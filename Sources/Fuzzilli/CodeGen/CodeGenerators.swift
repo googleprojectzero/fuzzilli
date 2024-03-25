@@ -1895,6 +1895,12 @@ public let CodeGenerators: [CodeGenerator] = [
         // This ensures that we can easily find and call exported methods.
         m.loadExports()
     },
+
+    // TODO: Add three generators for JSPI
+    // We need a WrapSuspendingGenerator that takes a callable and wraps it, this should get typed as .object(ofGroup: "WasmSuspenderObject" and we should attach a WasmTypeExtension that stores the signature of the wrapped function
+    // Then we need a WasmJsCallSuspendingFunctionGenerator that takes such a WasmSuspenderObject function, unpacks the signature and emits a WasmJsCall
+    // Then we also need a WrapPromisingGenerator that requires a WebAssembly module object, gets the exports field and its methods and then wraps one of those.
+    // For all of this to work we need to add a WasmTypeExtension and ideally the dynamic object group inference.
 ]
 
 extension Array where Element == CodeGenerator {

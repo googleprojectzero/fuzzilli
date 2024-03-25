@@ -89,6 +89,40 @@ public let ProgramTemplates = [
         }
     },
 
+    ProgramTemplate("JSPI") { b in
+        b.buildPrefix()
+        b.build(n: 20)
+
+        let f = b.buildAsyncFunction(with: b.randomParameters()) { _ in
+            b.build(n: 10)
+        }
+
+        let signature = b.type(of: f).signature ?? Signature.forUnknownFunction
+        // As we do not yet know what types we have in the Wasm module when we try to call this, let Fuzzilli know that it could potentially use all Wasm types here.
+        let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
+
+        var wasmSignature = b.convertJsSignatureToWasmSignature(signature, availableTypes: allWasmTypes)
+        let wrapped = b.wrapSuspending(function: f)
+
+        let m = b.buildWasmModule { mod in
+            mod.addWasmFunction(with: [] => .nothing) { fbuilder, _  in
+                b.build(n: 20)
+                let args = b.randomWasmArguments(forWasmSignature: wasmSignature)
+                // Best effort call...
+                // TODO: Extend findOrGenerateArguments to work in Wasm as well.
+                if let args {
+                    fbuilder.wasmJsCall(function: wrapped, withArgs: args, withWasmSignature: wasmSignature)
+                }
+            }
+        }
+
+        let exportedMethod = b.wrapPromising(function: b.getProperty(m.getExportedMethod(at: 0), of: m.loadExports()))
+
+        b.callFunction(exportedMethod)
+
+        b.build(n: 5)
+    },
+
     ProgramTemplate("JIT1Function") { b in
         let smallCodeBlockSize = 5
         let numIterations = 100

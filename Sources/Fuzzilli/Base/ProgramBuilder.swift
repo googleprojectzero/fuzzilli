@@ -2714,6 +2714,15 @@ public class ProgramBuilder {
         return emit(CreateWasmTable(tableType: tableType, minSize: minSize, maxSize: maxSize)).output
     }
 
+    @discardableResult
+    public func wrapSuspending(function: Variable) -> Variable {
+        return emit(WrapSuspending(), withInputs: [function]).output
+    }
+
+    @discardableResult
+    public func wrapPromising(function: Variable) -> Variable {
+        return emit(WrapPromising(), withInputs: [function]).output
+    }
 
     public class WasmFunction {
         private let b: ProgramBuilder

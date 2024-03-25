@@ -815,6 +815,12 @@ message CreateWasmTable {
   optional int64 maxSize = 3;
 }
 
+message WrapSuspending {
+}
+
+message WrapPromising {
+}
+
 // Wasm Operations
 
 message Consti64 {

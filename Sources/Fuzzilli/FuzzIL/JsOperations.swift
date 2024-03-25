@@ -2433,6 +2433,22 @@ class EndWasmModule: JsOperation {
     }
 }
 
+class WrapPromising: JsOperation {
+    override var opcode: Opcode { .wrapPromising(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: .javascript)
+    }
+}
+
+class WrapSuspending: JsOperation {
+    override var opcode: Opcode { .wrapSuspending(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: .javascript)
+    }
+}
+
 
 // This instruction is used to create strongly typed WasmGlobals in the JS world that can be imported by a WasmModule.
 class CreateWasmGlobal: JsOperation {

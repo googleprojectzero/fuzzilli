@@ -951,6 +951,18 @@ public struct JSTyper: Analyzer {
             // TODO: fix this.
             set(instr.output, .object(ofGroup: "WasmTable.\(type)"))
 
+        case .wrapSuspending(_):
+            // This operation takes a function but produces an object that can be called from WebAssembly.
+            // TODO: right now this "loses" the signature of the JS function, this is unfortunate but won't break fuzzing, in the template we can just store the signature.
+            // The WasmJsCall generator just won't work as it requires a callable.
+            // In the future we should also attach a WasmTypeExtension to this object that stores the signature of input(0) here.
+            set(instr.output, .object(ofGroup:"WebAssembly.SuspendableObject"))
+
+        case .wrapPromising(_):
+            // Here we basically pass through the type transparently as we just annotate this exported function as "promising"
+            // It is still possible to call this function just like any other regular function and the Signature is also the same.
+            set(instr.output, type(ofInput: 0))
+
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
             assert(instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0))

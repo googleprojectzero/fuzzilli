@@ -468,6 +468,8 @@ public class OperationMutator: BaseInstructionMutator {
              .loadAsyncDisposableVariable(_),
              .void(_),
              .directive(_),
+             .wrapPromising(_),
+             .wrapSuspending(_),
              // Wasm instructions
              .beginWasmModule(_),
              .endWasmModule(_),

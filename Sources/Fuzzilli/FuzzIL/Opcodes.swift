@@ -210,6 +210,8 @@ enum Opcode {
     case endWasmModule(EndWasmModule)
     case createWasmGlobal(CreateWasmGlobal)
     case createWasmTable(CreateWasmTable)
+    case wrapPromising(WrapPromising)
+    case wrapSuspending(WrapSuspending)
 
     // Wasm opcodes
     case consti64(Consti64)

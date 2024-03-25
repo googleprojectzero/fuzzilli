@@ -771,6 +771,12 @@ public class FuzzILLifter: Lifter {
             }
             w.emit("\(output()) <- CreateWasmTable \(op.tableType) [\(op.minSize),\(maxSizeStr)]")
 
+        case .wrapPromising(_):
+            w.emit("\(output()) <- wrapPromising \(input(0))")
+
+        case .wrapSuspending(_):
+            w.emit("\(output()) <- wrapSuspending \(input(0))")
+
         // Wasm Instructions
 
         case .beginWasmFunction(let op):

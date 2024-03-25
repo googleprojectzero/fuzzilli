@@ -1362,6 +1362,17 @@ public class JavaScriptLifter: Lifter {
                 }
                 w.emit("\(LET) \(V) = new WebAssembly.Global({ value: \"\(type)\", mutable: \(op.isMutable) }, \(value));")
 
+            case .wrapSuspending(_):
+                let V = w.declare(instr.output)
+                let FUNCTION = input(0)
+                let LET = w.varKeyword
+                w.emit("\(LET) \(V) = new WebAssembly.Suspending(\(FUNCTION));")
+
+            case .wrapPromising(_):
+                let V = w.declare(instr.output)
+                let FUNCTION = input(0)
+                let LET = w.varKeyword
+                w.emit("\(LET) \(V) = WebAssembly.promising(\(FUNCTION));")
 
             case .beginWasmModule:
                 wasmCodeStarts = instr.index
