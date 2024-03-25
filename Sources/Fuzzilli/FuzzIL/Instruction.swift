@@ -938,6 +938,10 @@ extension Instruction: ProtobufConvertible {
                         $0.maxSize = Int64(maxSize)
                     }
                 }
+            case .wrapPromising(_):
+                $0.wrapPromising = Fuzzilli_Protobuf_WrapPromising()
+            case .wrapSuspending(_):
+                $0.wrapSuspending = Fuzzilli_Protobuf_WrapSuspending()
             case .print(_):
                 fatalError("Print operations should not be serialized")
             // Wasm Operations
@@ -1672,6 +1676,10 @@ extension Instruction: ProtobufConvertible {
                 maxSize = nil
             }
             op = CreateWasmTable(tableType: WasmTypeEnumToILType(p.tableType), minSize: Int(p.minSize), maxSize: maxSize)
+        case .wrapPromising(_):
+            op = WrapPromising()
+        case .wrapSuspending(_):
+            op = WrapSuspending()
         case .print(_):
             fatalError("Should not deserialize a Print instruction!")
 

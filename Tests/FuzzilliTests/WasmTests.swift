@@ -2125,3 +2125,61 @@ class WasmSpliceTests: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 }
+
+class WasmJSPITests: XCTestCase {
+    func testJSPI() throws {
+        // We need to have the right arguments here and we need a shell that supports jspi.
+        guard let runner = JavaScriptExecutor(type: .user, withArguments: ["--wasm-staging", "--expose-gc"]) else {
+            throw XCTSkip("Could not find a JS shell.")
+        }
+
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        // This is a function that returns a promise.
+        let function = b.buildAsyncFunction(with: .parameters(n: 1)) { args in
+            b.callFunction(b.createNamedVariable(forBuiltin: "gc"))
+            let json = b.createNamedVariable(forBuiltin: "JSON")
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("stringify", on: json, withArgs: [args[0]])])
+            b.doReturn(b.loadInt(1))
+        }
+
+        // Wrap the JS function for JSPI use.
+        let importFunction = b.wrapSuspending(function: function)
+        XCTAssert(b.type(of: importFunction).Is(.object(ofGroup: "WebAssembly.SuspendableObject")))
+
+        // Now lets build the module
+        let module = b.buildWasmModule { m in
+            m.addWasmFunction(with: [.wasmExternRef] => .wasmi32) { f, args in
+                let ret = f.wasmJsCall(function: importFunction, withArgs: args, withWasmSignature: [.wasmExternRef] => .wasmi32)
+                f.wasmReturn(ret!)
+            }
+        }
+
+        let exports = module.loadExports()
+        let exportRef = b.getProperty(module.getExportedMethod(at: 0), of: exports)
+
+        let exportFunc = b.wrapPromising(function: exportRef)
+
+        let obj = b.createObject(with: ["a": b.loadInt(42)])
+
+        let res = b.callFunction(exportFunc, withArgs: [obj])
+
+        let arrowFunc = b.buildArrowFunction(with: .parameters(n: 1)) { args in
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: args[0])])
+        }
+
+        b.callMethod("then", on: res, withArgs: [arrowFunc])
+
+        let outputString = "{\"a\":42}\n1\n"
+
+        let program = b.finalize()
+        let jsProgram = fuzzer.lifter.lift(program, withOptions: .includeComments)
+
+        testForOutput(program: jsProgram, runner: runner, outputString: outputString)
+    }
+}

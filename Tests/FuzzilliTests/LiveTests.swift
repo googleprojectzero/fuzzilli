@@ -90,7 +90,7 @@ class LiveTests: XCTestCase {
     // shape that is then executed with the given runner. We then check that
     // we stay below the maximum failure rate over the given number of iterations.
     static func runLiveTest(iterations n: Int = 250, withRunner runner: JavaScriptExecutor, body: (inout ProgramBuilder) -> Void) throws -> (failureRate: Double, failureMessages: [String: Int]) {
-        let liveTestConfig = Configuration(logLevel: .warning, enableInspection: true)
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
         // This ensures that we use the available builtins.

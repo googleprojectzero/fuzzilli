@@ -20,6 +20,7 @@ public let programTemplateWeights = [
     "WasmCodegen100":        2,
     "MixedJsAndWasm1":       2,
     "MixedJsAndWasm2":       2,
+    "JSPI":                  2,
     "JIT1Function":          3,
     "JIT2Functions":         3,
     "JITTrickyFunction":     2,
