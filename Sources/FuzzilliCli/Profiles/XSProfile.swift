@@ -64,6 +64,16 @@ fileprivate let HardenGenerator = CodeGenerator("HardenGenerator", inputs: .requ
 	b.callFunction(harden, withArgs: [obj])
 }
 
+fileprivate let ModuleSourceGenerator = RecursiveCodeGenerator("ModuleSourceGenerator") { b in
+	let moduleSourceConstructor = b.loadBuiltin("ModuleSource");
+
+    let code = b.buildCodeString() {
+        b.buildRecursive()
+    }
+
+	b.construct(moduleSourceConstructor, withArgs: [code])
+}
+
 fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenerator") { b in
 	let compartmentConstructor = b.loadBuiltin("Compartment");
 
@@ -245,6 +255,9 @@ public extension ILType {
 
     static let jsCompartmentConstructor = ILType.constructor([.function()] => .jsCompartment) + .object(ofGroup: "CompartmentConstructor", withProperties: ["prototype"], withMethods: [])
 
+    static let jsModuleSource = ILType.object(ofGroup: "ModuleSource", withProperties: ["bindings", "needsImport", "needsImportMeta"])
+
+    static let jsModuleSourceConstructor = ILType.constructor([.function()] => .jsModuleSource) + .object(ofGroup: "ModuleSourceConstructor", withProperties: ["prototype"], withMethods: [])
 }
 
 /// Object group modelling JavaScript compartments.
@@ -265,6 +278,27 @@ let jsCompartments = ObjectGroup(
 let jsCompartmentConstructor = ObjectGroup(
     name: "CompartmentConstructor",
     instanceType: .jsCompartmentConstructor,
+    properties: [
+        "prototype" : .object()
+    ],
+    methods: [:]
+)
+
+/// Object group modelling JavaScript ModuleSources.
+let jsModuleSources = ObjectGroup(
+    name: "ModuleSource",
+    instanceType: .jsModuleSource,
+    properties: [
+        "bindings" : .object(), 
+        "needsImport" : .object(), 
+        "needsImportMeta" : .object(),
+    ],
+    methods: [:]
+)
+
+let jsModuleSourceConstructor = ObjectGroup(
+    name: "ModuleSourceConstructor",
+    instanceType: .jsModuleSourceConstructor,
     properties: [
         "prototype" : .object()
     ],
@@ -309,7 +343,8 @@ let xsProfile = Profile(
         (StressXSGC,    5),
         (HardenGenerator, 5),
         (CompartmentGenerator, 5),
-        (UnicodeStringGenerator, 2)
+        (UnicodeStringGenerator, 2),
+        (ModuleSourceGenerator, 3)
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
@@ -327,6 +362,7 @@ let xsProfile = Profile(
 
 		// hardened javascript
         "Compartment"         : .function([] => .jsCompartmentConstructor),
+        "ModuleSource"        : .function([] => .jsModuleSourceConstructor),
 		"harden"              : .function([.plain(.anything)] => .undefined),
 		"lockdown"            : .function([] => .undefined) ,
 		"petrify"             : .function([.plain(.anything)] => .undefined),
