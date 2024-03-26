@@ -127,18 +127,12 @@ fileprivate let UnicodeStringGenerator = CodeGenerator("UnicodeStringGenerator",
 	b.loadString(s)
 }
 
-//const y = new StaticModuleRecord({ source:`
-//	export const b = "b";
-//`});
-
-
-
 /*
 The inputs to this aren't filtered to jsCompartment but seem to be any just .object()
 That's not very useful, so leaving this disabled until that is sorted out
 
-fileprivate let CompartmentEvaluateGenerator = CodeGenerator("CompartmentEvaluateGenerator", input: .jsCompartment) { b, target in
-	let code = b.codeString() {
+fileprivate let CompartmentEvaluateGenerator = CodeGenerator("CompartmentEvaluateGenerator", inputs: .required(.jsCompartment)) { b, target in
+	let code = b.buildCodeString() {
 		b.buildRecursive()
 	}
 	b.callMethod("evaluate", on: target, withArgs: [code])
