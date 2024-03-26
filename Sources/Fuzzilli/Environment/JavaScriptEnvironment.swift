@@ -321,7 +321,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsArguments)
         registerObjectGroup(.jsGenerators)
         registerObjectGroup(.jsPromises)
-        registerObjectGroup(.jsCompartments)
         registerObjectGroup(.jsRegExps)
         registerObjectGroup(.jsFunctions)
         registerObjectGroup(.jsSymbols)
@@ -340,7 +339,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 
         registerObjectGroup(.jsObjectConstructor)
         registerObjectGroup(.jsPromiseConstructor)
-        registerObjectGroup(.jsCompartmentConstructor)
         registerObjectGroup(.jsArrayConstructor)
         registerObjectGroup(.jsStringConstructor)
         registerObjectGroup(.jsSymbolConstructor)
@@ -386,7 +384,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("DataView", ofType: .jsDataViewConstructor)
         registerBuiltin("Date", ofType: .jsDateConstructor)
         registerBuiltin("Promise", ofType: .jsPromiseConstructor)
-        registerBuiltin("Compartment", ofType: .jsCompartmentConstructor)
         registerBuiltin("Proxy", ofType: .jsProxyConstructor)
         registerBuiltin("Map", ofType: .jsMapConstructor)
         registerBuiltin("WeakMap", ofType: .jsWeakMapConstructor)
@@ -557,9 +554,6 @@ public extension ILType {
     /// Type of a JavaScript Promise object.
     static let jsPromise = ILType.object(ofGroup: "Promise", withMethods: ["catch", "finally", "then"])
 
-    /// Type of a JavaScript Compartment object.
-    static let jsCompartment = ILType.object(ofGroup: "Compartment", withProperties: ["globalThis"], withMethods: ["evaluate", "import", "importNow", "module"])
-
     /// Type of a JavaScript Map object.
     static let jsMap = ILType.iterable + ILType.object(ofGroup: "Map", withProperties: ["size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
 
@@ -652,9 +646,6 @@ public extension ILType {
 
     /// Type of the JavaScript Promise constructor builtin.
     static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled"])
-
-    /// Type of the JavaScript Compartment constructor builtin.
-    static let jsCompartmentConstructor = ILType.constructor([.function()] => .jsCompartment) + .object(ofGroup: "CompartmentConstructor", withProperties: ["prototype"], withMethods: [])
 
     /// Type of the JavaScript Proxy constructor builtin.
     static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .anything)
@@ -801,21 +792,6 @@ public extension ObjectGroup {
             "compile"    : [.string] => .jsRegExp,
             "exec"       : [.string] => .jsArray,
             "test"       : [.string] => .boolean,
-        ]
-    )
-
-    /// Object group modelling JavaScript compartments.
-    static let jsCompartments = ObjectGroup(
-        name: "Compartment",
-        instanceType: .jsCompartment,
-        properties: [
-            "globalThis"  : .object()
-        ],
-        methods: [  // import/importNow can accept more than strings
-            "import"    : [.string] => .jsPromise,
-            "importNow" : [.string] => .anything,
-            "module"    : [.opt(.string)] => .object(),
-            "evaluate"  : [.string] => .anything,
         ]
     )
 
@@ -1141,16 +1117,6 @@ public extension ObjectGroup {
             "race"       : [.jsPromise...] => .jsPromise,
             "allSettled" : [.jsPromise...] => .jsPromise,
         ]
-    )
-
-    /// ObjectGroup modelling the JavaScript Compartment constructor builtin
-    static let jsCompartmentConstructor = ObjectGroup(
-        name: "CompartmentConstructor",
-        instanceType: .jsCompartmentConstructor,
-        properties: [
-            "prototype" : .object()
-        ],
-        methods: [:]
     )
 
     /// ObjectGroup modelling JavaScript Date objects

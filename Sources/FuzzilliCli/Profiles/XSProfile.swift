@@ -239,7 +239,37 @@ fileprivate let RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
     b.build(n: 15)
 }
 
+public extension ILType {
+    /// Type of a JavaScript Compartment object.
+    static let jsCompartment = ILType.object(ofGroup: "Compartment", withProperties: ["globalThis"], withMethods: ["evaluate", "import", "importNow" /* , "module" */])
 
+    static let jsCompartmentConstructor = ILType.constructor([.function()] => .jsCompartment) + .object(ofGroup: "CompartmentConstructor", withProperties: ["prototype"], withMethods: [])
+
+}
+
+/// Object group modelling JavaScript compartments.
+let jsCompartments = ObjectGroup(
+    name: "Compartment",
+    instanceType: .jsCompartment,
+    properties: [
+        "globalThis"  : .object()
+    ],
+    methods: [  //@@ import/importNow can accept more than strings
+        "import"    : [.string] => .jsPromise,
+        "importNow" : [.string] => .anything,
+        // "module"    : [.opt(.string)] => .object(), (currently unavailable)
+        "evaluate"  : [.string] => .anything,
+    ]
+)
+
+let jsCompartmentConstructor = ObjectGroup(
+    name: "CompartmentConstructor",
+    instanceType: .jsCompartmentConstructor,
+    properties: [
+        "prototype" : .object()
+    ],
+    methods: [:]
+)
 
 let xsProfile = Profile(
     processArgs: { randomize in
@@ -296,13 +326,14 @@ let xsProfile = Profile(
         "print"               : .function([.string] => .undefined),
 
 		// hardened javascript
+        "Compartment"         : .function([] => .jsCompartmentConstructor),
 		"harden"              : .function([.plain(.anything)] => .undefined),
 		"lockdown"            : .function([] => .undefined) ,
 		"petrify"             : .function([.plain(.anything)] => .undefined),
 		"mutabilities"        : .function([.plain(.anything)] => .object())
     ],
 
-    additionalObjectGroups: [],
+    additionalObjectGroups: [jsCompartments, jsCompartmentConstructor, jsModuleSources, jsModuleSourceConstructor],
 
     optionalPostProcessor: nil
 )
