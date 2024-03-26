@@ -726,18 +726,35 @@ public class Fuzzer {
             maxExecutionTime = max(maxExecutionTime, execution.execTime)
         }
 
-        // Check if we can detect crashes and measure their execution time
-        for test in config.crashTests {
+        // Check if the profile's startup tests pass.
+        var hasAnyCrashTests = false
+        for (test, expectedResult) in config.startupTests {
             b = makeBuilder()
             b.eval(test)
             execution = execute(b.finalize(), purpose: .startup)
-            guard case .crashed = execution.outcome else {
+
+            switch expectedResult {
+            case .shouldSucceed where execution.outcome != .succeeded:
+                logger.fatal("Testcase \"\(test)\" did not execute successfully")
+            case .shouldCrash where !execution.outcome.isCrash():
                 logger.fatal("Testcase \"\(test)\" did not crash")
+            case .shouldNotCrash where execution.outcome.isCrash():
+                logger.fatal("Testcase \"\(test)\" unexpectedly crashed")
+            default:
+                // Test passed
+                break
             }
-            maxExecutionTime = max(maxExecutionTime, execution.execTime)
+
+            if expectedResult == .shouldCrash {
+                // In this case, also measure the execution time here to make sure that
+                // we don't set our timeout too low to detect crashes.
+                maxExecutionTime = max(maxExecutionTime, execution.execTime)
+                hasAnyCrashTests = true
+            }
         }
-        if config.crashTests.isEmpty {
-            logger.warning("Cannot check if crashes are detected")
+
+        if !hasAnyCrashTests {
+            logger.warning("Cannot check if crashes are detected as there are no startup tests that should cause a crash")
         }
 
         // Determine recommended timeout value (rounded up to nearest multiple of 10ms)

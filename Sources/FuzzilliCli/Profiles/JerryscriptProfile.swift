@@ -33,7 +33,14 @@ let jerryscriptProfile = Profile(
 
     ecmaVersion: ECMAScriptVersion.es5,
 
-    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)"],
+    startupTests: [
+        // Check that the fuzzilli integration is available.
+        ("fuzzilli('FUZZILLI_PRINT', 'test')", .shouldSucceed),
+
+        // Check that common crash types are detected.
+        ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldCrash),
+    ],
 
     additionalCodeGenerators: [],
 
@@ -49,6 +56,8 @@ let jerryscriptProfile = Profile(
         "resourceName"      : .function([] => .undefined),
         "placeholder"       : .function([] => .undefined),
     ],
+
+    additionalObjectGroups: [],
 
     optionalPostProcessor: nil
 )

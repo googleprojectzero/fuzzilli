@@ -85,7 +85,17 @@ let spidermonkeyProfile = Profile(
 
     ecmaVersion: ECMAScriptVersion.es6,
 
-    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
+    startupTests: [
+        // Check that the fuzzilli integration is available.
+        ("fuzzilli('FUZZILLI_PRINT', 'test')", .shouldSucceed),
+
+        // Check that common crash types are detected.
+        ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldCrash),
+
+        // TODO we could try to check that OOM crashes are ignored here ( with.shouldNotCrash).
+    ],
 
     additionalCodeGenerators: [
         (ForceSpidermonkeyIonGenerator, 10),
@@ -105,6 +115,8 @@ let spidermonkeyProfile = Profile(
         "bailout"       : .function([] => .undefined),
 
     ],
+
+    additionalObjectGroups: [],
 
     optionalPostProcessor: nil
 )

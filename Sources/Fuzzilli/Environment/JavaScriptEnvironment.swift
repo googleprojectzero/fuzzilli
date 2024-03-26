@@ -546,7 +546,7 @@ public extension ILType {
     static let jsSymbol = ILType.object(ofGroup: "Symbol", withProperties: ["description"])
 
     /// Type of a JavaScript array.
-    static let jsArray = ILType.iterable + ILType.object(ofGroup: "Array", withProperties: ["length"], withMethods:  ["at", "concat", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "toReversed", "toSorted", "toSpliced", "join", "lastIndexOf", "values", "flat", "flatMap", "with"])
+    static let jsArray = ILType.iterable + ILType.object(ofGroup: "Array", withProperties: ["length"], withMethods: ["at", "concat", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "toReversed", "toSorted", "toSpliced", "with", "join", "lastIndexOf", "values", "flat", "flatMap"])
 
     /// Type of a function's arguments object.
     static let jsArguments = ILType.iterable + ILType.object(ofGroup: "Arguments", withProperties: ["length", "callee"])
@@ -589,7 +589,7 @@ public extension ILType {
 
     /// Type of a JavaScript TypedArray object of the given variant.
     static func jsTypedArray(_ variant: String) -> ILType {
-        return .iterable + .object(ofGroup: variant, withProperties: ["buffer", "byteOffset", "byteLength", "length"], withMethods: ["copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "with", "toReversed", "toSorted", "toLocaleString", "toString"])
+        return .iterable + .object(ofGroup: variant, withProperties: ["buffer", "byteOffset", "byteLength", "length"], withMethods: ["at", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "toLocaleString", "toString", "toReversed", "toSorted", "with"])
     }
 
     /// Type of a JavaScript function.
@@ -862,7 +862,7 @@ public extension ObjectGroup {
             "toString"       : [] => .jsString,
             "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
             "toReversed"     : [] => .jsArray,
-			"toSorted"       : [.function()] => .jsArray,
+            "toSorted"       : [.opt(.function())] => .jsArray,
             "toSpliced"      : [.integer, .opt(.integer), .anything...] => .jsArray,
             "with"           : [.integer, .anything] => .jsArray,
         ]
@@ -1060,14 +1060,15 @@ public extension ObjectGroup {
                 "length"      : .integer
             ],
             methods: [
+                "at"          : [.integer] => .anything,
                 "copyWithin"  : [.integer, .integer, .opt(.integer)] => .undefined,
                 "entries"     : [] => .jsArray,
                 "every"       : [.function(), .opt(.object())] => .boolean,
                 "fill"        : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
                 "find"        : [.function(), .opt(.object())] => .anything,
                 "findIndex"   : [.function(), .opt(.object())] => .integer,
-                "findLast"   : [.function(), .opt(.object())] => .anything,
-                "findLastIndex"   : [.function(), .opt(.object())] => .integer,
+                "findLast"    : [.function(), .opt(.object())] => .anything,
+                "findLastIndex"  : [.function(), .opt(.object())] => .integer,
                 "forEach"     : [.function(), .opt(.object())] => .undefined,
                 "includes"    : [.anything, .opt(.integer)] => .boolean,
                 "indexOf"     : [.anything, .opt(.integer)] => .integer,
@@ -1080,16 +1081,16 @@ public extension ObjectGroup {
                 "set"         : [.object(), .opt(.integer)] => .undefined,
                 "some"        : [.function(), .opt(.anything)] => .boolean,
                 "sort"        : [.function()] => .undefined,
-                "toReversed"  : [] => .jsTypedArray(variant),
-                "toSorted"    : [.function()] => .jsTypedArray(variant),
                 "values"      : [] => .object(),
-                "with"        : [.integer, .anything] => .jsTypedArray(variant),
                 "filter"      : [.function(), .opt(.object())] => .jsTypedArray(variant),
                 "map"         : [.function(), .opt(.object())] => .jsTypedArray(variant),
                 "slice"       : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
                 "subarray"    : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
                 "toString"       : [] => .jsString,
-                "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString
+                "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
+                "toReversed"     : [] => .jsTypedArray(variant),
+                "toSorted"       : [.opt(.function())] => .jsTypedArray(variant),
+                "with"           : [.integer, .anything] => .jsTypedArray(variant),
             ]
         )
     }

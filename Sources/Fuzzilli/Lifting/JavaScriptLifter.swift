@@ -1301,11 +1301,11 @@ public class JavaScriptLifter: Lifter {
             w.emitBlock(JavaScriptProbeLifting.suffixCode)
         }
 
+        w.emitBlock(suffix)
+
         if options.contains(.includeComments), let footer = program.comments.at(.footer) {
             w.emitComment(footer)
         }
-
-        w.emitBlock(suffix)
 
         return w.code
     }

@@ -556,6 +556,7 @@ let v8Profile = Profile(
         return args
     },
 
+    // We typically fuzz without any sanitizer instrumentation, but if any sanitizers are active, "abort_on_error=1" must probably be set so that sanitizer errors can be detected.
     processEnv: [:],
 
     maxExecsBeforeRespawn: 1000,
@@ -570,7 +571,22 @@ let v8Profile = Profile(
 
     ecmaVersion: ECMAScriptVersion.es6,
 
-    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)", "fuzzilli('FUZZILLI_CRASH', 3)"],
+    startupTests: [
+        // Check that the fuzzilli integration is available.
+        ("fuzzilli('FUZZILLI_PRINT', 'test')", .shouldSucceed),
+
+        // Check that common crash types are detected.
+        // IMMEDIATE_CRASH()
+        ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
+        // CHECK failure
+        ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldCrash),
+        // DCHECK failure
+        ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldCrash),
+        // Wild-write
+        ("fuzzilli('FUZZILLI_CRASH', 3)", .shouldCrash),
+
+        // TODO we could try to check that OOM crashes are ignored here ( with.shouldNotCrash).
+    ],
 
     additionalCodeGenerators: [
         (ForceJITCompilationThroughLoopGenerator,  5),
@@ -597,6 +613,8 @@ let v8Profile = Profile(
         "d8"                                            : .object(),
         "Worker"                                        : .constructor([.anything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
+
+    additionalObjectGroups: [],
 
     optionalPostProcessor: nil
 )

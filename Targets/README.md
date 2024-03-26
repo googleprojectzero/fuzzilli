@@ -6,20 +6,17 @@ Please note that particular configuration decisions are not "one size fits all",
 ## Modifications to Target JS Engine
 
 ### Compilation Changes
-The target Javascript engine should be compiled with appropriate debug parameters in order to catch errors that would not crash the production build.
-Examples include debug asserts and heap validation.
-Note that some sanitizers modify program return values, which Fuzzilli uses to determine when and how the engine crashes.
-For example, clang's undefined behavior sanitizer requires processEnv in its profile (see below) to be `"UBSAN_OPTIONS": "handle_segv=0"`.
+The target Javascript engine should be compiled with appropriate debug parameters in order to catch errors that would not crash the production build. Examples include debug asserts and heap validation.
+Note that when fuzzing with ASan or another sanitizer, `"ASAN_OPTIONS": "abort_on_error=1"` (or the corresponding alternative for other sanitizers) should be used to ensure that Fuzzilli treats sanitizer faults as crashes.
 
 ### Code Coverage
 Fuzzilli performs guided fuzzing based on code coverage.
-In order to implement this, [coverage.c](./coverage.c) needs to be included in the build, and `__sanitizer_cov_reset_edgeguards()` needs to be available for the REPRL implementation. 
+In order to implement this, [coverage.c](./coverage.c) needs to be included in the build, and `__sanitizer_cov_reset_edgeguards()` needs to be available for the REPRL implementation.
 
 ### Adding Read-Eval-Print-Reset-Loop
-In order to iterate quickly with minimal overhead, Fuzzilli operates with a Read-Eval-Print-Reset loop, where 1 process of the engine runs many test cases, resetting itself between each one.
-This is done to reduce the overhead occurred when starting a new instance of the JS engine. 
-The max number of iterations value is set by the `maxExecsBeforeRespawn` constant [here](../Sources/Fuzzilli/Execution/REPRL.swift).
-This loop needs to be triggered by a unique command line option (make sure to include as processArgument in the profile, see below).
+In order to iterate quickly with minimal overhead, Fuzzilli operates with a Read-Eval-Print-Reset loop, where one process of the engine runs many test cases, resetting itself between each one.
+This is done to reduce the overhead occurred when starting a new instance of the JS engine.
+The max number of iterations value is set by the `maxExecsBeforeRespawn` constant, which can be specified in the profile, see below.
 
 #### REPRL Psuedocode
 This is only rough psuedocode as an overview. Please reference the appropriate lines in one of the patch files for an example implementation.
@@ -50,8 +47,8 @@ REPRL's exit status format is similar to the one used on e.g. Linux or macOS: th
 As such, it is also possible to "emulate" a crash in the target by setting the lower 8 bits of the exit status to a nonzero value. In that case, Fuzzilli would treat the execution as a crash.
 
 ### Adding Custom "fuzzilli" Javascript Builtin
-At start, Fuzzilli calls functions specified in `crashTests` in the profile, in order to validate detection of crashes.
-Thus, current targets add a custom function as a builtin, that either segfaults or fails a debug assertion when given particular strings as input.
+At startup, Fuzzilli executes code specified in the `startupTests` in the profile to for example ensure that crashes are correctly detected.
+Thus, current targets add a custom function as a builtin, that for examples segfaults or fails a debug assertion when given particular strings as input.
 The input strings are designed to be hard for the fuzzer to accidentally trigger, to prevent false positives.
 This function should be added to the Javascript Engine under test, and listed with crashing inputs in the profile.
 
@@ -63,12 +60,16 @@ Once a profile has been made, it also needs to be added to the list in [Profile.
 
 ### Profile Fields
 
-- `processArguments`: Command line arguments to call the Javascript engine with
+- `processArgs`: Command line arguments to call the Javascript engine with
 - `processEnv`: Environment variables to set when calling the Javascript engine
+- `maxExecsBeforeRespawn`: How many samples to execute in the same target process (via REPRL) before starting a fresh process
+- `timeout`: The timeout in milliseconds after which to terminate the target process
 - `codePrefix` and `codeSuffix`: Javascript code that is added to the beginning/end of each generated test case. This can setup and call `main`, force garbage collection, etc. 
-- `crashTests`: Functions to call that intentionally fault, in order to validate that Fuzzilli properly detects crashes and assertion failures in the JS engine.
+- `startupTests`: Functions to call to test that the engine behaves as expected and that crashes are detected
 - `additionalCodeGenerators`: Additional code generators, called the fuzzer in building test cases. An example use case is producing code to trigger JIT compilation in V8.
 - `additionalProgramTemplates`: Additional [program templates](../Docs/HowFuzzilliWorks.md#program-templates) for the fuzzer to generate programs from. Examples for ProgramTemplates can be found in [ProgramTemplates.swift](../Sources/Fuzzilli/CodeGen/ProgramTemplates.swift)
 - `disabledCodeGenerators`: List of code generators to disable. The current list of code generators is in [CodeGenerators.swift](../Sources/Fuzzilli/CodeGen/CodeGenerators.swift) with their respective weights in [CodeGeneratorWeights.swift](../Sources/Fuzzilli/CodeGen/CodeGeneratorsWeights.swift).
 - `disabledMutators`: List of mutators to disable, in other words, the mutators in this list will not be selected to mutate input during the fuzzing loop. The current list of enabled mutators is in [FuzzilliCli/main.swift](../Sources/FuzzilliCli/main.swift)
 - `additionalBuiltins`: Additional unique builtins for the JS engine. The list does not have to be exhaustive, but should include functionality likely to cause bugs. An example would be a function that triggers garbage collection. 
+- `additionalObjectGroups`: Additional unique [ObjectGroup](../Sources/Fuzzilli/Environment/JavaScriptEnvironment.swift)s for the JS engine. Examples for ObjectGroups can be found in [JavaScriptEnvironment.swift](../Sources/Fuzzilli/Environment/JavaScriptEnvironment.swift)
+- `optionalPostProcessor`: An optional post-processor which can modify generated programs before executing them on the target

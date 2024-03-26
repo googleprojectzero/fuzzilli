@@ -85,7 +85,20 @@ let v8HoleFuzzingProfile = Profile(
     codeSuffix: """
                 """,
     ecmaVersion: ECMAScriptVersion.es6,
-    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 7)"],
+
+    startupTests: [
+        // Check that the fuzzilli integration is available.
+        ("fuzzilli('FUZZILLI_PRINT', 'test')", .shouldSucceed),
+
+        // Check that "hard" crashes are detected.
+        ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 7)", .shouldCrash),
+
+        // DCHECK and CHECK failures should be ignored.
+        ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldNotCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldNotCrash),
+    ],
+
     additionalCodeGenerators: [
         (ForceJITCompilationThroughLoopGenerator,  5),
         (ForceTurboFanCompilationGenerator,        5),
@@ -102,5 +115,6 @@ let v8HoleFuzzingProfile = Profile(
         "d8"                                            : .object(),
         "Worker"                                        : .constructor([.anything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
+    additionalObjectGroups: [],
     optionalPostProcessor: nil
 )

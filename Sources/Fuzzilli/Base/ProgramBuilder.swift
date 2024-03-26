@@ -1252,7 +1252,6 @@ public class ProgramBuilder {
     }
 
     private func buildInternal(initialBuildingBudget: Int, mode: BuildingMode) {
-        assert(hasVisibleVariables, "CodeGenerators and our splicing implementation assume that there are visible variables to use. Use buildPrefix() to generate some initial variables in a new program")
         assert(initialBuildingBudget > 0)
 
         // Both splicing and code generation can sometimes fail, for example if no other program with the necessary features exists.
@@ -1292,7 +1291,9 @@ public class ProgramBuilder {
             let codeSizeBefore = code.count
             switch mode {
             case .generating:
-                assert(hasVisibleVariables)
+                // This requirement might seem somewhat arbitrary but our JavaScript code generators make use of `b.randomVariable` and as such rely on the availability of
+                // visible Variables. Therefore we should always have some Variables visible if we want to use them.
+                assert(hasVisibleVariables, "CodeGenerators assume that there are visible variables to use. Use buildPrefix() to generate some initial variables in a new program")
 
                 // Reset the code generator specific part of the state.
                 state.nextRecursiveBlockOfCurrentGenerator = 1
