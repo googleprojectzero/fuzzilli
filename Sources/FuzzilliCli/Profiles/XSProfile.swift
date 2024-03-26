@@ -18,123 +18,123 @@ import Fuzzilli
 // swift run -c release FuzzilliCli --profile=xs --jobs=8 --storagePath=./results --resume --timeout=200 $MODDABLE/build/bin/mac/debug/xst
 
 fileprivate let StressXSGC = CodeGenerator("StressXSGC", inputs: .required(.function())) { b, f in
-	guard b.type(of: f).Is(.function()) else { return }		//@@ where did this come from??
+    guard b.type(of: f).Is(.function()) else { return }        //@@ where did this come from??
     let arguments = b.randomArguments(forCalling: f)
 
     let index = b.loadInt(1)
     let end = b.loadInt(128)
     let gc = b.loadBuiltin("gc")
-	b.callFunction(gc, withArgs: [index])
-	b.buildWhileLoop({b.compare(index, with: end, using: .lessThan)}) {
+    b.callFunction(gc, withArgs: [index])
+    b.buildWhileLoop({b.compare(index, with: end, using: .lessThan)}) {
         b.callFunction(f, withArgs: arguments)
-		b.unary(.PostInc, index)
-		let result = b.callFunction(gc, withArgs: [index])
-		b.buildIfElse(result, ifBody: {
-			b.loopBreak();
-		}, elseBody: {
-		});
-	}
+        b.unary(.PostInc, index)
+        let result = b.callFunction(gc, withArgs: [index])
+        b.buildIfElse(result, ifBody: {
+            b.loopBreak();
+        }, elseBody: {
+        });
+    }
 }
 
 fileprivate let StressXSMemoryFail = CodeGenerator("StressXSMemoryFail", inputs: .required(.function())) { b, f in
-	guard b.type(of: f).Is(.function()) else { return }		//@@ where did this come from??
+    guard b.type(of: f).Is(.function()) else { return }        //@@ where did this come from??
     let arguments = b.randomArguments(forCalling: f)
 
     let index = b.loadInt(1)
     let max = b.loadInt(1000000)
     let memoryFail = b.loadBuiltin("memoryFail")
-	b.callFunction(memoryFail, withArgs: [max])    // count how many allocations this function makes
+    b.callFunction(memoryFail, withArgs: [max])    // count how many allocations this function makes
     b.callFunction(f, withArgs: arguments)
     var end = b.callFunction(memoryFail, withArgs: [index])
     end = b.binary(max, end, with: .Sub)
-	b.buildWhileLoop({b.compare(index, with: end, using: .lessThan)}) {
+    b.buildWhileLoop({b.compare(index, with: end, using: .lessThan)}) {
         b.callFunction(f, withArgs: arguments)
-		b.unary(.PostInc, index)
-		b.callFunction(memoryFail, withArgs: [index])
-	}
+        b.unary(.PostInc, index)
+        b.callFunction(memoryFail, withArgs: [index])
+    }
 }
 
 fileprivate let HardenGenerator = CodeGenerator("HardenGenerator", inputs: .required(.object())) { b, obj in
-	let harden = b.loadBuiltin("harden")
+    let harden = b.loadBuiltin("harden")
 
-	if (Int.random(in: 0...20) < 1) {
-		let lockdown = b.loadBuiltin("lockdown")
-		b.callFunction(lockdown, withArgs: [])
-	}
-	b.callFunction(harden, withArgs: [obj])
+    if (Int.random(in: 0...20) < 1) {
+        let lockdown = b.loadBuiltin("lockdown")
+        b.callFunction(lockdown, withArgs: [])
+    }
+    b.callFunction(harden, withArgs: [obj])
 }
 
 fileprivate let ModuleSourceGenerator = RecursiveCodeGenerator("ModuleSourceGenerator") { b in
-	let moduleSourceConstructor = b.loadBuiltin("ModuleSource");
+    let moduleSourceConstructor = b.loadBuiltin("ModuleSource");
 
     let code = b.buildCodeString() {
         b.buildRecursive()
     }
 
-	b.construct(moduleSourceConstructor, withArgs: [code])
+    b.construct(moduleSourceConstructor, withArgs: [code])
 }
 
 fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenerator") { b in
-	let compartmentConstructor = b.loadBuiltin("Compartment");
+    let compartmentConstructor = b.loadBuiltin("Compartment");
 
-	var endowments = [String: Variable]()		// may be used as endowments argument or globalLexicals
-	var moduleMap = [String: Variable]()
-	var options = [String: Variable]()
+    var endowments = [String: Variable]()        // may be used as endowments argument or globalLexicals
+    var moduleMap = [String: Variable]()
+    var options = [String: Variable]()
 
-	for _ in 0..<Int.random(in: 1...4) {
-		let propertyName = b.randomCustomPropertyName()
-		endowments[propertyName] = b.randomVariable()
-	}
-	var endowmentsObject = b.createObject(with: endowments)
+    for _ in 0..<Int.random(in: 1...4) {
+        let propertyName = b.randomCustomPropertyName()
+        endowments[propertyName] = b.randomVariable()
+    }
+    var endowmentsObject = b.createObject(with: endowments)
 
 //@@ populate a moduleMap
-	let moduleMapObject = b.createObject(with: moduleMap)
-	let resolveHook = b.buildPlainFunction(with: .parameters(n: 2)) { _ in
-		b.buildRecursive(block: 1, of: 4)
-		b.doReturn(b.randomVariable())
-	}
-	let moduleMapHook = b.buildPlainFunction(with: .parameters(n: 1)) { _ in
-		b.buildRecursive(block: 2, of: 4)
-		b.doReturn(b.randomVariable())
-	}
-	let loadNowHook = b.dup(moduleMapHook)
-	let loadHook = b.buildAsyncFunction(with: .parameters(n: 1)) { _ in
-		b.buildRecursive(block: 3, of: 4)
-		b.doReturn(b.randomVariable())
-	}
-	options["resolveHook"] = resolveHook;
-	options["moduleMapHook"] = moduleMapHook;
-	options["loadNowHook"] = loadNowHook;
-	options["loadHook"] = loadHook;
+    let moduleMapObject = b.createObject(with: moduleMap)
+    let resolveHook = b.buildPlainFunction(with: .parameters(n: 2)) { _ in
+        b.buildRecursive(block: 1, of: 4)
+        b.doReturn(b.randomVariable())
+    }
+    let moduleMapHook = b.buildPlainFunction(with: .parameters(n: 1)) { _ in
+        b.buildRecursive(block: 2, of: 4)
+        b.doReturn(b.randomVariable())
+    }
+    let loadNowHook = b.dup(moduleMapHook)
+    let loadHook = b.buildAsyncFunction(with: .parameters(n: 1)) { _ in
+        b.buildRecursive(block: 3, of: 4)
+        b.doReturn(b.randomVariable())
+    }
+    options["resolveHook"] = resolveHook;
+    options["moduleMapHook"] = moduleMapHook;
+    options["loadNowHook"] = loadNowHook;
+    options["loadHook"] = loadHook;
 
-	if (Int.random(in: 0...100) < 50) {
-		options["globalLexicals"] = endowmentsObject
-		endowmentsObject = b.createObject(with: [:]) 
-	}
-	let optionsObject = b.createObject(with: options)
+    if (Int.random(in: 0...100) < 50) {
+        options["globalLexicals"] = endowmentsObject
+        endowmentsObject = b.createObject(with: [:]) 
+    }
+    let optionsObject = b.createObject(with: options)
 
-	let compartment = b.construct(compartmentConstructor, withArgs: [endowmentsObject, moduleMapObject, optionsObject])
+    let compartment = b.construct(compartmentConstructor, withArgs: [endowmentsObject, moduleMapObject, optionsObject])
 
-	if (Int.random(in: 0...100) < 50) {
-		let code = b.buildCodeString() {
-			b.buildRecursive(block: 4, of: 4)
-		}
-		b.callMethod("evaluate", on: compartment, withArgs: [code])
-	}
+    if (Int.random(in: 0...100) < 50) {
+        let code = b.buildCodeString() {
+            b.buildRecursive(block: 4, of: 4)
+        }
+        b.callMethod("evaluate", on: compartment, withArgs: [code])
+    }
 }
 
 fileprivate let UnicodeStringGenerator = CodeGenerator("UnicodeStringGenerator", inputs: .required(.object())) { b, obj in
-	var s = ""
-	for _ in 0..<Int.random(in: 1...100) {
-		let codePoint = UInt32.random(in: 0..<0x10FFFF)
-		if ((0xD800 <= codePoint) && (codePoint < 0xE000)) {
-			// ignore surrogate pair code points
-		}
-		else {
-			s += String(Unicode.Scalar(codePoint)!)
-		}
-	}
-	b.loadString(s)
+    var s = ""
+    for _ in 0..<Int.random(in: 1...100) {
+        let codePoint = UInt32.random(in: 0..<0x10FFFF)
+        if ((0xD800 <= codePoint) && (codePoint < 0xE000)) {
+            // ignore surrogate pair code points
+        }
+        else {        
+            s += String(Unicode.Scalar(codePoint)!)
+        }
+    }
+    b.loadString(s)
 }
 
 /*
@@ -142,10 +142,10 @@ The inputs to this aren't filtered to jsCompartment but seem to be any just .obj
 That's not very useful, so leaving this disabled until that is sorted out
 
 fileprivate let CompartmentEvaluateGenerator = CodeGenerator("CompartmentEvaluateGenerator", inputs: .required(.jsCompartment)) { b, target in
-	let code = b.buildCodeString() {
-		b.buildRecursive()
-	}
-	b.callMethod("evaluate", on: target, withArgs: [code])
+    let code = b.buildCodeString() {
+        b.buildRecursive()
+    }
+    b.callMethod("evaluate", on: target, withArgs: [code])
 }
 */
 
@@ -360,13 +360,13 @@ let xsProfile = Profile(
         "memoryFail"          : .function([.number] => .number),
         "print"               : .function([.string] => .undefined),
 
-		// hardened javascript
+        // hardened javascript
         "Compartment"         : .function([] => .jsCompartmentConstructor),
         "ModuleSource"        : .function([] => .jsModuleSourceConstructor),
-		"harden"              : .function([.plain(.anything)] => .undefined),
-		"lockdown"            : .function([] => .undefined) ,
-		"petrify"             : .function([.plain(.anything)] => .undefined),
-		"mutabilities"        : .function([.plain(.anything)] => .object())
+        "harden"              : .function([.plain(.anything)] => .undefined),
+        "lockdown"            : .function([] => .undefined) ,
+        "petrify"             : .function([.plain(.anything)] => .undefined),
+        "mutabilities"        : .function([.plain(.anything)] => .object())
     ],
 
     additionalObjectGroups: [jsCompartments, jsCompartmentConstructor, jsModuleSources, jsModuleSourceConstructor],
