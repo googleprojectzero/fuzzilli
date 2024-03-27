@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,69 +14,77 @@
 
 import Foundation
 
-/// This class wraps a NodeJS executable and allows executing JavaScript code with it.
-public class NodeJS {
-    /// Path to the node.js binary.
-    let nodejsExecutablePath: String
+public class JavaScriptExecutor {
+    /// Path to the js shell binary.
+    let executablePath: String
 
     /// Prefix to execute before every JavaScript testcase. Its main task is to define the `output` function.
     let prefix = Data("const output = console.log;\n".utf8)
 
-    public init?() {
-        if let path = NodeJS.findNodeJsExecutable() {
-            self.nodejsExecutablePath = path
-        } else {
-            return nil
-        }
+    /// The js shell mode for this JavaScriptExecutor
+    public enum ExecutorType {
+        // The default behavior, we will try to use the user supplied binary first.
+        // And fall back to node if we don't find anything supplied through FUZZILLI_TEST_SHELL
+        case any
+        // Try to find the node binary (useful if node modules are required) or fail.
+        case nodejs
+        // Try to find the user supplied binary or fail
+        case user
     }
 
-    /// The result of executing a Script.
-    public struct Result {
-        enum Outcome {
-            case terminated(status: Int32)
-            case timedOut
+    let arguments: [String]
+
+    /// Depending on the type this constructor will try to find the requested shell or fail
+    public init?(type: ExecutorType = .any, withArguments maybeArguments: [String]? = nil) {
+        self.arguments = maybeArguments ?? []
+        let path: String?
+
+        switch type {
+            case .any:
+                path = JavaScriptExecutor.findJsShellExecutable() ?? JavaScriptExecutor.findNodeJsExecutable()
+            case .nodejs:
+                path = JavaScriptExecutor.findNodeJsExecutable()
+            case .user:
+                path = JavaScriptExecutor.findJsShellExecutable()
         }
 
-        let outcome: Outcome
-        let output: String
+        if path == nil {
+            return nil
+        }
 
-        var isSuccess: Bool {
-            switch outcome {
-            case .terminated(status: let status):
-                return status == 0
-            case .timedOut:
-                return false
-            }
-        }
-        var isFailure: Bool {
-            return !isSuccess
-        }
+        self.executablePath = path!
     }
 
     /// Executes the JavaScript script using the configured engine and returns the stdout.
     public func executeScript(_ script: String, withTimeout timeout: TimeInterval? = nil) throws -> Result {
-        return try execute(nodejsExecutablePath, withInput: prefix + script.data(using: .utf8)!, withArguments: ["--allow-natives-syntax"], timeout: timeout)
+        return try execute(executablePath, withInput: prefix + script.data(using: .utf8)!, withArguments: self.arguments, timeout: timeout)
     }
 
     /// Executes the JavaScript script at the specified path using the configured engine and returns the stdout.
     public func executeScript(at url: URL, withTimeout timeout: TimeInterval? = nil) throws -> Result {
         let script = try Data(contentsOf: url)
-        return try execute(nodejsExecutablePath, withInput: prefix + script, withArguments: ["--allow-natives-syntax"], timeout: timeout)
+        return try execute(executablePath, withInput: prefix + script, withArguments: self.arguments, timeout: timeout)
     }
 
     func execute(_ path: String, withInput input: Data = Data(), withArguments arguments: [String] = [], timeout maybeTimeout: TimeInterval? = nil) throws -> Result {
         let inputPipe = Pipe()
         let outputPipe = Pipe()
+        let errorPipe = Pipe()
 
-        // Write input into input pipe, then close it.
-        try inputPipe.fileHandleForWriting.write(contentsOf: input)
+        // Write input into file.
+        let url = FileManager.default.temporaryDirectory
+               .appendingPathComponent(UUID().uuidString)
+               .appendingPathExtension("js")
+
+        try input.write(to: url)
+        // Close stdin
         try inputPipe.fileHandleForWriting.close()
 
         // Execute the subprocess.
         let task = Process()
         task.standardOutput = outputPipe
-        task.standardError = outputPipe
-        task.arguments = arguments
+        task.standardError = errorPipe
+        task.arguments = arguments + [url.path]
         task.executableURL = URL(fileURLWithPath: path)
         task.standardInput = inputPipe
         try task.run()
@@ -97,6 +105,9 @@ public class NodeJS {
         }
 
         task.waitUntilExit()
+
+        // Delete the temporary file
+        try FileManager.default.removeItem(at: url)
 
         // Fetch and return the output.
         var output = ""
@@ -130,5 +141,33 @@ public class NodeJS {
         }
         return nil
     }
-}
 
+    /// Tries to find a JS shell that is usable for testing.
+    private static func findJsShellExecutable() -> String? {
+        if let path = ProcessInfo.processInfo.environment["FUZZILLI_TEST_SHELL"] {
+            return path
+        }
+        return nil
+    }
+
+    /// The Result of a JavaScript Execution, the exit code and any associated output.
+    public struct Result {
+        enum Outcome: Equatable {
+            case terminated(status: Int32)
+            case timedOut
+        }
+
+        let outcome: Outcome
+        let output: String
+
+        var isSuccess: Bool {
+            return outcome == .terminated(status: 0)
+        }
+        var isFailure: Bool {
+            return !isSuccess
+        }
+        var isTimeOut: Bool {
+            return outcome == .timedOut
+        }
+    }
+}

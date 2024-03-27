@@ -27,7 +27,7 @@ import Foundation
 ///  - The test passes if there are no errors along the way and if the output of both executions is identical
 class CompilerTests: XCTestCase {
     func testFuzzILCompiler() throws {
-        guard let nodejs = NodeJS() else {
+        guard let nodejs = JavaScriptExecutor(type: .nodejs, withArguments: ["--allow-natives-syntax"]) else {
             throw XCTSkip("Could not find NodeJS executable. See Sources/Fuzzilli/Compiler/Parser/README.md for details on how to set up the parser.")
         }
 

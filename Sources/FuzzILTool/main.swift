@@ -165,7 +165,8 @@ else if args.has("--checkCorpus") {
 
 // Compile a JavaScript program to a FuzzIL program. Requires node.js
 else if args.has("--compile") {
-    guard let nodejs = NodeJS() else {
+    // We require a NodeJS executor here as we need certain node modules.
+    guard let nodejs = JavaScriptExecutor(type: .nodejs) else {
         print("Could not find the NodeJS executable.")
         exit(-1)
     }

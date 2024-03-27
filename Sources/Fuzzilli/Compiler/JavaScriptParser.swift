@@ -20,8 +20,8 @@ import Foundation
 public class JavaScriptParser {
     public typealias AST = Compiler_Protobuf_AST
 
-    /// The nodejs executable wrapper that we are using to run the parse.js script.
-    public let executor: NodeJS
+    /// The JavaScriptExecutor executable wrapper that we are using to run the parse.js script.
+    public let executor: JavaScriptExecutor
 
     // Simple error enum for errors that are displayed to the user.
     public enum ParserError: Error {
@@ -31,8 +31,10 @@ public class JavaScriptParser {
     /// The path to the parse.js script that implements the actual parsing using babel.js.
     private let parserScriptPath: String
 
-    public init?(executor: NodeJS) {
+    public init?(executor: JavaScriptExecutor) {
         self.executor = executor
+
+        // This will only work if the executor is node as we will need to use node modules.
 
         // The Parser/ subdirectory is copied verbatim into the module bundle, see Package.swift.
         self.parserScriptPath = Bundle.module.path(forResource: "parser", ofType: "js", inDirectory: "Parser")!
@@ -63,7 +65,7 @@ public class JavaScriptParser {
         task.standardError = output
         task.arguments = [parserScriptPath] + arguments
         // TODO: move this method into the NodeJS class instead of manually invoking the node.js binary here
-        task.executableURL = URL(fileURLWithPath: executor.nodejsExecutablePath)
+        task.executableURL = URL(fileURLWithPath: executor.executablePath)
         try task.run()
         task.waitUntilExit()
 

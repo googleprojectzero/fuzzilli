@@ -15,16 +15,48 @@
 import XCTest
 @testable import Fuzzilli
 
+func executeAndParseResults(program: Program, fuzzer: Fuzzer, runner: JavaScriptExecutor, failures: inout Int, failureMessages: inout [String: Int]) {
+
+    let jsProgram = fuzzer.lifter.lift(program, withOptions: .includeComments)
+
+    do {
+        let result = try runner.executeScript(jsProgram, withTimeout: 5 * Seconds)
+        if result.isFailure {
+            failures += 1
+
+            for line in result.output.split(separator: "\n") {
+                if line.contains("Error:") {
+                    // Remove anything after a potential 2nd ":", which is usually testcase dependent content, e.g. "SyntaxError: Invalid regular expression: /ep{}[]Z7/: Incomplete quantifier"
+                    let signature = line.split(separator: ":")[0...1].joined(separator: ":")
+                    failureMessages[signature] = (failureMessages[signature] ?? 0) + 1
+                }
+            }
+
+            if LiveTests.VERBOSE {
+                let fuzzilProgram = FuzzILLifter().lift(program)
+                print("Program is invalid:")
+                print(jsProgram)
+                print("Out:")
+                print(result.output)
+                print("FuzzILCode:")
+                print(fuzzilProgram)
+            }
+        }
+    } catch {
+        XCTFail("Could not execute script: \(error)")
+    }
+}
+
 class LiveTests: XCTestCase {
     // Set to true to log failing programs
     static let VERBOSE = false
 
     func testValueGeneration() throws {
-        guard let nodejs = NodeJS() else {
-            throw XCTSkip("Could not find NodeJS executable.")
+        guard let runner = JavaScriptExecutor() else {
+            throw XCTSkip("Could not find js shell executable.")
         }
 
-        let liveTestConfig = Configuration(enableInspection: true)
+        let liveTestConfig = Configuration(logLevel: .warning, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
         // This ensures that we use the available builtins.
@@ -36,40 +68,14 @@ class LiveTests: XCTestCase {
         // TODO: consider running these in parallel.
         for _ in 0..<N {
             let b = fuzzer.makeBuilder()
+
             // Prefix building will run a handful of value generators. We use it instead of directly
             // calling buildValues() since we're mostly interested in emitting valid program prefixes.
             b.buildPrefix()
 
             let program = b.finalize()
-            let jsProgram = fuzzer.lifter.lift(program, withOptions: .includeComments)
 
-            // TODO: consider moving this code into a shared function once other tests need it as well.
-            do {
-                let result = try nodejs.executeScript(jsProgram, withTimeout: 5 * Seconds)
-                if result.isFailure {
-                    failures += 1
-
-                    for line in result.output.split(separator: "\n") {
-                        if line.contains("Error:") {
-                            // Remove anything after a potential 2nd ":", which is usually testcase dependent content, e.g. "SyntaxError: Invalid regular expression: /ep{}[]Z7/: Incomplete quantifier"
-                            let signature = line.split(separator: ":")[0...1].joined(separator: ":")
-                            failureMessages[signature] = (failureMessages[signature] ?? 0) + 1
-                        }
-                    }
-
-                    if LiveTests.VERBOSE {
-                        let fuzzilProgram = FuzzILLifter().lift(program)
-                        print("Program is invalid:")
-                        print(jsProgram)
-                        print("Out:")
-                        print(result.output)
-                        print("FuzzILCode:")
-                        print(fuzzilProgram)
-                    }
-                }
-            } catch {
-                XCTFail("Could not execute script: \(error)")
-            }
+            executeAndParseResults(program: program, fuzzer: fuzzer, runner: runner, failures: &failures, failureMessages: &failureMessages)
         }
 
         let failureRate = Double(failures) / Double(N)
