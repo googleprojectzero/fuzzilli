@@ -1271,6 +1271,34 @@ public class ProgramBuilder {
             assert(!availableGenerators.isEmpty)
         }
 
+        struct BuildLog {
+            enum ActionOutcome {
+                case success
+                case failed
+            }
+
+            struct BuildAction {
+                var action: String
+                var outcome: ActionOutcome?
+            }
+
+            var actions = [BuildAction]()
+
+            mutating func startAction(_ action: String) {
+                // Make sure that we have either completed our last build step or we haven't started any build steps yet.
+                assert(actions.isEmpty || actions[actions.count - 1].outcome != nil)
+                actions.append(BuildAction(action: action))
+            }
+
+            mutating func endAction(withOutcome outcome: ActionOutcome) {
+                assert(!actions.isEmpty && actions[actions.count - 1].outcome == nil)
+                actions[actions.count - 1].outcome = outcome
+            }
+
+        }
+
+        var buildLog = fuzzer.config.logLevel.isAtLeast(.verbose) ? BuildLog() : nil
+
         while remainingBudget > 0 {
             assert(context == origContext, "Code generation or splicing must not change the current context")
 
@@ -1301,10 +1329,12 @@ public class ProgramBuilder {
 
                 // Select a random generator and run it.
                 let generator = availableGenerators.randomElement()
+                buildLog?.startAction(generator.name)
                 run(generator)
 
             case .splicing:
                 let program = fuzzer.corpus.randomElementForSplicing()
+                buildLog?.startAction("splicing")
                 splice(from: program)
 
             default:
@@ -1315,8 +1345,10 @@ public class ProgramBuilder {
             let emittedInstructions = codeSizeAfter - codeSizeBefore
             remainingBudget -= emittedInstructions
             if emittedInstructions > 0 {
+                buildLog?.endAction(withOutcome: .success)
                 consecutiveFailures = 0
             } else {
+                buildLog?.endAction(withOutcome: .failed)
                 consecutiveFailures += 1
                 guard consecutiveFailures < 10 else {
                     // When splicing, this is somewhat expected as we may not find code to splice if we're in a restricted
@@ -1325,6 +1357,12 @@ public class ProgramBuilder {
                     // generate code, not matter what context we are currently in.
                     if state.mode != .splicing {
                         logger.warning("Too many consecutive failures during code building with mode .\(state.mode). Bailing out.")
+                        if let actions = buildLog?.actions {
+                            logger.verbose("Build log:")
+                            for action in actions {
+                                logger.verbose("    \(action.action): \(action.outcome!)")
+                            }
+                        }
                     }
                     return
                 }
