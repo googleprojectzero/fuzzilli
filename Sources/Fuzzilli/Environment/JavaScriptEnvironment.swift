@@ -573,7 +573,7 @@ public extension ILType {
     static let jsFinalizationRegistry = ILType.object(ofGroup: "FinalizationRegistry", withMethods: ["register", "unregister"])
 
     /// Type of a JavaScript ArrayBuffer object.
-    static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["concat", "detached", "resize", "slice", "transfer"])
+    static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["resize", "slice", "transfer"])
 
     /// Type of a JavaScript SharedArrayBuffer object.
     static let jsSharedArrayBuffer = ILType.object(ofGroup: "SharedArrayBuffer", withProperties: ["byteLength", "maxByteLength", "growable"], withMethods: ["grow", "slice"])
@@ -602,7 +602,7 @@ public extension ILType {
     static let jsFunctionConstructor = ILType.constructor([.string] => .jsFunction(Signature.forUnknownFunction))
 
     /// Type of the JavaScript String constructor builtin.
-    static let jsStringConstructor = ILType.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromArrayBuffer", "fromCharCode", "fromCodePoint", "raw"])
+    static let jsStringConstructor = ILType.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
 
     /// Type of the JavaScript Boolean constructor builtin.
     static let jsBooleanConstructor = ILType.functionAndConstructor([.anything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
@@ -614,7 +614,7 @@ public extension ILType {
     static let jsSymbolConstructor = ILType.function([.string] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: JavaScriptEnvironment.wellKnownSymbols, withMethods: ["for", "keyFor"])
 
     /// Type of the JavaScript BigInt constructor builtin.
-    static let jsBigIntConstructor = ILType.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN", "bitLength", "fromArrayBuffer"])
+    static let jsBigIntConstructor = ILType.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
 
     /// Type of the JavaScript RegExp constructor builtin.
     static let jsRegExpConstructor = ILType.jsFunction([.string] => .jsRegExp)
@@ -630,7 +630,7 @@ public extension ILType {
     }
 
     /// Type of the JavaScript ArrayBuffer constructor builtin.
-    static let jsArrayBufferConstructor = ILType.constructor([.integer, .opt(.object())] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView", "fromBigInt", "fromString"])
+    static let jsArrayBufferConstructor = ILType.constructor([.integer, .opt(.object())] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView"])
 
     /// Type of the JavaScript SharedArrayBuffer constructor builtin.
     static let jsSharedArrayBufferConstructor = ILType.constructor([.integer, .opt(.object())] => .jsSharedArrayBuffer) + .object(ofGroup: "SharedArrayBufferConstructor", withProperties: ["prototype"], withMethods: [])
@@ -669,7 +669,7 @@ public extension ILType {
     static let jsFinalizationRegistryConstructor = ILType.constructor([.function()] => .jsFinalizationRegistry)
 
     /// Type of the JavaScript Math constructor builtin.
-    static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods:  ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "idiv", "idivmod", "imod", "imul", "imuldiv", "irem", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
+    static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
 
     /// Type of the JavaScript Date object
     static let jsDate = ILType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "now", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString"])
@@ -1001,8 +1001,6 @@ public extension ObjectGroup {
             "resizable"     : .boolean
         ],
         methods: [
-            "concat"    : [.jsArrayBuffer...] => .jsArrayBuffer,
-            "detached"    : [] => .boolean,
             "resize"    : [.integer] => .undefined,
             "slice"     : [.integer, .opt(.integer)] => .jsArrayBuffer,
             "transfer"  : [] => .jsArrayBuffer,
@@ -1240,9 +1238,7 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "isView" : [.anything] => .boolean,
-            "fromString" : [.string] => .jsArrayBuffer,
-            "fromBigInt" : [.bigint] => .jsArrayBuffer,
+            "isView" : [.anything] => .boolean
         ]
     )
 
@@ -1263,7 +1259,6 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "fromArrayBuffer": [.object(ofGroup: "ArrayBuffer")] => .jsString,
             "fromCharCode"  : [.anything...] => .jsString,
             "fromCodePoint" : [.anything...] => .jsString,
             "raw"           : [.anything...] => .jsString
@@ -1305,9 +1300,7 @@ public extension ObjectGroup {
         methods: [
             "asIntN"  : [.number, .bigint] => .bigint,
             "asUintN" : [.number, .bigint] => .bigint,
-			"bitLength"       : [.bigint] => .integer,
-            "fromArrayBuffer" : [.object(ofGroup: "ArrayBuffer")] => .bigint,
-		]
+        ]
     )
 
     /// Object group modelling the JavaScript Boolean constructor builtin
@@ -1371,12 +1364,7 @@ public extension ObjectGroup {
             "floor"  : [.anything] => .number,
             "fround" : [.anything] => .number,
             "hypot"  : [.anything...] => .number,
-            "idiv"   : [.anything, .anything] => .integer,
-            "idivmod" : [.anything, .anything] => .integer,
-            "imod"   : [.anything, .anything] => .integer,
             "imul"   : [.anything, .anything] => .integer,
-            "imuldiv" : [.anything, .anything, .anything] => .integer,
-            "irem"   : [.anything, .anything] => .integer,
             "log"    : [.anything] => .number,
             "log1p"  : [.anything] => .number,
             "log10"  : [.anything] => .number,
