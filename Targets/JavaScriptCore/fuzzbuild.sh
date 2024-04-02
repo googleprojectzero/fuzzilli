@@ -18,6 +18,10 @@ export WEBKIT_OUTPUTDIR=FuzzBuild
 
 if [ "$(uname)" == "Linux" ]; then
     ./Tools/Scripts/build-jsc --jsc-only --debug --cmakeargs="-DENABLE_STATIC_JSC=ON -DCMAKE_C_COMPILER='/usr/bin/clang' -DCMAKE_CXX_COMPILER='/usr/bin/clang++' -DCMAKE_CXX_FLAGS='-fsanitize-coverage=trace-pc-guard -O3 -lrt'"
+elif [ "$(uname)" == "Darwin" ]; then
+    unset WEBKIT_OUTPUTDIR # remove the outputdir env on macOS for the build without cmake will be in the Source directory(maybe the build-jsc have problem)
+    ./Tools/Scripts/set-webkit-configuration --debug --analyze --coverage --force-optimization-level=O3 
+    ./Tools/Scripts/build-jsc
 else
     echo "Unsupported operating system"
 fi
