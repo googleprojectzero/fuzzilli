@@ -22,7 +22,7 @@
 #endif
 
 #if defined(_WIN32)
-typedef SOCKET socket_t;
+typedef SOCKET socket_fd;
 
 // We need C11 or newer due to the use of `_Generic`.  Windows does not have a
 // signed size type, so we construct the equivalent type by inspecting the type
@@ -36,18 +36,18 @@ typedef __typeof__(_Generic((size_t)0,                                  \
                             unsigned char : (char)0)) ssize_t;
 #endif
 #else
-typedef int socket_t;
+typedef int socket_fd;
 #define INVALID_SOCKET (-1)
 #endif
 
-socket_t socket_listen(const char* address, uint16_t port);
-socket_t socket_accept(socket_t socket);
-socket_t socket_connect(const char* address, uint16_t port);
+socket_fd socket_listen(const char* address, uint16_t port);
+socket_fd socket_accept(socket_fd socket);
+socket_fd socket_connect(const char* address, uint16_t port);
 
-ssize_t socket_send(socket_t socket, const uint8_t* data, size_t length);
-ssize_t socket_recv(socket_t socket, uint8_t* buffer, size_t length);
+ssize_t socket_send(socket_fd socket, const uint8_t* data, size_t length);
+ssize_t socket_recv(socket_fd socket, uint8_t* buffer, size_t length);
 
-int socket_shutdown(socket_t socket);
-int socket_close(socket_t socket);
+int socket_shutdown(socket_fd socket);
+int socket_close(socket_fd socket);
 
 #endif

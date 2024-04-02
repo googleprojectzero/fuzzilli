@@ -44,8 +44,8 @@ static void __attribute__((__destructor__, __used__)) libsocket_fini(void) {
     (void)WSACleanup();
 }
 
-socket_t socket_listen(const char *address, uint16_t port) {
-    socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
+socket_fd socket_listen(const char *address, uint16_t port) {
+    socket_fd sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == INVALID_SOCKET)
         return INVALID_SOCKET;
 
@@ -68,8 +68,8 @@ socket_t socket_listen(const char *address, uint16_t port) {
     return sock;
 }
 
-socket_t socket_accept(socket_t sock) {
-    socket_t client = accept(sock, NULL, NULL);
+socket_fd socket_accept(socket_fd sock) {
+    socket_fd client = accept(sock, NULL, NULL);
     if (client == INVALID_SOCKET)
         return INVALID_SOCKET;
 
@@ -82,7 +82,7 @@ socket_t socket_accept(socket_t sock) {
     return client;
 }
 
-socket_t socket_connect(const char *address, uint16_t port) {
+socket_fd socket_connect(const char *address, uint16_t port) {
     struct addrinfo ai;
     ZeroMemory(&ai, sizeof(ai));
     ai.ai_family = AF_UNSPEC;
@@ -96,7 +96,7 @@ socket_t socket_connect(const char *address, uint16_t port) {
     if (getaddrinfo(address, port_str, &ai, &ai_list))
         return INVALID_SOCKET;
 
-    socket_t sock;
+    socket_fd sock;
     struct addrinfo *ai_cur;
     for (ai_cur = ai_list; ai_cur; ai_cur = ai_cur->ai_next) {
         sock = socket(ai_cur->ai_family, ai_cur->ai_socktype, ai_cur->ai_protocol);
@@ -124,7 +124,7 @@ socket_t socket_connect(const char *address, uint16_t port) {
     return sock;
 }
 
-ssize_t socket_send(socket_t sock, const uint8_t *data, size_t length) {
+ssize_t socket_send(socket_fd sock, const uint8_t *data, size_t length) {
     assert(length <= INT_MAX && "unable to send > INT_MAX bytes");
     ssize_t remaining = length;
     while (remaining) {
@@ -137,16 +137,16 @@ ssize_t socket_send(socket_t sock, const uint8_t *data, size_t length) {
     return length;
 }
 
-ssize_t socket_recv(socket_t sock, uint8_t *buffer, size_t length) {
+ssize_t socket_recv(socket_fd sock, uint8_t *buffer, size_t length) {
     assert(length <= INT_MAX && "unable to receive >INT_MAX bytes");
     return recv(sock, (char *)buffer, length, 0);
 }
 
-int socket_shutdown(socket_t socket) {
+int socket_shutdown(socket_fd socket) {
     return shutdown(socket, SD_BOTH);
 }
 
-int socket_close(socket_t socket) {
+int socket_close(socket_fd socket) {
     return closesocket(socket);
 }
 
