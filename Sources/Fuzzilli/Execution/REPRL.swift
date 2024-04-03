@@ -49,6 +49,14 @@ public class REPRL: ComponentBase, ScriptRunner {
         self.maxExecsBeforeRespawn = maxExecsBeforeRespawn
         super.init(name: "REPRL")
 
+        #if os(macOS)
+            // Make sure that the DYLD_FRAMEWORK_PATH have been correctly set
+            // Only when the name of executable is jsc
+            if executable.suffix(4) == "/jsc" {
+                env.append("DYLD_FRAMEWORK_PATH=" + executable.components(separatedBy: "jsc")[0])
+            }
+        #endif
+
         for (key, value) in processEnvironment {
             env.append(key + "=" + value)
         }

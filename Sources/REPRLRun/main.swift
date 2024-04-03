@@ -37,7 +37,12 @@ if ctx == nil {
 }
 
 let argv = convertToCArray(Array(CommandLine.arguments[1...]))
+#if os(macOS)
+// Set the DYLD_FRAMEWORK_PATH env variable for the shell to run
+let envp = convertToCArray(["DYLD_FRAMEWORK_PATH=\(String(CommandLine.arguments[1].prefix(CommandLine.arguments[1].count-3)))"])
+#else
 let envp = convertToCArray([])
+#endif
 if reprl_initialize_context(ctx, argv, envp, /* capture_stdout: */ 1, /* capture stderr: */ 1) != 0 {
     print("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(ctx)))")
 }
