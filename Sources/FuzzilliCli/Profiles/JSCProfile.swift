@@ -49,8 +49,12 @@ let jscProfile = Profile(
             "--thresholdForFTLOptimizeAfterWarmUp=1000",
             "--thresholdForFTLOptimizeSoon=1000",
             // Enable bounds check elimination validation
-            "--validateBCE=true",
+            //"--validateBCE=true",
             "--reprl"]
+        
+        #if !os(macOS)
+        args.append("--validateBCE=true")
+        #endif
 
         guard randomize else { return args }
 
