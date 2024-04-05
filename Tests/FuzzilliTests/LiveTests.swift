@@ -15,39 +15,12 @@
 import XCTest
 @testable import Fuzzilli
 
-func executeAndParseResults(program: Program, fuzzer: Fuzzer, runner: JavaScriptExecutor, failures: inout Int, failureMessages: inout [String: Int]) {
-
-    let jsProgram = fuzzer.lifter.lift(program, withOptions: .includeComments)
-
-    do {
-        let result = try runner.executeScript(jsProgram, withTimeout: 5 * Seconds)
-        if result.isFailure {
-            failures += 1
-
-            for line in result.output.split(separator: "\n") {
-                if line.contains("Error:") {
-                    // Remove anything after a potential 2nd ":", which is usually testcase dependent content, e.g. "SyntaxError: Invalid regular expression: /ep{}[]Z7/: Incomplete quantifier"
-                    let signature = line.split(separator: ":")[0...1].joined(separator: ":")
-                    failureMessages[signature] = (failureMessages[signature] ?? 0) + 1
-                }
-            }
-
-            if LiveTests.VERBOSE {
-                let fuzzilProgram = FuzzILLifter().lift(program)
-                print("Program is invalid:")
-                print(jsProgram)
-                print("Out:")
-                print(result.output)
-                print("FuzzILCode:")
-                print(fuzzilProgram)
-            }
-        }
-    } catch {
-        XCTFail("Could not execute script: \(error)")
-    }
-}
-
 class LiveTests: XCTestCase {
+    enum ExecutionResult {
+        case failed(failureMessage: String?)
+        case succeeded
+    }
+
     // Set to true to log failing programs
     static let VERBOSE = false
 
@@ -56,37 +29,104 @@ class LiveTests: XCTestCase {
             throw XCTSkip("Could not find js shell executable.")
         }
 
+        let results = try Self.runLiveTest(withRunner: runner) { b in
+            b.buildPrefix()
+        }
+
+        // We expect a maximum of 10% of ValueGeneration to fail
+        checkFailureRate(testResults: results, maxFailureRate: 0.10)
+    }
+
+    // The closure can use the ProgramBuilder to emit a program of a specific
+    // shape that is then executed with the given runner. We then check that
+    // we stay below the maximum failure rate over the given number of iterations.
+    static func runLiveTest(iterations n: Int = 250, withRunner runner: JavaScriptExecutor, body: (inout ProgramBuilder) -> Void) throws -> (failureRate: Double, failureMessages: [String: Int]) {
         let liveTestConfig = Configuration(logLevel: .warning, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
         // This ensures that we use the available builtins.
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
-        let N = 250
         var failures = 0
         var failureMessages = [String: Int]()
 
-        // TODO: consider running these in parallel.
-        for _ in 0..<N {
-            let b = fuzzer.makeBuilder()
+        var programs = [(program: Program, jsProgram: String)]()
+        // Pre-allocate this so that we don't need a lock in the `concurrentPerform`.
+        var results = [ExecutionResult?](repeating: nil, count: n)
 
-            // Prefix building will run a handful of value generators. We use it instead of directly
-            // calling buildValues() since we're mostly interested in emitting valid program prefixes.
-            b.buildPrefix()
+        for _ in 0..<n {
+            var b = fuzzer.makeBuilder()
+
+            body(&b)
 
             let program = b.finalize()
+            let jsProgram = fuzzer.lifter.lift(program)
 
-            executeAndParseResults(program: program, fuzzer: fuzzer, runner: runner, failures: &failures, failureMessages: &failureMessages)
+            programs.append((program, jsProgram))
         }
 
-        let failureRate = Double(failures) / Double(N)
-        let maxFailureRate = 0.25        // TODO lower this (should probably be around 1-5%)
-        if failureRate >= maxFailureRate {
-            var message = "Failure rate for value generators is too high. Should be below \(String(format: "%.2f", maxFailureRate * 100))% but we observed \(String(format: "%.2f", failureRate * 100))%\n"
+        DispatchQueue.concurrentPerform(iterations: n) { i in
+            let result = executeAndParseResults(program: programs[i], runner: runner)
+            results[i] = result
+        }
+
+        for result in results {
+            switch result! {
+            case .failed(let message):
+                failures += 1
+                if let message = message {
+                    failureMessages[message] = (failureMessages[message] ?? 0) + 1
+                }
+            case .succeeded:
+                break
+            }
+        }
+
+        let failureRate = Double(failures) / Double(n)
+
+        return (failureRate, failureMessages)
+    }
+
+    func checkFailureRate(testResults: (failureRate: Double, failureMessages: [String: Int]), maxFailureRate: Double) {
+        if testResults.failureRate >= maxFailureRate {
+            var message = "Failure rate is too high. Should be below \(String(format: "%.2f", maxFailureRate * 100))% but we observed \(String(format: "%.2f", testResults.failureRate * 100))%\n"
             message += "Observed failures:\n"
-            for (signature, count) in failureMessages.sorted(by: { $0.value > $1.value }) {
+            for (signature, count) in testResults.failureMessages.sorted(by: { $0.value > $1.value }) {
                 message += "    \(count)x \(signature)\n"
             }
             XCTFail(message)
         }
+    }
+
+    static func executeAndParseResults(program: (program: Program, jsProgram: String), runner: JavaScriptExecutor) -> ExecutionResult {
+
+        do {
+            let result = try runner.executeScript(program.jsProgram, withTimeout: 5 * Seconds)
+            if result.isFailure {
+                var signature: String? = nil
+
+                for line in result.output.split(separator: "\n") {
+                    if line.contains("Error:") {
+                        // Remove anything after a potential 2nd ":", which is usually testcase dependent content, e.g. "SyntaxError: Invalid regular expression: /ep{}[]Z7/: Incomplete quantifier"
+                        signature = line.split(separator: ":")[0...1].joined(separator: ":")
+                    }
+                }
+
+                if Self.VERBOSE {
+                    let fuzzilProgram = FuzzILLifter().lift(program.program)
+                    print("Program is invalid:")
+                    print(program.jsProgram)
+                    print("Out:")
+                    print(result.output)
+                    print("FuzzILCode:")
+                    print(fuzzilProgram)
+                }
+
+                return .failed(failureMessage: signature)
+            }
+        } catch {
+            XCTFail("Could not execute script: \(error)")
+        }
+
+        return .succeeded
     }
 }
