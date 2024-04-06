@@ -1,4 +1,4 @@
-// Copyright 2019-2022 Google LLC
+// Copyright 2019-2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,9 @@
 
 import Fuzzilli
 
+// swift run FuzzilliCli --profile=xs --jobs=8 --storagePath=./results --resume --inspect=history --timeout=100 $MODDABLE/build/bin/mac/debug/xst
+// swift run -c release FuzzilliCli --profile=xs --jobs=8 --storagePath=./results --resume --timeout=200 $MODDABLE/build/bin/mac/debug/xst
+
 fileprivate let StressXSGC = CodeGenerator("StressXSGC", inputs: .required(.function())) { b, f in
     let arguments = b.randomArguments(forCalling: f)
 
@@ -26,7 +29,7 @@ fileprivate let StressXSGC = CodeGenerator("StressXSGC", inputs: .required(.func
         b.unary(.PostInc, index)
         let result = b.callFunction(gc, withArgs: [index])
         b.buildIf(result) {
-            b.loopBreak();
+            b.loopBreak()
         }
     }
 }
@@ -59,7 +62,7 @@ fileprivate let HardenGenerator = CodeGenerator("HardenGenerator", inputs: .requ
 }
 
 fileprivate let ModuleSourceGenerator = RecursiveCodeGenerator("ModuleSourceGenerator") { b in
-    let moduleSourceConstructor = b.loadBuiltin("ModuleSource");
+    let moduleSourceConstructor = b.loadBuiltin("ModuleSource")
 
     let code = b.buildCodeString() {
         b.buildRecursive()
@@ -69,7 +72,7 @@ fileprivate let ModuleSourceGenerator = RecursiveCodeGenerator("ModuleSourceGene
 }
 
 fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenerator") { b in
-    let compartmentConstructor = b.loadBuiltin("Compartment");
+    let compartmentConstructor = b.loadBuiltin("Compartment")
 
     var endowments = [String: Variable]()        // may be used as endowments argument or globalLexicals
     var moduleMap = [String: Variable]()
@@ -96,10 +99,10 @@ fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenera
         b.buildRecursive(block: 3, of: 4)
         b.doReturn(b.randomVariable())
     }
-    options["resolveHook"] = resolveHook;
-    options["moduleMapHook"] = moduleMapHook;
-    options["loadNowHook"] = loadNowHook;
-    options["loadHook"] = loadHook;
+    options["resolveHook"] = resolveHook
+    options["moduleMapHook"] = moduleMapHook
+    options["loadNowHook"] = loadNowHook
+    options["loadHook"] = loadHook
 
     if probability(0.5) {
         options["globalLexicals"] = endowmentsObject
@@ -121,19 +124,17 @@ fileprivate let UnicodeStringGenerator = CodeGenerator("UnicodeStringGenerator")
     var s = ""
     for _ in 0..<Int.random(in: 1...100) {
         let codePoint = UInt32.random(in: 0..<0x10FFFF)
-        if ((0xD800 <= codePoint) && (codePoint < 0xE000)) {
-            // ignore surrogate pair code points
-        }
-        else {        
+        // ignore surrogate pair code points
+        if !((0xD800 <= codePoint) && (codePoint < 0xE000)) {
             s += String(Unicode.Scalar(codePoint)!)
         }
     }
     b.loadString(s)
 }
 
-let hexValues = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "A", "B", "C", "D", "E", "F"]
-
 fileprivate let HexGenerator = CodeGenerator("HexGenerator") { b in
+    let hexValues = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "A", "B", "C", "D", "E", "F"]
+
     let Uint8Array = b.loadBuiltin("Uint8Array")
 
     withEqualProbability({
@@ -146,8 +147,7 @@ fileprivate let HexGenerator = CodeGenerator("HexGenerator") { b in
 
             if probability(0.5) {
                 b.callMethod("fromHex", on: Uint8Array, withArgs: [hex])
-            }
-            else {
+            } else {
                 let target = b.construct(Uint8Array, withArgs: [b.loadInt(Int64.random(in: 0...0x100))])
                 b.callMethod("setFromHex", on: target, withArgs: [hex])
             }
@@ -163,10 +163,10 @@ fileprivate let HexGenerator = CodeGenerator("HexGenerator") { b in
     )
 }
 
-let base64Alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "/"]
-let base64URLAlphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", "_"]
-
 fileprivate let Base64Generator = CodeGenerator("Base64Generator") { b in
+    let base64Alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "/"]
+    let base64URLAlphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", "_"]
+
     let Uint8Array = b.loadBuiltin("Uint8Array")
 
     withEqualProbability({
@@ -181,22 +181,35 @@ fileprivate let Base64Generator = CodeGenerator("Base64Generator") { b in
             )
 
             var s = ""
-            for _ in 0..<Int.random(in: 1...128) {
+            for _ in 0..<Int.random(in: 1...32) * 4 {
                 s += chooseUniform(from: alphabet)
             }
 
-            if probability(0.5) {
-                while (0 != (s.count % 4)) {
-                    s += "=";
-                }
+            // extend by 0, 1, or 2 bytes
+            switch (Int.random(in: 0...3)) {
+                case 1:
+                    s += base64Alphabet[Int.random(in: 0...63)]
+                    s += base64Alphabet[Int.random(in: 0...63) & 0x30]
+                    s += "=="
+                    break
+
+                case 2:
+                    s += base64Alphabet[Int.random(in: 0...63)]
+                    s += base64Alphabet[Int.random(in: 0...63)]
+                    s += base64Alphabet[Int.random(in: 0...63) & 0x3C]
+                    s += "="
+                    break
+
+                default:
+                    break
             }
+
             let base64 = b.loadString(s)
 
             let optionsObject = b.createObject(with: options)
             if probability(0.5) {
                 b.callMethod("fromBase64", on: Uint8Array, withArgs: [base64, optionsObject])
-            }
-            else {
+            } else {
                 let target = b.construct(Uint8Array, withArgs: [b.loadInt(Int64.random(in: 0...0x100))])
                 b.callMethod("setFromBase64", on: target, withArgs: [base64, optionsObject])
             }
@@ -307,13 +320,7 @@ fileprivate let RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
         b.doReturn(resultVar)
     }
 
-    // b.eval("%SetForceSlowPath(false)");
-    // compile the regexp once
     b.callFunction(f)
-    let resFast = b.callFunction(f)
-    // b.eval("%SetForceSlowPath(true)");
-    let resSlow = b.callFunction(f)
-    // b.eval("%SetForceSlowPath(false)");
 
     b.build(n: 15)
 }
