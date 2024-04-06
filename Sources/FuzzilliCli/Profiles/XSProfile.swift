@@ -14,9 +14,6 @@
 
 import Fuzzilli
 
-// swift run FuzzilliCli --profile=xs --jobs=8 --storagePath=./results --resume --inspect=history --timeout=100 $MODDABLE/build/bin/mac/debug/xst
-// swift run -c release FuzzilliCli --profile=xs --jobs=8 --storagePath=./results --resume --timeout=200 $MODDABLE/build/bin/mac/debug/xst
-
 fileprivate let StressXSGC = CodeGenerator("StressXSGC", inputs: .required(.function())) { b, f in
     let arguments = b.randomArguments(forCalling: f)
 
