@@ -192,6 +192,10 @@ Special thanks to all users of Fuzzilli who have reported bugs found by it!
 * [CVE-2023-29544](https://bugzilla.mozilla.org/show_bug.cgi?id=1818781): Memory corruption during parallel marking
 * [CVE-2023-29549](https://bugzilla.mozilla.org/show_bug.cgi?id=1823042): Objects allocated in incorrect realm
 * [CVE-2024-0744](https://bugzilla.mozilla.org/show_bug.cgi?id=1871089): JIT compiled code could have dereferenced a wild pointer value
+* [CVE-2024-3854](https://bugzilla.mozilla.org/show_bug.cgi?id=1884552): JIT incorrectly optimized switch statements and generated code with out-of-bounds-reads
+* [CVE-2024-3855](https://bugzilla.mozilla.org/show_bug.cgi?id=1885828): JIT incorrectly optimized MSubstr operations, which led to out-of-bounds reads
+* [CVE-2024-3857](https://bugzilla.mozilla.org/show_bug.cgi?id=1886683): JIT generated incorrect code resulting in use-after-free during garbage collection
+* [CVE-2024-3858](https://bugzilla.mozilla.org/show_bug.cgi?id=1888892): Mutating a JavaScript object while GC tracing crashes the jitted code
 
 
 #### Chromium/v8
