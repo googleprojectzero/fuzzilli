@@ -34,8 +34,10 @@ public let ProgramTemplates = [
         }
         b.build(n: 10)
 
-        for (method, signature) in m.getExportedMethods() {
-            b.callMethod(method, on: m.getModuleVariable(), withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        let exports = m.loadExports()
+
+        for (methodName, signature) in m.getExportedMethods() {
+            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
         }
     },
 
@@ -46,8 +48,10 @@ public let ProgramTemplates = [
         }
         b.build(n: 10)
 
-        for (method, signature) in m.getExportedMethods() {
-            b.callMethod(method, on: m.getModuleVariable(), withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        let exports = m.loadExports()
+
+        for (methodName, signature) in m.getExportedMethods() {
+            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
         }
     },
 
@@ -59,8 +63,10 @@ public let ProgramTemplates = [
         }
         b.build(n: 20)
 
-        for (method, signature) in m.getExportedMethods() {
-            b.callMethod(method, on: m.getModuleVariable(), withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        let exports = m.loadExports()
+
+        for (methodName, signature) in m.getExportedMethods() {
+            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
         }
     },
 
@@ -76,8 +82,10 @@ public let ProgramTemplates = [
         }
         b.build(n: 20)
 
-        for (method, signature) in m.getExportedMethods() {
-            b.callMethod(method, on: m.getModuleVariable(), withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        let exports = m.loadExports()
+
+        for (methodName, signature) in m.getExportedMethods() {
+            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
         }
     },
 

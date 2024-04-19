@@ -3070,6 +3070,12 @@ public class ProgramBuilder {
         public var tables: [(ILType, Int, Int?)]
         public var memories: [(Int, Int?)] = []
         private var moduleVariable: Variable?
+        /// This stores the type information for the `exports` property of the Wasm module.
+        private var exportsTypeInfo: ILType? = nil
+
+        public func setExportsTypeInfo(typeInfo: ILType) {
+            self.exportsTypeInfo = typeInfo
+        }
 
         public func getExportedMethod(at index: Int) -> String {
             return methods[index]
@@ -3087,13 +3093,6 @@ public class ProgramBuilder {
             moduleVariable = variable
         }
 
-        public func getModuleVariable() -> Variable {
-            guard moduleVariable != nil else {
-                fatalError("WasmModule variable was not set yet!")
-            }
-            return moduleVariable!
-        }
-
         fileprivate init(in b: ProgramBuilder) {
             assert(b.context.contains(.wasm))
             self.b = b
@@ -3101,6 +3100,14 @@ public class ProgramBuilder {
             self.moduleVariable = nil
             self.tables = []
             self.functions = []
+        }
+
+        @discardableResult
+        public func loadExports() -> Variable {
+            let exports = self.b.getProperty("exports", of: self.getModuleVariable())
+            b.setType(ofVariable: exports, to: self.exportsTypeInfo!)
+
+            return exports
         }
 
         // TODO: distinguish between exported and non-exported functions
@@ -3146,6 +3153,13 @@ public class ProgramBuilder {
         public func addMemory(importing memory: Variable) -> Variable {
             return b.emit(WasmImportMemory(), withInputs: [memory]).output
         }
+
+        private func getModuleVariable() -> Variable {
+            guard moduleVariable != nil else {
+                fatalError("WasmModule variable was not set yet!")
+            }
+            return moduleVariable!
+        }
     }
 
     public func randomWasmGlobal() -> WasmGlobal {
@@ -3167,6 +3181,7 @@ public class ProgramBuilder {
         let module = self.currentWasmModule
         body(module)
         emit(EndWasmModule())
+
         return module
     }
 
@@ -3319,6 +3334,9 @@ public class ProgramBuilder {
             activeWasmModule = WasmModule(in: self)
         case .endWasmModule:
             activeWasmModule!.setModuleVariable(variable: instr.output)
+            // We store the type information that we collect about this module separately in the module.
+            // This allows us to `setType` the correct type when we want to load the `exports` property of the WasmModule
+            activeWasmModule!.setExportsTypeInfo(typeInfo: self.jsTyper.activeWasmModuleDefinition!.getExportsType())
             activeWasmModule = nil
         case .endWasmFunction:
             activeWasmModule!.methods.append("w\(activeWasmModule!.methods.count)")
