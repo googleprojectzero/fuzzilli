@@ -63,12 +63,14 @@ class WasmFoundationTests: XCTestCase {
             }
         }
 
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.getModuleVariable())
+        let exports = module.loadExports()
+
+        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports)
 
         let num = b.loadBigInt(1)
-        let res1 = b.callMethod(module.getExportedMethod(at: 1), on: module.getModuleVariable(), withArgs: [num])
+        let res1 = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [num])
 
-        let res2 = b.callMethod(module.getExportedMethod(at: 2), on: module.getModuleVariable(), withArgs: [res1, num])
+        let res2 = b.callMethod(module.getExportedMethod(at: 2), on: exports, withArgs: [res1, num])
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
@@ -107,19 +109,21 @@ class WasmFoundationTests: XCTestCase {
 
         let nameOfExportedGlobals = [WasmLifter.nameOfGlobal(0), WasmLifter.nameOfGlobal(1), WasmLifter.nameOfGlobal(2)]
 
-        assert(b.type(of: module.getModuleVariable()) == .object(withProperties: nameOfExportedGlobals))
+        let exports = module.loadExports()
+
+        assert(b.type(of: exports) == .object(withProperties: nameOfExportedGlobals))
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
         // Now let's actually see what the re-exported values are and see that the types don't match with what the programbuilder will see.
         // TODO: Is this an issue? will the programbuilder still be queriable for variables? I think so, it is internally consistent within the module....
-        let firstExport = b.getProperty(nameOfExportedGlobals[0], of: module.getModuleVariable())
+        let firstExport = b.getProperty(nameOfExportedGlobals[0], of: exports)
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: b.getProperty("value", of: firstExport))])
 
-        let secondExport = b.getProperty(nameOfExportedGlobals[1], of: module.getModuleVariable())
+        let secondExport = b.getProperty(nameOfExportedGlobals[1], of: exports)
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: b.getProperty("value", of: secondExport))])
 
-        let thirdExport = b.getProperty(nameOfExportedGlobals[2], of: module.getModuleVariable())
+        let thirdExport = b.getProperty(nameOfExportedGlobals[2], of: exports)
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: b.getProperty("value", of: thirdExport))])
 
         let prog = b.finalize()
@@ -178,10 +182,12 @@ class WasmFoundationTests: XCTestCase {
             }
         }
 
+        let exports = module.loadExports()
+
         let val = b.loadBigInt(2)
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.getModuleVariable(), withArgs: [val])
-        let res1 = b.callMethod(module.getExportedMethod(at: 1), on: module.getModuleVariable())
-        let res2 = b.callMethod(module.getExportedMethod(at: 2), on: module.getModuleVariable())
+        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [val])
+        let res1 = b.callMethod(module.getExportedMethod(at: 1), on: exports)
+        let res2 = b.callMethod(module.getExportedMethod(at: 2), on: exports)
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
@@ -217,9 +223,11 @@ class WasmFoundationTests: XCTestCase {
             }
         }
 
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.getModuleVariable())
+        let exports = module.loadExports()
+
+        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports)
         let integer = b.loadBigInt(1)
-        let res1 = b.callMethod(module.getExportedMethod(at: 1), on: module.getModuleVariable(), withArgs: [integer])
+        let res1 = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [integer])
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
@@ -277,14 +285,16 @@ class WasmFoundationTests: XCTestCase {
             }
         }
 
-        let _ = b.callMethod("w1", on: module.getModuleVariable(), withArgs: [b.loadBigInt(10)])
+        let exports = module.loadExports()
 
-        let out = b.callMethod("w0", on: module.getModuleVariable(), withArgs: [b.loadBigInt(10)])
+        let _ = b.callMethod("w1", on: exports, withArgs: [b.loadBigInt(10)])
+
+        let out = b.callMethod("w0", on: exports, withArgs: [b.loadBigInt(10)])
         let _ = b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out)])
 
-        let _ = b.callMethod("w2", on: module.getModuleVariable(), withArgs: [b.loadBigInt(20)])
+        let _ = b.callMethod("w2", on: exports, withArgs: [b.loadBigInt(20)])
 
-        let outLoop = b.callMethod("w3", on: module.getModuleVariable(), withArgs: [])
+        let outLoop = b.callMethod("w3", on: exports, withArgs: [])
         let _ = b.callFunction(outputFunc, withArgs: [outLoop])
 
         let prog = b.finalize()
@@ -325,20 +335,22 @@ class WasmFoundationTests: XCTestCase {
             }
         }
 
-        let _ = b.callMethod(module.getExportedMethod(at: 0), on: module.getModuleVariable())
-        let out = b.callMethod(module.getExportedMethod(at: 1), on: module.getModuleVariable())
+        let exports = module.loadExports()
+
+        let _ = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        let out = b.callMethod(module.getExportedMethod(at: 1), on: exports)
 
         let nameOfExportedGlobals = [WasmLifter.nameOfGlobal(0), WasmLifter.nameOfGlobal(1)]
         let nameOfExportedFunctions = [WasmLifter.nameOfFunction(0), WasmLifter.nameOfFunction(1)]
 
-        assert(b.type(of: module.getModuleVariable()) == .object(withProperties: nameOfExportedGlobals, withMethods: nameOfExportedFunctions))
+        assert(b.type(of: exports) == .object(withProperties: nameOfExportedGlobals, withMethods: nameOfExportedFunctions))
 
 
         let value = b.getProperty("value", of: wasmGlobali64)
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let _ = b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: value)])
 
-        let wg0 = b.getProperty(nameOfExportedGlobals[0], of: module.getModuleVariable())
+        let wg0 = b.getProperty(nameOfExportedGlobals[0], of: exports)
         let valueWg0 = b.getProperty("value", of: wg0)
         let _ = b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: valueWg0)])
 
@@ -383,7 +395,9 @@ class WasmFoundationTests: XCTestCase {
             }
         }
 
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.getModuleVariable())
+        let exports = module.loadExports()
+
+        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports)
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let json = b.createNamedVariable(forBuiltin: "JSON")
@@ -432,7 +446,9 @@ class WasmFoundationTests: XCTestCase {
         // Read the value of the memory.
         let value = b.callMethod("getUint32", on: view, withArgs: [b.loadInt(10), b.loadBool(true)])
 
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.getModuleVariable())
+        let exports = module.loadExports()
+
+        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports)
 
         let valueAfter = b.callMethod("getUint32", on: view, withArgs: [b.loadInt(10), b.loadBool(true)])
 
@@ -497,7 +513,9 @@ class WasmFoundationTests: XCTestCase {
             }
         }
 
-        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: module.getModuleVariable())
+        let exports = module.loadExports()
+
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
 
@@ -535,7 +553,9 @@ class WasmFoundationTests: XCTestCase {
             }
         }
 
-        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: module.getModuleVariable(), withArgs: [b.loadInt(1337)])
+        let exports = module.loadExports()
+
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1337)])
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
 
@@ -567,12 +587,12 @@ class WasmNumericalTests: XCTestCase {
             }
         }
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -680,12 +700,12 @@ class WasmNumericalTests: XCTestCase {
         let rotlFunc = module.getExportedMethod(at: Int(WasmIntegerBinaryOpKind.Rotl.rawValue))
         let rotrFunc = module.getExportedMethod(at: Int(WasmIntegerBinaryOpKind.Rotr.rawValue))
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -769,12 +789,12 @@ class WasmNumericalTests: XCTestCase {
         let maxFunc = module.getExportedMethod(at: Int(WasmFloatBinaryOpKind.Max.rawValue))
         let copysignFunc = module.getExportedMethod(at: Int(WasmFloatBinaryOpKind.Copysign.rawValue))
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -834,12 +854,12 @@ class WasmNumericalTests: XCTestCase {
         let maxFunc = module.getExportedMethod(at: Int(WasmFloatBinaryOpKind.Max.rawValue))
         let copysignFunc = module.getExportedMethod(at: Int(WasmFloatBinaryOpKind.Copysign.rawValue))
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -896,12 +916,12 @@ class WasmNumericalTests: XCTestCase {
         let ctzFunc = module.getExportedMethod(at: Int(WasmIntegerUnaryOpKind.Ctz.rawValue))
         let popcntFunc = module.getExportedMethod(at: Int(WasmIntegerUnaryOpKind.Popcnt.rawValue))
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -944,12 +964,12 @@ class WasmNumericalTests: XCTestCase {
         let ctzFunc = module.getExportedMethod(at: Int(WasmIntegerUnaryOpKind.Ctz.rawValue))
         let popcntFunc = module.getExportedMethod(at: Int(WasmIntegerUnaryOpKind.Popcnt.rawValue))
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -997,12 +1017,12 @@ class WasmNumericalTests: XCTestCase {
         let nearestFunc = module.getExportedMethod(at: Int(WasmFloatUnaryOpKind.Nearest.rawValue))
         let sqrtFunc = module.getExportedMethod(at: Int(WasmFloatUnaryOpKind.Sqrt.rawValue))
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1061,12 +1081,12 @@ class WasmNumericalTests: XCTestCase {
         let nearestFunc = module.getExportedMethod(at: Int(WasmFloatUnaryOpKind.Nearest.rawValue))
         let sqrtFunc = module.getExportedMethod(at: Int(WasmFloatUnaryOpKind.Sqrt.rawValue))
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1137,12 +1157,12 @@ class WasmNumericalTests: XCTestCase {
         // This function is added separately at the end above.
         let eqzFunc = module.getExportedMethod(at: WasmIntegerCompareOpKind.allCases.count)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1230,12 +1250,12 @@ class WasmNumericalTests: XCTestCase {
         // This function is added separately at the end above.
         let eqzFunc = module.getExportedMethod(at: WasmIntegerCompareOpKind.allCases.count)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1312,12 +1332,12 @@ class WasmNumericalTests: XCTestCase {
         let leFunc = module.getExportedMethod(at: Int(WasmFloatCompareOpKind.Le.rawValue))
         let geFunc = module.getExportedMethod(at: Int(WasmFloatCompareOpKind.Ge.rawValue))
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1372,12 +1392,12 @@ class WasmNumericalTests: XCTestCase {
         let leFunc = module.getExportedMethod(at: Int(WasmFloatCompareOpKind.Le.rawValue))
         let geFunc = module.getExportedMethod(at: Int(WasmFloatCompareOpKind.Ge.rawValue))
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1422,12 +1442,12 @@ class WasmNumericalTests: XCTestCase {
             }
         }
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1474,12 +1494,12 @@ class WasmNumericalTests: XCTestCase {
         let truncatef64toi32SignedFunc = module.getExportedMethod(at: 2)
         let truncatef64toi32UnsignedFunc = module.getExportedMethod(at: 3)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1526,12 +1546,12 @@ class WasmNumericalTests: XCTestCase {
         let extendi32SignedFunc = module.getExportedMethod(at: 0)
         let extendi32UnsignedFunc = module.getExportedMethod(at: 1)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1579,12 +1599,12 @@ class WasmNumericalTests: XCTestCase {
         let truncatef64toi64SignedFunc = module.getExportedMethod(at: 2)
         let truncatef64toi64UnsignedFunc = module.getExportedMethod(at: 3)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1641,12 +1661,12 @@ class WasmNumericalTests: XCTestCase {
         let converti64tof32SignedFunc = module.getExportedMethod(at: 2)
         let converti64tof32UnsignedFunc = module.getExportedMethod(at: 3)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1689,12 +1709,12 @@ class WasmNumericalTests: XCTestCase {
         let promotionFunc = module.getExportedMethod(at: 0)
         let demotionFunc = module.getExportedMethod(at: 1)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1740,12 +1760,12 @@ class WasmNumericalTests: XCTestCase {
         let converti64tof64SignedFunc = module.getExportedMethod(at: 2)
         let converti64tof64UnsignedFunc = module.getExportedMethod(at: 3)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1798,12 +1818,12 @@ class WasmNumericalTests: XCTestCase {
         let i32Asf32Func = module.getExportedMethod(at: 2)
         let i64Asf64Func = module.getExportedMethod(at: 3)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1856,12 +1876,12 @@ class WasmNumericalTests: XCTestCase {
         let signExtend16Intoi64Func = module.getExportedMethod(at: 3)
         let signExtend32Intoi64Func = module.getExportedMethod(at: 4)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1919,12 +1939,12 @@ class WasmNumericalTests: XCTestCase {
         let truncateSatf64toi32SignedFunc = module.getExportedMethod(at: 2)
         let truncateSatf64toi32UnsignedFunc = module.getExportedMethod(at: 3)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
@@ -1977,12 +1997,12 @@ class WasmNumericalTests: XCTestCase {
         let truncateSatf64toi64SignedFunc = module.getExportedMethod(at: 2)
         let truncateSatf64toi64UnsignedFunc = module.getExportedMethod(at: 3)
 
-        let modVar = module.getModuleVariable()
+        let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
         let ExpectEq = { function, arguments, output in
-            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }

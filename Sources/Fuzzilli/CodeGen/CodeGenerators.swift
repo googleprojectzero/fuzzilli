@@ -1887,9 +1887,13 @@ public let CodeGenerators: [CodeGenerator] = [
 
     // Wasm Module Generator, this is fairly important as it creates the context necessary to run the Wasm CodeGenerators.
     RecursiveCodeGenerator("WasmModuleGenerator", inContext: .javascript) { b in
-        b.buildWasmModule { m in
+        let m = b.buildWasmModule { m in
             b.buildRecursive()
         }
+
+        // Make the exports available for further use.
+        // This ensures that we can easily find and call exported methods.
+        m.loadExports()
     },
 ]
 

@@ -32,15 +32,19 @@ public struct JSTyper: Analyzer {
     // Tracks the active function definitions and contains the instruction that started the function.
     private var activeFunctionDefinitions = Stack<Instruction>()
 
-    private var activeWasmModuleDefinition: WasmModuleDefinition? = nil
+    public var activeWasmModuleDefinition: WasmModuleDefinition? = nil
 
-    struct WasmModuleDefinition {
+    public struct WasmModuleDefinition {
         var activeFunctionSignature: Signature? = nil
         // The invariant here is that we never reassign these variables, therefore these signatures are "set in stone" and they are always valid for the lifetime of the module.
         // The signatures are immutable and they are never changed.
         // TODO(cffsmith): Add something in `Code.check()` that makes sure that this is actually upheld for programs.
         var methodSignatures: [(variable: Variable, signature: Signature)] = [(Variable, Signature)]()
         var globals: VariableMap<ILType> = VariableMap()
+
+        public func getExportsType() -> ILType {
+            return .object(withProperties: self.globals.enumerated().map { "wg\($0.0)"}, withMethods: self.methodSignatures.enumerated().map { "w\($0.0)" })
+        }
     }
 
     // Stack of active object literals. Each entry contains the current type of the object created by the literal.
@@ -147,12 +151,12 @@ public struct JSTyper: Analyzer {
 
         switch instr.op.opcode {
         case .beginWasmModule(_):
-            guard activeWasmModuleDefinition == nil else {
-                fatalError("Already have a wasm module definition")
-            }
+            assert(activeWasmModuleDefinition == nil, "We already have an active WasmModuleDefinition")
             activeWasmModuleDefinition = WasmModuleDefinition()
         case .endWasmModule(_):
-            setType(of: instr.output, to: .object(withProperties: activeWasmModuleDefinition!.globals.enumerated().map { "wg\($0.0)"}, withMethods: activeWasmModuleDefinition!.methodSignatures.enumerated().map { "w\($0.0)" }))
+            // TODO(cffsmith): use more precise type information.
+            // Type this as an object for now with the `exports` property.
+            setType(of: instr.output, to: .object(withProperties: ["exports"]))
             activeWasmModuleDefinition = nil
         default:
             break

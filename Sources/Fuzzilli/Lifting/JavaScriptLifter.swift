@@ -1378,7 +1378,7 @@ public class JavaScriptLifter: Lifter {
                 // TODO(do we need this?) assert(!wasmLifter.isEmpty)
                 // TODO: support a better diagnostics mode which stores the .wasm binary file alongside the samples.
                 let (bytecode, importRefs) = wasmLifter.lift()
-                w.emit("\(LET) \(V) = (new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([")
+                w.emit("\(LET) \(V) = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([")
                 w.enterNewBlock()
                 let blockSize = 10
                 for chunk in stride(from: 0, to: bytecode.count, by: blockSize).map({ Array(bytecode[$0 ..< Swift.min($0 + blockSize, bytecode.count)])}) {
@@ -1387,7 +1387,7 @@ public class JavaScriptLifter: Lifter {
                 }
                 w.leaveCurrentBlock()
                 if importRefs.isEmpty {
-                    w.emit("])))).exports;")
+                    w.emit("])));")
                 } else {
                     w.emit("])),")
                     w.emit("{ imports: {")
@@ -1396,7 +1396,7 @@ public class JavaScriptLifter: Lifter {
                         w.emit("import_\(idx)_\(importRef): \(w.retrieve(expressionsFor: [importRef])[0]),")
                     }
                     w.leaveCurrentBlock()
-                    w.emit("} })).exports;")
+                    w.emit("} });")
                 }
                 wasmLifter.reset()
 

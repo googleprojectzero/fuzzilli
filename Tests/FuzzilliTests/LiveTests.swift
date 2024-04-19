@@ -84,7 +84,7 @@ class LiveTests: XCTestCase {
                 }
             }
 
-            b.callMethod(m.getExportedMethod(at: 0), on: m.getModuleVariable())
+            b.callMethod(m.getExportedMethod(at: 0), on: m.loadExports())
         }
 
         // TODO(cffsmith): Try to lower this
