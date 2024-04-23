@@ -854,12 +854,19 @@ public class ProgramBuilder {
             weightedTypes.append(t, withWeight: w)
         }
 
-
         // This already does an approximation of the JS signature
         let newSignature = convertJsSignatureToWasmSignature(signature, availableTypes: weightedTypes)
 
+        guard let variables = randomWasmArguments(forWasmSignature: newSignature) else {
+            return nil
+        }
+
+        return (newSignature, variables)
+    }
+
+    public func randomWasmArguments(forWasmSignature signature: Signature) -> [Variable]? {
         // This is a bit useless, as all types here are already .plain types, we basically only want to unwrap the plains here.
-        let parameterTypes = prepareArgumentTypes(forParameters: newSignature.parameters)
+        let parameterTypes = prepareArgumentTypes(forParameters: signature.parameters)
 
         var variables = [Variable]()
         for parameterType in parameterTypes {
@@ -870,7 +877,7 @@ public class ProgramBuilder {
             }
         }
 
-        return (newSignature, variables)
+        return variables
     }
 
     // We simplify the signature by first converting it into types, approximating this signature by getting the corresponding Wasm world types.
@@ -976,6 +983,11 @@ public class ProgramBuilder {
 
     public func type(ofProperty property: String, on v: Variable) -> ILType {
         return jsTyper.inferPropertyType(of: property, on: v)
+    }
+
+    public func wasmSignature(ofFunction function: Variable) -> Signature? {
+        assert(context.inWasm)
+        return jsTyper.wasmSignature(ofFunction: function)
     }
 
     public func methodSignature(of methodName: String, on object: Variable) -> Signature {
@@ -3092,11 +3104,12 @@ public class ProgramBuilder {
         }
 
         // TODO: distinguish between exported and non-exported functions
-        public func addWasmFunction(with signature: Signature, _ body: (WasmFunction, [Variable]) -> ()) {
+        @discardableResult
+        public func addWasmFunction(with signature: Signature, _ body: (WasmFunction, [Variable]) -> ()) -> Variable {
             let functionBuilder = WasmFunction(forBuilder: b, withSignature: signature)
             let instr = b.emit(BeginWasmFunction(signature: signature))
             body(functionBuilder, Array(instr.innerOutputs))
-            b.emit(EndWasmFunction())
+            return b.emit(EndWasmFunction()).output
         }
 
         @discardableResult

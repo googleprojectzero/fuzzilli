@@ -400,7 +400,8 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("WasmReassignmentGenerator", inContext: .wasmFunction, inputs: .oneWasmPrimitive) { b, v in
+    // We cannot store to funcRefs or externRefs if they are not in a slot.
+    CodeGenerator("WasmReassignmentGenerator", inContext: .wasmFunction, inputs: .oneWasmNumericalPrimitive) { b, v in
         let module = b.currentWasmModule
         let function = module.currentWasmFunction
 
@@ -436,24 +437,21 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
-    RecursiveCodeGenerator("WasmIfElseGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, conditionVar in
+    // The variable we reassign to has to be a numerical primitive, e.g. something that looks like a number (can be a global)
+    // We cannot reassign to a .wasmFuncRef or .wasmExternRef though, as they need to be in a local slot.
+    RecursiveCodeGenerator("WasmIfElseGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32, .wasmNumericalPrimitive)) { b, conditionVar, outputVar in
         let function = b.currentWasmModule.currentWasmFunction
 
         let assignProb = probability(0.2)
 
-        let outputVar = b.randomVariable()
-
-        // We get a random output variable that we want to reassign to, we can only do this, if that type is a wasm primitive though. We cannot reassign to e.g. WasmGlobals or WasmTables.
-        let reassignable = b.type(of: outputVar).Is(.wasmPrimitive)
-
         function.wasmBuildIfElse(conditionVar) {
             b.buildRecursive(block: 1, of: 2, n: 4)
-            if let variable = b.randomVariable(ofType: b.type(of: outputVar)), assignProb, reassignable {
+            if let variable = b.randomVariable(ofType: b.type(of: outputVar)) {
                 function.wasmReassign(variable: variable, to: outputVar)
             }
         } elseBody: {
             b.buildRecursive(block: 2, of: 2, n: 4)
-            if let variable = b.randomVariable(ofType: b.type(of: outputVar)), assignProb, reassignable {
+            if let variable = b.randomVariable(ofType: b.type(of: outputVar)) {
                 function.wasmReassign(variable: variable, to: outputVar)
             }
         }

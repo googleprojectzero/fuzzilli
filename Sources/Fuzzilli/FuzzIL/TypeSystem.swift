@@ -198,6 +198,8 @@ public struct ILType: Hashable {
     // The union of all primitive wasm types
     public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef
 
+    public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
+
 
     //
     // Type testing
