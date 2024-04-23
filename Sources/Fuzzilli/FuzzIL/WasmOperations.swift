@@ -1054,7 +1054,7 @@ final class BeginWasmFunction: WasmOperation {
 final class EndWasmFunction: WasmOperation {
     override var opcode: Opcode { .endWasmFunction(self) }
     init() {
-        super.init(attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
+        super.init(outputType: .wasmFuncRef, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
     }
 
 }

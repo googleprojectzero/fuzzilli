@@ -780,7 +780,7 @@ public class FuzzILLifter: Lifter {
 
         case .endWasmFunction:
             w.decreaseIndentionLevel()
-            w.emit("EndWasmFunction")
+            w.emit("\(output()) <- EndWasmFunction")
 
         case .wasmDefineGlobal(let op):
             w.emit("\(output()) <- WasmDefineGlobal \(op.wasmGlobal)")

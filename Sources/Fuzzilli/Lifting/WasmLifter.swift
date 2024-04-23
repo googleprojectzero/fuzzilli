@@ -244,6 +244,7 @@ public class WasmLifter {
     private class FunctionInfo {
         var signature: Signature
         var code: Data
+        var outputVariable: Variable? = nil
         // Locals that we spill to, this maps from the ordering to the stack.
         var localsInfo: [(Variable, ILType)]
         var variableAnalyzer = VariableAnalyzer()
@@ -818,6 +819,7 @@ public class WasmLifter {
         case .endWasmFunction(_):
             // TODO: Make sure that the stack is matching the output of the function signature, at least depth wise
             // Make sure that we exit the current function, this is necessary such that the variableAnalyzer can be reset too, it is local to a function definition and we should only pass .wasmFunction context instructions to the variableAnalyzer.
+            currentFunction!.outputVariable = instr.output
             currentFunction = nil
             break
         case .wasmDefineGlobal(_):
@@ -868,6 +870,7 @@ public class WasmLifter {
             if typer.type(of: input).Is(.label) {
                 continue
             }
+
             // If we have a stackslot, i.e. it is a local, or argument, then add the stack load.
             if let stackSlot = currentFunction!.getStackSlot(for: input), stackSlot < currentFunction!.signature.parameters.count {
                 // Emit stack load here now.

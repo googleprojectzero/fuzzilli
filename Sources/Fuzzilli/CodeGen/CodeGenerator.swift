@@ -126,6 +126,10 @@ public class CodeGenerator: Contributor {
             return Inputs(types: [.wasmPrimitive], mode: .strict)
         }
 
+        public static var oneWasmNumericalPrimitive: Inputs {
+            return Inputs(types: [.wasmNumericalPrimitive], mode: .strict)
+        }
+
         // Two inputs of type .anything
         public static var two: Inputs {
             return Inputs(types: [.anything, .anything], mode: .loose)
