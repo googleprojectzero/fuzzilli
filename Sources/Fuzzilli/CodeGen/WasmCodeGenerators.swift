@@ -370,10 +370,18 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("WasmFunctionGenerator", inContext: .wasm) { b in
         let module = b.currentWasmModule
 
-        // TODO: add other types here.
+        // TODO: generalize this and move to b.randomWasmParameters()
         let returnType: ILType = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
-
-        let signature = [] => returnType
+        let numParams = Int.random(in: 0...10)
+        var params = ParameterList()
+        for _ in 0..<numParams {
+            // TODO currently we don't emit .wasmi64 here as we don't yet have
+            // the correct signatures on the JavaScript side (i.e. for the
+            // exported function) and would therefore generate a lot of "Cannot
+            // convert XYZ to a BigInt" exceptions.
+            params.append(chooseUniform(from: [.wasmi32, .wasmf32, .wasmf64]))
+        }
+        let signature = params => returnType
 
         module.addWasmFunction(with: signature) { _, _ in
             b.buildPrefix()
