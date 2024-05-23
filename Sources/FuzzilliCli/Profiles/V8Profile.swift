@@ -584,6 +584,8 @@ let v8Profile = Profile(
         ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldCrash),
         // Wild-write
         ("fuzzilli('FUZZILLI_CRASH', 3)", .shouldCrash),
+        // Check that DEBUG is defined.
+        ("fuzzilli('FUZZILLI_CRASH', 8)", .shouldCrash),
 
         // TODO we could try to check that OOM crashes are ignored here ( with.shouldNotCrash).
     ],

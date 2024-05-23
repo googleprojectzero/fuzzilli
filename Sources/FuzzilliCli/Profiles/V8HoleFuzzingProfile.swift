@@ -94,6 +94,9 @@ let v8HoleFuzzingProfile = Profile(
         ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
         ("fuzzilli('FUZZILLI_CRASH', 7)", .shouldCrash),
 
+        // Check that DEBUG is not defined.
+        ("fuzzilli('FUZZILLI_CRASH', 8)", .shouldNotCrash),
+
         // DCHECK and CHECK failures should be ignored.
         ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldNotCrash),
         ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldNotCrash),
