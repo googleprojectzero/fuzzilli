@@ -526,6 +526,9 @@ let v8Profile = Profile(
             if probability(0.5) { args.append("--lazy-new-space-shrinking") }
             if probability(0.5) { args.append("--const-tracking-let") }
             if probability(0.5) { args.append("--stress-wasm-memory-moving") }
+            if probability(0.5) { args.append("--stress-background-compile") }
+            if probability(0.5) { args.append("--parallel-compile-tasks-for-lazy") }
+            if probability(0.5) { args.append("--parallel-compile-tasks-for-eager-toplevel") }
 
             args.append(probability(0.5) ? "--always-sparkplug" : "--no-always-sparkplug")
             args.append(probability(0.5) ? "--always-osr" : "--no-always-osr")
