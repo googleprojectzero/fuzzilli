@@ -140,7 +140,7 @@ Further resources about this fuzzer:
 
 ## Bug Showcase
 
-The following is a list of some of the bugs found with the help of Fuzzilli. Only bugs with security impact that were present in at least a Beta release of the affected software should be included in this list. Since Fuzzilli is often used for continuous fuzz testing during development, many issues found by it are not included in this list as they are typically found prior to the vulnerable code reaching a Beta release. A list of all issues recently found by Fuzzilli in V8 can, however, be found [here](https://bugs.chromium.org/p/chromium/issues/list?q=label%3Afuzzilli&can=1).
+The following is a list of some of the bugs found with the help of Fuzzilli. Only bugs with security impact that were present in at least a Beta release of the affected software should be included in this list. Since Fuzzilli is often used for continuous fuzz testing during development, many issues found by it are not included in this list as they are typically found prior to the vulnerable code reaching a Beta release. A list of all issues recently found by Fuzzilli in V8 can, however, be found [here](https://issues.chromium.org/issues?q=hotlistid:5433121%20status:(fixed%20%7C%20verified)).
 
 Special thanks to all users of Fuzzilli who have reported bugs found by it!
 
