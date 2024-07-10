@@ -591,7 +591,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -704,7 +704,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -793,7 +793,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -858,7 +858,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -920,7 +920,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -968,7 +968,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1021,7 +1021,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1085,7 +1085,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1161,7 +1161,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1254,7 +1254,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1336,7 +1336,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1396,7 +1396,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1446,7 +1446,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1498,7 +1498,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1550,7 +1550,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1603,7 +1603,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1665,7 +1665,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1713,7 +1713,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1764,7 +1764,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1822,7 +1822,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1880,7 +1880,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String)in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -1943,7 +1943,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
@@ -2001,7 +2001,7 @@ class WasmNumericalTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         var outputString = ""
 
-        let ExpectEq = { function, arguments, output in
+        let ExpectEq = { (function: String, arguments: [Variable], output: String) in
             let result = b.callMethod(function, on: exports, withArgs: arguments)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
