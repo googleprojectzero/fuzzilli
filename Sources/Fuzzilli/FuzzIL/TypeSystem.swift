@@ -874,12 +874,15 @@ extension ParameterList {
         var sawOptionals = false
         for (i, p) in self.enumerated() {
             switch p {
-            case .rest(_):
+            case .rest(let t):
+                assert(!t.Is(.nothing))
                 // Only the last parameter can be a rest parameter.
                 guard i == count - 1 else { return false }
-            case .opt(_):
+            case .opt(let t):
+                assert(!t.Is(.nothing))
                 sawOptionals = true
-            case .plain(_):
+            case .plain(let t):
+                assert(!t.Is(.nothing))
                 // Optional parameters must not be followed by regular parameters.
                 guard !sawOptionals else { return false }
             }
@@ -921,6 +924,7 @@ public struct Signature: Hashable, CustomStringConvertible {
         assert(parameters.areValid())
         self.parameters = parameters
         self.outputType = returnType
+        assert(!outputType.Is(.nothing))
     }
 
     // Constructs a function with N parameters of any type and returning .anything.

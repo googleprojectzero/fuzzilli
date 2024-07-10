@@ -1795,6 +1795,37 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("LoadNewTargetGenerator", inContext: .subroutine) { b in
         assert(b.context.contains(.subroutine))
         b.loadNewTarget()
+    },
+
+    // TODO: think about merging this with the regular ConstructorCallGenerator.
+    CodeGenerator("ApiConstructorCallGenerator", inputs: .required(.constructor())) { b, c in
+        let signature = b.type(of: c).signature ?? Signature.forUnknownFunction
+
+        b.buildTryCatchFinally(tryBody: {
+            let args = b.findOrGenerateArguments(forSignature: signature)
+            b.construct(c, withArgs: args)
+        }, catchBody: { _ in })
+    },
+
+    // TODO: think about merging this with the regular MethodCallGenerator.
+    CodeGenerator("ApiMethodCallGenerator", inputs: .required(.object())) { b, o in
+        let methodName = b.type(of: o).randomMethod() ?? b.randomMethodName()
+
+        let signature = b.methodSignature(of: methodName, on: o)
+
+        b.buildTryCatchFinally(tryBody: {
+            let args = b.findOrGenerateArguments(forSignature: signature)
+            b.callMethod(methodName, on: o, withArgs: args)
+        }, catchBody: { _ in })
+    },
+
+    CodeGenerator("ApiFunctionCallGenerator", inputs: .required(.function())) { b, f in
+        let signature = b.type(of: f).signature ?? Signature.forUnknownFunction
+
+        b.buildTryCatchFinally(tryBody: {
+            let args = b.findOrGenerateArguments(forSignature: signature)
+            b.callFunction(f, withArgs: args)
+        }, catchBody: { _ in })
     }
 ]
 

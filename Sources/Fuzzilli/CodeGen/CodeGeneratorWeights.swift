@@ -188,4 +188,7 @@ public let codeGeneratorWeights = [
     "IteratorGenerator":                        5,
     "ConstructWithDifferentNewTargetGenerator": 5,
     "ObjectHierarchyGenerator":                 10,
+    "ApiConstructorCallGenerator":              15,
+    "ApiMethodCallGenerator":                   15,
+    "ApiFunctionCallGenerator":                 15,
 ]
