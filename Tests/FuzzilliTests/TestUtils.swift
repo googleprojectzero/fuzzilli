@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import Foundation
+import XCTest
 @testable import Fuzzilli
 
 extension Program: Equatable {
@@ -28,4 +29,11 @@ extension Program: Equatable {
 // Convenience variable constructor
 func v(_ n: Int) -> Variable {
     return Variable(number: n)
+}
+
+func GetJavaScriptExecutorOrSkipTest() throws -> JavaScriptExecutor {
+    guard let runner = JavaScriptExecutor() else {
+        throw XCTSkip("Could not find js shell executable. Install Node.js (or if you want to use a different shell, modify the FUZZILLI_TEST_SHELL variable).")
+    }
+    return runner
 }
