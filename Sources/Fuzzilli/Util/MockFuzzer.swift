@@ -73,6 +73,14 @@ class MockEnvironment: ComponentBase, Environment {
         return .anything
     }
 
+    func hasBuiltin(_ name: String) -> Bool {
+        return builtinTypes.keys.contains(name)
+    }
+
+    func hasGroup(_ name: String) -> Bool {
+        return propertiesByGroup.keys.contains(name)
+    }
+
     func type(ofBuiltin builtinName: String) -> ILType {
         return builtinTypes[builtinName] ?? .anything
     }

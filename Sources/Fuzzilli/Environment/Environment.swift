@@ -82,6 +82,14 @@ public protocol Environment: Component {
     var promiseType: ILType { get }
 
 
+    /// Returns true if the given type is a builtin, e.g. can be constructed
+    /// This is useful for types that are dictionary config objects, as we will have an object group for them, i.e. type(ofProperty, on) will work but type(ofBuiltin) won't
+    func hasBuiltin(_ name: String) -> Bool
+
+    /// Returns true if we have an object group associated with this name
+    /// config objects have a group but no constructor, i.e. loadable builtin associated
+    func hasGroup(_ name: String) -> Bool
+
     /// Retuns the type of the builtin with the given name.
     func type(ofBuiltin builtinName: String) -> ILType
 

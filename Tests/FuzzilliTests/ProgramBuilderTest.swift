@@ -2396,4 +2396,53 @@ class ProgramBuilderTests: XCTestCase {
         let result = b.finalize()
         XCTAssert(result.code.contains(where: { $0.op is BeginSwitchCase }))
     }
+
+    func testArgumentGenerationForKnownSignature() {
+        let env = JavaScriptEnvironment()
+        let fuzzer = makeMockFuzzer(environment: env)
+        let b = fuzzer.makeBuilder()
+
+        b.loadInt(42)
+
+        let constructor = b.loadBuiltin("DataView")
+        let signature = env.type(ofBuiltin: "DataView").signature!
+
+        let variables = b.findOrGenerateArguments(forSignature: signature)
+
+        XCTAssertTrue(b.type(of: variables[0]).Is(.object(ofGroup: "ArrayBuffer")))
+        if (variables.count > 1) {
+            XCTAssertTrue(b.type(of: variables[1]).Is(.number))
+        }
+
+        b.construct(constructor, withArgs: variables)
+    }
+
+    func testArgumentGenerationForKnownSignatureWithLimit() {
+        let env = JavaScriptEnvironment()
+        let fuzzer = makeMockFuzzer(environment: env)
+        let b = fuzzer.makeBuilder()
+
+        b.loadInt(42)
+
+        let typeA: ILType = .object(withProperties: ["a", "b"])
+        let typeB: ILType = .object(withProperties: ["c", "d"])
+
+        let signature: Signature = [.plain(typeA), .plain(typeB)] => .undefined
+
+        var args = b.findOrGenerateArguments(forSignature: signature)
+        XCTAssertEqual(args.count, 2)
+
+        // check that args have the right types
+        XCTAssert(b.type(of: args[0]).Is(typeA))
+        XCTAssert(b.type(of: args[1]).Is(typeB))
+
+        let previous = b.numberOfVisibleVariables
+
+        args = b.findOrGenerateArguments(forSignature: signature, maxNumberOfVariablesToGenerate: 1)
+        XCTAssertEqual(args.count, 2)
+
+        // Ensure first object has the right type, and that we only generated one more variable
+        XCTAssert(b.type(of: args[0]).Is(typeA))
+        XCTAssertEqual(b.numberOfVisibleVariables, previous + 1)
+    }
 }

@@ -427,6 +427,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         assert(builtinMethods.contains("valueOf"))
         assert(builtinMethods.contains("toString"))
 
+        checkConstructorAvailability()
+
         // Log detailed information about the environment here so users are aware of it and can modify things if they like.
         logger.info("Initialized static JS environment model")
         logger.info("Have \(builtins.count) available builtins: \(builtins)")
@@ -435,6 +437,38 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         logger.info("Have \(builtinMethods.count) builtin method names: \(builtinMethods)")
         logger.info("Have \(customProperties.count) custom property names: \(customProperties)")
         logger.info("Have \(customMethods.count) custom method names: \(customMethods)")
+    }
+
+    func checkConstructorAvailability() {
+        logger.info("Checking constructor availability...")
+        // These constructors return types that are well-known instead of .object types.
+        let knownExceptions = [
+            "Boolean",        // returns .boolean
+            "Number",         // returns .number
+            "Object",         // returns plain .object
+            "Proxy",          // returns .anything
+        ]
+        for builtin in builtins where type(ofBuiltin: builtin).Is(.constructor()) {
+            if knownExceptions.contains(builtin) { continue }
+            if !hasGroup(builtin) { logger.warning("Missing group info for constructable \(builtin)")}
+            if type(ofBuiltin: builtin).signature == nil {
+                logger.warning("Missing signature for builtin \(builtin)")
+            } else {
+                if !type(ofBuiltin: builtin).signature!.outputType.Is(.object(ofGroup: builtin)) {
+                    logger.warning("Signature for builtin \(builtin) is mismatching")
+                }
+            }
+
+        }
+        logger.info("Done checking constructor availability...")
+    }
+
+    public func hasBuiltin(_ name: String) -> Bool {
+        return self.builtinTypes.keys.contains(name)
+    }
+
+    public func hasGroup(_ name: String) -> Bool {
+        return self.groups.keys.contains(name)
     }
 
     public func registerObjectGroup(_ group: ObjectGroup) {

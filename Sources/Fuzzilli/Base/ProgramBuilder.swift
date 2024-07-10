@@ -86,6 +86,14 @@ public class ProgramBuilder {
     /// Type inference for JavaScript variables.
     private var jsTyper: JSTyper
 
+    /// Argument generation budget.
+    /// This budget is used in `findOrGenerateArguments(forSignature)` and tracks the upper limit of variables that that function should emit.
+    /// If that upper limit is reached the function will stop generating new variables and use existing ones instead.
+    /// If this value is set to nil, there is no argument generation happening, every argument generation should enter the recursive function (findOrGenerateArgumentsInternal) through the public non-internal one.
+    private var argumentGenerationVariableBudget: Int? = nil
+    /// This is the top most signature that was requested when `findOrGeneratorArguments(forSignature)` was called, this is helpful for debugging.
+    private var argumentGenerationSignature: Signature? = nil
+
     /// Stack of active object literals.
     ///
     /// This needs to be a stack as object literals can be nested, for example if an object
@@ -464,6 +472,135 @@ public class ProgramBuilder {
         return .parameters(params)
     }
 
+    public func findOrGenerateArguments(forSignature signature: Signature, maxNumberOfVariablesToGenerate: Int = 100) -> [Variable] {
+        assert(context.contains(.javascript))
+
+        argumentGenerationVariableBudget = numVariables + maxNumberOfVariablesToGenerate
+        argumentGenerationSignature = signature
+
+        defer {
+            argumentGenerationVariableBudget = nil
+            argumentGenerationSignature = nil
+        }
+
+        return findOrGenerateArgumentsInternal(forSignature: signature)
+    }
+
+    private func findOrGenerateArgumentsInternal(forSignature: Signature) -> [Variable] {
+
+        var args: [Variable] = []
+
+        // This should be called whenever we have a type that has known information about its properties but we don't have a constructor for it.
+        // This can be the case for configuration objects, e.g. objects that can be passed into DOMAPIs.
+        func createObjectWithProperties(_ type: ILType) -> Variable  {
+            assert(type.MayBe(.object()))
+
+            var properties: [String: Variable] = [:]
+
+            for propertyName in type.properties {
+                // If we have an object that has a group, we should get a type here, otherwise if we don't have a group, we will get .anything.
+                let propType = fuzzer.environment.type(ofProperty: propertyName, on: type)
+                // Here we can enter generateType again, and end up here again if we need config objects for config objects, therefore we pass the recursion counter back into generateType, which will bail out eventually if there is a cycle.
+                properties[propertyName] = generateType(propType)
+            }
+
+            return createObject(with: properties)
+        }
+
+        func createObjectWithGroup(type: ILType) -> Variable {
+            let group = type.group!
+
+            // We can be sure that we have such a builtin with a signature because the Environment checks this during initialization.
+            let signature = fuzzer.environment.type(ofBuiltin: group).signature!
+            let constructor = loadBuiltin(group)
+            let arguments = findOrGenerateArgumentsInternal(forSignature: signature)
+            let constructed = construct(constructor, withArgs: arguments)
+
+            return constructed
+        }
+
+        func generateType(_ type: ILType) -> Variable {
+            if probability(0.5) {
+                if let existingVariable = randomVariable(ofType: type) {
+                    return existingVariable
+                }
+            }
+
+            if numVariables > argumentGenerationVariableBudget! {
+                logger.warning("Reached variable generation limit in generateType for Signature: \(argumentGenerationSignature!).")
+                return randomVariable(forUseAs: type)
+            }
+
+            // We only need to check against all base types from TypeSystem.swift, this works because we use .MayBe
+            // TODO: Not sure how we should handle merge types, e.g. .string + .object(...).
+            let typeGenerators: [(ILType, () -> Variable)] = [
+                (.integer, { return self.loadInt(self.randomInt()) }),
+                (.string, { return self.loadString(self.randomString()) }),
+                (.boolean, { return self.loadBool(probability(0.5)) }),
+                (.bigint, { return self.loadBigInt(self.randomInt()) }),
+                (.float, { return self.loadFloat(self.randomFloat()) }),
+                (.regexp, {
+                     let (pattern, flags) = self.randomRegExpPatternAndFlags()
+                     return self.loadRegExp(pattern, flags)
+                 }),
+                (.iterable, { return self.createArray(with: self.randomVariables(upTo: 5)) }),
+                (.function(), {
+                     // TODO: We could technically generate a full function here but then we would enter the full code generation logic which could do anything.
+                     // Because we want to avoid this, we will just pick anything that can be a function.
+                     return self.randomVariable(forUseAs: .function())
+                 }),
+                (.undefined, { return self.loadUndefined() }),
+                (.constructor(), {
+                     // TODO: We have the same issue as above for functions.
+                     return self.randomVariable(forUseAs: .constructor())
+                 }),
+                (.object(), {
+                     // If we have a group on this object and we have a builtin, that means we can construct it with new.
+                     if let group = type.group, self.fuzzer.environment.hasBuiltin(group) && self.fuzzer.environment.type(ofBuiltin: group).Is(.constructor()) {
+                         return createObjectWithGroup(type: type)
+                     } else {
+                         // Otherwise this is one of the following:
+                         // 1. an object with more type information, i.e. it has a group, but no associated builtin, e.g. we cannot construct it with new.
+                         // 2. an object without a group, but it has some required fields.
+                         // In either case, we try to construct such an object.
+                         return createObjectWithProperties(type)
+                     }
+                 })
+            ]
+
+            // Make sure that we walk over these tests and their generators randomly.
+            // The requested type could be a Union of other types and as such we want to randomly generate one of them, therefore we also use the MayBe test below.
+            for (t, generate) in typeGenerators.shuffled() {
+                if type.MayBe(t) {
+                    let variable = generate()
+                    return variable
+                }
+            }
+
+            logger.warning("Type \(type) was not handled, returning random variable.")
+            return randomVariable(forUseAs: type)
+        }
+
+        outer: for parameter in forSignature.parameters {
+            switch parameter {
+            case .plain(let t):
+                args.append(generateType(t))
+            case .opt(let t):
+                if probability(0.5) {
+                    args.append(generateType(t))
+                } else {
+                    // We decided to not provide an optional parameter, so we can stop here.
+                    break outer
+                }
+            case .rest(let t):
+                for _ in 0...Int.random(in: 1...3) {
+                    args.append(generateType(t))
+                }
+            }
+        }
+
+        return args
+    }
 
     ///
     /// Access to variables.
