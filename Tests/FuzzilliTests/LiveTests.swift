@@ -25,9 +25,7 @@ class LiveTests: XCTestCase {
     static let VERBOSE = false
 
     func testValueGeneration() throws {
-        guard let runner = JavaScriptExecutor() else {
-            throw XCTSkip("Could not find js shell executable.")
-        }
+        let runner = try GetJavaScriptExecutorOrSkipTest()
 
         let results = try Self.runLiveTest(withRunner: runner) { b in
             b.buildPrefix()
@@ -38,9 +36,7 @@ class LiveTests: XCTestCase {
     }
 
     func testWasmCodeGenerationAndCompilation() throws {
-        guard let runner = JavaScriptExecutor() else {
-            throw XCTSkip("Could not find js shell executable.")
-        }
+        let runner =  try GetJavaScriptExecutorOrSkipTest()
 
         let results = try Self.runLiveTest(withRunner: runner) { b in
             // Make sure that we have at least one JavaScript function that we can call.
@@ -64,9 +60,7 @@ class LiveTests: XCTestCase {
     }
 
     func testWasmCodeGenerationAndCompilationAndExecution() throws {
-        guard let runner = JavaScriptExecutor() else {
-            throw XCTSkip("Could not find js shell executable.")
-        }
+        let runner =  try GetJavaScriptExecutorOrSkipTest()
 
         let results = try Self.runLiveTest(withRunner: runner) { b in
             // Make sure that we have at least one JavaScript function that we can call.

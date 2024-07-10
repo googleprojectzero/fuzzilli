@@ -36,8 +36,8 @@ class WasmSignatureConversionTests: XCTestCase {
 }
 
 class WasmFoundationTests: XCTestCase {
-    func testFunction() {
-        let runner = JavaScriptExecutor()!
+    func testFunction() throws {
+    let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -84,8 +84,8 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1338\n42\n41\n")
     }
 
-    func testExportNaming() {
-        let runner = JavaScriptExecutor()!
+    func testExportNaming() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -132,8 +132,8 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "42\n4141\n1337\n")
     }
 
-    func testImports() {
-        let runner = JavaScriptExecutor()!
+    func testImports() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -201,8 +201,8 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "3\n-1335\n-1335.0999755859375\n")
     }
 
-    func testBasics() {
-        let runner = JavaScriptExecutor()!
+    func testBasics() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -240,8 +240,8 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "42\n42\n")
     }
 
-    func testReassigns() {
-        let runner = JavaScriptExecutor()!
+    func testReassigns() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -303,8 +303,8 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1338\n0\n")
     }
 
-    func testGlobals() {
-        let runner = JavaScriptExecutor()!
+    func testGlobals() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -362,8 +362,8 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1338\n4242\n6.61e-321\n")
     }
 
-    func testTables() {
-        let runner = JavaScriptExecutor()!
+    func testTables() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -409,8 +409,8 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "{\"a\":41,\"b\":42}\n")
     }
 
-    func testMemories() {
-        let runner = JavaScriptExecutor()!
+    func testMemories() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -463,8 +463,8 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1337\n0\n1337\n")
     }
 
-    func testLoops() {
-        let runner = JavaScriptExecutor()!
+    func testLoops() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -525,8 +525,8 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1368\n")
     }
 
-    func testIfs() {
-        let runner = JavaScriptExecutor()!
+    func testIfs() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -568,8 +568,8 @@ class WasmFoundationTests: XCTestCase {
 
 class WasmNumericalTests: XCTestCase {
     // Integer BinaryOperations
-    func testi64BinaryOperations() {
-        let runner = JavaScriptExecutor()!
+    func testi64BinaryOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -665,8 +665,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testi32BinaryOperations() {
-        let runner = JavaScriptExecutor()!
+    func testi32BinaryOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -762,8 +762,8 @@ class WasmNumericalTests: XCTestCase {
     }
 
     // Float Binary Operations
-    func testf64BinaryOperations() {
-        let runner = JavaScriptExecutor()!
+    func testf64BinaryOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -827,8 +827,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testf32BinaryOperations() {
-        let runner = JavaScriptExecutor()!
+    func testf32BinaryOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -893,8 +893,8 @@ class WasmNumericalTests: XCTestCase {
     }
 
     // Integer Unary Operations
-    func testi64UnaryOperations() {
-        let runner = JavaScriptExecutor()!
+    func testi64UnaryOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -941,8 +941,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testi32UnaryOperations() {
-        let runner = JavaScriptExecutor()!
+    func testi32UnaryOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -990,8 +990,8 @@ class WasmNumericalTests: XCTestCase {
     }
 
     // Float Unary Operations
-    func testf64UnaryOperations() {
-        let runner = JavaScriptExecutor()!
+    func testf64UnaryOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1054,8 +1054,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testf32UnaryOperations() {
-        let runner = JavaScriptExecutor()!
+    func testf32UnaryOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1119,8 +1119,8 @@ class WasmNumericalTests: XCTestCase {
     }
 
     // Integer Comparison Operations
-    func testi64ComparisonOperations() {
-        let runner = JavaScriptExecutor()!
+    func testi64ComparisonOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1212,8 +1212,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testi32ComparisonOperations() {
-        let runner = JavaScriptExecutor()!
+    func testi32ComparisonOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1306,8 +1306,8 @@ class WasmNumericalTests: XCTestCase {
     }
 
     // Float Comparison Operations
-    func testf64ComparisonOperations() {
-        let runner = JavaScriptExecutor()!
+    func testf64ComparisonOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1366,8 +1366,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testf32ComparisonOperations() {
-        let runner = JavaScriptExecutor()!
+    func testf32ComparisonOperations() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1427,8 +1427,8 @@ class WasmNumericalTests: XCTestCase {
     }
 
     // Numerical Conversion Operations
-    func testWrappingi64toi32() {
-        let runner = JavaScriptExecutor()!
+    func testWrappingi64toi32() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1462,8 +1462,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testFloatTruncationToi32() {
-        let runner = JavaScriptExecutor()!
+    func testFloatTruncationToi32() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1524,8 +1524,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testExtendingToi64() {
-        let runner = JavaScriptExecutor()!
+    func testExtendingToi64() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1567,8 +1567,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testFloatTruncationToi64() {
-        let runner = JavaScriptExecutor()!
+    func testFloatTruncationToi64() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1629,8 +1629,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testConversionTof32() {
-        let runner = JavaScriptExecutor()!
+    func testConversionTof32() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1687,8 +1687,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testPromotionAndDemotionOfFloats() {
-        let runner = JavaScriptExecutor()!
+    func testPromotionAndDemotionOfFloats() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1728,8 +1728,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testConversionTof64() {
-        let runner = JavaScriptExecutor()!
+    func testConversionTof64() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1786,8 +1786,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testReinterpretAs() {
-        let runner = JavaScriptExecutor()!
+    func testReinterpretAs() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1839,8 +1839,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testSignExtension() {
-        let runner = JavaScriptExecutor()!
+    func testSignExtension() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1907,8 +1907,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testFloatSaturatingTruncationToi32() {
-        let runner = JavaScriptExecutor()!
+    func testFloatSaturatingTruncationToi32() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1965,8 +1965,8 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 
-    func testFloatSaturatingTruncationToi64() {
-        let runner = JavaScriptExecutor()!
+    func testFloatSaturatingTruncationToi64() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
