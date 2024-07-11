@@ -88,7 +88,7 @@ FuzzIL has a number of properties:
 ## Mutating FuzzIL Code
 FuzzIL is designed to facilitate various code mutations. In this section, the central mutations are explained.
 
-It should be noted that [programs](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/Program.swift) in Fuzzilli are immutable, which makes it easier to reason about them. As such, when a program is mutated, it is actually copied while mutations are applied to it. This is done through the [ProgramBuilder class](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/ProgramBuilder.swift), a central component in Fuzzilli which allows [generating new instructions](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L816) as well as [appending existing ones](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L599) and provides various kinds of information about the program under construction, such as which variables are currently visible.
+It should be noted that [programs](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/Program.swift) in Fuzzilli are immutable, which makes it easier to reason about them. As such, when a program is mutated, it is actually copied while mutations are applied to it. This is done through the [ProgramBuilder class](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Base/ProgramBuilder.swift), a central component in Fuzzilli which allows [generating new instructions](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L816) as well as [appending existing ones](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L599) and provides various kinds of information about the program under construction, such as which variables are currently visible.
 
 ### Input Mutator
 Implementation: [InputMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/InputMutator.swift)
@@ -181,9 +181,9 @@ CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, r
 
 This generator emits a comparison instruction (e.g. `==`) comparing two existing variables (of arbitrary type).
 
-The default code generators can be found in [CodeGenerators.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/CodeGenerators.swift) while custom code generators can be added for specific engines, for example to [trigger different levels of JITing](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/Profiles/JSCProfile.swift).
+The default code generators can be found in [CodeGenerators.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/CodeGen/CodeGenerators.swift) while custom code generators can be added for specific engines, for example to [trigger different levels of JITing](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/Profiles/JSCProfile.swift).
 
-Code generators are stored in a weighted list and are thus selected with different, currently [manually chosen weights](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/CodeGeneratorWeights.swift). This allows some degree of control over the distribution of the generated code, for example roughly how often arithmetic operations or method calls are performed, or how much control flow (if-else, loops, ...) is generated relative to data flow. Furthermore, CodeGenerators provide a simple way to steer Fuzzilli towards certain bug types by adding CodeGenerators that generate code fragments that have frequently resulted in bugs in the past, such as prototype changes, custom type conversion callbacks (e.g. valueOf), or indexed accessors.
+Code generators are stored in a weighted list and are thus selected with different, currently [manually chosen weights](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/CodeGen/CodeGeneratorWeights.swift). This allows some degree of control over the distribution of the generated code, for example roughly how often arithmetic operations or method calls are performed, or how much control flow (if-else, loops, ...) is generated relative to data flow. Furthermore, CodeGenerators provide a simple way to steer Fuzzilli towards certain bug types by adding CodeGenerators that generate code fragments that have frequently resulted in bugs in the past, such as prototype changes, custom type conversion callbacks (e.g. valueOf), or indexed accessors.
 
 Through the code generators, all relevant language features (e.g. object operations, unary and binary operations, etc.) will eventually be generated, then kept in the corpus (because they trigger new coverage) and further mutated afterwards.
 
@@ -228,7 +228,7 @@ v4 <- CallFunction v3, []
 
 This will cause a runtime exception to be thrown which then results in the rest of the program to not be executed and the program being considered invalid.
 
-To deal with this problem, Fuzzilli implements a relatively simple type inference which attempts to infer the possible types of every variable while a program is constructed by the ProgramBuilder. This is (likely) easier than it sounds since the interpreter only needs to be correct most of the time (it’s basically an optimization), not always. This significantly simplifies the implementation as many operations with complex effects, such as prototype changes, can largely be ignored. As an example, consider the rules that infer the  results of the typeof, instanceof, and comparison operations:
+To deal with this problem, Fuzzilli implements a relatively simple type inference which attempts to infer the possible types of every variable while a program is constructed by the ProgramBuilder. This is (likely) easier than it sounds since the interpreter only needs to be correct most of the time (it’s basically an optimization), not always. This significantly simplifies the implementation as many operations with complex effects, such as prototype changes, can largely be ignored. As an example, consider the rules that infer the results of the typeof, instanceof, and comparison operations:
 
 ```swift
 case is TypeOf:
@@ -241,7 +241,7 @@ case is Compare:
     set(instr.output, environment.booleanType)
 ```
 
-To correctly infer the types of builtin objects, methods, and functions, the type inference relies on a [static model of the JavaScript runtime environment](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/JavaScriptEnvironment.swift) which can, for example, tell the interpreter that the eval builtin is a function that expects a single argument, that the Object builtin is an object with various methods, or that the Uint8Array builtin is a constructor that returns a Uint8Array instance, which then has a certain set of properties and methods.
+To correctly infer the types of builtin objects, methods, and functions, the type inference relies on a [static model of the JavaScript runtime environment](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Environment/JavaScriptEnvironment.swift) which can, for example, tell the interpreter that the eval builtin is a function that expects a single argument, that the Object builtin is an object with various methods, or that the Uint8Array builtin is a constructor that returns a Uint8Array instance, which then has a certain set of properties and methods.
 
 FuzzIL is designed to make type inference as simple as possible. As an example, consider the implementation of ES6 classes. In FuzzIL, they look roughly like this:
 
@@ -383,7 +383,7 @@ class v0 { ... foo() { ... }; bar() { ... } };
 ```
 
 ## The Mutation Engine
-Implementation: [MutationEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/MutationEngine.swift) (--engine=mutation)
+Implementation: [MutationEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Engines/MutationEngine.swift) (--engine=mutation)
 
 This section will explain how Fuzzilli’s mutation engine works. For that, it first covers three of the missing components of the mutation engine, namely the minimizer, the corpus, and coverage collection, then explains the high-level fuzzing algorithm used by the mutation engine.
 
@@ -413,11 +413,11 @@ As can be imagined, minimization is very expensive, frequently requiring over a 
 It is possible to tune the minimizer to remove code less aggressively through the `--minimizationLimit=N` CLI flag. With that, it is possible to force the minimizer to keep minimized programs above a given number of instructions. This can help retain some additional code fragments which might facilitate future mutations. This can also speed up minimization a bit since less instructions need to be removed. However, setting this value too high will likely result in the same kinds of problems that the minimizer attempts to solve in the first place.
 
 ### Corpus
-Implementation: [Corpus.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/Corpus.swift)
+Implementation: [Corpus.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Corpus/Corpus.swift)
 
-Fuzzilli keeps "interesting" samples in its corpus for future mutations. In the default corpus implementation, samples are added , then mutated randomly, and eventually "retired" after they have been mutated at least a certain number of times (controllable through `--minMutationsPerSample` flag). Other corpus management algorithms can be implemented as well. For example, an implementation of a [corpus management algorithm based on Markov Chains](https://mboehme.github.io/paper/TSE18.pdf) is [currently in the works](https://github.com/googleprojectzero/fuzzilli/pull/171).
+Fuzzilli keeps "interesting" samples in its corpus for future mutations. In the default corpus implementation, samples are added , then mutated randomly, and eventually "retired" after they have been mutated at least a certain number of times (controllable through `--minMutationsPerSample` flag). Other corpus management algorithms can be implemented as well. For example, an implementation of a [corpus management algorithm based on Markov Chains](https://mboehme.github.io/paper/TSE18.pdf) is [implemented](https://github.com/googleprojectzero/fuzzilli/pull/171).
 
-By default, Fuzzilli always starts from a single, arbitrarily chosen program in the corpus. It can be desirable to start from an existing corpus of programs, for example to find variants of past bugs. In Fuzzilli, this in essence requires a compiler from JavaScript to FuzzIL as Fuzzilli can only operate on FuzzIL programs. Thanks to [@WilliamParks](https://github.com/WilliamParks) such a compiler now ships with Fuzzilli and can be found in the [Compiler/](https://github.com/googleprojectzero/fuzzilli/tree/main/Compiler) directory. 
+By default, Fuzzilli always starts from a single, arbitrarily chosen program in the corpus. It can be desirable to start from an existing corpus of programs, for example to find variants of past bugs. In Fuzzilli, this in essence requires a compiler from JavaScript to FuzzIL as Fuzzilli can only operate on FuzzIL programs. Thanks to [@WilliamParks](https://github.com/WilliamParks) such a compiler now ships with Fuzzilli and can be found in the [Compiler/](https://github.com/googleprojectzero/fuzzilli/tree/main/Sources/Fuzzilli/Compiler) directory. 
 
 If the `--storagePath` CLI flag is used, Fuzzilli will write all samples that it adds to its corpus to disk in their protobuf format. These can for example be used to resume a previous fuzzing session through `--resume` or they can be inspected with the FuzzILTool.
 
@@ -736,7 +736,7 @@ The entry point to the generative engine is the ProgramBuilder.generate(n) API, 
 ![Generative Fuzzing Algorithm](images/generative_engine.png)
 
 ## The Hybrid Engine
-Implementation: [HybridEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/HybridEngine.swift) (--engine=hybrid)
+Implementation: [HybridEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Engines/HybridEngine.swift) (--engine=hybrid)
 
 In general, one could go with a pure generative engine as described in the previous section. However, there are at least two problems:
 
@@ -809,7 +809,7 @@ Follows a generic guidance algorithms and requires almost no manual tuning to ge
 There is little room for control over the generated samples since they are mostly determined by the coverage feedback. Possible ways to influence the code include the CodeGenerators and their relative weights, the Mutators, and the aggressivity of the minimizer | Allows a great amount of control over the generated code, both over the high level structure (for example, one function that is being JIT compiled, then called a few times) as well as over low-level code fragments through CodeGenerators
 Able to find vulnerabilities that are "close" to samples trigger new coverage (and so are added to the corpus), but likely struggles to find bugs that are not. The latter probably includes bugs that require complex state manipulation through multiple distinct code paths | Able to find bugs that are "close" to one of the used ProgramTemplates, which can either come from past bugs, from developers that want to test certain areas, or from auditors that want to test a complex are of the codebase
 
-As the engines complement each other, it can be desirable to run both engines in the same fuzzing session. At least in theory, the two engines should also be able to benefit from each other: the mutation engine can further mutate samples originating from the HybridEngine, while the HybridEngine benefits (through splicing) from a better Corpus built by the MutationEngine. For that reason, the [MultiEngine](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/MultiEngine.swift) (--engine=multi) allows using both engines in one fuzzing session, and allows controlling roughly how often each engine is scheduled.
+As the engines complement each other, it can be desirable to run both engines in the same fuzzing session. At least in theory, the two engines should also be able to benefit from each other: the mutation engine can further mutate samples originating from the HybridEngine, while the HybridEngine benefits (through splicing) from a better Corpus built by the MutationEngine. For that reason, the [MultiEngine](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Engines/MultiEngine.swift) (--engine=multi) allows using both engines in one fuzzing session, and allows controlling roughly how often each engine is scheduled.
 
 
 
