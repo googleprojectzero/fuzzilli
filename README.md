@@ -94,10 +94,10 @@ The fuzzer is implemented in [Swift](https://swift.org/), with some parts (e.g. 
 
 A fuzzer instance (implemented in [Fuzzer.swift](Sources/Fuzzilli/Fuzzer.swift)) is made up of the following central components:
 
-* [MutationFuzzer](Sources/Fuzzilli/Core/MutationEngine.swift): produces new programs from existing ones by applying [mutations](Sources/Fuzzilli/Mutators). Afterwards executes the produced samples and evaluates them.
+* [MutationFuzzer](Sources/Fuzzilli/Engines/MutationEngine.swift): produces new programs from existing ones by applying [mutations](Sources/Fuzzilli/Mutators). Afterwards executes the produced samples and evaluates them.
 * [ScriptRunner](Sources/Fuzzilli/Execution): executes programs of the target language.
 * [Corpus](Sources/Fuzzilli/Corpus/Corpus.swift): stores interesting samples and supplies them to the core fuzzer.
-* [Environment](Sources/Fuzzilli/Core/JavaScriptEnvironment.swift): has knowledge of the runtime environment, e.g. the available builtins, property names, and methods.
+* [Environment](Sources/Fuzzilli/Environment/JavaScriptEnvironment.swift): has knowledge of the runtime environment, e.g. the available builtins, property names, and methods.
 * [Minimizer](Sources/Fuzzilli/Minimization/Minimizer.swift): minimizes crashing and interesting programs.
 * [Evaluator](Sources/Fuzzilli/Evaluation): evaluates whether a sample is interesting according to some metric, e.g. code coverage.
 * [Lifter](Sources/Fuzzilli/Lifting): translates a FuzzIL program to the target language (JavaScript).
@@ -111,7 +111,7 @@ Furthermore, a number of modules are optionally available:
 
 The fuzzer is event-driven, with most of the interactions between different classes happening through events. Events are dispatched e.g. as a result of a crash or an interesting program being found, a new program being executed, a log message being generated and so on. See [Events.swift](Sources/Fuzzilli/Core/Events.swift) for the full list of events. The event mechanism effectively decouples the various components of the fuzzer and makes it easy to implement additional modules.
 
-A FuzzIL program can be built up using a [ProgramBuilder](Sources/Fuzzilli/Core/ProgramBuilder.swift) instance. A ProgramBuilder provides methods to create and append new instructions, append instructions from another program, retrieve existing variables, query the execution context at the current position (e.g. whether it is inside a loop), and more.
+A FuzzIL program can be built up using a [ProgramBuilder](Sources/Fuzzilli/Base/ProgramBuilder.swift) instance. A ProgramBuilder provides methods to create and append new instructions, append instructions from another program, retrieve existing variables, query the execution context at the current position (e.g. whether it is inside a loop), and more.
 
 ### Execution
 
