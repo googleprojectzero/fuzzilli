@@ -421,7 +421,8 @@ let v8Profile = Profile(
             "--jit-fuzzing",
             "--future",
             "--harmony",
-            "--js-staging"
+            "--js-staging",
+            "--wasm-staging"
         ]
 
         guard randomize else { return args }
