@@ -80,7 +80,7 @@ public class HybridEngine: FuzzEngine {
     }
 
     private func generateTemplateProgram(template: ProgramTemplate) -> Program {
-        let b = fuzzer.makeBuilder(mode: .conservative)
+        let b = fuzzer.makeBuilder()
         b.traceHeader("Generating program based on \(template.name) template")
         template.generate(in: b)
         let program = b.finalize()

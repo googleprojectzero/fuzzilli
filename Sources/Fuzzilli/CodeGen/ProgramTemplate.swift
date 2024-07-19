@@ -21,7 +21,6 @@ public class ProgramTemplate: Contributor {
     }
 
     public func generate(in b: ProgramBuilder) {
-        assert(b.mode == .conservative)
         f(b)
     }
 }

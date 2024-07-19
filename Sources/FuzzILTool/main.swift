@@ -208,7 +208,7 @@ else if args.has("--compile") {
 
 else if args.has("--generate") {
     let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .warning, enableInspection: true), environment: JavaScriptEnvironment())
-    let b = fuzzer.makeBuilder(mode: .conservative)
+    let b = fuzzer.makeBuilder()
     b.buildPrefix()
     b.build(n: 50, by: .generating)
     let program = b.finalize()
