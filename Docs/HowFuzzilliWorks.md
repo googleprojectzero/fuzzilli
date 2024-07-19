@@ -1,10 +1,10 @@
 # How Fuzzilli Works
 
-This document aims to explain how Fuzzilli generates JavaScript code and how it can be tuned to search for different kinds of bugs. Fuzzilli features two separate engines: the older mutation engine and the newer, still mostly experimental and not yet feature-complete, hybrid engine, which is essentially a combination of a purely generative component coupled with existing mutations. Before explaining how these engines work, this document first explains FuzzIL, the custom intermediate language around which Fuzzilli is built.
+This document aims to explain how Fuzzilli generates JavaScript code and how it can be tuned to search for different kinds of bugs. Fuzzilli features two main fuzzing engines: the mutation engine and the hybrid engine, which is essentially a combination of a purely generative component coupled with existing mutations. Before explaining how these engines work, this document first explains FuzzIL, the custom intermediate language around which Fuzzilli is built.
 
-All of the mechanisms described in this document can be observed in action by using the `--inspect=history` CLI flag. If enabled, programs written to disk (essentially the programs in the corpus as well as crashes) will have an additional .history file describing the "history" of the programs, namely the exact mutation, splicing, code generation, etc. steps that were performed to generate it.
+All of the mechanisms described in this document can be observed in action by using the `--inspect` CLI flag. If enabled, all programs written to disk (essentially the programs in the corpus as well as crashes) will have an additional .history file describing the "history" of the programs, namely the exact mutation, splicing, code generation, etc. steps that were performed to generate it.
 
-This document is both a living document, describing how Fuzzilli currently works, and a design doc for future development, in particular of the hybrid engine which is not yet feature complete.
+This document is meant to be a living document, describing how Fuzzilli currently works.
 
 ## Goals of Fuzzilli
 Besides the central goal of generating "interesting" JavaScript code, Fuzzilli also has to deal with the following two problems.
@@ -15,7 +15,7 @@ If a program is syntactically invalid, it will be rejected early on during proce
 ### Semantic Correctness
 In Fuzzilli, a program that raises an uncaught exception is considered to be semantically incorrect, or simply invalid. While it would be possible to wrap every (or most) statements into try-catch blocks, this would fundamentally change the control flow of the generated program and thus how it is optimized by a JIT compiler. Many JIT bugs can not be triggered through such a program. As such, it is essential that Fuzzilli generates semantically valid samples with a fairly high degree (as a baseline, Fuzzilli should aim for a correctness rate of above 50%).
 
-This challenge is up to each engine, and will thus be discussed separately for each of them.
+This challenge is up to each fuzzing engine, and will thus be discussed separately for each of them.
 
 ## FuzzIL
 Implementation: [FuzzIL/](https://github.com/googleprojectzero/fuzzilli/tree/main/Sources/Fuzzilli/FuzzIL) subdirectory
@@ -37,7 +37,7 @@ FuzzIL programs can be serialized into [protobufs](https://github.com/googleproj
 
 `swift run FuzzILTool --liftToFuzzIL path/to/program.protobuf`
 
-An imaginary FuzzIL sample might look like this
+FuzzIL strives to be mostly self-explanatory. For example, an imaginary FuzzIL sample might look like this
 
 ```
 v0 <- BeginPlainFunctionDefinition -> v1, v2, v3
@@ -53,42 +53,48 @@ v8 <- CallFunction v0, [v7, v7, v6]
 When inlining intermediate expressions, the same program lifted to JavaScript code could look like this
 
 ```javascript
-function v0(v1, v2, v3) {
-    v3.foo = v1 + v2;
+function f0(a1, a2, a3) {
+    a3.foo = a1 + a2;
 }
 const v6 = {bar: "Hello World"};
-v0(13.37, 13.37, v6);
+f0(13.37, 13.37, v6);
 ```
 
 Or could look like this when using a trivial lifting algorithm:
 
 ```javascript
-function v0(v1, v2, v3) {
-    const v4 = v1 + v2;
-    v3.foo = v4;
+function f0(a1, a2, a3) {
+    const v4 = a1 + a2;
+    a3.foo = v4;
 }
 const v5 = "Hello World";
 const v6 = {bar: v5};
 const v7 = 13.37;
-const v8 = v0(v7, v7, v6);
+const v8 = f0(v7, v7, v6);
 ```
 
-Ultimately, the used lifting algorithm likely doesn’t matter too much since the engine's bytecode and JIT compiler will produce mostly identical results regardless of the syntactical representation of the code.
+Ultimately, the used lifting algorithm likely doesn’t matter too much since the JavaScript engine's bytecode and JIT compiler will produce mostly identical results regardless of the syntactical representation of the code.
+
+FuzzIL has a notion of "guarded" operations, which are operations that guard against runtime exceptions via a try-catch. For example, if a `CallFunction` operation may reasonably throw an exception (e.g. because the argument types are incorrect), it could be marked as guarded: `CallFunction v3, [v5, v6] (guarded)`. In that case, it would lift to JavaScript code such as
+```javascript
+try { v3(v5, v6); } catch {};
+```
+As the try-catch blocks generated for guarded opetations can negatively influence the program's behavior (as described above), they should be used sparingly. Furthermore, Fuzzilli tries to convert guarded operations into unguarded ones during Minimization and through the FixupMutator, both of which are discussed further later on in this document.
 
 FuzzIL has a number of properties:
 * A FuzzIL program is simply a list of instructions.
 * Every FuzzIL program can be lifted to syntactically valid JavaScript code.
 * A FuzzIL instruction is an operation together with input and output variables and potentially one or more parameters (enclosed in single quotes in the notation above).
 * Every variable is defined before it is used, and variable numbers are ascending and contiguous.
-* Control flow is expressed through "blocks" which have at least a Begin and and End operation, but can also have intermediate operations, for example BeginIf, BeginElse, EndIf.
+* Control flow is expressed through "blocks" which have at least a Begin and and End operation, but can also have intermediate operations, for example `BeginIf`, `BeginElse`, `EndIf`.
 * Block instructions can have inner outputs (those following a '->' in the notation above) which are only visible in the newly opened scope (for example function parameters).
 * Inputs to instructions are always variables, there are no immediate values.
 * Every output of an instruction is a new variable, and existing variables can only be reassigned through dedicated operations such as the `Reassign` instruction.
 
 ## Mutating FuzzIL Code
-FuzzIL is designed to facilitate various code mutations. In this section, the central mutations are explained.
+FuzzIL is designed to facilitate various meaningful code mutations. In this section, the central mutations are explained.
 
-It should be noted that [programs](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/Program.swift) in Fuzzilli are immutable, which makes it easier to reason about them. As such, when a program is mutated, it is actually copied while mutations are applied to it. This is done through the [ProgramBuilder class](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Base/ProgramBuilder.swift), a central component in Fuzzilli which allows [generating new instructions](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L816) as well as [appending existing ones](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L599) and provides various kinds of information about the program under construction, such as which variables are currently visible.
+It should be noted that [programs](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/Program.swift) in Fuzzilli are immutable, which makes it easier to reason about them. As such, when a program is mutated, it is actually copied while mutations are applied to it. This is done through the [ProgramBuilder class](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Base/ProgramBuilder.swift), a central component in Fuzzilli which allows generating new instructions or copying instructions from another program, and exposes various kinds of information about the program under construction, such as which variables are currently visible.
 
 ### Input Mutator
 Implementation: [InputMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/InputMutator.swift)
@@ -110,7 +116,7 @@ Due to the design of FuzzIL, in particular the fact that all inputs to instructi
 ### Operation Mutator
 Implementation: [OperationMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/OperationMutator.swift)
 
-Another fundamental mutation which mutates the parameters of an operation (the values enclosed in single quotes above). For example:
+Another fundamental mutation which mutates the parameters of an operation (the values enclosed in single quotes in FuzzIL's textual representation). For example:
 
 ```
 v4 <- BinaryOperation v1 '+' v2
@@ -135,7 +141,7 @@ v3 <- CallMethod v2, 'sin', [v1]
 v4 <- CreateArray [v3, v3]
 ```
 
-In its simplest form, splicing from the CallMethod instruction would result in the three middle instructions being copied into the current program. This also requires renaming variables so they don’t collide with existing variables:
+In its simplest form, splicing from the `CallMethod` instruction would result in the three middle instructions being copied into the current program. This also requires renaming variables so they don’t collide with existing variables:
 
 ```
 ... existing code
@@ -190,7 +196,7 @@ Through the code generators, all relevant language features (e.g. object operati
 ### Exploration
 Implementation: [ExplorationMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/ExplorationMutator.swift)
 
-This advanced mutator uses runtime type information available in JavaScript to perform more intelligent mutations. It does the following:
+This advanced mutator uses runtime type information available in JavaScript to perform more intelligent mutations, in particular to determine possible actions that can be performed on an existing value. It does the following:
 1. It inserts `Explore` operations for random existing variables in the program to be mutated
 2. It executes the resulting (temporary) program. The `Explore` operations will be lifted
    to a sequence of code that inspects the variable at runtime (using features like 'typeof' and
@@ -203,7 +209,47 @@ The result is a program that performs useful actions on some of the existing var
 statically knowing their type. The resulting program is also deterministic and "JIT friendly" as it
 no longer relies on any kind of runtime object inspection.
 
-## The Type System
+### Probing
+Implementation: [ProbingMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/ProbingMutator.swift)
+
+This is another runtime-assisted mutator which tries to determine how an existing value is used. In particular, it tries to determine if certain properties should exist on an object. This mutator does the following:
+1. It inserts `Probe` operations for random existing variables in the program
+   to be mutated
+2. It executes the resulting (temporary) program. The `Probe` operations will
+   be lifted to a sequence of code that replaces the object (really, the
+   object's prototype) with a Proxy, which then records all accesses to
+   non-existant properties. The list of these is then sent back to Fuzzilli.
+3. The mutator processes the output of step 2 and installs some of the missing
+   properties and callbacks.
+
+This mutator thereby achieves a few things:
+1. It can automatically detect whether an operation triggers a callback, and
+   can then install the callback function. This can for example help find bugs
+   related to [unexpected callbacks](http://www.phrack.org/issues/70/3.html).
+2. It can determine how a builtin API works and what kinds of arguments it
+   expects. For example, many APIs require "config" objects that are expected
+   to have certain keys. This mutator can determine what those keys are, making
+   it possible to call those APIs in a useful way.
+3. It can make existing code more useful. For example, we may already have a
+   jit-optimized function that operates on an object argument, but accesses
+   non-existant properties, which is likely not very useful. This mutator can
+   ensure that those properties exist, making the overall program more
+   meaningful.
+
+### FixupMutator
+Implementation: [FixupMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/FixupMutator.swift)
+
+This is the final runtime-assisted mutator. It's goal is to fix/improve existing code. In particular, it wants to
+* Remove unecessary try-catch blocks and guards
+* Fix accesses to non-existant properties and elements (TODO)
+* Fix invalid function-, method-, or constructor calls (TODO)
+* Fix arithmetic operations that result in NaN, which typically indicates that no meaningful operation was performed (TODO)
+
+All but the first are not yet implemented, so this mutator is still work-in-progress.
+
+The FixupMutator is one of two ways in which guarded operations are converted to unguarded ones (which are generally preferable).
+
+## The Type System and Type Inference
 Implementation: [TypeSystem.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/TypeSystem.swift) and [JSTyper.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/JSTyper.swift)
 
 Up to this point, a code generator is a simple function that fetches zero or more random input variables and generates some new FuzzIL instructions to perform some operations on them. Now consider the following, imaginary code generator:
@@ -246,62 +292,74 @@ To correctly infer the types of builtin objects, methods, and functions, the typ
 FuzzIL is designed to make type inference as simple as possible. As an example, consider the implementation of ES6 classes. In FuzzIL, they look roughly like this:
 
 ```
-v0 <- BeginClassDefinition '$properties', '$methods' -> v1 (this), v2, v3
-    ... constructor code
-BeginMethodDefinition -> v4 (this), v5
-    ... implementation of method 1
-BeginMethodDefinition -> v6 (this)
-    ... implementation of method 2
+v0 <- BeginClassDefinition
+ClassAddInstanceProperty "foo", v5
+BeginClassInstanceMethod "bar" -> v8 (this), v9
+    ... implementation of method "bar"
+EndClassInstanceMethod
+BeginClassInstanceMethod "baz" -> v6 (this)
+    ... implementation of method "baz"
+EndClassInstanceMethod
 EndClassDefinition
 ```
 
-The important bit here is that all type information about the class’ instances (namely, the properties and methods as well as their signatures) is stored in the BeginClassDefinition instruction. This enables the JSTyper to correctly infer the type of the `this` parameter (the first parameter) in the constructor and every method without having to parse the entire class definition first (which would be impossible if it is just being generated). This in turn enables Fuzzilli to perform meaningful operations (e.g. property accesses or method calls) on the `this` object.
+With this it is fairly straight-forward to infer the type of the class' instances from the FuzzIL code: `.object(withProperties: ["foo"], withMethods: ["bar", "baz"])`.
 
 With type information available, the CodeGenerator from above can now request a variable containing a function and can also attempt to find variables compatible with the function’s parameter types:
 
 ```swift
 CodeGenerator("FunctionCallGenerator") { b in
     let function = b.randomVariable(ofType: .function())
-    let arguments = b.randomCallArguments(forCalling: function)
+    let arguments = b.randomArguments(forCalling: function)
     b.callFunction(f, with: arguments)
 }
 ```
 
-It is important to note that, for mutation-based fuzzing, the JSTyper and the type system should be seen as optimizations, not essential features, and so the fuzzer must still be able to function without type information. In addition, while the use of type information for mutations can improve the performance of the fuzzer (less trivially incorrect samples are produced), too much reliance on it might restrict the fuzzer and thus affect the performance negatively (less diverse samples are produced). An example of this is the InputMutator, which can optionally be type aware, in which case it will attempt to find "compatible" replacement variables. In order to not restrict the fuzzer too much, Fuzzilli's MutationEngine is currently configured to use a non-type-aware InputMutator twice as often as a type-aware InputMutator.
+However, even with this change, the function call can still raise an exception if the argument values have the wrong type. Fuzzilli tries to deal with that in two ways:
+1. If the type of the function is known (i.e. its signature is known),
+   `randomArguments(forCalling:)` will try to find appropriate arguments.
+2. If no matching arguments are found (or if the signature isn't known), the
+   generator can optionally mark the call operation as "guarded". This will
+   cause it to be wrapped in try-catch during lifing.
+
+It is important to note that, for mutation-based fuzzing, the JSTyper and the type system should be seen as optimizations, not essential features, and so the fuzzer should still be able to function without type information. In addition, while the use of type information for mutations can improve the performance of the fuzzer (less trivially incorrect samples are produced), too much reliance on it might restrict the fuzzer and thus affect the performance negatively (less diverse samples are produced). An example of this is the InputMutator, which can optionally be type aware, in which case it will attempt to find "compatible" replacement variables. In order to not restrict the fuzzer too much, Fuzzilli's MutationEngine is currently configured to use a non-type-aware InputMutator as well as a type-aware InputMutator.
 
 ### Type System
 Implementation: [TypeSystem.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/TypeSystem.swift)
 
 To do its job, the JSTyper requires a type system. FuzzIL’s type system is designed to support two central use cases:
 
-* Determining the operations that can be performed on a given variable. For example, the type system is expected to state which properties and methods are available on an object and what their types and signatures are.
-* Finding a compatible variable for a given operation. For example, a function might require a certain argument type, e.g. a Number or a Uint8Array. The type system must be able to express these types and be able to identify variables that store a value of this type or of a subtype. For example, a Uint8Array with an additional property can be used when a Uint8Array is required, and an object of a subclass can be used when the parent class is required.
+1. Determining the operations that can be performed on a given variable. For example, the type system is expected to state which properties and methods are available on an object and what their types and signatures are.
+2. Finding a compatible variable for a given operation. For example, a function might require a certain argument type, e.g. a Number or a Uint8Array. The type system must be able to express these types and be able to identify variables that store a value of this type or of a subtype. For example, a Uint8Array with an additional property can be used when a Uint8Array is required, and an object of a subclass can be used when the parent class is required.
 
 Both of these operations need to be efficient as they will be performed frequently.
 
 The type system is constructed around bitsets, with the base types represented each by a single bit in a 32bit integer:
 
 ```swift
+static let nothing     = BaseType([])
 static let undefined   = BaseType(rawValue: 1 << 0)
 static let integer     = BaseType(rawValue: 1 << 1)
-static let float       = BaseType(rawValue: 1 << 2)
-static let string      = BaseType(rawValue: 1 << 3)
+static let bigint      = BaseType(rawValue: 1 << 2)
+static let float       = BaseType(rawValue: 1 << 3)
 static let boolean     = BaseType(rawValue: 1 << 4)
-static let bigint      = BaseType(rawValue: 1 << 5)
-static let object      = BaseType(rawValue: 1 << 6)
-static let array       = BaseType(rawValue: 1 << 7)
+static let string      = BaseType(rawValue: 1 << 5)
+static let regexp      = BaseType(rawValue: 1 << 6)
+static let object      = BaseType(rawValue: 1 << 7)
 static let function    = BaseType(rawValue: 1 << 8)
 static let constructor = BaseType(rawValue: 1 << 9)
+static let iterable    = BaseType(rawValue: 1 << 10)
+static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 ```
 
-Each base type expresses that certain actions can be performed of a value of its type (use case 1.). For example, the numerical types express that arithmetic operations can be performed on its values, the .array type expresses that the value can be iterated over (e.g. through a for-of loop or using the spread operator), the .object type expresses that the value has properties and methods that can be accessed, and the .function type expresses that the value can be invoked using a function call.
+Each base type expresses that certain actions can be performed of a value of its type (use case 1.). For example, the numerical types express that arithmetic operations can be performed on its values, the `.iterable` type expresses that the value can be iterated over (e.g. through a for-of loop or using the spread operator), the `.object` type expresses that the value has properties and methods that can be accessed, and the `.function` type expresses that the value can be invoked using a function call.
 
 Additional type information, for example the properties and methods, the signatures of functions, or the element type of arrays, is stored in "type extension" objects which can be shared between multiple Type structs (to reduce memory consumption).
 
 The base types can be combined to form more complex types using three operators: union, intersection, and merge. These are discussed next.
 
 #### Union Operator
-Operator: | (bitwise or)
+Operator: `|` (bitwise or)
 
 A union expresses that a variable has one type or the other: the type `t1 | t2` expresses that a value is either a `t1` or a `t2`.
 
@@ -316,14 +374,14 @@ if (v2) {
 ```
 
 #### Intersection Operator
-Operator: & (bitwise and)
+Operator: `&` (bitwise and)
 
 The intersection operator computes the intersection between two (union) types. For example, the intersection of `t1 | t2` with `t1 | t3` is `t1`.
 
 In Fuzzilli, this operator is used to determine whether a variable may have a certain type, for example whether it could be a BigInt, in which case the resulting type of many arithmetic operators should also include BigInt.
 
 #### Merge Operator
-Operator: + (plus)
+Operator: `+` (plus)
 
 This operator is probably the least intuitive and is likely somewhat unique to this type system.
 
@@ -341,7 +399,7 @@ A JavaScript array is iterable, but also contains properties and methods and is 
 In essence, merge types allow FuzzIL to model the dynamic nature of the JavaScript language, in particular the implicit type conversions that are frequently performed and the fact that many things are (also) objects.
 
 #### Type Subsumption
-Operation: <= and >=
+Operation: `<=` and `>=`
 
 To support type queries (use case 2.), the type system implements a subsumption relationship between types. This can be thought of as the "is a" relationship and should generally be used when searching for "compatible" variables for a given type constraint.
 
@@ -390,7 +448,7 @@ This section will explain how Fuzzilli’s mutation engine works. For that, it f
 ### Minimization
 Implementation: [Minimization/](https://github.com/googleprojectzero/fuzzilli/tree/main/Sources/Fuzzilli/Minimization) subdirectory
 
-The mutations that Fuzzilli performs all share a common aspect: they can only increase the size (the number of instructions) of a FuzzIL program, but never decrease it. As such, after many rounds of mutations, programs would eventually become too large to execute within the time limit. Moreover, if unnecessary features are not removed from interesting programs, the efficiency of future mutations degrades, as many mutations will be "wasted" mutating irrelevant code. As such, Fuzzilli requires a minimizer that removes unnecessary code from programs before they are inserted into the corpus.
+The mutations that Fuzzilli performs all have one thing in common: they can only increase the size (the number of instructions) of a FuzzIL program, but never decrease it. As such, after many rounds of mutations, programs would eventually become too large to execute within the time limit. Moreover, if unnecessary features are not removed from interesting programs, the efficiency of future mutations degrades, as many mutations will be "wasted" mutating irrelevant code. As such, Fuzzilli requires a minimizer that removes unnecessary code from programs before they are inserted into the corpus.
 
 Minimization is conceptually simple: Fuzzilli attempts to identify and remove instructions that are not necessary to trigger the newly discovered coverage edges. In the simplest case, this means [removing a single instruction, then rerunning the program to see if it still triggers the new edges](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Minimization/GenericInstructionReducer.swift). There are also a few specialized minimization passes. For example, there is an [inlining reducer](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Minimization/InliningReducer.swift) which attempts to inline functions at their callsite. This is necessary since otherwise code patterns such as
 
@@ -412,14 +470,19 @@ As can be imagined, minimization is very expensive, frequently requiring over a 
 
 It is possible to tune the minimizer to remove code less aggressively through the `--minimizationLimit=N` CLI flag. With that, it is possible to force the minimizer to keep minimized programs above a given number of instructions. This can help retain some additional code fragments which might facilitate future mutations. This can also speed up minimization a bit since less instructions need to be removed. However, setting this value too high will likely result in the same kinds of problems that the minimizer attempts to solve in the first place.
 
+Besides removing instructions, the Minimizer also tries to simplify programs in other ways. For example, it attempts to convert guarded operations into unguarded ones, remove unecessary arguments to function calls, merge variables containing the same values, and turns some complex instructions into simpler ones (e.g. spread calls into regular calls).
+
 ### Corpus
 Implementation: [Corpus.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Corpus/Corpus.swift)
 
 Fuzzilli keeps "interesting" samples in its corpus for future mutations. In the default corpus implementation, samples are added , then mutated randomly, and eventually "retired" after they have been mutated at least a certain number of times (controllable through `--minMutationsPerSample` flag). Other corpus management algorithms can be implemented as well. For example, an implementation of a [corpus management algorithm based on Markov Chains](https://mboehme.github.io/paper/TSE18.pdf) is [implemented](https://github.com/googleprojectzero/fuzzilli/pull/171).
 
-By default, Fuzzilli always starts from a single, arbitrarily chosen program in the corpus. It can be desirable to start from an existing corpus of programs, for example to find variants of past bugs. In Fuzzilli, this in essence requires a compiler from JavaScript to FuzzIL as Fuzzilli can only operate on FuzzIL programs. Thanks to [@WilliamParks](https://github.com/WilliamParks) such a compiler now ships with Fuzzilli and can be found in the [Compiler/](https://github.com/googleprojectzero/fuzzilli/tree/main/Sources/Fuzzilli/Compiler) directory. 
-
 If the `--storagePath` CLI flag is used, Fuzzilli will write all samples that it adds to its corpus to disk in their protobuf format. These can for example be used to resume a previous fuzzing session through `--resume` or they can be inspected with the FuzzILTool.
+
+### Compiler
+Implementation: [Compiler/](https://github.com/googleprojectzero/fuzzilli/tree/main/Sources/Fuzzilli/Compiler)
+
+By default, Fuzzilli always starts from a single, arbitrarily chosen program in the corpus. It can be desirable to start from an existing corpus of programs, for example to find variants of past bugs. In Fuzzilli, this requires a compiler from JavaScript to FuzzIL as Fuzzilli can only operate on FuzzIL programs. Fuzzilli comes with such a compiler, which uses [babel.js](https://babeljs.io/) to parse JavaScript code, then a relatively straight-forward compiler that processes the resulting AST and produces a FuzzIL program from it. The compiler is not yet feature complete and support for more language constructs is needed.
 
 ### Coverage
 Implementation: [Evaluation/](https://github.com/googleprojectzero/fuzzilli/tree/main/Sources/Fuzzilli/Evaluation) subdirectory
@@ -449,7 +512,7 @@ A fuzzer can be viewed as a tool that samples from a universe of possible inputs
 
 The MutationEngine would then be able to find bugs that are somewhat "close" to those in the corpus, but not ones that are far away from that.
 
-The key question is then how the distribution of the samples in the corpus is likely to look, as that greatly influences the overall distribution of the generated samples. Here, the thesis is that samples in the corpus will usually only trigger one or a few features of the engine since it is unlikely that a new program triggers multiple new, complex optimizations at once. This can be measured to some degree by looking at the number of newly discovered edges (`--inspect=history` will include it) of the samples in a typical corpus. The table below shows this for a fuzzing run against JavaScriptCore with roughly 20000 samples:
+The key question is then how the distribution of the samples in the corpus is likely to look, as that greatly influences the overall distribution of the generated samples. Here, the thesis is that samples in the corpus will usually only trigger one or a few features of the engine since it is unlikely that a new program triggers multiple new, complex optimizations at once. This can be measured to some degree by looking at the number of newly discovered edges (`--inspect` will include it) of the samples in a typical corpus. The table below shows this for a fuzzing run against JavaScriptCore with roughly 20000 samples:
 
 Number of new Edges | Number of Samples | % of Total | Avg. size (in JS LoC)
 --------------------|-------------------|------------|----------------------
@@ -463,31 +526,45 @@ As such, likely one of the biggest shortcomings of the MutationEngine is that it
 There are a number of possible solutions to this problem:
 
 * Design an alternative guidance metric as replacement or complement to pure code coverage which steers the fuzzer towards bugs that the existing metric has difficulties reaching. This metric could for example attempt to combine coverage feedback with some form of dataflow analyses to reward the fuzzer for triggering multiple distinct features on the same dataflow. This is a topic for future research.
-* Seed the fuzzer from proof-of-concept code or regression tests for old vulnerabilities to find remaining bugs that can be triggered by somewhat similar code. This is possible by using the [FuzzIL compiler](https://github.com/googleprojectzero/fuzzilli/tree/main/Compiler) to compile existing JavaScript code into a FuzzIL corpus. This approach is inherently limited to finding bugs that are at least somewhat similar to past vulnerabilities.
+* Seed the fuzzer from proof-of-concept code or regression tests for old vulnerabilities to find remaining bugs that can be triggered by somewhat similar code. This is possible by using the [FuzzIL compiler](https://github.com/googleprojectzero/fuzzilli/tree/main/Sources/Fuzzilli/Compiler) discussed above to compile existing JavaScript code into a FuzzIL corpus. This approach is inherently limited to finding bugs that are at least somewhat similar to past vulnerabilities.
 * Improve the code generation infrastructure and use it to create new programs from scratch, possibly targeting specific bug types or components of the target JavaScript engine. The remainder of this document discusses this approach and the HybridEngine that implements it.
 
 
-## Hybrid Fuzzing (Experimental)
-The central idea behind the HybridEngine is to combine a conservative code generation engine with the existing mutations and the splicing mechanism. This achieves a number of things:
+## The HybridEngine
+Implementation: [HybridEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Engines/HybridEngine.swift) (--engine=hybrid)
 
-* It allows the pure code generator to be fairly conservative so as to reduce its complexity while still achieving a reasonable correctness rate (rate of semantically valid samples)
-* It prevents over-specialization and improves the diversity of the emitted code as the mutations (mainly the input and operation mutations) are completely random and unbiased (for example, they ignore any type information). As such, they will also frequently result in semantically invalid samples.
-* It enables the code generation engine to "learn" interesting code fragments as these will be added to the corpus (due to coverage feedback) and then used for splicing. Due to this, code coverage feedback is still used even in a generative fuzzing mode.
+The central idea behind the HybridEngine is to combine code generation with the existing mutations and the splicing mechanism. This achieves a number of things:
 
-The next section discusses the (conservative) code generation engine. Afterwards, the full design of the hybrid engine will be explained.
+* It allows for manual fuzzer guidance by configuring the shape and aspects of
+  the generated programs (for example to stress certain areas of the JavaScript
+  engine or specific APIs).
+* It allows the pure code generator to be stay fairly simple and instead rely
+  on the mutators to make the generated code more interesting or more correct.
+  In particular, the FixupMutator is specifically designed to aid the
+  HybridEngine in generating correct and meaningful programs.
+* It prevents over-specialization and improves the diversity of the emitted
+  code as the mutations (mainly the input and operation mutations) are
+  completely random and unbiased (for example, they ignore any type
+  information). As such, they will also frequently result in semantically
+  invalid samples.
+* It enables the code generation engine to "learn" interesting code fragments
+  as these will be added to the corpus (due to coverage feedback) and then used
+  for splicing. Due to this, code coverage feedback is still used even in a
+  generative fuzzing mode.
 
-## Code Generation
+In contrast to the MutationEngine, the HybridEngine mostly lacks coverage guidance. As such, it needs to solve a number of problems in a different way:
 
-**Note: the remainder of this document is essentially a design document for the full HybridEngine. The current implementation of that engine is not yet feature-complete and should be treated as experimental**
+### 1. The Correctness Problem
+As the mutation engine reverts invalid mutations (those that cause a runtime exception to be raised), code generation during mutation can be somewhat aggressive and therefore lead to more invalid samples. However, when generating entire programs from scratch, the correctness rate of the generated samples is much more important. As such, the code generators needs to be careful not to generate invalid code. This is achieved in a number of ways:
 
-In the mutation engine, code generation can be fairly simple as it only ever has to generate a handful of instructions at the same time (e.g. during an invocation of the CodeGenMutator). Thus, the semantic correctness rate isn’t too important. The generative engine, on the other hand, requires a more sophisticated code generation infrastructure as it cannot (solely) rely on code coverage feedback to produce interesting code.
+1. Code generators should select input variables of the correct types. For example, a generator that emits a function call should ensure that the chosen variable contains a callable value.
 
-This section will explain the implementation of the new code generation engine. Note, however, that the code generation infrastructure, and in particular the CodeGenerators, are shared between the mutation engine (where it is used mainly as part of the CodeGenMutator) and the hybrid engine. As such, the mutation engine automatically benefits from improved code generation as well.
+2. Code generators can use guarded instructions (or explicit try-catch blocks) when they cannot prove that no exception will be thrown at runtime (this may happen for a number of reasons, including that no variable of the required type is currently available). As discussed above, both the FixupMutator and the Minimizer will take care of removing unecessary guards.
 
-To approach this, a number of problems related to code generation will be introduced and their solutions discussed which ultimately determine how the code generation engine works.
+3. There are a few other ad-hoc mechanisms that try to prevent common sources of invalid programs. For example, the ProgramBuilder supports a "recursion guard" which prevents trivial recursion.
 
-### The "Meaningfulness" Problem
-The first problem revolves around the creation of *meaningful* code. As an introductory example, consider the following code:
+### 2. The Meaningfulness Problem
+Consider the following code:
 
 ```javascript
 let v0 = ...;
@@ -503,14 +580,14 @@ In the mutation engine, code coverage in combination with the minimizer effectiv
 However, a generative engine doesn’t have the luxury of relying on coverage feedback (apart from splicing). As such, the main design goal of the code generation engine is to strive to generate meaningful code with a high frequency, where a loose definition of meaningful is that for given input types, the output can have different values depending on the input values. In practice, this for example means that a CodeGenerator that performs bitwise operations should require numerical input values instead of completely arbitrary ones:
 
 ```swift
-CodeGenerator("BitOp", inputs: (.number, .number)) { b, lhs, rhs in
+CodeGenerator("BitOp", inputs: .preferred(.number, .number)) { b, lhs, rhs in
     b.binary(lhs, rhs, with: chooseUniform(from: allBitwiseOperators))
 }
 ```
 
-In this example, the shown CodeGenerator states that it requires numerical inputs to produce meaningful code even though it could, in theory, also perform bitwise operations on other values like functions, etc.
+Further, the FixupMutator is (eventually) meant to also address this problem by detecting meaningless operations at runtime and changing them to be more meaningful.
 
-### The Lookahead Problem
+### 3. The Lookahead Problem
 Consider the case where Fuzzilli generates a function definition (e.g. through the PlainFunctionGenerator):
 
 ```javascript
@@ -530,7 +607,7 @@ function foo(v4: Number, v5: JSArray) -> JSArray {
 }
 ```
 
-With that, the code in the body can use the parameters meaningfully, and its return value can also be used. The function will have its signature stored in its type (as builtin functions and methods do as well) and so any calls to it generated in the future will attempt to obtain argument values of the correct type.
+With that, the code in the body can use the parameters meaningfully, and its return value can also be used. The function will have its signature stored in its type (as builtin functions and methods do as well) and so any calls to it generated in the future will attempt to obtain argument values of the correct type. When the signature is generated, the currently available variables are taken into account such that the probability of generating a signature which cannot be satisfied is very low.
 
 A related question is how to deal with custom object types, for example to generate code like:
 
@@ -542,7 +619,7 @@ function foo(v3) {
 
 For this to be possible, Fuzzilli must not only know about the type of v3 but also about the type of its properties.
 
-The solution here is quite similar: generate a handful of custom object types with recursive property types, then use them throughout the generator. For example, the following type might be used for v3 above:
+This can similarly be solved by generating a number of custom object types up front and using those in the generator. For example, the following type might be used for v3 above:
 
 ```
 v3 = .object("ObjType1", [
@@ -556,195 +633,6 @@ v3 = .object("ObjType1", [
 
 For this to work, code generators that generate objects or property stores have to obey these property types.
 
-Custom object types are not generated per program but are stored globally and are reused for multiple generated programs before slowly being replaced by new types. This provides an additional benefit: it enables splicing to work nicely since two programs are likely to share (some of) the same custom object types. In other words, it makes the generated programs more "compatible". In the case of distributed fuzzing, the types are also shared between different instances for the same reasons.
-
-#### Type Generation
-For the above solution, "TypeGenerators" are now required: small functions that return a  randomly generated type. A very simple type generation could look like this
-
-```swift
-"PrimitiveTypeGenerator": { b in
-    return chooseUniform(from: [.integer, .float, .boolean, .string])
-}
-```
-
-While a more complex type generator could for example generate an object type as shown previously, with recursive property types.
-
-TypeGenerators can be weighted differently (just like CodeGenerators), thus allowing control over the generated code (by influencing function parameter types and property types).
-
-### The Missing Argument Problem
-Consider the following scenario:
-
-```javascript
-// ObjType1 = .object("ObjType1", [
-//    .b: .integer
-// ])
-// ObjType2 = .object("ObjType2", [
-//    .a: ObjType1
-// ])
-
-function foo(v1: ObjType2) -> .anything {
-    ...;
-}
-
-// call foo here
-```
-
-Here, a function has been generated which requires a specific object type as the first argument. Later, a call to the function (by for example selecting the FunctionCallGenerator) is attempted to be generated. At that point, a value of the given object type is required, but none might exist currently (in fact, the probability of randomly generated code constructing a complex object with multiple properties and methods of the correct type is vanishingly small). There are now a few options:
-1. Give up and don’t perform the call. This is probably bad since it skews the distribution of the generated code in unpredictable ways (it will certainly have less function calls than expected).
-2. Perform the call with another, randomly chosen value. This is probably also bad since the function body was generated under the assumption that its parameter has a specific type. Mutations should be responsible for (attempting to) call a function with invalid arguments, but the generator should aim to use the correct argument types.
-3. Attempt to splice code from another program which results in the required value. While this is something to experiment with, it probably leads to unintuitive results, as the spliced code could perform all kinds of other things or favor certain kinds of values over others if they appear more frequently in the corpus.
-4. Generate code that directly creates a value of the required type.
-5. Somehow ensure that there are always (or most of the time) values of the necessary types available
-
-Ultimately, (4.) or (5.) appear to be the preferred ways to approach this problem. However, they require a mechanism to create a value of a given type: type instantiation.
-
-#### Type Instantiation
-Type instantiation is performed by CodeGenerators (since it requires code to be generated). For this to be possible, CodeGenerators that construct new values have to be annotated with the types that they can construct. This is shown in the next example:
-
-```swift
-CodeGenerator("IntegerGenerator", constructs: .integer) { b in
-    b.loadInt(b.genInt())
-}
-```
-
-With that, (4.) is easily achieved: find a CodeGenerator that is able to generate the specified type, then invoke it (and tell it which concrete type to instantiate). Moreover,  (5.) is also fairly easy to achieve since these code generators will also run as part of the normal code generation procedure. They only need to be "hinted" to generate values of the types used in the program (e.g. ObjType1 and ObjType2 from above).
-
-For constructing custom objects, there are at least the following options, each implemented by a CodeGenerator (and thus selected with different probabilities corresponding to their relative weights):
-
-1. Create an object literal
-2. Create a partial or empty object through an object literal, then add properties and methods to. This will likely be processed differently by the target engines.
-3. Create (or reuse) a constructor function, then call it using the `new` operator
-4. Create (or reuse) a class, then instantiate it using the `new` operator
-5. Create an object with a custom prototype object and distribute the required properties and methods between the two
-
-For constructing builtin objects (TypedArrays, Maps, Sets, etc.) there is generally only the option of invoking their respective constructor.
-
-With type instantiation available, there are now two central APIs for obtaining a variable:
-
-```swift
-findVariable(ofType: t) -> Variable?
-```
-
-This will always return an existing variable, but can fail if none exist
-
-```swift
-instantiate(t) -> Variable
-```
-
-This will always generate code to create a value of the desired type. It cannot fail.
-
-#### When to Instantiate
-Returning to the previous example, consider the following scenario:
-
-```
-function foo(v1: ObjType2) -> .anything {
-    ...;
-}
-
-let v2 = makeObjType2();
-foo(v2);
-
-// generate another call to foo here
-```
-
-In this case, a value of ObjType2 has been instantiated to perform the first call to foo. If, later on, a second call to foo is to be generated, there are now again two options:
-
-* Reuse v2
-* Create a new object to use as argument
-
-It is fairly clear that always performing one of the two will heavily bias the generated code and should be avoided. The question then is whether there exists some optimal "reuse ratio" that determines how often an existing value should be used and how often a new one should be generated. However, there is clearly no universally valid ratio: when performing a given number of function calls, there should, on average, clearly be less functions than argument values. The solution used by Fuzzilli is then to add a third API for variable access, which uses an existing value with a constant and configurable probability and otherwise instantiates the type. As a rule of thumbs, this API should be used whenever potentially complex object types are required (for function calls and property stores for example), while findVariable should be used to obtain values of the basic types (e.g. .function() (any function), .object() (any object), etc.). There is currently no use case that always uses the instantiate API directly.
-
-As a final note, the inputs to CodeGenerators are always selected using findVariable, never through instantiate. As such, their input types should generally be fairly broad.
-
-### The Variable Selection Problem
-Strictly speaking, this problem is not directly related to code generation and applies equally to the input mutation, which also has to select variables. However, it likely matters the most during code generation, so is listed here.
-
-Consider the following case:
-
-```swift
-CodeGenerator("MathOpGenerator") { b in
-    let Math = b.loadBuiltin("Math")
-    let method = chooseUniform(from: allMathMethods)
-    b.callMethod(method, on: Math, with: [...])
-}
-```
-
-This code generator does two things:
-1. Load the Math builtin
-2. Call one of the Math methods with existing (numerical) variables as inputs
-
-Assuming this generator is run twice in a row, there would now be two variables holding a reference to the Math builtin and two variables holding the results of the computations. As such, when randomly picking variables to operate on, it is now equally likely to perform another operation on the Math object as on the two (different) output variables. As the Math object is just a "side-effect", this is likely undesirable.
-
-There are multiple possible solutions for this problem:
-* Implement a more sophisticated variable selection algorithm that favors "complex" variables or favors variables that have not yet been used (often)
-* Adding a mechanism to "hide" variables to avoid them being used further at all
-* Avoid loading builtins and primitive values that already exist
-
-There is a basic mechanism to achieve the latter in the form of the `ProgramBuilder.reuseOrLoadX` APIs. However, it's probably still worth evaluating a more sophisticated solution.
-
-### The (New) Role Of The JSTyper
-While the JSTyper is mostly an optimization in the case of the MutationEngine (it increases the correctness rate but isn’t fundamentally required), it is essential for a generative engine. Without type information, it is virtually guaranteed that at least one of the possibly hundreds of generated instructions will cause a runtime exception.
-
-This doesn’t necessarily mean that the JSTyper must become significantly more powerful - in fact, it can still do fine without an understanding of e.g. prototypes - but it means that it might need to be helped in some ways, for example through custom function signatures and object property types.
-
-Still, code generating is fundamentally conservative: the JSTyper essentially defines the limits of what the generative engine can produce. If the JSTyper cannot infer the type of a variable, the remaining code is unlikely to make meaningful use of it (apart from generic operations that work on all types, such as e.g. the typeof operator) .
-
-### Summary
-The following summarizes the main features that power Fuzzillis code generation engine. The effects on the code generation performed during mutations are explicitly mentioned as well.
-
-1. Code generators should aim to generate semantically meaningful code instead of just semantically valid code. This will directly impact the CodeGenMutator as it uses these code generators as well.
-2. There is a new API: ProgramBuilder.genType() which generates a random type based on a small set of TypeGenerators. These for example result in primitive types, specific object types, or builtin types. This API is used to generate random signatures for generated functions or custom object types.
-3. There is another new API: ProgramBuilder.instantiate(t) which generates code that creates a value of the given type. For that, the ProgramBuilder relies on the CodeGenerators, which now state what types they can construct.
-4. A final API (name yet to be determined) is provided which either reuses an existing variable or instantiates a new one based on a configurable probability. This is used by code generators such as the FunctionCallGenerator or the PropertyStoreGenerator and thus affects the MutationEngine as well
-
-The following shows an example program that the code generators might produce.
-
-```javascript
-// Type set for this program:
-//     - ObjType1: .object([.a => .number])
-//     - all primitive types
-
-// FunctionDefinitionGenerator, picking a random signature:
-// (v4: ObjType1, v5: .integer) => .number
-function v3(v4, v5) {
-    // FunctionDefinitionGenerator generates code to fill the body
-
-    const v6 = v4.a; 	  // ObjType1 has .a property of type .number
-    const v7 = v6 * v5;   // v6, v5 are known to be numbers
-
-    return v7; 	// v7 is known to be a number
-}
-
-// ObjectLiteralGenerator, with "type hint" to create ObjType1
-const v9 = { a: 1337 };
-
-// FunctionCallGenerator, using an existing variable as input
-v3(v9, 42);
-
-// MethodCallGenerator, calling a Method on the Math builtin
-const v11 = Math.round(42);
-
-// FunctionCallGenerator, instantiating a new argument value
-const v12 = {};
-v12.a = 13.37;
-v3(v12, v11);
-```
-
-### The Generative Engine
-The entry point to the generative engine is the ProgramBuilder.generate(n) API, which will generate roughly n instructions (usually a bit more, never less). This API can generally either splice code or run a CodeGenerator. This ratio between the two is configurable through a global constant; by default, it aims to generate roughly 50% of the code through splicing and 50% through CodeGenerators. The high-level code generation algorithm is summarized in the image below.
-
-![Generative Fuzzing Algorithm](images/generative_engine.png)
-
-## The Hybrid Engine
-Implementation: [HybridEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Engines/HybridEngine.swift) (--engine=hybrid)
-
-In general, one could go with a pure generative engine as described in the previous section. However, there are at least two problems:
-
-* CodeGenerator is too conservative/limited (mostly limited by the JSTyper but also to some degree inherently) and simply can’t generate certain code constructs. For example, the common loop types (for, while, do-while) generated by the CodeGeneratos always have a fairly restricted form (they essentially always count up from zero to a number between 0 and 10)
-* Pure code generation might still result in a failure rate that is too high
-
-To solve these, Fuzzilli combines the code generation engine with the existing mutators, thus forming the HybridEngine. This improves the diversity of the generated samples (e.g. by mutating loops) and will also likely improve the overall correctness rate since only valid samples are further mutated and since the mutators probably have a higher correctness rate than the generator.
-
 ### Program Templates
 As previously discussed, there needs to be some guidance mechanism to direct the fuzzer towards specific areas of the code. In the HybridEngine, this is achieved through ProgramTemplates: high-level descriptions of the structure of a program from which concrete programs are then generated. This effectively restricts the search space and can thus find vulnerabilities more efficiently.
 
@@ -752,31 +640,122 @@ An example for a ProgramTemplate is shown next.
 
 ```swift
 ProgramTemplate("JITFunction") { b in
-    // Generate some random header code
-    b.generate(n: 10)
+    // Start with a random prefix and some random code.
+    b.buildPrefix()
+    b.build(n: 5)
 
-    var signature = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 1)[0] // invokes TypeGenerators
-
-    // Generate a random function to JIT compile
-    let f = b.buildPlainFunction(withSignature: signature) { args in
-        b.generate(n: 100)
+    // Generate a larger function and a signature for it
+    let f = b.buildPlainFunction(with: b.randomParameters()) { args in
+        assert(args.count > 0)
+        b.build(n: 30)
+        b.doReturn(b.randomVariable())
     }
-    
 
-    // Generate some random code in between
-    b.generate(n: 10)
-
-    // Call the function repeatedly to trigger JIT compilation
-    b.forLoop(b.loadInt(0), .lessThan, b.loadInt(20), .Add, b.loadInt(1)) { args in
-        b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
+    // Trigger JIT optimization
+    b.buildRepeatLoop(n: 100) { _ in
+        b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
     }
-    
-    // Call the function again with different arguments
-    let args = b.generateCallArguments(for: f)
-    b.callFunction(f, withArgs: args ) 
 ```
 
 This fairly simple template aims to search for JIT compiler bugs by generating a random function, forcing it to be compiled, then calling it again with different arguments.
+
+### Example
+The following is a walkthrough of how the HybridEngine may generate a program based on the template above. Note that not all CodeGenerators have been migrated to work well with the HybridEngine (e.g. by emitting guarded instruction if necessary) as that is still work-in-progress.
+
+#### 1. Prefix code generation
+The template starts out by generating a small "prefix" via the `b.buildPrefix()` method. A prefix is simply a piece of code whose purpose is to create some variables for use by subsequent code. It is usually recommended to start out with such a prefix, as it ensures that CodeGenerators have visible variables to use as inputs. Under the hood, prefix generation performs code generation but with only a small list of code generators marked as "value generators". These must always generate new variables and must not fail. The result may be a piece of code such as
+```
+v0 <- LoadInt '42'
+v1 <- LoadInt '1337'
+v2 <- LoadString 'foo'
+```
+
+#### 2. Random code generation
+The next part of the template simply generates a couple of random instructions using the main code generation API: `ProgramBuilder.build(n:)`. For code generation, the ProgramBuilder will repeatedly pick random CodeGenerators and run them until at least `n` instructions have been generated. An example CodeGenerator could looks as follows:
+
+```swift
+CodeGenerator("BinOp", inputs: .preferred(.number, .number)) { b, lhs, rhs in
+    let needGuard = b.type(of: lhs).MayBe(.bigint) || b.type(of: rhs).MayBe(.bigint)
+    b.binary(lhs, rhs, with: chooseUniform(from: allBinaryOperators), guard: needGuard)
+}
+```
+
+Note how the generator is careful to generate both correct _and_ meaningful code, while also not being unreasonably strict about its input requirements. It does so by stating that it "prefers" to receive numbers as inputs (meaning that it should be called with numbers if there are available variables, but can also be called with variables of different types), then checking if one of the inputs may be BigInts (in which case there would likely be a runtime exceptions: "TypeError: Cannot mix BigInt and other types, use explicit conversions"), and if so marking the operation as guarded (resulting in a try-catch being used at runtime).
+
+Used in this context, the generator may be invoked using `v0` and `v1`:
+
+```
+v3 <- Binary v0, '*', v1
+```
+
+As the types of both inputs are statically known to not be BigInts, no guarding is necessary.
+
+At this point, only one new instruction has been generated, and so code generation would continue. However, in the interest of brevity, for this example we will stop code generation here and move on to the next part of the template.
+
+#### 3. Function generation
+The next part of the template is responsible for generating a random function. For that, the first step is to generate a random signature using the `ProgramBuilder.randomParameters` API. This will look at the existing variables and their types and select a signature based on them. This way, there is a high chance that fitting argument values can be found later on. In this specific case, it could come up with a signature such as `[.string, .int]` as there are existing variables of both types. Note that the signature does not yet include the return value type. That will only be computed at the end of the function definition, depending on the `Return` statements generated inside the function body.
+
+After generating the signature, the template creates the function and fills its body using the code generation machinery. This time, we will use the following three code generators:
+
+```swift
+CodeGenerator("BuiltinGenerator") { b in
+    b.loadBuiltin(b.randomBuiltin())
+},
+
+CodeGenerator("FunctionCallGenerator", inputs: .preferred(.function())) { b, f in
+    let arguments = b.randomArguments(forCalling: f)
+    let needGuard = b.type(of: f).MayNotBe(.function())  // Technically would also need a guard if the argument types didn't match the signature
+    b.callFunction(f, withArgs: arguments, guard: needGuard)
+},
+
+CodeGenerator("ComputedPropertyAssignmentGenerator", inputs: .preferred(.object())) { b, obj in
+    let propertyName = b.randomVariable()
+    let value = b.randomVariable()
+    let needGuard = b.type(of: obj).MayBe(.nullish)
+    b.setComputedProperty(propertyName, of: obj, to: value, guard: needGuard)
+},
+```
+
+When running the first generator, the `ProgramBuilder.randomBuiltin` API will consult the static environment model to find an available builtin. In this case, the environment model may contain the following builtin: `bar: .function([] => .anything)`, which is then choosen. Next, code generation may select the  `FunctionCallGenerator`. As it states that it would like a `.function()` as argument, the ProgramBuilder would (likely) select the previously loaded builtin. As its signature is known, no argument values are selected for the call and the return value is typed as `.anything`. Finally, code generation may pick the `ComputedPropertyAssignmentGenerator`. As there is currently no value of type `.object()` available, the return value of the function call would (likely) be selected as it has type `.anything`. This way, there is al least a chance that the value will be an object at runtime. As it cannot be ruled out that the value is not "nullish" (`null` or `undefined`), in which case a runtime exception would be raised, the code generator marks the operation as guarded. Putting everything together, the following code is generated for the function:
+
+```
+v4 <- BeginPlainFunction -> v5, v6
+    v7 <- LoadBuiltin 'bar'
+    v8 <- CallFunction v7, []
+    SetComputedProperty v8, v5, v6 (guarded)
+    Return v8
+EndPlainFunction
+```
+
+#### 4. Putting it all together
+The remainder of the template simply generates a loop to call the function generated in step 3. Typically, the function should be called again a few more times with different arguments and possibly after executing some more randomly generated code. To keep this example short, these steps are skipped here, however.
+
+Lifted to JavaScript (with expression inlining), the generated code would now be:
+```js
+function f4(a5, a6) {
+    let v8 = bar();
+    try { v8[a5] = a6; } catch {}
+    return v8;
+}
+for (let v9 = 0; v9 < 100; v9++) {
+    f6("foo", 42 * 1337);
+}
+```
+
+After generation, the sample will be mutated further. As the FixupMutator is especially useful for the HybridEngine, it is always used as the first mutator to "refine" the generated program. In this case, the mutator may discover that the try-catch guard is not needed (if it never triggers at runtime) and can therefore be removed, resulting in the final ("refined") program:
+
+```js
+function f4(a5, a6) {
+    let v8 = bar();
+    v8[a5] = a6;
+    return v8;
+}
+for (let v9 = 0; v9 < 100; v9++) {
+    f6("foo", 42 * 1337);
+}
+```
+
+The subsequent mutations may then change the generated program in all sorts of interesting (and less interesting) ways.
 
 ### Code Generation + Mutations: The HybridEngine
 The HybridEngine combines the code generation engine with the existing mutators. For that, it first selects a random ProgramTemplate, then generates a program from it, using the code generation engine as discussed previously. If the generated program is valid, it is further mutated a few times, using the algorithm that is also used by the Mutationengine.
