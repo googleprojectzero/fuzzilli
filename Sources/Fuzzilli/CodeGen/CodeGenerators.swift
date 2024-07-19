@@ -1371,8 +1371,6 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("ForOfWithDestructLoopGenerator", inputs: .preferred(.iterable)) { b, obj in
-        // Don't run this generator in conservative mode, until we can track array element types
-        guard b.mode != .conservative else { return }
         var indices: [Int64] = []
         for idx in 0..<Int64.random(in: 1..<5) {
             withProbability(0.8) {

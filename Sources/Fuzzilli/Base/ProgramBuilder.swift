@@ -34,18 +34,6 @@ public class ProgramBuilder {
     /// The parent program for the program being constructed.
     private let parent: Program?
 
-    public enum Mode {
-        /// In this mode, the builder will try as hard as possible to generate semantically valid code.
-        /// However, the generated code is likely not as diverse as in aggressive mode.
-        case conservative
-        /// In this mode, the builder tries to generate more diverse code. However, the generated
-        /// code likely has a lower probability of being semantically correct.
-        case aggressive
-
-    }
-    /// The mode of this builder
-    public var mode: Mode
-
     public var context: Context {
         return contextAnalyzer.context
     }
@@ -152,10 +140,9 @@ public class ProgramBuilder {
     }
 
     /// Constructs a new program builder for the given fuzzer.
-    init(for fuzzer: Fuzzer, parent: Program?, mode: Mode) {
+    init(for fuzzer: Fuzzer, parent: Program?) {
         self.fuzzer = fuzzer
         self.jsTyper = JSTyper(for: fuzzer.environment)
-        self.mode = mode
         self.parent = parent
     }
 
@@ -996,10 +983,8 @@ public class ProgramBuilder {
                 assert(!instr.hasOneOutput || v != instr.output || !(instr.op is BeginAnySubroutine) || (type.signature?.outputType ?? .anything) == .anything)
                 // Try to find a compatible variable in the host program.
                 let replacement: Variable
-                if mode == .conservative, let match = randomVariable(ofType: type) {
+                if let match = randomVariable(ofType: type) {
                     replacement = match
-                } else if mode == .aggressive {
-                    replacement = randomVariable(forUseAs: type)
                 } else {
                     // No compatible variable found
                     continue
