@@ -3,7 +3,7 @@ const protobuf = require("protobufjs");
 const fs = require('fs');
 
 if (process.argv.length < 5) {
-    console.log(`Usage: node ${process.argv[1]} path/to/ast.proto path/to/code.js path/to/output.ast.proto`);
+    console.error(`Usage: node ${process.argv[1]} path/to/ast.proto path/to/code.js path/to/output.ast.proto`);
     process.exit(0);
 }
 
@@ -26,7 +26,7 @@ function tryReadFile(path) {
     try {
         content = fs.readFileSync(path, 'utf8').toString();
     } catch(err) {
-        console.log(`Couldn't read ${path}: ${err}`);
+        console.error(`Couldn't read ${path}: ${err}`);
         process.exit(-1);
     }
     return content;
@@ -568,7 +568,9 @@ protobuf.load(astProtobufDefinitionPath, function(err, root) {
         throw err;
 
     let ast = parse(script, root);
-    console.log(JSON.stringify(ast, null, 2));
+
+    // Uncomment this to print the AST to stdout (will be very verbose).
+    //console.log(JSON.stringify(ast, null, 2));
 
     const AST = root.lookupType('compiler.protobuf.AST');
     let buffer = AST.encode(ast).finish();
