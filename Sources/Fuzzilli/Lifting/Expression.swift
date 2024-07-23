@@ -52,7 +52,7 @@ public struct Expression: CustomStringConvertible {
     public let type: ExpressionType
     public let text: String
 
-    let numSubexpressions: UInt8
+    let numSubexpressions: UInt
 
     public var characteristic: ExpressionType.Characteristic {
         return type.characteristic
