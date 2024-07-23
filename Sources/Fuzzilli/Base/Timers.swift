@@ -28,7 +28,7 @@ public class Timers {
         self.queue = queue
     }
 
-    /// Schedule a task to run repeatadly in fixed time intervals.
+    /// Schedule a task to run repeatedly in fixed time intervals.
     ///
     /// - Parameters:
     ///   - interval: The interval (in seconds) between two executions of the task.
