@@ -1456,9 +1456,6 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        // This test requires conservative building mode. See comments below.
-        b.mode = .conservative
-
         //
         // Original Program
         //
@@ -1485,8 +1482,6 @@ class ProgramBuilderTests: XCTestCase {
             b.doReturn(r)
         }
         // This function is not compatible since it requires more parameters.
-        // However, in .aggressive building mode we may still take it since it MayBe
-        // compatible (as in, the 2nd parameter may not be used, for example).
         b.buildPlainFunction(with: .parameters(n: 2)) { args in
             let r = b.binary(args[0], args[1], with: .Exp)
             b.doReturn(r)
@@ -1522,9 +1517,6 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        // This test behaves differently depending on the builder mode.
-        b.mode = chooseUniform(from: [.aggressive, .conservative])
-
         //
         // Original Program
         //
@@ -1545,10 +1537,7 @@ class ProgramBuilderTests: XCTestCase {
         //
         b.probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 1.0
         // In the host program, we have a function with one parameter of an explicit type.
-        // In aggressive mode, we still take this function since it MayBe a compatible function (from
-        // a theoretical standpoint because it may still be called with an integer, but from a practical
-        // point-of-view because it may may actually also work with different arguments).
-        // However in conservative mode, we won't take it since it's not guaranteed to be compatible.
+        // For splicint, we therefore won't take this function since it's not guaranteed to be compatible.
         b.buildPlainFunction(with: .parameters(.integer)) { args in
             let two = b.loadInt(2)
             let r = b.binary(args[0], two, with: .Mul)
@@ -1562,32 +1551,19 @@ class ProgramBuilderTests: XCTestCase {
         // Expected Program
         //
         let expected: Program
-        switch b.mode {
-        case .aggressive:
-            // The host function MayBe compatible, so take it.
-            f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-                let two = b.loadInt(2)
-                let r = b.binary(args[0], two, with: .Mul)
-                b.doReturn(r)
-            }
-            n = b.loadInt(42)
-            b.callFunction(f, withArgs: [n])
-            expected = b.finalize()
-        case .conservative:
-            // The host function isn't guaranteed to be compatible, so don't take it.
-            b.buildPlainFunction(with: .parameters(n: 1)) { args in
-                let two = b.loadInt(2)
-                let r = b.binary(args[0], two, with: .Mul)
-                b.doReturn(r)
-            }
-            n = b.loadInt(42)
-            let f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-                let print = b.loadBuiltin("print")
-                b.callFunction(print, withArgs: args)
-            }
-            b.callFunction(f, withArgs: [n])
-            expected = b.finalize()
+        // The host function isn't guaranteed to be compatible, so don't take it.
+        b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let two = b.loadInt(2)
+            let r = b.binary(args[0], two, with: .Mul)
+            b.doReturn(r)
         }
+        n = b.loadInt(42)
+        f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let print = b.loadBuiltin("print")
+            b.callFunction(print, withArgs: args)
+        }
+        b.callFunction(f, withArgs: [n])
+        expected = b.finalize()
 
         XCTAssertEqual(FuzzILLifter().lift(actual), FuzzILLifter().lift(expected))
         XCTAssertEqual(actual, expected)
@@ -1598,13 +1574,10 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        // This test behaves differently depending on the builder mode.
-        b.mode = chooseUniform(from: [.aggressive, .conservative])
-
         //
         // Original Program
         //
-        let i = b.loadInt(42)
+        var i = b.loadInt(42)
         splicePoint = b.indexOfNextInstruction()
         b.unary(.PostInc, i)
         let original = b.finalize()
@@ -1614,19 +1587,10 @@ class ProgramBuilderTests: XCTestCase {
         //
         b.probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 1.0
 
-        // There are no variables known to have the type that we're looking for (.integer),
-        // but there are variables that may be of that type (because they are .anything or
-        // .number in this example), so we expect these to be used in aggressive building
-        // mode. However, in conservative mode we won't use them because it's not guaranteed
-        // that they are compatible.
+        // For splicing, we will not use a variable of an unknown type as replacement.
         let unknown = b.loadBuiltin("unknown")
         XCTAssertEqual(b.type(of: unknown), .anything)
-        if probability(0.5) {
-            // Any union type that includes .integer should work for this example.
-            b.setType(ofVariable: unknown, to: .number)
-            XCTAssertEqual(b.type(of: unknown), .number)
-        }
-        b.loadBool(true)        // This should never be used as replacement as it definitely has a different type
+        b.loadBool(true)        // This should also never be used as replacement as it definitely has a different type
         b.splice(from: original, at: splicePoint, mergeDataFlow: true)
         let actual = b.finalize()
 
@@ -1634,19 +1598,11 @@ class ProgramBuilderTests: XCTestCase {
         // Expected Program
         //
         let expected: Program
-        switch b.mode {
-        case .aggressive:
-            let unknown = b.loadBuiltin("unknown")
-            b.loadBool(true)
-            b.unary(.PostInc, unknown)
-            expected = b.finalize()
-        case .conservative:
-            b.loadBuiltin("unknown")
-            b.loadBool(true)
-            let i = b.loadInt(42)
-            b.unary(.PostInc, i)
-            expected = b.finalize()
-        }
+        b.loadBuiltin("unknown")
+        b.loadBool(true)
+        i = b.loadInt(42)
+        b.unary(.PostInc, i)
+        expected = b.finalize()
 
         XCTAssertEqual(actual, expected)
     }
@@ -1655,8 +1611,6 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        // This test requires .conservative mode, see below.
-        b.mode = .conservative
 
         //
         // Original Program
@@ -1674,9 +1628,7 @@ class ProgramBuilderTests: XCTestCase {
 
         // In this case, all existing variables are known to definitely have a different
         // type than the one we're looking for (.integer) when trying to replace the outputs
-        // of the LoadInt operations. In this case it's not obvious what the best way to
-        // handle this is, so currently we don't replace the outputs in such cases if we're
-        // in conservative splicing mode (otherwise, we'd pick any other variable).
+        // of the LoadInt operations. In this case we don't replace the outputs in such cases.
         b.loadString("foobar")
         b.loadBool(true)
         b.splice(from: original, at: splicePoint, mergeDataFlow: true)
@@ -1922,7 +1874,6 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        b.mode = .conservative
 
         //
         // Original Program
@@ -2018,8 +1969,6 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        // We enable conservative mode to exercise the canMutate checks within the splice loop
-        b.mode = .conservative
 
         //
         // Original Program
@@ -2091,7 +2040,6 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        b.mode = .conservative
 
         //
         // Original Program
@@ -2254,7 +2202,6 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        b.mode = .conservative
 
         //
         // Original Program
@@ -2303,7 +2250,6 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        b.mode = .conservative
 
         //
         // Original Program
@@ -2331,7 +2277,6 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        b.mode = .conservative
 
         //
         // Original Program
@@ -2376,7 +2321,6 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        b.mode = .conservative
 
         //
         // Original Program
@@ -2412,7 +2356,6 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        b.mode = .conservative
 
         //
         // Original Program
