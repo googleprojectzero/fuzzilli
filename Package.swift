@@ -25,7 +25,7 @@ let package = Package(
         .library(name: "Fuzzilli",targets: ["Fuzzilli"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.6.0"),
+        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.27.0"),
     ],
     targets: [
         .target(name: "libsocket",
