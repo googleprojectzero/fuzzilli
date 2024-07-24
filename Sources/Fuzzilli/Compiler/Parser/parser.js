@@ -34,8 +34,8 @@ function tryReadFile(path) {
 
 // Parse the given JavaScript script and return an AST compatible with Fuzzilli's protobuf-based AST format.
 function parse(script, proto) {
-    let ast = Parser.parse(script, { plugins: ["v8intrinsic"] });
-
+    let ast = Parser.parse(script, { plugins: ["v8intrinsic"] }); 
+    
     function assertNoError(err) {
         if (err) throw err;
     }
@@ -519,6 +519,15 @@ function parse(script, proto) {
                 let argument = visitExpression(node.argument);
                 return makeExpression('UnaryExpression', { operator, argument });
             }
+            case 'ConditionalExpression': {
+
+                let condition = visitExpression(node.test);
+                let consequent = visitExpression(node.consequent);
+                let alternate = visitExpression(node.alternate);
+
+                return makeExpression('TernaryExpression', { condition, consequent, alternate });
+
+            }
             case 'BinaryExpression':
             case 'LogicalExpression': {
                 let operator = node.operator;
@@ -571,8 +580,8 @@ protobuf.load(astProtobufDefinitionPath, function(err, root) {
 
     // Uncomment this to print the AST to stdout (will be very verbose).
     //console.log(JSON.stringify(ast, null, 2));
-
-    const AST = root.lookupType('compiler.protobuf.AST');
+    
+const AST = root.lookupType('compiler.protobuf.AST');
     let buffer = AST.encode(ast).finish();
 
     fs.writeFileSync(outputFilePath, buffer);
