@@ -10,7 +10,7 @@
 #define REPRL_DRFD 102
 #define REPRL_DWFD 103
 
-#define SHM_SIZE 0x100000
+#define SHM_SIZE 0x200000
 #define MAX_EDGES ((SHM_SIZE - 4) * 8)
 
 #define CHECK(cond) if (!(cond)) { fprintf(stderr, "\"" #cond "\" failed\n"); _exit(-1); }

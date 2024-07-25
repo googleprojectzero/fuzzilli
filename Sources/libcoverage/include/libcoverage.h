@@ -33,7 +33,10 @@ struct edge_counts {
     uint32_t * edge_hit_count;
 };
 
-#define SHM_SIZE 0x100000
+// Size of the shared memory region. Defines an upper limit on the number of
+// coverage edges that can be tracked. When bumping this number, please also
+// update Target/coverage.c.
+#define SHM_SIZE 0x200000
 #define MAX_EDGES ((SHM_SIZE - 4) * 8)
 
 // Structure of the shared memory region.
