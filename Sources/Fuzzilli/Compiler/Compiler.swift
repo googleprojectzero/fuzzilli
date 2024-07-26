@@ -505,6 +505,13 @@ public class JavaScriptCompiler {
 
         switch expr {
 
+        case .ternaryExpression(let ternaryExpression):
+            let condition = try compileExpression(ternaryExpression.condition)
+            let consequent = try compileExpression(ternaryExpression.consequent)
+            let alternate = try compileExpression(ternaryExpression.alternate)
+            return emit(TernaryOperation(), withInputs: [condition, consequent, alternate]).output
+        
+
         case .identifier(let identifier):
             // Identifiers can generally turn into one of three things:
             //  1. A FuzzIL variable that has previously been associated with the identifier
