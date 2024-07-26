@@ -27,6 +27,7 @@ output(a >>> b);
 output(a && b);
 output(a || b);
 output(a > b ? a : b);
+output(a < b ? a : b);
 
 let arr = [1,2];
 output(typeof arr);

@@ -502,7 +502,7 @@ public class JavaScriptCompiler {
         guard let expr = node.expression else {
             throw CompilerError.invalidASTError("missing concrete expression in expression node")
         }
-        
+
         switch expr {
 
         case .ternaryExpression(let ternaryExpression):

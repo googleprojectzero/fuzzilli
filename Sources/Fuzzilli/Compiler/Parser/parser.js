@@ -520,13 +520,10 @@ function parse(script, proto) {
                 return makeExpression('UnaryExpression', { operator, argument });
             }
             case 'ConditionalExpression': {
-
                 let condition = visitExpression(node.test);
                 let consequent = visitExpression(node.consequent);
                 let alternate = visitExpression(node.alternate);
-
                 return makeExpression('TernaryExpression', { condition, consequent, alternate });
-
             }
             case 'BinaryExpression':
             case 'LogicalExpression': {
@@ -581,7 +578,7 @@ protobuf.load(astProtobufDefinitionPath, function(err, root) {
     // Uncomment this to print the AST to stdout (will be very verbose).
     //console.log(JSON.stringify(ast, null, 2));
     
-const AST = root.lookupType('compiler.protobuf.AST');
+    const AST = root.lookupType('compiler.protobuf.AST');
     let buffer = AST.encode(ast).finish();
 
     fs.writeFileSync(outputFilePath, buffer);
