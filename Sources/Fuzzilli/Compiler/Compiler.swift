@@ -479,6 +479,16 @@ public class JavaScriptCompiler {
             let value = try compileExpression(throwStatement.argument)
             emit(ThrowException(), withInputs: [value])
 
+        case .withStatement(let withStatement):
+            let object = try compileExpression(withStatement.object)
+            let beginWith = BeginWith()
+            emit(beginWith, withInputs: [object])
+            try enterNewScope {
+                for statement in withStatement.body.blockStatement.body {
+                    try compileStatement(statement)
+                }
+            }
+            emit(EndWith())
         }
     }
 

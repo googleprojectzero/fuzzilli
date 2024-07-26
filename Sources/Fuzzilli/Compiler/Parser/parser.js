@@ -320,6 +320,12 @@ function parse(script, proto) {
             case 'ThrowStatement': {
                 return makeStatement('ThrowStatement', { argument: visitExpression(node.argument) });
             }
+            case 'WithStatement': {
+                let withStatement = {};
+                withStatement.object = visitExpression(node.object);
+                withStatement.body = visitStatement(node.body);
+                return makeStatement('WithStatement', withStatement);
+            }
             default: {
                 throw "Unhandled node type " + node.type;
             }
