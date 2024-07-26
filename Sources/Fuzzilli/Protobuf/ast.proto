@@ -395,6 +395,15 @@ message V8IntrinsicIdentifier {
     string name = 1;
 }
 
+message TernaryExpression {
+  // The test condition of the ternary expression.
+  Expression condition = 1;
+  // The expression executed if the test is true.
+  Expression consequent = 2;
+  // The expression executed if the test is false.
+  Expression alternate = 3;
+}
+
 message Expression {
     oneof expression {
         Identifier identifier = 1;
@@ -421,5 +430,6 @@ message Expression {
         SpreadElement spreadElement = 22;
         SequenceExpression sequenceExpression = 23;
         V8IntrinsicIdentifier v8IntrinsicIdentifier = 24;
+        TernaryExpression ternaryExpression = 25;
     }
 }
