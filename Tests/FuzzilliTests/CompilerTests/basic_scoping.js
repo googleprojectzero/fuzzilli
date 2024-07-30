@@ -16,5 +16,12 @@ function foo(x) {
   }
   output(x);
   output(y);
+  let obj = { x: 45, y: 9001 };
+  with (obj) {
+    output(x);
+    output(y);
+  }
+  output(x);
+  output(y);
 }
 foo(44);

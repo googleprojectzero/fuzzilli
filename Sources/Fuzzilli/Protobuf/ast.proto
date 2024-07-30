@@ -202,6 +202,11 @@ message ThrowStatement {
     Expression argument = 1;
 }
 
+message WithStatement {
+    Expression object = 1;
+    Statement body = 2;
+}
+
 message Statement {
     oneof statement {
         EmptyStatement emptyStatement = 1;
@@ -221,6 +226,7 @@ message Statement {
         ContinueStatement continueStatement = 15;
         TryStatement tryStatement = 16;
         ThrowStatement throwStatement = 17;
+        WithStatement withStatement = 18;
     }
 }
 
