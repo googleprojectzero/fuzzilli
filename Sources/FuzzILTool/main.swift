@@ -36,7 +36,7 @@ let filteredFunctionsForCompiler = [
 // Loads a serialized FuzzIL program from the given file
 func loadProgram(from path: String) throws -> Program {
     let data = try Data(contentsOf: URL(fileURLWithPath: path))
-    let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
+    let proto = try Fuzzilli_Protobuf_Program(serializedBytes: data)
     let program = try Program(from: proto)
     return program
 }
@@ -147,7 +147,7 @@ else if args.has("--liftCorpusToJS") {
 // This allows the debugging of produced programs that are not syntactically valid
 else if args.has("--dumpProtobuf") {
     let data = try Data(contentsOf: URL(fileURLWithPath: path))
-    let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
+    let proto = try Fuzzilli_Protobuf_Program(serializedBytes: data)
     dump(proto, maxDepth: 3)
 }
 

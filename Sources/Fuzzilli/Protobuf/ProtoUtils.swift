@@ -113,7 +113,7 @@ public func decodeProtobufCorpus(_ buffer: Data) throws -> [Program]{
         }
         let data = buffer.subdata(in: offset..<offset+size)
         offset += size + align(size, to: 4)
-        let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
+        let proto = try Fuzzilli_Protobuf_Program(serializedBytes: data)
         let program = try Program(from: proto, opCache: opCache)
         newPrograms.append(program)
     }

@@ -33,8 +33,8 @@ class ProgramSerializationTests: XCTestCase {
             let data1 = try! proto1.serializedData()
             let data2 = try! proto2.serializedData()
 
-            proto1 = try! Fuzzilli_Protobuf_Program(serializedData: data1)
-            proto2 = try! Fuzzilli_Protobuf_Program(serializedData: data2)
+            proto1 = try! Fuzzilli_Protobuf_Program(serializedBytes: data1)
+            proto2 = try! Fuzzilli_Protobuf_Program(serializedBytes: data2)
             XCTAssertEqual(proto1, proto2)
 
             let copy1 = try! Program(from: proto1)
@@ -75,7 +75,7 @@ class ProgramSerializationTests: XCTestCase {
 
         var proto = program.asProtobuf(opCache: encodingCache)
         let data = try! proto.serializedData()
-        proto = try! Fuzzilli_Protobuf_Program(serializedData: data)
+        proto = try! Fuzzilli_Protobuf_Program(serializedBytes: data)
         let copy = try! Program(from: proto, opCache: decodingCache)
 
         XCTAssertEqual(program, copy)
