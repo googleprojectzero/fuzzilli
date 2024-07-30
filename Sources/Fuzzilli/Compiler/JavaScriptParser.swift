@@ -53,7 +53,7 @@ public class JavaScriptParser {
         try runParserScript(withArguments: [astProtobufDefinitionPath, path, outputFilePath])
         let data = try Data(contentsOf: URL(fileURLWithPath: outputFilePath))
         try FileManager.default.removeItem(atPath: outputFilePath)
-        return try AST(serializedData: data)
+        return try AST(serializedBytes: data)
     }
 
     private func runParserScript(withArguments arguments: [String]) throws {

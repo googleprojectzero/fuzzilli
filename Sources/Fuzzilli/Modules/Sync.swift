@@ -154,7 +154,7 @@ public class DistributedFuzzingNode {
     /// and importing instances need to be configured identically, see above.
     func synchronizeState(to data: Data) throws {
         if supportsFastStateSynchronization {
-            let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
+            let state = try Fuzzilli_Protobuf_FuzzerState(serializedBytes: data)
             try fuzzer.corpus.importState(state.corpus)
             try fuzzer.evaluator.importState(state.evaluatorState)
         } else {
@@ -236,7 +236,7 @@ public class DistributedFuzzingParentNode: DistributedFuzzingNode, Module {
 
         case .crashingProgram:
             do {
-                let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
+                let proto = try Fuzzilli_Protobuf_Program(serializedBytes: data)
                 let program = try Program(from: proto)
                 fuzzer.importCrash(program, origin: .child(id: child))
             } catch {
@@ -250,7 +250,7 @@ public class DistributedFuzzingParentNode: DistributedFuzzingNode, Module {
             }
 
             do {
-                let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
+                let proto = try Fuzzilli_Protobuf_Program(serializedBytes: data)
                 let program = try Program(from: proto)
                 fuzzer.importProgram(program, enableDropout: false, origin: .child(id: child))
             } catch {
@@ -258,7 +258,7 @@ public class DistributedFuzzingParentNode: DistributedFuzzingNode, Module {
             }
 
         case .statistics:
-            if let data = try? Fuzzilli_Protobuf_Statistics(serializedData: data) {
+            if let data = try? Fuzzilli_Protobuf_Statistics(serializedBytes: data) {
                 if let stats = Statistics.instance(for: fuzzer) {
                     stats.importData(data, from: child)
                 }
@@ -267,7 +267,7 @@ public class DistributedFuzzingParentNode: DistributedFuzzingNode, Module {
             }
 
         case .log:
-            if let proto = try? Fuzzilli_Protobuf_LogMessage(serializedData: data),
+            if let proto = try? Fuzzilli_Protobuf_LogMessage(serializedBytes: data),
                let origin = UUID(uuidString: proto.origin),
                let level = LogLevel(rawValue: Int(clamping: proto.level)) {
                 fuzzer.dispatchEvent(fuzzer.events.Log, data: (origin: origin, level: level, label: proto.label, message: proto.content))
@@ -444,7 +444,7 @@ public class DistributedFuzzingChildNode: DistributedFuzzingNode, Module {
             }
 
             do {
-                let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
+                let proto = try Fuzzilli_Protobuf_Program(serializedBytes: data)
                 let program = try Program(from: proto)
 
                 if messageType == .importedProgram {

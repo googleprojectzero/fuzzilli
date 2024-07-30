@@ -347,7 +347,7 @@ func loadCorpus(from dirPath: String) -> [Program] {
         let path = dirPath + "/" + filename
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
-            let pb = try Fuzzilli_Protobuf_Program(serializedData: data)
+            let pb = try Fuzzilli_Protobuf_Program(serializedBytes: data)
             let program = try Program.init(from: pb)
             if !program.isEmpty {
                 programs.append(program)
