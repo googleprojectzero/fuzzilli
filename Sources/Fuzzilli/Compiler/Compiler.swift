@@ -483,9 +483,7 @@ public class JavaScriptCompiler {
             let object = try compileExpression(withStatement.object)
             emit(BeginWith(), withInputs: [object])
             try enterNewScope {
-                for statement in withStatement.body.blockStatement.body {
-                    try compileStatement(statement)
-                }
+                try compileBody(withStatement.body)
             }
             emit(EndWith())
         }
