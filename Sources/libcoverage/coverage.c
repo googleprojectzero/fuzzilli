@@ -38,8 +38,6 @@
 
 #define unlikely(cond) __builtin_expect(!!(cond), 0)
 
-#define SHM_SIZE 0x100000
-#define MAX_EDGES ((SHM_SIZE - 4) * 8)
 static_assert(MAX_EDGES <= UINT32_MAX, "Edges must be addressable using a 32-bit index");
 
 static inline int edge(const uint8_t* bits, uint64_t index)
