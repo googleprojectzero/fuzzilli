@@ -495,12 +495,17 @@ public class ProgramBuilder {
         func createObjectWithProperties(_ type: ILType) -> Variable  {
             assert(type.MayBe(.object()))
 
+            // Before we do any generation below, let's take into account that we already create a variable with this invocation, i.e. the createObject at the end.
+            // Therefore we need to decrease the budget here temporarily.
+            self.argumentGenerationVariableBudget! -= 1
+            // We defer the increase again, because at that point the variable is actually visible, i.e. `numVariables` was increased through the `createObject` call.
+            defer { self.argumentGenerationVariableBudget! += 1 }
+
             var properties: [String: Variable] = [:]
 
             for propertyName in type.properties {
                 // If we have an object that has a group, we should get a type here, otherwise if we don't have a group, we will get .anything.
                 let propType = fuzzer.environment.type(ofProperty: propertyName, on: type)
-                // Here we can enter generateType again, and end up here again if we need config objects for config objects, therefore we pass the recursion counter back into generateType, which will bail out eventually if there is a cycle.
                 properties[propertyName] = generateType(propType)
             }
 
@@ -526,8 +531,8 @@ public class ProgramBuilder {
                 }
             }
 
-            if numVariables > argumentGenerationVariableBudget! {
-                logger.warning("Reached variable generation limit in generateType for Signature: \(argumentGenerationSignature!).")
+            if numVariables >= argumentGenerationVariableBudget! {
+                logger.warning("Reached variable generation limit in generateType for Signature: \(argumentGenerationSignature!), returning a random variable for use as type \(type).")
                 return randomVariable(forUseAs: type)
             }
 
