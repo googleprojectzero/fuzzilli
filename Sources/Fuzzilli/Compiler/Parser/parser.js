@@ -326,6 +326,18 @@ function parse(script, proto) {
                 withStatement.body = visitStatement(node.body);
                 return makeStatement('WithStatement', withStatement);
             }
+            case 'SwitchStatement': {
+                let switchStatement = {};
+                switchStatement.discriminant = visitExpression(node.discriminant);
+                switchStatement.cases = node.cases.map(caseNode => visitStatement(caseNode));
+                return makeStatement('SwitchStatement', switchStatement);
+            }
+            case 'SwitchCase': {
+                let switchCase = {};
+                if (node.test) {switchCase.test = visitExpression(node.test)}
+                switchCase.consequent = node.consequent.map(consequentNode => visitStatement(consequentNode));
+                return switchCase;
+            }
             default: {
                 throw "Unhandled node type " + node.type;
             }

@@ -905,6 +905,55 @@ public struct Compiler_Protobuf_WithStatement: @unchecked Sendable {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+public struct Compiler_Protobuf_SwitchStatement: @unchecked Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var discriminant: Compiler_Protobuf_Expression {
+    get {return _storage._discriminant ?? Compiler_Protobuf_Expression()}
+    set {_uniqueStorage()._discriminant = newValue}
+  }
+  /// Returns true if `discriminant` has been explicitly set.
+  public var hasDiscriminant: Bool {return _storage._discriminant != nil}
+  /// Clears the value of `discriminant`. Subsequent reads from it will return its default value.
+  public mutating func clearDiscriminant() {_uniqueStorage()._discriminant = nil}
+
+  public var cases: [Compiler_Protobuf_SwitchCase] {
+    get {return _storage._cases}
+    set {_uniqueStorage()._cases = newValue}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+public struct Compiler_Protobuf_SwitchCase: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var test: Compiler_Protobuf_Expression {
+    get {return _test ?? Compiler_Protobuf_Expression()}
+    set {_test = newValue}
+  }
+  /// Returns true if `test` has been explicitly set.
+  public var hasTest: Bool {return self._test != nil}
+  /// Clears the value of `test`. Subsequent reads from it will return its default value.
+  public mutating func clearTest() {self._test = nil}
+
+  public var consequent: [Compiler_Protobuf_Statement] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _test: Compiler_Protobuf_Expression? = nil
+}
+
 public struct Compiler_Protobuf_Statement: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1059,6 +1108,14 @@ public struct Compiler_Protobuf_Statement: @unchecked Sendable {
     set {_uniqueStorage()._statement = .withStatement(newValue)}
   }
 
+  public var switchStatement: Compiler_Protobuf_SwitchStatement {
+    get {
+      if case .switchStatement(let v)? = _storage._statement {return v}
+      return Compiler_Protobuf_SwitchStatement()
+    }
+    set {_uniqueStorage()._statement = .switchStatement(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Statement: Equatable, Sendable {
@@ -1080,6 +1137,7 @@ public struct Compiler_Protobuf_Statement: @unchecked Sendable {
     case tryStatement(Compiler_Protobuf_TryStatement)
     case throwStatement(Compiler_Protobuf_ThrowStatement)
     case withStatement(Compiler_Protobuf_WithStatement)
+    case switchStatement(Compiler_Protobuf_SwitchStatement)
 
   }
 
@@ -4019,6 +4077,132 @@ extension Compiler_Protobuf_WithStatement: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
+extension Compiler_Protobuf_SwitchStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SwitchStatement"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "discriminant"),
+    2: .same(proto: "cases"),
+  ]
+
+  fileprivate class _StorageClass {
+    var _discriminant: Compiler_Protobuf_Expression? = nil
+    var _cases: [Compiler_Protobuf_SwitchCase] = []
+
+    #if swift(>=5.10)
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+    #else
+      static let defaultInstance = _StorageClass()
+    #endif
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _discriminant = source._discriminant
+      _cases = source._cases
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._discriminant) }()
+        case 2: try { try decoder.decodeRepeatedMessageField(value: &_storage._cases) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._discriminant {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+      if !_storage._cases.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._cases, fieldNumber: 2)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_SwitchStatement, rhs: Compiler_Protobuf_SwitchStatement) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._discriminant != rhs_storage._discriminant {return false}
+        if _storage._cases != rhs_storage._cases {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_SwitchCase: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SwitchCase"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "test"),
+    2: .same(proto: "consequent"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._test) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.consequent) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._test {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    if !self.consequent.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.consequent, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_SwitchCase, rhs: Compiler_Protobuf_SwitchCase) -> Bool {
+    if lhs._test != rhs._test {return false}
+    if lhs.consequent != rhs.consequent {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Statement"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -4040,6 +4224,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
     16: .same(proto: "tryStatement"),
     17: .same(proto: "throwStatement"),
     18: .same(proto: "withStatement"),
+    19: .same(proto: "switchStatement"),
   ]
 
   fileprivate class _StorageClass {
@@ -4311,6 +4496,19 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .withStatement(v)
           }
         }()
+        case 19: try {
+          var v: Compiler_Protobuf_SwitchStatement?
+          var hadOneofValue = false
+          if let current = _storage._statement {
+            hadOneofValue = true
+            if case .switchStatement(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._statement = .switchStatement(v)
+          }
+        }()
         default: break
         }
       }
@@ -4395,6 +4593,10 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
       case .withStatement?: try {
         guard case .withStatement(let v)? = _storage._statement else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+      }()
+      case .switchStatement?: try {
+        guard case .switchStatement(let v)? = _storage._statement else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
       }()
       case nil: break
       }

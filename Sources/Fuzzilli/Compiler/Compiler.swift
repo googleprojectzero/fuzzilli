@@ -441,7 +441,6 @@ public class JavaScriptCompiler {
             emit(EndForOfLoop())
 
         case .breakStatement:
-            // TODO currently we assume this is a LoopBreak, but once we support switch-statements, it could also be a SwitchBreak
             emit(LoopBreak())
 
         case .continueStatement:
@@ -486,6 +485,45 @@ public class JavaScriptCompiler {
                 try compileBody(withStatement.body)
             }
             emit(EndWith())
+        case .switchStatement(let switchStatement):
+            // Precompute tests because between BeginSwitch and BeginSwitchCase we can't emit instructions
+            var precomputedTests = [Variable?]()
+            for caseStatement in switchStatement.cases {
+                if caseStatement.hasTest {
+                    let test = try compileExpression(caseStatement.test)
+                    precomputedTests.append(test)
+                } else {
+                    precomputedTests.append(nil) 
+                }
+            }
+            let discriminant = try compileExpression(switchStatement.discriminant)
+            emit(BeginSwitch(), withInputs: [discriminant])
+            for (index, caseStatement) in switchStatement.cases.enumerated() {
+                var fallsThrough = true
+                if caseStatement.hasTest {
+                    if let test = precomputedTests[index] {
+                        emit(BeginSwitchCase(), withInputs: [test])
+                    }
+                } else {
+                    emit(BeginSwitchDefaultCase())
+                }
+                try enterNewScope {
+                    for statement in caseStatement.consequent {
+                        switch statement.statement {
+                        case .breakStatement:
+                            fallsThrough = false
+                            break // Don't compile the break statement because it'd be interpreted as a LoopBreak
+                        default:
+                            try compileStatement(statement)
+                        }
+                        if !fallsThrough {
+                            break
+                        }
+                    }
+                }
+                emit(EndSwitchCase(fallsThrough: fallsThrough))
+            }
+            emit(EndSwitch())
         }
     }
 

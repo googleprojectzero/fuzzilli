@@ -207,6 +207,16 @@ message WithStatement {
     Statement body = 2;
 }
 
+message SwitchStatement {
+    Expression discriminant = 1;
+    repeated SwitchCase cases = 2;
+}
+
+message SwitchCase {
+    Expression test = 1;
+    repeated Statement consequent = 2;
+}
+
 message Statement {
     oneof statement {
         EmptyStatement emptyStatement = 1;
@@ -227,6 +237,7 @@ message Statement {
         TryStatement tryStatement = 16;
         ThrowStatement throwStatement = 17;
         WithStatement withStatement = 18;
+        SwitchStatement switchStatement = 19;
     }
 }
 
