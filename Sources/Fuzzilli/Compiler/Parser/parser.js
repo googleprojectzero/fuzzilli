@@ -329,7 +329,7 @@ function parse(script, proto) {
             case 'SwitchStatement': {
                 let switchStatement = {};
                 switchStatement.discriminant = visitExpression(node.discriminant);
-                switchStatement.cases = node.cases.map(caseNode => visitStatement(caseNode));
+                switchStatement.cases = node.cases.map(visitStatement);
                 return makeStatement('SwitchStatement', switchStatement);
             }
             case 'SwitchCase': {

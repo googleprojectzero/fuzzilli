@@ -486,24 +486,22 @@ public class JavaScriptCompiler {
             }
             emit(EndWith())
         case .switchStatement(let switchStatement):
-            // Precompute tests because between BeginSwitch and BeginSwitchCase we can't emit instructions
-            var precomputedTests = [Variable?]()
+            // TODO Replace the precomputation of tests with compilation of the test expressions in the cases.
+            // To do this, we would need to redesign Switch statements in FuzzIL to (for example) have a BeginSwitchCaseHead, BeginSwitchCaseBody, and EndSwitchCase. 
+            // Then the expression would go inside the header.
+            var precomputedTests = [Variable]()
             for caseStatement in switchStatement.cases {
                 if caseStatement.hasTest {
                     let test = try compileExpression(caseStatement.test)
                     precomputedTests.append(test)
-                } else {
-                    precomputedTests.append(nil) 
-                }
+                } 
             }
             let discriminant = try compileExpression(switchStatement.discriminant)
             emit(BeginSwitch(), withInputs: [discriminant])
-            for (index, caseStatement) in switchStatement.cases.enumerated() {
+            for caseStatement in switchStatement.cases {
                 var fallsThrough = true
                 if caseStatement.hasTest {
-                    if let test = precomputedTests[index] {
-                        emit(BeginSwitchCase(), withInputs: [test])
-                    }
+                    emit(BeginSwitchCase(), withInputs: [precomputedTests.removeFirst()])
                 } else {
                     emit(BeginSwitchDefaultCase())
                 }
