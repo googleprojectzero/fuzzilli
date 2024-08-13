@@ -335,7 +335,7 @@ function parse(script, proto) {
             case 'SwitchCase': {
                 let switchCase = {};
                 if (node.test) {switchCase.test = visitExpression(node.test)}
-                switchCase.consequent = node.consequent.map(consequentNode => visitStatement(consequentNode));
+                switchCase.consequent = node.consequent.map(visitStatement);
                 return switchCase;
             }
             default: {
