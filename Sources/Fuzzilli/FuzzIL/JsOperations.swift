@@ -1851,7 +1851,7 @@ final class EndWhileLoop: JsOperation {
     override var opcode: Opcode { .endWhileLoop(self) }
 
     init() {
-        super.init(attributes: .isBlockEnd)
+        super.init(attributes: [.isBlockEnd, .isBreakableEnd])
     }
 }
 
@@ -1876,7 +1876,7 @@ final class EndDoWhileLoop: JsOperation {
     override var opcode: Opcode { .endDoWhileLoop(self) }
 
     init() {
-        super.init(numInputs: 1, attributes: .isBlockEnd)
+        super.init(numInputs: 1, attributes: [.isBlockEnd, .isBreakableEnd])
     }
 }
 
@@ -1960,7 +1960,7 @@ final class EndForLoop: JsOperation {
     override var opcode: Opcode { .endForLoop(self) }
 
     init() {
-        super.init(attributes: .isBlockEnd)
+        super.init(attributes: [.isBlockEnd, .isBreakableEnd])
     }
 }
 
@@ -1976,7 +1976,7 @@ final class EndForInLoop: JsOperation {
     override var opcode: Opcode { .endForInLoop(self) }
 
     init() {
-        super.init(attributes: .isBlockEnd)
+        super.init(attributes: [.isBlockEnd, .isBreakableEnd])
     }
 }
 
@@ -2006,7 +2006,7 @@ final class EndForOfLoop: JsOperation {
     override var opcode: Opcode { .endForOfLoop(self) }
 
     init() {
-        super.init(attributes: .isBlockEnd)
+        super.init(attributes: [.isBlockEnd, .isBreakableEnd])
     }
 }
 
@@ -2034,7 +2034,7 @@ final class EndRepeatLoop: JsOperation {
     override var opcode: Opcode { .endRepeatLoop(self) }
 
     init() {
-        super.init(attributes: .isBlockEnd)
+        super.init(attributes: [.isBlockEnd, .isBreakableEnd])
     }
 }
 
@@ -2222,7 +2222,7 @@ final class EndSwitch: JsOperation {
     override var opcode: Opcode { .endSwitch(self) }
 
     init() {
-        super.init(attributes: .isBlockEnd, requiredContext: .switchBlock)
+        super.init(attributes: [.isBlockEnd, .isBreakableEnd], requiredContext: .switchBlock)
     }
 }
 

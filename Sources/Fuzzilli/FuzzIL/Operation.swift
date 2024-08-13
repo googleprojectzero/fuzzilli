@@ -138,6 +138,9 @@ public class Operation {
 
         // The instruction is a Nop operation.
         static let isNop                        = Attributes(rawValue: 1 << 11)
+
+        // The instruction ends a breakable context.
+        static let isBreakableEnd               = Attributes(rawValue: 1 << 12)
     }
 }
 

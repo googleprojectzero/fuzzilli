@@ -251,6 +251,11 @@ public struct Instruction {
         return op.attributes.contains(.isNop)
     }
 
+    /// Whether this instruction is the end of a breakable context.
+    public var isBreakableEnd: Bool {
+        return op.attributes.contains(.isBreakableEnd)
+    }
+
 
     public init<Variables: Collection>(_ op: Operation, inouts: Variables, index: Int? = nil) where Variables.Element == Variable {
         assert(op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count)

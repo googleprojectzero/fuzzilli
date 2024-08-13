@@ -57,6 +57,9 @@ public class JavaScriptCompiler {
     /// The next free FuzzIL variable.
     private var nextVariable = 0
 
+    /// Context analyzer to track the context of the code being compiled. Used to distinguish switch and loop breaks.
+    private var contextAnalyzer = ContextAnalyzer()
+
     public func compile(_ ast: AST) throws -> Program {
         reset()
 
@@ -441,7 +444,16 @@ public class JavaScriptCompiler {
             emit(EndForOfLoop())
 
         case .breakStatement:
-            emit(LoopBreak())
+            switch contextAnalyzer.breakContext {
+            case .loop:
+                emit(LoopBreak())
+                break
+            case .switchBlock:
+                emit(SwitchBreak())
+                break
+            default:
+                throw CompilerError.invalidNodeError("break statement outside of loop or switch")
+            }
 
         case .continueStatement:
             emit(LoopContinue())
@@ -499,7 +511,6 @@ public class JavaScriptCompiler {
             let discriminant = try compileExpression(switchStatement.discriminant)
             emit(BeginSwitch(), withInputs: [discriminant])
             for caseStatement in switchStatement.cases {
-                var fallsThrough = true
                 if caseStatement.hasTest {
                     emit(BeginSwitchCase(), withInputs: [precomputedTests.removeFirst()])
                 } else {
@@ -507,19 +518,10 @@ public class JavaScriptCompiler {
                 }
                 try enterNewScope {
                     for statement in caseStatement.consequent {
-                        switch statement.statement {
-                        case .breakStatement:
-                            fallsThrough = false
-                            break // Don't compile the break statement because it'd be interpreted as a LoopBreak
-                        default:
-                            try compileStatement(statement)
-                        }
-                        if !fallsThrough {
-                            break
-                        }
+                        try compileStatement(statement)
                     }
                 }
-                emit(EndSwitchCase(fallsThrough: fallsThrough))
+                emit(EndSwitchCase(fallsThrough: true))
             }
             emit(EndSwitch())
         }
@@ -1035,6 +1037,7 @@ public class JavaScriptCompiler {
         let innerOutputs = (0..<op.numInnerOutputs).map { _ in nextFreeVariable() }
         let inouts = inputs + outputs + innerOutputs
         let instr = Instruction(op, inouts: inouts)
+        contextAnalyzer.analyze(instr)
         return code.append(instr)
     }
 
