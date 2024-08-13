@@ -57,7 +57,7 @@ public class JavaScriptCompiler {
     /// The next free FuzzIL variable.
     private var nextVariable = 0
 
-    /// Context analyzer to track the context of the code being compiled. Used to distinguish switch and loop breaks.
+    /// Context analyzer to track the context of the code being compiled. Used for example to distinguish switch and loop breaks.
     private var contextAnalyzer = ContextAnalyzer()
 
     public func compile(_ ast: AST) throws -> Program {
@@ -521,7 +521,9 @@ public class JavaScriptCompiler {
                         try compileStatement(statement)
                     }
                 }
-                emit(EndSwitchCase(fallsThrough: true))
+                // We could also do an optimization here where we check if the last statement in the case is a break, and if so, we drop the last instruction
+                // and set the fallsThrough flag to false.
+                emit(EndSwitchCase(fallsThrough: true)) 
             }
             emit(EndSwitch())
         }
