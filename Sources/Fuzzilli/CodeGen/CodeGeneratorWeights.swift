@@ -40,6 +40,7 @@ public let codeGeneratorWeights = [
     "ArgumentsAccessGenerator":                 3,
     "FunctionWithArgumentsAccessGenerator":     2,
     "BuiltinGenerator":                         10,
+    "BuiltinOverwriteGenerator":                3,
     "LoadNewTargetGenerator":                   3,
 
     "ObjectLiteralGenerator":                   10,
