@@ -749,6 +749,10 @@ public let CodeGenerators: [CodeGenerator] = [
         b.loadBuiltin(b.randomBuiltin())
     },
 
+    CodeGenerator("BuiltinOverwriteGenerator", inputs: .one) { b, value in
+        b.storeNamedVariable(b.randomBuiltin(), value)
+    },
+
     RecursiveCodeGenerator("PlainFunctionGenerator") { b in
         let f = b.buildPlainFunction(with: b.randomParameters(), isStrict: probability(0.1)) { _ in
             b.buildRecursive()
