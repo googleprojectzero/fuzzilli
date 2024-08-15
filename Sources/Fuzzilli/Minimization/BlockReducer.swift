@@ -14,27 +14,27 @@
 
 /// Reducer to remove unecessary block groups.
 struct BlockReducer: Reducer {
-    func reduce(_ code: inout Code, with helper: MinimizationHelper) {
+    func reduce(with helper: MinimizationHelper) {
         /// Here we iterate over the blocks in the code while also changing the code (by removing blocks). This works
         /// since we are for the most part only nopping out block instructions, not moving them around. In the cases
         /// where code is moved, only code inside the processed block is moved, and the iteration order visits inner
         /// blocks before outer blocks.
         /// As such, the block indices stay valid across these code transformations.
-        for group in code.findAllBlockGroups() {
-            switch code[group.head].op.opcode {
+        for group in helper.code.findAllBlockGroups() {
+            switch helper.code[group.head].op.opcode {
             case .beginObjectLiteral:
                 assert(group.numBlocks == 1)
-                reduceObjectLiteral(group.block(0), in: &code, with: helper)
+                reduceObjectLiteral(group.block(0), with: helper)
 
             case .beginObjectLiteralMethod,
                  .beginObjectLiteralComputedMethod,
                  .beginObjectLiteralGetter,
                  .beginObjectLiteralSetter:
                 assert(group.numBlocks == 1)
-                reduceFunctionInObjectLiteral(group.block(0), in: &code, with: helper)
+                reduceFunctionInObjectLiteral(group.block(0), with: helper)
 
             case .beginClassDefinition:
-                reduceClassDefinition(group.block(0), in: &code, with: helper)
+                reduceClassDefinition(group.block(0), with: helper)
 
             case .beginClassConstructor,
                  .beginClassInstanceMethod,
@@ -46,7 +46,7 @@ struct BlockReducer: Reducer {
                  .beginClassStaticSetter,
                  .beginClassPrivateInstanceMethod,
                  .beginClassPrivateStaticMethod:
-                reduceFunctionInClassDefinition(group.block(0), in: &code, with: helper)
+                reduceFunctionInClassDefinition(group.block(0), with: helper)
 
             case .beginWhileLoopHeader,
                  .beginDoWhileLoopBody,
@@ -55,16 +55,16 @@ struct BlockReducer: Reducer {
                  .beginForOfLoop,
                  .beginForOfLoopWithDestruct,
                  .beginRepeatLoop:
-                reduceLoop(group, in: &code, with: helper)
+                reduceLoop(group, with: helper)
 
             case .beginIf:
-                reduceIfElse(group, in: &code, with: helper)
+                reduceIfElse(group, with: helper)
 
             case .beginTry:
-                reduceTryCatchFinally(tryCatch: group, in: &code, with: helper)
+                reduceTryCatchFinally(tryCatch: group, with: helper)
 
             case .beginSwitch:
-                reduceBeginSwitch(group, in: &code, with: helper)
+                reduceBeginSwitch(group, with: helper)
 
             case .beginSwitchCase,
                  .beginSwitchDefaultCase:
@@ -72,7 +72,7 @@ struct BlockReducer: Reducer {
                  break
 
             case .beginWith:
-                reduceGenericBlockGroup(group, in: &code, with: helper)
+                reduceGenericBlockGroup(group, with: helper)
 
             case .beginPlainFunction,
                  .beginArrowFunction,
@@ -81,38 +81,39 @@ struct BlockReducer: Reducer {
                  .beginAsyncArrowFunction,
                  .beginAsyncGeneratorFunction,
                  .beginConstructor:
-                reduceFunctionOrConstructor(group, in: &code, with: helper)
+                reduceFunctionOrConstructor(group, with: helper)
 
             case .beginCodeString:
-                reduceCodeString(group, in: &code, with: helper)
+                reduceCodeString(group, with: helper)
 
             case .beginBlockStatement:
-                reduceGenericBlockGroup(group, in: &code, with: helper)
+                reduceGenericBlockGroup(group, with: helper)
 
             default:
-                fatalError("Unknown block group: \(code[group.head].op.name)")
+                fatalError("Unknown block group: \(helper.code[group.head].op.name)")
             }
         }
     }
 
-    private func reduceObjectLiteral(_ literal: Block, in code: inout Code, with helper: MinimizationHelper) {
+    private func reduceObjectLiteral(_ literal: Block, with helper: MinimizationHelper) {
         // The instructions in the body of the object literal aren't valid outside of
         // object literals, so either remove the entire literal or nothing.
-        helper.tryNopping(literal.allInstructions, in: &code)
+        helper.tryNopping(literal.allInstructions)
     }
 
-    private func reduceFunctionInObjectLiteral(_ function: Block, in code: inout Code, with helper: MinimizationHelper) {
+    private func reduceFunctionInObjectLiteral(_ function: Block, with helper: MinimizationHelper) {
         // The instruction in the body of these functions aren't valid inside the object literal as
         // they require .javascript context. So either remove the entire function or nothing.
-        helper.tryNopping(function.allInstructions, in: &code)
+        helper.tryNopping(function.allInstructions)
     }
 
-    private func reduceClassDefinition(_ definition: Block, in code: inout Code, with helper: MinimizationHelper) {
-        assert(code[definition.head].op is BeginClassDefinition)
-        assert(code[definition.tail].op is EndClassDefinition)
+    private func reduceClassDefinition(_ definition: Block, with helper: MinimizationHelper) {
+        assert(helper.code[definition.head].op is BeginClassDefinition)
+        assert(helper.code[definition.tail].op is EndClassDefinition)
 
         // Similar to the object literal case, the instructions in the body aren't valid outside of it, so remove everything.
-        if helper.tryNopping(definition.allInstructions, in: &code) {
+        if helper.tryNopping(definition.allInstructions) {
+            // Success!
             return
         }
 
@@ -143,11 +144,11 @@ struct BlockReducer: Reducer {
         //     v43 <- CallMethod 'm'
         //
         // For that, first collect all field definition instructions and all body instructions into two separate lists
-        var fieldDefinitionInstructions = [code[definition.head]]
+        var fieldDefinitionInstructions = [helper.code[definition.head]]
         var bodyInstruction = [Instruction]()
         // We have to be careful not to include field definitions of nested class definitions here, so go by the current depth to indentify the correct instructions.
         var depth = 0
-        for instr in code.body(of: definition) {
+        for instr in helper.code.body(of: definition) {
             if instr.isBlockEnd {
                 assert(depth > 0)
                 depth -= 1
@@ -161,7 +162,7 @@ struct BlockReducer: Reducer {
                 depth += 1
             }
         }
-        fieldDefinitionInstructions.append(code[definition.tail])
+        fieldDefinitionInstructions.append(helper.code[definition.tail])
         if bodyInstruction.isEmpty {
             // No need to attempt any reordering. This early bail-out is required to ensure minimization terminates.
             // Otherwise, this reordering would be retried every time, and count as a successful modification of the code.
@@ -177,23 +178,23 @@ struct BlockReducer: Reducer {
 
         // Code reordering can change the numbering of variables, so they need to be renumbered.
         // The resulting code may also not be valid since we're moving code out of a method definition.
-        helper.tryReplacements(replacements, in: &code, renumberVariables: true, expectCodeToBeValid: false)
+        helper.tryReplacements(replacements, renumberVariables: true, expectCodeToBeValid: false)
     }
 
-    private func reduceFunctionInClassDefinition(_ function: Block, in code: inout Code, with helper: MinimizationHelper) {
+    private func reduceFunctionInClassDefinition(_ function: Block, with helper: MinimizationHelper) {
         // Similar to the object literal case, the instructions inside the function body aren't valid inside
         // the surrounding class definition, so we can only try to temove the entire function.
-        helper.tryNopping(function.allInstructions, in: &code)
+        helper.tryNopping(function.allInstructions)
     }
 
-    private func reduceLoop(_ loop: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
+    private func reduceLoop(_ loop: BlockGroup, with helper: MinimizationHelper) {
         // We reduce loops by removing the loop itself as well as
         // any 'break' or 'continue' instructions in the loop body.
         var candidates = loop.blockInstructionIndices
         var inNestedLoop = false
         var nestedBlocks = Stack<Bool>()
         for block in loop.blocks {
-            for instr in code.body(of: block) {
+            for instr in helper.code.body(of: block) {
                 if instr.isBlockEnd {
                    inNestedLoop = nestedBlocks.pop()
                 }
@@ -210,15 +211,16 @@ struct BlockReducer: Reducer {
             assert(nestedBlocks.isEmpty)
         }
 
-        helper.tryNopping(candidates, in: &code)
+        helper.tryNopping(candidates)
     }
 
-    private func reduceIfElse(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
-        assert(code[group.head].op is BeginIf)
-        assert(code[group.tail].op is EndIf)
+    private func reduceIfElse(_ group: BlockGroup, with helper: MinimizationHelper) {
+        assert(helper.code[group.head].op is BeginIf)
+        assert(helper.code[group.tail].op is EndIf)
 
         // First try to remove the entire if-else block but keep its content.
-        if helper.tryNopping(group.blockInstructionIndices, in: &code) {
+        if helper.tryNopping(group.blockInstructionIndices) {
+            // Success!
             return
         }
 
@@ -227,29 +229,30 @@ struct BlockReducer: Reducer {
             // First try to remove the else block.
             let elseBlock = group.block(1)
             let rangeToNop = Array(elseBlock.head ..< elseBlock.tail)
-            if helper.tryNopping(rangeToNop, in: &code) {
+            if helper.tryNopping(rangeToNop) {
+                // Success!
                 return
             }
 
             // Then try to remove the if block. This requires inverting the condition of the if.
             let ifBlock = group.block(0)
-            let beginIf = code[ifBlock.head].op as! BeginIf
+            let beginIf = helper.code[ifBlock.head].op as! BeginIf
             let invertedIf = BeginIf(inverted: !beginIf.inverted)
             var replacements = [(Int, Instruction)]()
-            replacements.append((ifBlock.head, Instruction(invertedIf, inouts: code[ifBlock.head].inouts)))
+            replacements.append((ifBlock.head, Instruction(invertedIf, inouts: helper.code[ifBlock.head].inouts, flags: .empty)))
             // The rest of the if body is nopped ...
-            for instr in code.body(of: ifBlock) {
+            for instr in helper.code.body(of: ifBlock) {
                 replacements.append((instr.index, helper.nop(for: instr)))
             }
             // ... as well as the BeginElse.
             replacements.append((elseBlock.head, Instruction(Nop())))
-            helper.tryReplacements(replacements, in: &code)
+            helper.tryReplacements(replacements)
         }
     }
 
-    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
+    private func reduceGenericBlockGroup(_ group: BlockGroup, with helper: MinimizationHelper) {
         var candidates = group.blockInstructionIndices
-        if helper.tryNopping(candidates, in: &code) {
+        if helper.tryNopping(candidates) {
             // Success!
             return
         }
@@ -272,19 +275,19 @@ struct BlockReducer: Reducer {
         // can be removed independently, since they have data dependencies on each other. As such,
         // the only option is to remove the entire block, including its content.
         candidates = group.instructionIndices
-        helper.tryNopping(candidates, in: &code)
+        helper.tryNopping(candidates)
     }
 
     // Try to reduce a BeginSwitch/EndSwitch Block.
     // (1) reduce it by aggressively trying to remove the whole thing.
     // (2) reduce it by removing the BeginSwitch(Default)Case/EndSwitchCase instructions but keeping the content.
     // (3) reduce it by removing individual BeginSwitchCase/EndSwitchCase blocks.
-    private func reduceBeginSwitch(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
-        assert(code[group.head].op is BeginSwitch)
+    private func reduceBeginSwitch(_ group: BlockGroup, with helper: MinimizationHelper) {
+        assert(helper.code[group.head].op is BeginSwitch)
 
         var candidates = group.instructionIndices
 
-        if helper.tryNopping(candidates, in: &code) {
+        if helper.tryNopping(candidates) {
             // (1)
             // We successfully removed the whole switch statement.
             return
@@ -299,8 +302,8 @@ struct BlockReducer: Reducer {
         // Start iterating over the switch case statements.
         var instructionIdx = group.head+1
         while instructionIdx < group.tail {
-            if code[instructionIdx].op is BeginSwitchCase || code[instructionIdx].op is BeginSwitchDefaultCase {
-                let block = code.block(startingAt: instructionIdx)
+            if helper.code[instructionIdx].op is BeginSwitchCase || helper.code[instructionIdx].op is BeginSwitchDefaultCase {
+                let block = helper.code.block(startingAt: instructionIdx)
                 blocks.append(block)
                 candidates.append(block.head)
                 candidates.append(block.tail)
@@ -310,7 +313,7 @@ struct BlockReducer: Reducer {
             instructionIdx += 1
         }
 
-        if helper.tryNopping(candidates, in: &code) {
+        if helper.tryNopping(candidates) {
             // (2)
             // We successfully removed the switch case while keeping the
             // content inside.
@@ -319,13 +322,13 @@ struct BlockReducer: Reducer {
 
         for block in blocks {
             // (3) Try to remove the cases here.
-            helper.tryNopping(block.allInstructions, in: &code)
+            helper.tryNopping(block.allInstructions)
         }
     }
 
-    private func reduceFunctionOrConstructor(_ function: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
-        assert(code[function.head].op is BeginAnySubroutine)
-        assert(code[function.tail].op is EndAnySubroutine)
+    private func reduceFunctionOrConstructor(_ function: BlockGroup, with helper: MinimizationHelper) {
+        assert(helper.code[function.head].op is BeginAnySubroutine)
+        assert(helper.code[function.tail].op is EndAnySubroutine)
 
         // Only attempt generic block group reduction and rely on the InliningReducer to handle more complex scenarios.
         // Alternatively, we could also attempt to turn
@@ -342,42 +345,44 @@ struct BlockReducer: Reducer {
         //
         // So that the calls to the function can be removed by a subsequent reducer if only the body is important.
         // But its likely not worth the effort as the InliningReducer will do a better job at solving this.
-        reduceGenericBlockGroup(function, in: &code, with: helper)
+        reduceGenericBlockGroup(function, with: helper)
     }
 
-    private func reduceCodeString(_ codestring: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
-        assert(code[codestring.head].op is BeginCodeString)
-        assert(code[codestring.tail].op is EndCodeString)
+    private func reduceCodeString(_ codestring: BlockGroup, with helper: MinimizationHelper) {
+        assert(helper.code[codestring.head].op is BeginCodeString)
+        assert(helper.code[codestring.tail].op is EndCodeString)
 
         // To remove CodeStrings, we replace the BeginCodeString with a LoadString operation and the EndCodeString with a Nop.
         // This way, the code inside the CodeString will execute directly and any following `eval()` call on that CodeString
         // will effectively become a Nop (and will hopefully be removed afterwards).
         // This avoids the need to find the `eval` call that use the CodeString.
+        // Indices stay valid throughout this reduction.
         var replacements = [(Int, Instruction)]()
-        replacements.append((codestring.head, Instruction(LoadString(value: ""), output: code[codestring.head].output)))
+        replacements.append((codestring.head, Instruction(LoadString(value: ""), output: helper.code[codestring.head].output)))
         replacements.append((codestring.tail, Instruction(Nop())))
-        if helper.tryReplacements(replacements, in: &code) {
+        if helper.tryReplacements(replacements) {
             // Success!
             return
         }
 
         // If unsuccessful, default to generic block reduction
-        reduceGenericBlockGroup(codestring, in: &code, with: helper)
+        reduceGenericBlockGroup(codestring, with: helper)
     }
 
-    private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
-        assert(code[tryCatch.head].op is BeginTry)
-        assert(code[tryCatch.tail].op is EndTryCatchFinally)
+    private func reduceTryCatchFinally(tryCatch: BlockGroup, with helper: MinimizationHelper) {
+        assert(helper.code[tryCatch.head].op is BeginTry)
+        assert(helper.code[tryCatch.tail].op is EndTryCatchFinally)
 
         // First we try to remove only the try-catch-finally block instructions.
         var candidates = tryCatch.blockInstructionIndices
 
-        if helper.tryNopping(candidates, in: &code) {
+        if helper.tryNopping(candidates) {
+            // Success!
             return
         }
 
         let tryBlock = tryCatch.block(0)
-        assert(code[tryBlock.head].op is BeginTry)
+        assert(helper.code[tryBlock.head].op is BeginTry)
 
         // If that doesn't work, then we try to remove the block instructions
         // and the last instruction of the try block but keep everything else.
@@ -404,8 +409,8 @@ struct BlockReducer: Reducer {
         var removedLastTryBlockInstruction = false
         // Find the last instruction in try block and try removing that as well.
         for i in stride(from: tryBlock.tail - 1, to: tryBlock.head, by: -1) {
-            if !(code[i].op is Nop) {
-                if !code[i].isBlock {
+            if !(helper.code[i].op is Nop) {
+                if !helper.code[i].isBlock {
                     candidates.append(i)
                     removedLastTryBlockInstruction = true
                 }
@@ -413,8 +418,11 @@ struct BlockReducer: Reducer {
             }
         }
 
-        if removedLastTryBlockInstruction && helper.tryNopping(candidates, in: &code) {
-            return
+        if removedLastTryBlockInstruction {
+            if helper.tryNopping(candidates) {
+                // Success!
+                return
+            }
         }
 
         // If that still didn't work, try removing the entire try-block.
@@ -435,15 +443,18 @@ struct BlockReducer: Reducer {
 
         // Remove all instructions in the body of the try block
         for i in stride(from: tryBlock.tail - 1, to: tryBlock.head, by: -1) {
-            if !(code[i].op is Nop) {
+            if !(helper.code[i].op is Nop) {
                 candidates.append(i)
             }
         }
 
-        helper.tryNopping(candidates, in: &code)
+        if helper.tryNopping(candidates) {
+            // Success!
+            return
+        }
 
         // Finally, fall back to generic block group reduction, which will attempt to remove the
         // entire try-catch block including its content
-        reduceGenericBlockGroup(tryCatch, in: &code, with: helper)
+        reduceGenericBlockGroup(tryCatch, with: helper)
     }
 }

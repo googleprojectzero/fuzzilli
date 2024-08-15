@@ -27,7 +27,10 @@ import Foundation
 ///     be a configurable limit to minimization which keeps some random instructions alive, so that those are uniformly
 ///     distributed and not biased to a certain type of instruction or instruction sequence.
 ///
+/// We *cannot* store any information as indices as they are invalidated as soon as any reducer moves instructions around.
+/// Therefore, also every reducer needs to preserve flags when they operate on an instruction or operation.
 public class Minimizer: ComponentBase {
+
     /// DispatchQueue on which program minimization happens.
     private let minimizationQueue = DispatchQueue(label: "Minimizer")
 
@@ -62,36 +65,13 @@ public class Minimizer: ComponentBase {
     }
 
     private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double, runningSynchronously: Bool) -> Code {
-        // Implementation of minimization limits:
-        // Pick N (~= minimizationLimit * programSize) instructions at random which will not be removed during minimization.
-        // This way, minimization will be sped up (because no executions are necessary for those instructions marked as keep-alive)
-        // while the instructions that are kept artificially are equally distributed throughout the program.
-        var keptInstructions = Set<Int>()
-        if minimizationLimit != 0 {
-            assert(minimizationLimit > 0.0 && minimizationLimit <= 1.0)
-            var analyzer = DefUseAnalyzer(for: program)
-            analyzer.analyze()
-            let numberOfInstructionsToKeep = Int(Double(program.size) * minimizationLimit)
-            var indices = Array(0..<program.size).shuffled()
+        assert(program.code.countIntructionsWith(flags: .notRemovable) == 0)
 
-            while keptInstructions.count < numberOfInstructionsToKeep {
-                func keep(_ instr: Instruction) {
-                    guard !keptInstructions.contains(instr.index) else { return }
+        let helper = MinimizationHelper(for: aspects, forCode: program.code, of: fuzzer, runningOnFuzzerQueue: runningSynchronously)
 
-                    keptInstructions.insert(instr.index)
+        helper.applyMinimizationLimit(limit: minimizationLimit)
 
-                    // Keep alive all inputs recursively.
-                    for input in instr.inputs {
-                        keep(analyzer.definition(of: input))
-                    }
-                }
-
-                keep(program.code[indices.removeLast()])
-            }
-        }
-
-        let helper = MinimizationHelper(for: aspects, of: fuzzer, keeping: keptInstructions, runningOnFuzzerQueue: runningSynchronously)
-        var code = program.code
+        assert(helper.code.countIntructionsWith(flags: .notRemovable) >= helper.numKeptInstructions)
 
         var iterations = 0
         repeat {
@@ -103,28 +83,38 @@ public class Minimizer: ComponentBase {
             //  - The VariadicInputReducer should run after the InliningReducer as it may remove function call arguments, causing the parameters to be undefined after inlining.
             let reducers: [Reducer] = [GenericInstructionReducer(), BlockReducer(), SimplifyingReducer(), LoopReducer(), InliningReducer(), ReassignmentReducer(), VariadicInputReducer(), DeduplicatingReducer()]
             for reducer in reducers {
-                reducer.reduce(&code, with: helper)
-                assert(code.isStaticallyValid())
+                reducer.reduce(with: helper)
+                // The reducers should not remove any instructions that we want to keep unconditionally.
+                // The code might have more non-removable instructions due to other analyzers marking them as non-removable
+                // but it should be at least more than we have seen at the start.
+                assert(helper.code.countIntructionsWith(flags: .notRemovable) >= helper.numKeptInstructions)
+                assert(helper.code.isStaticallyValid())
             }
             iterations += 1
             guard iterations < 100 else {
                 // This can happen if a reducer performs a no-op change in every iteration, e.g. replacing one instruction with the same instruction. This is considered a bug since it leads to this kind of issue.
-                logger.error("Fixpoint iteration for program minimization did not converge after 100 iterations for program:\n\(FuzzILLifter().lift(code)). Aborting minimization.")
+                logger.error("Fixpoint iteration for program minimization did not converge after 100 iterations for program:\n\(FuzzILLifter().lift(helper.code)). Aborting minimization.")
                 break
             }
         } while helper.didReduce
 
         // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now.
-        code.removeNops()
+        helper.removeNops()
+        assert(helper.code.countIntructionsWith(flags: .notRemovable) >= helper.numKeptInstructions)
 
         // Post-process the sample after minimization. This step adds certain features back to the program that may have been minimized away but are typically helpful for future mutations.
         // Currently we run this regardless of whether we're processing a crash or an interesting sample. If we wanted to, we could only run this for interesting samples (that will be mutated again), but its fine to also run it for crashes.
         // Adding instructions will invalidate the keptInstructions array. Since we're not removing any more instructions, clear that array now.
-        helper.clearInstructionsToKeep()
-        let postProcessor = MinimizationPostProcessor()
-        postProcessor.process(&code, with: helper)
-        assert(code.isStaticallyValid())
+        helper.clearFlags()
 
-        return code
+        let postProcessor = MinimizationPostProcessor()
+
+        if !postProcessor.process(with: helper) {
+            logger.warning("Failed to postprocess sample during minimization.")
+        }
+
+        assert(helper.code.isStaticallyValid())
+
+        return helper.finalize()
     }
 }

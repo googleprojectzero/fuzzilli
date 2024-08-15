@@ -17,6 +17,23 @@ import XCTest
 
 class MinimizerTests: XCTestCase {
 
+    func testMinimizationLimit() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        for _ in 0..<10 {
+            b.buildPrefix()
+            b.build(n: 70)
+
+            let preMinimization = b.finalize()
+            let limit = 0.1
+
+            let result = minimize(preMinimization, with: fuzzer, limit: limit)
+            XCTAssert(result.size >= Int(Double(preMinimization.size) * limit))
+        }
+    }
+
     func testGenericInstructionMinimization() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
@@ -1373,10 +1390,10 @@ class MinimizerTests: XCTestCase {
     }
 
     // Helper function to perform the minimization.
-    func minimize(_ program: Program, with fuzzer: Fuzzer) -> Program {
+    func minimize(_ program: Program, with fuzzer: Fuzzer, limit: Double = 0.0) -> Program {
         guard let evaluator = fuzzer.evaluator as? EvaluatorForMinimizationTests else { fatalError("Invalid Evaluator used for minimization tests: \(fuzzer.evaluator)") }
         evaluator.setOriginalProgram(program)
         let dummyAspects = ProgramAspects(outcome: .succeeded)
-        return fuzzer.minimizer.minimize(program, withAspects: dummyAspects)
+        return fuzzer.minimizer.minimize(program, withAspects: dummyAspects, limit: limit)
     }
 }

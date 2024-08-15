@@ -51,6 +51,9 @@ public class InputMutator: BaseInstructionMutator {
         b.trace("Replacing input \(selectedInput) (\(inouts[selectedInput])) with \(replacement)")
         inouts[selectedInput] = replacement
 
-        b.append(Instruction(instr.op, inouts: inouts))
+        // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
+        // If we add flags, remove this assert and change the code below.
+        assert(instr.flags == .empty)
+        b.append(Instruction(instr.op, inouts: inouts, flags: .empty))
     }
 }

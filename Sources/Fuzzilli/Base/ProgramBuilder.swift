@@ -955,7 +955,7 @@ public class ProgramBuilder {
 
     /// Adopts an instruction from the program that is currently configured for adoption into the program being constructed.
     public func adopt(_ instr: Instruction) {
-        internalAppend(Instruction(instr.op, inouts: adopt(instr.inouts)))
+        internalAppend(Instruction(instr.op, inouts: adopt(instr.inouts), flags: instr.flags))
     }
 
     /// Append an instruction at the current position.
@@ -1253,7 +1253,7 @@ public class ProgramBuilder {
                 variableMap[output] = nextVariable()
             }
             let inouts = instr.inouts.map({ variableMap[$0]! })
-            append(Instruction(instr.op, inouts: inouts))
+            append(Instruction(instr.op, inouts: inouts, flags: instr.flags))
         }
 
         trace("Splicing done")
@@ -1604,7 +1604,7 @@ public class ProgramBuilder {
             inouts.append(nextVariable())
         }
 
-        return internalAppend(Instruction(op, inouts: inouts))
+        return internalAppend(Instruction(op, inouts: inouts, flags: .empty))
     }
 
     @discardableResult

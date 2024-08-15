@@ -14,13 +14,13 @@
 
 /// Removes simple instructions from a program if they are not required.
 struct GenericInstructionReducer: Reducer {
-    func reduce(_ code: inout Code, with helper: MinimizationHelper) {
-        for instr in code.reversed() {
+    func reduce(with helper: MinimizationHelper) {
+        for instr in helper.code.reversed() {
             if !instr.isSimple || instr.op is Nop {
                 continue
             }
 
-            helper.tryNopping(instructionAt: instr.index, in: &code)
+            helper.tryNopping(instructionAt: instr.index)
         }
     }
 }

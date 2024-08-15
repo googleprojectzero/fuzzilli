@@ -14,35 +14,36 @@
 
 // Attempts to simplify "complex" instructions into simpler instructions.
 struct SimplifyingReducer: Reducer {
-    func reduce(_ code: inout Code, with helper: MinimizationHelper) {
-        simplifyFunctionDefinitions(&code, with: helper)
-        simplifyGuardedInstructions(&code, with: helper)
-        simplifySingleInstructions(&code, with: helper)
-        simplifyMultiInstructions(&code, with: helper)
+    func reduce(with helper: MinimizationHelper) {
+        simplifyFunctionDefinitions(with: helper)
+        simplifyGuardedInstructions(with: helper)
+        simplifySingleInstructions(with: helper)
+        simplifyMultiInstructions(with: helper)
     }
 
-    func simplifyFunctionDefinitions(_ code: inout Code, with helper: MinimizationHelper) {
+    func simplifyFunctionDefinitions(with helper: MinimizationHelper) {
         // Try to turn "fancy" functions into plain functions
-        for group in code.findAllBlockGroups() {
-            guard let begin = code[group.head].op as? BeginAnyFunction else { continue }
-            assert(code[group.tail].op is EndAnyFunction)
+        for group in helper.code.findAllBlockGroups() {
+            guard let begin = helper.code[group.head].op as? BeginAnyFunction else { continue }
+            assert(helper.code[group.tail].op is EndAnyFunction)
             if begin is BeginPlainFunction { continue }
 
-            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, isStrict: begin.isStrict), inouts: code[group.head].inouts)
+            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, isStrict: begin.isStrict), inouts: helper.code[group.head].inouts, flags: .empty)
             let newEnd = Instruction(EndPlainFunction())
 
             // The resulting code may be invalid as we may be changing the context inside the body (e.g. turning an async function into a plain one).
-            helper.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], in: &code, expectCodeToBeValid: false)
+            helper.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], expectCodeToBeValid: false)
         }
     }
 
     /// Simplify instructions that can be replaced by a single, simple instruction.
-    func simplifySingleInstructions(_ code: inout Code, with helper: MinimizationHelper) {
+    func simplifySingleInstructions(with helper: MinimizationHelper) {
         // Miscellaneous simplifications. This will:
         //   - convert SomeOpWithSpread into SomeOp since spread operations are less "mutation friendly" (somewhat low value, high chance of producing invalid code)
         //   - convert Constructs into Calls
         //   - convert strict functions into non-strict functions
-        for instr in code {
+        // Since we only change operations in a forward fashion and never change instructions "in front of us" this iterator should stay valid.
+        for instr in helper.code {
             var newOp: Operation? = nil
             switch instr.op.opcode {
             case .createArrayWithSpread(let op):
@@ -87,15 +88,15 @@ struct SimplifyingReducer: Reducer {
             }
 
             if let op = newOp {
-                helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts), in: &code)
+                helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts, flags: .empty))
             }
         }
     }
 
-    func simplifyGuardedInstructions(_ code: inout Code, with helper: MinimizationHelper) {
+    func simplifyGuardedInstructions(with helper: MinimizationHelper) {
         // This will attempt to turn guarded operations into unguarded ones.
         // In the lifted JavaScript code, this would turn something like `try { o.foo(); } catch (e) {}` into `o.foo();`
-        for instr in code {
+        for instr in helper.code {
             var newOp: Operation? = nil
             switch instr.op.opcode {
             case .getProperty(let op):
@@ -161,13 +162,13 @@ struct SimplifyingReducer: Reducer {
             }
 
             if let op = newOp {
-                helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts), in: &code)
+                helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts, flags: .empty))
             }
         }
     }
 
     /// Simplify instructions that can be replaced by a sequence of simpler instructions.
-    func simplifyMultiInstructions(_ code: inout Code, with helper: MinimizationHelper) {
+    func simplifyMultiInstructions(with helper: MinimizationHelper) {
         // This will:
         //  - convert destructuring operations into simple property or element loads
         //
@@ -176,7 +177,7 @@ struct SimplifyingReducer: Reducer {
         // these would cause the fixpoint iteration to not terminate.
         var newCode = Code()
         var numCopiedInstructions = 0
-        for instr in code {
+        for instr in helper.code {
             var keepInstruction = true
             switch instr.op.opcode {
             case .destructObject(let op):
@@ -218,9 +219,9 @@ struct SimplifyingReducer: Reducer {
             }
         }
 
-        let didMakeChanges = numCopiedInstructions != code.count
-        if didMakeChanges && helper.test(newCode) {
-            code = newCode
+        let didMakeChanges = numCopiedInstructions != helper.code.count
+        if didMakeChanges {
+            helper.testAndCommit(newCode)
         }
     }
 }
