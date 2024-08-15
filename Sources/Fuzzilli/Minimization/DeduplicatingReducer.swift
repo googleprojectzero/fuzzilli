@@ -14,7 +14,7 @@
 
 // Attempts deduplicate variables containing the same values.
 struct DeduplicatingReducer: Reducer {
-    func reduce(_ code: inout Code, with helper: MinimizationHelper) {
+    func reduce(with helper: MinimizationHelper) {
         // Currently we only handle LoadBuiltin, but the code could easily be
         // extended to cover other types of values as well.
         // It's not obvious however which other values would benefit from this.
@@ -31,12 +31,12 @@ struct DeduplicatingReducer: Reducer {
         var deduplicatedVariables = VariableMap<Variable>()
         var visibleBuiltins = Stack<[String]>([[]])
         var variableForBuiltin = [String: Variable]()
-        for instr in code {
+        for instr in helper.code {
             // Instruction replacement.
             let oldInouts = Array(instr.inouts)
             let newInouts = oldInouts.map({ deduplicatedVariables[$0] ?? $0 })
             if oldInouts != newInouts {
-                replacements.append((instr.index, Instruction(instr.op, inouts: newInouts)))
+                replacements.append((instr.index, Instruction(instr.op, inouts: newInouts, flags: instr.flags)))
             }
 
             // Scope management.
@@ -63,7 +63,7 @@ struct DeduplicatingReducer: Reducer {
         }
 
         if !replacements.isEmpty {
-            helper.tryReplacements(replacements, in: &code)
+            helper.tryReplacements(replacements)
         }
     }
 }

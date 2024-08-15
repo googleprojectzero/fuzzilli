@@ -21,18 +21,18 @@
 ///
 /// Like other reducers, changes are only performed if they do not alter the programs relevant behaviour.
 struct MinimizationPostProcessor {
-    func process(_ code: inout Code, with helper: MinimizationHelper) {
+    func process(with helper: MinimizationHelper) -> Bool {
         // Step 1: Generate all changes that we'd like to perform and record them.
         var changes = [(index: Int, newInstruction: Instruction)]()
+        var codeWithNops = Code()
 
         // This must happen on the fuzzer's queue as it requires a ProgramBuilder to obtain input variables.
         helper.performOnFuzzerQueue {
             // For every insertion, we also insert a placeholder Nop into the current code. This way, performing the insertions in step 2 becomes very cheap.
-            var codeWithNops = Code()
             let b = helper.fuzzer.makeBuilder()
             var lastInstr = Instruction(Nop())
 
-            for instr in code {
+            for instr in helper.code {
                 var addedInstruction: Instruction? = nil
                 var replacementInstruction: Instruction? = nil
                 switch instr.op.opcode {
@@ -87,19 +87,25 @@ struct MinimizationPostProcessor {
                 codeWithNops.append(instr)
                 lastInstr = instr
             }
-            assert(codeWithNops.count >= code.count)
-            code = codeWithNops
+            assert(codeWithNops.count >= helper.code.count)
+        }
+
+        if !helper.testAndCommit(codeWithNops) {
+            return false
         }
 
         // Step 2: Try to apply each change from step 1 on its own and verify that the change doesn't alter the program's behaviour.
         for change in changes {
             // Either we're adding a new instruction (in which case we're replacing a nop inserted in step 1), or changing the number of inputs of an existing instruction.
-            assert((code[change.index].op is Nop && !(change.newInstruction.op is Nop)) ||
-                   (code[change.index].op.name == change.newInstruction.op.name && code[change.index].numInputs < change.newInstruction.numInputs))
-            helper.tryReplacing(instructionAt: change.index, with: change.newInstruction, in: &code)
+            assert((helper.code[change.index].op is Nop && !(change.newInstruction.op is Nop)) ||
+                   (helper.code[change.index].op.name == change.newInstruction.op.name && helper.code[change.index].numInputs < change.newInstruction.numInputs))
+            if !helper.tryReplacing(instructionAt: change.index, with: change.newInstruction) {
+                return false
+            }
         }
 
         // Step 3: Remove any remaining nops from step 1.
-        code.removeNops()
+        helper.removeNops()
+        return true
     }
 }

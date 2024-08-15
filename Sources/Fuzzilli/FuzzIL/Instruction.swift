@@ -27,9 +27,15 @@ public struct Instruction {
     ///      First numInputs Variables: inputs
     ///      Next numOutputs Variables: outputs visible in the outer scope
     ///      Next numInnerOutputs Variables: outputs only visible in the inner scope created by this instruction
-    ///      Final value, if present: the index of this instruction in the code object it belongs to
     private let inouts_: [Variable]
 
+    /// The index of this instruction if it belongs to a `Code`, otherwise it is `UInt16.max`.
+    /// In practice, this does not limit the size of programs/code since that's already
+    /// limited by the fact that variables are UInt16 internally.
+    private var indexValue: UInt16 = UInt16.max
+
+    /// The flags associated with this instruction, right now these are mainly used during minimization.
+    public var flags: Self.Flags
 
     /// The number of input variables of this instruction.
     public var numInputs: Int {
@@ -132,19 +138,11 @@ public struct Instruction {
         return inouts_[..<numInouts]
     }
 
-    /// Whether this instruction contains its index in the code it belongs to.
-    public var hasIndex: Bool {
-        // If the index is present, it is the last value in inouts. See comment in index getter.
-        return inouts_.count == numInouts + 1
-    }
-
-    /// The index of this instruction in the Code it belongs to.
+    /// The index of this instruction in the `Code` it belongs to.
     public var index: Int {
-        // We store the index in the internal inouts array for memory efficiency reasons.
-        // In practice, this does not limit the size of programs/code since that's already
-        // limited by the fact that variables are UInt16 internally.
-        assert(hasIndex)
-        return Int(inouts_.last!.number)
+        // Check that this instruction belongs to a `Code` object, i.e. it has a proper value
+        assert(self.indexValue != UInt16.max)
+        return Int(self.indexValue)
     }
 
     ///
@@ -252,45 +250,60 @@ public struct Instruction {
     }
 
 
-    public init<Variables: Collection>(_ op: Operation, inouts: Variables, index: Int? = nil) where Variables.Element == Variable {
+    public init<Variables: Collection>(_ op: Operation, inouts: Variables, index: Int? = nil, flags: Self.Flags) where Variables.Element == Variable {
         assert(op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count)
         self.op = op
-        var inouts_ = Array(inouts)
+        self.inouts_ = Array(inouts)
         if let idx = index {
-            inouts_.append(Variable(number: idx))
+            self.indexValue = UInt16(idx)
         }
-        self.inouts_ = inouts_
+        self.flags = flags
     }
 
     public init(_ op: Operation, output: Variable) {
         assert(op.numInputs == 0 && op.numOutputs == 1 && op.numInnerOutputs == 0)
-        self.init(op, inouts: [output])
+        self.init(op, inouts: [output], flags: .empty)
     }
 
     public init(_ op: Operation, output: Variable, inputs: [Variable]) {
         assert(op.numOutputs == 1)
         assert(op.numInnerOutputs == 0)
         assert(op.numInputs == inputs.count)
-        self.init(op, inouts: inputs + [output])
+        self.init(op, inouts: inputs + [output], flags: .empty)
     }
 
     public init(_ op: Operation, inputs: [Variable]) {
         assert(op.numOutputs + op.numInnerOutputs == 0)
         assert(op.numInputs == inputs.count)
-        self.init(op, inouts: inputs)
+        self.init(op, inouts: inputs, flags: .empty)
     }
 
     public init(_ op: Operation, innerOutput: Variable) {
         assert(op.numInnerOutputs == 1)
         assert(op.numOutputs == 0)
         assert(op.numInputs == 0)
-        self.init(op, inouts: [innerOutput])
+        self.init(op, inouts: [innerOutput], flags: .empty)
     }
 
     public init(_ op: Operation) {
         assert(op.numOutputs + op.numInnerOutputs == 0)
         assert(op.numInputs == 0)
-        self.init(op, inouts: [])
+        self.init(op, inouts: [], flags: .empty)
+    }
+
+    /// Flags associated with an Instruction.
+    /// This can be useful to mark instructions in some way, for example during minimization.
+    public struct Flags: OptionSet, CaseIterable {
+        public static var allCases: [Instruction.Flags] = [.notRemovable]
+
+        public let rawValue: UInt16
+
+        public init(rawValue: UInt16) {
+            self.rawValue = rawValue
+        }
+        /// If this is set, the minimizer cannot remove this instruction.
+        public static let notRemovable = Self(rawValue: 1 << 0)
+        public static let empty = Self([])
     }
 }
 
@@ -1249,7 +1262,7 @@ extension Instruction: ProtobufConvertible {
 
         opCache?.add(op)
 
-        self.init(op, inouts: inouts)
+        self.init(op, inouts: inouts, flags: .empty)
     }
 
     init(from proto: ProtobufType) throws {

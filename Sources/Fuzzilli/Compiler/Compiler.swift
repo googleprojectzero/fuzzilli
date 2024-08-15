@@ -998,7 +998,7 @@ public class JavaScriptCompiler {
         let outputs = (0..<op.numOutputs).map { _ in nextFreeVariable() }
         let innerOutputs = (0..<op.numInnerOutputs).map { _ in nextFreeVariable() }
         let inouts = inputs + outputs + innerOutputs
-        let instr = Instruction(op, inouts: inouts)
+        let instr = Instruction(op, inouts: inouts, flags: .empty)
         return code.append(instr)
     }
 

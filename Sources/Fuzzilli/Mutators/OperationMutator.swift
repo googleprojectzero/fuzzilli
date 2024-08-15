@@ -231,7 +231,10 @@ public class OperationMutator: BaseInstructionMutator {
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }
 
-        return Instruction(newOp, inouts: instr.inouts)
+        // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
+        // If we add flags, remove this assert and change the code below.
+        assert(instr.flags == .empty)
+        return Instruction(newOp, inouts: instr.inouts, flags: .empty)
     }
 
     private func extendVariadicOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
@@ -307,7 +310,11 @@ public class OperationMutator: BaseInstructionMutator {
 
         assert(inputs.count != instr.inputs.count)
         let inouts = inputs + instr.outputs + instr.innerOutputs
-        return Instruction(newOp, inouts: inouts)
+
+        // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
+        // If we add flags, remove this assert and change the code below.
+        assert(instr.flags == .empty)
+        return Instruction(newOp, inouts: inouts, flags: .empty)
     }
 
     private func replaceRandomElement<T: Comparable>(in elements: inout Array<T>, generatingRandomValuesWith generator: () -> T) {
