@@ -444,14 +444,13 @@ public class JavaScriptCompiler {
             emit(EndForOfLoop())
 
         case .breakStatement:
-            switch contextAnalyzer.breakContext {
-            case .loop:
+            if contextAnalyzer.context.contains(.loop){
                 emit(LoopBreak())
                 break
-            case .switchBlock:
+            } else if contextAnalyzer.context.contains(.switchBlock){
                 emit(SwitchBreak())
                 break
-            default:
+            } else {
                 throw CompilerError.invalidNodeError("break statement outside of loop or switch")
             }
 

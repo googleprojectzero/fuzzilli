@@ -142,14 +142,9 @@ struct VariableAnalyzer: Analyzer {
 /// Keeps track of the current context during program construction.
 struct ContextAnalyzer: Analyzer {
     private var contextStack = Stack([Context.javascript])
-    private var breakContextStack = Stack([Context.empty])
 
     var context: Context {
         return contextStack.top
-    }
-
-    var breakContext: Context {
-        return breakContextStack.top
     }
 
     mutating func analyze(_ instr: Instruction) {
@@ -173,16 +168,12 @@ struct ContextAnalyzer: Analyzer {
 
                 newContext.formUnion(contextStack.secondToTop)
             }
+            if (instr.op.contextOpened.contains(.switchBlock)) {
+                newContext.remove(.loop)
+            } else if (instr.op.contextOpened.contains(.loop)) {
+                newContext.remove(.switchBlock)
+            }
             contextStack.push(newContext)
-        }
-        if instr.op.contextOpened.contains(.loop){
-            breakContextStack.push(.loop)
-        }
-        if instr.op.contextOpened.contains(.switchBlock) {
-            breakContextStack.push(.switchBlock)
-        }
-        if instr.isBreakableEnd {
-            breakContextStack.pop()
         }
     }
 }
