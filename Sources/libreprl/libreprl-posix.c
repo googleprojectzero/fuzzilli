@@ -29,9 +29,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sched.h>
 #include <sys/mman.h>
+#include <sys/mount.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -200,6 +203,17 @@ static int reprl_spawn_child(struct reprl_context* ctx)
     fcntl(ctx->ctrl_out, F_SETFD, FD_CLOEXEC);
 
 #ifdef __linux__
+    // Create the mountpoint for our tmpfs here. This is just an empty dir.
+    // We also do not really care if this directory exists, we just need it as
+    // a mountpoint.
+    if (mkdir("/tmp/fuzzilli_tmp/", 0)) {
+        if (errno != EEXIST) {
+          fprintf(stderr, "mkdir failed to create /tmp/fuzzilli_dir to create a mountpoint: %s\n", strerror(errno));
+        }
+    }
+#endif
+
+#ifdef __linux__
     // Use vfork() on Linux as that considerably improves the fuzzer performance. See also https://github.com/googleprojectzero/fuzzilli/issues/174
     // Due to vfork, the code executed in the child process *must not* modify any memory apart from its stack, as it will share the page table of its parent.
     pid_t pid = vfork();
@@ -246,6 +260,23 @@ static int reprl_spawn_child(struct reprl_context* ctx)
         if (ctx->child_stderr) dup2(ctx->child_stderr->fd, 2);
         else dup2(devnull, 2);
         close(devnull);
+
+#ifdef __linux__
+        // We create a new user (CLONE_NEWUSER) and mount (CLONE_NEWNS)
+        // namespace here such that we can mount our own tmpfs onto
+        // /tmp/fuzzilli_tmp that is only visible to this child process.
+        if (unshare(CLONE_NEWUSER | CLONE_NEWNS) == -1) {
+            fprintf(stderr, "unshare failed to create a new mount namespace in the child: %s\n", strerror(errno));
+            _exit(-1);
+        };
+
+        // Mount a new tmpfs onto /tmp/fuzzilli_tmp this allows us to add files
+        // here that get automatically cleaned up once the process exits.
+        if (mount("tmpfs", "/tmp/fuzzilli_tmp", "tmpfs", 0, NULL) == -1) {
+            fprintf(stderr, "mount failed to create a tmpfs in namespace in the child: %s\n", strerror(errno));
+            _exit(-1);
+        }
+#endif
 
         // close all other FDs. We try to use FD_CLOEXEC everywhere, but let's be extra sure we don't leak any fds to the child.
         int tablesize = getdtablesize();
