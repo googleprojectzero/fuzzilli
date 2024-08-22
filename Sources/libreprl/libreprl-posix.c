@@ -53,6 +53,60 @@ static size_t min(size_t x, size_t y) {
   return x < y ? x : y;
 }
 
+#ifdef __linux__
+// This function creates the UID/GID mapping that we need inside of the user
+// namespace. This is needed such that the files we create have a proper owner
+// attached to them.
+static void write_id_maps(uid_t uid, gid_t gid) {
+    char setgroups_path[] = "/proc/self/setgroups";
+    char uid_map_path[] = "/proc/self/uid_map";
+    char gid_map_path[] = "/proc/self/gid_map";
+
+    int setgroups_fd = open(setgroups_path, O_WRONLY);
+    int uid_map_fd = open(uid_map_path, O_WRONLY);
+    int gid_map_fd = open(gid_map_path, O_WRONLY);
+
+    if (setgroups_fd == -1 || uid_map_fd == -1 || gid_map_fd == -1) {
+        fprintf(stderr, "Error opening setgroups/uid_map/gid_map file: %s\n", strerror(errno));
+        _exit(-1);
+    }
+
+    // More context on this: https://lwn.net/Articles/626665/
+    dprintf(setgroups_fd, "deny");
+    dprintf(uid_map_fd, "%d %d 1", uid, uid);
+    dprintf(gid_map_fd, "%d %d 1", gid, gid);
+
+    close(setgroups_fd);
+    close(uid_map_fd);
+    close(gid_map_fd);
+}
+
+// Creates a tmpfs at `mount_point` in a new user namespace.
+static void create_tmpfs(const char* mount_point) {
+    // Get the UID and GID before we call unshare.
+    uid_t uid = getuid();
+    gid_t gid = getgid();
+
+    // We create a new user (CLONE_NEWUSER) and mount (CLONE_NEWNS)
+    // namespace here such that we can mount our own tmpfs onto
+    // mount_point that is only visible to this process.
+    if (unshare(CLONE_NEWUSER | CLONE_NEWNS) == -1) {
+        fprintf(stderr, "unshare failed to create a new mount namespace in the child: %s\n", strerror(errno));
+        _exit(-1);
+    };
+
+    // Now write the UID / GID mappings
+    write_id_maps(uid, gid);
+
+    // Mount a new tmpfs onto `mount_point` this allows us to add files
+    // here that get automatically cleaned up once the process exits.
+    if (mount("tmpfs", mount_point, "tmpfs", 0, NULL) == -1) {
+        fprintf(stderr, "mount failed to create a tmpfs in namespace in the child: %s\n", strerror(errno));
+        _exit(-1);
+    }
+}
+#endif
+
 static uint64_t current_usecs()
 {
     struct timespec ts;
@@ -205,12 +259,21 @@ static int reprl_spawn_child(struct reprl_context* ctx)
     fcntl(ctx->ctrl_out, F_SETFD, FD_CLOEXEC);
 
 #ifdef __linux__
+    // This is where we will mount our own tmpfs, this is intended to be used
+    // for targets like Chrome, where we have to pass the user data directory.
+    // Even if the target does not clean up after themselves, the tmpfs in the
+    // user namespace will be removed once the process exits. Also, every child
+    // process, i.e. fuzzing instance, can then have it's own tmpfs.
+    // This only works on Linux right now, which is where we fuzz Chrome, this
+    // won't work on any other OS.
+    const char mount_point[] = "/tmp/fuzzilli_tmp";
+
     // Create the mountpoint for our tmpfs here. This is just an empty dir.
     // We also do not really care if this directory exists, we just need it as
     // a mountpoint.
-    if (mkdir("/tmp/fuzzilli_tmp/", 0)) {
+    if (mkdir(mount_point, 0)) {
         if (errno != EEXIST) {
-          fprintf(stderr, "mkdir failed to create /tmp/fuzzilli_dir to create a mountpoint: %s\n", strerror(errno));
+          fprintf(stderr, "mkdir failed to create %s to create a mountpoint: %s\n", mount_point, strerror(errno));
         }
     }
 #endif
@@ -264,20 +327,11 @@ static int reprl_spawn_child(struct reprl_context* ctx)
         close(devnull);
 
 #ifdef __linux__
-        // We create a new user (CLONE_NEWUSER) and mount (CLONE_NEWNS)
-        // namespace here such that we can mount our own tmpfs onto
-        // /tmp/fuzzilli_tmp that is only visible to this child process.
-        if (unshare(CLONE_NEWUSER | CLONE_NEWNS) == -1) {
-            fprintf(stderr, "unshare failed to create a new mount namespace in the child: %s\n", strerror(errno));
-            _exit(-1);
-        };
-
-        // Mount a new tmpfs onto /tmp/fuzzilli_tmp this allows us to add files
-        // here that get automatically cleaned up once the process exits.
-        if (mount("tmpfs", "/tmp/fuzzilli_tmp", "tmpfs", 0, NULL) == -1) {
-            fprintf(stderr, "mount failed to create a tmpfs in namespace in the child: %s\n", strerror(errno));
-            _exit(-1);
-        }
+        // Create the tmpfs at the specific mount point here in the child process
+        // such that we have a tmpfs for this process only that will be cleaned up at process exit.
+        // This will also write into the necessary files in /proc, so we need to do this here after we've fork()'ed.
+        // This will only work on Linux, see the comment above where call mkdir.
+        create_tmpfs(mount_point);
 #endif
 
         // close all other FDs. We try to use FD_CLOEXEC everywhere, but let's be extra sure we don't leak any fds to the child.
