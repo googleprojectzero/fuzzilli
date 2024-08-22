@@ -444,12 +444,12 @@ public class JavaScriptCompiler {
             emit(EndForOfLoop())
 
         case .breakStatement:
+            // If we're in both .loop and .switch context, then the loop must be the most recent context 
+            // (switch blocks don't propagate an outer .loop context) so we just need to check for .loop here
             if contextAnalyzer.context.contains(.loop){
                 emit(LoopBreak())
-                break
             } else if contextAnalyzer.context.contains(.switchBlock){
                 emit(SwitchBreak())
-                break
             } else {
                 throw CompilerError.invalidNodeError("break statement outside of loop or switch")
             }
