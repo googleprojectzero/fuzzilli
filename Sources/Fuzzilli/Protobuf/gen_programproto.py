@@ -55,7 +55,7 @@ def parse_opcodes():
     opcodes = []
     with open(OPCODESSWIFT_FILE, "r") as f:
         for line in f.readlines():
-            obj = re.search("^\s*case `?(\w*)`?\(", line)
+            obj = re.search(r"^\s*case `?(\w*)`?\(", line)
             if obj is not None:
                 opcodes.append(obj.group(1))
 

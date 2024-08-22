@@ -109,9 +109,7 @@ public class Minimizer: ComponentBase {
 
         let postProcessor = MinimizationPostProcessor()
 
-        if !postProcessor.process(with: helper) {
-            logger.warning("Failed to postprocess sample during minimization.")
-        }
+        postProcessor.process(with: helper)
 
         assert(helper.code.isStaticallyValid())
 

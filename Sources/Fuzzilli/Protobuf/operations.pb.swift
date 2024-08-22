@@ -34,7 +34,7 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-public enum Fuzzilli_Protobuf_PropertyType: SwiftProtobuf.Enum {
+public enum Fuzzilli_Protobuf_PropertyType: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case value // = 0
   case getter // = 1
@@ -66,11 +66,6 @@ public enum Fuzzilli_Protobuf_PropertyType: SwiftProtobuf.Enum {
     }
   }
 
-}
-
-#if swift(>=4.2)
-
-extension Fuzzilli_Protobuf_PropertyType: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   public static let allCases: [Fuzzilli_Protobuf_PropertyType] = [
     .value,
@@ -78,11 +73,10 @@ extension Fuzzilli_Protobuf_PropertyType: CaseIterable {
     .setter,
     .gettersetter,
   ]
+
 }
 
-#endif  // swift(>=4.2)
-
-public enum Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf.Enum {
+public enum Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case preInc // = 0
   case preDec // = 1
@@ -126,11 +120,6 @@ public enum Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf.Enum {
     }
   }
 
-}
-
-#if swift(>=4.2)
-
-extension Fuzzilli_Protobuf_UnaryOperator: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   public static let allCases: [Fuzzilli_Protobuf_UnaryOperator] = [
     .preInc,
@@ -142,11 +131,10 @@ extension Fuzzilli_Protobuf_UnaryOperator: CaseIterable {
     .plus,
     .minus,
   ]
+
 }
 
-#endif  // swift(>=4.2)
-
-public enum Fuzzilli_Protobuf_BinaryOperator: SwiftProtobuf.Enum {
+public enum Fuzzilli_Protobuf_BinaryOperator: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case add // = 0
   case sub // = 1
@@ -208,11 +196,6 @@ public enum Fuzzilli_Protobuf_BinaryOperator: SwiftProtobuf.Enum {
     }
   }
 
-}
-
-#if swift(>=4.2)
-
-extension Fuzzilli_Protobuf_BinaryOperator: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   public static let allCases: [Fuzzilli_Protobuf_BinaryOperator] = [
     .add,
@@ -230,11 +213,10 @@ extension Fuzzilli_Protobuf_BinaryOperator: CaseIterable {
     .exp,
     .unrshift,
   ]
+
 }
 
-#endif  // swift(>=4.2)
-
-public enum Fuzzilli_Protobuf_Comparator: SwiftProtobuf.Enum {
+public enum Fuzzilli_Protobuf_Comparator: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case equal // = 0
   case strictEqual // = 1
@@ -278,11 +260,6 @@ public enum Fuzzilli_Protobuf_Comparator: SwiftProtobuf.Enum {
     }
   }
 
-}
-
-#if swift(>=4.2)
-
-extension Fuzzilli_Protobuf_Comparator: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   public static let allCases: [Fuzzilli_Protobuf_Comparator] = [
     .equal,
@@ -294,12 +271,11 @@ extension Fuzzilli_Protobuf_Comparator: CaseIterable {
     .greaterThan,
     .greaterThanOrEqual,
   ]
+
 }
 
-#endif  // swift(>=4.2)
-
 /// Parameters used by function definitions, not an operation by itself.
-public struct Fuzzilli_Protobuf_Parameters {
+public struct Fuzzilli_Protobuf_Parameters: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -313,7 +289,7 @@ public struct Fuzzilli_Protobuf_Parameters {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadInteger {
+public struct Fuzzilli_Protobuf_LoadInteger: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -325,7 +301,7 @@ public struct Fuzzilli_Protobuf_LoadInteger {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadBigInt {
+public struct Fuzzilli_Protobuf_LoadBigInt: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -337,7 +313,7 @@ public struct Fuzzilli_Protobuf_LoadBigInt {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadFloat {
+public struct Fuzzilli_Protobuf_LoadFloat: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -349,7 +325,7 @@ public struct Fuzzilli_Protobuf_LoadFloat {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadString {
+public struct Fuzzilli_Protobuf_LoadString: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -361,7 +337,7 @@ public struct Fuzzilli_Protobuf_LoadString {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadBoolean {
+public struct Fuzzilli_Protobuf_LoadBoolean: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -373,7 +349,7 @@ public struct Fuzzilli_Protobuf_LoadBoolean {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadUndefined {
+public struct Fuzzilli_Protobuf_LoadUndefined: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -383,7 +359,7 @@ public struct Fuzzilli_Protobuf_LoadUndefined {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadNull {
+public struct Fuzzilli_Protobuf_LoadNull: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -393,7 +369,7 @@ public struct Fuzzilli_Protobuf_LoadNull {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadThis {
+public struct Fuzzilli_Protobuf_LoadThis: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -403,7 +379,7 @@ public struct Fuzzilli_Protobuf_LoadThis {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadArguments {
+public struct Fuzzilli_Protobuf_LoadArguments: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -413,7 +389,7 @@ public struct Fuzzilli_Protobuf_LoadArguments {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadRegExp {
+public struct Fuzzilli_Protobuf_LoadRegExp: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -427,7 +403,7 @@ public struct Fuzzilli_Protobuf_LoadRegExp {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginObjectLiteral {
+public struct Fuzzilli_Protobuf_BeginObjectLiteral: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -437,7 +413,7 @@ public struct Fuzzilli_Protobuf_BeginObjectLiteral {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ObjectLiteralAddProperty {
+public struct Fuzzilli_Protobuf_ObjectLiteralAddProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -449,7 +425,7 @@ public struct Fuzzilli_Protobuf_ObjectLiteralAddProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ObjectLiteralAddElement {
+public struct Fuzzilli_Protobuf_ObjectLiteralAddElement: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -461,7 +437,7 @@ public struct Fuzzilli_Protobuf_ObjectLiteralAddElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty {
+public struct Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -471,7 +447,7 @@ public struct Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ObjectLiteralCopyProperties {
+public struct Fuzzilli_Protobuf_ObjectLiteralCopyProperties: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -481,7 +457,7 @@ public struct Fuzzilli_Protobuf_ObjectLiteralCopyProperties {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ObjectLiteralSetPrototype {
+public struct Fuzzilli_Protobuf_ObjectLiteralSetPrototype: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -491,7 +467,7 @@ public struct Fuzzilli_Protobuf_ObjectLiteralSetPrototype {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginObjectLiteralMethod {
+public struct Fuzzilli_Protobuf_BeginObjectLiteralMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -514,7 +490,7 @@ public struct Fuzzilli_Protobuf_BeginObjectLiteralMethod {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndObjectLiteralMethod {
+public struct Fuzzilli_Protobuf_EndObjectLiteralMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -524,7 +500,7 @@ public struct Fuzzilli_Protobuf_EndObjectLiteralMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod {
+public struct Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -545,7 +521,7 @@ public struct Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndObjectLiteralComputedMethod {
+public struct Fuzzilli_Protobuf_EndObjectLiteralComputedMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -555,29 +531,7 @@ public struct Fuzzilli_Protobuf_EndObjectLiteralComputedMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginObjectLiteralGetter {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var propertyName: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_EndObjectLiteralGetter {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginObjectLiteralSetter {
+public struct Fuzzilli_Protobuf_BeginObjectLiteralGetter: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -589,7 +543,7 @@ public struct Fuzzilli_Protobuf_BeginObjectLiteralSetter {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndObjectLiteralSetter {
+public struct Fuzzilli_Protobuf_EndObjectLiteralGetter: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -599,7 +553,19 @@ public struct Fuzzilli_Protobuf_EndObjectLiteralSetter {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndObjectLiteral {
+public struct Fuzzilli_Protobuf_BeginObjectLiteralSetter: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var propertyName: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_EndObjectLiteralSetter: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -609,7 +575,17 @@ public struct Fuzzilli_Protobuf_EndObjectLiteral {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginClassDefinition {
+public struct Fuzzilli_Protobuf_EndObjectLiteral: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_BeginClassDefinition: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -621,7 +597,7 @@ public struct Fuzzilli_Protobuf_BeginClassDefinition {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginClassConstructor {
+public struct Fuzzilli_Protobuf_BeginClassConstructor: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -642,7 +618,7 @@ public struct Fuzzilli_Protobuf_BeginClassConstructor {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndClassConstructor {
+public struct Fuzzilli_Protobuf_EndClassConstructor: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -652,7 +628,7 @@ public struct Fuzzilli_Protobuf_EndClassConstructor {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ClassAddInstanceProperty {
+public struct Fuzzilli_Protobuf_ClassAddInstanceProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -666,7 +642,7 @@ public struct Fuzzilli_Protobuf_ClassAddInstanceProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ClassAddInstanceElement {
+public struct Fuzzilli_Protobuf_ClassAddInstanceElement: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -680,7 +656,7 @@ public struct Fuzzilli_Protobuf_ClassAddInstanceElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ClassAddInstanceComputedProperty {
+public struct Fuzzilli_Protobuf_ClassAddInstanceComputedProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -692,7 +668,7 @@ public struct Fuzzilli_Protobuf_ClassAddInstanceComputedProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginClassInstanceMethod {
+public struct Fuzzilli_Protobuf_BeginClassInstanceMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -715,7 +691,7 @@ public struct Fuzzilli_Protobuf_BeginClassInstanceMethod {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndClassInstanceMethod {
+public struct Fuzzilli_Protobuf_EndClassInstanceMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -725,29 +701,7 @@ public struct Fuzzilli_Protobuf_EndClassInstanceMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginClassInstanceGetter {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var propertyName: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_EndClassInstanceGetter {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginClassInstanceSetter {
+public struct Fuzzilli_Protobuf_BeginClassInstanceGetter: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -759,7 +713,7 @@ public struct Fuzzilli_Protobuf_BeginClassInstanceSetter {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndClassInstanceSetter {
+public struct Fuzzilli_Protobuf_EndClassInstanceGetter: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -769,7 +723,29 @@ public struct Fuzzilli_Protobuf_EndClassInstanceSetter {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ClassAddStaticProperty {
+public struct Fuzzilli_Protobuf_BeginClassInstanceSetter: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var propertyName: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_EndClassInstanceSetter: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_ClassAddStaticProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -783,7 +759,7 @@ public struct Fuzzilli_Protobuf_ClassAddStaticProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ClassAddStaticElement {
+public struct Fuzzilli_Protobuf_ClassAddStaticElement: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -797,7 +773,7 @@ public struct Fuzzilli_Protobuf_ClassAddStaticElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ClassAddStaticComputedProperty {
+public struct Fuzzilli_Protobuf_ClassAddStaticComputedProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -809,7 +785,7 @@ public struct Fuzzilli_Protobuf_ClassAddStaticComputedProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginClassStaticInitializer {
+public struct Fuzzilli_Protobuf_BeginClassStaticInitializer: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -819,7 +795,7 @@ public struct Fuzzilli_Protobuf_BeginClassStaticInitializer {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndClassStaticInitializer {
+public struct Fuzzilli_Protobuf_EndClassStaticInitializer: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -829,7 +805,7 @@ public struct Fuzzilli_Protobuf_EndClassStaticInitializer {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginClassStaticMethod {
+public struct Fuzzilli_Protobuf_BeginClassStaticMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -852,7 +828,7 @@ public struct Fuzzilli_Protobuf_BeginClassStaticMethod {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndClassStaticMethod {
+public struct Fuzzilli_Protobuf_EndClassStaticMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -862,29 +838,7 @@ public struct Fuzzilli_Protobuf_EndClassStaticMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginClassStaticGetter {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var propertyName: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_EndClassStaticGetter {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginClassStaticSetter {
+public struct Fuzzilli_Protobuf_BeginClassStaticGetter: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -896,7 +850,7 @@ public struct Fuzzilli_Protobuf_BeginClassStaticSetter {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndClassStaticSetter {
+public struct Fuzzilli_Protobuf_EndClassStaticGetter: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -906,7 +860,29 @@ public struct Fuzzilli_Protobuf_EndClassStaticSetter {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty {
+public struct Fuzzilli_Protobuf_BeginClassStaticSetter: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var propertyName: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_EndClassStaticSetter: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -920,7 +896,7 @@ public struct Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod {
+public struct Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -943,7 +919,7 @@ public struct Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndClassPrivateInstanceMethod {
+public struct Fuzzilli_Protobuf_EndClassPrivateInstanceMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -953,7 +929,7 @@ public struct Fuzzilli_Protobuf_EndClassPrivateInstanceMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ClassAddPrivateStaticProperty {
+public struct Fuzzilli_Protobuf_ClassAddPrivateStaticProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -967,7 +943,7 @@ public struct Fuzzilli_Protobuf_ClassAddPrivateStaticProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginClassPrivateStaticMethod {
+public struct Fuzzilli_Protobuf_BeginClassPrivateStaticMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -990,7 +966,7 @@ public struct Fuzzilli_Protobuf_BeginClassPrivateStaticMethod {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndClassPrivateStaticMethod {
+public struct Fuzzilli_Protobuf_EndClassPrivateStaticMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1000,7 +976,7 @@ public struct Fuzzilli_Protobuf_EndClassPrivateStaticMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndClassDefinition {
+public struct Fuzzilli_Protobuf_EndClassDefinition: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1010,7 +986,7 @@ public struct Fuzzilli_Protobuf_EndClassDefinition {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CreateArray {
+public struct Fuzzilli_Protobuf_CreateArray: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1020,7 +996,7 @@ public struct Fuzzilli_Protobuf_CreateArray {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CreateIntArray {
+public struct Fuzzilli_Protobuf_CreateIntArray: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1032,7 +1008,7 @@ public struct Fuzzilli_Protobuf_CreateIntArray {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CreateFloatArray {
+public struct Fuzzilli_Protobuf_CreateFloatArray: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1044,7 +1020,7 @@ public struct Fuzzilli_Protobuf_CreateFloatArray {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CreateTemplateString {
+public struct Fuzzilli_Protobuf_CreateTemplateString: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1056,7 +1032,7 @@ public struct Fuzzilli_Protobuf_CreateTemplateString {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CreateArrayWithSpread {
+public struct Fuzzilli_Protobuf_CreateArrayWithSpread: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1068,7 +1044,7 @@ public struct Fuzzilli_Protobuf_CreateArrayWithSpread {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadBuiltin {
+public struct Fuzzilli_Protobuf_LoadBuiltin: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1080,7 +1056,7 @@ public struct Fuzzilli_Protobuf_LoadBuiltin {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_GetProperty {
+public struct Fuzzilli_Protobuf_GetProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1094,7 +1070,7 @@ public struct Fuzzilli_Protobuf_GetProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_SetProperty {
+public struct Fuzzilli_Protobuf_SetProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1106,7 +1082,7 @@ public struct Fuzzilli_Protobuf_SetProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_UpdateProperty {
+public struct Fuzzilli_Protobuf_UpdateProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1120,7 +1096,7 @@ public struct Fuzzilli_Protobuf_UpdateProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_DeleteProperty {
+public struct Fuzzilli_Protobuf_DeleteProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1134,7 +1110,7 @@ public struct Fuzzilli_Protobuf_DeleteProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ConfigureProperty {
+public struct Fuzzilli_Protobuf_ConfigureProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1154,7 +1130,7 @@ public struct Fuzzilli_Protobuf_ConfigureProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_GetElement {
+public struct Fuzzilli_Protobuf_GetElement: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1168,7 +1144,7 @@ public struct Fuzzilli_Protobuf_GetElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_SetElement {
+public struct Fuzzilli_Protobuf_SetElement: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1180,7 +1156,7 @@ public struct Fuzzilli_Protobuf_SetElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_UpdateElement {
+public struct Fuzzilli_Protobuf_UpdateElement: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1194,7 +1170,7 @@ public struct Fuzzilli_Protobuf_UpdateElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_DeleteElement {
+public struct Fuzzilli_Protobuf_DeleteElement: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1208,7 +1184,7 @@ public struct Fuzzilli_Protobuf_DeleteElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ConfigureElement {
+public struct Fuzzilli_Protobuf_ConfigureElement: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1228,7 +1204,7 @@ public struct Fuzzilli_Protobuf_ConfigureElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_GetComputedProperty {
+public struct Fuzzilli_Protobuf_GetComputedProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1240,7 +1216,7 @@ public struct Fuzzilli_Protobuf_GetComputedProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_SetComputedProperty {
+public struct Fuzzilli_Protobuf_SetComputedProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1250,7 +1226,7 @@ public struct Fuzzilli_Protobuf_SetComputedProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_UpdateComputedProperty {
+public struct Fuzzilli_Protobuf_UpdateComputedProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1262,7 +1238,7 @@ public struct Fuzzilli_Protobuf_UpdateComputedProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_DeleteComputedProperty {
+public struct Fuzzilli_Protobuf_DeleteComputedProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1274,7 +1250,7 @@ public struct Fuzzilli_Protobuf_DeleteComputedProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ConfigureComputedProperty {
+public struct Fuzzilli_Protobuf_ConfigureComputedProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1292,7 +1268,7 @@ public struct Fuzzilli_Protobuf_ConfigureComputedProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_TypeOf {
+public struct Fuzzilli_Protobuf_TypeOf: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1302,7 +1278,7 @@ public struct Fuzzilli_Protobuf_TypeOf {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_TestInstanceOf {
+public struct Fuzzilli_Protobuf_TestInstanceOf: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1312,7 +1288,7 @@ public struct Fuzzilli_Protobuf_TestInstanceOf {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_TestIn {
+public struct Fuzzilli_Protobuf_TestIn: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1322,40 +1298,7 @@ public struct Fuzzilli_Protobuf_TestIn {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginPlainFunction {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var parameters: Fuzzilli_Protobuf_Parameters {
-    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
-    set {_parameters = newValue}
-  }
-  /// Returns true if `parameters` has been explicitly set.
-  public var hasParameters: Bool {return self._parameters != nil}
-  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
-  public mutating func clearParameters() {self._parameters = nil}
-
-  public var isStrict: Bool = false
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
-}
-
-public struct Fuzzilli_Protobuf_EndPlainFunction {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginArrowFunction {
+public struct Fuzzilli_Protobuf_BeginPlainFunction: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1378,7 +1321,7 @@ public struct Fuzzilli_Protobuf_BeginArrowFunction {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndArrowFunction {
+public struct Fuzzilli_Protobuf_EndPlainFunction: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1388,40 +1331,7 @@ public struct Fuzzilli_Protobuf_EndArrowFunction {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginGeneratorFunction {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var parameters: Fuzzilli_Protobuf_Parameters {
-    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
-    set {_parameters = newValue}
-  }
-  /// Returns true if `parameters` has been explicitly set.
-  public var hasParameters: Bool {return self._parameters != nil}
-  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
-  public mutating func clearParameters() {self._parameters = nil}
-
-  public var isStrict: Bool = false
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
-}
-
-public struct Fuzzilli_Protobuf_EndGeneratorFunction {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginAsyncFunction {
+public struct Fuzzilli_Protobuf_BeginArrowFunction: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1444,7 +1354,7 @@ public struct Fuzzilli_Protobuf_BeginAsyncFunction {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndAsyncFunction {
+public struct Fuzzilli_Protobuf_EndArrowFunction: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1454,40 +1364,7 @@ public struct Fuzzilli_Protobuf_EndAsyncFunction {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginAsyncArrowFunction {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var parameters: Fuzzilli_Protobuf_Parameters {
-    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
-    set {_parameters = newValue}
-  }
-  /// Returns true if `parameters` has been explicitly set.
-  public var hasParameters: Bool {return self._parameters != nil}
-  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
-  public mutating func clearParameters() {self._parameters = nil}
-
-  public var isStrict: Bool = false
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
-}
-
-public struct Fuzzilli_Protobuf_EndAsyncArrowFunction {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginAsyncGeneratorFunction {
+public struct Fuzzilli_Protobuf_BeginGeneratorFunction: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1510,7 +1387,7 @@ public struct Fuzzilli_Protobuf_BeginAsyncGeneratorFunction {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndAsyncGeneratorFunction {
+public struct Fuzzilli_Protobuf_EndGeneratorFunction: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1520,7 +1397,106 @@ public struct Fuzzilli_Protobuf_EndAsyncGeneratorFunction {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginConstructor {
+public struct Fuzzilli_Protobuf_BeginAsyncFunction: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
+    set {_parameters = newValue}
+  }
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
+
+  public var isStrict: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
+}
+
+public struct Fuzzilli_Protobuf_EndAsyncFunction: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_BeginAsyncArrowFunction: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
+    set {_parameters = newValue}
+  }
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
+
+  public var isStrict: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
+}
+
+public struct Fuzzilli_Protobuf_EndAsyncArrowFunction: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_BeginAsyncGeneratorFunction: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
+    set {_parameters = newValue}
+  }
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
+
+  public var isStrict: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
+}
+
+public struct Fuzzilli_Protobuf_EndAsyncGeneratorFunction: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_BeginConstructor: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1541,7 +1517,7 @@ public struct Fuzzilli_Protobuf_BeginConstructor {
   fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
-public struct Fuzzilli_Protobuf_EndConstructor {
+public struct Fuzzilli_Protobuf_EndConstructor: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1551,7 +1527,7 @@ public struct Fuzzilli_Protobuf_EndConstructor {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Return {
+public struct Fuzzilli_Protobuf_Return: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1561,7 +1537,7 @@ public struct Fuzzilli_Protobuf_Return {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Yield {
+public struct Fuzzilli_Protobuf_Yield: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1571,7 +1547,7 @@ public struct Fuzzilli_Protobuf_Yield {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_YieldEach {
+public struct Fuzzilli_Protobuf_YieldEach: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1581,7 +1557,7 @@ public struct Fuzzilli_Protobuf_YieldEach {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Await {
+public struct Fuzzilli_Protobuf_Await: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1591,7 +1567,7 @@ public struct Fuzzilli_Protobuf_Await {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CallFunction {
+public struct Fuzzilli_Protobuf_CallFunction: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1603,7 +1579,7 @@ public struct Fuzzilli_Protobuf_CallFunction {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CallFunctionWithSpread {
+public struct Fuzzilli_Protobuf_CallFunctionWithSpread: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1617,7 +1593,7 @@ public struct Fuzzilli_Protobuf_CallFunctionWithSpread {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Construct {
+public struct Fuzzilli_Protobuf_Construct: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1629,7 +1605,7 @@ public struct Fuzzilli_Protobuf_Construct {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ConstructWithSpread {
+public struct Fuzzilli_Protobuf_ConstructWithSpread: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1643,7 +1619,7 @@ public struct Fuzzilli_Protobuf_ConstructWithSpread {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CallMethod {
+public struct Fuzzilli_Protobuf_CallMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1657,7 +1633,7 @@ public struct Fuzzilli_Protobuf_CallMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CallMethodWithSpread {
+public struct Fuzzilli_Protobuf_CallMethodWithSpread: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1673,7 +1649,7 @@ public struct Fuzzilli_Protobuf_CallMethodWithSpread {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CallComputedMethod {
+public struct Fuzzilli_Protobuf_CallComputedMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1685,7 +1661,7 @@ public struct Fuzzilli_Protobuf_CallComputedMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CallComputedMethodWithSpread {
+public struct Fuzzilli_Protobuf_CallComputedMethodWithSpread: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1699,7 +1675,7 @@ public struct Fuzzilli_Protobuf_CallComputedMethodWithSpread {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_UnaryOperation {
+public struct Fuzzilli_Protobuf_UnaryOperation: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1711,7 +1687,7 @@ public struct Fuzzilli_Protobuf_UnaryOperation {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BinaryOperation {
+public struct Fuzzilli_Protobuf_BinaryOperation: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1723,7 +1699,7 @@ public struct Fuzzilli_Protobuf_BinaryOperation {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_TernaryOperation {
+public struct Fuzzilli_Protobuf_TernaryOperation: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1733,7 +1709,7 @@ public struct Fuzzilli_Protobuf_TernaryOperation {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Update {
+public struct Fuzzilli_Protobuf_Update: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1745,7 +1721,7 @@ public struct Fuzzilli_Protobuf_Update {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Dup {
+public struct Fuzzilli_Protobuf_Dup: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1755,7 +1731,7 @@ public struct Fuzzilli_Protobuf_Dup {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Reassign {
+public struct Fuzzilli_Protobuf_Reassign: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1765,7 +1741,7 @@ public struct Fuzzilli_Protobuf_Reassign {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_DestructArray {
+public struct Fuzzilli_Protobuf_DestructArray: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1779,7 +1755,7 @@ public struct Fuzzilli_Protobuf_DestructArray {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_DestructArrayAndReassign {
+public struct Fuzzilli_Protobuf_DestructArrayAndReassign: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1793,7 +1769,7 @@ public struct Fuzzilli_Protobuf_DestructArrayAndReassign {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_DestructObject {
+public struct Fuzzilli_Protobuf_DestructObject: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1807,7 +1783,7 @@ public struct Fuzzilli_Protobuf_DestructObject {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_DestructObjectAndReassign {
+public struct Fuzzilli_Protobuf_DestructObjectAndReassign: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1821,7 +1797,7 @@ public struct Fuzzilli_Protobuf_DestructObjectAndReassign {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Compare {
+public struct Fuzzilli_Protobuf_Compare: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1833,7 +1809,7 @@ public struct Fuzzilli_Protobuf_Compare {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadNamedVariable {
+public struct Fuzzilli_Protobuf_LoadNamedVariable: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1845,7 +1821,7 @@ public struct Fuzzilli_Protobuf_LoadNamedVariable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StoreNamedVariable {
+public struct Fuzzilli_Protobuf_StoreNamedVariable: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1857,7 +1833,7 @@ public struct Fuzzilli_Protobuf_StoreNamedVariable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_DefineNamedVariable {
+public struct Fuzzilli_Protobuf_DefineNamedVariable: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1869,7 +1845,7 @@ public struct Fuzzilli_Protobuf_DefineNamedVariable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Eval {
+public struct Fuzzilli_Protobuf_Eval: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1883,7 +1859,7 @@ public struct Fuzzilli_Protobuf_Eval {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CallSuperConstructor {
+public struct Fuzzilli_Protobuf_CallSuperConstructor: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1895,7 +1871,7 @@ public struct Fuzzilli_Protobuf_CallSuperConstructor {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CallSuperMethod {
+public struct Fuzzilli_Protobuf_CallSuperMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1907,7 +1883,7 @@ public struct Fuzzilli_Protobuf_CallSuperMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_GetPrivateProperty {
+public struct Fuzzilli_Protobuf_GetPrivateProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1919,7 +1895,7 @@ public struct Fuzzilli_Protobuf_GetPrivateProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_SetPrivateProperty {
+public struct Fuzzilli_Protobuf_SetPrivateProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1931,7 +1907,7 @@ public struct Fuzzilli_Protobuf_SetPrivateProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_UpdatePrivateProperty {
+public struct Fuzzilli_Protobuf_UpdatePrivateProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1945,7 +1921,7 @@ public struct Fuzzilli_Protobuf_UpdatePrivateProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CallPrivateMethod {
+public struct Fuzzilli_Protobuf_CallPrivateMethod: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1957,7 +1933,7 @@ public struct Fuzzilli_Protobuf_CallPrivateMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_GetSuperProperty {
+public struct Fuzzilli_Protobuf_GetSuperProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1969,7 +1945,7 @@ public struct Fuzzilli_Protobuf_GetSuperProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_SetSuperProperty {
+public struct Fuzzilli_Protobuf_SetSuperProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1981,7 +1957,7 @@ public struct Fuzzilli_Protobuf_SetSuperProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_GetComputedSuperProperty {
+public struct Fuzzilli_Protobuf_GetComputedSuperProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1991,7 +1967,7 @@ public struct Fuzzilli_Protobuf_GetComputedSuperProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_SetComputedSuperProperty {
+public struct Fuzzilli_Protobuf_SetComputedSuperProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2001,7 +1977,7 @@ public struct Fuzzilli_Protobuf_SetComputedSuperProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_UpdateSuperProperty {
+public struct Fuzzilli_Protobuf_UpdateSuperProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2015,7 +1991,7 @@ public struct Fuzzilli_Protobuf_UpdateSuperProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadNewTarget {
+public struct Fuzzilli_Protobuf_LoadNewTarget: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2025,7 +2001,7 @@ public struct Fuzzilli_Protobuf_LoadNewTarget {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Explore {
+public struct Fuzzilli_Protobuf_Explore: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2039,7 +2015,7 @@ public struct Fuzzilli_Protobuf_Explore {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Probe {
+public struct Fuzzilli_Protobuf_Probe: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2051,7 +2027,7 @@ public struct Fuzzilli_Protobuf_Probe {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Fixup {
+public struct Fuzzilli_Protobuf_Fixup: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2069,7 +2045,7 @@ public struct Fuzzilli_Protobuf_Fixup {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginWith {
+public struct Fuzzilli_Protobuf_BeginWith: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2079,7 +2055,7 @@ public struct Fuzzilli_Protobuf_BeginWith {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndWith {
+public struct Fuzzilli_Protobuf_EndWith: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2089,7 +2065,7 @@ public struct Fuzzilli_Protobuf_EndWith {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginIf {
+public struct Fuzzilli_Protobuf_BeginIf: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2101,7 +2077,7 @@ public struct Fuzzilli_Protobuf_BeginIf {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginElse {
+public struct Fuzzilli_Protobuf_BeginElse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2111,7 +2087,7 @@ public struct Fuzzilli_Protobuf_BeginElse {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndIf {
+public struct Fuzzilli_Protobuf_EndIf: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2121,7 +2097,7 @@ public struct Fuzzilli_Protobuf_EndIf {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginSwitch {
+public struct Fuzzilli_Protobuf_BeginSwitch: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2131,7 +2107,7 @@ public struct Fuzzilli_Protobuf_BeginSwitch {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginSwitchCase {
+public struct Fuzzilli_Protobuf_BeginSwitchCase: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2141,7 +2117,7 @@ public struct Fuzzilli_Protobuf_BeginSwitchCase {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginSwitchDefaultCase {
+public struct Fuzzilli_Protobuf_BeginSwitchDefaultCase: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2151,7 +2127,7 @@ public struct Fuzzilli_Protobuf_BeginSwitchDefaultCase {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_SwitchBreak {
+public struct Fuzzilli_Protobuf_SwitchBreak: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2161,7 +2137,7 @@ public struct Fuzzilli_Protobuf_SwitchBreak {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndSwitchCase {
+public struct Fuzzilli_Protobuf_EndSwitchCase: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2173,7 +2149,7 @@ public struct Fuzzilli_Protobuf_EndSwitchCase {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndSwitch {
+public struct Fuzzilli_Protobuf_EndSwitch: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2183,7 +2159,7 @@ public struct Fuzzilli_Protobuf_EndSwitch {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginWhileLoopHeader {
+public struct Fuzzilli_Protobuf_BeginWhileLoopHeader: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2193,7 +2169,7 @@ public struct Fuzzilli_Protobuf_BeginWhileLoopHeader {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginWhileLoopBody {
+public struct Fuzzilli_Protobuf_BeginWhileLoopBody: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2203,7 +2179,7 @@ public struct Fuzzilli_Protobuf_BeginWhileLoopBody {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndWhileLoop {
+public struct Fuzzilli_Protobuf_EndWhileLoop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2213,7 +2189,7 @@ public struct Fuzzilli_Protobuf_EndWhileLoop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginDoWhileLoopBody {
+public struct Fuzzilli_Protobuf_BeginDoWhileLoopBody: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2223,7 +2199,7 @@ public struct Fuzzilli_Protobuf_BeginDoWhileLoopBody {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginDoWhileLoopHeader {
+public struct Fuzzilli_Protobuf_BeginDoWhileLoopHeader: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2233,7 +2209,7 @@ public struct Fuzzilli_Protobuf_BeginDoWhileLoopHeader {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndDoWhileLoop {
+public struct Fuzzilli_Protobuf_EndDoWhileLoop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2243,7 +2219,7 @@ public struct Fuzzilli_Protobuf_EndDoWhileLoop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForLoopInitializer {
+public struct Fuzzilli_Protobuf_BeginForLoopInitializer: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2253,7 +2229,7 @@ public struct Fuzzilli_Protobuf_BeginForLoopInitializer {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForLoopCondition {
+public struct Fuzzilli_Protobuf_BeginForLoopCondition: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2263,7 +2239,7 @@ public struct Fuzzilli_Protobuf_BeginForLoopCondition {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForLoopAfterthought {
+public struct Fuzzilli_Protobuf_BeginForLoopAfterthought: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2273,7 +2249,7 @@ public struct Fuzzilli_Protobuf_BeginForLoopAfterthought {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForLoopBody {
+public struct Fuzzilli_Protobuf_BeginForLoopBody: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2283,7 +2259,7 @@ public struct Fuzzilli_Protobuf_BeginForLoopBody {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndForLoop {
+public struct Fuzzilli_Protobuf_EndForLoop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2293,7 +2269,7 @@ public struct Fuzzilli_Protobuf_EndForLoop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForInLoop {
+public struct Fuzzilli_Protobuf_BeginForInLoop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2303,7 +2279,7 @@ public struct Fuzzilli_Protobuf_BeginForInLoop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndForInLoop {
+public struct Fuzzilli_Protobuf_EndForInLoop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2313,7 +2289,7 @@ public struct Fuzzilli_Protobuf_EndForInLoop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForOfLoop {
+public struct Fuzzilli_Protobuf_BeginForOfLoop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2323,7 +2299,7 @@ public struct Fuzzilli_Protobuf_BeginForOfLoop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForOfLoopWithDestruct {
+public struct Fuzzilli_Protobuf_BeginForOfLoopWithDestruct: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2337,7 +2313,7 @@ public struct Fuzzilli_Protobuf_BeginForOfLoopWithDestruct {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndForOfLoop {
+public struct Fuzzilli_Protobuf_EndForOfLoop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2347,7 +2323,7 @@ public struct Fuzzilli_Protobuf_EndForOfLoop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginRepeatLoop {
+public struct Fuzzilli_Protobuf_BeginRepeatLoop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2361,7 +2337,7 @@ public struct Fuzzilli_Protobuf_BeginRepeatLoop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndRepeatLoop {
+public struct Fuzzilli_Protobuf_EndRepeatLoop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2371,7 +2347,7 @@ public struct Fuzzilli_Protobuf_EndRepeatLoop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoopBreak {
+public struct Fuzzilli_Protobuf_LoopBreak: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2381,7 +2357,7 @@ public struct Fuzzilli_Protobuf_LoopBreak {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoopContinue {
+public struct Fuzzilli_Protobuf_LoopContinue: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2391,7 +2367,7 @@ public struct Fuzzilli_Protobuf_LoopContinue {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginTry {
+public struct Fuzzilli_Protobuf_BeginTry: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2401,7 +2377,7 @@ public struct Fuzzilli_Protobuf_BeginTry {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginCatch {
+public struct Fuzzilli_Protobuf_BeginCatch: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2411,7 +2387,7 @@ public struct Fuzzilli_Protobuf_BeginCatch {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginFinally {
+public struct Fuzzilli_Protobuf_BeginFinally: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2421,7 +2397,7 @@ public struct Fuzzilli_Protobuf_BeginFinally {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndTryCatch {
+public struct Fuzzilli_Protobuf_EndTryCatch: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2431,7 +2407,7 @@ public struct Fuzzilli_Protobuf_EndTryCatch {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndTryCatchFinally {
+public struct Fuzzilli_Protobuf_EndTryCatchFinally: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2441,7 +2417,7 @@ public struct Fuzzilli_Protobuf_EndTryCatchFinally {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ThrowException {
+public struct Fuzzilli_Protobuf_ThrowException: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2451,7 +2427,7 @@ public struct Fuzzilli_Protobuf_ThrowException {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginCodeString {
+public struct Fuzzilli_Protobuf_BeginCodeString: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2461,7 +2437,7 @@ public struct Fuzzilli_Protobuf_BeginCodeString {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndCodeString {
+public struct Fuzzilli_Protobuf_EndCodeString: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2471,7 +2447,7 @@ public struct Fuzzilli_Protobuf_EndCodeString {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginBlockStatement {
+public struct Fuzzilli_Protobuf_BeginBlockStatement: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2481,7 +2457,7 @@ public struct Fuzzilli_Protobuf_BeginBlockStatement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndBlockStatement {
+public struct Fuzzilli_Protobuf_EndBlockStatement: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2491,7 +2467,7 @@ public struct Fuzzilli_Protobuf_EndBlockStatement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Nop {
+public struct Fuzzilli_Protobuf_Nop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2501,7 +2477,7 @@ public struct Fuzzilli_Protobuf_Nop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Print {
+public struct Fuzzilli_Protobuf_Print: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2510,192 +2486,6 @@ public struct Fuzzilli_Protobuf_Print {
 
   public init() {}
 }
-
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Fuzzilli_Protobuf_PropertyType: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_UnaryOperator: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BinaryOperator: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Comparator: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Parameters: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadInteger: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadBigInt: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadFloat: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadString: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadBoolean: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadUndefined: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadNull: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadThis: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadArguments: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadRegExp: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginObjectLiteral: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ObjectLiteralAddProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ObjectLiteralAddElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ObjectLiteralCopyProperties: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ObjectLiteralSetPrototype: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginObjectLiteralMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndObjectLiteralMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndObjectLiteralComputedMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginObjectLiteralGetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndObjectLiteralGetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginObjectLiteralSetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndObjectLiteralSetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndObjectLiteral: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassDefinition: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassConstructor: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassConstructor: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ClassAddInstanceProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ClassAddInstanceElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ClassAddInstanceComputedProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassInstanceMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassInstanceMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassInstanceGetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassInstanceGetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassInstanceSetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassInstanceSetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ClassAddStaticProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ClassAddStaticElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ClassAddStaticComputedProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassStaticInitializer: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassStaticInitializer: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassStaticMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassStaticMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassStaticGetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassStaticGetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassStaticSetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassStaticSetter: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassPrivateInstanceMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ClassAddPrivateStaticProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginClassPrivateStaticMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassPrivateStaticMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndClassDefinition: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CreateArray: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CreateIntArray: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CreateFloatArray: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CreateTemplateString: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CreateArrayWithSpread: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadBuiltin: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_GetProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_SetProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_UpdateProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_DeleteProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ConfigureProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_GetElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_SetElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_UpdateElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_DeleteElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ConfigureElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_GetComputedProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_SetComputedProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_UpdateComputedProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_DeleteComputedProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ConfigureComputedProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_TypeOf: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_TestInstanceOf: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_TestIn: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginPlainFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndPlainFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginArrowFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndArrowFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginGeneratorFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndGeneratorFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginAsyncFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndAsyncFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginAsyncArrowFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndAsyncArrowFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginAsyncGeneratorFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndAsyncGeneratorFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginConstructor: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndConstructor: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Return: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Yield: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_YieldEach: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Await: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CallFunction: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CallFunctionWithSpread: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Construct: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ConstructWithSpread: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CallMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CallMethodWithSpread: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CallComputedMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CallComputedMethodWithSpread: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_UnaryOperation: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BinaryOperation: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_TernaryOperation: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Update: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Dup: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Reassign: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_DestructArray: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_DestructArrayAndReassign: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_DestructObject: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_DestructObjectAndReassign: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Compare: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadNamedVariable: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StoreNamedVariable: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_DefineNamedVariable: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Eval: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CallSuperConstructor: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CallSuperMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_GetPrivateProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_SetPrivateProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_UpdatePrivateProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_CallPrivateMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_GetSuperProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_SetSuperProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_GetComputedSuperProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_SetComputedSuperProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_UpdateSuperProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadNewTarget: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Explore: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Probe: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Fixup: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginWith: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndWith: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginIf: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginElse: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndIf: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginSwitch: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginSwitchCase: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginSwitchDefaultCase: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_SwitchBreak: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndSwitchCase: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndSwitch: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginWhileLoopHeader: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginWhileLoopBody: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndWhileLoop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginDoWhileLoopBody: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginDoWhileLoopHeader: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndDoWhileLoop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginForLoopInitializer: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginForLoopCondition: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginForLoopAfterthought: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginForLoopBody: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndForLoop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginForInLoop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndForInLoop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginForOfLoop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginForOfLoopWithDestruct: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndForOfLoop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginRepeatLoop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndRepeatLoop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoopBreak: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoopContinue: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginTry: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginCatch: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginFinally: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndTryCatch: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndTryCatchFinally: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ThrowException: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginCodeString: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndCodeString: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginBlockStatement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndBlockStatement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Nop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Print: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
@@ -2876,7 +2666,7 @@ extension Fuzzilli_Protobuf_LoadFloat: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.value != 0 {
+    if self.value.bitPattern != 0 {
       try visitor.visitSingularDoubleField(value: self.value, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -2958,8 +2748,8 @@ extension Fuzzilli_Protobuf_LoadUndefined: SwiftProtobuf.Message, SwiftProtobuf.
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -2977,8 +2767,8 @@ extension Fuzzilli_Protobuf_LoadNull: SwiftProtobuf.Message, SwiftProtobuf._Mess
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -2996,8 +2786,8 @@ extension Fuzzilli_Protobuf_LoadThis: SwiftProtobuf.Message, SwiftProtobuf._Mess
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3015,8 +2805,8 @@ extension Fuzzilli_Protobuf_LoadArguments: SwiftProtobuf.Message, SwiftProtobuf.
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3072,8 +2862,8 @@ extension Fuzzilli_Protobuf_BeginObjectLiteral: SwiftProtobuf.Message, SwiftProt
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3155,8 +2945,8 @@ extension Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty: SwiftProtobuf.Mess
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3174,8 +2964,8 @@ extension Fuzzilli_Protobuf_ObjectLiteralCopyProperties: SwiftProtobuf.Message, 
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3193,8 +2983,8 @@ extension Fuzzilli_Protobuf_ObjectLiteralSetPrototype: SwiftProtobuf.Message, Sw
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3254,8 +3044,8 @@ extension Fuzzilli_Protobuf_EndObjectLiteralMethod: SwiftProtobuf.Message, Swift
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3309,8 +3099,8 @@ extension Fuzzilli_Protobuf_EndObjectLiteralComputedMethod: SwiftProtobuf.Messag
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3360,8 +3150,8 @@ extension Fuzzilli_Protobuf_EndObjectLiteralGetter: SwiftProtobuf.Message, Swift
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3411,8 +3201,8 @@ extension Fuzzilli_Protobuf_EndObjectLiteralSetter: SwiftProtobuf.Message, Swift
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3430,8 +3220,8 @@ extension Fuzzilli_Protobuf_EndObjectLiteral: SwiftProtobuf.Message, SwiftProtob
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3517,8 +3307,8 @@ extension Fuzzilli_Protobuf_EndClassConstructor: SwiftProtobuf.Message, SwiftPro
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3686,8 +3476,8 @@ extension Fuzzilli_Protobuf_EndClassInstanceMethod: SwiftProtobuf.Message, Swift
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3737,8 +3527,8 @@ extension Fuzzilli_Protobuf_EndClassInstanceGetter: SwiftProtobuf.Message, Swift
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3788,8 +3578,8 @@ extension Fuzzilli_Protobuf_EndClassInstanceSetter: SwiftProtobuf.Message, Swift
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3915,8 +3705,8 @@ extension Fuzzilli_Protobuf_BeginClassStaticInitializer: SwiftProtobuf.Message, 
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3934,8 +3724,8 @@ extension Fuzzilli_Protobuf_EndClassStaticInitializer: SwiftProtobuf.Message, Sw
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -3995,8 +3785,8 @@ extension Fuzzilli_Protobuf_EndClassStaticMethod: SwiftProtobuf.Message, SwiftPr
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -4046,8 +3836,8 @@ extension Fuzzilli_Protobuf_EndClassStaticGetter: SwiftProtobuf.Message, SwiftPr
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -4097,8 +3887,8 @@ extension Fuzzilli_Protobuf_EndClassStaticSetter: SwiftProtobuf.Message, SwiftPr
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -4196,8 +3986,8 @@ extension Fuzzilli_Protobuf_EndClassPrivateInstanceMethod: SwiftProtobuf.Message
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -4295,8 +4085,8 @@ extension Fuzzilli_Protobuf_EndClassPrivateStaticMethod: SwiftProtobuf.Message, 
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -4314,8 +4104,8 @@ extension Fuzzilli_Protobuf_EndClassDefinition: SwiftProtobuf.Message, SwiftProt
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -4333,8 +4123,8 @@ extension Fuzzilli_Protobuf_CreateArray: SwiftProtobuf.Message, SwiftProtobuf._M
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -4948,8 +4738,8 @@ extension Fuzzilli_Protobuf_SetComputedProperty: SwiftProtobuf.Message, SwiftPro
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5081,8 +4871,8 @@ extension Fuzzilli_Protobuf_TypeOf: SwiftProtobuf.Message, SwiftProtobuf._Messag
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5100,8 +4890,8 @@ extension Fuzzilli_Protobuf_TestInstanceOf: SwiftProtobuf.Message, SwiftProtobuf
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5119,8 +4909,8 @@ extension Fuzzilli_Protobuf_TestIn: SwiftProtobuf.Message, SwiftProtobuf._Messag
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5180,8 +4970,8 @@ extension Fuzzilli_Protobuf_EndPlainFunction: SwiftProtobuf.Message, SwiftProtob
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5241,8 +5031,8 @@ extension Fuzzilli_Protobuf_EndArrowFunction: SwiftProtobuf.Message, SwiftProtob
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5302,8 +5092,8 @@ extension Fuzzilli_Protobuf_EndGeneratorFunction: SwiftProtobuf.Message, SwiftPr
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5363,8 +5153,8 @@ extension Fuzzilli_Protobuf_EndAsyncFunction: SwiftProtobuf.Message, SwiftProtob
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5424,8 +5214,8 @@ extension Fuzzilli_Protobuf_EndAsyncArrowFunction: SwiftProtobuf.Message, SwiftP
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5485,8 +5275,8 @@ extension Fuzzilli_Protobuf_EndAsyncGeneratorFunction: SwiftProtobuf.Message, Sw
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5540,8 +5330,8 @@ extension Fuzzilli_Protobuf_EndConstructor: SwiftProtobuf.Message, SwiftProtobuf
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5559,8 +5349,8 @@ extension Fuzzilli_Protobuf_Return: SwiftProtobuf.Message, SwiftProtobuf._Messag
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5578,8 +5368,8 @@ extension Fuzzilli_Protobuf_Yield: SwiftProtobuf.Message, SwiftProtobuf._Message
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5597,8 +5387,8 @@ extension Fuzzilli_Protobuf_YieldEach: SwiftProtobuf.Message, SwiftProtobuf._Mes
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5616,8 +5406,8 @@ extension Fuzzilli_Protobuf_Await: SwiftProtobuf.Message, SwiftProtobuf._Message
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -5991,8 +5781,8 @@ extension Fuzzilli_Protobuf_TernaryOperation: SwiftProtobuf.Message, SwiftProtob
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -6042,8 +5832,8 @@ extension Fuzzilli_Protobuf_Dup: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -6061,8 +5851,8 @@ extension Fuzzilli_Protobuf_Reassign: SwiftProtobuf.Message, SwiftProtobuf._Mess
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -6660,8 +6450,8 @@ extension Fuzzilli_Protobuf_GetComputedSuperProperty: SwiftProtobuf.Message, Swi
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -6679,8 +6469,8 @@ extension Fuzzilli_Protobuf_SetComputedSuperProperty: SwiftProtobuf.Message, Swi
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -6736,8 +6526,8 @@ extension Fuzzilli_Protobuf_LoadNewTarget: SwiftProtobuf.Message, SwiftProtobuf.
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -6875,8 +6665,8 @@ extension Fuzzilli_Protobuf_BeginWith: SwiftProtobuf.Message, SwiftProtobuf._Mes
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -6894,8 +6684,8 @@ extension Fuzzilli_Protobuf_EndWith: SwiftProtobuf.Message, SwiftProtobuf._Messa
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -6945,8 +6735,8 @@ extension Fuzzilli_Protobuf_BeginElse: SwiftProtobuf.Message, SwiftProtobuf._Mes
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -6964,8 +6754,8 @@ extension Fuzzilli_Protobuf_EndIf: SwiftProtobuf.Message, SwiftProtobuf._Message
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -6983,8 +6773,8 @@ extension Fuzzilli_Protobuf_BeginSwitch: SwiftProtobuf.Message, SwiftProtobuf._M
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7002,8 +6792,8 @@ extension Fuzzilli_Protobuf_BeginSwitchCase: SwiftProtobuf.Message, SwiftProtobu
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7021,8 +6811,8 @@ extension Fuzzilli_Protobuf_BeginSwitchDefaultCase: SwiftProtobuf.Message, Swift
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7040,8 +6830,8 @@ extension Fuzzilli_Protobuf_SwitchBreak: SwiftProtobuf.Message, SwiftProtobuf._M
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7091,8 +6881,8 @@ extension Fuzzilli_Protobuf_EndSwitch: SwiftProtobuf.Message, SwiftProtobuf._Mes
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7110,8 +6900,8 @@ extension Fuzzilli_Protobuf_BeginWhileLoopHeader: SwiftProtobuf.Message, SwiftPr
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7129,8 +6919,8 @@ extension Fuzzilli_Protobuf_BeginWhileLoopBody: SwiftProtobuf.Message, SwiftProt
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7148,8 +6938,8 @@ extension Fuzzilli_Protobuf_EndWhileLoop: SwiftProtobuf.Message, SwiftProtobuf._
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7167,8 +6957,8 @@ extension Fuzzilli_Protobuf_BeginDoWhileLoopBody: SwiftProtobuf.Message, SwiftPr
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7186,8 +6976,8 @@ extension Fuzzilli_Protobuf_BeginDoWhileLoopHeader: SwiftProtobuf.Message, Swift
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7205,8 +6995,8 @@ extension Fuzzilli_Protobuf_EndDoWhileLoop: SwiftProtobuf.Message, SwiftProtobuf
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7224,8 +7014,8 @@ extension Fuzzilli_Protobuf_BeginForLoopInitializer: SwiftProtobuf.Message, Swif
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7243,8 +7033,8 @@ extension Fuzzilli_Protobuf_BeginForLoopCondition: SwiftProtobuf.Message, SwiftP
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7262,8 +7052,8 @@ extension Fuzzilli_Protobuf_BeginForLoopAfterthought: SwiftProtobuf.Message, Swi
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7281,8 +7071,8 @@ extension Fuzzilli_Protobuf_BeginForLoopBody: SwiftProtobuf.Message, SwiftProtob
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7300,8 +7090,8 @@ extension Fuzzilli_Protobuf_EndForLoop: SwiftProtobuf.Message, SwiftProtobuf._Me
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7319,8 +7109,8 @@ extension Fuzzilli_Protobuf_BeginForInLoop: SwiftProtobuf.Message, SwiftProtobuf
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7338,8 +7128,8 @@ extension Fuzzilli_Protobuf_EndForInLoop: SwiftProtobuf.Message, SwiftProtobuf._
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7357,8 +7147,8 @@ extension Fuzzilli_Protobuf_BeginForOfLoop: SwiftProtobuf.Message, SwiftProtobuf
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7414,8 +7204,8 @@ extension Fuzzilli_Protobuf_EndForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7471,8 +7261,8 @@ extension Fuzzilli_Protobuf_EndRepeatLoop: SwiftProtobuf.Message, SwiftProtobuf.
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7490,8 +7280,8 @@ extension Fuzzilli_Protobuf_LoopBreak: SwiftProtobuf.Message, SwiftProtobuf._Mes
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7509,8 +7299,8 @@ extension Fuzzilli_Protobuf_LoopContinue: SwiftProtobuf.Message, SwiftProtobuf._
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7528,8 +7318,8 @@ extension Fuzzilli_Protobuf_BeginTry: SwiftProtobuf.Message, SwiftProtobuf._Mess
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7547,8 +7337,8 @@ extension Fuzzilli_Protobuf_BeginCatch: SwiftProtobuf.Message, SwiftProtobuf._Me
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7566,8 +7356,8 @@ extension Fuzzilli_Protobuf_BeginFinally: SwiftProtobuf.Message, SwiftProtobuf._
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7585,8 +7375,8 @@ extension Fuzzilli_Protobuf_EndTryCatch: SwiftProtobuf.Message, SwiftProtobuf._M
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7604,8 +7394,8 @@ extension Fuzzilli_Protobuf_EndTryCatchFinally: SwiftProtobuf.Message, SwiftProt
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7623,8 +7413,8 @@ extension Fuzzilli_Protobuf_ThrowException: SwiftProtobuf.Message, SwiftProtobuf
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7642,8 +7432,8 @@ extension Fuzzilli_Protobuf_BeginCodeString: SwiftProtobuf.Message, SwiftProtobu
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7661,8 +7451,8 @@ extension Fuzzilli_Protobuf_EndCodeString: SwiftProtobuf.Message, SwiftProtobuf.
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7680,8 +7470,8 @@ extension Fuzzilli_Protobuf_BeginBlockStatement: SwiftProtobuf.Message, SwiftPro
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7699,8 +7489,8 @@ extension Fuzzilli_Protobuf_EndBlockStatement: SwiftProtobuf.Message, SwiftProto
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7718,8 +7508,8 @@ extension Fuzzilli_Protobuf_Nop: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
@@ -7737,8 +7527,8 @@ extension Fuzzilli_Protobuf_Print: SwiftProtobuf.Message, SwiftProtobuf._Message
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
