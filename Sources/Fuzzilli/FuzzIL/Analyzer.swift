@@ -168,11 +168,6 @@ struct ContextAnalyzer: Analyzer {
 
                 newContext.formUnion(contextStack.secondToTop)
             }
-            if (instr.op.contextOpened.contains(.switchBlock)) {
-                newContext.remove(.loop)
-            } else if (instr.op.contextOpened.contains(.loop)) {
-                newContext.remove(.switchBlock)
-            }
             contextStack.push(newContext)
         }
     }
