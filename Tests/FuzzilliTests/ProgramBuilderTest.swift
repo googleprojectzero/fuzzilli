@@ -2419,7 +2419,8 @@ class ProgramBuilderTests: XCTestCase {
 
     func testArgumentGenerationForKnownSignatureWithLimit() {
         let env = JavaScriptEnvironment()
-        let fuzzer = makeMockFuzzer(environment: env)
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
         let b = fuzzer.makeBuilder()
 
         b.loadInt(42)

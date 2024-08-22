@@ -21,6 +21,7 @@
 ///
 /// Like other reducers, changes are only performed if they do not alter the programs relevant behaviour.
 struct MinimizationPostProcessor {
+    @discardableResult
     func process(with helper: MinimizationHelper) -> Bool {
         // Step 1: Generate all changes that we'd like to perform and record them.
         var changes = [(index: Int, newInstruction: Instruction)]()

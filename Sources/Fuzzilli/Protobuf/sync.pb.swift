@@ -34,7 +34,7 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-public struct Fuzzilli_Protobuf_LogMessage {
+public struct Fuzzilli_Protobuf_LogMessage: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -53,7 +53,7 @@ public struct Fuzzilli_Protobuf_LogMessage {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_FuzzerState {
+public struct Fuzzilli_Protobuf_FuzzerState: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -67,7 +67,7 @@ public struct Fuzzilli_Protobuf_FuzzerState {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Statistics {
+public struct Fuzzilli_Protobuf_Statistics: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -180,12 +180,6 @@ public struct Fuzzilli_Protobuf_Statistics {
 
   fileprivate var _storage = _StorageClass.defaultInstance
 }
-
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Fuzzilli_Protobuf_LogMessage: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_FuzzerState: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_Statistics: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
@@ -320,7 +314,15 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     var _correctnessRate: Double = 0
     var _timeoutRate: Double = 0
 
-    static let defaultInstance = _StorageClass()
+    #if swift(>=5.10)
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+    #else
+      static let defaultInstance = _StorageClass()
+    #endif
 
     private init() {}
 
@@ -403,37 +405,37 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       if _storage._totalExecs != 0 {
         try visitor.visitSingularUInt64Field(value: _storage._totalExecs, fieldNumber: 6)
       }
-      if _storage._avgCorpusSize != 0 {
+      if _storage._avgCorpusSize.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._avgCorpusSize, fieldNumber: 7)
       }
-      if _storage._avgProgramSize != 0 {
+      if _storage._avgProgramSize.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._avgProgramSize, fieldNumber: 8)
       }
-      if _storage._avgCorpusProgramSize != 0 {
+      if _storage._avgCorpusProgramSize.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._avgCorpusProgramSize, fieldNumber: 9)
       }
-      if _storage._avgExecutionTime != 0 {
+      if _storage._avgExecutionTime.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._avgExecutionTime, fieldNumber: 10)
       }
-      if _storage._execsPerSecond != 0 {
+      if _storage._execsPerSecond.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._execsPerSecond, fieldNumber: 11)
       }
-      if _storage._fuzzerOverhead != 0 {
+      if _storage._fuzzerOverhead.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._fuzzerOverhead, fieldNumber: 12)
       }
-      if _storage._minimizationOverhead != 0 {
+      if _storage._minimizationOverhead.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._minimizationOverhead, fieldNumber: 13)
       }
       if _storage._numChildNodes != 0 {
         try visitor.visitSingularUInt64Field(value: _storage._numChildNodes, fieldNumber: 14)
       }
-      if _storage._coverage != 0 {
+      if _storage._coverage.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._coverage, fieldNumber: 15)
       }
-      if _storage._correctnessRate != 0 {
+      if _storage._correctnessRate.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._correctnessRate, fieldNumber: 16)
       }
-      if _storage._timeoutRate != 0 {
+      if _storage._timeoutRate.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._timeoutRate, fieldNumber: 17)
       }
     }

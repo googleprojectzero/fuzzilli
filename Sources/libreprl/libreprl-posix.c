@@ -46,10 +46,12 @@
 #define REPRL_CHILD_DATA_IN 102
 #define REPRL_CHILD_DATA_OUT 103
 
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-
 /// Maximum timeout in microseconds. Mostly just limited by the fact that the timeout in milliseconds has to fit into a 32-bit integer.
 #define REPRL_MAX_TIMEOUT_IN_MICROSECONDS ((uint64_t)(INT_MAX) * 1000)
+
+static size_t min(size_t x, size_t y) {
+  return x < y ? x : y;
+}
 
 static uint64_t current_usecs()
 {
@@ -513,7 +515,7 @@ static const char* fetch_data_channel_content(struct data_channel* channel)
 {
     if (!channel) return "";
     size_t pos = lseek(channel->fd, 0, SEEK_CUR);
-    pos = MIN(pos, REPRL_MAX_DATA_SIZE - 1);
+    pos = min(pos, REPRL_MAX_DATA_SIZE - 1);
     channel->mapping[pos] = 0;
     return channel->mapping;
 }
