@@ -1882,7 +1882,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }, {
             return .wasmi64(b.randomInt())
         })
-        b.createWasmGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
+        b.createWasmGlobal(value: wasmGlobal, isMutable: probability(0.5))
     },
 
     // Wasm Module Generator, this is fairly important as it creates the context necessary to run the Wasm CodeGenerators.

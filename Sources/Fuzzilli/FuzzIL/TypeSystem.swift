@@ -146,8 +146,8 @@ public struct ILType: Hashable {
     public static let nullish: ILType = .undefined
 
     /// Constructs an object type.
-    public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> ILType {
-        let ext = TypeExtension(group: group, properties: Set(properties), methods: Set(methods), signature: nil)
+    public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = [], withWasmType wasmExt: WasmTypeExtension? = nil) -> ILType {
+        let ext = TypeExtension(group: group, properties: Set(properties), methods: Set(methods), signature: nil, wasmExt: wasmExt)
         return ILType(definiteType: .object, ext: ext)
     }
 
@@ -199,7 +199,6 @@ public struct ILType: Hashable {
     public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef
 
     public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
-
 
     //
     // Type testing
@@ -356,6 +355,10 @@ public struct ILType: Hashable {
 
     public var group: String? {
         return ext?.group
+    }
+
+    public var wasmGlobalType: WasmGlobalType? {
+        return ext?.wasmExt as? WasmGlobalType
     }
 
     public var properties: Set<String> {
@@ -846,8 +849,11 @@ class TypeExtension: Hashable {
     // The function signature. Will only be != nil if isFunction or isConstructor is true.
     let signature: Signature?
 
-    init?(group: String? = nil, properties: Set<String>, methods: Set<String>, signature: Signature?) {
-        if group == nil && properties.isEmpty && methods.isEmpty && signature == nil {
+    // Wasm specific properties for Wasm types.
+    let wasmExt: WasmTypeExtension?
+
+    init?(group: String? = nil, properties: Set<String>, methods: Set<String>, signature: Signature?, wasmExt: WasmTypeExtension? = nil) {
+        if group == nil && properties.isEmpty && methods.isEmpty && signature == nil && wasmExt == nil {
             return nil
         }
 
@@ -855,10 +861,11 @@ class TypeExtension: Hashable {
         self.methods = methods
         self.group = group
         self.signature = signature
+        self.wasmExt = wasmExt
     }
 
     static func ==(lhs: TypeExtension, rhs: TypeExtension) -> Bool {
-        return lhs.properties == rhs.properties && lhs.methods == rhs.methods && lhs.group == rhs.group && lhs.signature == rhs.signature
+        return lhs.properties == rhs.properties && lhs.methods == rhs.methods && lhs.group == rhs.group && lhs.signature == rhs.signature && lhs.wasmExt == rhs.wasmExt
     }
 
     public func hash(into hasher: inout Hasher) {
@@ -866,6 +873,43 @@ class TypeExtension: Hashable {
         hasher.combine(properties)
         hasher.combine(methods)
         hasher.combine(signature)
+        hasher.combine(wasmExt)
+    }
+}
+
+// Base class that all Wasm types wih TypeExtension should inherit from.
+public class WasmTypeExtension: Hashable {
+    public static func ==(lhs: WasmTypeExtension, rhs: WasmTypeExtension) -> Bool {
+        lhs.isEqual(to: rhs)
+    }
+
+    func isEqual(to other: WasmTypeExtension) -> Bool {
+        fatalError("unreachable")
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        fatalError("unreachable")
+    }
+}
+
+public class WasmGlobalType: WasmTypeExtension {
+
+    let valueType: ILType
+    let isMutable: Bool
+
+    override func isEqual(to other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmGlobalType else { return false }
+        return self.valueType == other.valueType && self.isMutable == other.isMutable
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine(valueType)
+        hasher.combine(isMutable)
+    }
+
+    init(valueType: ILType, isMutable: Bool) {
+        self.valueType = valueType
+        self.isMutable = isMutable
     }
 }
 

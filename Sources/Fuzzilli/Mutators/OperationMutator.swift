@@ -225,7 +225,7 @@ public class OperationMutator: BaseInstructionMutator {
             // The type has to match for wasm, we cannot just switch types here as the rest of the wasm code will become invalid.
             // TODO: add nullref and funcref as types here.
             let wasmGlobal: WasmGlobal
-            switch op.wasmGlobal.toType() {
+            switch op.value.toType() {
             case .wasmf32:
                 wasmGlobal =  .wasmf32(Float32(b.randomFloat()))
             case .wasmf64:
@@ -237,7 +237,7 @@ public class OperationMutator: BaseInstructionMutator {
             default:
                 fatalError("unexpected/unimplemented Value Type!")
             }
-            newOp = CreateWasmGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
+            newOp = CreateWasmGlobal(value: wasmGlobal, isMutable: probability(0.5))
         case .createWasmTable(_):
             let wasmTableType: ILType
             if probability(0.5) {

@@ -355,9 +355,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError", "SuppressedError"] {
             registerObjectGroup(.jsError(variant))
         }
-        for variant in ["i32", "i64", "f32", "f64"] {
-            registerObjectGroup(.wasmGlobal(variant))
-        }
+        registerObjectGroup(.jsWasmGlobal)
         for variant in ["funcref", "externref"] {
             registerObjectGroup(.wasmTable(variant))
         }
@@ -764,12 +762,6 @@ public extension ILType {
 
     /// Type of the JavaScript Infinity value.
     static let jsInfinity = ILType.float
-
-    /// Type of a JavaScript WebAssembly.Global object of the given variant, i.e. i32, i64, f32 or f64.
-    // TODO: Add funcref and externref and v128.
-    static func wasmGlobal(_ variant: String) -> ILType {
-        return .object(ofGroup: "WasmGlobal.\(variant)", withProperties: ["value"], withMethods: [])
-    }
 
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
     static func wasmTable(_ variant: String) -> ILType {
@@ -1487,17 +1479,16 @@ public extension ObjectGroup {
         )
     }
 
-    /// ObjectGroup modelling JavaScript WebAssembly Global objects
-    static func wasmGlobal(_ variant: String) -> ObjectGroup {
-        return ObjectGroup(
-            name: "WasmGlobal.\(variant)",
-            instanceType: .wasmGlobal(variant),
-            properties: [
-                "value" : .object()
-            ],
-            methods: [:]
-        )
-    }
+    /// ObjectGroup modelling JavaScript WebAssembly Global objects.
+    static let jsWasmGlobal = ObjectGroup(
+        name: "WasmGlobal",
+        instanceType: .object(ofGroup: "WasmGlobal", withProperties: ["value"]),
+        properties: [
+            // TODO: Try using precise JS types based on the global's underlying valuetype (e.g. float for f32 and f64).
+            "value" : .anything
+        ],
+        methods: [:]
+    )
 
     /// ObjectGroup modelling JavaScript WebAssembly Table objects
     static func wasmTable(_ variant: String) -> ObjectGroup {

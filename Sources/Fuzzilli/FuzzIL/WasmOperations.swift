@@ -606,33 +606,8 @@ public enum WasmGlobal {
         case .refNull:
             return .wasmExternRef
         case .imported(let type):
-            switch type {
-            case .object(ofGroup: "WasmGlobal.i64"):
-                return .wasmi64
-            case .object(ofGroup: "WasmGlobal.i32"):
-                return .wasmi32
-            case .object(ofGroup: "WasmGlobal.f32"):
-                return .wasmf32
-            case .object(ofGroup: "WasmGlobal.f64"):
-                return .wasmf64
-            default:
-                fatalError("no conversion for this imported type!")
-            }
-        default:
-            fatalError("Unimplemented / unhandled")
-        }
-    }
-
-    func toJsType() -> ILType {
-        switch self {
-        case .wasmi64:
-            return .object(ofGroup: "WasmGlobal.i64")
-        case .wasmi32:
-            return .object(ofGroup: "WasmGlobal.i32")
-        case .wasmf32:
-            return .object(ofGroup: "WasmGlobal.f32")
-        case .wasmf64:
-            return .object(ofGroup: "WasmGlobal.f64")
+            assert(type.wasmGlobalType != nil)
+            return type.wasmGlobalType!.valueType
         default:
             fatalError("Unimplemented / unhandled")
         }
@@ -749,24 +724,12 @@ final class WasmImportTable: WasmOperation {
 
         assert(tableType.Is(.object()))
 
-        super.init(inputTypes: [tableType], outputType: convertToWasmWorldType(tableType), attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasm])
+        super.init(inputTypes: [tableType], outputType: convertTableTypeToWasmWorldType(tableType), attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasm])
     }
 }
 
 // Converts to the wasm equivalent type
-fileprivate func convertToWasmWorldType(_ type: ILType) -> ILType {
-    if type.Is(.object(ofGroup: "WasmGlobal.f32")) {
-        return .wasmf32
-    }
-    if type.Is(.object(ofGroup: "WasmGlobal.f64")) {
-        return .wasmf64
-    }
-    if type.Is(.object(ofGroup: "WasmGlobal.i32")) {
-        return .wasmi32
-    }
-    if type.Is(.object(ofGroup: "WasmGlobal.i64")) {
-        return .wasmi64
-    }
+fileprivate func convertTableTypeToWasmWorldType(_ type: ILType) -> ILType {
     if type.Is(.object(ofGroup: "WasmTable.externref")) {
         return .externRefTable
     }
@@ -779,19 +742,19 @@ fileprivate func convertToWasmWorldType(_ type: ILType) -> ILType {
 final class WasmImportGlobal: WasmOperation {
     override var opcode: Opcode { .wasmImportGlobal(self) }
 
-    let valueType: ILType
-    let mutability: Bool
+    let wasmGlobal: ILType
+    let isMutable: Bool
 
     // This is where we need a bit stricter typing. The type that flows into this operation needs to match with the given
     // valueType here, as otherwise we cannot do meaningful wasm programbuilding (is this true?)
-    init(valueType: ILType, mutability: Bool) {
-        self.valueType = valueType
-        self.mutability = mutability
-        // Here we expect a JS variable, which should be an object with 'ofGroup: "WasmGlobal.*"'
-        assert(valueType.Is(.object()))
-        // TODO: is this correct? is this valueType?
+    init(wasmGlobal: ILType) {
+        self.wasmGlobal = wasmGlobal
+        assert(wasmGlobal.Is(.object(ofGroup: "WasmGlobal")))
+        assert(wasmGlobal.wasmGlobalType != nil)
+        let wasmGlobalType = wasmGlobal.wasmGlobalType! 
+        self.isMutable = wasmGlobalType.isMutable
         // We need to have this input variable here, such that we preserve the 'use' of the defined js global.
-        super.init(inputTypes: [valueType], outputType: convertToWasmWorldType(valueType), attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasm])
+        super.init(inputTypes: [wasmGlobal], outputType: wasmGlobalType.valueType, attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasm])
     }
 }
 

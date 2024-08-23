@@ -123,10 +123,11 @@ public struct JSTyper: Analyzer {
                 }
                 break
             case .wasmImportGlobal(let op):
-                activeWasmModuleDefinition!.globals[instr.output] = op.valueType
+                activeWasmModuleDefinition!.globals[instr.output] = op.wasmGlobal
                 break
             case .wasmDefineGlobal(let op):
-                activeWasmModuleDefinition!.globals[instr.output] = op.wasmGlobal.toJsType()
+                let wasmType = WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable)
+                activeWasmModuleDefinition!.globals[instr.output] = .object(ofGroup: "WasmGlobal", withWasmType: wasmType)
                 break
             default:
                 break
@@ -935,8 +936,7 @@ public struct JSTyper: Analyzer {
 
         // TODO: also add other macro instructions here.
         case .createWasmGlobal(let op):
-            let type = op.wasmGlobal.typeString()
-            set(instr.output, .object(ofGroup: "WasmGlobal.\(type)"))
+            set(instr.output, .object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: op.value.toType(), isMutable: op.isMutable)))
 
         case .createWasmTable(let op):
             let type: String

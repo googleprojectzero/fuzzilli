@@ -67,17 +67,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     // Global Generators
 
-    CodeGenerator("WasmImportGlobalGenerator", inContext: .wasm) { b in
+    CodeGenerator("WasmImportGlobalGenerator", inContext: .wasm, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, value in
         let module = b.currentWasmModule
-        // TODO(cffsmith): Ideally this should have a .required(.wasmJsGlobal) and then we could just query the real underlying type and
-        // then import that because right now this might not add any instructions and if this generator is picked a lot it might
-        // result in a generation failure as we fail to fulfill the quota.
-        let visibleJsWasmGlobals = b.getVisibleJsWasmGlobals()
-        guard !visibleJsWasmGlobals.isEmpty else {
-            return
-        }
-        let global = chooseUniform(from: visibleJsWasmGlobals)
-        module.addGlobal(importing: global)
+        module.addGlobal(importing: value)
     },
 
     CodeGenerator("WasmDefineGlobalGenerator", inContext: .wasm) { b in

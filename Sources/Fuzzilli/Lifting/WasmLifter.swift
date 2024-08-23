@@ -48,23 +48,6 @@ private let ILTypeMapping: [ILType: Data] = [
     .number: Data([0x7d]) // Maps to .wasmf32
 ]
 
-/// Maps global types that are imported from the JS world to their respective Wasm equivalent.
-private func globalImportMapping(type: ILType) -> Data {
-    if type.Is(.object(ofGroup: "WasmGlobal.i64")) {
-        return Data([0x7e])
-    }
-    if type.Is(.object(ofGroup: "WasmGlobal.i32")) {
-        return Data([0x7f])
-    }
-    if type.Is(.object(ofGroup: "WasmGlobal.f64")) {
-        return Data([0x7C])
-    }
-    if type.Is(.object(ofGroup: "WasmGlobal.f32")) {
-        return Data([0x7D])
-    }
-    fatalError("unimplemented for iltype \(type)!")
-}
-
 /// This is the main compiler for Wasm instructions.
 /// This lifter collects all wasm instructions during lifting
 /// (The JavaScriptLifter passes them to this instance) and then it compiles them
@@ -541,8 +524,10 @@ public class WasmLifter {
                     temp += Data([0x0] + Leb128.unsignedEncode(minSize))
                 }
             case .global(let valueType, let mutability):
+                assert(valueType.Is(.object(ofGroup: "WasmGlobal")))
+                let wasmGlobalType = valueType.wasmGlobalType!
                 temp += [0x3]
-                temp += globalImportMapping(type: valueType)
+                temp += ILTypeMapping[wasmGlobalType.valueType]!
                 temp += mutability ? [0x1] : [0x0]
             }
         }
@@ -931,7 +916,7 @@ public class WasmLifter {
             case .wasmImportGlobal(let op):
                 // Here we need to record the input variable, as this will be used for the import section.
                 // And the expression retriever needs to know here it came frome.
-                self.imports.append((instr.input(0), Import(importType: .global(globalType: op.valueType, mutability: op.mutability), outputVariable: instr.output)))
+                self.imports.append((instr.input(0), Import(importType: .global(globalType: op.wasmGlobal, mutability: op.isMutable), outputVariable: instr.output)))
                 // Append this global as seen.
                 self.globalOrder.append(instr.output)
             case .wasmDefineGlobal(let op):

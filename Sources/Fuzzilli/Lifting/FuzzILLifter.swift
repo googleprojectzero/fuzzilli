@@ -762,7 +762,7 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- EndWasmModule")
 
         case .createWasmGlobal(let op):
-            w.emit("\(output()) <- CreateWasmGlobal \(op.wasmGlobal.typeString()): \(op.wasmGlobal.valueToString())")
+            w.emit("\(output()) <- CreateWasmGlobal \(op.value.typeString()): \(op.value.valueToString())")
 
         case .createWasmTable(let op):
             var maxSizeStr = ""
