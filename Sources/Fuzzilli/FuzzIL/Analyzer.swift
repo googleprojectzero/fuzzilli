@@ -168,6 +168,14 @@ struct ContextAnalyzer: Analyzer {
 
                 newContext.formUnion(contextStack.secondToTop)
             }
+            
+            // If we are in a loop, we don't want to propagate the switch context and vice versa.
+            if (instr.op.contextOpened.contains(.switchBlock) || instr.op.contextOpened.contains(.switchCase)) {
+                newContext.remove(.loop)
+            } else if (instr.op.contextOpened.contains(.loop)) {
+                newContext.remove(.switchBlock) 
+                newContext.remove(.switchCase)
+            }
             contextStack.push(newContext)
         }
     }

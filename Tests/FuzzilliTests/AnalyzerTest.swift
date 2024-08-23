@@ -304,4 +304,47 @@ class AnalyzerTests: XCTestCase {
 
         let _  = b.finalize()
     }
+
+    func testBreakContext() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let case1 = b.loadInt(1337)
+        let case2 = b.loadInt(9001)
+        
+        // Test case 1: switch -> loop -> switch
+        b.buildSwitch(on: case1) { outer_switch in
+            XCTAssertEqual(b.context, .switchBlock)
+            outer_switch.addCase(case1) {
+                XCTAssertEqual(b.context, [.javascript, .switchCase])
+                b.buildWhileLoop({ b.loadBool(true) }) {        
+                    XCTAssertEqual(b.context, [.javascript, .loop])
+                    b.buildSwitch(on: case2) { inner_switch in
+                        XCTAssertEqual(b.context, .switchBlock)
+                        inner_switch.addCase(case2) {
+                            XCTAssertEqual(b.context, [.javascript, .switchCase])
+                        }
+                    }
+                } 
+            }
+        }
+        XCTAssertEqual(b.context, .javascript)
+
+        // Test case 2: loop -> switch -> loop
+        b.buildWhileLoop({ b.loadBool(true) }) {
+            XCTAssertEqual(b.context, [.javascript, .loop])
+            b.buildSwitch(on: case1) { swtch in
+                XCTAssertEqual(b.context, .switchBlock)
+                swtch.addCase(case1) {
+                    XCTAssertEqual(b.context, [.javascript, .switchCase])
+                    b.buildWhileLoop({ b.loadBool(true) }) {
+                        XCTAssertEqual(b.context, [.javascript, .loop])
+                    }
+                }
+            }
+        }
+        XCTAssertEqual(b.context, .javascript)
+        
+        let _ = b.finalize()
+    }
 }
