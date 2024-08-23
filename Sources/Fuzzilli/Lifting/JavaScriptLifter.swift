@@ -1354,8 +1354,8 @@ public class JavaScriptLifter: Lifter {
             case .createWasmGlobal(let op):
                 let V = w.declare(instr.output)
                 let LET = w.varKeyword
-                let type = op.wasmGlobal.typeString()
-                var value = op.wasmGlobal.valueToString()
+                let type = op.value.typeString()
+                var value = op.value.valueToString()
                 // TODO: make this nicer? if we create an i64, we need a bigint.
                 if type == "i64" {
                     value = value + "n"

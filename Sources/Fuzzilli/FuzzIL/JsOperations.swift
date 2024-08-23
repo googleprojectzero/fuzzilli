@@ -2454,11 +2454,11 @@ class WrapSuspending: JsOperation {
 class CreateWasmGlobal: JsOperation {
     override var opcode: Opcode { .createWasmGlobal(self) }
 
-    let wasmGlobal: WasmGlobal
+    let value: WasmGlobal
     let isMutable: Bool
 
-    init(wasmGlobal: WasmGlobal, isMutable: Bool) {
-        self.wasmGlobal = wasmGlobal
+    init(value: WasmGlobal, isMutable: Bool) {
+        self.value = value
         self.isMutable = isMutable
         super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript])
     }

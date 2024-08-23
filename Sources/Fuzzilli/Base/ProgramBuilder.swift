@@ -112,18 +112,6 @@ public class ProgramBuilder {
         return activeWasmModule!
     }
 
-    // TODO: check if this works as expected.
-    // This is very hacky right now.
-    public func getVisibleJsWasmGlobals() -> [Variable] {
-        // Query all the global types
-        var variables: [Variable] = []
-        variables += visibleVariables.filter { type(of: $0).Is(.object(ofGroup: "WasmGlobal.i32")) }
-        variables += visibleVariables.filter { type(of: $0).Is(.object(ofGroup: "WasmGlobal.i64")) }
-        variables += visibleVariables.filter { type(of: $0).Is(.object(ofGroup: "WasmGlobal.f32")) }
-        variables += visibleVariables.filter { type(of: $0).Is(.object(ofGroup: "WasmGlobal.f64")) }
-        return variables
-    }
-
     /// Stack of active class definitions.
     ///
     /// Similar to object literals, class definitions can be nested so this needs to be a stack.
@@ -2705,8 +2693,8 @@ public class ProgramBuilder {
 
 
     @discardableResult
-    public func createWasmGlobal(wasmGlobal: WasmGlobal, isMutable: Bool) -> Variable {
-        let variable = emit(CreateWasmGlobal(wasmGlobal: wasmGlobal, isMutable: isMutable)).output
+    public func createWasmGlobal(value: WasmGlobal, isMutable: Bool) -> Variable {
+        let variable = emit(CreateWasmGlobal(value: value, isMutable: isMutable)).output
         return variable
     }
 
@@ -3135,10 +3123,9 @@ public class ProgramBuilder {
 
         @discardableResult
         public func addGlobal(importing global: Variable) -> Variable {
-            // This needs to be an object of type "WasmGlobal.*"
-            assert(b.type(of: global).Is(.object()))
-            // TODO: this mutability needs to be fixed, i.e. strongly typed. Here we just assume mutability for now.
-            return b.emit(WasmImportGlobal(valueType: b.type(of: global), mutability: true), withInputs: [global]).output
+            let wasmGlobalObject = b.type(of: global)
+            assert(wasmGlobalObject.Is(.object(ofGroup: "WasmGlobal")))
+            return b.emit(WasmImportGlobal(wasmGlobal: wasmGlobalObject), withInputs: [global]).output
         }
 
         @discardableResult
@@ -3357,8 +3344,8 @@ public class ProgramBuilder {
             // assert(op.valueType.Is(self.type(of: instr.input(0))))
             // assert(self.type(of: instr.input(0)).Is(op.valueType))
             // If the JsWorld typer cannot guarantuee the same import type here, we have probably reassigned to the global variable, which will most likely lead to an exception on instantiation of the wasm module if the type is not matching to what we try to import.
-            if !self.type(of: instr.input(0)).Is(op.valueType) {
-                logger.info("Import might have changed due to reassign in mutation, assuming type of \(op.valueType)")
+            if !self.type(of: instr.input(0)).Is(op.wasmGlobal) {
+                logger.info("Import might have changed due to reassign in mutation, assuming type of \(op.wasmGlobal)")
                 logger.info("This will likely lead to an exception at runtime, we cannot do anything about it here though.")
             }
         case .wasmDefineTable(_):

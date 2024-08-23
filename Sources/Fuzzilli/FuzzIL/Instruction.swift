@@ -337,20 +337,18 @@ extension Instruction: ProtobufConvertible {
 
         func ILTypeToWasmTypeEnum(_ wasmType: ILType) -> Fuzzilli_Protobuf_WasmILType {
             let value: Int
-            if wasmType == .nothing {
+            var underlyingWasmType = wasmType
+            if underlyingWasmType == .nothing {
                 // This is used as sentinel for function signatures that don't have a return value
                 return Fuzzilli_Protobuf_WasmILType(rawValue: 9)!
             }
-            if wasmType.Is(.object()) {
-                switch wasmType.group {
-                case "WasmGlobal.i32":
-                    value = 0
-                case "WasmGlobal.i64":
-                    value = 1
-                case "WasmGlobal.f32":
-                    value = 2
-                case "WasmGlobal.f64":
-                    value = 3
+            // In case of Wasm globals, the underlying valuetype is stored in the Wasm extension.
+            if underlyingWasmType.Is(.object(ofGroup: "WasmGlobal")) {
+                let wasmGlobalType = underlyingWasmType.wasmGlobalType!
+                underlyingWasmType = wasmGlobalType.valueType
+            }
+            if underlyingWasmType.Is(.object()) {
+                switch underlyingWasmType.group {
                 case "WasmTable.externref":
                     value = 6
                 case "WasmTable.funcref":
@@ -358,10 +356,10 @@ extension Instruction: ProtobufConvertible {
                 case "WasmMemory":
                     value = 8
                 default:
-                    fatalError("Can not serialize a non-wasm type \(wasmType) into a WasmILType! for instruction \(self)")
+                    fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a WasmILType! for instruction \(self)")
                 }
             } else {
-                switch wasmType {
+                switch underlyingWasmType {
                 case .wasmi32:
                     value = 0
                 case .wasmi64:
@@ -381,7 +379,7 @@ extension Instruction: ProtobufConvertible {
                 case .wasmMemory:
                     value = 8
                 default:
-                    fatalError("Can not serialize a non-wasm type \(wasmType) into a WasmILType! for instruction \(self)")
+                    fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a WasmILType! for instruction \(self)")
                 }
             }
             return Fuzzilli_Protobuf_WasmILType(rawValue: value)!
@@ -928,7 +926,7 @@ extension Instruction: ProtobufConvertible {
             case .createWasmGlobal(let op):
                 $0.createWasmGlobal = Fuzzilli_Protobuf_CreateWasmGlobal.with {
                     $0.wasmGlobal.isMutable = op.isMutable
-                    $0.wasmGlobal.wasmGlobal = convertWasmGlobal(wasmGlobal: op.wasmGlobal)
+                    $0.wasmGlobal.wasmGlobal = convertWasmGlobal(wasmGlobal: op.value)
                 }
             case .createWasmTable(let op):
                 $0.createWasmTable = Fuzzilli_Protobuf_CreateWasmTable.with {
@@ -1076,8 +1074,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmImportGlobal(let op):
                 $0.wasmImportGlobal = Fuzzilli_Protobuf_WasmImportGlobal.with {
-                    $0.mutability = op.mutability
-                    $0.valueType = ILTypeToWasmTypeEnum(op.valueType)
+                    $0.mutability = op.isMutable
+                    $0.valueType = ILTypeToWasmTypeEnum(op.wasmGlobal)
                 }
             case .wasmDefineTable(let op):
                 $0.wasmDefineTable = Fuzzilli_Protobuf_WasmDefineTable.with {
@@ -1232,17 +1230,33 @@ extension Instruction: ProtobufConvertible {
             }
         }
 
+        // This converts to the JS world object type.
+        func WasmTypeEnumToJsWasmObjectType(_ wasmType: Fuzzilli_Protobuf_WasmImportGlobal) -> ILType {
+            var valueType: ILType
+            let isMutable = wasmType.mutability
+            switch wasmType.valueType {
+            case .constf32:
+                valueType = .wasmf32
+            case .constf64:
+                valueType = .wasmf64
+            case .consti32:
+                valueType = .wasmi32
+            case .consti64:
+                valueType = .wasmi64
+            case .externreftable:
+                valueType = .wasmExternRef
+            case .funcreftable:
+                valueType = .wasmFuncRef
+            default:
+                fatalError("Unrecognized wasmType enum value")
+            }
+
+            return .object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: valueType, isMutable: isMutable))
+        }
+
         // This converts to the JS world object type
         func WasmTypeEnumToJsWasmObjectType(_ wasmType: Fuzzilli_Protobuf_WasmILType) -> ILType {
             switch wasmType {
-            case .constf32:
-                return .object(ofGroup: "WasmGlobal.f32")
-            case .constf64:
-                return .object(ofGroup: "WasmGlobal.f64")
-            case .consti32:
-                return .object(ofGroup: "WasmGlobal.i32")
-            case .consti64:
-                return .object(ofGroup: "WasmGlobal.i64")
             case .externreftable:
                 return .object(ofGroup: "WasmTable.externref")
             case .funcreftable:
@@ -1667,7 +1681,7 @@ extension Instruction: ProtobufConvertible {
         case .nop:
             op = Nop()
         case .createWasmGlobal(let p):
-            op = CreateWasmGlobal(wasmGlobal: convertWasmGlobal(p.wasmGlobal), isMutable: p.wasmGlobal.isMutable)
+            op = CreateWasmGlobal(value: convertWasmGlobal(p.wasmGlobal), isMutable: p.wasmGlobal.isMutable)
         case .createWasmTable(let p):
             let maxSize: Int?
             if p.hasMaxSize {
@@ -1792,7 +1806,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmDefineGlobal(let p):
             op = WasmDefineGlobal(wasmGlobal: convertWasmGlobal(p.wasmGlobal), isMutable: p.wasmGlobal.isMutable)
         case .wasmImportGlobal(let p):
-            op = WasmImportGlobal(valueType: WasmTypeEnumToJsWasmObjectType(p.valueType), mutability: p.mutability)
+            op = WasmImportGlobal(wasmGlobal: WasmTypeEnumToJsWasmObjectType(p))
         case .wasmDefineTable(let p):
             op = WasmDefineTable(tableInfo: (WasmTypeEnumToILType(p.tableType), Int(p.minSize), p.hasMaxSize ? Int(p.maxSize) : nil))
         case .wasmImportTable(let p):
