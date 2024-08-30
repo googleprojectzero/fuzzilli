@@ -452,12 +452,13 @@ void reprl_destroy_context(struct reprl_context* ctx)
     free(ctx);
 }
 
-int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script_length, uint64_t timeout, uint64_t* execution_time, int fresh_instance)
+int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script_size, uint64_t timeout, uint64_t* execution_time, int fresh_instance)
 {
     if (!ctx->initialized) {
         return reprl_error(ctx, "REPRL context is not initialized");
     }
-    if (script_length > REPRL_MAX_DATA_SIZE) {
+
+    if (script_size > REPRL_MAX_DATA_SIZE) {
         return reprl_error(ctx, "Script too large");
     }
 
@@ -488,11 +489,11 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
     }
 
     // Copy the script to the data channel.
-    memcpy(ctx->data_out->mapping, script, script_length);
+    memcpy(ctx->data_out->mapping, script, script_size);
 
     // Tell child to execute the script.
     if (write(ctx->ctrl_out, "exec", 4) != 4 ||
-        write(ctx->ctrl_out, &script_length, 8) != 8) {
+        write(ctx->ctrl_out, &script_size, 8) != 8) {
         // These can fail if the child unexpectedly terminated between executions.
         // Check for that here to be able to provide a better error message.
         int status;

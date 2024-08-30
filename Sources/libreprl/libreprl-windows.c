@@ -309,11 +309,12 @@ void reprl_destroy_context(struct reprl_context* ctx)
     free(ctx);
 }
 
-int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script_length, uint64_t timeout, uint64_t* execution_time, int fresh_instance)
+int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script_size, uint64_t timeout, uint64_t* execution_time, int fresh_instance)
 {
     if (!ctx->initialized)
         return reprl_error(ctx, "REPRL context is not initialized");
-    if (script_length > REPRL_MAX_DATA_SIZE)
+
+    if (script_size > REPRL_MAX_DATA_SIZE)
         return reprl_error(ctx, "Script too large");
 
     if (fresh_instance && ctx->hChild != INVALID_HANDLE_VALUE)
@@ -333,7 +334,7 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
     }
 
     // Copy the script to the data channel.
-    memcpy(ctx->data_out->mapping, script, script_length);
+    memcpy(ctx->data_out->mapping, script, script_size);
 
     // Tell child to execute the script.
     DWORD dwBytesWritten;
@@ -345,7 +346,7 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
         }
         return reprl_error(ctx, "Failed to send command to child process: %d", GetLastError());
     }
-    if (!WriteFile(ctx->hControlWrite, &script_length, sizeof(script_length), &dwBytesWritten, NULL) || dwBytesWritten != sizeof(script_length)) {
+    if (!WriteFile(ctx->hControlWrite, &script_size, sizeof(script_size), &dwBytesWritten, NULL) || dwBytesWritten != sizeof(script_size)) {
         DWORD dwExitCode;
         if (GetExitCodeProcess(ctx->hChild, &dwExitCode) != STILL_ACTIVE) {
             reprl_child_terminated(ctx);
