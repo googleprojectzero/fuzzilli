@@ -42,11 +42,11 @@ if reprl_initialize_context(ctx, argv, envp, /* capture_stdout: */ 1, /* capture
     print("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(ctx)))")
 }
 
-func execute(_ code: String) -> (status: Int32, exec_time: UInt64) {
+func execute(_ script: String) -> (status: Int32, exec_time: UInt64) {
     var exec_time: UInt64 = 0
     var status: Int32 = 0
-    code.withCString {
-        status = reprl_execute(ctx, $0, UInt64(code.count), 1_000_000, &exec_time, 0)
+    script.withCString { ptr in
+        status = reprl_execute(ctx, ptr, UInt64(script.utf8.count), 1_000_000, &exec_time, 0)
     }
     return (status, exec_time)
 }
