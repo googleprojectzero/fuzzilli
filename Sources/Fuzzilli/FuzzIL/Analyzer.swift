@@ -168,6 +168,15 @@ struct ContextAnalyzer: Analyzer {
 
                 newContext.formUnion(contextStack.secondToTop)
             }
+            
+            // If we are in a loop, we don't want to propagate the switch context and vice versa. Otherwise we couldn't determine which break operation to emit.
+            // TODO Make this generic for similar logic cases as well. E.g. by using a instr.op.contextClosed list.
+            if (instr.op.contextOpened.contains(.switchBlock) || instr.op.contextOpened.contains(.switchCase)) {
+                newContext.remove(.loop)
+            } else if (instr.op.contextOpened.contains(.loop)) {
+                newContext.remove(.switchBlock) 
+                newContext.remove(.switchCase)
+            }
             contextStack.push(newContext)
         }
     }
