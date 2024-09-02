@@ -305,6 +305,8 @@ class AnalyzerTests: XCTestCase {
         let _  = b.finalize()
     }
 
+    // Tests if the context is correctly identified in nested loops and switches. 
+    // Needs to work to distinguish when to emit LoopBreak and SwitchBreak.
     func testBreakContext() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

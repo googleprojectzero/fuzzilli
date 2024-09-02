@@ -446,7 +446,6 @@ public class JavaScriptCompiler {
         case .breakStatement:
             // If we're in both .loop and .switch context, then the loop must be the most recent context 
             // (switch blocks don't propagate an outer .loop context) so we just need to check for .loop here
-            // TODO remove this comment once the Analyzer bug fixs has been merged. Until then the code in this switch case is buggy.
             if contextAnalyzer.context.contains(.loop){
                 emit(LoopBreak())
             } else if contextAnalyzer.context.contains(.switchBlock){
