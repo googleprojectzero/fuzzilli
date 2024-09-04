@@ -95,10 +95,10 @@ class WasmFoundationTests: XCTestCase {
 
         // This test tests whether re-exported imports and module defined globals are re-ordered from the typer.
         let wasmGlobali32: Variable = b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
-        assert(b.type(of: wasmGlobali32) == .object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)))
+        assert(b.type(of: wasmGlobali32) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)))
 
         let wasmGlobalf32: Variable = b.createWasmGlobal(value: .wasmf32(42.0), isMutable: false)
-        assert(b.type(of: wasmGlobalf32) == .object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: ILType.wasmf32, isMutable: false)))
+        assert(b.type(of: wasmGlobalf32) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmf32, isMutable: false)))
 
         let module = b.buildWasmModule { wasmModule in
             // Imports are always before internal globals, this breaks the logic if we add a global and then import a global.
@@ -315,7 +315,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let wasmGlobali64: Variable = b.createWasmGlobal(value: .wasmi64(1337), isMutable: true)
-        assert(b.type(of: wasmGlobali64) == .object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: ILType.wasmi64, isMutable: true)))
+        assert(b.type(of: wasmGlobali64) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmi64, isMutable: true)))
 
         let module = b.buildWasmModule { wasmModule in
             let global = wasmModule.addGlobal(wasmGlobal: .wasmi64(1339), isMutable: true)

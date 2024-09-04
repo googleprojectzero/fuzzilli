@@ -1251,7 +1251,7 @@ extension Instruction: ProtobufConvertible {
                 fatalError("Unrecognized wasmType enum value")
             }
 
-            return .object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: valueType, isMutable: isMutable))
+            return .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: valueType, isMutable: isMutable))
         }
 
         // This converts to the JS world object type
