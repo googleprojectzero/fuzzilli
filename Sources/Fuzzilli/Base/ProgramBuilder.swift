@@ -3123,9 +3123,9 @@ public class ProgramBuilder {
 
         @discardableResult
         public func addGlobal(importing global: Variable) -> Variable {
-            let wasmGlobalObject = b.type(of: global)
-            assert(wasmGlobalObject.Is(.object(ofGroup: "WasmGlobal")))
-            return b.emit(WasmImportGlobal(wasmGlobal: wasmGlobalObject), withInputs: [global]).output
+            let globalType = b.type(of: global)
+            assert(globalType.isWasmGlobalType)
+            return b.emit(WasmImportGlobal(wasmGlobal: globalType), withInputs: [global]).output
         }
 
         @discardableResult
