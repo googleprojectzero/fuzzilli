@@ -524,7 +524,7 @@ public class WasmLifter {
                     temp += Data([0x0] + Leb128.unsignedEncode(minSize))
                 }
             case .global(let valueType, let mutability):
-                assert(valueType.Is(.object(ofGroup: "WasmGlobal")))
+                assert(valueType.isWasmGlobalType)
                 let wasmGlobalType = valueType.wasmGlobalType!
                 temp += [0x3]
                 temp += ILTypeMapping[wasmGlobalType.valueType]!

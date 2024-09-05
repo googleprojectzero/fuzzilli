@@ -343,7 +343,7 @@ extension Instruction: ProtobufConvertible {
                 return Fuzzilli_Protobuf_WasmILType(rawValue: 9)!
             }
             // In case of Wasm globals, the underlying valuetype is stored in the Wasm extension.
-            if underlyingWasmType.Is(.object(ofGroup: "WasmGlobal")) {
+            if underlyingWasmType.isWasmGlobalType {
                 let wasmGlobalType = underlyingWasmType.wasmGlobalType!
                 underlyingWasmType = wasmGlobalType.valueType
             }

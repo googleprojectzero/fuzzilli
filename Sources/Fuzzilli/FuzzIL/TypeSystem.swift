@@ -258,6 +258,7 @@ public struct ILType: Hashable {
     ///    primitive types (.undefined, .integer, .float, .string, .boolean)
     ///  - .object(ofGroup: G1, withProperties: P1, withMethods: M1) >= .object(ofGroup: G2, withProperties: P2, withMethods: M2)
     ///        iff (G1 == nil || G1 == G2) && P1 is a subset of P2 && M1 is a subset of M2
+    ///  - for .object(..., withWasmType: W) the WasmTypeExtensions have to be equal
     ///  - .function(S1) >= .function(S2) iff S1 = nil || S1 == S2
     ///  - .constructor(S1) >= .constructor(S2) iff S1 = nil || S1 == S2
     ///  - T1 | T2 >= T1 && T1 | T2 >= T2
@@ -325,6 +326,11 @@ public struct ILType: Hashable {
             return false
         }
 
+        // Wasm type extension.
+        guard !self.hasWasmTypeInfo || self.wasmType == other.wasmType else {
+            return false
+        }
+
         return true
     }
 
@@ -357,8 +363,20 @@ public struct ILType: Hashable {
         return ext?.group
     }
 
+    public var hasWasmTypeInfo: Bool {
+        return ext?.wasmExt != nil
+    }
+
+    public var wasmType: WasmTypeExtension? {
+        return ext?.wasmExt
+    }
+
     public var wasmGlobalType: WasmGlobalType? {
         return ext?.wasmExt as? WasmGlobalType
+    }
+
+    public var isWasmGlobalType: Bool {
+        return wasmGlobalType != nil && ext?.group == "WasmGlobal"
     }
 
     public var properties: Set<String> {
@@ -397,6 +415,7 @@ public struct ILType: Hashable {
     /// Unioning is imprecise (over-approximative). For example, constructing the following union
     ///    let r = .object(withProperties: ["a", "b"]) | .object(withProperties: ["a", "c"])
     /// will result in r == .object(withProperties: ["a"]). Which is wider than it needs to be.
+    /// To have a WasmTypeExtension in the union, they have to be equal.
     public func union(with other: ILType) -> ILType {
         // Trivial cases.
         if self == .anything || other == .anything {
@@ -423,7 +442,9 @@ public struct ILType: Hashable {
         let commonMethods = self.methods.intersection(other.methods)
         let signature = self.signature == other.signature ? self.signature : nil        // TODO: this is overly coarse, we could also see if one signature subsumes the other, then take the subsuming one.
         let group = self.group == other.group ? self.group : nil
-        return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: commonProperties, methods: commonMethods, signature: signature))
+        let wasmExt = self.wasmType == other.wasmType ? self.wasmType : nil
+
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: commonProperties, methods: commonMethods, signature: signature, wasmExt: wasmExt))
     }
 
     public static func |(lhs: ILType, rhs: ILType) -> ILType {
@@ -503,7 +524,15 @@ public struct ILType: Hashable {
             return .nothing
         }
 
-        return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: properties, methods: methods, signature: signature))
+        // Handling Wasm type extension.
+        var wasmExt: WasmTypeExtension?
+        if self.wasmType == other.wasmType {
+            wasmExt = self.wasmType
+        } else {
+            return .nothing
+        }
+
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: properties, methods: methods, signature: signature, wasmExt: wasmExt))
     }
 
     public static func &(lhs: ILType, rhs: ILType) -> ILType {
@@ -879,6 +908,7 @@ class TypeExtension: Hashable {
 
 // Base class that all Wasm types wih TypeExtension should inherit from.
 public class WasmTypeExtension: Hashable {
+
     public static func ==(lhs: WasmTypeExtension, rhs: WasmTypeExtension) -> Bool {
         lhs.isEqual(to: rhs)
     }

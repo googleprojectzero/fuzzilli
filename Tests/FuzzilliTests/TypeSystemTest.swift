@@ -546,6 +546,118 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse(bObj == aObj || bObj >= aObj || aObj >= bObj)
     }
 
+    func testWasmGlobalSubsumption() {
+        let wasmi32Mutable = WasmGlobalType(valueType:ILType.wasmi32, isMutable: true)
+        let wasmi32NonMutable = WasmGlobalType(valueType:ILType.wasmi32, isMutable: false)
+        let wasmi64Mutable = WasmGlobalType(valueType:ILType.wasmi64, isMutable: true)
+
+        let ILTypeGlobalI32Mutable = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi32Mutable)
+        let ILTypeGlobalI32NonMutable = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi32NonMutable)
+        let ILTypeGlobalI64Mutable = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64Mutable)
+
+        XCTAssert(ILTypeGlobalI32Mutable >= ILTypeGlobalI32Mutable)
+        // Types which don't have equal WasmTypeExtension don't subsume.
+        XCTAssertFalse(ILTypeGlobalI32NonMutable >= ILTypeGlobalI32Mutable)
+        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalI32NonMutable)
+        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalI64Mutable)
+        XCTAssertFalse(ILTypeGlobalI64Mutable >= ILTypeGlobalI32Mutable)
+        XCTAssertFalse(ILTypeGlobalI32NonMutable >= ILTypeGlobalI64Mutable)
+
+        let ILTypeGlobalI32MutableNoGroup: ILType = ILType.object(withProperties: ["value"], withWasmType: wasmi32Mutable)
+        let ILTypeGlobalI32MutableNoProperty: ILType = ILType.object(ofGroup: "WasmGlobal", withWasmType: wasmi32Mutable)
+        let ILTypeGlobalI32MutableNoWasmType: ILType = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"])
+        let ILTypeGlobalOnlyGroup: ILType = ILType.object(ofGroup: "WasmGlobal")
+        let ILTypeGlobalOnlyProperty: ILType = ILType.object(withProperties: ["value"])
+
+        // If the WasmGlobalTypes are equal, the other subsumption rules apply.
+        XCTAssert(ILTypeGlobalI32MutableNoGroup >= ILTypeGlobalI32Mutable)
+        XCTAssert(ILTypeGlobalI32MutableNoProperty >= ILTypeGlobalI32Mutable)
+        XCTAssert(ILTypeGlobalI32MutableNoWasmType >= ILTypeGlobalI32Mutable)
+        XCTAssert(ILTypeGlobalOnlyGroup >= ILTypeGlobalI32Mutable)
+        XCTAssert(ILTypeGlobalOnlyProperty >= ILTypeGlobalI32Mutable)
+        // But not the other way around: the WasmGlobalType matters.
+        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalI32MutableNoGroup)
+        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalI32MutableNoProperty)
+        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalI32MutableNoWasmType)
+        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalOnlyGroup)
+        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalOnlyProperty)
+
+        // Groups should match.
+        let ILTypeWrongGroup = ILType.object(ofGroup: "SomeOtherGroup", withProperties: ["value"], withWasmType: wasmi32Mutable)
+        XCTAssertFalse(ILTypeWrongGroup >= ILTypeGlobalI32Mutable)
+        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeWrongGroup)
+    }
+
+    func testWasmGlobalUnion() {
+        let wasmi32Mutable = WasmGlobalType(valueType:ILType.wasmi32, isMutable: true)
+        let wasmi32NonMutable = WasmGlobalType(valueType:ILType.wasmi32, isMutable: false)
+        let wasmf32Mutable = WasmGlobalType(valueType:ILType.wasmf32, isMutable: true)
+
+        let ILTypeGlobalI32Mutable = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi32Mutable)
+        let ILTypeGlobalI32NonMutable = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi32NonMutable)
+        let ILTypeGlobalF32Mutable = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmf32Mutable)
+
+        XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalI32Mutable, ILTypeGlobalI32Mutable)
+
+        // Types with not equal WasmTypeExtension don't have a WasmTypeExtension in their union.
+        let unionMutabilityDiff = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"])
+        XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalI32NonMutable, unionMutabilityDiff)
+        // Invariant: the union of two types subsumes both types.
+        XCTAssert(unionMutabilityDiff >= ILTypeGlobalI32Mutable)
+        XCTAssert(unionMutabilityDiff >= ILTypeGlobalI32NonMutable)
+
+        let unionValueTypeDiff = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"])
+        XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalF32Mutable, unionValueTypeDiff)
+        XCTAssert(unionValueTypeDiff >= ILTypeGlobalI32Mutable)
+        XCTAssert(unionValueTypeDiff >= ILTypeGlobalI32NonMutable)
+
+        XCTAssertEqual(ILTypeGlobalI32Mutable | .object(ofGroup: "WasmGlobal"), .object(ofGroup: "WasmGlobal"))
+        XCTAssert(.object(ofGroup: "WasmGlobal") >= ILTypeGlobalI32Mutable)
+        XCTAssertEqual(ILTypeGlobalI32Mutable | .object(withProperties: ["value"]), .object(withProperties: ["value"]))
+        XCTAssert(.object(withProperties: ["value"]) >= ILTypeGlobalI32Mutable)
+    }
+
+    func testWasmGlobalIntersection() {
+        let wasmi64Mutable = WasmGlobalType(valueType:ILType.wasmi64, isMutable: true)
+        let wasmi64NonMutable = WasmGlobalType(valueType:ILType.wasmi64, isMutable: false)
+        let wasmf64Mutable = WasmGlobalType(valueType:ILType.wasmf64, isMutable: true)
+
+        let ILTypeGlobalI64Mutable = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64Mutable)
+        let ILTypeGlobalI64NonMutable = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64NonMutable)
+        let ILTypeGlobalF64Mutable = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmf64Mutable)
+
+        XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalI64Mutable, ILTypeGlobalI64Mutable)
+        XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalI64NonMutable, .nothing)
+        XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalF64Mutable, .nothing)
+        XCTAssertEqual(ILTypeGlobalI64Mutable & .object(withProperties: ["value"]), .nothing)
+        XCTAssertEqual((ILTypeGlobalI64Mutable & ILType.object(withWasmType: wasmi64Mutable)), ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64Mutable)) 
+    }
+
+    func testWasmGlobalIsAndMayBe() {
+        let wasmi32Mutable = WasmGlobalType(valueType:ILType.wasmi32, isMutable: true)
+        let wasmi32NonMutable = WasmGlobalType(valueType:ILType.wasmi32, isMutable: false)
+        let wasmf64Mutable = WasmGlobalType(valueType:ILType.wasmf64, isMutable: true)
+
+        let ILTypeGlobalI32Mutable: ILType = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi32Mutable)
+        let ILTypeGlobalI32NonMutable = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi32NonMutable)
+        let ILTypeGlobalF64Mutable: ILType = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmf64Mutable)
+
+        XCTAssert(ILTypeGlobalI32Mutable.Is(.object(ofGroup: "WasmGlobal")))
+        XCTAssert(ILTypeGlobalI32Mutable.Is(.object(withProperties: ["value"])))
+        XCTAssert(ILTypeGlobalI32Mutable.Is(.object(withWasmType: wasmi32Mutable)))
+        XCTAssertFalse(ILTypeGlobalI32Mutable.Is(ILTypeGlobalI32NonMutable))
+        XCTAssertFalse(ILTypeGlobalI32NonMutable.Is(ILTypeGlobalI32Mutable))
+        XCTAssertFalse(ILTypeGlobalI32Mutable.Is(ILTypeGlobalF64Mutable))
+        XCTAssertFalse(ILTypeGlobalF64Mutable.Is(ILTypeGlobalI32Mutable))
+
+        XCTAssertFalse(ILTypeGlobalI32Mutable.MayBe(.object(ofGroup: "WasmGlobal")))
+        XCTAssertFalse(ILTypeGlobalI32Mutable.MayBe(.object(withProperties: ["value"])))
+        XCTAssert(ILTypeGlobalI32Mutable.MayBe(.object(withWasmType: wasmi32Mutable)))
+        XCTAssert(ILTypeGlobalI32Mutable.MayBe(ILTypeGlobalI32Mutable))
+        XCTAssertFalse(ILTypeGlobalI32Mutable.MayBe(ILTypeGlobalI32NonMutable))
+        XCTAssertFalse(ILTypeGlobalI32NonMutable.MayBe(ILTypeGlobalI32Mutable))
+    }
+
     func testTypeUnioning() {
         // Basic union tests
         XCTAssert(.integer | .float >= .integer)

@@ -749,9 +749,8 @@ final class WasmImportGlobal: WasmOperation {
     // valueType here, as otherwise we cannot do meaningful wasm programbuilding (is this true?)
     init(wasmGlobal: ILType) {
         self.wasmGlobal = wasmGlobal
-        assert(wasmGlobal.Is(.object(ofGroup: "WasmGlobal")))
-        assert(wasmGlobal.wasmGlobalType != nil)
-        let wasmGlobalType = wasmGlobal.wasmGlobalType! 
+        assert(wasmGlobal.isWasmGlobalType)
+        let wasmGlobalType = wasmGlobal.wasmGlobalType!
         self.isMutable = wasmGlobalType.isMutable
         // We need to have this input variable here, such that we preserve the 'use' of the defined js global.
         super.init(inputTypes: [wasmGlobal], outputType: wasmGlobalType.valueType, attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasm])
