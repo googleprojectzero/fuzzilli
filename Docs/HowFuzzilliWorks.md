@@ -79,7 +79,7 @@ FuzzIL has a notion of "guarded" operations, which are operations that guard aga
 ```javascript
 try { v3(v5, v6); } catch {};
 ```
-As the try-catch blocks generated for guarded opetations can negatively influence the program's behavior (as described above), they should be used sparingly. Furthermore, Fuzzilli tries to convert guarded operations into unguarded ones during Minimization and through the FixupMutator, both of which are discussed further later on in this document.
+As the try-catch blocks generated for guarded operations can negatively influence the program's behavior (as described above), they should be used sparingly. Furthermore, Fuzzilli tries to convert guarded operations into unguarded ones during Minimization and through the FixupMutator, both of which are discussed further later on in this document.
 
 FuzzIL has a number of properties:
 * A FuzzIL program is simply a list of instructions.
