@@ -950,6 +950,36 @@ final class WasmEndLoop: WasmOperation {
     }
 }
 
+final class WasmBeginTry: WasmOperation {
+    override var opcode: Opcode { .wasmBeginTry(self) }
+
+    let signature: Signature
+
+    init(with signature: Signature) {
+        self.signature = signature
+
+        var parameterTypes: [ILType] = []
+        for parameter in signature.parameters {
+            switch parameter {
+            case .plain(let typ):
+                parameterTypes.append(typ)
+            default:
+                fatalError("Wrong type of parameter for a Wasm try block")
+            }
+        }
+
+        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
+    }
+}
+
+final class WasmEndTry: WasmOperation {
+    override var opcode: Opcode { .wasmEndTry(self) }
+
+    init() {
+        super.init(attributes: [.isPure, .isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmBranch: WasmOperation {
     override var opcode: Opcode { .wasmBranch(self) }
 

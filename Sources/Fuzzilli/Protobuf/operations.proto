@@ -1091,6 +1091,14 @@ message WasmBeginLoop {
 message WasmEndLoop {
 }
 
+message WasmBeginTry {
+  repeated WasmILType parameters = 1;
+  WasmILType returnType = 2;
+}
+
+message WasmEndTry {
+}
+
 message WasmBranch {
 }
 

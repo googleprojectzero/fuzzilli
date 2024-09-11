@@ -3025,9 +3025,14 @@ public class ProgramBuilder {
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         public func wasmBuildLoop(with signature: Signature, body: (Variable, [Variable]) -> ()) {
             let instr = b.emit(WasmBeginLoop(with: signature))
-            b.setType(ofVariable: instr.innerOutput(0), to: .label)
             body(instr.innerOutput(0), Array(instr.innerOutputs[1...]))
             b.emit(WasmEndLoop())
+        }
+
+        public func wasmBuildLegacyTry(with signature: Signature, body: (Variable, [Variable]) -> ()) {
+            let instr = b.emit(WasmBeginTry(with: signature))
+            body(instr.innerOutput(0), Array(instr.innerOutputs[1...]))
+            b.emit(WasmEndTry())
         }
 
         public func generateRandomWasmVar(ofType type: ILType) -> Variable {

@@ -2089,6 +2089,22 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmEndIf(newValue)}
   }
 
+  public var wasmBeginTry: Fuzzilli_Protobuf_WasmBeginTry {
+    get {
+      if case .wasmBeginTry(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmBeginTry()
+    }
+    set {operation = .wasmBeginTry(newValue)}
+  }
+
+  public var wasmEndTry: Fuzzilli_Protobuf_WasmEndTry {
+    get {
+      if case .wasmEndTry(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmEndTry()
+    }
+    set {operation = .wasmEndTry(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable, Sendable {
@@ -2347,6 +2363,8 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmBeginIf(Fuzzilli_Protobuf_WasmBeginIf)
     case wasmBeginElse(Fuzzilli_Protobuf_WasmBeginElse)
     case wasmEndIf(Fuzzilli_Protobuf_WasmEndIf)
+    case wasmBeginTry(Fuzzilli_Protobuf_WasmBeginTry)
+    case wasmEndTry(Fuzzilli_Protobuf_WasmEndTry)
 
   }
 
@@ -2652,6 +2670,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     254: .same(proto: "wasmBeginIf"),
     255: .same(proto: "wasmBeginElse"),
     256: .same(proto: "wasmEndIf"),
+    257: .same(proto: "wasmBeginTry"),
+    258: .same(proto: "wasmEndTry"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5971,6 +5991,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmEndIf(v)
         }
       }()
+      case 257: try {
+        var v: Fuzzilli_Protobuf_WasmBeginTry?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmBeginTry(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmBeginTry(v)
+        }
+      }()
+      case 258: try {
+        var v: Fuzzilli_Protobuf_WasmEndTry?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmEndTry(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmEndTry(v)
+        }
+      }()
       default: break
       }
     }
@@ -7004,6 +7050,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .wasmEndIf?: try {
       guard case .wasmEndIf(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 256)
+    }()
+    case .wasmBeginTry?: try {
+      guard case .wasmBeginTry(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 257)
+    }()
+    case .wasmEndTry?: try {
+      guard case .wasmEndTry(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 258)
     }()
     case nil: break
     }

@@ -116,6 +116,12 @@ public class JavaScriptExecutor {
         } else {
             output = "Process output is not valid UTF-8"
         }
+        var error = ""
+        if let data = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) {
+            error = data
+        } else {
+            error = "Process stderr is not valid UTF-8"
+        }
         var outcome: Result.Outcome
         if timedOut {
             outcome = .timedOut
@@ -123,7 +129,7 @@ public class JavaScriptExecutor {
         } else {
             outcome = .terminated(status: task.terminationStatus)
         }
-        return Result(outcome: outcome, output: output)
+        return Result(outcome: outcome, output: output, error: error)
     }
 
     /// Looks for an executable named `node` in the $PATH and, if found, returns it.
@@ -159,6 +165,7 @@ public class JavaScriptExecutor {
 
         let outcome: Outcome
         let output: String
+        let error: String
 
         var isSuccess: Bool {
             return outcome == .terminated(status: 0)

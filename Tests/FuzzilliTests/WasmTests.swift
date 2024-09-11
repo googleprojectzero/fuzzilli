@@ -23,7 +23,7 @@ func testForOutput(program: String, runner: JavaScriptExecutor, outputString: St
             fatalError("Could not execute Script")
         }
 
-        XCTAssertEqual(result.output, outputString)
+        XCTAssertEqual(result.output, outputString, "Error Output:\n" + result.error)
 }
 
 class WasmSignatureConversionTests: XCTestCase {
@@ -276,6 +276,7 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
                 let ctr = function.consti32(10)
                 function.wasmBuildLoop(with: [] => .nothing) { label, args in
+                    XCTAssert(b.type(of: label).Is(.label))
                     let result = function.wasmi32BinOp(ctr, function.consti32(1), binOpKind: .Sub)
                     function.wasmReassign(variable: ctr, to: result)
                     // The backedge, loop if we are not at zero yet.
@@ -498,6 +499,7 @@ class WasmFoundationTests: XCTestCase {
                 let one = function.consti32(1)
 
                 function.wasmBuildLoop(with: [] => .nothing) { label, args in
+                    XCTAssert(b.type(of: label).Is(.label))
                     let result = function.wasmi32BinOp(ctr, one, binOpKind: .Add)
                     let varUpdate = function.wasmi64BinOp(variable, function.consti64(2), binOpKind: .Add)
                     function.wasmReassign(variable: ctr, to: result)
@@ -564,6 +566,35 @@ class WasmFoundationTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
 
         testForOutput(program: jsProg, runner: runner, outputString: "1327\n")
+    }
+
+    func testTryVoid() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                    XCTAssert(b.type(of: label).Is(.label))
+                    function.wasmReturn(function.consti64(42))
+                }
+                // Unreachable.
+                function.wasmReturn(function.consti64(-1))
+            }
+        }
+
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 }
 

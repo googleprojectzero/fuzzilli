@@ -91,7 +91,8 @@ struct BlockReducer: Reducer {
                  .beginWasmModule,
                  .wasmBeginBlock,
                  .wasmBeginLoop,
-                 .wasmBeginIf:
+                 .wasmBeginIf,
+                 .wasmBeginTry:
                 reduceGenericBlockGroup(group, with: helper)
 
             default:

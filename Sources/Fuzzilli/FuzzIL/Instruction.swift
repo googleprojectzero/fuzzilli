@@ -1161,6 +1161,23 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmEndLoop(_):
                 $0.wasmEndLoop = Fuzzilli_Protobuf_WasmEndLoop()
+            case .wasmBeginTry(let op):
+                // TODO(mliedtke): This is the same as the other blocks, we should consolidate this.
+                $0.wasmBeginTry = Fuzzilli_Protobuf_WasmBeginTry.with {
+                    var plainParams: [ILType] = []
+                    for param in op.signature.parameters {
+                        switch param {
+                        case .plain(let p):
+                            plainParams.append(p)
+                        default:
+                            fatalError("Only plain parameters are expexted for wasm try")
+                        }
+                    }
+                    $0.parameters = plainParams.map { ILTypeToWasmTypeEnum($0) }
+                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                }
+            case .wasmEndTry(_):
+                $0.wasmEndTry = Fuzzilli_Protobuf_WasmEndTry()
             case .wasmBranch(_):
                 $0.wasmBranch = Fuzzilli_Protobuf_WasmBranch()
             case .wasmBranchIf(_):
@@ -1845,6 +1862,13 @@ extension Instruction: ProtobufConvertible {
             op = WasmBeginLoop(with: parameters => WasmTypeEnumToILType(p.returnType))
         case .wasmEndLoop(_):
             op = WasmEndLoop()
+        case .wasmBeginTry(let p):
+            let parameters: [Parameter] = p.parameters.map({ param in
+                Parameter.plain(WasmTypeEnumToILType(param))
+            })
+            op = WasmBeginTry(with: parameters => WasmTypeEnumToILType(p.returnType))
+        case .wasmEndTry(_):
+            op = WasmEndTry()
         case .wasmBranch(_):
             op = WasmBranch()
         case .wasmBranchIf(_):

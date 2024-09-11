@@ -758,7 +758,7 @@ public class WasmLifter {
         for (idx, (outputVariable, _)) in self.globals.enumerated() {
             // Append the name as a vector
             // Again, the name that we export it as matches the order that the ProgramBuilder's typer has seen it when traversing the Code, which happen's way before our typer here sees it, as we are typing during *lifting* of the JS code.
-            // This kinda solves a problem we don't actually have... but it's correct this way :) 
+            // This kinda solves a problem we don't actually have... but it's correct this way :)
             let index = self.globalOrder.firstIndex(of: outputVariable)!
             let name = WasmLifter.nameOfGlobal(index)
             temp += Leb128.unsignedEncode(name.count)
@@ -787,7 +787,8 @@ public class WasmLifter {
 
         switch instr.op.opcode {
         case .wasmBeginBlock(_),
-             .wasmBeginLoop(_):
+             .wasmBeginLoop(_),
+             .wasmBeginTry(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.scopes.count
             // Needs typer analysis
             return true
@@ -1190,8 +1191,12 @@ public class WasmLifter {
         case .wasmBeginLoop(_):
             // 0x03 is the loop instruction and 0x40 is the empty block type, just like in .wasmBeginBlock
             return Data([0x03] + [0x40])
+        case .wasmBeginTry(_):
+            // 0x03 is the loop instruction and 0x40 is the empty block type, just like in .wasmBeginBlock
+            return Data([0x06] + [0x40])
         case .wasmEndLoop(_),
                 .wasmEndIf(_),
+                .wasmEndTry(_),
                 .wasmEndBlock(_):
             // Basically the same as EndBlock, just an explicit instruction.
             return Data([0x0B])

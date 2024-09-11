@@ -116,7 +116,8 @@ public struct JSTyper: Analyzer {
                 activeWasmModuleDefinition!.methodSignatures.append((instr.output, signature))
                 break
             case .wasmBeginBlock(_),
-                 .wasmBeginLoop(_):
+                 .wasmBeginLoop(_),
+                 .wasmBeginTry(_):
                 // Type all the innerOutputs
                 for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmOperation).innerOutputTypes) {
                     setType(of: innerOutput, to: paramType)
