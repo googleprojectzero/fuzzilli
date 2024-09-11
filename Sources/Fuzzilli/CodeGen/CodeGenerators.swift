@@ -1891,9 +1891,11 @@ public let CodeGenerators: [CodeGenerator] = [
             b.buildRecursive()
         }
 
-        // Make the exports available for further use.
-        // This ensures that we can easily find and call exported methods.
-        m.loadExports()
+        let exports = m.loadExports()
+
+        for (methodName, signature) in m.getExportedMethods() {
+            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        }
     },
 
     // TODO: Add three generators for JSPI
