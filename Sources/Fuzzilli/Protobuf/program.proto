@@ -280,6 +280,8 @@ message Instruction {
         WasmBeginIf wasmBeginIf = 254;
         WasmBeginElse wasmBeginElse = 255;
         WasmEndIf wasmEndIf = 256;
+        WasmBeginTry wasmBeginTry = 257;
+        WasmEndTry wasmEndTry = 258;
     }
 }
 

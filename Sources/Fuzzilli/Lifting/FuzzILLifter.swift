@@ -974,6 +974,19 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("WasmEndLoop")
 
+        case .wasmBeginTry(let op):
+            if instr.numOutputs > 0 {
+                // TODO(cffsmith): Maybe lift labels as e.g. L7 or something like that?
+                w.emit("\(output()) <- WasmBeginTry L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs[1...]))] (\(op.signature))")
+            } else {
+                w.emit("WasmBeginTry L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs[1...]))] (\(op.signature))")
+            }
+            w.increaseIndentionLevel()
+
+        case .wasmEndTry(_):
+            w.decreaseIndentionLevel()
+            w.emit("WasmEndTry")
+
         case .wasmReassign(_):
             w.emit("\(input(0)) <- WasmReassign \(input(1))")
 

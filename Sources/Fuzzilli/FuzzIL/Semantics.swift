@@ -229,6 +229,8 @@ extension Operation {
             return endOp is WasmEndBlock
         case .wasmBeginLoop:
             return endOp is WasmEndLoop
+        case .wasmBeginTry:
+            return endOp is WasmEndTry
         case .wasmBeginIf:
             return endOp is WasmEndIf || endOp is WasmBeginElse
         case .wasmBeginElse:

@@ -503,6 +503,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmEndBlock(_),
              .wasmBeginLoop(_),
              .wasmEndLoop(_),
+             .wasmBeginTry(_),
+             .wasmEndTry(_),
              .wasmBranch(_),
              .wasmBranchIf(_),
              .wasmBeginIf(_),
