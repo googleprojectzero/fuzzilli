@@ -378,6 +378,8 @@ extension Instruction: ProtobufConvertible {
                     value = 7
                 case .wasmMemory:
                     value = 8
+                case .wasmSimd128:
+                    value = 9
                 default:
                     fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a WasmILType! for instruction \(self)")
                 }
@@ -1190,6 +1192,29 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmEndIf = Fuzzilli_Protobuf_WasmEndIf()
             case .wasmNop(_):
                 fatalError("Should never be serialized")
+            case .constSimd128(let op):
+                $0.constSimd128 = Fuzzilli_Protobuf_ConstSimd128.with { $0.value = op.value.map{ UInt32($0) } }
+            case .wasmSimd128IntegerUnOp(let op):
+                $0.wasmSimd128IntegerUnOp = Fuzzilli_Protobuf_WasmSimd128IntegerUnOp.with {
+                    $0.shape = UInt32(op.shape.rawValue)
+                    $0.unaryOperator = Int32(op.unOpKind.rawValue)
+                }
+            case .wasmSimd128IntegerBinOp(let op):
+                $0.wasmSimd128IntegerBinOp = Fuzzilli_Protobuf_WasmSimd128IntegerBinOp.with {
+                    $0.shape = UInt32(op.shape.rawValue)
+                    $0.binaryOperator = Int32(op.binOpKind.rawValue)
+                }
+            case .wasmSimd128Compare(let op):
+                $0.wasmSimd128Compare = Fuzzilli_Protobuf_WasmSimd128Compare.with {
+                    $0.shape = UInt32(op.shape.rawValue)
+                    $0.compareOperator = UInt32(op.compareOpKind.toInt())
+                }
+            case .wasmI64x2Splat(_):
+                $0.wasmI64X2Splat = Fuzzilli_Protobuf_WasmI64x2Splat()
+            case .wasmI64x2ExtractLane(_):
+                $0.wasmI64X2ExtractLane = Fuzzilli_Protobuf_WasmI64x2ExtractLane()
+            case .wasmI64x2LoadSplat(let op):
+                $0.wasmI64X2LoadSplat = Fuzzilli_Protobuf_WasmI64x2LoadSplat.with { $0.offset = Int64(op.offset) }
             }
         }
 
@@ -1881,6 +1906,30 @@ extension Instruction: ProtobufConvertible {
             op = WasmEndIf()
         case .wasmNop(_):
             fatalError("Should never be deserialized!")
+        case .constSimd128(let p):
+            op = ConstSimd128(value: p.value.map{ UInt8($0) })
+        case .wasmSimd128IntegerUnOp(let p):
+            let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
+            let unOpKind = WasmSimd128IntegerUnOpKind(rawValue: Int(p.unaryOperator))!
+            op = WasmSimd128IntegerUnOp(shape: shape, unOpKind: unOpKind)
+        case .wasmSimd128IntegerBinOp(let p):
+            let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
+            let binOpKind = WasmSimd128IntegerBinOpKind(rawValue: Int(p.binaryOperator))!
+            op = WasmSimd128IntegerBinOp(shape: shape, binOpKind: binOpKind)
+        case .wasmSimd128Compare(let p):
+            let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
+            let compareOpKind = if shape.isFloat() {
+                WasmSimd128CompareOpKind.fKind(value: WasmFloatCompareOpKind(rawValue: UInt8(p.compareOperator))!)
+            } else {
+                WasmSimd128CompareOpKind.iKind(value: WasmIntegerCompareOpKind(rawValue: UInt8(p.compareOperator))!)
+            }
+            op = WasmSimd128Compare(shape: shape, compareOpKind: compareOpKind)
+        case .wasmI64X2Splat(_):
+            op = WasmI64x2Splat()
+        case .wasmI64X2ExtractLane(_):
+            op = WasmI64x2ExtractLane(lane: 0)
+        case .wasmI64X2LoadSplat(let p):
+            op = WasmI64x2LoadSplat(offset: Int(p.offset))
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

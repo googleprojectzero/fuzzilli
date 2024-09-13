@@ -267,4 +267,13 @@ public let codeGeneratorWeights = [
     "WasmBranchGenerator":                      10,
     "WasmBranchIfGenerator":                    10,
     "WasmJsCallGenerator":                      30,
+
+    // Simd Generators
+    "ConstSimd128Generator":                    10,
+    "WasmSimd128IntegerUnOpGenerator":          10,
+    "WasmSimd128IntegerBinOpGenerator":         10,
+    "WasmSimd128CompareGenerator":              10,
+    "WasmI64x2SplatGenerator":                  10,
+    "WasmI64x2ExtractLaneGenerator":            10,
+    "WasmI64x2LoadSplatGenerator":              0,
 ]

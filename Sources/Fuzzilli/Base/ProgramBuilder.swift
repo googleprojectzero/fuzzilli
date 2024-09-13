@@ -3046,6 +3046,8 @@ public class ProgramBuilder {
                 return self.constf32(Float32(b.randomFloat()))
             case .wasmf64:
                 return self.constf64(b.randomFloat())
+            case .wasmSimd128:
+                return self.constSimd128(value: (0 ..< 16).map{ _ in UInt8.random(in: UInt8.min ... UInt8.max) })
             default:
                 fatalError("unimplemented")
             }
@@ -3058,6 +3060,42 @@ public class ProgramBuilder {
 
         public func wasmReturn() {
             b.emit(WasmReturn(returnType: .nothing), withInputs: [])
+        }
+
+        @discardableResult
+        public func constSimd128(value: [UInt8]) -> Variable {
+            return b.emit(ConstSimd128(value: value)).output
+        }
+
+        @discardableResult
+        public func wasmSimd128IntegerUnOp(_ input: Variable, _ shape: WasmSimd128Shape, _ integerUnOpKind: WasmSimd128IntegerUnOpKind) -> Variable {
+            return b.emit(WasmSimd128IntegerUnOp(shape: shape, unOpKind: integerUnOpKind), withInputs: [input]).output
+        }
+
+        @discardableResult
+        public func wasmSimd128IntegerBinOp(_ left: Variable, _ right: Variable, _ shape: WasmSimd128Shape, _ integerBinOpKind: WasmSimd128IntegerBinOpKind) -> Variable {
+            return b.emit(WasmSimd128IntegerBinOp(shape: shape, binOpKind: integerBinOpKind), withInputs: [left, right]).output
+        }
+
+        @discardableResult
+        public func wasmSimd128Compare(_ lhs: Variable, _ rhs: Variable, _ shape: WasmSimd128Shape, _ compareOpKind: WasmSimd128CompareOpKind) -> Variable {
+            return b.emit(WasmSimd128Compare(shape: shape, compareOpKind: compareOpKind), withInputs: [lhs, rhs]).output
+        }
+
+        @discardableResult
+        public func wasmI64x2Splat(_ input: Variable) -> Variable {
+            return b.emit(WasmI64x2Splat(), withInputs: [input]).output
+        }
+
+        @discardableResult
+        public func wasmI64x2ExtractLane(_ input: Variable, _ lane: Int) -> Variable {
+            return b.emit(WasmI64x2ExtractLane(lane: lane), withInputs: [input]).output
+        }
+
+        // TODO(nicohartmann): Properly handle memory loads.
+        @discardableResult
+        public func wasmI64x2LoadSplat(memoryRef: Variable) -> Variable {
+            return b.emit(WasmI64x2LoadSplat(offset: 0), withInputs: [memoryRef]).output
         }
     }
 
@@ -3164,7 +3202,7 @@ public class ProgramBuilder {
     }
 
     public func randomWasmGlobal() -> WasmGlobal {
-        // TODO: Add extern ref and nullrefs.
+        // TODO: Add simd128, extern ref and nullrefs.
         withEqualProbability({
             return .wasmf32(Float32(self.randomFloat()))
         }, {

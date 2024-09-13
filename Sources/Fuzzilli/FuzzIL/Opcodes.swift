@@ -291,4 +291,12 @@ enum Opcode {
     case wasmEndIf(WasmEndIf)
     case wasmBeginTry(WasmBeginTry)
     case wasmEndTry(WasmEndTry)
+
+    case constSimd128(ConstSimd128)
+    case wasmSimd128Compare(WasmSimd128Compare)
+    case wasmSimd128IntegerUnOp(WasmSimd128IntegerUnOp)
+    case wasmSimd128IntegerBinOp(WasmSimd128IntegerBinOp)
+    case wasmI64x2Splat(WasmI64x2Splat)
+    case wasmI64x2ExtractLane(WasmI64x2ExtractLane)
+    case wasmI64x2LoadSplat(WasmI64x2LoadSplat)
 }

@@ -1502,7 +1502,14 @@ public class JavaScriptLifter: Lifter {
                  .wasmBeginIf(_),
                  .wasmBeginElse(_),
                  .wasmEndIf(_),
-                 .wasmNop(_):
+                 .wasmNop(_),
+                 .constSimd128(_),
+                 .wasmSimd128IntegerUnOp(_),
+                 .wasmSimd128IntegerBinOp(_),
+                 .wasmSimd128Compare(_),
+                 .wasmI64x2Splat(_),
+                 .wasmI64x2ExtractLane(_),
+                 .wasmI64x2LoadSplat(_):
                  fatalError("unreachable")
             }
 

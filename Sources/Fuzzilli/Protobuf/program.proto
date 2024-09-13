@@ -282,6 +282,13 @@ message Instruction {
         WasmEndIf wasmEndIf = 256;
         WasmBeginTry wasmBeginTry = 257;
         WasmEndTry wasmEndTry = 258;
+        ConstSimd128 constSimd128 = 259;
+        WasmSimd128Compare wasmSimd128Compare = 260;
+        WasmSimd128IntegerUnOp wasmSimd128IntegerUnOp = 261;
+        WasmSimd128IntegerBinOp wasmSimd128IntegerBinOp = 262;
+        WasmI64x2Splat wasmI64x2Splat = 263;
+        WasmI64x2ExtractLane wasmI64x2ExtractLane = 264;
+        WasmI64x2LoadSplat wasmI64x2LoadSplat = 265;
     }
 }
 

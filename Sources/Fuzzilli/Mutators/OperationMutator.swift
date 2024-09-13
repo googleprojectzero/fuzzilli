@@ -344,7 +344,27 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmMemorySet(let op):
             // TODO: change the offset here.
             newOp = op
-
+        case .constSimd128(let op):
+            // TODO: ?
+            newOp = op
+        case .wasmSimd128IntegerUnOp(let op):
+            // TODO: ?
+            newOp = op
+        case .wasmSimd128IntegerBinOp(let op):
+            // TODO: ?
+            newOp = op
+        case .wasmSimd128Compare(let op):
+            // TODO: ?
+            newOp = op
+        case .wasmI64x2Splat(let op):
+            // TODO: ?
+            newOp = op
+        case .wasmI64x2ExtractLane(let op):
+            // TODO: ?
+            newOp = op
+        case .wasmI64x2LoadSplat(let op):
+            // TODO: ?
+            newOp = op
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
              .loadUndefined(_),

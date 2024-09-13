@@ -473,4 +473,66 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmBranchIf(conditionVar, to: label)
     },
+
+    CodeGenerator("ConstSimd128Generator", inContext: .wasmFunction) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.constSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
+    },
+
+    CodeGenerator("WasmSimd128IntegerUnOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ return !$0.isFloat() })
+        let unOpKind = chooseUniform(from: WasmSimd128IntegerUnOpKind.allCases.filter{
+            return $0.isValidForShape(shape: shape)
+        })
+
+        let function = b.currentWasmModule.currentWasmFunction;
+        function.wasmSimd128IntegerUnOp(input, shape, unOpKind)
+    },
+
+    CodeGenerator("WasmSimd128IntegerBinOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128, .wasmSimd128)) { b, lhs, rhs in
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ return !$0.isFloat() })
+        let binOpKind = chooseUniform(from: WasmSimd128IntegerBinOpKind.allCases.filter{
+            return $0.isValidForShape(shape: shape)
+        })
+
+        let function = b.currentWasmModule.currentWasmFunction;
+        function.wasmSimd128IntegerBinOp(lhs, rhs, shape, binOpKind)
+    },
+
+    CodeGenerator("WasmSimd128CompareGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128, .wasmSimd128)) { b, lhs, rhs in
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases)
+        let compareOpKind = if shape.isFloat() {
+            WasmSimd128CompareOpKind.fKind(value: chooseUniform(from: WasmFloatCompareOpKind.allCases))
+        } else {
+            if shape == .i64x2 {
+                // i64x2 does not provide unsigned comparison.
+                WasmSimd128CompareOpKind.iKind(value:
+                    chooseUniform(from: WasmIntegerCompareOpKind.allCases.filter{
+                        return $0 != .Lt_u && $0 != .Le_u && $0 != .Gt_u && $0 != .Ge_u
+                    }))
+            } else {
+                WasmSimd128CompareOpKind.iKind(value:
+                    chooseUniform(from: WasmIntegerCompareOpKind.allCases))
+            }
+        }
+
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmSimd128Compare(lhs, rhs, shape, compareOpKind)
+    },
+
+    CodeGenerator("WasmI64x2SplatGenerator", inContext: .wasmFunction, inputs: .required(.wasmi64)) {b, input in
+        let function = b.currentWasmModule.currentWasmFunction;
+        function.wasmI64x2Splat(input)
+    },
+
+    CodeGenerator("WasmI64x2ExtractLaneGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmI64x2ExtractLane(input, 0)
+    },
+
+    CodeGenerator("WasmI64x2LoadSplatGenerator", inContext: .wasmFunction, inputs: .required(.wasmMemory)) { b, memoryRef in
+        let function = b.currentWasmModule.currentWasmFunction
+        b.currentWasmModule.addMemory(importing: memoryRef);
+        function.wasmI64x2LoadSplat(memoryRef: memoryRef)
+    },
 ]
