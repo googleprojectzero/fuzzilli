@@ -1121,6 +1121,34 @@ message WasmEndIf {
 message WasmNop {
 }
 
+message ConstSimd128 {
+    repeated uint32 value = 1;
+}
+
+message WasmSimd128Compare {
+    uint32 shape = 1;
+    uint32 compareOperator = 2;
+}
+
+message WasmSimd128IntegerUnOp {
+    uint32 shape = 1;
+    int32 unaryOperator = 2;
+}
+
+message WasmSimd128IntegerBinOp {
+    uint32 shape = 1;
+    int32 binaryOperator = 2;
+}
+
+message WasmI64x2Splat {
+}
+
+message WasmI64x2ExtractLane {
+}
+
+message WasmI64x2LoadSplat {
+    int64 offset = 1;
+}
 
 message WasmImportTable {
   WasmILType tableType = 1;

@@ -194,9 +194,10 @@ public struct ILType: Hashable {
     public static let wasmf64 = ILType(definiteType: .wasmf64)
     public static let wasmExternRef = ILType(definiteType: .wasmExternRef)
     public static let wasmFuncRef = ILType(definiteType: .wasmFuncRef)
+    public static let wasmSimd128 = ILType(definiteType: .wasmSimd128)
 
     // The union of all primitive wasm types
-    public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef
+    public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef | .wasmSimd128
 
     public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
 
@@ -789,6 +790,8 @@ extension ILType: CustomStringConvertible {
             return ".wasmExternRef"
         case .wasmFuncRef:
             return ".wasmFuncRef"
+        case .wasmSimd128:
+            return ".wasmSimd128"
         case .label:
             return ".label"
         case .funcRefTable:
@@ -859,6 +862,7 @@ struct BaseType: OptionSet, Hashable {
     static let funcRefTable   = BaseType(rawValue: 1 << 19)
 
     static let wasmMemory     = BaseType(rawValue: 1 << 20)
+    static let wasmSimd128    = BaseType(rawValue: 1 << 21)
 
     static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 

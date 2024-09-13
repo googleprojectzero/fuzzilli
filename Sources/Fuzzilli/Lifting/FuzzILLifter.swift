@@ -1015,6 +1015,27 @@ public class FuzzILLifter: Lifter {
         case .wasmNop:
             w.emit("WasmNop")
 
+        case .constSimd128(let op):
+            w.emit("\(output()) <- ConstSimd128 \(op.value)")
+
+        case .wasmSimd128IntegerUnOp(let op):
+            w.emit("\(output()) <- wasmSimd128IntegerUnOp \(op.shape) \(op.unOpKind) \(input(0))")
+
+        case .wasmSimd128IntegerBinOp(let op):
+            w.emit("\(output()) <- wasmSimd128IntegerBinOp \(op.shape) \(op.binOpKind) \(input(0)) \(input(1))")
+
+        case .wasmSimd128Compare(let op):
+            w.emit("\(output()) <- wasmSimd128Compare \(op.shape) \(op.compareOpKind) \(input(0)) \(input(1))")
+
+        case .wasmI64x2Splat(_):
+            w.emit("\(output()) <- wasmI64x2Splat \(input(0))")
+
+        case .wasmI64x2ExtractLane(let op):
+            w.emit("\(output()) <- wasmI64x2ExtractLane \(input(0)) \(op.lane)")
+
+        case .wasmI64x2LoadSplat(_):
+            w.emit("\(output()) <- wasmI64x2LoadSplat \(input(0))")
+
         default:
             fatalError("No FuzzIL lifting for this operation!")
         }

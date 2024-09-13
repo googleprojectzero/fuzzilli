@@ -41,6 +41,7 @@ private let ILTypeMapping: [ILType: Data] = [
     .wasmf64 : Data([0x7C]),
     .wasmExternRef: Data([0x6f]),
     .wasmFuncRef: Data([0x70]),
+    .wasmSimd128: Data([0x7B]),
 
     .bigint  : Data([0x7e]), // Maps to .wasmi64
     .anything: Data([0x6f]), // Maps to .wasmExternRef
@@ -615,6 +616,7 @@ public class WasmLifter {
             for (_, type) in functionInfo.localsInfo[functionInfo.signature.parameters.count...] {
                 // Encode the locals
                 funcTemp += Leb128.unsignedEncode(1)
+                // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
                 funcTemp += ILTypeMapping[type]!
             }
             // append the actual code and the end marker
@@ -1240,6 +1242,61 @@ public class WasmLifter {
         case .wasmNop(_):
             // This should return something...?
             return Data()
+        case .constSimd128(let op):
+            return Data([0xFD]) + Leb128.unsignedEncode(12) + Data(op.value)
+        case .wasmSimd128IntegerUnOp(let op):
+            let base = switch op.shape {
+                case .i8x16: 92
+                case .i16x8: 124
+                case .i32x4: 156
+                case .i64x2: 188
+                default: fatalError("unreachable")
+            }
+            return Data([0xFD]) + Leb128.unsignedEncode(base + op.unOpKind.rawValue)
+        case .wasmSimd128IntegerBinOp(let op):
+            let base = switch op.shape {
+                case .i8x16: 92
+                case .i16x8: 124
+                case .i32x4: 156
+                case .i64x2: 188
+                default: fatalError("unreachable")
+            }
+            return Data([0xFD]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue)
+        case .wasmSimd128Compare(let op):
+            switch op.shape {
+            case .i8x16:
+                return Data([0xFD]) + Leb128.unsignedEncode(35 + op.compareOpKind.toInt())
+            case .i16x8:
+                return Data([0xFD]) + Leb128.unsignedEncode(45 + op.compareOpKind.toInt())
+            case .i32x4:
+                return Data([0xFD]) + Leb128.unsignedEncode(55 + op.compareOpKind.toInt())
+            case .i64x2:
+                if case .iKind(let value) = op.compareOpKind {
+                    let temp = switch value {
+                        case .Eq: 0
+                        case .Ne: 1
+                        case .Lt_s: 2
+                        case .Gt_s: 3
+                        case .Le_s: 4
+                        case .Ge_s: 5
+                        default:
+                            // We should not produce this in the generator.
+                            0
+                    }
+                    return Data([0xFD]) + Leb128.unsignedEncode(214 + temp)
+                }
+                fatalError("unreachable")
+            case .f32x4:
+                return Data([0xFD]) + Leb128.unsignedEncode(65 + op.compareOpKind.toInt())
+            case .f64x2:
+                return Data([0xFD]) + Leb128.unsignedEncode(71 + op.compareOpKind.toInt())
+            }
+        case .wasmI64x2Splat(_):
+            return Data([0xFD]) + Leb128.unsignedEncode(18)
+        case .wasmI64x2ExtractLane(let op):
+            return Data([0xFD]) + Leb128.unsignedEncode(29) + Leb128.unsignedEncode(op.lane)
+         case .wasmI64x2LoadSplat(let op):
+            return Data([0xFD]) + Leb128.unsignedEncode(10) + Leb128.unsignedEncode(0) + Leb128.unsignedEncode(op.offset)
 
         default:
              fatalError("unreachable")

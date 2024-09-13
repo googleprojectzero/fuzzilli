@@ -109,6 +109,23 @@ public enum WasmIntegerCompareOpKind: UInt8, CaseIterable {
     case Ge_u = 9
 }
 
+extension WasmIntegerCompareOpKind: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .Eq: return "eq"
+        case .Ne: return "ne"
+        case .Lt_s: return "lt_s"
+        case .Lt_u: return "lt_u"
+        case .Gt_s: return "gt_s"
+        case .Gt_u: return "gt_u"
+        case .Le_s: return "le_s"
+        case .Le_u: return "le_u"
+        case .Ge_s: return "ge_s"
+        case .Ge_u: return "ge_u"
+        }
+    }
+}
+
 final class Wasmi32CompareOp: WasmOperation {
     override var opcode: Opcode { .wasmi32CompareOp(self) }
 
@@ -143,6 +160,19 @@ public enum WasmFloatCompareOpKind: UInt8, CaseIterable {
     case Gt = 3
     case Le = 4
     case Ge = 5
+}
+
+extension WasmFloatCompareOpKind: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .Eq: return "eq"
+        case .Ne: return "ne"
+        case .Lt: return "lt"
+        case .Gt: return "gt"
+        case .Le: return "le"
+        case .Ge: return "ge"
+        }
+    }
 }
 
 final class Wasmf32CompareOp: WasmOperation {
@@ -1058,3 +1088,227 @@ final class WasmNop: WasmOperation {
         super.init(outputType: outputType, innerOutputTypes: innerOutputTypes, attributes: [.isInternal, .isNop], requiredContext: [.wasmFunction])
     }
 }
+
+final class ConstSimd128: WasmOperation {
+    override var opcode: Opcode { .constSimd128(self) }
+    let value: [UInt8]
+
+    init(value: [UInt8]) {
+        self.value = value;
+        super.init(outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+// This array must be kept in sync with the Comparator Enum in operations.proto
+public enum WasmSimd128CompareOpKind {
+    case iKind(value: WasmIntegerCompareOpKind)
+    case fKind(value: WasmFloatCompareOpKind)
+
+    func toInt() -> Int {
+        switch self {
+        case .iKind(let value):
+            return Int(value.rawValue)
+        case .fKind(let value):
+            return Int(value.rawValue)
+        }
+    }
+}
+
+extension WasmSimd128CompareOpKind: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .iKind(let value):
+            return "\(value)"
+        case .fKind(let value):
+            return "\(value)"
+        }
+    }
+}
+
+public enum WasmSimd128Shape: UInt8, CaseIterable {
+    case i8x16              = 0
+    case i16x8              = 1
+    case i32x4              = 2
+    case i64x2              = 3
+    case f32x4              = 4
+    case f64x2              = 5
+
+    func isFloat() -> Bool {
+        switch self {
+            case .i8x16,
+                 .i16x8,
+                 .i32x4,
+                 .i64x2:
+                return false
+            case .f32x4,
+                 .f64x2:
+                return true
+        }
+    }
+}
+
+final class WasmSimd128Compare: WasmOperation {
+    override var opcode: Opcode { .wasmSimd128Compare(self) }
+    let shape: WasmSimd128Shape
+    let compareOpKind: WasmSimd128CompareOpKind
+
+    init(shape: WasmSimd128Shape, compareOpKind: WasmSimd128CompareOpKind) {
+        self.shape = shape
+        self.compareOpKind = compareOpKind
+        super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
+    // The offsets are added to the a base value for each shape:
+    // i8x16: 92 + offset
+    // i16x8: 124 + offset
+    // i32x4: 156 + offset
+    // i64x2: 188 + offset
+    case extadd_pairwise_i8x16_s = 0
+    case extadd_pairwise_i8x16_u = 1
+    case extadd_pairwise_i16x8_s = -34
+    case extadd_pairwise_i16x8_u = -33
+    case abs                     = 4
+    case neg                     = 5
+    // i8x16: popcnt, i16x8: q15mulr_sat_s
+    case popcnt_q15mulr_sat_s    = 6
+    case all_true                = 7
+    case bitmask                 = 8
+    case extend_low_s            = 11
+    case extend_high_s           = 12
+    case extend_low_u            = 13
+    case extend_high_u           = 14
+
+    func isValidForShape(shape: WasmSimd128Shape) -> Bool {
+        if shape.isFloat() { return false }
+        switch self {
+        case .extadd_pairwise_i8x16_s:  return shape == .i16x8
+        case .extadd_pairwise_i8x16_u:  return shape == .i16x8
+        case .extadd_pairwise_i16x8_s:  return shape == .i32x4
+        case .extadd_pairwise_i16x8_u:  return shape == .i32x4
+        case .abs:                      return true
+        case .neg:                      return true
+        case .popcnt_q15mulr_sat_s:     return shape == .i8x16 || shape == .i16x8
+        case .all_true:                 return true
+        case .bitmask:                  return true
+        case .extend_low_s:             return shape != .i8x16
+        case .extend_high_s:            return shape != .i8x16
+        case .extend_low_u:             return shape != .i8x16
+        case .extend_high_u:            return shape != .i8x16
+        }
+    }
+}
+
+final class WasmSimd128IntegerUnOp: WasmOperation {
+    override var opcode: Opcode { .wasmSimd128IntegerUnOp(self) }
+    let shape: WasmSimd128Shape
+    let unOpKind: WasmSimd128IntegerUnOpKind
+
+    init(shape: WasmSimd128Shape, unOpKind: WasmSimd128IntegerUnOpKind) {
+        self.shape = shape
+        self.unOpKind = unOpKind
+        super.init(inputTypes: [.wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
+    // The offsets are added to the a base value for each shape:
+    // i8x16: 92 + offset
+    // i16x8: 124 + offset
+    // i32x4: 156 + offset
+    // i64x2: 188 + offset
+    case narrow_s      = 9
+    case narrow_u      = 10
+
+    case shl           = 15
+    case shr_s         = 16
+    case shr_u         = 17
+    case add           = 18
+    case add_sat_s     = 19
+    case add_sat_u     = 20
+    case sub           = 21
+    case sub_sat_s     = 22
+    case sub_sat_u     = 23
+
+    case mul           = 25
+    case min_s         = 26
+    case min_u         = 27
+    case max_s         = 28
+    case max_u         = 29
+    case dot_i16x8_s   = 30
+    case avgr_u        = 31
+    case extmul_low_s  = 32
+    case extmul_high_s = 33
+    case extmul_low_u  = 34
+    case extmul_high_u = 35
+
+    func isValidForShape(shape: WasmSimd128Shape) -> Bool {
+        if shape.isFloat() { return false }
+        switch self {
+        case .narrow_s:      return shape == .i8x16 || shape == .i16x8
+        case .narrow_u:      return shape == .i8x16 || shape == .i16x8
+        case .shl:           return true
+        case .shr_s:         return true
+        case .shr_u:         return true
+        case .add:           return true
+        case .add_sat_s:     return shape == .i8x16 || shape == .i16x8
+        case .add_sat_u:     return shape == .i8x16 || shape == .i16x8
+        case .sub:           return true
+        case .sub_sat_s:     return shape == .i8x16 || shape == .i16x8
+        case .sub_sat_u:     return shape == .i8x16 || shape == .i16x8
+        case .mul:           return shape != .i8x16
+        case .min_s:         return shape != .i64x2
+        case .min_u:         return shape != .i64x2
+        case .max_s:         return shape != .i64x2
+        case .max_u:         return shape != .i64x2
+        case .dot_i16x8_s:   return shape == .i32x4
+        case .avgr_u:        return shape == .i8x16 || shape == .i16x8
+        case .extmul_low_s:  return shape != .i8x16
+        case .extmul_high_s: return shape != .i8x16
+        case .extmul_low_u:  return shape != .i8x16
+        case .extmul_high_u: return shape != .i8x16
+        }
+    }
+}
+
+final class WasmSimd128IntegerBinOp: WasmOperation {
+    override var opcode: Opcode { .wasmSimd128IntegerBinOp(self) }
+    let shape: WasmSimd128Shape
+    let binOpKind: WasmSimd128IntegerBinOpKind
+
+    init(shape: WasmSimd128Shape, binOpKind: WasmSimd128IntegerBinOpKind) {
+        self.shape = shape
+        self.binOpKind = binOpKind
+        super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+// TODO: Generalize to other shapes.
+final class WasmI64x2Splat: WasmOperation {
+    override var opcode: Opcode { .wasmI64x2Splat(self) }
+    init() {
+        super.init(inputTypes: [.wasmi64], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+// TODO: Generalize to other shapes.
+final class WasmI64x2ExtractLane: WasmOperation {
+  override var opcode: Opcode { .wasmI64x2ExtractLane(self) }
+  let lane: Int
+
+  init(lane: Int) {
+    self.lane = lane;
+    super.init(inputTypes: [.wasmSimd128 ], outputType: .wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+  }
+}
+
+final class WasmI64x2LoadSplat: WasmOperation {
+    override var opcode: Opcode { .wasmI64x2LoadSplat(self) }
+    let offset: Int;
+    init(offset: Int) {
+        self.offset = offset;
+        super.init(inputTypes: [.wasmMemory], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
