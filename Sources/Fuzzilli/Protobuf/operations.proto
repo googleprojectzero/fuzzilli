@@ -809,6 +809,10 @@ message CreateWasmGlobal {
   WasmGlobal wasmGlobal = 1;
 }
 
+message CreateWasmMemory {
+  WasmMemory wasmMemory = 1;
+}
+
 message CreateWasmTable {
   WasmILType tableType = 1;
   int64 minSize = 2;
@@ -853,8 +857,7 @@ enum WasmILType {
   FUNCREF = 5;
   EXTERNREFTABLE = 6;
   FUNCREFTABLE = 7;
-  WASMMEMORY = 8;
-  NOTHING = 9;
+  NOTHING = 8;
 }
 
 message BeginWasmFunction {
@@ -1033,6 +1036,13 @@ message WasmGlobal {
   }
 }
 
+message WasmMemory {
+  int64 minPages = 1;
+  optional int64 maxPages = 2;
+  bool isShared = 3;
+  bool isMemory64 = 4;
+}
+
 message WasmDefineGlobal {
    WasmGlobal wasmGlobal = 1;
 }
@@ -1044,8 +1054,7 @@ message WasmDefineTable {
 }
 
 message WasmDefineMemory {
-  int64 minSize = 1;
-  optional int64 maxSize = 2;
+  WasmMemory wasmMemory =1;
 }
 
 
@@ -1155,6 +1164,7 @@ message WasmImportTable {
 }
 
 message WasmImportMemory {
+  WasmMemory wasmMemory = 1;
 }
 
 message WasmImportGlobal {

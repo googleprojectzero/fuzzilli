@@ -356,6 +356,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             registerObjectGroup(.jsError(variant))
         }
         registerObjectGroup(.jsWasmGlobal)
+        registerObjectGroup(.jsWasmMemory)
         for variant in ["funcref", "externref"] {
             registerObjectGroup(.wasmTable(variant))
         }
@@ -1488,6 +1489,18 @@ public extension ObjectGroup {
             "value" : .anything
         ],
         methods: [:]
+    )
+
+    /// ObjectGroup modelling JavaScript WebAssembly Memory objects.
+    static let jsWasmMemory = ObjectGroup(
+        name: "WasmMemory",
+        instanceType: .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow"]),
+        properties: [
+            "buffer" : .jsArrayBuffer | .jsSharedArrayBuffer
+        ],
+        methods: [
+            "grow" : [.number] => .number
+        ]
     )
 
     /// ObjectGroup modelling JavaScript WebAssembly Table objects

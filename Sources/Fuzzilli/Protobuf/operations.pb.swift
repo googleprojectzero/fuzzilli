@@ -559,8 +559,7 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
   case funcref // = 5
   case externreftable // = 6
   case funcreftable // = 7
-  case wasmmemory // = 8
-  case nothing // = 9
+  case nothing // = 8
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -577,8 +576,7 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
     case 5: self = .funcref
     case 6: self = .externreftable
     case 7: self = .funcreftable
-    case 8: self = .wasmmemory
-    case 9: self = .nothing
+    case 8: self = .nothing
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -593,8 +591,7 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
     case .funcref: return 5
     case .externreftable: return 6
     case .funcreftable: return 7
-    case .wasmmemory: return 8
-    case .nothing: return 9
+    case .nothing: return 8
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -609,7 +606,6 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
     .funcref,
     .externreftable,
     .funcreftable,
-    .wasmmemory,
     .nothing,
   ]
 
@@ -2867,6 +2863,27 @@ public struct Fuzzilli_Protobuf_CreateWasmGlobal: Sendable {
   fileprivate var _wasmGlobal: Fuzzilli_Protobuf_WasmGlobal? = nil
 }
 
+public struct Fuzzilli_Protobuf_CreateWasmMemory: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var wasmMemory: Fuzzilli_Protobuf_WasmMemory {
+    get {return _wasmMemory ?? Fuzzilli_Protobuf_WasmMemory()}
+    set {_wasmMemory = newValue}
+  }
+  /// Returns true if `wasmMemory` has been explicitly set.
+  public var hasWasmMemory: Bool {return self._wasmMemory != nil}
+  /// Clears the value of `wasmMemory`. Subsequent reads from it will return its default value.
+  public mutating func clearWasmMemory() {self._wasmMemory = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _wasmMemory: Fuzzilli_Protobuf_WasmMemory? = nil
+}
+
 public struct Fuzzilli_Protobuf_CreateWasmTable: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -3543,6 +3560,33 @@ public struct Fuzzilli_Protobuf_WasmGlobal: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_WasmMemory: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var minPages: Int64 = 0
+
+  public var maxPages: Int64 {
+    get {return _maxPages ?? 0}
+    set {_maxPages = newValue}
+  }
+  /// Returns true if `maxPages` has been explicitly set.
+  public var hasMaxPages: Bool {return self._maxPages != nil}
+  /// Clears the value of `maxPages`. Subsequent reads from it will return its default value.
+  public mutating func clearMaxPages() {self._maxPages = nil}
+
+  public var isShared: Bool = false
+
+  public var isMemory64: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _maxPages: Int64? = nil
+}
+
 public struct Fuzzilli_Protobuf_WasmDefineGlobal: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -3594,22 +3638,20 @@ public struct Fuzzilli_Protobuf_WasmDefineMemory: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var minSize: Int64 = 0
-
-  public var maxSize: Int64 {
-    get {return _maxSize ?? 0}
-    set {_maxSize = newValue}
+  public var wasmMemory: Fuzzilli_Protobuf_WasmMemory {
+    get {return _wasmMemory ?? Fuzzilli_Protobuf_WasmMemory()}
+    set {_wasmMemory = newValue}
   }
-  /// Returns true if `maxSize` has been explicitly set.
-  public var hasMaxSize: Bool {return self._maxSize != nil}
-  /// Clears the value of `maxSize`. Subsequent reads from it will return its default value.
-  public mutating func clearMaxSize() {self._maxSize = nil}
+  /// Returns true if `wasmMemory` has been explicitly set.
+  public var hasWasmMemory: Bool {return self._wasmMemory != nil}
+  /// Clears the value of `wasmMemory`. Subsequent reads from it will return its default value.
+  public mutating func clearWasmMemory() {self._wasmMemory = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _maxSize: Int64? = nil
+  fileprivate var _wasmMemory: Fuzzilli_Protobuf_WasmMemory? = nil
 }
 
 public struct Fuzzilli_Protobuf_WasmLoadGlobal: Sendable {
@@ -3935,9 +3977,20 @@ public struct Fuzzilli_Protobuf_WasmImportMemory: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  public var wasmMemory: Fuzzilli_Protobuf_WasmMemory {
+    get {return _wasmMemory ?? Fuzzilli_Protobuf_WasmMemory()}
+    set {_wasmMemory = newValue}
+  }
+  /// Returns true if `wasmMemory` has been explicitly set.
+  public var hasWasmMemory: Bool {return self._wasmMemory != nil}
+  /// Clears the value of `wasmMemory`. Subsequent reads from it will return its default value.
+  public mutating func clearWasmMemory() {self._wasmMemory = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _wasmMemory: Fuzzilli_Protobuf_WasmMemory? = nil
 }
 
 public struct Fuzzilli_Protobuf_WasmImportGlobal: Sendable {
@@ -4083,8 +4136,7 @@ extension Fuzzilli_Protobuf_WasmILType: SwiftProtobuf._ProtoNameProviding {
     5: .same(proto: "FUNCREF"),
     6: .same(proto: "EXTERNREFTABLE"),
     7: .same(proto: "FUNCREFTABLE"),
-    8: .same(proto: "WASMMEMORY"),
-    9: .same(proto: "NOTHING"),
+    8: .same(proto: "NOTHING"),
   ]
 }
 
@@ -9126,6 +9178,42 @@ extension Fuzzilli_Protobuf_CreateWasmGlobal: SwiftProtobuf.Message, SwiftProtob
   }
 }
 
+extension Fuzzilli_Protobuf_CreateWasmMemory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CreateWasmMemory"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "wasmMemory"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._wasmMemory) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._wasmMemory {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_CreateWasmMemory, rhs: Fuzzilli_Protobuf_CreateWasmMemory) -> Bool {
+    if lhs._wasmMemory != rhs._wasmMemory {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_CreateWasmTable: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateWasmTable"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -10696,6 +10784,60 @@ extension Fuzzilli_Protobuf_WasmGlobal: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 }
 
+extension Fuzzilli_Protobuf_WasmMemory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmMemory"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "minPages"),
+    2: .same(proto: "maxPages"),
+    3: .same(proto: "isShared"),
+    4: .same(proto: "isMemory64"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularInt64Field(value: &self.minPages) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self._maxPages) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.isShared) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.isMemory64) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.minPages != 0 {
+      try visitor.visitSingularInt64Field(value: self.minPages, fieldNumber: 1)
+    }
+    try { if let v = self._maxPages {
+      try visitor.visitSingularInt64Field(value: v, fieldNumber: 2)
+    } }()
+    if self.isShared != false {
+      try visitor.visitSingularBoolField(value: self.isShared, fieldNumber: 3)
+    }
+    if self.isMemory64 != false {
+      try visitor.visitSingularBoolField(value: self.isMemory64, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmMemory, rhs: Fuzzilli_Protobuf_WasmMemory) -> Bool {
+    if lhs.minPages != rhs.minPages {return false}
+    if lhs._maxPages != rhs._maxPages {return false}
+    if lhs.isShared != rhs.isShared {return false}
+    if lhs.isMemory64 != rhs.isMemory64 {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_WasmDefineGlobal: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmDefineGlobal"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -10783,8 +10925,7 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
 extension Fuzzilli_Protobuf_WasmDefineMemory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmDefineMemory"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "minSize"),
-    2: .same(proto: "maxSize"),
+    1: .same(proto: "wasmMemory"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -10793,8 +10934,7 @@ extension Fuzzilli_Protobuf_WasmDefineMemory: SwiftProtobuf.Message, SwiftProtob
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._wasmMemory) }()
       default: break
       }
     }
@@ -10805,18 +10945,14 @@ extension Fuzzilli_Protobuf_WasmDefineMemory: SwiftProtobuf.Message, SwiftProtob
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if self.minSize != 0 {
-      try visitor.visitSingularInt64Field(value: self.minSize, fieldNumber: 1)
-    }
-    try { if let v = self._maxSize {
-      try visitor.visitSingularInt64Field(value: v, fieldNumber: 2)
+    try { if let v = self._wasmMemory {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmDefineMemory, rhs: Fuzzilli_Protobuf_WasmDefineMemory) -> Bool {
-    if lhs.minSize != rhs.minSize {return false}
-    if lhs._maxSize != rhs._maxSize {return false}
+    if lhs._wasmMemory != rhs._wasmMemory {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11593,18 +11729,35 @@ extension Fuzzilli_Protobuf_WasmImportTable: SwiftProtobuf.Message, SwiftProtobu
 
 extension Fuzzilli_Protobuf_WasmImportMemory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmImportMemory"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "wasmMemory"),
+  ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    // Load everything into unknown fields
-    while try decoder.nextFieldNumber() != nil {}
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._wasmMemory) }()
+      default: break
+      }
+    }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._wasmMemory {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmImportMemory, rhs: Fuzzilli_Protobuf_WasmImportMemory) -> Bool {
+    if lhs._wasmMemory != rhs._wasmMemory {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -1362,6 +1362,15 @@ public class JavaScriptLifter: Lifter {
                 }
                 w.emit("\(LET) \(V) = new WebAssembly.Global({ value: \"\(type)\", mutable: \(op.isMutable) }, \(value));")
 
+            case .createWasmMemory(let op):
+                let V = w.declare(instr.output)
+                let LET = w.varKeyword
+                var maxPagesStr = ""
+                if let maxPages = op.memType.limits.max {
+                    maxPagesStr = ", maximum: \(maxPages)"
+                }
+                w.emit("\(LET) \(V) = new WebAssembly.Memory({ initial: \(op.memType.limits.min)\(maxPagesStr) });")
+
             case .wrapSuspending(_):
                 let V = w.declare(instr.output)
                 let FUNCTION = input(0)

@@ -181,8 +181,10 @@ public struct ILType: Hashable {
     public static let externRefTable: ILType = ILType(definiteType: .externRefTable)
     public static let funcRefTable: ILType = ILType(definiteType: .funcRefTable)
 
-    // Used to glue together memory operations
-    public static let wasmMemory: ILType = ILType(definiteType: .wasmMemory)
+    public static func wasmMemory(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) -> ILType {
+        let wasmMemExt = WasmMemoryType(limits: limits, isShared: isShared, isMemory64: isMemory64)
+        return .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow"], withWasmType: wasmMemExt)
+    }
 
     //
     // Wasm Types
@@ -378,6 +380,14 @@ public struct ILType: Hashable {
 
     public var isWasmGlobalType: Bool {
         return wasmGlobalType != nil && ext?.group == "WasmGlobal"
+    }
+
+    public var wasmMemoryType: WasmMemoryType? {
+        return ext?.wasmExt as? WasmMemoryType
+    }
+
+    public var isWasmMemoryType: Bool {
+        return wasmMemoryType != nil && ext?.group == "WasmMemory"
     }
 
     public var properties: Set<String> {
@@ -798,8 +808,6 @@ extension ILType: CustomStringConvertible {
             return ".funcRefTable"
         case .externRefTable:
             return ".externRefTable"
-        case .wasmMemory:
-            return ".wasmMemory"
         default:
             break
         }
@@ -860,9 +868,7 @@ struct BaseType: OptionSet, Hashable {
     // The lifter will resolve this to the proper index when lifting.
     static let externRefTable = BaseType(rawValue: 1 << 18)
     static let funcRefTable   = BaseType(rawValue: 1 << 19)
-
-    static let wasmMemory     = BaseType(rawValue: 1 << 20)
-    static let wasmSimd128    = BaseType(rawValue: 1 << 21)
+    static let wasmSimd128    = BaseType(rawValue: 1 << 20)
 
     static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 
@@ -945,6 +951,34 @@ public class WasmGlobalType: WasmTypeExtension {
         self.valueType = valueType
         self.isMutable = isMutable
     }
+}
+
+public struct Limits: Hashable {
+   var min: Int
+   var max: Int?
+}
+
+public class WasmMemoryType: WasmTypeExtension {
+   let limits: Limits
+   let isShared: Bool
+   let isMemory64: Bool
+
+   override func isEqual(to other: WasmTypeExtension) -> Bool {
+       guard let other = other as? WasmMemoryType else { return false }
+       return self.limits == other.limits && self.isShared == other.isShared && self.isMemory64 == other.isMemory64
+   }
+
+   override public func hash(into hasher: inout Hasher) {
+       hasher.combine(limits)
+       hasher.combine(isShared)
+       hasher.combine(isMemory64)
+   }
+
+   init(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) {
+       self.limits = limits
+       self.isShared = isShared
+       self.isMemory64 = isMemory64
+   }
 }
 
 // Represents one parameter of a function signature.
@@ -1219,4 +1253,3 @@ infix operator =>: AdditionPrecedence
 public func => (parameters: [Parameter], returnType: ILType) -> Signature {
     return Signature(expects: ParameterList(parameters), returns: returnType)
 }
-

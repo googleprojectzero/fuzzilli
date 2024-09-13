@@ -1885,6 +1885,15 @@ public let CodeGenerators: [CodeGenerator] = [
         b.createWasmGlobal(value: wasmGlobal, isMutable: probability(0.5))
     },
 
+    CodeGenerator("WasmMemoryGenerator", inContext: .javascript) { b in
+        let minPages = Int.random(in: 0..<10)
+        var maxPages: Int? = nil
+        if probability(0.5) {
+            maxPages = Int.random(in: minPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
+        }
+        b.createWasmMemory(minPages: minPages, maxPages: maxPages, isShared: probability(0.5))
+    },
+
     // Wasm Module Generator, this is fairly important as it creates the context necessary to run the Wasm CodeGenerators.
     RecursiveCodeGenerator("WasmModuleGenerator", inContext: .javascript) { b in
         let m = b.buildWasmModule { m in

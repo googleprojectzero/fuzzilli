@@ -209,6 +209,7 @@ enum Opcode {
     case beginWasmModule(BeginWasmModule)
     case endWasmModule(EndWasmModule)
     case createWasmGlobal(CreateWasmGlobal)
+    case createWasmMemory(CreateWasmMemory)
     case createWasmTable(CreateWasmTable)
     case wrapPromising(WrapPromising)
     case wrapSuspending(WrapSuspending)

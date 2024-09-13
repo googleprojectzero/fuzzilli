@@ -340,7 +340,7 @@ extension Instruction: ProtobufConvertible {
             var underlyingWasmType = wasmType
             if underlyingWasmType == .nothing {
                 // This is used as sentinel for function signatures that don't have a return value
-                return Fuzzilli_Protobuf_WasmILType(rawValue: 9)!
+                return Fuzzilli_Protobuf_WasmILType(rawValue: 8)!
             }
             // In case of Wasm globals, the underlying valuetype is stored in the Wasm extension.
             if underlyingWasmType.isWasmGlobalType {
@@ -353,8 +353,6 @@ extension Instruction: ProtobufConvertible {
                     value = 6
                 case "WasmTable.funcref":
                     value = 7
-                case "WasmMemory":
-                    value = 8
                 default:
                     fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a WasmILType! for instruction \(self)")
                 }
@@ -376,10 +374,8 @@ extension Instruction: ProtobufConvertible {
                     value = 6
                 case .funcRefTable:
                     value = 7
-                case .wasmMemory:
-                    value = 8
                 case .wasmSimd128:
-                    value = 9
+                    value = 8
                 default:
                     fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a WasmILType! for instruction \(self)")
                 }
@@ -930,6 +926,15 @@ extension Instruction: ProtobufConvertible {
                     $0.wasmGlobal.isMutable = op.isMutable
                     $0.wasmGlobal.wasmGlobal = convertWasmGlobal(wasmGlobal: op.value)
                 }
+            case .createWasmMemory(let op):
+                $0.createWasmMemory = Fuzzilli_Protobuf_CreateWasmMemory.with {
+                    $0.wasmMemory.minPages = Int64(op.memType.limits.min)
+                    if let maxPages = op.memType.limits.max {
+                        $0.wasmMemory.maxPages = Int64(maxPages)
+                    }
+                    $0.wasmMemory.isShared = op.memType.isShared
+                    $0.wasmMemory.isMemory64 = op.memType.isMemory64
+                }
             case .createWasmTable(let op):
                 $0.createWasmTable = Fuzzilli_Protobuf_CreateWasmTable.with {
                     $0.tableType = ILTypeToWasmTypeEnum(op.tableType)
@@ -1091,11 +1096,15 @@ extension Instruction: ProtobufConvertible {
             case .wasmImportTable(let op):
                 $0.wasmImportTable = Fuzzilli_Protobuf_WasmImportTable.with { $0.tableType = ILTypeToWasmTypeEnum(op.tableType) }
             case .wasmDefineMemory(let op):
+                assert(op.wasmMemory.isWasmMemoryType)
+                let mem = op.wasmMemory.wasmMemoryType!
                 $0.wasmDefineMemory = Fuzzilli_Protobuf_WasmDefineMemory.with {
-                    $0.minSize = Int64(op.minSize)
-                    if let maxSize = op.maxSize {
-                        $0.maxSize = Int64(maxSize)
+                    $0.wasmMemory.minPages = Int64(mem.limits.min)
+                    if let maxPages = mem.limits.max {
+                        $0.wasmMemory.maxPages = Int64(maxPages)
                     }
+                    $0.wasmMemory.isShared = mem.isShared
+                    $0.wasmMemory.isMemory64 = mem.isMemory64
                 }
             case .wasmImportMemory(_):
                 $0.wasmImportMemory = Fuzzilli_Protobuf_WasmImportMemory()
@@ -1263,8 +1272,6 @@ extension Instruction: ProtobufConvertible {
                 return .externRefTable
             case .funcreftable:
                 return .funcRefTable
-            case .wasmmemory:
-                return .wasmMemory
             case .nothing:
                 return .nothing
             default:
@@ -1724,6 +1731,9 @@ extension Instruction: ProtobufConvertible {
             op = Nop()
         case .createWasmGlobal(let p):
             op = CreateWasmGlobal(value: convertWasmGlobal(p.wasmGlobal), isMutable: p.wasmGlobal.isMutable)
+        case .createWasmMemory(let p):
+            let maxPages = p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil
+            op = CreateWasmMemory(limits: Limits(min: Int(p.wasmMemory.minPages), max: maxPages), isShared: p.wasmMemory.isShared, isMemory64: p.wasmMemory.isMemory64)
         case .createWasmTable(let p):
             let maxSize: Int?
             if p.hasMaxSize {
@@ -1854,9 +1864,11 @@ extension Instruction: ProtobufConvertible {
         case .wasmImportTable(let p):
             op = WasmImportTable(tableType: WasmTypeEnumToJsWasmObjectType(p.tableType))
         case .wasmDefineMemory(let p):
-            op = WasmDefineMemory(memoryInfo: (Int(p.minSize), p.hasMaxSize ? Int(p.maxSize) : nil))
-        case .wasmImportMemory(_):
-            op = WasmImportMemory()
+            let maxPages = p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil
+            op = WasmDefineMemory(limits: Limits(min: Int(p.wasmMemory.minPages), max: maxPages), isShared: p.wasmMemory.isShared, isMemory64: p.wasmMemory.isMemory64)
+        case .wasmImportMemory(let p):
+            let wasmMemory = ILType.wasmMemory(limits: Limits(min: Int(p.wasmMemory.minPages), max: p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil), isShared: p.wasmMemory.isShared, isMemory64: p.wasmMemory.isMemory64)
+            op = WasmImportMemory(wasmMemory: wasmMemory)
         case .wasmLoadGlobal(let p):
             op = WasmLoadGlobal(globalType: WasmTypeEnumToILType(p.globalType))
         case .wasmStoreGlobal(let p):
