@@ -939,6 +939,9 @@ public struct JSTyper: Analyzer {
         case .createWasmGlobal(let op):
             set(instr.output, .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: op.value.toType(), isMutable: op.isMutable)))
 
+        case .createWasmMemory(let op):
+            set(instr.output, .wasmMemory(limits: op.memType.limits, isShared: op.memType.isShared, isMemory64: op.memType.isMemory64))
+
         case .createWasmTable(let op):
             let type: String
             switch (op.tableType) {

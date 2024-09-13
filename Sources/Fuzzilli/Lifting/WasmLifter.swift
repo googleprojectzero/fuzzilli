@@ -90,8 +90,7 @@ public class WasmLifter {
 
         public enum ImportType {
             case function(Signature)
-            // Encodes the limits of the memory
-            case memory(Limit)
+            case memory(ILType)
             // Encodes the table type, can only be externref or funcref and the limits
             case table(tableType: ILType, limit: Limit)
             // Encodes the value type and the mutability of the global
@@ -140,9 +139,9 @@ public class WasmLifter {
     // The Tables associated with this module, the elements of the tuple describe the element type, minSize and maxSize respectively.
     private var tables: VariableMap<(ILType, Int, Int?)> = VariableMap()
 
-    // The Memories associated with this module, the elements of the tuple describe the minSize and maxSize respectively
+    // The Memories associated with this module.
     // This only holds memories defined in the module, if there is an import of a memory, it is in the imports array.
-    private var memories: [(Int, Int?)] = []
+    private var memories: VariableMap<(ILType)> = VariableMap()
 
     // The function index space
     private var functionIdxBase = 0
@@ -160,7 +159,7 @@ public class WasmLifter {
         self.imports = []
         self.globals = VariableMap()
         self.tables = VariableMap()
-        self.memories = []
+        self.memories = VariableMap()
         self.functionIdxBase = 0
         self.typer.reset()
         self.out = ""
@@ -509,12 +508,15 @@ public class WasmLifter {
 
                 // Update the index space, these indices have to be set before the exports are set
                 functionIdxBase += 1
-            case .memory((let minSize, let maxSize)):
+            case .memory(let wasmMemory):
+                // TODO(evih): Encode the sharedness.
+                assert(wasmMemory.isWasmMemoryType)
+                let mem = wasmMemory.wasmMemoryType!
                 temp += Data([0x2])
-                if let maxSize = maxSize {
-                    temp += Data([0x1] + Leb128.unsignedEncode(minSize) + Leb128.unsignedEncode(maxSize))
+                if let maxPages = mem.limits.max {
+                    temp += Data([0x1] + Leb128.unsignedEncode(mem.limits.min) + Leb128.unsignedEncode(maxPages))
                 } else {
-                    temp += Data([0x0] + Leb128.unsignedEncode(minSize))
+                    temp += Data([0x0] + Leb128.unsignedEncode(mem.limits.min))
                 }
             case .table(let tableType, (let minSize, let maxSize)):
                 temp += Data([0x1])
@@ -703,12 +705,14 @@ public class WasmLifter {
 
         assert(memories.count <= 1, "Can only define at most one memory")
         temp += Leb128.unsignedEncode(memories.count)
-
-        for (minSize, maxSize) in memories {
-            if let maxSize = maxSize {
-                temp += Data([0x1] + Leb128.unsignedEncode(minSize) + Leb128.unsignedEncode(maxSize))
+        // TODO(evih): Encode sharedness.
+        for (_, memoryType) in memories {
+            assert(memoryType.isWasmMemoryType)
+            let wasmMemory = memoryType.wasmMemoryType!
+            if let maxPages = wasmMemory.limits.max {
+                temp += Data([0x1] + Leb128.unsignedEncode(wasmMemory.limits.min) + Leb128.unsignedEncode(maxPages))
             } else {
-                temp += Data([0x0] + Leb128.unsignedEncode(minSize))
+                temp += Data([0x0] + Leb128.unsignedEncode(wasmMemory.limits.min))
             }
         }
 
@@ -826,12 +830,11 @@ public class WasmLifter {
             // We don't know the type and limits of this import. Assume opaque externref and some limits for now
 //            self.imports[instr.input(0)] = Import(importType: .table(tableType: .wasmExternRef, limit: (10, 20)), outputVariable: nil)
         case .wasmDefineMemory(let op):
-            self.memories.append((op.minSize, op.maxSize))
-        case .wasmImportMemory(_):
-            // We don't know the limits of this memory as it is defined in JavaScript
-            // Therefore we hardcore these limits here for now, this should be fixed in version 1.1.
-            // TODO: Do something proper here.
-            self.imports.append((instr.input(0), Import(importType: .memory((10, 20)), outputVariable: nil)))
+            assert(op.wasmMemory.isWasmMemoryType)
+            self.memories[instr.output] = op.wasmMemory
+        case .wasmImportMemory(let op):
+            assert(op.wasmMemory.isWasmMemoryType)
+            self.imports.append((instr.input(0), Import(importType: .memory(op.wasmMemory), outputVariable: nil)))
         case .wasmJsCall(let op):
             // Make sure that we have the input variable as an import if we see a call to a JS function.
             // Here we also see the inputs, which describe the input types that we need.

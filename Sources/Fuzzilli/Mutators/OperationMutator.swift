@@ -238,6 +238,13 @@ public class OperationMutator: BaseInstructionMutator {
                 fatalError("unexpected/unimplemented Value Type!")
             }
             newOp = CreateWasmGlobal(value: wasmGlobal, isMutable: probability(0.5))
+        case .createWasmMemory(_):
+            let newMinPages = Int.random(in: 0..<10)
+            var newMaxPages: Int? = nil
+            if probability(0.5) {
+                newMaxPages = Int.random(in: newMinPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
+            }
+            newOp = CreateWasmMemory(limits: Limits(min: newMinPages, max: newMaxPages))
         case .createWasmTable(_):
             let wasmTableType: ILType
             if probability(0.5) {

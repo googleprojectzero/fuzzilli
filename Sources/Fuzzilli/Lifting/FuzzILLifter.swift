@@ -765,6 +765,12 @@ public class FuzzILLifter: Lifter {
         let isMutable = op.isMutable ? ", mutable" : ""
             w.emit("\(output()) <- CreateWasmGlobal \(op.value.typeString()): \(op.value.valueToString())\(isMutable)")
 
+        case .createWasmMemory(let op):
+            let maxPagesStr = op.memType.limits.max != nil ? "\(op.memType.limits.max!)" : ""
+            let isMem64Str = op.memType.isMemory64 ? " memory64" : ""
+            let sharedStr = op.memType.isShared ? " shared" : ""
+            w.emit("\(output()) <- CreateWasmMemory [\(op.memType.limits.min),\(maxPagesStr)],\(isMem64Str)\(sharedStr)")
+
         case .createWasmTable(let op):
             var maxSizeStr = ""
             if let maxSize = op.maxSize {
@@ -796,10 +802,20 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- WasmDefineTable \(op.tableType), (\(op.minSize), \(String(describing: op.maxSize)))")
 
         case .wasmDefineMemory(let op):
-            w.emit("\(output()) <- WasmDefineMemory (\(op.minSize), \(String(describing: op.maxSize)))")
+            assert(op.wasmMemory.isWasmMemoryType)
+            let mem = op.wasmMemory.wasmMemoryType!
+            let maxPagesStr = mem.limits.max != nil ? "\(mem.limits.max!)" : ""
+            let isMem64Str = mem.isMemory64 ? " memory64" : ""
+            let sharedStr = mem.isShared ? " shared" : ""
+            w.emit("\(output()) <- WasmDefineMemory [\(mem.limits.min),\(maxPagesStr)],\(isMem64Str)\(sharedStr)")
 
-        case .wasmImportMemory(_):
-            w.emit("\(output()) <- WasmImportMemory \(input(0))")
+        case .wasmImportMemory(let op):
+            assert(op.wasmMemory.isWasmMemoryType)
+            let mem = op.wasmMemory.wasmMemoryType!
+            let maxPagesStr = mem.limits.max != nil ? "\(mem.limits.max!)" : ""
+            let isMem64Str = mem.isMemory64 ? " memory64" : ""
+            let sharedStr = mem.isShared ? " shared" : ""
+            w.emit("\(output()) <- WasmImportMemory [\(mem.limits.min),\(maxPagesStr)],\(isMem64Str)\(sharedStr)")
 
         case .wasmImportTable(_):
             w.emit("\(output()) <- WasmImportTable \(input(0))")

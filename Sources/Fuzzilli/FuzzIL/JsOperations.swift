@@ -2464,6 +2464,18 @@ class CreateWasmGlobal: JsOperation {
     }
 }
 
+// This instruction is used to create strongly typed WasmMemories in the JS world that can be imported by a WasmModule.
+class CreateWasmMemory: JsOperation {
+   override var opcode: Opcode { .createWasmMemory(self) }
+
+   let memType: WasmMemoryType
+
+   init(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) {
+       self.memType = WasmMemoryType(limits: limits, isShared: isShared, isMemory64: isMemory64)
+       super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript])
+   }
+}
+
 // This instruction is used to create strongly typed WasmTables in the JS world that can be imported by a WasmModule.
 class CreateWasmTable: JsOperation {
     override var opcode: Opcode { .createWasmTable(self) }

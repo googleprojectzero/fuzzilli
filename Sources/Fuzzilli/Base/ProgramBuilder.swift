@@ -2698,6 +2698,11 @@ public class ProgramBuilder {
         return variable
     }
 
+    @discardableResult
+    public func createWasmMemory(minPages: Int, maxPages: Int? = nil, isShared: Bool = false, isMemory64: Bool = false) -> Variable {
+        return emit(CreateWasmMemory(limits: Limits(min: minPages, max: maxPages), isShared: isShared, isMemory64: isMemory64)).output
+    }
+
     public func createWasmTable(tableType: ILType, minSize: Int, maxSize: Int? = nil) -> Variable {
         return emit(CreateWasmTable(tableType: tableType, minSize: minSize, maxSize: maxSize)).output
     }
@@ -3108,7 +3113,6 @@ public class ProgramBuilder {
         }
         public var globals: VariableMap<WasmGlobal> = VariableMap()
         public var tables: [(ILType, Int, Int?)]
-        public var memories: [(Int, Int?)] = []
         private var moduleVariable: Variable?
         /// This stores the type information for the `exports` property of the Wasm module.
         private var exportsTypeInfo: ILType? = nil
@@ -3184,13 +3188,15 @@ public class ProgramBuilder {
         // This result can be ignored right now, as we can only define one memory per module
         // Also this should be tracked like a global / table.
         @discardableResult
-        public func addMemory(minSize: Int, maxSize: Int? = nil) -> Variable {
-            return b.emit(WasmDefineMemory(memoryInfo: (minSize, maxSize))).output
+        public func addMemory(minPages: Int, maxPages: Int? = nil, isShared: Bool = false, isMemory64: Bool = false) -> Variable {
+            return b.emit(WasmDefineMemory(limits: Limits(min: minPages, max: maxPages), isShared: isShared, isMemory64: isMemory64)).output
         }
 
         @discardableResult
         public func addMemory(importing memory: Variable) -> Variable {
-            return b.emit(WasmImportMemory(), withInputs: [memory]).output
+            let memoryType = b.type(of: memory)
+            assert(memoryType.isWasmMemoryType)
+            return b.emit(WasmImportMemory(wasmMemory: memoryType), withInputs: [memory]).output
         }
 
         private func getModuleVariable() -> Variable {

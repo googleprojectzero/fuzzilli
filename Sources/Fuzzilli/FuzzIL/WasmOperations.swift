@@ -27,6 +27,12 @@ public class WasmOperation: Operation {
         self.innerOutputTypes = innerOutputTypes
         super.init(numInputs: inputTypes.count, numOutputs: outputType == .nothing ? 0 : 1, numInnerOutputs: innerOutputTypes.count, firstVariadicInput: firstVariadicInput, attributes: attributes, requiredContext: requiredContext, contextOpened: contextOpened)
     }
+
+    struct WasmConstants {
+       // This constant limits the amount of *declared* memory. At runtime, memory can grow up to only a limit based on the architecture type.
+       static let specMaxWasmMem32Pages: Int = 65536 // 4GB
+   }
+
 }
 
 final class Consti64: WasmOperation {
@@ -724,21 +730,24 @@ final class WasmDefineTable: WasmOperation {
 final class WasmDefineMemory: WasmOperation {
     override var opcode: Opcode { .wasmDefineMemory(self) }
 
-    let minSize: Int
-    let maxSize: Int?
+    let wasmMemory: ILType
 
-    init(memoryInfo: (Int, Int?)) {
-        self.minSize = memoryInfo.0
-        self.maxSize = memoryInfo.1
-        super.init(outputType: .wasmMemory, attributes: [.isPure, .isMutable], requiredContext: [.wasm])
+    init(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) {
+        self.wasmMemory = .wasmMemory(limits: limits, isShared: isShared, isMemory64: isMemory64)
+        super.init(outputType: self.wasmMemory, attributes: [.isPure, .isMutable], requiredContext: [.wasm])
     }
 }
 
+// TODO: Remove this operation.
 final class WasmImportMemory: WasmOperation {
     override var opcode: Opcode { .wasmImportMemory(self) }
 
-    init() {
-        super.init(inputTypes: [.unknownObject], outputType: .wasmMemory, attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasm])
+    let wasmMemory: ILType
+
+    init(wasmMemory: ILType) {
+        assert(wasmMemory.isWasmMemoryType)
+        self.wasmMemory = wasmMemory
+        super.init(inputTypes: [wasmMemory], outputType: wasmMemory, attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasm])
     }
 }
 
@@ -856,7 +865,7 @@ final class WasmMemoryGet: WasmOperation {
         self.loadType = loadType
         self.offset = offset
         // Technically, Wasm currently does not require this variable, as we always pick the memory at "index 0" but we want it for proper dataflow in our IL.
-        super.init(inputTypes: [.wasmMemory, .wasmi32], outputType: loadType, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.object(), .wasmi32], outputType: loadType, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -869,7 +878,7 @@ final class WasmMemorySet: WasmOperation {
     init(storeType: ILType, offset: Int) {
         self.storeType = storeType
         self.offset = offset
-        super.init(inputTypes: [.wasmMemory, .wasmi32, storeType], attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.object(), .wasmi32, storeType], attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1308,7 +1317,7 @@ final class WasmI64x2LoadSplat: WasmOperation {
     let offset: Int;
     init(offset: Int) {
         self.offset = offset;
-        super.init(inputTypes: [.wasmMemory], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.object()], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 

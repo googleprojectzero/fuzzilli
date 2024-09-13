@@ -421,17 +421,11 @@ class WasmFoundationTests: XCTestCase {
 
         let b = fuzzer.makeBuilder()
 
-        let ten = b.loadInt(10)
-        let twenty = b.loadInt(20)
-
-        let config = b.createObject(with: ["initial": ten, "maximum": twenty])
-        let wasm = b.createNamedVariable(forBuiltin: "WebAssembly")
-        let wasmMemoryConstructor = b.getProperty("Memory", of: wasm)
-        let javaScriptVar = b.construct(wasmMemoryConstructor, withArgs: [config])
-
+        let wasmMemory: Variable = b.createWasmMemory(minPages: 10, maxPages: 20)
+        assert(b.type(of: wasmMemory) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: false))
 
         let module = b.buildWasmModule { wasmModule in
-            let memoryRef = wasmModule.addMemory(importing: javaScriptVar)
+            let memoryRef = wasmModule.addMemory(importing: wasmMemory)
 
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 let value = function.consti32(1337)
@@ -443,7 +437,8 @@ class WasmFoundationTests: XCTestCase {
         }
 
         let viewBuiltin = b.createNamedVariable(forBuiltin: "DataView")
-        let view = b.construct(viewBuiltin, withArgs: [b.getProperty("buffer", of: javaScriptVar)])
+        assert(b.type(of: b.getProperty("buffer", of: wasmMemory)) == (.jsArrayBuffer | .jsSharedArrayBuffer))
+        let view = b.construct(viewBuiltin, withArgs: [b.getProperty("buffer", of: wasmMemory)])
 
         // Read the value of the memory.
         let value = b.callMethod("getUint32", on: view, withArgs: [b.loadInt(10), b.loadBool(true)])
@@ -463,6 +458,35 @@ class WasmFoundationTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
 
         testForOutput(program: jsProg, runner: runner, outputString: "1337\n0\n1337\n")
+    }
+
+    func testDefineMemory() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            let memoryRef = wasmModule.addMemory(minPages: 5, maxPages: 12)
+
+            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                let value = function.consti32(1337)
+                let base = function.consti32(0)
+                function.wasmMemorySet(memoryRef: memoryRef, base: base, offset: 8, value: value)
+                let val = function.wasmMemoryGet(memoryRef: memoryRef, type: .wasmi64, base: base, offset: 8)
+                function.wasmReturn(val)
+            }
+        }
+
+        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+        b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res0)])
+
+        let jsProg = fuzzer.lifter.lift(b.finalize())
+        testForOutput(program: jsProg, runner: runner, outputString: "1337\n")
     }
 
     func testLoops() throws {
