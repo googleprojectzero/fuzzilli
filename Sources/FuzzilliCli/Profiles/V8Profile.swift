@@ -486,6 +486,10 @@ let v8Profile = Profile(
             args.append("--turboshaft-from-maglev")
         }
 
+        if probability(0.1) && !args.contains("--no-turboshaft") {
+            args.append("--turboshaft_wasm_in_js_inlining")
+        }
+
         if probability(0.1) {
             args.append("--harmony-struct")
         }
