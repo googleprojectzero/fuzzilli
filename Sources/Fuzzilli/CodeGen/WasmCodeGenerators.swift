@@ -530,9 +530,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmI64x2ExtractLane(input, 0)
     },
 
-    CodeGenerator("WasmI64x2LoadSplatGenerator", inContext: .wasmFunction, inputs: .required(.wasmMemory)) { b, memoryRef in
-        let function = b.currentWasmModule.currentWasmFunction
-        b.currentWasmModule.addMemory(importing: memoryRef);
-        function.wasmI64x2LoadSplat(memoryRef: memoryRef)
-    },
+//    CodeGenerator("WasmI64x2LoadSplatGenerator", inContext: .wasmFunction, inputs: .required(.wasmMemory)) { b, memoryRef in
+//        let function = b.currentWasmModule.currentWasmFunction
+//        b.currentWasmModule.addMemory(importing: memoryRef);
+//        function.wasmI64x2LoadSplat(memoryRef: memoryRef)
+//    },
 ]

@@ -275,5 +275,5 @@ public let codeGeneratorWeights = [
     "WasmSimd128CompareGenerator":              10,
     "WasmI64x2SplatGenerator":                  10,
     "WasmI64x2ExtractLaneGenerator":            10,
-    "WasmI64x2LoadSplatGenerator":              0,
+//    "WasmI64x2LoadSplatGenerator":              0,
 ]
