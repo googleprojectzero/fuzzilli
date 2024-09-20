@@ -833,17 +833,31 @@ public class JavaScriptCompiler {
         case .arrayExpression(let arrayExpression):
             var elements = [Variable]()
             var undefined: Variable? = nil
+            var spreads = [Bool]()
             for elem in arrayExpression.elements {
                 if elem.expression == nil {
                     if undefined == nil {
                         undefined = emit(LoadUndefined()).output
                     }
                     elements.append(undefined!)
+                    spreads.append(false)
                 } else {
-                    elements.append(try compileExpression(elem))
+                    if case .spreadElement(let spreadElement) = elem.expression {
+                        elements.append(try compileExpression(spreadElement.argument))
+                        spreads.append(true)
+                    }
+                    else {
+                        elements.append(try compileExpression(elem))
+                        spreads.append(false)
+                    }
                 }
             }
-            return emit(CreateArray(numInitialValues: elements.count), withInputs: elements).output
+            if spreads.contains(true) {
+                return emit(CreateArrayWithSpread(spreads: spreads), withInputs: elements).output
+           }
+           else {
+                return emit(CreateArray(numInitialValues: elements.count), withInputs: elements).output
+           }
 
         case .functionExpression(let functionExpression):
             let parameters = convertParameters(functionExpression.parameters)
