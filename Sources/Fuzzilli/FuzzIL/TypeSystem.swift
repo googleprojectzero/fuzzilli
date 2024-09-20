@@ -612,7 +612,7 @@ public struct ILType: Hashable {
         }
         var newProperties = properties
         newProperties.insert(property)
-        let newExt = TypeExtension(group: group, properties: newProperties, methods: methods, signature: signature)
+        let newExt = TypeExtension(group: group, properties: newProperties, methods: methods, signature: signature, wasmExt: wasmType)
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
@@ -628,7 +628,7 @@ public struct ILType: Hashable {
         }
         var newProperties = properties
         newProperties.remove(property)
-        let newExt = TypeExtension(group: group, properties: newProperties, methods: methods, signature: signature)
+        let newExt = TypeExtension(group: group, properties: newProperties, methods: methods, signature: signature, wasmExt: wasmType)
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
@@ -639,7 +639,7 @@ public struct ILType: Hashable {
         }
         var newMethods = methods
         newMethods.insert(method)
-        let newExt = TypeExtension(group: group, properties: properties, methods: newMethods, signature: signature)
+        let newExt = TypeExtension(group: group, properties: properties, methods: newMethods, signature: signature, wasmExt: wasmType)
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
@@ -655,7 +655,7 @@ public struct ILType: Hashable {
         }
         var newMethods = methods
         newMethods.remove(method)
-        let newExt = TypeExtension(group: group, properties: properties, methods: newMethods, signature: signature)
+        let newExt = TypeExtension(group: group, properties: properties, methods: newMethods, signature: signature, wasmExt: wasmType)
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
