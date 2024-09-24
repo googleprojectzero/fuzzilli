@@ -345,10 +345,10 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmDefineMemory(let op):
             // TODO: change memory size?
             newOp = op
-        case .wasmMemoryGet(let op):
+        case .wasmMemoryLoad(let op):
             // TODO: change the loadType and the offset
             newOp = op
-        case .wasmMemorySet(let op):
+        case .wasmMemoryStore(let op):
             // TODO: change the offset here.
             newOp = op
         case .constSimd128(let op):

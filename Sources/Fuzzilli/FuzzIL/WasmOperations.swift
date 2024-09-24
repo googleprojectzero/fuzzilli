@@ -855,8 +855,8 @@ final class WasmTableSet: WasmOperation {
     }
 }
 
-final class WasmMemoryGet: WasmOperation {
-    override var opcode: Opcode { .wasmMemoryGet(self) }
+final class WasmMemoryLoad: WasmOperation {
+    override var opcode: Opcode { .wasmMemoryLoad(self) }
 
     let loadType: ILType
     let offset: Int
@@ -869,8 +869,8 @@ final class WasmMemoryGet: WasmOperation {
     }
 }
 
-final class WasmMemorySet: WasmOperation {
-    override var opcode: Opcode { .wasmMemorySet(self) }
+final class WasmMemoryStore: WasmOperation {
+    override var opcode: Opcode { .wasmMemoryStore(self) }
 
     let storeType: ILType
     let offset: Int

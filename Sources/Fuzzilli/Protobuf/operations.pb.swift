@@ -3702,7 +3702,7 @@ public struct Fuzzilli_Protobuf_WasmTableSet: Sendable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_WasmMemorySet: Sendable {
+public struct Fuzzilli_Protobuf_WasmMemoryStore: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -3716,7 +3716,7 @@ public struct Fuzzilli_Protobuf_WasmMemorySet: Sendable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_WasmMemoryGet: Sendable {
+public struct Fuzzilli_Protobuf_WasmMemoryLoad: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -11086,8 +11086,8 @@ extension Fuzzilli_Protobuf_WasmTableSet: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-extension Fuzzilli_Protobuf_WasmMemorySet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".WasmMemorySet"
+extension Fuzzilli_Protobuf_WasmMemoryStore: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmMemoryStore"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "storeType"),
     2: .same(proto: "offset"),
@@ -11116,7 +11116,7 @@ extension Fuzzilli_Protobuf_WasmMemorySet: SwiftProtobuf.Message, SwiftProtobuf.
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_WasmMemorySet, rhs: Fuzzilli_Protobuf_WasmMemorySet) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmMemoryStore, rhs: Fuzzilli_Protobuf_WasmMemoryStore) -> Bool {
     if lhs.storeType != rhs.storeType {return false}
     if lhs.offset != rhs.offset {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -11124,8 +11124,8 @@ extension Fuzzilli_Protobuf_WasmMemorySet: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
-extension Fuzzilli_Protobuf_WasmMemoryGet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".WasmMemoryGet"
+extension Fuzzilli_Protobuf_WasmMemoryLoad: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmMemoryLoad"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "loadType"),
     2: .same(proto: "offset"),
@@ -11154,7 +11154,7 @@ extension Fuzzilli_Protobuf_WasmMemoryGet: SwiftProtobuf.Message, SwiftProtobuf.
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_WasmMemoryGet, rhs: Fuzzilli_Protobuf_WasmMemoryGet) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmMemoryLoad, rhs: Fuzzilli_Protobuf_WasmMemoryLoad) -> Bool {
     if lhs.loadType != rhs.loadType {return false}
     if lhs.offset != rhs.offset {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}

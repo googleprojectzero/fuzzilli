@@ -267,8 +267,8 @@ message Instruction {
         WasmStoreGlobal wasmStoreGlobal = 241;
         WasmTableGet wasmTableGet = 242;
         WasmTableSet wasmTableSet = 243;
-        WasmMemoryGet wasmMemoryGet = 244;
-        WasmMemorySet wasmMemorySet = 245;
+        WasmMemoryLoad wasmMemoryLoad = 244;
+        WasmMemoryStore wasmMemoryStore = 245;
         BeginWasmFunction beginWasmFunction = 246;
         EndWasmFunction endWasmFunction = 247;
         WasmBeginBlock wasmBeginBlock = 248;

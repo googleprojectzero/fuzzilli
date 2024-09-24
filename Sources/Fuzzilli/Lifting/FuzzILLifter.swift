@@ -832,11 +832,11 @@ public class FuzzILLifter: Lifter {
         case .wasmTableSet(_):
             w.emit("WasmTabletSet \(input(0))[\(input(1))] <- \(input(2))")
 
-        case .wasmMemoryGet(let op):
-            w.emit("\(output()) <- WasmMemoryGet \(input(0))[\(input(1)) + \(op.offset)]")
+        case .wasmMemoryLoad(let op):
+            w.emit("\(output()) <- WasmMemoryLoad \(input(0))[\(input(1)) + \(op.offset)]")
 
-        case .wasmMemorySet(let op):
-            w.emit("WasmMemorySet \(input(0))[\(input(1)) + \(op.offset)] <- \(input(2))")
+        case .wasmMemoryStore(let op):
+            w.emit("WasmMemoryStore \(input(0))[\(input(1)) + \(op.offset)] <- \(input(2))")
 
         case .wasmStoreGlobal(_):
             w.emit("WasmStoreGlobal \(input(0)) <- \(input(1))")

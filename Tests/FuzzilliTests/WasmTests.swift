@@ -430,8 +430,8 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 let value = function.consti32(1337)
                 let base = function.consti32(0)
-                function.wasmMemorySet(memoryRef: memoryRef, base: base, offset:10, value: value)
-                let val = function.wasmMemoryGet(memoryRef: memoryRef, type: .wasmi64, base: base, offset: 10)
+                function.wasmMemoryStore(memoryRef: memoryRef, base: base, offset:10, value: value)
+                let val = function.wasmMemoryLoad(memoryRef: memoryRef, type: .wasmi64, base: base, offset: 10)
                 function.wasmReturn(val)
             }
         }
@@ -476,8 +476,8 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 let value = function.consti32(1337)
                 let base = function.consti32(0)
-                function.wasmMemorySet(memoryRef: memoryRef, base: base, offset: 8, value: value)
-                let val = function.wasmMemoryGet(memoryRef: memoryRef, type: .wasmi64, base: base, offset: 8)
+                function.wasmMemoryStore(memoryRef: memoryRef, base: base, offset: 8, value: value)
+                let val = function.wasmMemoryLoad(memoryRef: memoryRef, type: .wasmi64, base: base, offset: 8)
                 function.wasmReturn(val)
             }
         }

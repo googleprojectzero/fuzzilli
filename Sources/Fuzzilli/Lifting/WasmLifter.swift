@@ -884,7 +884,7 @@ public class WasmLifter {
             }
 
             // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
-            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemorySet || instr.op is WasmMemoryGet || instr.op is WasmTableGet || instr.op is WasmTableSet {
+            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet {
                 continue
             }
             fatalError("unreachable")
@@ -1158,14 +1158,14 @@ public class WasmLifter {
         case .wasmTableSet(_):
             let tableRef = wasmInstruction.input(0)
             return Data([0x26]) + Leb128.unsignedEncode(resolveTableIdx(forInput: tableRef))
-        case .wasmMemoryGet(let op):
+        case .wasmMemoryLoad(let op):
             switch op.loadType {
             case .wasmi64:
                 return Data([0x29]) + Leb128.unsignedEncode(0) + Leb128.unsignedEncode(op.offset)
             default:
-                fatalError("WasmMemoryGet loadType unimplemented")
+                fatalError("WasmMemoryLoad loadType unimplemented")
             }
-        case .wasmMemorySet(let op):
+        case .wasmMemoryStore(let op):
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#memory-instructions
             switch op.storeType {
             case .wasmi64:
@@ -1175,7 +1175,7 @@ public class WasmLifter {
                 // Zero is alignment
                 return Data([0x36]) + Leb128.unsignedEncode(0) + Leb128.unsignedEncode(op.offset)
             default:
-                fatalError("WasmMemorySet storeType unimplemented")
+                fatalError("WasmMemoryStore storeType unimplemented")
             }
         case .wasmJsCall(let op):
             // TODO(cffsmith) fix this....., we need to find the right import to call here...., right now pick the matching signature, although this might not be the correct one, it will work.
