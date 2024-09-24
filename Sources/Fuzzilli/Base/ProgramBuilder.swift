@@ -2978,15 +2978,15 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmMemoryGet(memoryRef: Variable, type: ILType, base: Variable, offset: Int) -> Variable {
+        public func wasmMemoryLoad(memoryRef: Variable, type: ILType, base: Variable, offset: Int) -> Variable {
             assert(b.type(of: base) == .wasmi32)
-            return b.emit(WasmMemoryGet(loadType: type, offset: offset), withInputs: [memoryRef, base]).output
+            return b.emit(WasmMemoryLoad(loadType: type, offset: offset), withInputs: [memoryRef, base]).output
         }
 
-        public func wasmMemorySet(memoryRef: Variable, base: Variable, offset: Int, value: Variable) {
+        public func wasmMemoryStore(memoryRef: Variable, base: Variable, offset: Int, value: Variable) {
             assert(b.type(of: base) == .wasmi32)
             let type = b.type(of: value)
-            b.emit(WasmMemorySet(storeType: type, offset: offset), withInputs: [memoryRef, base, value])
+            b.emit(WasmMemoryStore(storeType: type, offset: offset), withInputs: [memoryRef, base, value])
         }
 
         public func wasmReassign(variable: Variable, to: Variable) {

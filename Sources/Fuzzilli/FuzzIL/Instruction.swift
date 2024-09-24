@@ -1120,10 +1120,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmTableGet = Fuzzilli_Protobuf_WasmTableGet()
             case .wasmTableSet(_):
                 $0.wasmTableSet = Fuzzilli_Protobuf_WasmTableSet()
-            case .wasmMemoryGet(let op):
-                $0.wasmMemoryGet = Fuzzilli_Protobuf_WasmMemoryGet.with { $0.loadType = ILTypeToWasmTypeEnum(op.loadType); $0.offset = Int64(op.offset) }
-            case .wasmMemorySet(let op):
-                $0.wasmMemorySet = Fuzzilli_Protobuf_WasmMemorySet.with { $0.storeType = ILTypeToWasmTypeEnum(op.storeType); $0.offset = Int64(op.offset) }
+            case .wasmMemoryLoad(let op):
+                $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with { $0.loadType = ILTypeToWasmTypeEnum(op.loadType); $0.offset = Int64(op.offset) }
+            case .wasmMemoryStore(let op):
+                $0.wasmMemoryStore = Fuzzilli_Protobuf_WasmMemoryStore.with { $0.storeType = ILTypeToWasmTypeEnum(op.storeType); $0.offset = Int64(op.offset) }
             case .beginWasmFunction(let op):
                 $0.beginWasmFunction = Fuzzilli_Protobuf_BeginWasmFunction.with {
                     var plainParams: [ILType] = []
@@ -1877,10 +1877,10 @@ extension Instruction: ProtobufConvertible {
             op = WasmTableGet(tableType: WasmTypeEnumToILType(p.tableType))
         case .wasmTableSet(let p):
             op = WasmTableSet(tableType: WasmTypeEnumToILType(p.tableType))
-        case .wasmMemoryGet(let p):
-            op = WasmMemoryGet(loadType: WasmTypeEnumToILType(p.loadType), offset: Int(p.offset))
-        case .wasmMemorySet(let p):
-            op = WasmMemorySet(storeType: WasmTypeEnumToILType(p.storeType), offset: Int(p.offset))
+        case .wasmMemoryLoad(let p):
+            op = WasmMemoryLoad(loadType: WasmTypeEnumToILType(p.loadType), offset: Int(p.offset))
+        case .wasmMemoryStore(let p):
+            op = WasmMemoryStore(storeType: WasmTypeEnumToILType(p.storeType), offset: Int(p.offset))
         case .beginWasmFunction(let p):
             op = BeginWasmFunction(parameterTypes: p.parameters.map { WasmTypeEnumToILType($0) }, returnType: WasmTypeEnumToILType(p.returnType))
         case .endWasmFunction(_):

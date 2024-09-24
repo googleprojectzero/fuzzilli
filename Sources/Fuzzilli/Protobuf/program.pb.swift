@@ -1985,20 +1985,20 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmTableSet(newValue)}
   }
 
-  public var wasmMemoryGet: Fuzzilli_Protobuf_WasmMemoryGet {
+  public var wasmMemoryLoad: Fuzzilli_Protobuf_WasmMemoryLoad {
     get {
-      if case .wasmMemoryGet(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_WasmMemoryGet()
+      if case .wasmMemoryLoad(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmMemoryLoad()
     }
-    set {operation = .wasmMemoryGet(newValue)}
+    set {operation = .wasmMemoryLoad(newValue)}
   }
 
-  public var wasmMemorySet: Fuzzilli_Protobuf_WasmMemorySet {
+  public var wasmMemoryStore: Fuzzilli_Protobuf_WasmMemoryStore {
     get {
-      if case .wasmMemorySet(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_WasmMemorySet()
+      if case .wasmMemoryStore(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmMemoryStore()
     }
-    set {operation = .wasmMemorySet(newValue)}
+    set {operation = .wasmMemoryStore(newValue)}
   }
 
   public var beginWasmFunction: Fuzzilli_Protobuf_BeginWasmFunction {
@@ -2414,8 +2414,8 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmStoreGlobal(Fuzzilli_Protobuf_WasmStoreGlobal)
     case wasmTableGet(Fuzzilli_Protobuf_WasmTableGet)
     case wasmTableSet(Fuzzilli_Protobuf_WasmTableSet)
-    case wasmMemoryGet(Fuzzilli_Protobuf_WasmMemoryGet)
-    case wasmMemorySet(Fuzzilli_Protobuf_WasmMemorySet)
+    case wasmMemoryLoad(Fuzzilli_Protobuf_WasmMemoryLoad)
+    case wasmMemoryStore(Fuzzilli_Protobuf_WasmMemoryStore)
     case beginWasmFunction(Fuzzilli_Protobuf_BeginWasmFunction)
     case endWasmFunction(Fuzzilli_Protobuf_EndWasmFunction)
     case wasmBeginBlock(Fuzzilli_Protobuf_WasmBeginBlock)
@@ -2729,8 +2729,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     241: .same(proto: "wasmStoreGlobal"),
     242: .same(proto: "wasmTableGet"),
     243: .same(proto: "wasmTableSet"),
-    244: .same(proto: "wasmMemoryGet"),
-    245: .same(proto: "wasmMemorySet"),
+    244: .same(proto: "wasmMemoryLoad"),
+    245: .same(proto: "wasmMemoryStore"),
     246: .same(proto: "beginWasmFunction"),
     247: .same(proto: "endWasmFunction"),
     248: .same(proto: "wasmBeginBlock"),
@@ -5903,29 +5903,29 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 244: try {
-        var v: Fuzzilli_Protobuf_WasmMemoryGet?
+        var v: Fuzzilli_Protobuf_WasmMemoryLoad?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .wasmMemoryGet(let m) = current {v = m}
+          if case .wasmMemoryLoad(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .wasmMemoryGet(v)
+          self.operation = .wasmMemoryLoad(v)
         }
       }()
       case 245: try {
-        var v: Fuzzilli_Protobuf_WasmMemorySet?
+        var v: Fuzzilli_Protobuf_WasmMemoryStore?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .wasmMemorySet(let m) = current {v = m}
+          if case .wasmMemoryStore(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .wasmMemorySet(v)
+          self.operation = .wasmMemoryStore(v)
         }
       }()
       case 246: try {
@@ -7183,12 +7183,12 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .wasmTableSet(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 243)
     }()
-    case .wasmMemoryGet?: try {
-      guard case .wasmMemoryGet(let v)? = self.operation else { preconditionFailure() }
+    case .wasmMemoryLoad?: try {
+      guard case .wasmMemoryLoad(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 244)
     }()
-    case .wasmMemorySet?: try {
-      guard case .wasmMemorySet(let v)? = self.operation else { preconditionFailure() }
+    case .wasmMemoryStore?: try {
+      guard case .wasmMemoryStore(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 245)
     }()
     case .beginWasmFunction?: try {

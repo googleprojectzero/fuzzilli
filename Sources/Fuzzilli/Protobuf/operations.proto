@@ -1074,12 +1074,12 @@ message WasmTableSet {
   WasmILType tableType = 1;
 }
 
-message WasmMemorySet {
+message WasmMemoryStore {
   WasmILType storeType = 1;
   int64 offset = 2;
 }
 
-message WasmMemoryGet {
+message WasmMemoryLoad {
   WasmILType loadType = 1;
   int64 offset = 2;
 }
