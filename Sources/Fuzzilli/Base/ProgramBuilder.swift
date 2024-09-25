@@ -1459,7 +1459,7 @@ public class ProgramBuilder {
         assert(parentState.recursiveBuildingAllowed)        // If this fails, a recursive CodeGenerator is probably not marked as recursive.
         assert(numBlocks >= 1)
         assert(block >= 1 && block <= numBlocks)
-        assert(parentState.nextRecursiveBlockOfCurrentGenerator == block)
+        assert(parentState.nextRecursiveBlockOfCurrentGenerator == block, "next = \(parentState.nextRecursiveBlockOfCurrentGenerator), block = \(block)")
         assert((parentState.totalRecursiveBlocksOfCurrentGenerator ?? numBlocks) == numBlocks)
 
         parentState.nextRecursiveBlockOfCurrentGenerator = block + 1
@@ -3028,15 +3028,21 @@ public class ProgramBuilder {
         }
 
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
-        public func wasmBuildLoop(with signature: Signature, body: (Variable, [Variable]) -> ()) {
+        public func wasmBuildLoop(with signature: Signature, body: (Variable, [Variable]) -> Void) {
             let instr = b.emit(WasmBeginLoop(with: signature))
             body(instr.innerOutput(0), Array(instr.innerOutputs[1...]))
             b.emit(WasmEndLoop())
         }
 
-        public func wasmBuildLegacyTry(with signature: Signature, body: (Variable, [Variable]) -> ()) {
+        public func wasmBuildLegacyTry(with signature: Signature, body: (Variable, [Variable]) -> Void, catchAllBody: (() -> Void)? = nil) {
             let instr = b.emit(WasmBeginTry(with: signature))
             body(instr.innerOutput(0), Array(instr.innerOutputs[1...]))
+            // TODO(mliedtke): Is a mutator able to remove a catchAll block?
+            if let catchAllBody = catchAllBody {
+                b.emit(WasmBeginCatchAll(with: signature))
+                catchAllBody()
+                b.emit(WasmEndCatch())
+            }
             b.emit(WasmEndTry())
         }
 

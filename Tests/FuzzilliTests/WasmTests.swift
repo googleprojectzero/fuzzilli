@@ -606,7 +606,7 @@ class WasmFoundationTests: XCTestCase {
                 function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
                     XCTAssert(b.type(of: label).Is(.label))
                     function.wasmReturn(function.consti64(42))
-                }
+                } catchAllBody: {}
                 // Unreachable.
                 function.wasmReturn(function.consti64(-1))
             }
@@ -619,6 +619,46 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
+    func testTryCatchAll() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        // JS function that throws.
+        // TODO(mliedtke): Throw from wasm instead once we support wasm throw?
+        let functionA = b.buildPlainFunction(with: .parameters()) { _ in
+            b.throwException(b.loadInt(3))
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                    XCTAssert(b.type(of: label).Is(.label))
+                    // Manually set the availableTypes here for testing.
+                    let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
+                    function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
+                    // Unreachable.
+                    function.wasmReturn(function.consti64(-1))
+                } catchAllBody: {
+                    function.wasmReturn(function.consti64(123))
+                }
+                function.wasmReturn(function.consti64(-1))
+            }
+        }
+
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "123\n")
     }
 }
 

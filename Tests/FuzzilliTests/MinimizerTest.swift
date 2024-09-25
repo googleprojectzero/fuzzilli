@@ -1401,6 +1401,61 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(numGuardedOperationsAfter, 0)
     }
 
+    func testWasmCatchAllMinimization() throws {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        do {
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let val = function.consti64(42)
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.wasmReturn(val)
+                    } catchAllBody: {
+                        function.wasmReturn(function.consti64(-1))
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let val = function.consti64(-1)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmReturn(val)
+                }
+            }
+
+            evaluator.nextInstructionIsImportant(in: b)
+            let exports = module.loadExports()
+            evaluator.nextInstructionIsImportant(in: b)
+            b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        }
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        do {
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                    function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                        function.wasmReturn(function.consti64(42))
+                    }
+                    function.wasmReturn(function.consti64(-1))
+                }
+            }
+
+            let exports = module.loadExports()
+            b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        }
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram,
+            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n" +
+            "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+    }
+
     // A mock evaluator that can be configured to treat selected instructions as important, causing them to not be minimized away.
     class EvaluatorForMinimizationTests: ProgramEvaluator {
         /// An abstract instruction used to identify the instructions that are important and should be kept.
