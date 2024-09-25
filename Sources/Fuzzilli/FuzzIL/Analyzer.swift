@@ -164,7 +164,7 @@ struct ContextAnalyzer: Analyzer {
                 assert(contextStack.count >= 2)
 
                 // Currently we only support context "skipping" for switch blocks. This logic may need to be refined if it is ever used for other constructs as well.
-                assert(contextStack.top.contains(.switchBlock) && contextStack.top.subtracting(.switchBlock) == .empty)
+                assert((contextStack.top.contains(.switchBlock) && contextStack.top.subtracting(.switchBlock) == .empty) || contextStack.top.contains(.wasmTry))
 
                 newContext.formUnion(contextStack.secondToTop)
             }

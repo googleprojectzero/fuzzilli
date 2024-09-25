@@ -1007,7 +1007,39 @@ final class WasmBeginTry: WasmOperation {
             }
         }
 
-        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
+        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmTry])
+    }
+}
+
+final class WasmBeginCatchAll : WasmOperation {
+    override var opcode: Opcode { .wasmBeginCatchAll(self) }
+
+    let signature: Signature
+
+    // TODO(mliedtke): We don't really have a full signature, only returns and it needs to stay in
+    // sync with the `WasmBeginTry` return types.
+    init(with signature: Signature) {
+        self.signature = signature
+
+        super.init(attributes: [
+                .isBlockStart,
+                // The inner context isn't a .wasmTry context any more.
+                .resumesSurroundingContext,
+                // Wasm only allows a single catch_all per try block.
+                .isSingular
+            ],
+            requiredContext: [.wasmTry])
+    }
+}
+
+// Ends a catch or a catch_all block inside a (legacy) try block.
+final class WasmEndCatch : WasmOperation {
+    override var opcode: Opcode { .wasmEndCatch(self) }
+
+    init() {
+        // Note that because the WasmBeginCatch(All) skips the surrounding  `.wasmTry` context,
+        // this operation is not used within that context!
+        super.init(attributes: .isBlockEnd, requiredContext: [.wasmFunction])
     }
 }
 
@@ -1015,7 +1047,7 @@ final class WasmEndTry: WasmOperation {
     override var opcode: Opcode { .wasmEndTry(self) }
 
     init() {
-        super.init(attributes: [.isPure, .isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
+        super.init(attributes: [.isPure, .isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmTry])
     }
 }
 

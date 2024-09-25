@@ -1000,6 +1000,16 @@ public class FuzzILLifter: Lifter {
             }
             w.increaseIndentionLevel()
 
+        case .wasmBeginCatchAll(_):
+            w.decreaseIndentionLevel()
+            w.emit("WasmBeginCatchAll")
+            w.increaseIndentionLevel()
+
+        case .wasmEndCatch(_):
+            w.decreaseIndentionLevel()
+            w.emit("WasmEndCatch")
+            w.increaseIndentionLevel()
+
         case .wasmEndTry(_):
             w.decreaseIndentionLevel()
             w.emit("WasmEndTry")

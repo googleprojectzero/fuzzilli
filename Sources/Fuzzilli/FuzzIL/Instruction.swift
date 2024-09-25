@@ -1187,6 +1187,12 @@ extension Instruction: ProtobufConvertible {
                     $0.parameters = plainParams.map { ILTypeToWasmTypeEnum($0) }
                     $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
+            case .wasmBeginCatchAll(let op):
+                $0.wasmBeginCatchAll = Fuzzilli_Protobuf_WasmBeginCatchAll.with {
+                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                }
+            case .wasmEndCatch(_):
+                $0.wasmEndCatch = Fuzzilli_Protobuf_WasmEndCatch()
             case .wasmEndTry(_):
                 $0.wasmEndTry = Fuzzilli_Protobuf_WasmEndTry()
             case .wasmBranch(_):
@@ -1914,6 +1920,10 @@ extension Instruction: ProtobufConvertible {
                 Parameter.plain(WasmTypeEnumToILType(param))
             })
             op = WasmBeginTry(with: parameters => WasmTypeEnumToILType(p.returnType))
+        case .wasmBeginCatchAll(let p):
+            op = WasmBeginCatchAll(with: [] => WasmTypeEnumToILType(p.returnType))
+        case .wasmEndCatch(_):
+            op = WasmEndCatch()
         case .wasmEndTry(_):
             op = WasmEndTry()
         case .wasmBranch(_):

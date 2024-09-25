@@ -282,16 +282,18 @@ message Instruction {
         WasmBeginElse wasmBeginElse = 256;
         WasmEndIf wasmEndIf = 257;
         WasmBeginTry wasmBeginTry = 258;
-        WasmEndTry wasmEndTry = 259;
-        ConstSimd128 constSimd128 = 260;
-        WasmSimd128Compare wasmSimd128Compare = 261;
-        WasmSimd128IntegerUnOp wasmSimd128IntegerUnOp = 262;
-        WasmSimd128IntegerBinOp wasmSimd128IntegerBinOp = 263;
-        WasmSimd128FloatUnOp wasmSimd128FloatUnOp = 264;
-        WasmSimd128FloatBinOp wasmSimd128FloatBinOp = 265;
-        WasmI64x2Splat wasmI64x2Splat = 266;
-        WasmI64x2ExtractLane wasmI64x2ExtractLane = 267;
-        WasmI64x2LoadSplat wasmI64x2LoadSplat = 268;
+        WasmBeginCatchAll wasmBeginCatchAll = 259;
+        WasmEndCatch wasmEndCatch = 260;
+        WasmEndTry wasmEndTry = 261;
+        ConstSimd128 constSimd128 = 262;
+        WasmSimd128Compare wasmSimd128Compare = 263;
+        WasmSimd128IntegerUnOp wasmSimd128IntegerUnOp = 264;
+        WasmSimd128IntegerBinOp wasmSimd128IntegerBinOp = 265;
+        WasmSimd128FloatUnOp wasmSimd128FloatUnOp = 266;
+        WasmSimd128FloatBinOp wasmSimd128FloatBinOp = 267;
+        WasmI64x2Splat wasmI64x2Splat = 268;
+        WasmI64x2ExtractLane wasmI64x2ExtractLane = 269;
+        WasmI64x2LoadSplat wasmI64x2LoadSplat = 270;
     }
 }
 

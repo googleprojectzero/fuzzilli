@@ -453,7 +453,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("WasmLegacyTryGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmBuildLegacyTry(with: [] => .nothing) { label, args in
-            b.buildRecursive()
+            b.buildRecursive(block: 1, of: 2, n: 4)
+        } catchAllBody: {
+            b.buildRecursive(block: 2, of: 2, n: 4)
         }
     },
 

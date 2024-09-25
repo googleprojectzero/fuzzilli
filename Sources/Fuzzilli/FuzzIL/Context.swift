@@ -55,6 +55,8 @@ public struct Context: OptionSet {
     public static let wasmFunction      = Context(rawValue: 1 << 13)
     // Inside a block of a wasm function, allows branches
     public static let wasmBlock         = Context(rawValue: 1 << 14)
+    // Inside a wasm try block, allows catch blocks
+    public static let wasmTry           = Context(rawValue: 1 << 15)
 
     public static let empty             = Context([])
 

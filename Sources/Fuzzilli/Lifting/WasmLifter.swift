@@ -218,7 +218,6 @@ public class WasmLifter {
             if wasmInstruction.op is BeginWasmFunction {
                 return
             }
-            assert(wasmInstruction.op.requiredContext.contains(.wasmFunction))
             currentFunction.variableAnalyzer.analyze(wasmInstruction)
         }
     }
@@ -1199,6 +1198,10 @@ public class WasmLifter {
         case .wasmBeginTry(_):
             // 0x03 is the loop instruction and 0x40 is the empty block type, just like in .wasmBeginBlock
             return Data([0x06] + [0x40])
+        case .wasmBeginCatchAll(_):
+            return Data([0x19])
+        case .wasmEndCatch(_):
+            return Data([])
         case .wasmEndLoop(_),
                 .wasmEndIf(_),
                 .wasmEndTry(_),
