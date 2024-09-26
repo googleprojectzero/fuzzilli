@@ -112,6 +112,7 @@ public class Minimizer: ComponentBase {
         postProcessor.process(with: helper)
 
         assert(helper.code.isStaticallyValid())
+        assert(!helper.code.contains(where: { $0.isNop }))
 
         return helper.finalize()
     }
