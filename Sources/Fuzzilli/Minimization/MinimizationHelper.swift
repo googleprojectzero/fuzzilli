@@ -42,6 +42,7 @@ class MinimizationHelper {
     private static let defaultNumExecutions = 1
 
     init(for aspects: ProgramAspects, forCode code: Code, of fuzzer: Fuzzer, runningOnFuzzerQueue: Bool) {
+        assert(code.filter({ $0.isNop }).count == 0)
         self.aspects = aspects
         self.fuzzer = fuzzer
         self.runningOnFuzzerQueue = runningOnFuzzerQueue
