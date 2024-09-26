@@ -239,11 +239,9 @@ public class OperationMutator: BaseInstructionMutator {
             }
             newOp = CreateWasmGlobal(value: wasmGlobal, isMutable: probability(0.5))
         case .createWasmMemory(_):
+            // TODO(evih): Implement shared memories and memory64.
             let newMinPages = Int.random(in: 0..<10)
-            var newMaxPages: Int? = nil
-            if probability(0.5) {
-                newMaxPages = Int.random(in: newMinPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
-            }
+            let newMaxPages = probability(0.5) ? nil : Int.random(in: newMinPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
             newOp = CreateWasmMemory(limits: Limits(min: newMinPages, max: newMaxPages))
         case .createWasmTable(_):
             let wasmTableType: ILType
@@ -342,9 +340,11 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmDefineTable(let op):
             // TODO: change table size?
             newOp = op
-        case .wasmDefineMemory(let op):
-            // TODO: change memory size?
-            newOp = op
+        case .wasmDefineMemory(_):
+            // TODO(evih): Implement shared memories and memory64.
+            let newMinPages = Int.random(in: 0..<10)
+            let newMaxPages = probability(0.5) ? nil : Int.random(in: newMinPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
+            newOp = WasmDefineMemory(limits: Limits(min: newMinPages, max: newMaxPages))
         case .wasmMemoryLoad(let op):
             // TODO: change the loadType and the offset
             newOp = op

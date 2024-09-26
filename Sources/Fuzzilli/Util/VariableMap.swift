@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO this should probably be a Collection, not a Sequence
+// TODO this should probably be a Collection, not a Sequence.
+// Note that this means that if you add an entry for Variable v123 as the first
+// and only element in the map, then 122 empty elements are allocated too.
 public struct VariableMap<Value>: Sequence {
     public typealias Element = (Variable, Value)
 

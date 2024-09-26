@@ -139,9 +139,9 @@ public class WasmLifter {
     // The Tables associated with this module, the elements of the tuple describe the element type, minSize and maxSize respectively.
     private var tables: VariableMap<(ILType, Int, Int?)> = VariableMap()
 
-    // The Memories associated with this module.
-    // This only holds memories defined in the module, if there is an import of a memory, it is in the imports array.
-    private var memories: VariableMap<(ILType)> = VariableMap()
+    // The memory associated with this module.
+    // This only holds a memory defined in the module, if there is an import of a memory, it is in the imports array.
+    private var memory: ILType? = nil
 
     // The function index space
     private var functionIdxBase = 0
@@ -159,7 +159,7 @@ public class WasmLifter {
         self.imports = []
         self.globals = VariableMap()
         self.tables = VariableMap()
-        self.memories = VariableMap()
+        self.memory = nil
         self.functionIdxBase = 0
         self.typer.reset()
         self.out = ""
@@ -703,12 +703,12 @@ public class WasmLifter {
         // The amount of memories we have, per standard this can currently only be one, either defined or imported
         // https://webassembly.github.io/spec/core/syntax/modules.html#memories
 
-        assert(memories.count <= 1, "Can only define at most one memory")
-        temp += Leb128.unsignedEncode(memories.count)
-        // TODO(evih): Encode sharedness.
-        for (_, memoryType) in memories {
-            assert(memoryType.isWasmMemoryType)
-            let wasmMemory = memoryType.wasmMemoryType!
+        let hasMemory = memory != nil ? true : false
+        temp += Leb128.unsignedEncode(hasMemory ? 1 : 0)
+        if (hasMemory) {
+            // TODO(evih): Encode sharedness.
+            assert(memory!.isWasmMemoryType)
+            let wasmMemory = memory!.wasmMemoryType!
             if let maxPages = wasmMemory.limits.max {
                 temp += Data([0x1] + Leb128.unsignedEncode(wasmMemory.limits.min) + Leb128.unsignedEncode(maxPages))
             } else {
@@ -831,7 +831,7 @@ public class WasmLifter {
 //            self.imports[instr.input(0)] = Import(importType: .table(tableType: .wasmExternRef, limit: (10, 20)), outputVariable: nil)
         case .wasmDefineMemory(let op):
             assert(op.wasmMemory.isWasmMemoryType)
-            self.memories[instr.output] = op.wasmMemory
+            self.memory = op.wasmMemory
         case .wasmImportMemory(let op):
             assert(op.wasmMemory.isWasmMemoryType)
             self.imports.append((instr.input(0), Import(importType: .memory(op.wasmMemory), outputVariable: nil)))
@@ -1306,5 +1306,3 @@ public class WasmLifter {
         }
     }
 }
-
-
