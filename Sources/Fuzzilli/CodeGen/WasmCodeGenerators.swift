@@ -65,6 +65,19 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    // TODO(evih): Implement shared memories and memory64.
+    CodeGenerator("WasmDefineMemoryGenerator", inContext: .wasm) { b in
+        let module = b.currentWasmModule
+        // TODO(evih): We can define only one memory so far.
+        if (module.memory != nil) {
+            return
+        }
+
+        let minPages = Int.random(in: 1..<10)
+        let maxPages = probability(0.5) ? nil : Int.random(in: minPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
+        module.memory = module.addMemory(minPages: minPages, maxPages: maxPages, isShared: false, isMemory64: false)
+    },
+
     // Global Generators
 
     CodeGenerator("WasmImportGlobalGenerator", inContext: .wasm, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, value in

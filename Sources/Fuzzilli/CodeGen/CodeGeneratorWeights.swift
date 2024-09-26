@@ -206,6 +206,7 @@ public let codeGeneratorWeights = [
 
     "WasmGlobalGenerator":                      4,
     "WasmMemoryGenerator":                      4,
+    "WasmDefineMemoryGenerator":                2,
     "WasmImportGlobalGenerator":                2,
     "WasmDefineGlobalGenerator":                2,
     "WasmGlobalStoreGenerator":                 2,

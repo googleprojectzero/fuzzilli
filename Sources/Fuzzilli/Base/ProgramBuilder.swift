@@ -3113,6 +3113,8 @@ public class ProgramBuilder {
         }
         public var globals: VariableMap<WasmGlobal> = VariableMap()
         public var tables: [(ILType, Int, Int?)]
+        // TODO(evih): Allow multi-memories.
+        public var memory: Variable?
         private var moduleVariable: Variable?
         /// This stores the type information for the `exports` property of the Wasm module.
         private var exportsTypeInfo: ILType? = nil
