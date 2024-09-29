@@ -845,8 +845,7 @@ public class JavaScriptCompiler {
                     if case .spreadElement(let spreadElement) = elem.expression {
                         elements.append(try compileExpression(spreadElement.argument))
                         spreads.append(true)
-                    }
-                    else {
+                    } else {
                         elements.append(try compileExpression(elem))
                         spreads.append(false)
                     }
@@ -854,10 +853,9 @@ public class JavaScriptCompiler {
             }
             if spreads.contains(true) {
                 return emit(CreateArrayWithSpread(spreads: spreads), withInputs: elements).output
-           }
-           else {
+            } else {
                 return emit(CreateArray(numInitialValues: elements.count), withInputs: elements).output
-           }
+            }
 
         case .functionExpression(let functionExpression):
             let parameters = convertParameters(functionExpression.parameters)
