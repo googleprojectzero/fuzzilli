@@ -6,7 +6,7 @@ function foo(a, b, c) {
   output(c);
 }
 
-let a = [1,2,3,4];
+let a = [1, 2, 3, 4];
 
 foo(...a);
 foo(100, ...a);
@@ -24,4 +24,27 @@ o.foo(100, ...a);
 o.foo(100, 101, ...a);
 o.foo(100, 101, 102, ...a);
 
-// TODO also add tests for spreading in array literals
+// Array spreading tests
+let array1 = [10, 20, 30];
+let array2 = [...array1];
+
+output(array1);
+output(array2);
+
+array1[0] = 100;
+output(array1);
+output(array2);
+
+let combinedArray = [5, ...array1, 50];
+output(combinedArray);
+
+// Spread with array-like objects
+function testArguments() {
+  let argsArray = [...arguments];
+  output(argsArray);
+}
+
+testArguments(1, 2, 3);
+
+let nestedArray = [...[...[1, 2, 3]], ...[4, 5]];
+output(nestedArray);
