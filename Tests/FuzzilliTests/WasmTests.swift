@@ -206,7 +206,7 @@ class WasmFoundationTests: XCTestCase {
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res1)])
         // We do not control whether the JS function is imported with a floating point or an integer type, so the
         // fractional digits might be lost. Round the result to make the output predictable.
-        let res2Rounded = b.callFunction(b.loadBuiltin("Math.round"), withArgs: [res2])
+        let res2Rounded = b.callFunction(b.createNamedVariable(forBuiltin: "Math.round"), withArgs: [res2])
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res2Rounded)])
 
         let prog = b.finalize()
@@ -468,7 +468,7 @@ class WasmFoundationTests: XCTestCase {
         let output0 = b.callFunction(tableElement0, withArgs: [b.loadInt(42)])
         let output1 = b.callFunction(tableElement1, withArgs: [])
 
-        let outputFunc = b.loadBuiltin("output")
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
         b.callFunction(outputFunc, withArgs: [output0])
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: output1)])
 
@@ -2753,7 +2753,7 @@ class WasmSpliceTests: XCTestCase {
 
         b.buildWasmModule { module in
             module.addWasmFunction(with: [] => .nothing) { function, _ in
-                let _ = function.constf32(42.42)
+                let _ = function.constf64(42.42)
                 b.splice(from: original, at: splicePoint, mergeDataFlow: true)
             }
         }
@@ -2766,7 +2766,7 @@ class WasmSpliceTests: XCTestCase {
 
         b.buildWasmModule { module in
             module.addWasmFunction(with: [] => .nothing) { function, _ in
-                let _ = function.constf32(42.42)
+                let _ = function.constf64(42.42)
                 let argument = function.consti32(1337)
                 let signature = ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
                 function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)

@@ -303,6 +303,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 
     private var builtinTypes: [String: ILType] = [:]
     private var groups: [String: ObjectGroup] = [:]
+    private var producingMethods: [ILType: [(group: String, method: String)]] = [:]
+    private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
 
     public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = []) {
         super.init(name: "JavaScriptEnvironment")
@@ -482,12 +484,48 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         groups[group.name] = group
         builtinProperties.formUnion(group.properties.keys)
         builtinMethods.formUnion(group.methods.keys)
+        for method in group.methods {
+            if method.value.outputType == .nothing {
+                continue
+            }
+            let type = method.value.outputType
+            if producingMethods[type] == nil {
+                producingMethods[type] = []
+            }
+            producingMethods[type]! += [(group: group.name, method: method.key)]
+        }
+        for property in group.properties {
+            let type: ILType
+            if property.value.Is(.constructor()) {
+                type = property.value.signature!.outputType
+            } else {
+                type = property.value
+            }
+            if producingProperties[type] == nil {
+                producingProperties[type] = []
+            }
+            producingProperties[type]! += [(group: group.name, property: property.key)]
+        }
     }
 
     public func registerBuiltin(_ name: String, ofType type: ILType) {
         assert(builtinTypes[name] == nil)
         builtinTypes[name] = type
         builtins.insert(name)
+
+        let producedType: ILType
+        if type.Is(.constructor()) {
+            guard let sig = type.signature else {
+                return
+            }
+            producedType = sig.outputType
+        } else {
+            producedType = type
+        }
+        if producingProperties[producedType] == nil {
+            producingProperties[producedType] = []
+        }
+        producingProperties[producedType]!.append((group: "", property: name))
     }
 
     public func type(ofBuiltin builtinName: String) -> ILType {
@@ -495,6 +533,15 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             return type
         } else {
             logger.warning("Missing type for builtin \(builtinName)")
+            return .anything
+        }
+    }
+
+    public func type (ofGroup groupName: String) -> ILType {
+        if let type = groups[groupName]?.instanceType {
+            return type
+        } else {
+            logger.warning("Missing type for group \(groupName)")
             return .anything
         }
     }
@@ -527,6 +574,20 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         }
 
         return Signature.forUnknownFunction
+    }
+
+    public func getProducingMethods(ofType type: ILType) -> [(group: String, method: String)] {
+        guard let array = producingMethods[type] else {
+            return []
+        }
+        return array
+    }
+
+    public func getProducingProperties(ofType type: ILType) -> [(group: String, property: String)] {
+        guard let array = producingProperties[type] else {
+            return []
+        }
+        return array
     }
 }
 
@@ -678,11 +739,11 @@ public extension ILType {
     /// Type of a JavaScript TypedArray constructor builtin.
     static func jsTypedArrayConstructor(_ variant: String) -> ILType {
         // TODO Also allow SharedArrayBuffers for first argument
-        return .constructor([.oneof(.integer, .object(ofGroup: "ArrayBuffer")), .opt(.integer), .opt(.integer)] => .jsTypedArray(variant))
+        return .constructor([.oneof(.integer, .jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsTypedArray(variant))
     }
 
     /// Type of the JavaScript DataView constructor builtin. (TODO Also allow SharedArrayBuffers for first argument)
-    static let jsDataViewConstructor = ILType.constructor([.object(ofGroup: "ArrayBuffer"), .opt(.integer), .opt(.integer)] => .jsDataView)
+    static let jsDataViewConstructor = ILType.constructor([.plain(.jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsDataView)
 
     /// Type of the JavaScript Promise constructor builtin.
     static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled"])

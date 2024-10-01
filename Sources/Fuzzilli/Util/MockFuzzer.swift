@@ -85,6 +85,18 @@ class MockEnvironment: ComponentBase, Environment {
         return builtinTypes[builtinName] ?? .anything
     }
 
+    func type(ofGroup groupName: String) -> ILType {
+        return .anything
+    }
+
+    func getProducingMethods(ofType type: ILType) -> [(group: String, method: String)] {
+        return []
+    }
+
+    func getProducingProperties(ofType type: ILType) -> [(group: String, property: String)] {
+        return []
+    }
+
     var constructables: [String] {
         return ["blafoo"]
     }
