@@ -1515,6 +1515,8 @@ public class JavaScriptLifter: Lifter {
                  .constSimd128(_),
                  .wasmSimd128IntegerUnOp(_),
                  .wasmSimd128IntegerBinOp(_),
+                 .wasmSimd128FloatUnOp(_),
+                 .wasmSimd128FloatBinOp(_),
                  .wasmSimd128Compare(_),
                  .wasmI64x2Splat(_),
                  .wasmI64x2ExtractLane(_),

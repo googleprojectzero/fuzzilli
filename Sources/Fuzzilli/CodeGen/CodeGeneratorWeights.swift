@@ -274,6 +274,8 @@ public let codeGeneratorWeights = [
     "ConstSimd128Generator":                    10,
     "WasmSimd128IntegerUnOpGenerator":          10,
     "WasmSimd128IntegerBinOpGenerator":         10,
+    "WasmSimd128FloatUnOpGenerator":            10,
+    "WasmSimd128FloatBinOpGenerator":           10,
     "WasmSimd128CompareGenerator":              10,
     "WasmI64x2SplatGenerator":                  10,
     "WasmI64x2ExtractLaneGenerator":            10,

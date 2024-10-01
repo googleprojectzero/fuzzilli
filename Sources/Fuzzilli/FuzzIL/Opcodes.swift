@@ -297,6 +297,8 @@ enum Opcode {
     case wasmSimd128Compare(WasmSimd128Compare)
     case wasmSimd128IntegerUnOp(WasmSimd128IntegerUnOp)
     case wasmSimd128IntegerBinOp(WasmSimd128IntegerBinOp)
+    case wasmSimd128FloatUnOp(WasmSimd128FloatUnOp)
+    case wasmSimd128FloatBinOp(WasmSimd128FloatBinOp)
     case wasmI64x2Splat(WasmI64x2Splat)
     case wasmI64x2ExtractLane(WasmI64x2ExtractLane)
     case wasmI64x2LoadSplat(WasmI64x2LoadSplat)

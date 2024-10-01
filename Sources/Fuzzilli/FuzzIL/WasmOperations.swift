@@ -1169,7 +1169,7 @@ final class WasmSimd128Compare: WasmOperation {
 }
 
 public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
-    // The offsets are added to the a base value for each shape:
+    // The offsets are added to a base value for each shape:
     // i8x16: 92 + offset
     // i16x8: 124 + offset
     // i32x4: 156 + offset
@@ -1215,6 +1215,7 @@ final class WasmSimd128IntegerUnOp: WasmOperation {
     let unOpKind: WasmSimd128IntegerUnOpKind
 
     init(shape: WasmSimd128Shape, unOpKind: WasmSimd128IntegerUnOpKind) {
+        assert(unOpKind.isValidForShape(shape: shape))
         self.shape = shape
         self.unOpKind = unOpKind
         super.init(inputTypes: [.wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
@@ -1222,7 +1223,7 @@ final class WasmSimd128IntegerUnOp: WasmOperation {
 }
 
 public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
-    // The offsets are added to the a base value for each shape:
+    // The offsets are added to a base value for each shape:
     // i8x16: 92 + offset
     // i16x8: 124 + offset
     // i32x4: 156 + offset
@@ -1287,6 +1288,68 @@ final class WasmSimd128IntegerBinOp: WasmOperation {
     let binOpKind: WasmSimd128IntegerBinOpKind
 
     init(shape: WasmSimd128Shape, binOpKind: WasmSimd128IntegerBinOpKind) {
+        assert(binOpKind.isValidForShape(shape: shape))
+        self.shape = shape
+        self.binOpKind = binOpKind
+        super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+public enum WasmSimd128FloatUnOpKind: Int, CaseIterable {
+    // The offsets are added to a base value for each shape:
+    // f32x4: 103 + offset
+    // f64x2: 116 + offset
+    case ceil = 0
+    case floor = 1
+    case trunc = 2
+    case nearest = 3
+    case abs = 4
+    case neg = 5
+    case sqrt = 6
+
+    func isValidForShape(shape: WasmSimd128Shape) -> Bool {
+        return shape.isFloat()
+    }
+}
+
+final class WasmSimd128FloatUnOp: WasmOperation {
+    override var opcode: Opcode { .wasmSimd128FloatUnOp(self) }
+    let shape: WasmSimd128Shape
+    let unOpKind: WasmSimd128FloatUnOpKind
+
+    init(shape: WasmSimd128Shape, unOpKind: WasmSimd128FloatUnOpKind) {
+        assert(unOpKind.isValidForShape(shape: shape))
+        self.shape = shape
+        self.unOpKind = unOpKind
+        super.init(inputTypes: [.wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+public enum WasmSimd128FloatBinOpKind: Int, CaseIterable {
+    // The offsets are added to a base value for each shape:
+    // f32x4: 103 + offset
+    // f64x2: 116 + offset
+    case add = 7
+    case sub = 8
+    case mul = 9
+    case div = 10
+    case min = 11
+    case max = 12
+    case pmin = 13
+    case pmax = 14
+
+    func isValidForShape(shape: WasmSimd128Shape) -> Bool {
+        return shape.isFloat()
+    }
+}
+
+final class WasmSimd128FloatBinOp: WasmOperation {
+    override var opcode: Opcode { .wasmSimd128FloatBinOp(self) }
+    let shape: WasmSimd128Shape
+    let binOpKind: WasmSimd128FloatBinOpKind
+
+    init(shape: WasmSimd128Shape, binOpKind: WasmSimd128FloatBinOpKind) {
+        assert(binOpKind.isValidForShape(shape: shape))
         self.shape = shape
         self.binOpKind = binOpKind
         super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])

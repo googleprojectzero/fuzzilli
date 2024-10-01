@@ -1149,6 +1149,16 @@ message WasmSimd128IntegerBinOp {
     int32 binaryOperator = 2;
 }
 
+message WasmSimd128FloatUnOp {
+    uint32 shape = 1;
+    int32 unaryOperator = 2;
+}
+
+message WasmSimd128FloatBinOp {
+    uint32 shape = 1;
+    int32 binaryOperator = 2;
+}
+
 message WasmI64x2Splat {
 }
 
