@@ -2448,4 +2448,75 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert(b.type(of: args[0]).Is(typeC))
         XCTAssertEqual(b.numberOfVisibleVariables, previous + 1)
     }
+
+    func testFindOrGenerateTypeWorksRecursively() {
+        // Types
+        let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
+        let jsD8Test = ILType.object(ofGroup: "D8Test", withProperties: ["FastCAPI"], withMethods: [])
+        let jsD8FastCAPI = ILType.object(ofGroup: "D8FastCAPI", withProperties: [], withMethods: ["throw_no_fallback", "add_32bit_int"])
+        let jsD8FastCAPIConstructor = ILType.constructor(Signature(expects: [], returns: jsD8FastCAPI))
+
+        // Object groups
+        let jsD8Group = ObjectGroup(name: "D8", instanceType: jsD8, properties: ["test" : jsD8Test], methods: [:])
+        let jsD8TestGroup = ObjectGroup(name: "D8Test", instanceType: jsD8Test, properties: ["FastCAPI": jsD8FastCAPIConstructor], methods: [:])
+        let jsD8FastCAPIGroup = ObjectGroup(name: "D8FastCAPI", instanceType: jsD8FastCAPI, properties: [:],
+                methods:["throw_no_fallback": Signature(expects: [], returns: ILType.integer),
+                        "add_32bit_int": Signature(expects: [Parameter.plain(ILType.integer), Parameter.plain(ILType.integer)], returns: ILType.integer)
+            ])
+        let additionalObjectGroups = [jsD8Group, jsD8TestGroup, jsD8FastCAPIGroup]
+
+        let env = JavaScriptEnvironment(additionalBuiltins: ["d8" : jsD8], additionalObjectGroups: additionalObjectGroups)
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+        // This has to generate `new d8.test.D8FastCAPI()`
+        let d8FastCAPIObj = b.findOrGenerateType(jsD8FastCAPI)
+        XCTAssert(b.type(of: d8FastCAPIObj).Is(jsD8FastCAPI))
+
+        // Check that the intermediate variables were generated as part of the recursion.
+        let d8 = b.randomVariable(ofType: jsD8)
+        XCTAssert(d8 != nil && b.type(of: d8!).Is(jsD8))
+
+        let d8Test = b.randomVariable(ofType: jsD8Test)
+        XCTAssert(d8Test != nil && b.type(of: d8Test!).Is(jsD8Test))
+    }
+
+    func testFindOrGenerateTypeWithGlobalConstructor() {
+        let objType = ILType.object(ofGroup: "Test", withProperties: [], withMethods: [])
+        let constructor = ILType.constructor(Signature(expects: [], returns: objType))
+
+        let testGroup = ObjectGroup(name: "Test", instanceType: objType, properties: [:], methods: [:])
+
+        let env = JavaScriptEnvironment(additionalBuiltins: ["myBuiltin" : constructor], additionalObjectGroups: [testGroup])
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+
+        let obj = b.findOrGenerateType(objType)
+        XCTAssert(b.type(of: obj).Is(objType))
+    }
+
+    func testFindOrGenerateTypeWithMethod() {
+        // Types
+        let jsD8 = ILType.object(ofGroup: "D8", withProperties: [], withMethods: ["test"])
+        let objType = ILType.object(ofGroup: "Test", withProperties: [], withMethods: [])
+
+        // Object groups
+        let jsD8Group = ObjectGroup(name: "D8", instanceType: jsD8, properties: [:], methods: ["test" : Signature(expects: [], returns: objType)])
+
+        let testGroup = ObjectGroup(name: "Test", instanceType: objType, properties: [:], methods: [:])
+
+        let env = JavaScriptEnvironment(additionalBuiltins: ["d8" : jsD8], additionalObjectGroups: [jsD8Group, testGroup])
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+
+        let obj = b.findOrGenerateType(objType)
+        print("Generated type \(b.type(of: obj))")
+        XCTAssert(b.type(of: obj).Is(objType))
+    }
+
 }

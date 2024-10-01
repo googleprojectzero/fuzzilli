@@ -419,6 +419,69 @@ fileprivate let RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
     b.build(n: 15)
 }
 
+public extension ILType {
+    static let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
+
+    static let jsD8Test = ILType.object(ofGroup: "D8Test", withProperties: ["FastCAPI"], withMethods: [])
+
+    static let jsD8FastCAPI = ILType.object(ofGroup: "D8FastCAPI", withProperties: [], withMethods: ["throw_no_fallback"])
+
+    static let jsD8FastCAPIConstructor = ILType.constructor(Signature(expects: [], returns: ILType.jsD8FastCAPI))
+}
+
+let jsD8 = ObjectGroup(name: "D8", instanceType: .jsD8, properties: ["test" : .jsD8Test], methods: [:])
+
+let jsD8Test = ObjectGroup(name: "D8Test", instanceType: .jsD8Test, properties: ["FastCAPI": .jsD8FastCAPIConstructor], methods: [:])
+
+let jsD8FastCAPI = ObjectGroup(name: "D8FastCAPI", instanceType: .jsD8FastCAPI, properties: [:], methods:["throw_no_fallback": Signature(expects: [], returns: ILType.integer)])
+
+let fastCallables : [(group: ILType, method: String)] = [
+    (group: .jsD8FastCAPI, method: "throw_no_fallback")
+]
+
+let WasmFastCallFuzzer = ProgramTemplate("WasmFastCallFuzzer") { b in
+    b.buildPrefix();
+    b.build(n: 10)
+    let target = fastCallables.randomElement()!
+    let apiObj = b.findOrGenerateType(target.group)
+
+    let unwrapped = b.getProperty(target.method, of: apiObj)
+
+    // Wrap the API function so that it can be called from WebAssembly.
+    let function = b.createNamedVariable(forBuiltin: "Function")
+    let prot = b.getProperty("prototype", of: function)
+    let call = b.getProperty("call", of: prot)
+    let wrapped = b.callMethod("bind", on: call, withArgs: [unwrapped])
+
+    let functionSig = b.methodSignature(of: target.method, on: target.group)
+    let wrappedSig = Signature(expects: [.plain(b.type(of: apiObj))] + functionSig.parameters, returns: functionSig.outputType)
+
+    let m = b.buildWasmModule { m in
+        let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
+        var wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(wrappedSig, availableTypes: allWasmTypes)
+        m.addWasmFunction(with: wasmSignature) {fbuilder, _  in
+            let args = b.randomWasmArguments(forWasmSignature: wasmSignature)
+            if var args {
+                let maybeRet = fbuilder.wasmJsCall(function: wrapped, withArgs: args, withWasmSignature: wasmSignature)
+                if let ret = maybeRet {
+                  fbuilder.wasmReturn(ret)
+                }
+            } else {
+                logger.error("Arguments should have been generated")
+            }
+        }
+    }
+
+    let exports = m.loadExports()
+
+    for (methodName, signature) in m.getExportedMethods() {
+        let exportedMethod = b.getProperty(methodName, of: exports)
+        b.eval("%WasmTierUpFunction(%@)", with: [exportedMethod])
+        let args = b.findOrGenerateArguments(forSignature: wrappedSig)
+        b.callMethod(methodName, on: exports, withArgs: args)
+    }
+}
+
 let v8Profile = Profile(
     processArgs: { randomize in
         var args = [
@@ -432,6 +495,8 @@ let v8Profile = Profile(
             "--harmony",
             "--js-staging",
             "--wasm-staging",
+            "--wasm-fast-api",
+            "--expose-fast-api",
         ]
 
         guard randomize else { return args }
@@ -630,6 +695,7 @@ let v8Profile = Profile(
         (MapTransitionFuzzer,    1),
         (ValueSerializerFuzzer,  1),
         (RegExpFuzzer,           1),
+        (WasmFastCallFuzzer,     1),
     ]),
 
     disabledCodeGenerators: [],
@@ -638,11 +704,11 @@ let v8Profile = Profile(
 
     additionalBuiltins: [
         "gc"                                            : .function([] => (.undefined | .jsPromise)),
-        "d8"                                            : .object(withProperties: ["test"]),
+        "d8"                                            : .jsD8,
         "Worker"                                        : .constructor([.anything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
 
-    additionalObjectGroups: [],
+    additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI],
 
     optionalPostProcessor: nil
 )

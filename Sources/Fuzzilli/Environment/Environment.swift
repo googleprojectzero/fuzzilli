@@ -90,12 +90,24 @@ public protocol Environment: Component {
     /// config objects have a group but no constructor, i.e. loadable builtin associated
     func hasGroup(_ name: String) -> Bool
 
-    /// Retuns the type of the builtin with the given name.
+    /// Returns the type of the builtin with the given name.
     func type(ofBuiltin builtinName: String) -> ILType
+
+    /// Returns the instance type of the object group with the specified name.
+    func type(ofGroup groupName: String) -> ILType
 
     /// Returns the type of the property on the provided base object.
     func type(ofProperty propertyName: String, on baseType: ILType) -> ILType
 
     /// Returns the signature of the specified method of he base object.
     func signature(ofMethod methodName: String, on baseType: ILType) -> Signature
+
+    /// Returns a list of (object group name, method name) pairs for a given type. The specified
+    /// method on the specified object group can be called to generate the given type.
+    func getProducingMethods(ofType type: ILType) -> [(group: String, method: String)]
+
+    /// Returns a list of (object group name, property name) pairs for a given type. The specified
+    /// property either has the given type, or is a constructor of that type. If the group name is
+    /// empty, then the `property name` is either a global property, or a global constructor.
+    func getProducingProperties(ofType type: ILType) -> [(group: String, property: String)]
 }
