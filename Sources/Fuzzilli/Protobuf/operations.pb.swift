@@ -3928,6 +3928,34 @@ public struct Fuzzilli_Protobuf_WasmSimd128IntegerBinOp: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_WasmSimd128FloatUnOp: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var shape: UInt32 = 0
+
+  public var unaryOperator: Int32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_WasmSimd128FloatBinOp: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var shape: UInt32 = 0
+
+  public var binaryOperator: Int32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_WasmI64x2Splat: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -11618,6 +11646,82 @@ extension Fuzzilli_Protobuf_WasmSimd128IntegerBinOp: SwiftProtobuf.Message, Swif
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmSimd128IntegerBinOp, rhs: Fuzzilli_Protobuf_WasmSimd128IntegerBinOp) -> Bool {
+    if lhs.shape != rhs.shape {return false}
+    if lhs.binaryOperator != rhs.binaryOperator {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmSimd128FloatUnOp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmSimd128FloatUnOp"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "shape"),
+    2: .same(proto: "unaryOperator"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.shape) }()
+      case 2: try { try decoder.decodeSingularInt32Field(value: &self.unaryOperator) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.shape != 0 {
+      try visitor.visitSingularUInt32Field(value: self.shape, fieldNumber: 1)
+    }
+    if self.unaryOperator != 0 {
+      try visitor.visitSingularInt32Field(value: self.unaryOperator, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmSimd128FloatUnOp, rhs: Fuzzilli_Protobuf_WasmSimd128FloatUnOp) -> Bool {
+    if lhs.shape != rhs.shape {return false}
+    if lhs.unaryOperator != rhs.unaryOperator {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmSimd128FloatBinOp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmSimd128FloatBinOp"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "shape"),
+    2: .same(proto: "binaryOperator"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.shape) }()
+      case 2: try { try decoder.decodeSingularInt32Field(value: &self.binaryOperator) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.shape != 0 {
+      try visitor.visitSingularUInt32Field(value: self.shape, fieldNumber: 1)
+    }
+    if self.binaryOperator != 0 {
+      try visitor.visitSingularInt32Field(value: self.binaryOperator, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmSimd128FloatBinOp, rhs: Fuzzilli_Protobuf_WasmSimd128FloatBinOp) -> Bool {
     if lhs.shape != rhs.shape {return false}
     if lhs.binaryOperator != rhs.binaryOperator {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}

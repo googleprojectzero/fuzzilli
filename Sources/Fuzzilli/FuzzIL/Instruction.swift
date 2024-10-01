@@ -1213,6 +1213,16 @@ extension Instruction: ProtobufConvertible {
                     $0.shape = UInt32(op.shape.rawValue)
                     $0.binaryOperator = Int32(op.binOpKind.rawValue)
                 }
+            case .wasmSimd128FloatUnOp(let op):
+                $0.wasmSimd128FloatUnOp = Fuzzilli_Protobuf_WasmSimd128FloatUnOp.with {
+                    $0.shape = UInt32(op.shape.rawValue)
+                    $0.unaryOperator = Int32(op.unOpKind.rawValue)
+                }
+            case .wasmSimd128FloatBinOp(let op):
+                $0.wasmSimd128FloatBinOp = Fuzzilli_Protobuf_WasmSimd128FloatBinOp.with {
+                    $0.shape = UInt32(op.shape.rawValue)
+                    $0.binaryOperator = Int32(op.binOpKind.rawValue)
+                }
             case .wasmSimd128Compare(let op):
                 $0.wasmSimd128Compare = Fuzzilli_Protobuf_WasmSimd128Compare.with {
                     $0.shape = UInt32(op.shape.rawValue)
@@ -1928,6 +1938,14 @@ extension Instruction: ProtobufConvertible {
             let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
             let binOpKind = WasmSimd128IntegerBinOpKind(rawValue: Int(p.binaryOperator))!
             op = WasmSimd128IntegerBinOp(shape: shape, binOpKind: binOpKind)
+        case .wasmSimd128FloatUnOp(let p):
+            let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
+            let unOpKind = WasmSimd128FloatUnOpKind(rawValue: Int(p.unaryOperator))!
+            op = WasmSimd128FloatUnOp(shape: shape, unOpKind: unOpKind)
+        case .wasmSimd128FloatBinOp(let p):
+            let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
+            let binOpKind = WasmSimd128FloatBinOpKind(rawValue: Int(p.binaryOperator))!
+            op = WasmSimd128FloatBinOp(shape: shape, binOpKind: binOpKind)
         case .wasmSimd128Compare(let p):
             let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
             let compareOpKind = if shape.isFloat() {

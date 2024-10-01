@@ -1265,6 +1265,12 @@ public class WasmLifter {
                 default: fatalError("unreachable")
             }
             return Data([0xFD]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue)
+        case .wasmSimd128FloatUnOp(let op):
+            let base = (op.shape == .f32x4) ? 103 : 116;
+            return Data([0xFD]) + Leb128.unsignedEncode(base + op.unOpKind.rawValue)
+        case .wasmSimd128FloatBinOp(let op):
+            let base = (op.shape == .f32x4) ? 103 : 116;
+            return Data([0xFD]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue)
         case .wasmSimd128Compare(let op):
             switch op.shape {
             case .i8x16:

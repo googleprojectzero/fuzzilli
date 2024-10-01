@@ -360,6 +360,12 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmSimd128IntegerBinOp(let op):
             // TODO: ?
             newOp = op
+        case .wasmSimd128FloatUnOp(let op):
+            // TODO: ?
+            newOp = op
+        case .wasmSimd128FloatBinOp(let op):
+            // TODO: ?
+            newOp = op
         case .wasmSimd128Compare(let op):
             // TODO: ?
             newOp = op

@@ -287,9 +287,11 @@ message Instruction {
         WasmSimd128Compare wasmSimd128Compare = 261;
         WasmSimd128IntegerUnOp wasmSimd128IntegerUnOp = 262;
         WasmSimd128IntegerBinOp wasmSimd128IntegerBinOp = 263;
-        WasmI64x2Splat wasmI64x2Splat = 264;
-        WasmI64x2ExtractLane wasmI64x2ExtractLane = 265;
-        WasmI64x2LoadSplat wasmI64x2LoadSplat = 266;
+        WasmSimd128FloatUnOp wasmSimd128FloatUnOp = 264;
+        WasmSimd128FloatBinOp wasmSimd128FloatBinOp = 265;
+        WasmI64x2Splat wasmI64x2Splat = 266;
+        WasmI64x2ExtractLane wasmI64x2ExtractLane = 267;
+        WasmI64x2LoadSplat wasmI64x2LoadSplat = 268;
     }
 }
 

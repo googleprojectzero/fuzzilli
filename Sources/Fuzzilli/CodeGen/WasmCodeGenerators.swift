@@ -512,6 +512,26 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmSimd128IntegerBinOp(lhs, rhs, shape, binOpKind)
     },
 
+    CodeGenerator("WasmSimd128FloatUnOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ return $0.isFloat() })
+        let unOpKind = chooseUniform(from: WasmSimd128FloatUnOpKind.allCases.filter{
+            return $0.isValidForShape(shape: shape)
+        })
+
+        let function = b.currentWasmModule.currentWasmFunction;
+        function.wasmSimd128FloatUnOp(input, shape, unOpKind)
+    },
+
+    CodeGenerator("WasmSimd128FloatBinOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128, .wasmSimd128)) { b, lhs, rhs in
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ return $0.isFloat() })
+        let binOpKind = chooseUniform(from: WasmSimd128FloatBinOpKind.allCases.filter{
+            return $0.isValidForShape(shape: shape)
+        })
+
+        let function = b.currentWasmModule.currentWasmFunction;
+        function.wasmSimd128FloatBinOp(lhs, rhs, shape, binOpKind)
+    },
+
     CodeGenerator("WasmSimd128CompareGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128, .wasmSimd128)) { b, lhs, rhs in
         let shape = chooseUniform(from: WasmSimd128Shape.allCases)
         let compareOpKind = if shape.isFloat() {
