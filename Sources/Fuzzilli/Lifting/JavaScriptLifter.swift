@@ -1397,6 +1397,12 @@ public class JavaScriptLifter: Lifter {
                 let LET = w.varKeyword
                 w.emit("\(LET) \(V) = WebAssembly.promising(\(FUNCTION));")
 
+            case .bindMethod(let op):
+                let V = w.declare(instr.output)
+                let OBJECT = input(0)
+                let LET = w.varKeyword
+                w.emit("\(LET) \(V) = Function.prototype.call.bind(\(OBJECT).\(op.methodName));")
+
             case .beginWasmModule:
                 wasmCodeStarts = instr.index
                 wasmLifter = WasmLifter(withTyper: typer!)

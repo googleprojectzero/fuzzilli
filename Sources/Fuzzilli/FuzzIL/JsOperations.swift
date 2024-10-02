@@ -2449,6 +2449,21 @@ class WrapSuspending: JsOperation {
     }
 }
 
+// This is used to bind methods for use as utility functions.
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind#transforming_methods_to_utility_functions
+// This allows us to call these things from Wasm and V8 has optimizations to help with well-known imports.
+class BindMethod: JsOperation {
+    override var opcode: Opcode { .bindMethod(self) }
+
+    let methodName: String
+
+    init(methodName: String) {
+        self.methodName = methodName
+        // TODO(cffsmith): We probably want to expand this in the future to also bind arguments at some point.
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: .javascript)
+    }
+}
+
 
 // This instruction is used to create strongly typed WasmGlobals in the JS world that can be imported by a WasmModule.
 class CreateWasmGlobal: JsOperation {

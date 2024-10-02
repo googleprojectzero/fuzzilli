@@ -511,6 +511,7 @@ public class OperationMutator: BaseInstructionMutator {
              .directive(_),
              .wrapPromising(_),
              .wrapSuspending(_),
+             .bindMethod(_),
              // Wasm instructions
              .beginWasmModule(_),
              .endWasmModule(_),

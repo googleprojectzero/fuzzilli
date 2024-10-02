@@ -982,6 +982,14 @@ public struct JSTyper: Analyzer {
             // It is still possible to call this function just like any other regular function and the Signature is also the same.
             set(instr.output, type(ofInput: 0))
 
+        case .bindMethod(let op):
+            let signature = chooseUniform(from: inferMethodSignatures(of: op.methodName, on: instr.input(0)))
+            // We need to prepend the this argument now. We pick .object() here as the widest type because of the following:
+            // - a lot of builtin methods (such as the ones on `Array.prototype`) work on any JavaScript object
+            // - [$constructor.prototype.foo.bind] is a common pattern and the `this` would be set to the type of constructor.prototype instead of the constructor's instance type.
+            let newParameters = [Parameter.plain(.object())] + signature.parameters
+            set(instr.output, .function(newParameters => signature.outputType))
+
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
             assert(instr.isNop || (instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0)))
