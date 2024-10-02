@@ -424,7 +424,7 @@ public extension ILType {
 
     static let jsD8Test = ILType.object(ofGroup: "D8Test", withProperties: ["FastCAPI"], withMethods: [])
 
-    static let jsD8FastCAPI = ILType.object(ofGroup: "D8FastCAPI", withProperties: [], withMethods: ["throw_no_fallback"])
+    static let jsD8FastCAPI = ILType.object(ofGroup: "D8FastCAPI", withProperties: [], withMethods: ["throw_no_fallback", "add_32bit_int"])
 
     static let jsD8FastCAPIConstructor = ILType.constructor(Signature(expects: [], returns: ILType.jsD8FastCAPI))
 }
@@ -433,10 +433,14 @@ let jsD8 = ObjectGroup(name: "D8", instanceType: .jsD8, properties: ["test" : .j
 
 let jsD8Test = ObjectGroup(name: "D8Test", instanceType: .jsD8Test, properties: ["FastCAPI": .jsD8FastCAPIConstructor], methods: [:])
 
-let jsD8FastCAPI = ObjectGroup(name: "D8FastCAPI", instanceType: .jsD8FastCAPI, properties: [:], methods:["throw_no_fallback": Signature(expects: [], returns: ILType.integer)])
+let jsD8FastCAPI = ObjectGroup(name: "D8FastCAPI", instanceType: .jsD8FastCAPI, properties: [:],
+        methods:["throw_no_fallback": Signature(expects: [], returns: ILType.integer),
+                 "add_32bit_int": Signature(expects: [Parameter.plain(ILType.integer), Parameter.plain(ILType.integer)], returns: ILType.integer)
+    ])
 
 let fastCallables : [(group: ILType, method: String)] = [
-    (group: .jsD8FastCAPI, method: "throw_no_fallback")
+    (group: .jsD8FastCAPI, method: "throw_no_fallback"),
+    (group: .jsD8FastCAPI, method: "add_32bit_int"),
 ]
 
 let WasmFastCallFuzzer = ProgramTemplate("WasmFastCallFuzzer") { b in
@@ -480,6 +484,35 @@ let WasmFastCallFuzzer = ProgramTemplate("WasmFastCallFuzzer") { b in
         let args = b.findOrGenerateArguments(forSignature: wrappedSig)
         b.callMethod(methodName, on: exports, withArgs: args)
     }
+}
+
+fileprivate let FastApiCallFuzzer = ProgramTemplate("FastApiCallFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 20)
+    let parameterCount = probability(0.5) ? 0 : Int.random(in: 1...4)
+
+    let f = b.buildPlainFunction(with: .parameters(n: parameterCount)) { args in
+        b.build(n: 10)
+        let target = fastCallables.randomElement()!
+        let apiObj = b.findOrGenerateType(target.group)
+        let functionSig = b.methodSignature(of: target.method, on: target.group)
+        let apiCall = b.callMethod(target.method, on: apiObj, withArgs: b.findOrGenerateArguments(forSignature: functionSig), guard: true)
+        b.doReturn(apiCall)
+    }
+
+    let args = b.randomVariables(n: Int.random(in: 0...5))
+    b.callFunction(f, withArgs: args)
+
+    b.eval("%PrepareFunctionForOptimization(%@)", with: [f]);
+
+    b.callFunction(f, withArgs: args)
+    b.callFunction(f, withArgs: args)
+
+    b.eval("%OptimizeFunctionOnNextCall(%@)", with: [f]);
+
+    b.callFunction(f, withArgs: args)
+
+    b.build(n: 10)
 }
 
 let v8Profile = Profile(
@@ -696,6 +729,7 @@ let v8Profile = Profile(
         (ValueSerializerFuzzer,  1),
         (RegExpFuzzer,           1),
         (WasmFastCallFuzzer,     1),
+        (FastApiCallFuzzer,      1),
     ]),
 
     disabledCodeGenerators: [],
