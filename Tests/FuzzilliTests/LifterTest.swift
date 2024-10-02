@@ -1626,6 +1626,28 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testMethodBindLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let Math = b.createNamedVariable(forBuiltin: "Math")
+        let r = b.callMethod("random", on: Math)
+        let bound = b.bindMethod("sin", on: Math)
+        b.callFunction(bound, withArgs: [Math, r])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v1 = Math.random();
+        let v2 = Function.prototype.call.bind(Math.sin);
+        v2(Math, v1);
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testMethodCallWithSpreadLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

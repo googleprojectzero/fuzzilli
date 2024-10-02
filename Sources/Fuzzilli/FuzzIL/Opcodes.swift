@@ -215,6 +215,7 @@ enum Opcode {
     case createWasmTag(CreateWasmTag)
     case wrapPromising(WrapPromising)
     case wrapSuspending(WrapSuspending)
+    case bindMethod(BindMethod)
 
     // Wasm opcodes
     case consti64(Consti64)

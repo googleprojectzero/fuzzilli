@@ -832,6 +832,10 @@ message WrapSuspending {
 message WrapPromising {
 }
 
+message BindMethod {
+    string methodName = 1;
+}
+
 // Wasm Operations
 
 message Consti64 {

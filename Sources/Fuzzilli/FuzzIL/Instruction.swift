@@ -1006,6 +1006,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wrapPromising = Fuzzilli_Protobuf_WrapPromising()
             case .wrapSuspending(_):
                 $0.wrapSuspending = Fuzzilli_Protobuf_WrapSuspending()
+            case .bindMethod(let op):
+                $0.bindMethod = Fuzzilli_Protobuf_BindMethod.with { $0.methodName = op.methodName }
             case .print(_):
                 fatalError("Print operations should not be serialized")
             // Wasm Operations
@@ -1834,6 +1836,8 @@ extension Instruction: ProtobufConvertible {
             op = WrapPromising()
         case .wrapSuspending(_):
             op = WrapSuspending()
+        case .bindMethod(let p):
+            op = BindMethod(methodName: p.methodName)
         case .print(_):
             fatalError("Should not deserialize a Print instruction!")
 

@@ -785,10 +785,13 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- CreateWasmTag \(op.parameters)")
 
         case .wrapPromising(_):
-            w.emit("\(output()) <- wrapPromising \(input(0))")
+            w.emit("\(output()) <- WrapPromising \(input(0))")
 
         case .wrapSuspending(_):
-            w.emit("\(output()) <- wrapSuspending \(input(0))")
+            w.emit("\(output()) <- WrapSuspending \(input(0))")
+
+        case .bindMethod(_):
+            w.emit("\(output()) <- BindMethod \(input(0))")
 
         // Wasm Instructions
 
