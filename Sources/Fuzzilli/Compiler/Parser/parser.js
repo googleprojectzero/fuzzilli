@@ -73,9 +73,27 @@ function parse(script, proto) {
     }
 
     function visitParameter(param) {
-        assert(param.type == 'Identifier');
-        return make('Parameter', { name: param.name });
-    }
+        assert(param.type == 'Identifier' || param.type == 'ObjectPattern' || param.type == 'ArrayPattern');
+        if (param.type === 'Identifier') {
+            return make('IdentifierParameter', { identifierParameter: { name: param.name } });
+        } else if (param.type === 'ObjectPattern') {
+            const parameters = param.properties.map(property => {
+                assert(property.type === 'ObjectProperty');
+                assert(property.computed === false);
+                assert(property.extra && property.extra.shorthand === true);
+                assert(property.method === false);
+                assert(property.key.type === 'Identifier');
+                return { name: property.key.name };
+            });
+            return make('ObjectParameter', { objectParameter: { parameters } });
+        } else if (param.type === 'ArrayPattern') {
+            const elements = param.elements.map(element => {
+                assert(element.type === 'Identifier');
+                return { name: element.name };
+            });
+            return make('ArrayParameter', { arrayParameter: { elements } });
+        }
+    }    
 
     function visitVariableDeclaration(node) {
         let kind;

@@ -1356,11 +1356,31 @@ public class JavaScriptLifter: Lifter {
     private func liftParameters(_ parameters: Parameters, as variables: [String]) -> String {
         assert(parameters.count == variables.count)
         var paramList = [String]()
-        for v in variables {
-            if parameters.hasRestParameter && v == variables.last {
-                paramList.append("..." + v)
-            } else {
+        var objectPropertyIndex = 0
+        for (index, v) in variables.enumerated() {
+            let type = parameters.parameterTypes[index]
+            switch type {
+            case .identifier, .standaloneObject, .standaloneArray:
                 paramList.append(v)
+            case .objectStart:
+                let propertyNames = parameters.objectPropertyNames[objectPropertyIndex]
+                let firstProperty = propertyNames.first!
+                paramList.append("{ \(firstProperty): \(v)")
+            case .objectMiddle:
+                let propertyNames = parameters.objectPropertyNames[objectPropertyIndex]
+                let middleProperty = propertyNames[index % propertyNames.count]
+                paramList.append("\(middleProperty): \(v)")
+            case .objectEnd:
+                let propertyNames = parameters.objectPropertyNames[objectPropertyIndex]
+                let lastProperty = propertyNames.last!
+                paramList.append("\(lastProperty): \(v) }")
+                objectPropertyIndex += 1
+            case .arrayStart:
+                paramList.append("[\(v)")
+            case .arrayMiddle:
+                paramList.append("\(v)")
+            case .arrayEnd:
+                paramList.append("\(v)]")
             }
         }
         return paramList.joined(separator: ", ")
