@@ -607,8 +607,7 @@ class WasmFoundationTests: XCTestCase {
                     XCTAssert(b.type(of: label).Is(.label))
                     function.wasmReturn(function.consti64(42))
                 } catchAllBody: {}
-                // Unreachable.
-                function.wasmReturn(function.consti64(-1))
+                function.wasmUnreachable()
             }
         }
 
@@ -643,12 +642,11 @@ class WasmFoundationTests: XCTestCase {
                     // Manually set the availableTypes here for testing.
                     let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
                     function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
-                    // Unreachable.
-                    function.wasmReturn(function.consti64(-1))
+                    function.wasmUnreachable()
                 } catchAllBody: {
                     function.wasmReturn(function.consti64(123))
                 }
-                function.wasmReturn(function.consti64(-1))
+                function.wasmUnreachable()
             }
         }
 
@@ -659,6 +657,36 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "123\n")
+    }
+
+    func testUnreachable() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                function.wasmUnreachable()
+            }
+        }
+
+        let exports = module.loadExports()
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        b.buildTryCatchFinally {
+            b.callMethod(module.getExportedMethod(at: 0), on: exports)
+            b.callFunction(outputFunc, withArgs: [b.loadString("Not reached")])
+        } catchBody: { e in
+            b.callFunction(outputFunc, withArgs: [b.loadString("Caught wasm trap")])
+        }
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "Caught wasm trap\n")
     }
 }
 

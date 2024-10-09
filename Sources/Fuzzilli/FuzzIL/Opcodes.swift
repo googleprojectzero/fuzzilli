@@ -304,4 +304,6 @@ enum Opcode {
     case wasmI64x2Splat(WasmI64x2Splat)
     case wasmI64x2ExtractLane(WasmI64x2ExtractLane)
     case wasmI64x2LoadSplat(WasmI64x2LoadSplat)
+
+    case wasmUnreachable(WasmUnreachable)
 }
