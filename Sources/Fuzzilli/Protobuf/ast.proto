@@ -24,7 +24,7 @@ message Parameter {
     oneof parameter {
         IdentifierParameter identifierParameter = 1;
         ObjectParameter objectParameter = 2;
-        ArrayParameter arrayParameter = 3; // Added ArrayParameter
+        ArrayParameter arrayParameter = 3;
     }
 }
 

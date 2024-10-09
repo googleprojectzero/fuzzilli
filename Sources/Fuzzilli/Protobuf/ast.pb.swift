@@ -150,7 +150,6 @@ public struct Compiler_Protobuf_Parameter: Sendable {
     set {parameter = .objectParameter(newValue)}
   }
 
-  /// Added ArrayParameter
   public var arrayParameter: Compiler_Protobuf_ArrayParameter {
     get {
       if case .arrayParameter(let v)? = parameter {return v}
@@ -164,7 +163,6 @@ public struct Compiler_Protobuf_Parameter: Sendable {
   public enum OneOf_Parameter: Equatable, Sendable {
     case identifierParameter(Compiler_Protobuf_IdentifierParameter)
     case objectParameter(Compiler_Protobuf_ObjectParameter)
-    /// Added ArrayParameter
     case arrayParameter(Compiler_Protobuf_ArrayParameter)
 
   }
