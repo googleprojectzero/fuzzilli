@@ -294,6 +294,7 @@ message Instruction {
         WasmI64x2Splat wasmI64x2Splat = 268;
         WasmI64x2ExtractLane wasmI64x2ExtractLane = 269;
         WasmI64x2LoadSplat wasmI64x2LoadSplat = 270;
+        WasmUnreachable wasmUnreachable = 271;
     }
 }
 

@@ -1420,9 +1420,7 @@ class MinimizerTests: XCTestCase {
                         function.wasmReturn(function.consti64(-1))
                     }
                     evaluator.nextInstructionIsImportant(in: b)
-                    let val = function.consti64(-1)
-                    evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmReturn(val)
+                    function.wasmUnreachable()
                 }
             }
 
@@ -1440,7 +1438,7 @@ class MinimizerTests: XCTestCase {
                     function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
                         function.wasmReturn(function.consti64(42))
                     }
-                    function.wasmReturn(function.consti64(-1))
+                    function.wasmUnreachable()
                 }
             }
 

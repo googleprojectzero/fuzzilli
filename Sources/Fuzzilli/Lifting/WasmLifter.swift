@@ -1246,8 +1246,9 @@ public class WasmLifter {
 
             return out + storeInstruction
         case .wasmNop(_):
-            // This should return something...?
-            return Data()
+            return Data([0x01])
+        case .wasmUnreachable(_):
+            return Data([0x00])
         case .constSimd128(let op):
             return Data([0xFD]) + Leb128.unsignedEncode(12) + Data(op.value)
         case .wasmSimd128IntegerUnOp(let op):

@@ -1042,6 +1042,9 @@ public class FuzzILLifter: Lifter {
         case .wasmNop:
             w.emit("WasmNop")
 
+        case .wasmUnreachable:
+            w.emit("WasmUnreachable")
+
         case .constSimd128(let op):
             w.emit("\(output()) <- ConstSimd128 \(op.value)")
 

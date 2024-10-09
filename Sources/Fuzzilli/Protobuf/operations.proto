@@ -1137,6 +1137,9 @@ message WasmEndIf {
 message WasmNop {
 }
 
+message WasmUnreachable {
+}
+
 message ConstSimd128 {
     repeated uint32 value = 1;
 }

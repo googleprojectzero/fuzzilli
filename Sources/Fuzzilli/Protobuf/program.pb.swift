@@ -2201,6 +2201,14 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmI64X2LoadSplat(newValue)}
   }
 
+  public var wasmUnreachable: Fuzzilli_Protobuf_WasmUnreachable {
+    get {
+      if case .wasmUnreachable(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmUnreachable()
+    }
+    set {operation = .wasmUnreachable(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable, Sendable {
@@ -2473,6 +2481,7 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmI64X2Splat(Fuzzilli_Protobuf_WasmI64x2Splat)
     case wasmI64X2ExtractLane(Fuzzilli_Protobuf_WasmI64x2ExtractLane)
     case wasmI64X2LoadSplat(Fuzzilli_Protobuf_WasmI64x2LoadSplat)
+    case wasmUnreachable(Fuzzilli_Protobuf_WasmUnreachable)
 
   }
 
@@ -2792,6 +2801,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     268: .same(proto: "wasmI64x2Splat"),
     269: .same(proto: "wasmI64x2ExtractLane"),
     270: .same(proto: "wasmI64x2LoadSplat"),
+    271: .same(proto: "wasmUnreachable"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6293,6 +6303,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmI64X2LoadSplat(v)
         }
       }()
+      case 271: try {
+        var v: Fuzzilli_Protobuf_WasmUnreachable?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmUnreachable(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmUnreachable(v)
+        }
+      }()
       default: break
       }
     }
@@ -7382,6 +7405,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .wasmI64X2LoadSplat?: try {
       guard case .wasmI64X2LoadSplat(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 270)
+    }()
+    case .wasmUnreachable?: try {
+      guard case .wasmUnreachable(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 271)
     }()
     case nil: break
     }

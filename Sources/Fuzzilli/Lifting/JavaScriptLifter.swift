@@ -1514,6 +1514,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmBeginElse(_),
                  .wasmEndIf(_),
                  .wasmNop(_),
+                 .wasmUnreachable(_),
                  .constSimd128(_),
                  .wasmSimd128IntegerUnOp(_),
                  .wasmSimd128IntegerBinOp(_),

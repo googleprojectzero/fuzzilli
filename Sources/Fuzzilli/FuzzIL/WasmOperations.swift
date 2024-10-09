@@ -1130,6 +1130,13 @@ final class WasmNop: WasmOperation {
     }
 }
 
+final class WasmUnreachable: WasmOperation {
+    override var opcode: Opcode { .wasmUnreachable(self) }
+    init() {
+        super.init(outputType: .nothing, attributes: [], requiredContext: [.wasmFunction])
+    }
+}
+
 final class ConstSimd128: WasmOperation {
     override var opcode: Opcode { .constSimd128(self) }
     let value: [UInt8]

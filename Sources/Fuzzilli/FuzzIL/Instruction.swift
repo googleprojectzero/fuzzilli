@@ -1207,6 +1207,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmEndIf = Fuzzilli_Protobuf_WasmEndIf()
             case .wasmNop(_):
                 fatalError("Should never be serialized")
+            case .wasmUnreachable(_):
+                $0.wasmUnreachable = Fuzzilli_Protobuf_WasmUnreachable()
             case .constSimd128(let op):
                 $0.constSimd128 = Fuzzilli_Protobuf_ConstSimd128.with { $0.value = op.value.map{ UInt32($0) } }
             case .wasmSimd128IntegerUnOp(let op):
@@ -1938,6 +1940,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmEndIf()
         case .wasmNop(_):
             fatalError("Should never be deserialized!")
+        case .wasmUnreachable(_):
+            op = WasmUnreachable()
         case .constSimd128(let p):
             op = ConstSimd128(value: p.value.map{ UInt8($0) })
         case .wasmSimd128IntegerUnOp(let p):

@@ -3064,6 +3064,10 @@ public class ProgramBuilder {
             }
         }
 
+        public func wasmUnreachable() {
+            b.emit(WasmUnreachable())
+        }
+
         public func wasmReturn(_ returnVariable: Variable) {
             let returnType = b.type(of: returnVariable)
             b.emit(WasmReturn(returnType: returnType), withInputs: [returnVariable])
