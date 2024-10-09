@@ -468,7 +468,14 @@ public class JavaScriptCompiler {
                 try enterNewScope {
                     let beginCatch = emit(BeginCatch())
                     if tryStatement.catch.hasParameter {
-                        map(tryStatement.catch.parameter.name, to: beginCatch.innerOutput)
+                        let parameter = tryStatement.catch.parameter
+                        switch parameter.parameter {
+                            case .identifierParameter(let identifier):
+                                map(identifier.name, to: beginCatch.innerOutput)
+
+                            default:
+                                throw CompilerError.unsupportedFeatureError("Unsupported parameter type")
+                        }
                     }
                     for statement in tryStatement.catch.body {
                         try compileStatement(statement)
@@ -1071,14 +1078,69 @@ public class JavaScriptCompiler {
     }
 
     private func mapParameters(_ parameters: [Compiler_Protobuf_Parameter], to variables: ArraySlice<Variable>) {
-        assert(parameters.count == variables.count)
-        for (param, v) in zip(parameters, variables) {
-            map(param.name, to: v)
+        var flatParameters: [String] = [] 
+        var expectedVariableCount = 0
+        for param in parameters {
+            switch param.parameter {
+            case .identifierParameter(let identifier):
+                flatParameters.append(identifier.name)
+                expectedVariableCount += 1
+            case .objectParameter(let object):
+                for subParam in object.parameters {
+                    flatParameters.append(subParam.name)
+                    expectedVariableCount += 1
+                }
+            case .arrayParameter(let array):
+                for element in array.elements {
+                    flatParameters.append(element.name)
+                    expectedVariableCount += 1
+                }
+            default:
+                break
+            }
+        }
+        assert(expectedVariableCount == variables.count, "The number of variables does not match the number of parameters.")
+        for (name, v) in zip(flatParameters, variables) {
+            map(name, to: v)
         }
     }
 
     private func convertParameters(_ parameters: [Compiler_Protobuf_Parameter]) -> Parameters {
-        return Parameters(count: parameters.count)
+        var totalParameterCount = 0
+        var parameterTypes = [Parameters.ParameterType]()
+        var objectPropertyNames = [[String]]()
+        
+        for param in parameters {
+            switch param.parameter {
+            case .identifierParameter(_):
+                totalParameterCount += 1
+                parameterTypes.append(.identifier)
+            case .objectParameter(let object):
+                let objectCount = object.parameters.count
+                totalParameterCount += objectCount
+                if (objectCount == 1) {
+                    parameterTypes.append(.standaloneObject)
+                } else {
+                    parameterTypes.append(.objectStart)
+                    parameterTypes.append(contentsOf: Array(repeating: .objectMiddle, count: max(0, objectCount - 2)))
+                    parameterTypes.append(.objectEnd)
+                }
+                objectPropertyNames.append(object.parameters.map { $0.name })
+            case .arrayParameter(let array):
+                let arrayCount = array.elements.count
+                totalParameterCount += arrayCount
+                if arrayCount == 1 {
+                    parameterTypes.append(.standaloneArray)
+                } else {
+                    parameterTypes.append(.arrayStart)
+                    parameterTypes.append(contentsOf: Array(repeating: .arrayMiddle, count: max(0, arrayCount - 2)))
+                    parameterTypes.append(.arrayEnd)
+                }
+            default:
+                break
+            }
+        }
+        return Parameters(count: totalParameterCount, parameterTypes: parameterTypes, objectPropertyNames: objectPropertyNames)
     }
 
     /// Convenience accessor for the currently active scope.

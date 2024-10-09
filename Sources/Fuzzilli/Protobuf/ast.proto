@@ -21,7 +21,23 @@ message AST {
 
 // A parameter in a function declaration. Not an expression on its own.
 message Parameter {
+    oneof parameter {
+        IdentifierParameter identifierParameter = 1;
+        ObjectParameter objectParameter = 2;
+        ArrayParameter arrayParameter = 3; // Added ArrayParameter
+    }
+}
+
+message IdentifierParameter {
     string name = 1;
+}
+
+message ObjectParameter {
+    repeated IdentifierParameter parameters = 1;
+}
+
+message ArrayParameter {
+    repeated IdentifierParameter elements = 1;
 }
 
 message EmptyStatement {

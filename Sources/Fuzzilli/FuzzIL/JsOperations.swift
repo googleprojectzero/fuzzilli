@@ -1059,9 +1059,25 @@ public struct Parameters {
         return Int(numParameters)
     }
 
-    init(count: Int, hasRestParameter: Bool = false) {
+    enum ParameterType {
+        case identifier
+        case objectStart
+        case objectEnd
+        case objectMiddle
+        case standaloneObject
+        case arrayStart
+        case arrayEnd
+        case arrayMiddle
+        case standaloneArray
+    }
+    
+    var parameterTypes: [ParameterType]
+    var objectPropertyNames: [[String]]
+    init(count: Int, hasRestParameter: Bool = false, parameterTypes: [ParameterType] = [], objectPropertyNames: [[String]] = []) {
         self.numParameters = UInt32(count)
         self.hasRestParameter = hasRestParameter
+        self.parameterTypes = parameterTypes
+        self.objectPropertyNames = objectPropertyNames
     }
 }
 
