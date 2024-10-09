@@ -1218,7 +1218,17 @@ final class WasmSimd128IntegerUnOp: WasmOperation {
         assert(unOpKind.isValidForShape(shape: shape))
         self.shape = shape
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+
+        var outputType: ILType = .wasmSimd128
+        switch unOpKind {
+        case .all_true, .bitmask:
+            // Tests and bitmasks produce a boolean i32 result
+            outputType = .wasmi32
+        default:
+            break
+        }
+
+        super.init(inputTypes: [.wasmSimd128], outputType: outputType, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1290,8 +1300,16 @@ final class WasmSimd128IntegerBinOp: WasmOperation {
     init(shape: WasmSimd128Shape, binOpKind: WasmSimd128IntegerBinOpKind) {
         assert(binOpKind.isValidForShape(shape: shape))
         self.shape = shape
+        // Shifts take an i32 as an rhs input, the others take a regular .wasmSimd128 input.
+        let rhsInputType: ILType = switch binOpKind {
+        case .shl, .shr_s, .shr_u:
+            .wasmi32
+        default:
+            .wasmSimd128
+        }
+
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmSimd128, rhsInputType], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 
