@@ -259,6 +259,16 @@ public class ProgramBuilder {
         }
     }
 
+    /// Returns a random non-negative integer value suitable as index.
+    public func randomNonNegativeIndex() -> Int64 {
+        // Prefer small indices.
+        if probability(0.33) {
+            return Int64.random(in: 0...10)
+        } else {
+            return randomSize()
+        }
+    }
+
     /// Returns a random integer value suitable as index.
     public func randomIndex() -> Int64 {
         // Prefer small, (usually) positive, indices.
@@ -2978,15 +2988,13 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmMemoryLoad(memoryRef: Variable, type: ILType, base: Variable, offset: Int) -> Variable {
-            assert(b.type(of: base) == .wasmi32)
-            return b.emit(WasmMemoryLoad(loadType: type, offset: offset), withInputs: [memoryRef, base]).output
+        public func wasmMemoryLoad(memory: Variable, dynamicOffset: Variable, loadType: WasmMemoryLoadType, staticOffset: Int64) -> Variable {
+            return b.emit(WasmMemoryLoad(loadType: loadType, staticOffset: staticOffset), withInputs: [memory, dynamicOffset]).output
         }
 
-        public func wasmMemoryStore(memoryRef: Variable, base: Variable, offset: Int, value: Variable) {
-            assert(b.type(of: base) == .wasmi32)
-            let type = b.type(of: value)
-            b.emit(WasmMemoryStore(storeType: type, offset: offset), withInputs: [memoryRef, base, value])
+        public func wasmMemoryStore(memory: Variable, dynamicOffset: Variable, value: Variable, storeType: WasmMemoryStoreType, staticOffset: Int64) {
+            assert(b.type(of: value) == storeType.numberType())
+            b.emit(WasmMemoryStore(storeType: storeType, staticOffset: staticOffset), withInputs: [memory, dynamicOffset, value])
         }
 
         public func wasmReassign(variable: Variable, to: Variable) {

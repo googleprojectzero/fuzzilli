@@ -65,6 +65,8 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    // Memory Generators
+
     // TODO(evih): Implement shared memories and memory64.
     CodeGenerator("WasmDefineMemoryGenerator", inContext: .wasm) { b in
         let module = b.currentWasmModule
@@ -76,6 +78,61 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let minPages = Int.random(in: 1..<10)
         let maxPages = probability(0.5) ? nil : Int.random(in: minPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
         module.memory = module.addMemory(minPages: minPages, maxPages: maxPages, isShared: false, isMemory64: false)
+    },
+
+    CodeGenerator("WasmMemoryLoadGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
+        let memSize = Int64(b.type(of: memory).wasmMemoryType!.limits.min * WasmOperation.WasmConstants.specWasmMemPageSize)
+        if (memSize == 0) {
+            return
+        }
+        let function = b.currentWasmModule.currentWasmFunction
+
+        let loadType = chooseUniform(from: WasmMemoryLoadType.allCases)
+
+        // Most of the times, generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.
+        // With 10% probability, choose one randomly from the already existing ones.
+        var staticOffset = b.randomNonNegativeIndex()
+        var dynamicOffset: Variable
+        if let randVar = b.randomVariable(ofType: .wasmi32), probability(0.1) {
+            dynamicOffset = randVar
+        } else {
+            let dynamicOffsetValue = b.randomNonNegativeIndex() % memSize
+            dynamicOffset = function.consti32(Int32(dynamicOffsetValue))
+            staticOffset %= (memSize - dynamicOffsetValue)
+        }
+
+        function.wasmMemoryLoad(memory: memory, dynamicOffset: dynamicOffset, loadType: loadType, staticOffset: staticOffset)
+    },
+
+    CodeGenerator("WasmMemoryStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
+        let memSize = Int64(b.type(of: memory).wasmMemoryType!.limits.min * WasmOperation.WasmConstants.specWasmMemPageSize)
+        if (memSize == 0) {
+            return
+        }
+        let function = b.currentWasmModule.currentWasmFunction
+
+        // Most of the times, generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.
+        // With 10% probability, choose one randomly from the already existing ones.
+        var staticOffset = b.randomNonNegativeIndex()
+        var dynamicOffset: Variable
+        if let randVar = b.randomVariable(ofType: .wasmi32), probability(0.1) {
+            dynamicOffset = randVar
+        } else {
+            let dynamicOffsetValue = b.randomNonNegativeIndex() % memSize
+            dynamicOffset = function.consti32(Int32(dynamicOffsetValue))
+            staticOffset %= (memSize - dynamicOffsetValue)
+        }
+
+        // Choose a `WasmMemoryStoreType` for which there is an existing Variable with a matching number type.
+        // Shuffle them so we don't have a bias in the ordering.
+        let storeTypes = WasmMemoryStoreType.allCases.shuffled()
+        for storeType in storeTypes {
+            if let storeVar = b.randomVariable(ofType: storeType.numberType()) {
+                function.wasmMemoryStore(memory: memory, dynamicOffset: dynamicOffset, value: storeVar, storeType: storeType, staticOffset: staticOffset)
+                return
+            }
+        }
+
     },
 
     // Global Generators

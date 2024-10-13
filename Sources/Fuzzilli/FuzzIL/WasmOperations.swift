@@ -29,8 +29,9 @@ public class WasmOperation: Operation {
     }
 
     struct WasmConstants {
-       // This constant limits the amount of *declared* memory. At runtime, memory can grow up to only a limit based on the architecture type.
-       static let specMaxWasmMem32Pages: Int = 65536 // 4GB
+        static let specWasmMemPageSize: Int = 65536 // 4GB
+        // This constant limits the amount of *declared* memory. At runtime, memory can grow up to only a limit based on the architecture type.
+        static let specMaxWasmMem32Pages: Int = 65536 // 4GB
    }
 
 }
@@ -855,30 +856,115 @@ final class WasmTableSet: WasmOperation {
     }
 }
 
+// WasmMemory operations
+//
+// The format of memory instructions is
+// (numberType).(LOAD|STORE)(storageSize)?(signedness)? (memarg) where:
+//   - The numberType is i32, i64, f32 or f64;
+//   - The storageSize can be optionally specified for integers to specify a bit width smaller than the respective integer numberType;
+//   - The signedness is required in case of LOADs and if the storageSize is specified;
+//   - The memarg is the memory immediate, consisting of {offset, align}. We refer to this offset as the staticOffset. For the align, we use 0 as default.
+// The instructions expect a memory offset (index into the memory) on the stack, we refer to this as the dynamicOffset. STORE expects also a numberType value on the stack.
+// As the result of the instruction, LOAD pushes a numberType value on the stack.
+// TODO(evih): Support variable alignments in the memarg.
+
+// Types of Wasm memory load instructions with the corresponding encoding as the raw value.
+public enum WasmMemoryLoadType: UInt8, CaseIterable {
+    case I32LoadMem = 0x28
+    case I64LoadMem = 0x29
+    case F32LoadMem = 0x2a
+    case F64LoadMem = 0x2b
+    case I32LoadMem8S = 0x2c
+    case I32LoadMem8U = 0x2d
+    case I32LoadMem16S = 0x2e
+    case I32LoadMem16U = 0x2f
+    case I64LoadMem8S = 0x30
+    case I64LoadMem8U = 0x31
+    case I64LoadMem16S = 0x32
+    case I64LoadMem16U = 0x33
+    case I64LoadMem32S = 0x34
+    case I64LoadMem32U = 0x35
+
+    func numberType() -> ILType {
+        switch self {
+            case .I32LoadMem,
+                 .I32LoadMem8S,
+                 .I32LoadMem8U,
+                 .I32LoadMem16S,
+                 .I32LoadMem16U:
+                return .wasmi32
+            case .I64LoadMem,
+                 .I64LoadMem8S,
+                 .I64LoadMem8U,
+                 .I64LoadMem16S,
+                 .I64LoadMem16U,
+                 .I64LoadMem32S,
+                 .I64LoadMem32U:
+                return .wasmi64
+            case .F32LoadMem:
+                return .wasmf32
+            case .F64LoadMem:
+                return .wasmf64
+        }
+    }
+}
+
 final class WasmMemoryLoad: WasmOperation {
     override var opcode: Opcode { .wasmMemoryLoad(self) }
 
-    let loadType: ILType
-    let offset: Int
+    let loadType: WasmMemoryLoadType
+    let staticOffset: Int64
 
-    init(loadType: ILType, offset: Int) {
+    init(loadType: WasmMemoryLoadType, staticOffset: Int64) {
         self.loadType = loadType
-        self.offset = offset
-        // Technically, Wasm currently does not require this variable, as we always pick the memory at "index 0" but we want it for proper dataflow in our IL.
-        super.init(inputTypes: [.object(), .wasmi32], outputType: loadType, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        self.staticOffset = staticOffset
+        let dynamicOffsetType = ILType.wasmi32
+        super.init(inputTypes: [.object(ofGroup: "WasmMemory"), dynamicOffsetType], outputType: loadType.numberType(), attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+// Types of Wasm memory store instructions with the corresponding encoding as the raw value.
+public enum WasmMemoryStoreType: UInt8, CaseIterable {
+    case I32StoreMem = 0x36
+    case I64StoreMem = 0x37
+    case F32StoreMem = 0x38
+    case F64StoreMem = 0x39
+    case I32StoreMem8 = 0x3a
+    case I32StoreMem16 = 0x3b
+    case I64StoreMem8 = 0x3c
+    case I64StoreMem16 = 0x3d
+    case I64StoreMem32 = 0x3e
+
+    func numberType() -> ILType {
+        switch self {
+            case .I32StoreMem,
+                 .I32StoreMem8,
+                 .I32StoreMem16:
+                return .wasmi32
+            case .I64StoreMem,
+                 .I64StoreMem8,
+                 .I64StoreMem16,
+                 .I64StoreMem32:
+                return .wasmi64
+            case .F32StoreMem:
+                return .wasmf32
+            case .F64StoreMem:
+                return .wasmf64
+        }
     }
 }
 
 final class WasmMemoryStore: WasmOperation {
     override var opcode: Opcode { .wasmMemoryStore(self) }
 
-    let storeType: ILType
-    let offset: Int
+    let storeType: WasmMemoryStoreType
+    let staticOffset: Int64
 
-    init(storeType: ILType, offset: Int) {
+    init(storeType: WasmMemoryStoreType, staticOffset: Int64) {
         self.storeType = storeType
-        self.offset = offset
-        super.init(inputTypes: [.object(), .wasmi32, storeType], attributes: [.isMutable], requiredContext: [.wasmFunction])
+        self.staticOffset = staticOffset
+        let dynamicOffsetType = ILType.wasmi32
+        super.init(inputTypes: [.object(ofGroup: "WasmMemory"), dynamicOffsetType, storeType.numberType()], attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
