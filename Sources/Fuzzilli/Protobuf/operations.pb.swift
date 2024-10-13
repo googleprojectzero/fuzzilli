@@ -615,6 +615,150 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
 
 }
 
+public enum Fuzzilli_Protobuf_WasmMemoryLoadType: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case i32Loadmem // = 0
+  case i64Loadmem // = 1
+  case f32Loadmem // = 2
+  case f64Loadmem // = 3
+  case i32Loadmem8S // = 4
+  case i32Loadmem8U // = 5
+  case i32Loadmem16S // = 6
+  case i32Loadmem16U // = 7
+  case i64Loadmem8S // = 8
+  case i64Loadmem8U // = 9
+  case i64Loadmem16S // = 10
+  case i64Loadmem16U // = 11
+  case i64Loadmem32S // = 12
+  case i64Loadmem32U // = 13
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .i32Loadmem
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .i32Loadmem
+    case 1: self = .i64Loadmem
+    case 2: self = .f32Loadmem
+    case 3: self = .f64Loadmem
+    case 4: self = .i32Loadmem8S
+    case 5: self = .i32Loadmem8U
+    case 6: self = .i32Loadmem16S
+    case 7: self = .i32Loadmem16U
+    case 8: self = .i64Loadmem8S
+    case 9: self = .i64Loadmem8U
+    case 10: self = .i64Loadmem16S
+    case 11: self = .i64Loadmem16U
+    case 12: self = .i64Loadmem32S
+    case 13: self = .i64Loadmem32U
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .i32Loadmem: return 0
+    case .i64Loadmem: return 1
+    case .f32Loadmem: return 2
+    case .f64Loadmem: return 3
+    case .i32Loadmem8S: return 4
+    case .i32Loadmem8U: return 5
+    case .i32Loadmem16S: return 6
+    case .i32Loadmem16U: return 7
+    case .i64Loadmem8S: return 8
+    case .i64Loadmem8U: return 9
+    case .i64Loadmem16S: return 10
+    case .i64Loadmem16U: return 11
+    case .i64Loadmem32S: return 12
+    case .i64Loadmem32U: return 13
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmMemoryLoadType] = [
+    .i32Loadmem,
+    .i64Loadmem,
+    .f32Loadmem,
+    .f64Loadmem,
+    .i32Loadmem8S,
+    .i32Loadmem8U,
+    .i32Loadmem16S,
+    .i32Loadmem16U,
+    .i64Loadmem8S,
+    .i64Loadmem8U,
+    .i64Loadmem16S,
+    .i64Loadmem16U,
+    .i64Loadmem32S,
+    .i64Loadmem32U,
+  ]
+
+}
+
+public enum Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case i32Storemem // = 0
+  case i64Storemem // = 1
+  case f32Storemem // = 2
+  case f64Storemem // = 3
+  case i32Storemem8 // = 4
+  case i32Storemem16 // = 5
+  case i64Storemem8 // = 6
+  case i64Storemem16 // = 7
+  case i64Storemem32 // = 8
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .i32Storemem
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .i32Storemem
+    case 1: self = .i64Storemem
+    case 2: self = .f32Storemem
+    case 3: self = .f64Storemem
+    case 4: self = .i32Storemem8
+    case 5: self = .i32Storemem16
+    case 6: self = .i64Storemem8
+    case 7: self = .i64Storemem16
+    case 8: self = .i64Storemem32
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .i32Storemem: return 0
+    case .i64Storemem: return 1
+    case .f32Storemem: return 2
+    case .f64Storemem: return 3
+    case .i32Storemem8: return 4
+    case .i32Storemem16: return 5
+    case .i64Storemem8: return 6
+    case .i64Storemem16: return 7
+    case .i64Storemem32: return 8
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmMemoryStoreType] = [
+    .i32Storemem,
+    .i64Storemem,
+    .f32Storemem,
+    .f64Storemem,
+    .i32Storemem8,
+    .i32Storemem16,
+    .i64Storemem8,
+    .i64Storemem16,
+    .i64Storemem32,
+  ]
+
+}
+
 /// Parameters used by function definitions, not an operation by itself.
 public struct Fuzzilli_Protobuf_Parameters: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -3706,28 +3850,28 @@ public struct Fuzzilli_Protobuf_WasmTableSet: Sendable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_WasmMemoryStore: Sendable {
+public struct Fuzzilli_Protobuf_WasmMemoryLoad: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var storeType: Fuzzilli_Protobuf_WasmILType = .consti32
+  public var loadType: Fuzzilli_Protobuf_WasmMemoryLoadType = .i32Loadmem
 
-  public var offset: Int64 = 0
+  public var staticOffset: Int64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_WasmMemoryLoad: Sendable {
+public struct Fuzzilli_Protobuf_WasmMemoryStore: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var loadType: Fuzzilli_Protobuf_WasmILType = .consti32
+  public var storeType: Fuzzilli_Protobuf_WasmMemoryStoreType = .i32Storemem
 
-  public var offset: Int64 = 0
+  public var staticOffset: Int64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -4202,6 +4346,39 @@ extension Fuzzilli_Protobuf_WasmILType: SwiftProtobuf._ProtoNameProviding {
     7: .same(proto: "FUNCREFTABLE"),
     8: .same(proto: "SIMD128"),
     9: .same(proto: "NOTHING"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmMemoryLoadType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "I32_LOADMEM"),
+    1: .same(proto: "I64_LOADMEM"),
+    2: .same(proto: "F32_LOADMEM"),
+    3: .same(proto: "F64_LOADMEM"),
+    4: .same(proto: "I32_LOADMEM_8S"),
+    5: .same(proto: "I32_LOADMEM_8U"),
+    6: .same(proto: "I32_LOADMEM_16S"),
+    7: .same(proto: "I32_LOADMEM_16U"),
+    8: .same(proto: "I64_LOADMEM_8S"),
+    9: .same(proto: "I64_LOADMEM_8U"),
+    10: .same(proto: "I64_LOADMEM_16S"),
+    11: .same(proto: "I64_LOADMEM_16U"),
+    12: .same(proto: "I64_LOADMEM_32S"),
+    13: .same(proto: "I64_LOADMEM_32U"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "I32_STOREMEM"),
+    1: .same(proto: "I64_STOREMEM"),
+    2: .same(proto: "F32_STOREMEM"),
+    3: .same(proto: "F64_STOREMEM"),
+    4: .same(proto: "I32_STOREMEM_8"),
+    5: .same(proto: "I32_STOREMEM_16"),
+    6: .same(proto: "I64_STOREMEM_8"),
+    7: .same(proto: "I64_STOREMEM_16"),
+    8: .same(proto: "I64_STOREMEM_32"),
   ]
 }
 
@@ -11151,49 +11328,11 @@ extension Fuzzilli_Protobuf_WasmTableSet: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-extension Fuzzilli_Protobuf_WasmMemoryStore: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".WasmMemoryStore"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "storeType"),
-    2: .same(proto: "offset"),
-  ]
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularEnumField(value: &self.storeType) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.storeType != .consti32 {
-      try visitor.visitSingularEnumField(value: self.storeType, fieldNumber: 1)
-    }
-    if self.offset != 0 {
-      try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_WasmMemoryStore, rhs: Fuzzilli_Protobuf_WasmMemoryStore) -> Bool {
-    if lhs.storeType != rhs.storeType {return false}
-    if lhs.offset != rhs.offset {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 extension Fuzzilli_Protobuf_WasmMemoryLoad: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmMemoryLoad"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "loadType"),
-    2: .same(proto: "offset"),
+    2: .same(proto: "staticOffset"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11203,25 +11342,63 @@ extension Fuzzilli_Protobuf_WasmMemoryLoad: SwiftProtobuf.Message, SwiftProtobuf
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.loadType) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.loadType != .consti32 {
+    if self.loadType != .i32Loadmem {
       try visitor.visitSingularEnumField(value: self.loadType, fieldNumber: 1)
     }
-    if self.offset != 0 {
-      try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
+    if self.staticOffset != 0 {
+      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmMemoryLoad, rhs: Fuzzilli_Protobuf_WasmMemoryLoad) -> Bool {
     if lhs.loadType != rhs.loadType {return false}
-    if lhs.offset != rhs.offset {return false}
+    if lhs.staticOffset != rhs.staticOffset {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmMemoryStore: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmMemoryStore"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "storeType"),
+    2: .same(proto: "staticOffset"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.storeType) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.storeType != .i32Storemem {
+      try visitor.visitSingularEnumField(value: self.storeType, fieldNumber: 1)
+    }
+    if self.staticOffset != 0 {
+      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmMemoryStore, rhs: Fuzzilli_Protobuf_WasmMemoryStore) -> Bool {
+    if lhs.storeType != rhs.storeType {return false}
+    if lhs.staticOffset != rhs.staticOffset {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

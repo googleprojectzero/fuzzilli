@@ -1055,7 +1055,7 @@ message WasmDefineTable {
 }
 
 message WasmDefineMemory {
-  WasmMemory wasmMemory =1;
+  WasmMemory wasmMemory = 1;
 }
 
 
@@ -1075,14 +1075,43 @@ message WasmTableSet {
   WasmILType tableType = 1;
 }
 
-message WasmMemoryStore {
-  WasmILType storeType = 1;
-  int64 offset = 2;
+enum WasmMemoryLoadType {
+  I32_LOADMEM = 0;
+  I64_LOADMEM = 1;
+  F32_LOADMEM = 2;
+  F64_LOADMEM = 3;
+  I32_LOADMEM_8S = 4;
+  I32_LOADMEM_8U = 5;
+  I32_LOADMEM_16S = 6;
+  I32_LOADMEM_16U = 7;
+  I64_LOADMEM_8S = 8;
+  I64_LOADMEM_8U = 9;
+  I64_LOADMEM_16S = 10;
+  I64_LOADMEM_16U = 11;
+  I64_LOADMEM_32S = 12;
+  I64_LOADMEM_32U = 13;
 }
 
 message WasmMemoryLoad {
-  WasmILType loadType = 1;
-  int64 offset = 2;
+  WasmMemoryLoadType loadType = 1;
+  int64 staticOffset = 2;
+}
+
+enum WasmMemoryStoreType {
+  I32_STOREMEM = 0;
+  I64_STOREMEM = 1;
+  F32_STOREMEM = 2;
+  F64_STOREMEM = 3;
+  I32_STOREMEM_8 = 4;
+  I32_STOREMEM_16 = 5;
+  I64_STOREMEM_8 = 6;
+  I64_STOREMEM_16 = 7;
+  I64_STOREMEM_32 = 8;
+}
+
+message WasmMemoryStore {
+  WasmMemoryStoreType storeType = 1;
+  int64 staticOffset = 2;
 }
 
 message WasmBeginBlock {

@@ -1158,24 +1158,11 @@ public class WasmLifter {
             let tableRef = wasmInstruction.input(0)
             return Data([0x26]) + Leb128.unsignedEncode(resolveTableIdx(forInput: tableRef))
         case .wasmMemoryLoad(let op):
-            switch op.loadType {
-            case .wasmi64:
-                return Data([0x29]) + Leb128.unsignedEncode(0) + Leb128.unsignedEncode(op.offset)
-            default:
-                fatalError("WasmMemoryLoad loadType unimplemented")
-            }
+            // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
+            return Data([op.loadType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
         case .wasmMemoryStore(let op):
-            // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#memory-instructions
-            switch op.storeType {
-            case .wasmi64:
-                // The zero is the alignment
-                return Data([0x37]) + Leb128.unsignedEncode(0) + Leb128.unsignedEncode(op.offset)
-            case .wasmi32:
-                // Zero is alignment
-                return Data([0x36]) + Leb128.unsignedEncode(0) + Leb128.unsignedEncode(op.offset)
-            default:
-                fatalError("WasmMemoryStore storeType unimplemented")
-            }
+            // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
+            return Data([op.storeType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
         case .wasmJsCall(let op):
             // TODO(cffsmith) fix this....., we need to find the right import to call here...., right now pick the matching signature, although this might not be the correct one, it will work.
             return Data([0x10]) + Data([UInt8(self.imports.filter({ $0.1.isFunction }).firstIndex(where: {

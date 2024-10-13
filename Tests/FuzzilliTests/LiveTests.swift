@@ -48,6 +48,7 @@ class LiveTests: XCTestCase {
 
             b.buildWasmModule() { module in
                 module.addGlobal(importing: global)
+                module.addMemory(minPages: 2)
                 module.addWasmFunction(with: [] => .nothing) { function, args in
                     b.buildPrefix()
                     b.build(n: 40)
@@ -72,6 +73,7 @@ class LiveTests: XCTestCase {
 
             let m = b.buildWasmModule() { module in
                 module.addGlobal(importing: global)
+                module.addMemory(minPages: 2)
                 module.addWasmFunction(with: [] => .nothing) { function, args in
                     b.buildPrefix()
                     b.build(n: 40)

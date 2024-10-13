@@ -381,6 +381,62 @@ extension Instruction: ProtobufConvertible {
             }
         }
 
+        func convertWasmMemoryLoadType(_ loadType: WasmMemoryLoadType) -> Fuzzilli_Protobuf_WasmMemoryLoadType {
+            switch loadType {
+                case .I32LoadMem:
+                    return .i32Loadmem
+                case .I64LoadMem:
+                    return .i64Loadmem
+                case .F32LoadMem:
+                    return .f32Loadmem
+                case .F64LoadMem:
+                    return .f64Loadmem
+                case .I32LoadMem8S:
+                    return .i32Loadmem8S
+                case .I32LoadMem8U:
+                    return .i32Loadmem8U
+                case .I32LoadMem16S:
+                    return .i32Loadmem16S
+                case .I32LoadMem16U:
+                    return .i32Loadmem16U
+                case .I64LoadMem8S:
+                    return .i64Loadmem8S
+                case .I64LoadMem8U:
+                    return .i64Loadmem8U
+                case .I64LoadMem16S:
+                    return .i64Loadmem16S
+                case .I64LoadMem16U:
+                    return .i64Loadmem16U
+                case .I64LoadMem32S:
+                    return .i64Loadmem32S
+                case .I64LoadMem32U:
+                    return .i64Loadmem32U
+            }
+        }
+
+        func convertWasmMemoryStoreType(_ loadType: WasmMemoryStoreType) -> Fuzzilli_Protobuf_WasmMemoryStoreType {
+            switch loadType {
+                case .I32StoreMem:
+                    return .i32Storemem
+                case .I64StoreMem:
+                    return .i64Storemem
+                case .F32StoreMem:
+                    return .f32Storemem
+                case .F64StoreMem:
+                    return .f64Storemem
+                case .I32StoreMem8:
+                    return .i32Storemem8
+                case .I32StoreMem16:
+                    return .i32Storemem16
+                case .I64StoreMem8:
+                    return .i64Storemem8
+                case .I64StoreMem16:
+                    return .i64Storemem16
+                case .I64StoreMem32:
+                    return .i64Storemem32
+            }
+        }
+
         func convertWasmGlobal(wasmGlobal: WasmGlobal) -> Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal {
             switch wasmGlobal {
             case .wasmi32(let val):
@@ -1119,9 +1175,15 @@ extension Instruction: ProtobufConvertible {
             case .wasmTableSet(_):
                 $0.wasmTableSet = Fuzzilli_Protobuf_WasmTableSet()
             case .wasmMemoryLoad(let op):
-                $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with { $0.loadType = ILTypeToWasmTypeEnum(op.loadType); $0.offset = Int64(op.offset) }
+                $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with {
+                    $0.loadType = convertWasmMemoryLoadType(op.loadType);
+                    $0.staticOffset = op.staticOffset
+                }
             case .wasmMemoryStore(let op):
-                $0.wasmMemoryStore = Fuzzilli_Protobuf_WasmMemoryStore.with { $0.storeType = ILTypeToWasmTypeEnum(op.storeType); $0.offset = Int64(op.offset) }
+                $0.wasmMemoryStore = Fuzzilli_Protobuf_WasmMemoryStore.with {
+                    $0.storeType = convertWasmMemoryStoreType(op.storeType);
+                    $0.staticOffset = op.staticOffset
+                }
             case .beginWasmFunction(let op):
                 $0.beginWasmFunction = Fuzzilli_Protobuf_BeginWasmFunction.with {
                     var plainParams: [ILType] = []
@@ -1294,6 +1356,66 @@ extension Instruction: ProtobufConvertible {
                 return .nothing
             case .UNRECOGNIZED(let value):
                 fatalError("Unrecognized WasmILType enum value \(value)")
+            }
+        }
+
+        func convertProtoWasmMemoryLoadType(_ loadType: Fuzzilli_Protobuf_WasmMemoryLoadType) -> WasmMemoryLoadType {
+            switch loadType {
+                case .i32Loadmem:
+                    return .I32LoadMem
+                case .i64Loadmem:
+                    return .I64LoadMem
+                case .f32Loadmem:
+                    return .F32LoadMem
+                case .f64Loadmem:
+                    return .F64LoadMem
+                case .i32Loadmem8S:
+                    return .I32LoadMem8S
+                case .i32Loadmem8U:
+                    return .I32LoadMem8U
+                case .i32Loadmem16S:
+                    return .I32LoadMem16S
+                case .i32Loadmem16U:
+                    return .I32LoadMem16U
+                case .i64Loadmem8S:
+                    return .I64LoadMem8S
+                case .i64Loadmem8U:
+                    return .I64LoadMem8U
+                case .i64Loadmem16S:
+                    return .I64LoadMem16S
+                case .i64Loadmem16U:
+                    return .I64LoadMem16U
+                case .i64Loadmem32S:
+                    return .I64LoadMem32S
+                case .i64Loadmem32U:
+                    return .I64LoadMem32U
+                default:
+                    fatalError("Wrong WasmMemoryLoadType")
+            }
+        }
+
+        func convertProtoWasmMemoryStoreType(_ loadType: Fuzzilli_Protobuf_WasmMemoryStoreType) -> WasmMemoryStoreType {
+            switch loadType {
+                case .i32Storemem:
+                    return .I32StoreMem
+                case .i64Storemem:
+                    return .I64StoreMem
+                case .f32Storemem:
+                    return .F32StoreMem
+                case .f64Storemem:
+                    return .F64StoreMem
+                case .i32Storemem8:
+                    return .I32StoreMem8
+                case .i32Storemem16:
+                    return .I32StoreMem16
+                case .i64Storemem8:
+                    return .I64StoreMem8
+                case .i64Storemem16:
+                    return .I64StoreMem16
+                case .i64Storemem32:
+                    return .I64StoreMem32
+                default:
+                    fatalError("Wrong WasmMemoryStoreType")
             }
         }
 
@@ -1896,9 +2018,9 @@ extension Instruction: ProtobufConvertible {
         case .wasmTableSet(let p):
             op = WasmTableSet(tableType: WasmTypeEnumToILType(p.tableType))
         case .wasmMemoryLoad(let p):
-            op = WasmMemoryLoad(loadType: WasmTypeEnumToILType(p.loadType), offset: Int(p.offset))
+            op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset)
         case .wasmMemoryStore(let p):
-            op = WasmMemoryStore(storeType: WasmTypeEnumToILType(p.storeType), offset: Int(p.offset))
+            op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset)
         case .beginWasmFunction(let p):
             op = BeginWasmFunction(parameterTypes: p.parameters.map { WasmTypeEnumToILType($0) }, returnType: WasmTypeEnumToILType(p.returnType))
         case .endWasmFunction(_):

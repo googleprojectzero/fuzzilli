@@ -15,14 +15,19 @@
 import XCTest
 @testable import Fuzzilli
 
-func testForOutput(program: String, runner: JavaScriptExecutor, outputString: String) {
-        let result: JavaScriptExecutor.Result
-        do {
-            result = try runner.executeScript(program)
-        } catch {
-            fatalError("Could not execute Script")
-        }
+@discardableResult
+func testExecuteScript(program: String, runner: JavaScriptExecutor) -> JavaScriptExecutor.Result {
+    let result: JavaScriptExecutor.Result
+    do {
+        result = try runner.executeScript(program)
+    } catch {
+        fatalError("Could not execute Script")
+    }
+    return result
+}
 
+func testForOutput(program: String, runner: JavaScriptExecutor, outputString: String) {
+        let result = testExecuteScript(program: program, runner: runner)
         XCTAssertEqual(result.output, outputString, "Error Output:\n" + result.error)
 }
 
@@ -425,13 +430,13 @@ class WasmFoundationTests: XCTestCase {
         assert(b.type(of: wasmMemory) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: false))
 
         let module = b.buildWasmModule { wasmModule in
-            let memoryRef = wasmModule.addMemory(importing: wasmMemory)
+            let memory = wasmModule.addMemory(importing: wasmMemory)
 
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 let value = function.consti32(1337)
-                let base = function.consti32(0)
-                function.wasmMemoryStore(memoryRef: memoryRef, base: base, offset:10, value: value)
-                let val = function.wasmMemoryLoad(memoryRef: memoryRef, type: .wasmi64, base: base, offset: 10)
+                let offset = function.consti32(10)
+                function.wasmMemoryStore(memory: memory, dynamicOffset: offset, value: value, storeType: .I32StoreMem, staticOffset: 0)
+                let val = function.wasmMemoryLoad(memory: memory, dynamicOffset: offset, loadType: .I64LoadMem, staticOffset: 0)
                 function.wasmReturn(val)
             }
         }
@@ -471,13 +476,14 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            let memoryRef = wasmModule.addMemory(minPages: 5, maxPages: 12)
+            let memory = wasmModule.addMemory(minPages: 5, maxPages: 12)
 
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                let value = function.consti32(1337)
-                let base = function.consti32(0)
-                function.wasmMemoryStore(memoryRef: memoryRef, base: base, offset: 8, value: value)
-                let val = function.wasmMemoryLoad(memoryRef: memoryRef, type: .wasmi64, base: base, offset: 8)
+            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                let value = function.consti64(1337)
+                let storeOffset = function.consti32(8)
+                function.wasmMemoryStore(memory: memory, dynamicOffset: storeOffset, value: value, storeType: .I64StoreMem, staticOffset: 2)
+                let loadOffset = function.consti32(10)
+                let val = function.wasmMemoryLoad(memory: memory, dynamicOffset: loadOffset, loadType: .I32LoadMem, staticOffset: 0)
                 function.wasmReturn(val)
             }
         }
@@ -487,6 +493,75 @@ class WasmFoundationTests: XCTestCase {
 
         let jsProg = fuzzer.lifter.lift(b.finalize())
         testForOutput(program: jsProg, runner: runner, outputString: "1337\n")
+    }
+
+    // This test doesn't check the result of the Wasm loads, just exectues them.
+    func testAllMemoryLoadTypesExecution() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            let memory = wasmModule.addMemory(minPages: 1, maxPages: 10)
+
+            // Create a Wasm function for every memory load type.
+            for loadType in WasmMemoryLoadType.allCases {
+                wasmModule.addWasmFunction(with: [] => loadType.numberType()) { function, _ in
+                    let loadOffset = function.consti32(9)
+                    let val = function.wasmMemoryLoad(memory: memory, dynamicOffset: loadOffset, loadType: loadType, staticOffset: 0)
+                    function.wasmReturn(val)
+                }
+            }
+        }
+
+        for idx in 0..<WasmMemoryLoadType.allCases.count {
+            let res = b.callMethod(module.getExportedMethod(at: idx), on: module.loadExports())
+            b.callFunction(b.loadBuiltin("output"), withArgs: [b.callMethod("toString", on: res)])
+        }
+        let jsProg = fuzzer.lifter.lift(b.finalize())
+        testExecuteScript(program: jsProg, runner: runner)
+    }
+
+        // This test doesn't check the result of the Wasm stores, just exectues them.
+    func testAllMemoryStoreTypesExecution() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            let memory = wasmModule.addMemory(minPages: 2)
+            // Create a Wasm function for every memory load type.
+            for storeType in WasmMemoryStoreType.allCases {
+                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                    let storeOffset = function.consti64(13)
+                    let value = switch storeType.numberType() {
+                        case .wasmi32: function.consti32(8)
+                        case .wasmi64: function.consti64(8)
+                        case .wasmf32: function.constf32(8.4)
+                        case .wasmf64: function.constf64(8.4)
+                        default: fatalError("Non-existent value to be stored")
+                    }
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: storeOffset, value: value, storeType: storeType, staticOffset: 2)
+                }
+            }
+        }
+
+        for idx in 0..<WasmMemoryStoreType.allCases.count {
+            let res = b.callMethod(module.getExportedMethod(at: idx), on: module.loadExports())
+            b.callFunction(b.loadBuiltin("output"), withArgs: [b.callMethod("toString", on: res)])
+        }
+        let jsProg = fuzzer.lifter.lift(b.finalize())
+        testExecuteScript(program: jsProg, runner: runner)
     }
 
     func testLoops() throws {

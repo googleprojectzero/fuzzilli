@@ -342,15 +342,18 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = op
         case .wasmDefineMemory(_):
             // TODO(evih): Implement shared memories and memory64.
-            let newMinPages = Int.random(in: 0..<10)
+            // Making the memory empty will make all loads and stores OOB, so do it rarely.
+            let newMinPages = probability(0.005) ? 0 : Int.random(in: 1..<10)
             let newMaxPages = probability(0.5) ? nil : Int.random(in: newMinPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
             newOp = WasmDefineMemory(limits: Limits(min: newMinPages, max: newMaxPages))
         case .wasmMemoryLoad(let op):
-            // TODO: change the loadType and the offset
-            newOp = op
+            let newLoadType = chooseUniform(from: WasmMemoryLoadType.allCases.filter({$0.numberType() == op.loadType.numberType()}))
+            let newStaticOffset = b.randomInt()
+            newOp = WasmMemoryLoad(loadType: newLoadType, staticOffset: newStaticOffset)
         case .wasmMemoryStore(let op):
-            // TODO: change the offset here.
-            newOp = op
+            let newStoreType = chooseUniform(from: WasmMemoryStoreType.allCases.filter({$0.numberType() == op.storeType.numberType()}))
+            let newStaticOffset = b.randomInt()
+            newOp = WasmMemoryStore(storeType: newStoreType, staticOffset: newStaticOffset)
         case .constSimd128(let op):
             // TODO: ?
             newOp = op
