@@ -98,6 +98,17 @@ class LiveTests: XCTestCase {
         var failures = 0
         var failureMessages = [String: Int]()
 
+        var failureDirectory: URL? = nil
+
+        if ProcessInfo.processInfo.environment["FUZZILLI_TEST_DEBUG"] != nil {
+            failureDirectory = FileManager().temporaryDirectory.appending(path: "fuzzilli_livetest_failures")
+            print("Saving LiveTest failures to \(String(describing: failureDirectory!)).")
+            do {
+                try? FileManager.default.removeItem(at: failureDirectory!)
+                try FileManager.default.createDirectory(at: failureDirectory!, withIntermediateDirectories: true)
+            } catch {}
+        }
+
         var programs = [(program: Program, jsProgram: String)]()
         // Pre-allocate this so that we don't need a lock in the `concurrentPerform`.
         var results = [ExecutionResult?](repeating: nil, count: n)
@@ -118,9 +129,12 @@ class LiveTests: XCTestCase {
             results[i] = result
         }
 
-        for result in results {
+        for (i, result) in results.enumerated() {
             switch result! {
             case .failed(let message):
+                if let path = failureDirectory {
+                    programs[i].program.storeToDisk(atPath: path.appending(path: "failure_\(i).fzil").path())
+                }
                 failures += 1
                 if let message = message {
                     failureMessages[message] = (failureMessages[message] ?? 0) + 1
@@ -141,6 +155,9 @@ class LiveTests: XCTestCase {
             message += "Observed failures:\n"
             for (signature, count) in testResults.failureMessages.sorted(by: { $0.value > $1.value }) {
                 message += "    \(count)x \(signature)\n"
+            }
+            if ProcessInfo.processInfo.environment["FUZZILLI_TEST_DEBUG"] == nil {
+                message += "If you want to dump failing programs to disk you can set FUZZILLI_TEST_DEBUG=1 in your environment."
             }
             XCTFail(message)
         }
