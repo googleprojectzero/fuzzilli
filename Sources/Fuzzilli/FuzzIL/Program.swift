@@ -92,6 +92,30 @@ public final class Program {
 
         return false
     }
+
+    /// This function can be invoked from the debugger to store a program that throws an assertion to disk.
+    /// The idea is to then use the FuzzILTool to lift the program, which can help debug Fuzzilli issues.
+    public func storeToDisk(atPath path: String) {
+        assert(path.hasSuffix(".fzil"))
+        do {
+            let pb = try self.asProtobuf().serializedData()
+            let url = URL(fileURLWithPath: path)
+            try pb.write(to: url)
+        } catch {
+            fatalError("Failed to serialize program to protobuf: \(error)")
+        }
+    }
+
+    /// This convienience initializer helps to load a program from disk. This can be helpful for debugging purposes.
+    convenience init(fromPath path: String) {
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: path))
+            let pb = try Fuzzilli_Protobuf_Program(serializedBytes: data)
+            try self.init(from: pb)
+        } catch {
+            fatalError("Failed to create program from protobuf: \(error)")
+        }
+    }
 }
 
 extension Program: ProtobufConvertible {
