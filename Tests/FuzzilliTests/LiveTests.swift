@@ -45,6 +45,8 @@ class LiveTests: XCTestCase {
             }
             // Make at least one Wasm global available
             b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
+            // Make at laest one Wasm tag available.
+            b.createWasmJSTag()
 
             b.buildWasmModule() { module in
                 module.addMemory(minPages: 2)
@@ -69,6 +71,8 @@ class LiveTests: XCTestCase {
             }
             // Make at least one Wasm global available
             b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
+            // Make at laest one Wasm tag available.
+            b.createWasmJSTag()
 
             let m = b.buildWasmModule() { module in
                 module.addMemory(minPages: 2)

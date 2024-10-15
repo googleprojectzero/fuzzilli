@@ -290,6 +290,7 @@ enum Opcode {
     case wasmEndIf(WasmEndIf)
     case wasmBeginTry(WasmBeginTry)
     case wasmBeginCatchAll(WasmBeginCatchAll)
+    case wasmBeginCatch(WasmBeginCatch)
     case wasmEndCatch(WasmEndCatch)
     case wasmEndTry(WasmEndTry)
 

@@ -734,6 +734,55 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "123\n")
     }
 
+    func testTryCatchJSException() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        // JS function that throws.
+        // TODO(mliedtke): Throw from wasm instead once we support wasm throw?
+        let functionA = b.buildPlainFunction(with: .parameters()) { _ in
+            b.throwException(b.loadInt(3))
+        }
+
+        // Wrap the actual test in a "WebAssembly.JSTag !== undefined" to skip the test if not supported by the runner.
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let jstag = b.createWasmJSTag()
+        let supportsJSTag = b.compare(jstag, with: b.loadUndefined(), using: .strictNotEqual)
+        b.buildIfElse(supportsJSTag) {
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                    function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                        XCTAssert(b.type(of: label).Is(.label))
+                        let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
+                        function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
+                        function.wasmUnreachable()
+                        function.WasmBuildLegacyCatch(tag: jstag) {
+                            function.wasmReturn(function.consti64(123))
+                        }
+                    } catchAllBody: {
+                        function.wasmUnreachable()
+                    }
+                    function.wasmUnreachable()
+                }
+            }
+            let exports = module.loadExports()
+            let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        } elseBody: {
+            // WebAssembly.JSTag is not supported by the runner, just create the expected result.
+            b.callFunction(outputFunc, withArgs: [b.loadString("123")])
+        }
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "123\n")
+    }
+
     func testUnreachable() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
