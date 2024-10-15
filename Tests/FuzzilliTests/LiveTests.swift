@@ -101,7 +101,7 @@ class LiveTests: XCTestCase {
         var failureDirectory: URL? = nil
 
         if ProcessInfo.processInfo.environment["FUZZILLI_TEST_DEBUG"] != nil {
-            failureDirectory = FileManager().temporaryDirectory.appending(path: "fuzzilli_livetest_failures")
+            failureDirectory = FileManager().temporaryDirectory.appendingPathComponent("fuzzilli_livetest_failures")
             print("Saving LiveTest failures to \(String(describing: failureDirectory!)).")
             do {
                 try? FileManager.default.removeItem(at: failureDirectory!)
@@ -133,7 +133,7 @@ class LiveTests: XCTestCase {
             switch result! {
             case .failed(let message):
                 if let path = failureDirectory {
-                    programs[i].program.storeToDisk(atPath: path.appending(path: "failure_\(i).fzil").path())
+                    programs[i].program.storeToDisk(atPath: path.appendingPathComponent("failure_\(i).fzil").path)
                 }
                 failures += 1
                 if let message = message {
