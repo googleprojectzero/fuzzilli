@@ -3056,6 +3056,12 @@ public class ProgramBuilder {
             b.emit(WasmEndTry())
         }
 
+        public func WasmBuildLegacyCatch(tag: Variable, body: (() -> Void)) {
+            b.emit(WasmBeginCatch(), withInputs: [tag])
+            body()
+            b.emit(WasmEndCatch())
+        }
+
         public func generateRandomWasmVar(ofType type: ILType) -> Variable {
             // TODO: add externref and nullrefs
             switch type {

@@ -1047,6 +1047,22 @@ final class WasmBeginCatchAll : WasmOperation {
     }
 }
 
+final class WasmBeginCatch : WasmOperation {
+    override var opcode: Opcode { .wasmBeginCatch(self) }
+
+    // TODO(mliedtke): Add support for tags and signatures.
+    init() {
+        super.init(
+            inputTypes: [.object(ofGroup: "WasmTag")],
+            attributes: [
+                .isBlockStart,
+                // The inner context isn't a .wasmTry context any more.
+                .resumesSurroundingContext,
+            ],
+            requiredContext: [.wasmTry])
+    }
+}
+
 // Ends a catch or a catch_all block inside a (legacy) try block.
 final class WasmEndCatch : WasmOperation {
     override var opcode: Opcode { .wasmEndCatch(self) }

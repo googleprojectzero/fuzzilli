@@ -97,6 +97,9 @@ public class WasmLifter {
     // The function index space
     private var functionIdxBase = 0
 
+    // The signature index space.
+    private var nextSignatureIdx = 0
+
     // This should only be set once we have preprocessed all imported globals, so that we know where internally defined globals start
     private var baseDefinedGlobals: Int? = nil
 
@@ -349,7 +352,8 @@ public class WasmLifter {
         // Currently we also need to build a type section entry for the JSPI types, e.g. objects that are of this specific group.
         let importCount = self.imports.filter( {
             typer.type(of: $0.0).Is(.function()) ||
-            typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))
+            typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject")) ||
+            typer.type(of: $0.0).Is(.object(ofGroup: "WasmTag"))
         }).count + self.functions.count
 
         temp += Leb128.unsignedEncode(importCount)
@@ -358,7 +362,7 @@ public class WasmLifter {
             let type = typer.type(of: importVariable)
 
             // Currently we also need to build a type section entry for the JSPI types, e.g. objects that are of this specific group.
-            if type.Is(.function()) || type.Is(.object(ofGroup: "WebAssembly.SuspendableObject")) {
+            if type.Is(.function()) || type.Is(.object(ofGroup: "WebAssembly.SuspendableObject")) || type.Is(.object(ofGroup: "WasmTag")) {
                 // Get the signature from the imports array.
                 // The signature of this function is a JS signature, it was converted when we decided to perform a WasmJSCall. This means we have selected a somewhat matching signature (see convertJsSignatureToWasmSignature).
                 // The code that follows and the code that performs the call depends on this signature and as such we need to build the right signature here that matches this.
@@ -375,8 +379,12 @@ public class WasmLifter {
                         fatalError("unreachable")
                     }
                 }
-                temp += Leb128.unsignedEncode(1) // num output types
-                temp += ILTypeMapping[signature.outputType] ?? Data([0x6f])
+                if signature.outputType != .nothing {
+                    temp += Leb128.unsignedEncode(1) // num output types
+                    temp += ILTypeMapping[signature.outputType] ?? Data([0x6f])
+                } else {
+                    temp += [0x00] // num output types
+                }
             }
         }
 
@@ -433,7 +441,8 @@ public class WasmLifter {
             // Append the name as a vector
             temp += Leb128.unsignedEncode("imports".count)
             temp += "imports".data(using: .utf8)!
-            let importName = "import_\(idx)_\(importVariable)"
+            var importName : String
+            importName = "import_\(idx)_\(importVariable)"
             temp += Leb128.unsignedEncode(importName.count)
             temp += importName.data(using: .utf8)!
             let type = typer.type(of: importVariable)
@@ -442,10 +451,11 @@ public class WasmLifter {
                 if verbose {
                     print(functionIdxBase)
                 }
-                temp += [0x0, UInt8(functionIdxBase)] // import kind and signature (type) idx
+                temp += [0x0, UInt8(nextSignatureIdx)] // import kind and signature (type) idx
 
                 // Update the index space, these indices have to be set before the exports are set
                 functionIdxBase += 1
+                nextSignatureIdx += 1
                 continue
             }
             if type.Is(.object(ofGroup: "WasmMemory")) {
@@ -483,6 +493,11 @@ public class WasmLifter {
                 temp += mutability ? [0x1] : [0x0]
                 continue
             }
+            if type.Is(.object(ofGroup: "WasmTag")) {
+                temp += [0x4, 0x0] + Leb128.unsignedEncode(nextSignatureIdx)
+                nextSignatureIdx += 1
+                continue
+            }
             fatalError("unreachable")
         }
 
@@ -505,7 +520,7 @@ public class WasmLifter {
         var temp = Leb128.unsignedEncode(self.functions.count)
 
         for (idx, _) in self.functions.enumerated() {
-            temp.append(Leb128.unsignedEncode(functionIdxBase + idx))
+            temp.append(Leb128.unsignedEncode(nextSignatureIdx + idx))
         }
 
         // Append the length of the section and the section contents itself.
@@ -783,6 +798,9 @@ public class WasmLifter {
         case .wasmJsCall(_):
             assert(self.imports.contains(where: { $0.0 == instr.input(0)}))
             return true
+        case .wasmBeginCatch(_):
+            assert(self.imports.contains(where: { $0.0 == instr.input(0)}))
+            return true
         default:
             return true
         }
@@ -818,7 +836,7 @@ public class WasmLifter {
             }
 
             // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
-            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet {
+            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet || instr.op is WasmBeginCatch {
                 continue
             }
             fatalError("unreachable")
@@ -890,6 +908,10 @@ public class WasmLifter {
 
             case .wasmJsCall(let op):
                 self.imports.append((instr.input(0), op.functionSignature))
+
+            case .wasmBeginCatch(_):
+                // TODO(mliedtke): This currently assumes that there aren't any user space tags.
+                self.imports.append((instr.input(0), [.wasmExternRef] => .nothing))
 
             default:
                 assert((instr.op as! WasmOperation).inputTypes.allSatisfy { type in
@@ -1144,6 +1166,9 @@ public class WasmLifter {
             return Data([0x06] + [0x40])
         case .wasmBeginCatchAll(_):
             return Data([0x19])
+        case .wasmBeginCatch(_):
+            // TODO(mliedtke): We need to encode the correct tag. See the solution in .wasmJSCall but on top of that we should also support non-imported tags...
+            return Data([0x07] + [0x00])
         case .wasmEndCatch(_):
             return Data([])
         case .wasmEndLoop(_),
@@ -1173,7 +1198,7 @@ public class WasmLifter {
             if let stackSlot = currentFunction!.getStackSlot(for: wasmInstruction.input(0)) {
 
                 // Emit the instruction now, with input and stackslot. Since we load this manually we don't need
-                // to emit bytes in the emitInputLoadsIfNeeded.
+                // to emit bytes in the emitInputLoadsIfNecessary.
                 storeInstruction = Data([0x21]) + Leb128.unsignedEncode(stackSlot)
             } else {
                 // It has to be global then. Do what StoreGlobal does.

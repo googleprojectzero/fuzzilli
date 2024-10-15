@@ -498,6 +498,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("WasmLegacyCatchGenerator", inContext: .wasmTry, inputs: .required(.object(ofGroup: "WasmTag"))) { b, value in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.WasmBuildLegacyCatch(tag: value) {
+            b.buildRecursive()
+        }
+    },
+
     // The variable we reassign to has to be a numerical primitive, e.g. something that looks like a number (can be a global)
     // We cannot reassign to a .wasmFuncRef or .wasmExternRef though, as they need to be in a local slot.
     RecursiveCodeGenerator("WasmIfElseGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32, .wasmNumericalPrimitive)) { b, conditionVar, outputVar in
