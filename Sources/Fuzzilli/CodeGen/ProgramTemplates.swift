@@ -101,7 +101,7 @@ public let ProgramTemplates = [
         // As we do not yet know what types we have in the Wasm module when we try to call this, let Fuzzilli know that it could potentially use all Wasm types here.
         let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
 
-        var wasmSignature = b.convertJsSignatureToWasmSignature(signature, availableTypes: allWasmTypes)
+        var wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(signature, availableTypes: allWasmTypes)
         let wrapped = b.wrapSuspending(function: f)
 
         let m = b.buildWasmModule { mod in

@@ -817,7 +817,7 @@ public class ProgramBuilder {
     /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
     public func randomArguments(forCallingFunctionWithParameters params: ParameterList) -> [Variable] {
         assert(params.count == 0 || hasVisibleVariables)
-        let parameterTypes = prepareArgumentTypes(forParameters: params)
+        let parameterTypes = ProgramBuilder.prepareArgumentTypes(forParameters: params)
         return parameterTypes.map({ randomVariable(forUseAs: $0) })
     }
 
@@ -853,7 +853,7 @@ public class ProgramBuilder {
         }
 
         // This already does an approximation of the JS signature
-        let newSignature = convertJsSignatureToWasmSignature(signature, availableTypes: weightedTypes)
+        let newSignature = ProgramBuilder.convertJsSignatureToWasmSignature(signature, availableTypes: weightedTypes)
 
         guard let variables = randomWasmArguments(forWasmSignature: newSignature) else {
             return nil
@@ -864,7 +864,7 @@ public class ProgramBuilder {
 
     public func randomWasmArguments(forWasmSignature signature: Signature) -> [Variable]? {
         // This is a bit useless, as all types here are already .plain types, we basically only want to unwrap the plains here.
-        let parameterTypes = prepareArgumentTypes(forParameters: signature.parameters)
+        let parameterTypes = ProgramBuilder.prepareArgumentTypes(forParameters: signature.parameters)
 
         var variables = [Variable]()
         for parameterType in parameterTypes {
@@ -880,10 +880,18 @@ public class ProgramBuilder {
 
     // We simplify the signature by first converting it into types, approximating this signature by getting the corresponding Wasm world types.
     // Then we convert that back into a signature with only .plain types and attach that to the WasmJsCall instruction.
-    public func convertJsSignatureToWasmSignature(_ signature: Signature, availableTypes types: WeightedList<ILType>) -> Signature {
+    public static func convertJsSignatureToWasmSignature(_ signature: Signature, availableTypes types: WeightedList<ILType>) -> Signature {
         let parameterTypes = prepareArgumentTypes(forParameters: signature.parameters).map { approximateWasmTypeFromJsType($0, availableTypes: types) }
 
         let outputType = mapJsToWasmType(signature.outputType) ?? chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmExternRef, .wasmFuncRef])
+
+        return Signature(expects: parameterTypes.map { .plain($0) }, returns: outputType)
+    }
+
+    public static func convertJsSignatureToWasmSignatureDeterministic(_ signature: Signature) -> Signature {
+        let parameterTypes = prepareArgumentTypesDeterministic(forParameters: signature.parameters).map { mapJsToWasmType($0) ?? ILType.wasmi32 }
+
+        let outputType = mapJsToWasmType(signature.outputType) ?? ILType.wasmi32
 
         return Signature(expects: parameterTypes.map { .plain($0) }, returns: outputType)
     }
@@ -936,7 +944,7 @@ public class ProgramBuilder {
     }
 
     // Helper that converts JS Types to their known Wasm counterparts.
-    private func mapJsToWasmType(_ type: ILType) -> ILType? {
+    private static func mapJsToWasmType(_ type: ILType) -> ILType? {
         switch type {
         case .integer:
             return .wasmi32
@@ -954,7 +962,7 @@ public class ProgramBuilder {
     }
 
     // Helper function to convert JS Types to Wasm Types or picks from the other available types
-    private func approximateWasmTypeFromJsType(_ type: ILType, availableTypes: WeightedList<ILType>) -> ILType {
+    private static func approximateWasmTypeFromJsType(_ type: ILType, availableTypes: WeightedList<ILType>) -> ILType {
         if let type = mapJsToWasmType(type), availableTypes.contains(type) {
             return type
         }
@@ -1004,7 +1012,7 @@ public class ProgramBuilder {
     }
 
     /// This helper function converts parameter types into argument types, for example by "unrolling" rest parameters and handling optional parameters.
-    private func prepareArgumentTypes(forParameters params: ParameterList) -> [ILType] {
+    private static func prepareArgumentTypes(forParameters params: ParameterList) -> [ILType] {
         var argumentTypes = [ILType]()
 
         for param in params {
@@ -1020,6 +1028,25 @@ public class ProgramBuilder {
                     return argumentTypes
                 }
                 fallthrough
+            case .plain(let t):
+                argumentTypes.append(t)
+            }
+        }
+
+        return argumentTypes
+    }
+
+    private static func prepareArgumentTypesDeterministic(forParameters params: ParameterList) -> [ILType] {
+        var argumentTypes = [ILType]()
+
+        for param in params {
+            switch param {
+            case .rest(let t):
+                // One repetition of the rest parameter
+                argumentTypes.append(t)
+            case .opt(_):
+                // It's an optional argument, so stop here.
+                return argumentTypes
             case .plain(let t):
                 argumentTypes.append(t)
             }
@@ -3171,7 +3198,7 @@ public class ProgramBuilder {
         public var currentWasmFunction: WasmFunction {
             return functions.last!
         }
-        public var tables: [(ILType, Int, Int?)]
+
         // TODO(evih): Allow multi-memories.
         public var memory: Variable?
         private var moduleVariable: Variable?
@@ -3203,7 +3230,6 @@ public class ProgramBuilder {
             self.b = b
             self.methods = [String]()
             self.moduleVariable = nil
-            self.tables = []
             self.functions = []
         }
 
@@ -3230,9 +3256,10 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func addTable(tableType: ILType, minSize: Int, maxSize: Int? = nil) -> Variable {
-            return b.emit(WasmDefineTable(tableInfo: (tableType, minSize,  maxSize))).output
+        public func addTable(tableType: ILType, minSize: Int, maxSize: Int? = nil, definedEntryIndices: [Int] = [], definedEntryValues: [Variable] = []) -> Variable {
+            return b.emit(WasmDefineTable(tableInfo: (tableType, minSize,  maxSize, definedEntryIndices)), withInputs: definedEntryValues).output
         }
+
         // This result can be ignored right now, as we can only define one memory per module
         // Also this should be tracked like a global / table.
         @discardableResult

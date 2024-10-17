@@ -143,6 +143,36 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         module.addGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
     },
 
+    CodeGenerator("WasmDefineTableGenerator", inContext: .wasm) { b in
+        let module = b.currentWasmModule
+        // TODO(manoskouk): Generalize these.
+        let minSize = 10
+        let maxSize: Int? = nil
+        let tableType = ILType.wasmFuncRef
+
+        var definedEntryIndices: [Int] = []
+        var definedEntryValues: [Variable] = []
+
+        let entryType = tableType == .wasmFuncRef ? .wasmFuncRef | .function() : .object()
+
+        // Currently, only generate entries for funcref tables.
+        // TODO(manoskouk): Generalize this.
+        if (tableType == .wasmFuncRef) {
+            let entryValue = b.randomVariable(ofType: entryType)
+
+            if entryValue != nil {
+                // There is at least one function in scope. Add some initial entries to the table.
+                // TODO(manoskouk): Generalize this.
+                definedEntryIndices = [0, 1, 2, 3, 4]
+                for _ in definedEntryIndices {
+                    definedEntryValues.append(b.randomVariable(ofType: entryType)!)
+                }
+            }
+        }
+
+        module.addTable(tableType: tableType, minSize: minSize, maxSize: maxSize, definedEntryIndices: definedEntryIndices, definedEntryValues: definedEntryValues)
+    },
+
     CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, global in
         let function = b.currentWasmModule.currentWasmFunction
 

@@ -1056,12 +1056,12 @@ message WasmDefineTable {
   WasmILType tableType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
+  repeated int64 definedEntryIndices = 4;
 }
 
 message WasmDefineMemory {
   WasmMemory wasmMemory = 1;
 }
-
 
 message WasmLoadGlobal {
   WasmILType globalType = 2;

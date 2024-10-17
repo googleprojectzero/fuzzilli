@@ -254,7 +254,7 @@ public class WasmLifter {
 
         // Step 1:
         // Collect all information that we need to later wire up the imports correctly, this means we look at instructions that can potentially import any variable that originated outside the Wasm module.
-        importAnalysis(forInstructions: self.instructionBuffer)
+        importAnalysis()
         // Todo: maybe add a def-use pass here to figure out where we need stack spills etc? e.g. if we have one use, we can omit the stack spill
 
         //
@@ -313,6 +313,9 @@ public class WasmLifter {
 
         // Export all functions by default.
         self.buildExportedSection()
+
+        // Build element segments for defined tables.
+        self.buildElementSection()
 
         // The actual bytecode of the functions.
         self.buildCodeSection(self.instructionBuffer)
@@ -550,7 +553,7 @@ public class WasmLifter {
     private func buildTableSection() {
         self.bytecode += [WasmSection.table.rawValue]
 
-        var temp = Leb128.unsignedEncode(self.tables.map { $0 }.count)
+        var temp = Leb128.unsignedEncode(self.tables.count)
 
         for instruction in self.tables {
             let op = instruction.op as! WasmDefineTable
@@ -575,6 +578,57 @@ public class WasmLifter {
                 print(String(format: "%02X ", byte))
             }
         }
+    }
+
+    // Only supports:
+    // - active segments
+    // - with custom table id
+    // - function-indices-as-elements (i.e. case 2 of the spec: https://webassembly.github.io/spec/core/binary/modules.html#element-section)
+    // - one segment per table (assumes entries are continuous)
+    // - constant starting index.
+    private func buildElementSection() {
+      self.bytecode += [WasmSection.element.rawValue]
+      var temp = Data();
+
+      let numDefinedTablesWithEntries = self.tables.count { instruction in
+        !(instruction.op as! WasmDefineTable).definedEntryIndices.isEmpty
+      }
+
+      // Element segment count.
+      temp += Leb128.unsignedEncode(numDefinedTablesWithEntries);
+
+      for instruction in self.tables {
+        let definedEntryIndices = (instruction.op as! WasmDefineTable).definedEntryIndices
+        assert(definedEntryIndices.count == instruction.inputs.count)
+        if definedEntryIndices.isEmpty { continue }
+        // Element segment case 2 definition.
+        temp += [0x02]
+        let tableIndex = self.resolveTableIdx(forInput: instruction.output)
+        temp += Leb128.unsignedEncode(tableIndex)
+        // Starting index. Assumes all entries are continuous.
+        temp += [0x41]
+        temp += Leb128.unsignedEncode(definedEntryIndices[0])
+        temp += [0x0b]  // end
+        // elemkind
+        temp += [0x00]
+        // entry count
+        temp += Leb128.unsignedEncode(definedEntryIndices.count)
+        // entries
+        for entry in instruction.inputs {
+          let functionId = resolveFunctionIdx(forInput: entry)
+          temp += Leb128.unsignedEncode(functionId)
+        }
+      }
+
+      self.bytecode.append(Leb128.unsignedEncode(temp.count))
+      self.bytecode.append(temp)
+
+      if verbose {
+          print("element section is")
+          for byte in temp {
+              print(String(format: "%02X ", byte))
+          }
+      }
     }
 
     private func buildCodeSection(_ instructions: Code) {
@@ -740,6 +794,7 @@ public class WasmLifter {
     }
 
     // Export all functions and globals by default.
+    // TODO(manoskouk): Also export tables.
     private func buildExportedSection() {
         self.bytecode += [WasmSection.export.rawValue]
 
@@ -801,7 +856,7 @@ public class WasmLifter {
     /// This function updates the internal state of the lifter before actually emitting code to the wasm module. This should be invoked before we try to get the corresponding bytes for the Instruction
     private func updateLifterState(wasmInstruction instr: Instruction) -> Bool {
         // Make sure that we actually have a Wasm operation here.
-        assert((instr.op as? WasmOperation) != nil)
+        assert(instr.op is WasmOperation)
 
         switch instr.op.opcode {
         case .wasmBeginBlock(_),
@@ -925,7 +980,7 @@ public class WasmLifter {
     // This usually means if your instruction takes an .object() as an input, it should be checked here.
     // TODO: check if this is still accurate as we now only have defined imports.
     // Also, we export the globals in the order we "see" them, which might mismatch the order in which they are laid out in the binary at the end, which is why we track the order of the globals separately.
-    private func importAnalysis(forInstructions instrs: Code) {
+    private func importAnalysis() {
         for instr in self.instructionBuffer {
             switch instr.op.opcode {
             case .wasmLoadGlobal(_),
@@ -939,8 +994,17 @@ public class WasmLifter {
                 self.globals.append(instr)
                 self.globalOrder.append(instr.output)
 
-            case .wasmDefineTable(_):
+            case .wasmDefineTable(let tableDef):
                 self.tables.append(instr)
+                if tableDef.tableType == .wasmFuncRef {
+                    for definedEntry in instr.inputs {
+                        if typer.type(of: definedEntry).Is(.function()) && !self.imports.contains(where: { $0.0 == definedEntry }) {
+                            // Ensure deterministic lifting.
+                            let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(typer.type(of: definedEntry).signature!)
+                            self.imports.append((definedEntry, wasmSignature))
+                        }
+                    }
+                }
             case .wasmDefineMemory:
                 self.memories.append(instr)
             case .wasmMemoryLoad(_),
@@ -1017,30 +1081,35 @@ public class WasmLifter {
         }
         fatalError("Invalid tag \(input)")
     }
+  
+    // This is almost identical to the resolveGlobalIdx.
+    func resolveTableIdx(forInput input: Variable) -> Int {
+        var idx: Int?
+        // Can be nil now
+        // Check if it is an imported table.
+        idx = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTable"))}).firstIndex(where: { $0.0 == input })
+        // It has to be nil if we enter here, and now we need to find it in the locally defined tables map.
+        if idx == nil && self.tables.map({ $0.output }).contains(input) {
+            // Add the number of imported tables here.
+            idx = self.baseDefinedTables! + self.tables.firstIndex(where: {$0.output == input})!
+        }
+        if idx == nil {
+            fatalError("WasmTableGet/WasmTableSet variable \(input) not found as table!")
+        }
+        return idx!
+    }
+
+    func resolveFunctionIdx(forInput input: Variable) -> Int {
+        return self.imports.filter({typer.type(of: $0.0).Is(.function()) || typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))}).firstIndex { $0.0 == input } ??
+            self.functionIdxBase + self.functions.firstIndex { $0.outputVariable == input }!
+    }
 
     /// Returns the Bytes that correspond to this instruction.
     /// This will also automatically add bytes that are necessary based on the state of the Lifter.
     /// Example: LoadGlobal with an input variable will resolve the input variable to a concrete global index.
     private func lift(_ wasmInstruction: Instruction) -> Data {
         // Make sure that we actually have a Wasm operation here.
-        assert((wasmInstruction.op as? WasmOperation) != nil)
-
-        // This is almost identical to the resolveGlobalIdx.
-        func resolveTableIdx(forInput input: Variable) -> Int {
-            var idx: Int?
-            // Can be nil now
-            // Check if it is an imported table.
-            idx = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTable"))}).firstIndex(where: { $0.0 == input })
-            // It has to be nil if we enter here, and now we need to find it in the locally defined tables map.
-            if idx == nil && self.tables.map({ $0.output }).contains(input) {
-                // Add the number of imported tables here.
-                idx = self.baseDefinedTables! + self.tables.firstIndex(where: {$0.output == input})!
-            }
-            if idx == nil {
-                fatalError("WasmTableGet/WasmTableSet variable \(input) not found as table!")
-            }
-            return idx!
-        }
+        assert(wasmInstruction.op is WasmOperation)
 
         switch wasmInstruction.op.opcode {
         case .consti64(let op):
