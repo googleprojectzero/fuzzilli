@@ -1002,6 +1002,8 @@ public class WasmMemoryType: WasmTypeExtension {
    }
 }
 
+// TODO(manoskouk): Introduce WasmTableType
+
 // Represents one parameter of a function signature.
 public enum Parameter: Hashable {
     case plain(ILType)

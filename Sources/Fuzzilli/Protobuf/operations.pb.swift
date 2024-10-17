@@ -3788,6 +3788,8 @@ public struct Fuzzilli_Protobuf_WasmDefineTable: Sendable {
   /// Clears the value of `maxSize`. Subsequent reads from it will return its default value.
   public mutating func clearMaxSize() {self._maxSize = nil}
 
+  public var definedEntryIndices: [Int64] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -11210,6 +11212,7 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
     1: .same(proto: "tableType"),
     2: .same(proto: "minSize"),
     3: .same(proto: "maxSize"),
+    4: .same(proto: "definedEntryIndices"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11221,6 +11224,7 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
       case 1: try { try decoder.decodeSingularEnumField(value: &self.tableType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
+      case 4: try { try decoder.decodeRepeatedInt64Field(value: &self.definedEntryIndices) }()
       default: break
       }
     }
@@ -11240,6 +11244,9 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
     try { if let v = self._maxSize {
       try visitor.visitSingularInt64Field(value: v, fieldNumber: 3)
     } }()
+    if !self.definedEntryIndices.isEmpty {
+      try visitor.visitPackedInt64Field(value: self.definedEntryIndices, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11247,6 +11254,7 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
     if lhs.tableType != rhs.tableType {return false}
     if lhs.minSize != rhs.minSize {return false}
     if lhs._maxSize != rhs._maxSize {return false}
+    if lhs.definedEntryIndices != rhs.definedEntryIndices {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

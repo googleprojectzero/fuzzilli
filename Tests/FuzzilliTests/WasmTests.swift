@@ -33,16 +33,13 @@ func testForOutput(program: String, runner: JavaScriptExecutor, outputString: St
 
 class WasmSignatureConversionTests: XCTestCase {
     func testJsSignatureConversion() {
-        let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .error), environment: JavaScriptEnvironment())
-        let b = fuzzer.makeBuilder()
-
-        XCTAssertEqual(b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)])), [.wasmf32] => .wasmi32)
+        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)])), [.wasmf32] => .wasmi32)
     }
 }
 
 class WasmFoundationTests: XCTestCase {
     func testFunction() throws {
-    let runner = try GetJavaScriptExecutorOrSkipTest()
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -171,7 +168,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, args in
                 // Manually set the availableTypes here for testing
-                let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([(.wasmi64, 1)]))
+                let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([(.wasmi64, 1)]))
                 assert(wasmSignature == [.wasmi64] => .wasmi64)
                 let varA = function.wasmJsCall(function: functionA, withArgs: [args[0]], withWasmSignature: wasmSignature)!
                 function.wasmReturn(varA)
@@ -180,7 +177,7 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => .wasmf32) { function, _ in
                 let varA = function.consti32(1337)
                 // Manually set the availableTypes here for testing
-                let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionB).signature!, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
+                let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionB).signature!, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
                 assert(wasmSignature == [.wasmi32] => .wasmf32)
                 let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: wasmSignature)!
                 function.wasmReturn(varRet)
@@ -391,7 +388,7 @@ class WasmFoundationTests: XCTestCase {
         b.callMethod("set", on: javaScriptTable, withArgs: [b.loadInt(1), object])
 
         let module = b.buildWasmModule { wasmModule in
-            let tableRef = wasmModule.addTable(tableType: .wasmFuncRef, minSize: 2)
+            let tableRef = wasmModule.addTable(tableType: .wasmExternRef, minSize: 2)
 
             wasmModule.addWasmFunction(with: [] => .wasmExternRef) { function, _ in
                 let offset = function.consti32(0)
@@ -416,6 +413,32 @@ class WasmFoundationTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
 
         testForOutput(program: jsProg, runner: runner, outputString: "{\"a\":41,\"b\":42}\n")
+    }
+
+    func testDefinedTables() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let jsFunction = b.buildPlainFunction(with: .parameters()) { _ in
+            b.doReturn(b.loadBigInt(0))
+        }
+
+        b.buildWasmModule { wasmModule in
+            let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, params in
+                function.wasmReturn(function.wasmi32BinOp(params[0], function.consti32(1), binOpKind: .Add))
+            }
+            wasmModule.addTable(tableType: .wasmFuncRef, minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction])
+        }
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: "")
     }
 
     func testMemories() throws {
@@ -714,7 +737,7 @@ class WasmFoundationTests: XCTestCase {
                 function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
                     XCTAssert(b.type(of: label).Is(.label))
                     // Manually set the availableTypes here for testing.
-                    let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
+                    let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
                     function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
                     function.wasmUnreachable()
                 } catchAllBody: {
@@ -2638,7 +2661,7 @@ class WasmSpliceTests: XCTestCase {
         b.buildWasmModule { module in
             module.addWasmFunction(with: [] => .nothing) { function, args in
                 let argument = function.consti32(1337)
-                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
+                let signature = ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
                 splicePoint = b.indexOfNextInstruction()
                 function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
             }
@@ -2679,7 +2702,7 @@ class WasmSpliceTests: XCTestCase {
         b.buildWasmModule { module in
             module.addWasmFunction(with: [] => .nothing) { function, args in
                 let argument = function.consti32(1337)
-                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
+                let signature = ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
                 splicePoint = b.indexOfNextInstruction()
                 function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
             }
@@ -2708,7 +2731,7 @@ class WasmSpliceTests: XCTestCase {
             module.addWasmFunction(with: [] => .nothing) { function, _ in
                 let _ = function.constf32(42.42)
                 let argument = function.consti32(1337)
-                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
+                let signature = ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
                 function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
             }
         }

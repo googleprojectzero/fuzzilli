@@ -805,7 +805,10 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- WasmDefineGlobal \(op.wasmGlobal)")
 
         case .wasmDefineTable(let op):
-            w.emit("\(output()) <- WasmDefineTable \(op.tableType), (\(op.minSize), \(String(describing: op.maxSize)))")
+            let entries = op.definedEntryIndices.enumerated().map { index, entry in
+                "\(entry) : \(input(index))"
+            }.joined(separator: ", ")
+            w.emit("\(output()) <- WasmDefineTable \(op.tableType), (\(op.minSize), \(String(describing: op.maxSize))), [\(entries)]")
 
         case .wasmDefineMemory(let op):
             assert(op.wasmMemory.isWasmMemoryType)

@@ -1136,7 +1136,7 @@ extension Instruction: ProtobufConvertible {
                     if let maxSize = op.maxSize {
                         $0.maxSize = Int64(maxSize)
                     }
-
+                    $0.definedEntryIndices = op.definedEntryIndices.map { Int64($0) }
                 }
             case .wasmDefineMemory(let op):
                 assert(op.wasmMemory.isWasmMemoryType)
@@ -1934,7 +1934,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmDefineGlobal(let p):
             op = WasmDefineGlobal(wasmGlobal: convertWasmGlobal(p.wasmGlobal), isMutable: p.wasmGlobal.isMutable)
         case .wasmDefineTable(let p):
-            op = WasmDefineTable(tableInfo: (WasmTypeEnumToILType(p.tableType), Int(p.minSize), p.hasMaxSize ? Int(p.maxSize) : nil))
+            op = WasmDefineTable(tableInfo: (WasmTypeEnumToILType(p.tableType), Int(p.minSize), p.hasMaxSize ? Int(p.maxSize) : nil, p.definedEntryIndices.map { Int($0) }))
         case .wasmDefineMemory(let p):
             let maxPages = p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil
             op = WasmDefineMemory(limits: Limits(min: Int(p.wasmMemory.minPages), max: maxPages), isShared: p.wasmMemory.isShared, isMemory64: p.wasmMemory.isMemory64)

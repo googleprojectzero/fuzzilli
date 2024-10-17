@@ -694,7 +694,6 @@ final class WasmDefineGlobal: WasmOperation {
         let outputType = ILType.object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: wasmGlobal.toType(), isMutable: isMutable))
         super.init(outputType: outputType, attributes: [.isPure, .isMutable], requiredContext: [.wasm])
     }
-
 }
 
 final class WasmDefineTable: WasmOperation {
@@ -703,16 +702,19 @@ final class WasmDefineTable: WasmOperation {
     let tableType: ILType
     let minSize: Int
     let maxSize: Int?
+    let definedEntryIndices: [Int]
 
-    init(tableInfo: (ILType, Int, Int?)) {
+    init(tableInfo: (ILType, Int, Int?, [Int])) {
         self.tableType = tableInfo.0
         self.minSize = tableInfo.1
         self.maxSize = tableInfo.2
+        self.definedEntryIndices = tableInfo.3
 
-        super.init(outputType: .object(ofGroup: "WasmTable"), attributes: [.isPure, .isMutable], requiredContext: [.wasm])
+        let inputType = tableType == .wasmFuncRef ? .wasmFuncRef | .function() : .object()
+
+        super.init(inputTypes: Array(repeating: inputType, count: definedEntryIndices.count), outputType: .object(ofGroup: "WasmTable"), attributes: [.isPure, .isMutable], requiredContext: [.wasm])
     }
 }
-
 
 // TODO: Wasm memory can be initialized in the data segment, theoretically one could initialize them with this instruction as well.
 // Currently they are by default zero initialized and fuzzilli should then just store or load from there.
