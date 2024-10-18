@@ -99,7 +99,9 @@ public class JavaScriptExecutor {
                 }
             }
             if task.isRunning {
-                task.terminate()
+                // Properly kill the task now with SIGKILL as it might be stuck
+                // in Wasm, where SIGTERM is not enough.
+                kill(task.processIdentifier, SIGKILL)
                 timedOut = true
             }
         }
