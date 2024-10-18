@@ -519,7 +519,6 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             b.randomVariable(ofType: .wasmSimd128) ?? function.constSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
         }
 
-
         function.wasmSimd128IntegerBinOp(lhs, rhs, shape, binOpKind)
     },
 

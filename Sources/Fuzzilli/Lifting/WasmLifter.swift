@@ -1270,11 +1270,31 @@ public class WasmLifter {
             }
             return Data([0xFD]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue)
         case .wasmSimd128FloatUnOp(let op):
-            let base = (op.shape == .f32x4) ? 103 : 116;
-            return Data([0xFD]) + Leb128.unsignedEncode(base + op.unOpKind.rawValue)
+            let encoding = switch op.shape {
+                case .f32x4: switch op.unOpKind {
+                    case .ceil: Leb128.unsignedEncode(0x67)
+                    case .floor: Leb128.unsignedEncode(0x68)
+                    case .trunc: Leb128.unsignedEncode(0x69)
+                    case .nearest: Leb128.unsignedEncode(0x6A)
+                    case .abs: Leb128.unsignedEncode(0xE0) + Leb128.unsignedEncode(0x01)
+                    case .neg: Leb128.unsignedEncode(0xE1) + Leb128.unsignedEncode(0x01)
+                    case .sqrt: Leb128.unsignedEncode(0xE3) + Leb128.unsignedEncode(0x01)
+                }
+                case .f64x2: switch op.unOpKind {
+                    case .ceil: Leb128.unsignedEncode(0x74)
+                    case .floor: Leb128.unsignedEncode(0x75)
+                    case .trunc: Leb128.unsignedEncode(0x7A)
+                    case .nearest: Leb128.unsignedEncode(0x94) + Leb128.unsignedEncode(0x01)
+                    case .abs: Leb128.unsignedEncode(0xEC) + Leb128.unsignedEncode(0x01)
+                    case .neg: Leb128.unsignedEncode(0xED) + Leb128.unsignedEncode(0x01)
+                    case .sqrt: Leb128.unsignedEncode(0xEF) + Leb128.unsignedEncode(0x01)
+                }
+                default: fatalError("Shape \(op.shape) not supported for wasmSimd128FloatUnOp")
+            }
+            return Data([0xFD]) + encoding
         case .wasmSimd128FloatBinOp(let op):
-            let base = (op.shape == .f32x4) ? 103 : 116;
-            return Data([0xFD]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue)
+            let base = (op.shape == .f32x4) ? 0xE4 : 0xF0;
+            return Data([0xFD]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue) + Leb128.unsignedEncode(0x01)
         case .wasmSimd128Compare(let op):
             switch op.shape {
             case .i8x16:

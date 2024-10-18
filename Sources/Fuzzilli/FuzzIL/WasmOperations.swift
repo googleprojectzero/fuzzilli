@@ -1353,16 +1353,13 @@ final class WasmSimd128IntegerBinOp: WasmOperation {
 }
 
 public enum WasmSimd128FloatUnOpKind: Int, CaseIterable {
-    // The offsets are added to a base value for each shape:
-    // f32x4: 103 + offset
-    // f64x2: 116 + offset
-    case ceil = 0
-    case floor = 1
-    case trunc = 2
-    case nearest = 3
-    case abs = 4
-    case neg = 5
-    case sqrt = 6
+    case ceil
+    case floor
+    case trunc
+    case nearest
+    case abs
+    case neg
+    case sqrt
 
     func isValidForShape(shape: WasmSimd128Shape) -> Bool {
         return shape.isFloat()
@@ -1384,16 +1381,16 @@ final class WasmSimd128FloatUnOp: WasmOperation {
 
 public enum WasmSimd128FloatBinOpKind: Int, CaseIterable {
     // The offsets are added to a base value for each shape:
-    // f32x4: 103 + offset
-    // f64x2: 116 + offset
-    case add = 7
-    case sub = 8
-    case mul = 9
-    case div = 10
-    case min = 11
-    case max = 12
-    case pmin = 13
-    case pmax = 14
+    // f32x4: 0xE4 + offset
+    // f64x2: 0xF0 + offset
+    case add = 0
+    case sub = 1
+    case mul = 2
+    case div = 3
+    case min = 4
+    case max = 5
+    case pmin = 6
+    case pmax = 7
 
     func isValidForShape(shape: WasmSimd128Shape) -> Bool {
         return shape.isFloat()
