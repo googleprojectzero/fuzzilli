@@ -514,7 +514,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // Shifts take an i32 as an rhs input, the others take a regular .wasmSimd128 input.
         var rhs = switch binOpKind {
         case .shl, .shr_s, .shr_u:
-            b.randomVariable(ofType: .wasmi32) ?? function.consti32(Int32(b.randomInt()))
+            b.randomVariable(ofType: .wasmi32) ?? function.consti32(Int32(truncatingIfNeeded: b.randomInt()))
         default:
             b.randomVariable(ofType: .wasmSimd128) ?? function.constSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
         }
