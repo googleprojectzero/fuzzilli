@@ -468,14 +468,10 @@ public class JavaScriptCompiler {
                 try enterNewScope {
                     let beginCatch = emit(BeginCatch())
                     if tryStatement.catch.hasParameter {
-                        let parameter = tryStatement.catch.parameter
-                        switch parameter.parameter {
-                            case .identifierParameter(let identifier):
-                                map(identifier.name, to: beginCatch.innerOutput)
-
-                            default:
-                                throw CompilerError.unsupportedFeatureError("Unsupported parameter type")
+                        guard case let .identifierParameter(identifier) = tryStatement.catch.parameter.parameter else {
+                            throw CompilerError.unsupportedFeatureError("Only identifier parameters are supported in catch blocks")
                         }
+                        map(identifier.name, to: beginCatch.innerOutput)
                     }
                     for statement in tryStatement.catch.body {
                         try compileStatement(statement)
@@ -1095,7 +1091,7 @@ public class JavaScriptCompiler {
                     flatParameters.append(element.name)
                     expectedVariableCount += 1
                 }
-            default:
+            case .none:
                 break
             }
         }
