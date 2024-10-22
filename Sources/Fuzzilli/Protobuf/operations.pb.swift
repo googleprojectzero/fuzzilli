@@ -559,7 +559,8 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
   case funcref // = 5
   case externreftable // = 6
   case funcreftable // = 7
-  case nothing // = 8
+  case simd128 // = 8
+  case nothing // = 9
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -576,7 +577,8 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
     case 5: self = .funcref
     case 6: self = .externreftable
     case 7: self = .funcreftable
-    case 8: self = .nothing
+    case 8: self = .simd128
+    case 9: self = .nothing
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -591,7 +593,8 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
     case .funcref: return 5
     case .externreftable: return 6
     case .funcreftable: return 7
-    case .nothing: return 8
+    case .simd128: return 8
+    case .nothing: return 9
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -606,6 +609,7 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
     .funcref,
     .externreftable,
     .funcreftable,
+    .simd128,
     .nothing,
   ]
 
@@ -4196,7 +4200,8 @@ extension Fuzzilli_Protobuf_WasmILType: SwiftProtobuf._ProtoNameProviding {
     5: .same(proto: "FUNCREF"),
     6: .same(proto: "EXTERNREFTABLE"),
     7: .same(proto: "FUNCREFTABLE"),
-    8: .same(proto: "NOTHING"),
+    8: .same(proto: "SIMD128"),
+    9: .same(proto: "NOTHING"),
   ]
 }
 

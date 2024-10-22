@@ -857,7 +857,8 @@ enum WasmILType {
   FUNCREF = 5;
   EXTERNREFTABLE = 6;
   FUNCREFTABLE = 7;
-  NOTHING = 8;
+  SIMD128 = 8;
+  NOTHING = 9;
 }
 
 message BeginWasmFunction {
