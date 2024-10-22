@@ -380,6 +380,7 @@ extension Instruction: ProtobufConvertible {
                     fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a WasmILType! for instruction \(self)")
                 }
             }
+            assert(value <= Fuzzilli_Protobuf_WasmILType.allCases.count, "Trying to serialize a value as a WasmILType that is missing in the proto definition, check if the values match in operations.proto")
             return Fuzzilli_Protobuf_WasmILType(rawValue: value)!
         }
 
@@ -1290,10 +1291,12 @@ extension Instruction: ProtobufConvertible {
                 return .externRefTable
             case .funcreftable:
                 return .funcRefTable
+            case .simd128:
+                return .wasmSimd128
             case .nothing:
                 return .nothing
-            default:
-                fatalError("Unrecognized wasmType enum value")
+            case .UNRECOGNIZED(let value):
+                fatalError("Unrecognized WasmILType enum value \(value)")
             }
         }
 
