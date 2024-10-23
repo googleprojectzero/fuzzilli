@@ -340,7 +340,7 @@ extension Instruction: ProtobufConvertible {
             var underlyingWasmType = wasmType
             if underlyingWasmType == .nothing {
                 // This is used as sentinel for function signatures that don't have a return value
-                return Fuzzilli_Protobuf_WasmILType(rawValue: 8)!
+                return Fuzzilli_Protobuf_WasmILType.nothing
             }
             // In case of Wasm globals, the underlying valuetype is stored in the Wasm extension.
             if underlyingWasmType.isWasmGlobalType {
