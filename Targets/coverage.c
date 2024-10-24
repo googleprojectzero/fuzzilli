@@ -29,7 +29,10 @@ void __sanitizer_cov_reset_edgeguards() {
         *x = ++N;
 }
 
-extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop) {
+#ifdef __cplusplus
+extern "C" 
+#endif
+void __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop) {
     // Avoid duplicate initialization
     if (start == stop || *start)
         return;
@@ -67,7 +70,10 @@ extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *s
     printf("[COV] edge counters initialized. Shared memory: %s with %u edges\n", shm_key, __shmem->num_edges);
 }
 
-extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
+#ifdef __cplusplus
+extern "C" 
+#endif 
+    void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
     // There's a small race condition here: if this function executes in two threads for the same
     // edge at the same time, the first thread might disable the edge (by setting the guard to zero)
     // before the second thread fetches the guard value (and thus the index). However, our
