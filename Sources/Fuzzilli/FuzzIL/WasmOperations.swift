@@ -1209,10 +1209,10 @@ final class WasmSimd128Compare: WasmOperation {
 
 public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
     // The offsets are added to a base value for each shape:
-    // i8x16: 92 + offset
-    // i16x8: 124 + offset
-    // i32x4: 156 + offset
-    // i64x2: 188 + offset
+    // i8x16: 0x5C + offset
+    // i16x8: 0x7C + offset
+    // i32x4: 0x9C + offset
+    // i64x2: 0xBC + offset
     case extadd_pairwise_i8x16_s = 0
     case extadd_pairwise_i8x16_u = 1
     case extadd_pairwise_i16x8_s = -34
@@ -1273,10 +1273,10 @@ final class WasmSimd128IntegerUnOp: WasmOperation {
 
 public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
     // The offsets are added to a base value for each shape:
-    // i8x16: 92 + offset
-    // i16x8: 124 + offset
-    // i32x4: 156 + offset
-    // i64x2: 188 + offset
+    // i8x16: 0x5C + offset
+    // i16x8: 0x7C + offset
+    // i32x4: 0x9C + offset
+    // i64x2: 0xBC + offset
     case narrow_s      = 9
     case narrow_u      = 10
 
