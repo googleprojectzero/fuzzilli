@@ -336,7 +336,6 @@ extension Instruction: ProtobufConvertible {
         }
 
         func ILTypeToWasmTypeEnum(_ wasmType: ILType) -> Fuzzilli_Protobuf_WasmILType {
-            let value: Int
             var underlyingWasmType = wasmType
             if underlyingWasmType == .nothing {
                 // This is used as sentinel for function signatures that don't have a return value
@@ -350,38 +349,36 @@ extension Instruction: ProtobufConvertible {
             if underlyingWasmType.Is(.object()) {
                 switch underlyingWasmType.group {
                 case "WasmTable.externref":
-                    value = 6
+                    return .externreftable
                 case "WasmTable.funcref":
-                    value = 7
+                    return .funcreftable
                 default:
                     fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a WasmILType! for instruction \(self)")
                 }
             } else {
                 switch underlyingWasmType {
                 case .wasmi32:
-                    value = 0
+                    return .consti32
                 case .wasmi64:
-                    value = 1
+                    return .consti64
                 case .wasmf32:
-                    value = 2
+                    return .constf32
                 case .wasmf64:
-                    value = 3
+                    return .constf64
                 case .wasmExternRef:
-                    value = 4
+                    return .externref
                 case .wasmFuncRef:
-                    value = 5
+                    return .funcref
                 case .externRefTable:
-                    value = 6
+                    return .externreftable
                 case .funcRefTable:
-                    value = 7
+                    return .funcreftable
                 case .wasmSimd128:
-                    value = 8
+                    return .simd128
                 default:
-                    fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a WasmILType! for instruction \(self)")
+                    fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a Protobuf_WasmILType! for instruction \(self)")
                 }
             }
-            assert(value <= Fuzzilli_Protobuf_WasmILType.allCases.count, "Trying to serialize a value as a WasmILType that is missing in the proto definition, check if the values match in operations.proto")
-            return Fuzzilli_Protobuf_WasmILType(rawValue: value)!
         }
 
         func convertWasmGlobal(wasmGlobal: WasmGlobal) -> Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal {
