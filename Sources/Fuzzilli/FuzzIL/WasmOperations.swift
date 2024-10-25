@@ -1219,8 +1219,7 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
     case extadd_pairwise_i16x8_u = -29
     case abs                     = 4
     case neg                     = 5
-    // i8x16: popcnt, i16x8: q15mulr_sat_s
-    case popcnt_q15mulr_sat_s    = 6
+    case popcnt                  = 6
     case all_true                = 7
     case bitmask                 = 8
     case extend_low_s            = 11
@@ -1237,7 +1236,7 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
         case .extadd_pairwise_i16x8_u:  return shape == .i32x4
         case .abs:                      return true
         case .neg:                      return true
-        case .popcnt_q15mulr_sat_s:     return shape == .i8x16 || shape == .i16x8
+        case .popcnt:                   return shape == .i8x16
         case .all_true:                 return true
         case .bitmask:                  return true
         case .extend_low_s:             return shape != .i8x16
@@ -1277,6 +1276,7 @@ public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
     // i16x8: 0x7C + offset
     // i32x4: 0x9C + offset
     // i64x2: 0xBC + offset
+    case q15mulr_sat_s = 6
     case narrow_s      = 9
     case narrow_u      = 10
 
@@ -1305,6 +1305,7 @@ public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
     func isValidForShape(shape: WasmSimd128Shape) -> Bool {
         if shape.isFloat() { return false }
         switch self {
+        case .q15mulr_sat_s: return shape == .i16x8
         case .narrow_s:      return shape == .i8x16 || shape == .i16x8
         case .narrow_u:      return shape == .i8x16 || shape == .i16x8
         case .shl:           return true
