@@ -1215,8 +1215,8 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
     // i64x2: 0xBC + offset
     case extadd_pairwise_i8x16_s = 0
     case extadd_pairwise_i8x16_u = 1
-    case extadd_pairwise_i16x8_s = -34
-    case extadd_pairwise_i16x8_u = -33
+    case extadd_pairwise_i16x8_s = -30
+    case extadd_pairwise_i16x8_u = -29
     case abs                     = 4
     case neg                     = 5
     // i8x16: popcnt, i16x8: q15mulr_sat_s
