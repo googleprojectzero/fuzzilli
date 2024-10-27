@@ -1355,35 +1355,33 @@ public class JavaScriptLifter: Lifter {
 
     private func liftParameters(_ parameters: Parameters, as variables: [String]) -> String {
         assert(parameters.count == variables.count)
-        var paramList = [String]()
-        var objectPropertyIndex = 0
-        for (index, v) in variables.enumerated() {
-            let type = parameters.parameterTypes[index]
-            switch type {
-            case .identifier, .standaloneObject, .standaloneArray:
-                paramList.append(v)
-            case .objectStart:
-                let propertyNames = parameters.objectPropertyNames[objectPropertyIndex]
-                let firstProperty = propertyNames.first!
-                paramList.append("{ \(firstProperty): \(v)")
-            case .objectMiddle:
-                let propertyNames = parameters.objectPropertyNames[objectPropertyIndex]
-                let middleProperty = propertyNames[index % propertyNames.count]
-                paramList.append("\(middleProperty): \(v)")
-            case .objectEnd:
-                let propertyNames = parameters.objectPropertyNames[objectPropertyIndex]
-                let lastProperty = propertyNames.last!
-                paramList.append("\(lastProperty): \(v) }")
-                objectPropertyIndex += 1
-            case .arrayStart:
-                paramList.append("[\(v)")
-            case .arrayMiddle:
-                paramList.append("\(v)")
-            case .arrayEnd:
-                paramList.append("\(v)]")
+        var variableIndex = 0
+        func liftPattern(_ pattern: ParameterPattern) -> String {
+            switch pattern {
+            case .identifier:
+                let variableName = variables[variableIndex]
+                variableIndex += 1
+                return variableName
+
+            case .object(let properties):
+                let liftedProperties = properties.map { property -> String in
+                    let key = property.key
+                    let value = liftPattern(property.value)
+                    return "\(key): \(value)"
+                }
+                return "{ " + liftedProperties.joined(separator: ", ") + " }"
+
+            case .array(let elements):
+                let liftedElements = elements.map { element -> String in
+                    return liftPattern(element)
+                }
+                return "[ " + liftedElements.joined(separator: ", ") + " ]"
             }
         }
-        return paramList.joined(separator: ", ")
+        let liftedParams = parameters.patterns.map { pattern in
+            return liftPattern(pattern)
+        }
+        return liftedParams.joined(separator: ", ")
     }
 
     private func liftFunctionDefinitionBegin(_ instr: Instruction, keyword FUNCTION: String, using w: inout JavaScriptWriter) {

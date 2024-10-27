@@ -73,27 +73,48 @@ function parse(script, proto) {
     }
 
     function visitParameter(param) {
-        assert(param.type == 'Identifier' || param.type == 'ObjectPattern' || param.type == 'ArrayPattern');
-        if (param.type === 'Identifier') {
-            return make('IdentifierParameter', { identifierParameter: { name: param.name } });
-        } else if (param.type === 'ObjectPattern') {
-            const parameters = param.properties.map(property => {
-                assert(property.type === 'ObjectProperty');
-                assert(property.computed === false);
-                assert(property.extra && property.extra.shorthand === true);
-                assert(property.method === false);
-                assert(property.key.type === 'Identifier');
-                return { name: property.key.name };
-            });
-            return make('ObjectParameter', { objectParameter: { parameters } });
-        } else if (param.type === 'ArrayPattern') {
-            const elements = param.elements.map(element => {
-                assert(element.type === 'Identifier');
-                return { name: element.name };
-            });
-            return make('ArrayParameter', { arrayParameter: { elements } });
+        assert(['Identifier', 'ObjectPattern', 'ArrayPattern'].includes(param.type));
+        switch (param.type) {
+            case 'Identifier': {
+                return make('IdentifierParameter', { identifierParameter: { name: param.name } });
+            }
+            case 'ObjectPattern': {
+                const parameters = param.properties.map(property => {
+                    assert(property.type === 'ObjectProperty');
+                    assert(property.computed === false);
+                    assert(property.method === false);
+                    let parameterKey;
+                    if (property.key.type === 'Identifier') {
+                        parameterKey = property.key.name;
+                    } else if (property.key.type === 'Literal') {
+                        // Internally, literal keys are stored as strings. So we can convert them to strings here.
+                        parameterKey = property.key.value.toString();
+                    } else {
+                        throw new Error('Unsupported property key type: ' + property.key.type);
+                    }
+                    const parameterValue = visitParameter(property.value);
+                    return make('ObjectParameterProperty', {
+                        parameterKey: parameterKey,
+                        parameterValue: parameterValue
+                    });
+                });
+                return make('ObjectParameter', { objectParameter: { parameters } });
+            }
+            case 'ArrayPattern': {
+                const elements = param.elements.map(element => {
+                    if (element === null) {
+                        throw new Error('Holes in array parameters are not supported');
+                    } else {
+                        return visitParameter(element);
+                    }
+                });
+                return make('ArrayParameter', { arrayParameter: { elements } });
+            }
+            default: {
+                throw new Error('Unsupported parameter type: ' + param.type);
+            }
         }
-    }    
+    }
 
     function visitVariableDeclaration(node) {
         let kind;

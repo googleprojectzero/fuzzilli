@@ -170,7 +170,36 @@ public struct JSTyper: Analyzer {
     /// Attempts to infer the parameter types of the given subroutine definition.
     /// If parameter types have been added for this function, they are returned, otherwise generic parameter types (i.e. .anything parameters) for the parameters specified in the operation are generated.
     private func inferSubroutineParameterList(of op: BeginAnySubroutine, at index: Int) -> ParameterList {
-        return signatures[index] ?? ParameterList(numParameters: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
+        if let signature = signatures[index] {
+            return signature
+        } else {
+            var parameterList = ParameterList()
+            let patterns = op.parameters.patterns
+            let hasRestParam = op.parameters.hasRestParameter
+
+            for (i, pattern) in patterns.enumerated() {
+                let ilType = inferParameterType(from: pattern)
+                let parameter: Parameter
+                if hasRestParam && i == patterns.count - 1 {
+                    parameter = .rest(ilType)
+                } else {
+                    parameter = .plain(ilType)
+                }
+                parameterList.append(parameter)
+            }
+            return parameterList
+        }
+    }
+
+    private func inferParameterType(from pattern: ParameterPattern) -> ILType {
+        switch pattern {
+        case .identifier:
+            return .anything
+        case .array:
+            return .iterable
+        case .object:
+            return .object()
+        }
     }
 
     // Set type to current state and save type change event

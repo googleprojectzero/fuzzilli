@@ -33,11 +33,16 @@ message IdentifierParameter {
 }
 
 message ObjectParameter {
-    repeated IdentifierParameter parameters = 1;
+    repeated ObjectParameterProperty parameters = 1;
+}
+
+message ObjectParameterProperty {
+    string parameterKey = 1;
+    Parameter parameterValue = 2;
 }
 
 message ArrayParameter {
-    repeated IdentifierParameter elements = 1;
+    repeated Parameter elements = 1;
 }
 
 message EmptyStatement {

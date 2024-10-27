@@ -122,7 +122,7 @@ public class JavaScriptCompiler {
             }
 
         case .functionDeclaration(let functionDeclaration):
-            let parameters = convertParameters(functionDeclaration.parameters)
+            let parameters = try convertParameters(functionDeclaration.parameters)
             let functionBegin, functionEnd: Operation
             switch functionDeclaration.type {
             case .plain:
@@ -218,7 +218,7 @@ public class JavaScriptCompiler {
                     emit(op, withInputs: inputs)
 
                 case .ctor(let constructor):
-                    let parameters = convertParameters(constructor.parameters)
+                    let parameters = try convertParameters(constructor.parameters)
                     let head = emit(BeginClassConstructor(parameters: parameters))
 
                     try enterNewScope {
@@ -233,7 +233,7 @@ public class JavaScriptCompiler {
                     emit(EndClassConstructor())
 
                 case .method(let method):
-                    let parameters = convertParameters(method.parameters)
+                    let parameters = try convertParameters(method.parameters)
                     let head: Instruction
                     if method.isStatic {
                         head = emit(BeginClassStaticMethod(methodName: method.name, parameters: parameters))
@@ -780,7 +780,7 @@ public class JavaScriptCompiler {
                         emit(ObjectLiteralAddComputedProperty(), withInputs: [computedPropertyKeys.removeLast()] + inputs)
                     }
                 case .method(let method):
-                    let parameters = convertParameters(method.parameters)
+                    let parameters = try convertParameters(method.parameters)
 
                     let instr: Instruction
                     if case .name(let name) = method.key {
@@ -861,7 +861,7 @@ public class JavaScriptCompiler {
             }
 
         case .functionExpression(let functionExpression):
-            let parameters = convertParameters(functionExpression.parameters)
+            let parameters = try convertParameters(functionExpression.parameters)
             let functionBegin, functionEnd: Operation
             switch functionExpression.type {
             case .plain:
@@ -892,7 +892,7 @@ public class JavaScriptCompiler {
             return instr.output
 
         case .arrowFunctionExpression(let arrowFunction):
-            let parameters = convertParameters(arrowFunction.parameters)
+            let parameters = try convertParameters(arrowFunction.parameters)
             let functionBegin, functionEnd: Operation
             switch arrowFunction.type {
             case .plain:
@@ -1074,69 +1074,68 @@ public class JavaScriptCompiler {
     }
 
     private func mapParameters(_ parameters: [Compiler_Protobuf_Parameter], to variables: ArraySlice<Variable>) {
-        var flatParameters: [String] = [] 
-        var expectedVariableCount = 0
-        for param in parameters {
+        var flatParameters: [String] = []
+        func extractIdentifiers(from param: Compiler_Protobuf_Parameter) {
             switch param.parameter {
             case .identifierParameter(let identifier):
                 flatParameters.append(identifier.name)
-                expectedVariableCount += 1
             case .objectParameter(let object):
-                for subParam in object.parameters {
-                    flatParameters.append(subParam.name)
-                    expectedVariableCount += 1
+                for property in object.parameters {
+                    extractIdentifiers(from: property.parameterValue)
                 }
             case .arrayParameter(let array):
                 for element in array.elements {
-                    flatParameters.append(element.name)
-                    expectedVariableCount += 1
+                    extractIdentifiers(from: element)
                 }
             case .none:
                 break
             }
         }
-        assert(expectedVariableCount == variables.count, "The number of variables does not match the number of parameters.")
+        for param in parameters {
+            extractIdentifiers(from: param)
+        }
+        assert(flatParameters.count == variables.count, "The number of variables (\(variables.count)) does not match the number of parameters (\(flatParameters.count)).")
         for (name, v) in zip(flatParameters, variables) {
             map(name, to: v)
         }
     }
 
-    private func convertParameters(_ parameters: [Compiler_Protobuf_Parameter]) -> Parameters {
+    private func convertParameters(_ parameters: [Compiler_Protobuf_Parameter]) throws -> Parameters {
         var totalParameterCount = 0
-        var parameterTypes = [Parameters.ParameterType]()
-        var objectPropertyNames = [[String]]()
-        
-        for param in parameters {
+        var patterns = [ParameterPattern]()
+        func processParameter(_ param: Compiler_Protobuf_Parameter) throws -> ParameterPattern {
             switch param.parameter {
             case .identifierParameter(_):
                 totalParameterCount += 1
-                parameterTypes.append(.identifier)
+                return .identifier
             case .objectParameter(let object):
-                let objectCount = object.parameters.count
-                totalParameterCount += objectCount
-                if (objectCount == 1) {
-                    parameterTypes.append(.standaloneObject)
-                } else {
-                    parameterTypes.append(.objectStart)
-                    parameterTypes.append(contentsOf: Array(repeating: .objectMiddle, count: max(0, objectCount - 2)))
-                    parameterTypes.append(.objectEnd)
+                var properties = [ObjectPatternProperty]()
+                for property in object.parameters {
+                    let key = property.parameterKey
+                    let valuePattern = try processParameter(property.parameterValue)
+                    properties.append(ObjectPatternProperty(key: key, value: valuePattern))
                 }
-                objectPropertyNames.append(object.parameters.map { $0.name })
+                return .object(properties: properties)
             case .arrayParameter(let array):
-                let arrayCount = array.elements.count
-                totalParameterCount += arrayCount
-                if arrayCount == 1 {
-                    parameterTypes.append(.standaloneArray)
-                } else {
-                    parameterTypes.append(.arrayStart)
-                    parameterTypes.append(contentsOf: Array(repeating: .arrayMiddle, count: max(0, arrayCount - 2)))
-                    parameterTypes.append(.arrayEnd)
+                var elements = [ParameterPattern]()
+                for element in array.elements {
+                    let elementPattern = try processParameter(element)
+                    elements.append(elementPattern)
                 }
-            default:
-                break
+                return .array(elements: elements)
+            case .none:
+                throw CompilerError.unsupportedFeatureError("Unexpected parameter type: .none in convertParameters")
             }
         }
-        return Parameters(count: totalParameterCount, parameterTypes: parameterTypes, objectPropertyNames: objectPropertyNames)
+        for param in parameters {
+            let pattern = try processParameter(param)
+            patterns.append(pattern)
+        }
+        var params = Parameters(
+            count: totalParameterCount
+        )
+        params.patterns = patterns
+        return params
     }
 
     /// Convenience accessor for the currently active scope.

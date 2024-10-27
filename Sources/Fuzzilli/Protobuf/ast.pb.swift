@@ -187,11 +187,34 @@ public struct Compiler_Protobuf_ObjectParameter: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: [Compiler_Protobuf_IdentifierParameter] = []
+  public var parameters: [Compiler_Protobuf_ObjectParameterProperty] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+}
+
+public struct Compiler_Protobuf_ObjectParameterProperty: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var parameterKey: String = String()
+
+  public var parameterValue: Compiler_Protobuf_Parameter {
+    get {return _parameterValue ?? Compiler_Protobuf_Parameter()}
+    set {_parameterValue = newValue}
+  }
+  /// Returns true if `parameterValue` has been explicitly set.
+  public var hasParameterValue: Bool {return self._parameterValue != nil}
+  /// Clears the value of `parameterValue`. Subsequent reads from it will return its default value.
+  public mutating func clearParameterValue() {self._parameterValue = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _parameterValue: Compiler_Protobuf_Parameter? = nil
 }
 
 public struct Compiler_Protobuf_ArrayParameter: Sendable {
@@ -199,7 +222,7 @@ public struct Compiler_Protobuf_ArrayParameter: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var elements: [Compiler_Protobuf_IdentifierParameter] = []
+  public var elements: [Compiler_Protobuf_Parameter] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2444,6 +2467,48 @@ extension Compiler_Protobuf_ObjectParameter: SwiftProtobuf.Message, SwiftProtobu
 
   public static func ==(lhs: Compiler_Protobuf_ObjectParameter, rhs: Compiler_Protobuf_ObjectParameter) -> Bool {
     if lhs.parameters != rhs.parameters {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ObjectParameterProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ObjectParameterProperty"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "parameterKey"),
+    2: .same(proto: "parameterValue"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.parameterKey) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._parameterValue) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.parameterKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.parameterKey, fieldNumber: 1)
+    }
+    try { if let v = self._parameterValue {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ObjectParameterProperty, rhs: Compiler_Protobuf_ObjectParameterProperty) -> Bool {
+    if lhs.parameterKey != rhs.parameterKey {return false}
+    if lhs._parameterValue != rhs._parameterValue {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
