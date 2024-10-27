@@ -1355,15 +1355,33 @@ public class JavaScriptLifter: Lifter {
 
     private func liftParameters(_ parameters: Parameters, as variables: [String]) -> String {
         assert(parameters.count == variables.count)
-        var paramList = [String]()
-        for v in variables {
-            if parameters.hasRestParameter && v == variables.last {
-                paramList.append("..." + v)
-            } else {
-                paramList.append(v)
+        var variableIndex = 0
+        func liftPattern(_ pattern: ParameterPattern) -> String {
+            switch pattern {
+            case .identifier:
+                let variableName = variables[variableIndex]
+                variableIndex += 1
+                return variableName
+
+            case .object(let properties):
+                let liftedProperties = properties.map { property -> String in
+                    let key = property.key
+                    let value = liftPattern(property.value)
+                    return "\(key): \(value)"
+                }
+                return "{ " + liftedProperties.joined(separator: ", ") + " }"
+
+            case .array(let elements):
+                let liftedElements = elements.map { element -> String in
+                    return liftPattern(element)
+                }
+                return "[ " + liftedElements.joined(separator: ", ") + " ]"
             }
         }
-        return paramList.joined(separator: ", ")
+        let liftedParams = parameters.patterns.map { pattern in
+            return liftPattern(pattern)
+        }
+        return liftedParams.joined(separator: ", ")
     }
 
     private func liftFunctionDefinitionBegin(_ instr: Instruction, keyword FUNCTION: String, using w: inout JavaScriptWriter) {
