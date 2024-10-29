@@ -44,8 +44,10 @@ public struct JSTyper: Analyzer {
         // Stores the globals this module accesses, this is just used below, where we get the correct exports type.
         var globals: [Variable] = []
 
+        var tables: [Variable] = []
+
         public func getExportsType() -> ILType {
-            return .object(withProperties: self.globals.enumerated().map { "wg\($0.0)"}, withMethods: self.methodSignatures.enumerated().map { "w\($0.0)" })
+            return .object(withProperties: self.globals.enumerated().map { "wg\($0.0)"} + self.tables.enumerated().map { "wt\($0.0)" }, withMethods: self.methodSignatures.enumerated().map { "w\($0.0)" })
         }
     }
 
@@ -128,10 +130,16 @@ public struct JSTyper: Analyzer {
                 }
             case .wasmDefineGlobal(_):
                 activeWasmModuleDefinition!.globals.append(instr.output)
+            case .wasmDefineTable(_):
+                activeWasmModuleDefinition!.tables.append(instr.output)
             case .wasmLoadGlobal(let op):
                 assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)
                 if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
                     activeWasmModuleDefinition!.globals.append(instr.input(0))
+                }
+            case .wasmTableGet(_), .wasmTableSet(_):
+                if !activeWasmModuleDefinition!.tables.contains(instr.input(0)) {
+                    activeWasmModuleDefinition!.tables.append(instr.input(0))
                 }
             case .wasmStoreGlobal(let op):
                 assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)

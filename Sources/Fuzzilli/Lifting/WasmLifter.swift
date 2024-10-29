@@ -82,6 +82,10 @@ public class WasmLifter {
         return "wg\(idx)"
     }
 
+    public static func nameOfTable(_ idx: Int) -> String {
+        return "wt\(idx)"
+    }
+
     // This contains imports, i.e. WasmJsCall arguments, tables, globals and memories that are not defined in this module. We need to track them here so that we can properly wire up the imports when lifting this module.
     // The Signature is only valid if the Variable is the argument to a WasmJsCall instruction, it is the Signature contained in the instruction. This Signature that is in the instruction is a loose approximation of the JS Signature, it depends on available Wasm types at the time when it was generated.
     private var imports: [(Variable, Signature?)] = []
@@ -812,7 +816,7 @@ public class WasmLifter {
             typer.type(of: $0).Is(.object(ofGroup: "WasmGlobal"))
         }
 
-        temp += Leb128.unsignedEncode(self.functions.count + importedGlobals.count + self.globals.map { $0 }.count)
+        temp += Leb128.unsignedEncode(self.functions.count + importedGlobals.count + self.globals.count + self.tables.count)
         for (idx, _) in self.functions.enumerated() {
             // Append the name as a vector
             let name = WasmLifter.nameOfFunction(idx)
@@ -844,6 +848,16 @@ public class WasmLifter {
             // TODO: maybe add something like a global base?
             temp += [0x3, UInt8(importedGlobals.count + idx)]
         }
+
+        for instruction in self.tables {
+          let index = resolveTableIdx(forInput: instruction.output)
+          let name = WasmLifter.nameOfTable(index)
+          temp += Leb128.unsignedEncode(name.count)
+          temp += name.data(using: .utf8)!
+          temp += [0x1, UInt8(index)]
+        }
+
+        // TODO(mliedtke): Export defined tags.
 
         // Append the length of the section and the section contents itself.
         self.bytecode.append(Leb128.unsignedEncode(temp.count))
