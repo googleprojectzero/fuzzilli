@@ -425,20 +425,34 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let jsFunction = b.buildPlainFunction(with: .parameters()) { _ in
-            b.doReturn(b.loadBigInt(0))
+            b.doReturn(b.loadBigInt(11))
         }
 
-        b.buildWasmModule { wasmModule in
+        let module = b.buildWasmModule { wasmModule in
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, params in
                 function.wasmReturn(function.wasmi32BinOp(params[0], function.consti32(1), binOpKind: .Add))
             }
             wasmModule.addTable(tableType: .wasmFuncRef, minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction])
         }
 
+        let exports = module.loadExports()
+
+        let table = b.getProperty("wt0", of: exports)
+
+        let tableElement0 = b.callMethod("get", on: table, withArgs: [b.loadInt(0)])
+        let tableElement1 = b.callMethod("get", on: table, withArgs: [b.loadInt(1)])
+
+        let output0 = b.callFunction(tableElement0, withArgs: [b.loadInt(42)])
+        let output1 = b.callFunction(tableElement1, withArgs: [])
+
+        let outputFunc = b.loadBuiltin("output")
+        b.callFunction(outputFunc, withArgs: [output0])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: output1)])
+
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
 
-        testForOutput(program: jsProg, runner: runner, outputString: "")
+        testForOutput(program: jsProg, runner: runner, outputString: "43\n11\n")
     }
 
     func testMemories() throws {

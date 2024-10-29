@@ -152,10 +152,7 @@ public class JavaScriptExecutor {
 
     /// Tries to find a JS shell that is usable for testing.
     private static func findJsShellExecutable() -> String? {
-        if let path = ProcessInfo.processInfo.environment["FUZZILLI_TEST_SHELL"] {
-            return path
-        }
-        return nil
+        return ProcessInfo.processInfo.environment["FUZZILLI_TEST_SHELL"]
     }
 
     /// The Result of a JavaScript Execution, the exit code and any associated output.
