@@ -819,6 +819,9 @@ message CreateWasmTable {
   optional int64 maxSize = 3;
 }
 
+message CreateWasmJSTag {
+}
+
 message WrapSuspending {
 }
 

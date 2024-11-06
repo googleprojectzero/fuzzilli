@@ -2494,6 +2494,14 @@ class CreateWasmTable: JsOperation {
     }
 }
 
+class CreateWasmJSTag: JsOperation {
+    override var opcode: Opcode { .createWasmJSTag(self) }
+
+    init() {
+        super.init(numOutputs: 1, attributes: [.isPure], requiredContext: [.javascript])
+    }
+}
+
 /// Internal operations.
 ///
 /// These can be used for internal fuzzer operations but will not appear in the corpus.

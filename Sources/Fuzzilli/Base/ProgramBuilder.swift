@@ -2716,6 +2716,11 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func createWasmJSTag() -> Variable {
+        return emit(CreateWasmJSTag()).output
+    }
+
+    @discardableResult
     public func wrapSuspending(function: Variable) -> Variable {
         return emit(WrapSuspending(), withInputs: [function]).output
     }

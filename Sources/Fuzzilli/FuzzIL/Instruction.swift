@@ -983,6 +983,8 @@ extension Instruction: ProtobufConvertible {
                         $0.maxSize = Int64(maxSize)
                     }
                 }
+            case .createWasmJSTag(_):
+                $0.createWasmJstag = Fuzzilli_Protobuf_CreateWasmJSTag()
             case .wrapPromising(_):
                 $0.wrapPromising = Fuzzilli_Protobuf_WrapPromising()
             case .wrapSuspending(_):
@@ -1819,6 +1821,8 @@ extension Instruction: ProtobufConvertible {
                 maxSize = nil
             }
             op = CreateWasmTable(tableType: WasmTypeEnumToILType(p.tableType), minSize: Int(p.minSize), maxSize: maxSize)
+        case .createWasmJstag(_):
+            op = CreateWasmJSTag()
         case .wrapPromising(_):
             op = WrapPromising()
         case .wrapSuspending(_):

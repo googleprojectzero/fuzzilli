@@ -954,6 +954,9 @@ public struct JSTyper: Analyzer {
             // TODO: fix this.
             set(instr.output, .object(ofGroup: "WasmTable"))
 
+        case .createWasmJSTag(_):
+            set(instr.output, .object(ofGroup: "WasmTag"))
+
         case .wrapSuspending(_):
             // This operation takes a function but produces an object that can be called from WebAssembly.
             // TODO: right now this "loses" the signature of the JS function, this is unfortunate but won't break fuzzing, in the template we can just store the signature.
