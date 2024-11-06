@@ -778,6 +778,9 @@ public class FuzzILLifter: Lifter {
             }
             w.emit("\(output()) <- CreateWasmTable \(op.tableType) [\(op.minSize),\(maxSizeStr)]")
 
+        case .createWasmJSTag(_):
+            w.emit("\(output()) <- CreateWasmJSTag")
+
         case .wrapPromising(_):
             w.emit("\(output()) <- wrapPromising \(input(0))")
 

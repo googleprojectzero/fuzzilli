@@ -381,6 +381,8 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmI64x2LoadSplat(let op):
             // TODO: ?
             newOp = op
+        case .createWasmJSTag(let op):
+            newOp = op
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
              .loadUndefined(_),

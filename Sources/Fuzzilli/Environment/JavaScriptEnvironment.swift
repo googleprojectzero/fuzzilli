@@ -360,6 +360,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         for variant in ["funcref", "externref"] {
             registerObjectGroup(.wasmTable(variant))
         }
+        registerObjectGroup(.jsWasmTag)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -1501,6 +1502,15 @@ public extension ObjectGroup {
         methods: [
             "grow" : [.number] => .number
         ]
+    )
+
+    // TOOD(mliedtke): Reconsider whether WebAssembly.Tag and WebAssembly.JSTag should share the
+    // same object group. When split, we can register the type() prototype method.
+    static let jsWasmTag = ObjectGroup(
+        name: "WasmTag",
+        instanceType: .object(ofGroup: "WasmTag"),
+        properties: [:],
+        methods: [:]
     )
 
     /// ObjectGroup modelling JavaScript WebAssembly Table objects
