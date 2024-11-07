@@ -423,6 +423,7 @@ let v8Profile = Profile(
     processArgs: { randomize in
         var args = [
             "--expose-gc",
+            "--expose-externalize-string",
             "--omit-quit",
             "--allow-natives-syntax",
             "--fuzzing",
