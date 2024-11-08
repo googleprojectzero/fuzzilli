@@ -198,6 +198,7 @@ public struct JSTyper: Analyzer {
         case .array:
             return .iterable
         case .object:
+            // TODO be more precise here: Describe the object parameters structure
             return .object()
         }
     }

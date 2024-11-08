@@ -122,7 +122,7 @@ public class JavaScriptCompiler {
             }
 
         case .functionDeclaration(let functionDeclaration):
-            let parameters = try convertParameters(functionDeclaration.parameters)
+            let parameters = convertParameters(functionDeclaration.parameters)
             let functionBegin, functionEnd: Operation
             switch functionDeclaration.type {
             case .plain:
@@ -218,7 +218,7 @@ public class JavaScriptCompiler {
                     emit(op, withInputs: inputs)
 
                 case .ctor(let constructor):
-                    let parameters = try convertParameters(constructor.parameters)
+                    let parameters = convertParameters(constructor.parameters)
                     let head = emit(BeginClassConstructor(parameters: parameters))
 
                     try enterNewScope {
@@ -233,7 +233,7 @@ public class JavaScriptCompiler {
                     emit(EndClassConstructor())
 
                 case .method(let method):
-                    let parameters = try convertParameters(method.parameters)
+                    let parameters = convertParameters(method.parameters)
                     let head: Instruction
                     if method.isStatic {
                         head = emit(BeginClassStaticMethod(methodName: method.name, parameters: parameters))
@@ -780,7 +780,7 @@ public class JavaScriptCompiler {
                         emit(ObjectLiteralAddComputedProperty(), withInputs: [computedPropertyKeys.removeLast()] + inputs)
                     }
                 case .method(let method):
-                    let parameters = try convertParameters(method.parameters)
+                    let parameters = convertParameters(method.parameters)
 
                     let instr: Instruction
                     if case .name(let name) = method.key {
@@ -861,7 +861,7 @@ public class JavaScriptCompiler {
             }
 
         case .functionExpression(let functionExpression):
-            let parameters = try convertParameters(functionExpression.parameters)
+            let parameters = convertParameters(functionExpression.parameters)
             let functionBegin, functionEnd: Operation
             switch functionExpression.type {
             case .plain:
@@ -892,7 +892,7 @@ public class JavaScriptCompiler {
             return instr.output
 
         case .arrowFunctionExpression(let arrowFunction):
-            let parameters = try convertParameters(arrowFunction.parameters)
+            let parameters = convertParameters(arrowFunction.parameters)
             let functionBegin, functionEnd: Operation
             switch arrowFunction.type {
             case .plain:
@@ -1074,6 +1074,8 @@ public class JavaScriptCompiler {
     }
 
     private func mapParameters(_ parameters: [Compiler_Protobuf_Parameter], to variables: ArraySlice<Variable>) {
+        // Maps parameters of a function to variables that are used in that function's scope.
+        // func extractIdentifiers and var flatParameters help to process object and array patterns.
         var flatParameters: [String] = []
         func extractIdentifiers(from param: Compiler_Protobuf_Parameter) {
             switch param.parameter {
@@ -1088,7 +1090,7 @@ public class JavaScriptCompiler {
                     extractIdentifiers(from: element)
                 }
             case .none:
-                break
+                fatalError("Unexpected parameter type: .none in mapParameters")
             }
         }
         for param in parameters {
@@ -1100,10 +1102,11 @@ public class JavaScriptCompiler {
         }
     }
 
-    private func convertParameters(_ parameters: [Compiler_Protobuf_Parameter]) throws -> Parameters {
+    private func convertParameters(_ parameters: [Compiler_Protobuf_Parameter]) -> Parameters {
+        // Converts a protobuf signature to a FuzzIL signature.
         var totalParameterCount = 0
         var patterns = [ParameterPattern]()
-        func processParameter(_ param: Compiler_Protobuf_Parameter) throws -> ParameterPattern {
+        func processParameter(_ param: Compiler_Protobuf_Parameter) -> ParameterPattern {
             switch param.parameter {
             case .identifierParameter(_):
                 totalParameterCount += 1
@@ -1112,23 +1115,23 @@ public class JavaScriptCompiler {
                 var properties = [ObjectPatternProperty]()
                 for property in object.parameters {
                     let key = property.parameterKey
-                    let valuePattern = try processParameter(property.parameterValue)
+                    let valuePattern = processParameter(property.parameterValue)
                     properties.append(ObjectPatternProperty(key: key, value: valuePattern))
                 }
                 return .object(properties: properties)
             case .arrayParameter(let array):
                 var elements = [ParameterPattern]()
                 for element in array.elements {
-                    let elementPattern = try processParameter(element)
+                    let elementPattern = processParameter(element)
                     elements.append(elementPattern)
                 }
                 return .array(elements: elements)
             case .none:
-                throw CompilerError.unsupportedFeatureError("Unexpected parameter type: .none in convertParameters")
+                fatalError("Unexpected parameter type: .none in convertParameters")
             }
         }
         for param in parameters {
-            let pattern = try processParameter(param)
+            let pattern = processParameter(param)
             patterns.append(pattern)
         }
         var params = Parameters(

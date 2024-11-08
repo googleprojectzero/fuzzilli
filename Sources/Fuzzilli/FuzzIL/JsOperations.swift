@@ -1060,24 +1060,25 @@ struct ObjectPatternProperty {
 
 // The parameters of a FuzzIL subroutine.
 public struct Parameters {
-    private let numParameters: UInt32
+    /// The total number of variables after destructuring object- and array patterns.
+    /// Example: f({a, b}, [c, d]) has 4 variables, not 2.
+    private let numVariables: UInt32
+    /// Whether the last parameter is a rest parameter.
+    /// TODO make the rest parameter an actual parameter type.
     let hasRestParameter: Bool
 
     var count: Int {
-        return Int(numParameters)
+        return Int(numVariables)
     }
 
-    var objectPropertyNames: [[String]]
     var patterns: [ParameterPattern]
     init(
         count: Int,
-        hasRestParameter: Bool = false,
-        objectPropertyNames: [[String]] = []
+        hasRestParameter: Bool = false
     ) {
-        self.numParameters = UInt32(count)
+        self.numVariables = UInt32(count)
         self.hasRestParameter = hasRestParameter
         self.patterns = []
-        self.objectPropertyNames = objectPropertyNames
     }
 }
 
