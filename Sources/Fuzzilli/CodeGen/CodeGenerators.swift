@@ -769,13 +769,13 @@ public let CodeGenerators: [CodeGenerator] = [
         // These are "typically" used as arguments, so we don't directly generate a call operation here.
     },
 
-    RecursiveCodeGenerator("GeneratorFunctionGenerator") { b in
+    RecursiveCodeGenerator("GeneratorFunctionGenerator", inputs: .preferred(.iterable)) { b, it in
         let f = b.buildGeneratorFunction(with: b.randomParameters(), isStrict: probability(0.1)) { _ in
             b.buildRecursive()
             if probability(0.5) {
                 b.yield(b.randomVariable())
             } else {
-                b.yieldEach(b.randomVariable())
+                b.yieldEach(b.buildIteratorVariable(b, it))
             }
             b.doReturn(b.randomVariable())
         }
@@ -800,14 +800,14 @@ public let CodeGenerators: [CodeGenerator] = [
         // These are "typically" used as arguments, so we don't directly generate a call operation here.
     },
 
-    RecursiveCodeGenerator("AsyncGeneratorFunctionGenerator") { b in
+    RecursiveCodeGenerator("AsyncGeneratorFunctionGenerator", inputs: .preferred(.iterable)) { b, it in
         let f = b.buildAsyncGeneratorFunction(with: b.randomParameters(), isStrict: probability(0.1)) { _ in
             b.buildRecursive()
             b.await(b.randomVariable())
             if probability(0.5) {
                 b.yield(b.randomVariable())
             } else {
-                b.yieldEach(b.randomVariable())
+                b.yieldEach(b.buildIteratorVariable(b, it))
             }
             b.doReturn(b.randomVariable())
         }
@@ -1085,7 +1085,7 @@ public let CodeGenerators: [CodeGenerator] = [
             }
         } else {
             // TODO only do this when the value is iterable?
-            b.yieldEach(val)
+            b.yieldEach(b.buildIteratorVariable(b, val))
         }
     },
 

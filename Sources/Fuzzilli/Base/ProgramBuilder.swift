@@ -2711,4 +2711,13 @@ public class ProgramBuilder {
             break
         }
     }
+
+    public func buildIteratorVariable(_ b: ProgramBuilder, _ it: Variable) -> Variable{
+        if(b.type(of: it).Is(.iterable)){
+            return it
+        }
+        let initialValues = (0..<Int.random(in: 1...5)).map({ _ in b.randomVariable() })
+        return b.createArray(with: initialValues)
+    }
+
 }
