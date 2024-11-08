@@ -383,6 +383,9 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = op
         case .createWasmJSTag(let op):
             newOp = op
+        case .createWasmTag(let op):
+            // TODO(mliedtke): We could mutate the types / counts of params.
+            newOp = op
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
              .loadUndefined(_),

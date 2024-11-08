@@ -1459,6 +1459,27 @@ public class JavaScriptLifter: Lifter {
                 let LET = w.varKeyword
                 w.emit("\(LET) \(V) = WebAssembly.JSTag;")
 
+            case .createWasmTag(let op):
+                let V = w.declare(instr.output)
+                let LET = w.varKeyword
+                let types = op.parameters.map {type in
+                    switch(type) {
+                        case .wasmExternRef:
+                            return "\"externref\""
+                        case .wasmf32:
+                            return "\"f32\""
+                        case .wasmf64:
+                            return "\"f64\""
+                        case .wasmi32:
+                            return "\"i32\""
+                        case .wasmi64:
+                            return "\"i64\""
+                        default:
+                            fatalError("Unhandled wasm type \(type)")
+                    }
+                }.joined(separator: ", ")
+                w.emit("\(LET) \(V) = new WebAssembly.Tag({parameters: [\(types)]});")
+
             case .consti64(_),
                  .consti32(_),
                  .constf32(_),

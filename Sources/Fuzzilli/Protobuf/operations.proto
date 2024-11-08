@@ -822,6 +822,10 @@ message CreateWasmTable {
 message CreateWasmJSTag {
 }
 
+message CreateWasmTag {
+    repeated WasmILType parameters = 1;
+}
+
 message WrapSuspending {
 }
 
@@ -865,7 +869,6 @@ enum WasmILType {
 message BeginWasmFunction {
   repeated WasmILType parameters = 1;
   WasmILType returnType = 2;
-
 }
 
 message EndWasmFunction {

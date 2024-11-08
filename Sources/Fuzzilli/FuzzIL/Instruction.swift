@@ -335,6 +335,19 @@ extension Instruction: ProtobufConvertible {
             }
         }
 
+        func convertParametersToWasmTypeEnums(_ parameters: ParameterList) -> [Fuzzilli_Protobuf_WasmILType] {
+            var plainParams: [ILType] = []
+            for param in parameters {
+                switch param {
+                case .plain(let p):
+                    plainParams.append(p)
+                default:
+                    fatalError("Only plain parameters are expected.")
+                }
+            }
+            return plainParams.map { ILTypeToWasmTypeEnum($0) }
+        }
+
         func ILTypeToWasmTypeEnum(_ wasmType: ILType) -> Fuzzilli_Protobuf_WasmILType {
             var underlyingWasmType = wasmType
             if underlyingWasmType == .nothing {
@@ -985,6 +998,10 @@ extension Instruction: ProtobufConvertible {
                 }
             case .createWasmJSTag(_):
                 $0.createWasmJstag = Fuzzilli_Protobuf_CreateWasmJSTag()
+            case .createWasmTag(let op):
+                $0.createWasmTag = Fuzzilli_Protobuf_CreateWasmTag.with {
+                    $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
+                }
             case .wrapPromising(_):
                 $0.wrapPromising = Fuzzilli_Protobuf_WrapPromising()
             case .wrapSuspending(_):
@@ -1004,16 +1021,7 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmReturn = Fuzzilli_Protobuf_WasmReturn.with { $0.returnType = ILTypeToWasmTypeEnum(op.returnType) }
             case .wasmJsCall(let op):
                 $0.wasmJsCall = Fuzzilli_Protobuf_WasmJsCall.with {
-                    var plainParams: [ILType] = []
-                    for param in op.functionSignature.parameters {
-                        switch param {
-                        case .plain(let p):
-                            plainParams.append(p)
-                        case .opt(_), .rest(_):
-                            fatalError("We only expect to see .plain parameters in wasm signatures")
-                        }
-                    }
-                    $0.parameters = plainParams.map(ILTypeToWasmTypeEnum)
+                    $0.parameters = convertParametersToWasmTypeEnums(op.functionSignature.parameters)
                     $0.returnType = ILTypeToWasmTypeEnum(op.functionSignature.outputType)
                 }
             case .wasmi32CompareOp(let op):
@@ -1165,65 +1173,28 @@ extension Instruction: ProtobufConvertible {
                 }
             case .beginWasmFunction(let op):
                 $0.beginWasmFunction = Fuzzilli_Protobuf_BeginWasmFunction.with {
-                    var plainParams: [ILType] = []
-                    for param in op.signature.parameters {
-                        switch param {
-                        case .plain(let p):
-                            plainParams.append(p)
-                        default:
-                            fatalError("Only plain parameters are expected for wasm functions.")
-                        }
-                    }
-                    $0.parameters = plainParams.map { ILTypeToWasmTypeEnum($0) }
+                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
                     $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
             case .endWasmFunction(_):
                 $0.endWasmFunction = Fuzzilli_Protobuf_EndWasmFunction()
             case .wasmBeginBlock(let op):
                 $0.wasmBeginBlock = Fuzzilli_Protobuf_WasmBeginBlock.with {
-                    var plainParams: [ILType] = []
-                    for param in op.signature.parameters {
-                        switch param {
-                        case .plain(let p):
-                            plainParams.append(p)
-                        default:
-                            fatalError("Only plain parameters are expected for wasm blocks")
-                        }
-                    }
-                    $0.parameters = plainParams.map { ILTypeToWasmTypeEnum($0) }
+                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
                     $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
             case .wasmEndBlock(_):
                 $0.wasmEndBlock = Fuzzilli_Protobuf_WasmEndBlock()
             case .wasmBeginLoop(let op):
                 $0.wasmBeginLoop = Fuzzilli_Protobuf_WasmBeginLoop.with {
-                    var plainParams: [ILType] = []
-                    for param in op.signature.parameters {
-                        switch param {
-                        case .plain(let p):
-                            plainParams.append(p)
-                        default:
-                            fatalError("Only plain parameters are expexted for wasm loops")
-                        }
-                    }
-                    $0.parameters = plainParams.map { ILTypeToWasmTypeEnum($0) }
+                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
                     $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
             case .wasmEndLoop(_):
                 $0.wasmEndLoop = Fuzzilli_Protobuf_WasmEndLoop()
             case .wasmBeginTry(let op):
-                // TODO(mliedtke): This is the same as the other blocks, we should consolidate this.
                 $0.wasmBeginTry = Fuzzilli_Protobuf_WasmBeginTry.with {
-                    var plainParams: [ILType] = []
-                    for param in op.signature.parameters {
-                        switch param {
-                        case .plain(let p):
-                            plainParams.append(p)
-                        default:
-                            fatalError("Only plain parameters are expexted for wasm try")
-                        }
-                    }
-                    $0.parameters = plainParams.map { ILTypeToWasmTypeEnum($0) }
+                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
                     $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
             case .wasmBeginCatchAll(let op):
@@ -1825,6 +1796,8 @@ extension Instruction: ProtobufConvertible {
             op = CreateWasmTable(tableType: WasmTypeEnumToILType(p.tableType), minSize: Int(p.minSize), maxSize: maxSize)
         case .createWasmJstag(_):
             op = CreateWasmJSTag()
+        case .createWasmTag(let p):
+            op = CreateWasmTag(parameters: p.parameters.map { Parameter.plain(WasmTypeEnumToILType($0)) })
         case .wrapPromising(_):
             op = WrapPromising()
         case .wrapSuspending(_):

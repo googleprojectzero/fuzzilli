@@ -212,6 +212,7 @@ enum Opcode {
     case createWasmMemory(CreateWasmMemory)
     case createWasmTable(CreateWasmTable)
     case createWasmJSTag(CreateWasmJSTag)
+    case createWasmTag(CreateWasmTag)
     case wrapPromising(WrapPromising)
     case wrapSuspending(WrapSuspending)
 
