@@ -1895,8 +1895,18 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmTagGenerator", inContext: .javascript) { b in
-        // TODO(mliedtke): Also generate "regular" wasm tags.
-        b.createWasmJSTag()
+        if probability(0.5) {
+            b.createWasmJSTag()
+        } else {
+            let numParams = Int.random(in: 0...10)
+            var params = ParameterList()
+            for _ in 0..<numParams {
+                // TODO(mliedtke): We should support externref and other types here. The list of types should be
+                // shared with function signature generation etc.
+                params.append(chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]))
+            }
+            b.createWasmTag(parameterTypes: params)
+        }
     },
 
     // Wasm Module Generator, this is fairly important as it creates the context necessary to run the Wasm CodeGenerators.

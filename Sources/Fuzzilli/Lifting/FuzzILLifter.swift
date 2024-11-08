@@ -781,6 +781,9 @@ public class FuzzILLifter: Lifter {
         case .createWasmJSTag(_):
             w.emit("\(output()) <- CreateWasmJSTag")
 
+        case .createWasmTag(let op):
+            w.emit("\(output()) <- CreateWasmTag \(op.parameters)")
+
         case .wrapPromising(_):
             w.emit("\(output()) <- wrapPromising \(input(0))")
 

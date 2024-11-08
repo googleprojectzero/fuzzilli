@@ -2502,6 +2502,16 @@ class CreateWasmJSTag: JsOperation {
     }
 }
 
+class CreateWasmTag: JsOperation {
+    override var opcode: Opcode { .createWasmTag(self) }
+    public let parameters: ParameterList
+
+    init(parameters: ParameterList) {
+        self.parameters = parameters
+        super.init(numOutputs: 1, attributes: [.isPure], requiredContext: [.javascript])
+    }
+}
+
 /// Internal operations.
 ///
 /// These can be used for internal fuzzer operations but will not appear in the corpus.
