@@ -1112,11 +1112,11 @@ public class JavaScriptCompiler {
                 totalParameterCount += 1
                 return .identifier
             case .objectParameter(let object):
-                var properties = [ObjectPatternProperty]()
+                var properties = [(String, ParameterPattern)]()
                 for property in object.parameters {
                     let key = property.parameterKey
                     let valuePattern = processParameter(property.parameterValue)
-                    properties.append(ObjectPatternProperty(key: key, value: valuePattern))
+                    properties.append((key, valuePattern))
                 }
                 return .object(properties: properties)
             case .arrayParameter(let array):

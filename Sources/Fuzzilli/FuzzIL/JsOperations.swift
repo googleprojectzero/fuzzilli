@@ -1049,13 +1049,8 @@ final class TestIn: JsOperation {
 
 enum ParameterPattern {
     case identifier
-    case object(properties: [ObjectPatternProperty])
+    case object(properties: [(String, ParameterPattern)])
     case array(elements: [ParameterPattern])
-}
-
-struct ObjectPatternProperty {
-    let key: String
-    let value: ParameterPattern
 }
 
 // The parameters of a FuzzIL subroutine.

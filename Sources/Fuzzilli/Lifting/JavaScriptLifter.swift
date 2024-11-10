@@ -1364,9 +1364,8 @@ public class JavaScriptLifter: Lifter {
                 return variableName
 
             case .object(let properties):
-                let liftedProperties = properties.map { property -> String in
-                    let key = property.key
-                    let value = liftPattern(property.value)
+                let liftedProperties = properties.map { (key, valuePattern) -> String in
+                    let value = liftPattern(valuePattern)
                     return "\(key): \(value)"
                 }
                 return "{ " + liftedProperties.joined(separator: ", ") + " }"

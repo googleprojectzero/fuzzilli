@@ -1,49 +1,54 @@
-function functionSimple(param0) {
-    console.log("Param0:", param0);
+function functionSimple(paramA) {
+    console.log("paramA:", paramA);
 }
 
 function functionNoParam() {
     console.log("No parameters here ...");
 }
 
-function functionWithObjectPattern(param0, { param1, param2 }) {
-    console.log("Param0:", param0);
-    console.log("Param1:", param1);
-    console.log("Param2:", param2);
-}
- 
-function functionWithArrayPattern(param0, [param1, param2]) {
-    console.log("Param0:", param0);
-    console.log("Param1:", param1);
-    console.log("Param2:", param2);
+function functionWithObjectPattern(argPrimary, { keyA, keyB }) {
+    console.log("keyB:", keyB);
+    console.log("argPrimary:", argPrimary);
+    console.log("keyA:", keyA);
 }
 
-function functionWithNestedObjectPattern(param0, { param1, param2: { subParam1, subParam2 } }) {
-    console.log("Param0:", param0);
-    console.log("Param1:", param1);
-    console.log("SubParam1:", subParam1);
-    console.log("SubParam2:", subParam2);
+function functionWithArrayPattern(firstElem, [secondElem, thirdElem]) {
+    console.log("secondElem:", secondElem);
+    console.log("thirdElem:", thirdElem);
+    console.log("firstElem:", firstElem);
 }
 
-function functionWithNestedArrayPattern(param0, [param1, [subParam1, subParam2]]) {
-    console.log("Param0:", param0);
-    console.log("Param1:", param1);
-    console.log("SubParam1:", subParam1);
-    console.log("SubParam2:", subParam2);
+function functionWithNestedObjectPattern(mainArg, { nestedKey1, nestedKey2: { subKeyX, subKeyY } }) {
+    console.log("mainArg:", mainArg);
+    console.log("subKeyY:", subKeyY);
+    console.log("nestedKey1:", nestedKey1);
+    console.log("subKeyX:", subKeyX);
 }
 
-function functionWithMixedPattern([param0, { objParam1, objParam2 }], { arrParam1, arrParam2: [subArr1, subArr2] }) {
-    console.log("Param0 (Array pattern):", param0);
-    console.log("ObjParam1 (in Array pattern):", objParam1);
-    console.log("ObjParam2 (in Array pattern):", objParam2);
-    console.log("ArrParam1 (in Object pattern):", arrParam1);
-    console.log("SubArr1 (in Array within Object pattern):", subArr1);
-    console.log("SubArr2 (in Array within Object pattern):", subArr2);
+function functionWithNestedArrayPattern(primaryElem, [secondaryElem, [nestedElemX, nestedElemY]]) {
+    console.log("primaryElem:", primaryElem);
+    console.log("nestedElemY:", nestedElemY);
+    console.log("secondaryElem:", secondaryElem);
+    console.log("nestedElemX:", nestedElemX);
 }
 
+function functionWithMixedPattern(
+    [arrayElem1, { objKey1, objKey2 }],
+    { arrKey1, arrKey2: [nestedArrElem1, nestedArrElem2] }
+) {
+    console.log("objKey2:", objKey2);
+    console.log("arrKey1:", arrKey1);
+    console.log("nestedArrElem1:", nestedArrElem1);
+    console.log("objKey1:", objKey1);
+    console.log("arrayElem1:", arrayElem1);
+    console.log("nestedArrElem2:", nestedArrElem2);
+}
 
-functionWithObjectPattern("foo", { param1: 23, param2: 42 });
+functionWithObjectPattern("foo", { keyA: 23, keyB: 42 });
 functionWithArrayPattern("bar", [9000, 9001]);
-functionWithNestedObjectPattern("foo", { param1: 23, param2: { subParam1: 100, subParam2: 200 } });
+functionWithNestedObjectPattern("foo", { nestedKey1: 23, nestedKey2: { subKeyX: 100, subKeyY: 200 } });
 functionWithNestedArrayPattern("bar", [9000, [9001, 9002]]);
-functionWithMixedPattern(["alpha", { objParam1: 300, objParam2: 400 }], { arrParam1: 500, arrParam2: [8000, 8001] });
+functionWithMixedPattern(
+    ["alpha", { objKey1: 300, objKey2: 400 }],
+    { arrKey1: 500, arrKey2: [8000, 8001] }
+);
