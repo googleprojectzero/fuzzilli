@@ -448,7 +448,7 @@ public class JavaScriptCompiler {
             // (switch blocks don't propagate an outer .loop context) so we just need to check for .loop here
             if contextAnalyzer.context.contains(.loop){
                 emit(LoopBreak())
-            } else if contextAnalyzer.context.contains(.switchBlock){
+            } else if contextAnalyzer.context.contains(.switchCase) {
                 emit(SwitchBreak())
             } else {
                 throw CompilerError.invalidNodeError("break statement outside of loop or switch")
