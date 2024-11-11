@@ -1073,7 +1073,7 @@ public struct Parameters {
     ) {
         self.numVariables = UInt32(count)
         self.hasRestParameter = hasRestParameter
-        self.patterns = []
+        self.patterns = Array(repeating: .identifier, count: count)
     }
 }
 
