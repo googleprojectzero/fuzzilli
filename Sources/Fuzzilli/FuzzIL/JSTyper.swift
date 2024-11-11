@@ -481,6 +481,12 @@ public struct JSTyper: Analyzer {
         case .loadArguments:
             set(instr.output, environment.argumentsType)
 
+        case .loadDisposableVariable:
+            set(instr.output, type(ofInput: 0))
+
+        case .loadAsyncDisposableVariable:
+            set(instr.output, type(ofInput: 0))
+
         case .loadNewTarget:
             set(instr.output, .function() | .undefined)
 

@@ -275,6 +275,30 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callFunction(f, withArgs: args)
     },
 
+    CodeGenerator("DisposableVariableGenerator", inContext: .subroutine, inputs: .one) { b, val in
+        assert(b.context.contains(.subroutine))
+        let dispose = b.getProperty("dispose", of: b.loadBuiltin("Symbol"));
+        let disposableVariable = b.buildObjectLiteral { obj in
+            obj.addProperty("value", as: val)
+            obj.addComputedMethod(dispose, with: .parameters(n:0)) { args in
+                b.doReturn(b.randomVariable())
+            }
+        }
+        b.loadDisposableVariable(disposableVariable)
+    },
+
+    CodeGenerator("AsyncDisposableVariableGenerator", inContext: .asyncFunction, inputs: .one) { b, val in
+        assert(b.context.contains(.asyncFunction))
+        let asyncDispose = b.getProperty("asyncDispose", of: b.loadBuiltin("Symbol"))
+        let asyncDisposableVariable = b.buildObjectLiteral { obj in
+            obj.addProperty("value", as: val)
+            obj.addComputedMethod(asyncDispose, with: .parameters(n:0)) { args in
+                b.doReturn(b.randomVariable())
+            }
+        }
+        b.loadAsyncDisposableVariable(asyncDisposableVariable)
+    },
+
     RecursiveCodeGenerator("ObjectLiteralGenerator") { b in
         b.buildObjectLiteral() { obj in
             b.buildRecursive()

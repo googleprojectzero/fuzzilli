@@ -2889,4 +2889,87 @@ class LifterTests: XCTestCase {
         """
         XCTAssertEqual(actual, expected)
     }
+
+    func testLoadDisposableVariableLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            let v1 = b.loadInt(1)
+            let v2 = b.loadInt(42)
+            let dispose = b.getProperty("dispose", of: b.loadBuiltin("Symbol"));
+            let disposableVariable = b.buildObjectLiteral { obj in
+                obj.addProperty("value", as: v1)
+                obj.addComputedMethod(dispose, with: .parameters(n:0)) { args in
+                    b.doReturn(v2)
+                }
+            }
+            let t = b.loadDisposableVariable(disposableVariable)
+        }
+        b.callFunction(f)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        function f0() {
+            const v4 = Symbol.dispose;
+            const o6 = {
+                "value": 1,
+                [v4]() {
+                    return 42;
+                },
+            };
+            using v7 = o6;
+        }
+        f0();
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testLoadAsyncDisposableVariableLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
+            let v1 = b.loadInt(1)
+            let v2 = b.loadInt(42)
+            let asyncDispose = b.getProperty("asyncDispose", of: b.loadBuiltin("Symbol"))
+            let asyncDisposableVariable = b.buildObjectLiteral { obj in
+                obj.addProperty("value", as: v1)
+                obj.addComputedMethod(asyncDispose, with: .parameters(n:0)) { args in
+                    b.doReturn(v2)
+                }
+            }
+            let t = b.loadAsyncDisposableVariable(asyncDisposableVariable)
+        }
+
+        let g = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
+            b.await(b.callFunction(f))
+        }
+        b.callFunction(g)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        async function f0() {
+            const v4 = Symbol.asyncDispose;
+            const o6 = {
+                "value": 1,
+                [v4]() {
+                    return 42;
+                },
+            };
+            await using v7 = o6;
+        }
+        async function f8() {
+            await f0();
+        }
+        f8();
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
 }

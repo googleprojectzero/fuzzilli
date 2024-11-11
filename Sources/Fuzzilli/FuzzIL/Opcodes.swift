@@ -38,6 +38,8 @@ enum Opcode {
     case loadNull(LoadNull)
     case loadThis(LoadThis)
     case loadArguments(LoadArguments)
+    case loadDisposableVariable(LoadDisposableVariable)
+    case loadAsyncDisposableVariable(LoadAsyncDisposableVariable)
     case loadRegExp(LoadRegExp)
     case beginObjectLiteral(BeginObjectLiteral)
     case objectLiteralAddProperty(ObjectLiteralAddProperty)

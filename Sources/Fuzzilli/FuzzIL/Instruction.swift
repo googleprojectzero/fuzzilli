@@ -361,6 +361,10 @@ extension Instruction: ProtobufConvertible {
                 $0.loadThis = Fuzzilli_Protobuf_LoadThis()
             case .loadArguments:
                 $0.loadArguments = Fuzzilli_Protobuf_LoadArguments()
+            case .loadDisposableVariable:
+                $0.loadDisposableVariable = Fuzzilli_Protobuf_LoadDisposableVariable()
+            case .loadAsyncDisposableVariable:
+                $0.loadAsyncDisposableVariable = Fuzzilli_Protobuf_LoadAsyncDisposableVariable()
             case .loadRegExp(let op):
                 $0.loadRegExp = Fuzzilli_Protobuf_LoadRegExp.with { $0.pattern = op.pattern; $0.flags = op.flags.rawValue }
             case .beginObjectLiteral:
@@ -896,6 +900,10 @@ extension Instruction: ProtobufConvertible {
             op = LoadThis()
         case .loadArguments:
             op = LoadArguments()
+        case .loadDisposableVariable:
+            op = LoadDisposableVariable()
+        case .loadAsyncDisposableVariable:
+            op = LoadAsyncDisposableVariable()
         case .loadRegExp(let p):
             op = LoadRegExp(pattern: p.pattern, flags: RegExpFlags(rawValue: p.flags))
         case .beginObjectLiteral:

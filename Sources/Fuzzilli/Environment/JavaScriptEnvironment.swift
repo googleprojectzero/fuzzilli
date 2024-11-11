@@ -40,7 +40,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         9223372036854775807,                                      // Int64 max, mostly for BigInts
     ]
 
-    static let wellKnownSymbols = ["iterator", "asyncIterator", "match", "matchAll", "replace", "search", "split", "hasInstance", "isConcatSpreadable", "unscopables", "species", "toPrimitive", "toStringTag"]
+    static let wellKnownSymbols = ["iterator", "asyncIterator", "match", "matchAll", "replace", "search", "split", "hasInstance", "isConcatSpreadable", "unscopables", "species", "toPrimitive", "toStringTag", "dispose", "asyncDispose"]
 
     public let interestingIntegers = InterestingIntegers
 
@@ -352,7 +352,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsReflectObject)
         registerObjectGroup(.jsArrayBufferConstructor)
         registerObjectGroup(.jsSharedArrayBufferConstructor)
-        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError"] {
+        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError", "SuppressedError"] {
             registerObjectGroup(.jsError(variant))
         }
 
@@ -373,7 +373,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("Symbol", ofType: .jsSymbolConstructor)
         registerBuiltin("BigInt", ofType: .jsBigIntConstructor)
         registerBuiltin("RegExp", ofType: .jsRegExpConstructor)
-        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError"] {
+        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError", "SuppressedError"] {
             registerBuiltin(variant, ofType: .jsErrorConstructor(variant))
         }
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
@@ -1316,7 +1316,9 @@ public extension ObjectGroup {
             "unscopables"        : .jsSymbol,
             "species"            : .jsSymbol,
             "toPrimitive"        : .jsSymbol,
-            "toStringTag"        : .jsSymbol
+            "toStringTag"        : .jsSymbol,
+            "dispose"            : .jsSymbol,
+            "asyncDispose"       : .jsSymbol
         ],
         methods: [
             "for"    : [.string] => .jsSymbol,

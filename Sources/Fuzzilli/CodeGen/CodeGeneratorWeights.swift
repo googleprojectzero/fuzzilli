@@ -42,6 +42,8 @@ public let codeGeneratorWeights = [
     "BuiltinGenerator":                         10,
     "BuiltinOverwriteGenerator":                3,
     "LoadNewTargetGenerator":                   3,
+    "DisposableVariableGenerator":              5,
+    "AsyncDisposableVariableGenerator":         5,
 
     "ObjectLiteralGenerator":                   10,
     // The following generators determine how frequently different

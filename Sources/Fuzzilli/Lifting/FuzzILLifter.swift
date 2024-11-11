@@ -67,6 +67,12 @@ public class FuzzILLifter: Lifter {
         case .loadArguments:
             w.emit("\(output()) <- LoadArguments")
 
+        case .loadDisposableVariable:
+            w.emit("\(output()) <- LoadDisposableVariable \(input(0))")
+
+        case .loadAsyncDisposableVariable:
+            w.emit("\(output()) <- LoadAsyncDisposableVariable \(input(0))")
+
         case .beginObjectLiteral:
             w.emit("BeginObjectLiteral")
             w.increaseIndentionLevel()
