@@ -219,6 +219,14 @@ public class JavaScriptLifter: Lifter {
             case .loadArguments:
                 w.assign(Identifier.new("arguments"), to: instr.output)
 
+            case .loadDisposableVariable:
+                let V = w.declare(instr.output);
+                w.emit("using \(V) = \(input(0));");
+
+            case .loadAsyncDisposableVariable:
+                let V = w.declare(instr.output);
+                w.emit("await using \(V) = \(input(0));");
+
             case .beginObjectLiteral:
                 let end = program.code.findBlockEnd(head: instr.index)
                 let output = program.code[end].output

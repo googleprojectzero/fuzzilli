@@ -145,6 +145,30 @@ final class LoadArguments: JsOperation {
     }
 }
 
+final class LoadDisposableVariable: JsOperation {
+    override var opcode: Opcode { .loadDisposableVariable(self) }
+
+    init() {
+        // Based on spec text, it is a Syntax error if UsingDeclaration and AwaitUsingDeclaration
+        // are not contained, either directly or indirectly, within a Block, CaseBlock, ForStatement,
+        // ForInOfStatement, FunctionBody, GeneratorBody, AsyncGeneratorBody, AsyncFunctionBody,
+        // or ClassStaticBlockBody.
+        // https://tc39.es/proposal-explicit-resource-management/#sec-let-and-const-declarations-static-semantics-early-errors
+
+        // TODO: Add support for block context to complete LoadDisposableVariable and
+        // LoadAsyncDisposableVariable operations.
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .subroutine])
+    }
+}
+
+final class LoadAsyncDisposableVariable: JsOperation {
+    override var opcode: Opcode { .loadAsyncDisposableVariable(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .asyncFunction])
+    }
+}
+
 public struct RegExpFlags: OptionSet, Hashable {
     public let rawValue: UInt32
 

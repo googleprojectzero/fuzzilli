@@ -115,7 +115,8 @@ struct InliningReducer: Reducer {
                 // Can't inline functions that are passed as arguments to other functions.
                 deleteCandidates(instr.inputs.dropFirst())
             case .loadNewTarget,
-                 .loadArguments:
+                 .loadArguments,
+                 .loadDisposableVariable:
                 // Can't inline functions if they access their arguments or new.target.
                 if let function = activeSubroutineDefinitions.last! {
                     candidates.removeValue(forKey: function)

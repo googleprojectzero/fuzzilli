@@ -1653,6 +1653,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func loadDisposableVariable(_ value: Variable) -> Variable {
+        return emit(LoadDisposableVariable(), withInputs: [value]).output
+    }
+
+    @discardableResult
+    public func loadAsyncDisposableVariable(_ value: Variable) -> Variable {
+        return emit(LoadAsyncDisposableVariable(), withInputs: [value]).output
+    }
+
+    @discardableResult
     public func loadNewTarget() -> Variable {
         return emit(LoadNewTarget()).output
     }
