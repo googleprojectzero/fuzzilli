@@ -2095,6 +2095,10 @@ public class ProgramBuilder {
             return SubroutineDescriptor(withParameters: parameters, ofTypes: parameterTypes)
         }
 
+        public static func parameters(_ parameters: Parameters) -> SubroutineDescriptor {
+            return SubroutineDescriptor(withParameters: parameters)
+        }
+
         private init(withParameters parameters: Parameters, ofTypes parameterTypes: ParameterList? = nil) {
             if let types = parameterTypes {
                 assert(types.areValid())

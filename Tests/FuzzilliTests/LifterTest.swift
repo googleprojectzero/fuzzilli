@@ -842,6 +842,36 @@ class LifterTests: XCTestCase {
         }
         b.reassign(f, to: f2)
         b.callFunction(f)
+        var arrayParameter = Parameters(count: 2)
+        arrayParameter.patterns = [.array(elements: [.identifier, .identifier])]
+        let descriptor = ProgramBuilder.SubroutineDescriptor.parameters(arrayParameter)
+        
+        let f3 = b.buildPlainFunction(with: descriptor) { args in
+            let elem0 = args[0]
+            let elem1 = args[1]
+            
+            let print = b.loadBuiltin("print")
+            b.callFunction(print, withArgs: [elem0])
+            b.callFunction(print, withArgs: [elem1])
+        }
+        let arrayArg = b.createArray(with: [b.loadInt(42), b.loadInt(43)])
+        b.callFunction(f3, withArgs: [arrayArg])
+
+        var objectParameter = Parameters(count: 2)
+        objectParameter.patterns = [.object(properties: [("key1", .identifier), ("key2", .identifier)])]
+        let descriptorObj = ProgramBuilder.SubroutineDescriptor.parameters(objectParameter)
+        
+        let f4 = b.buildPlainFunction(with: descriptorObj) { args in
+            let key1Value = args[0]
+            let key2Value = args[1]
+            
+            let print = b.loadBuiltin("print")
+            b.callFunction(print, withArgs: [key1Value])
+            b.callFunction(print, withArgs: [key2Value])
+        }
+
+        let objArg = b.createObject(with: ["key1": b.loadInt(9000), "key2": b.loadInt(9001)])
+        b.callFunction(f4, withArgs: [objArg])
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -856,7 +886,21 @@ class LifterTests: XCTestCase {
         };
         f0 = v4;
         f0();
-
+        function f7([ a8, a9 ]) {
+            print(a8);
+            print(a9);
+        }
+        f7([42,43]);
+        function f17({ key1: a18, key2: a19 }) {
+            print(a18);
+            print(a19);
+        }
+        const o25 = {
+            "key1": 9000,
+            "key2": 9001,
+        };
+        f17(o25);
+        
         """
 
         XCTAssertEqual(actual, expected)
