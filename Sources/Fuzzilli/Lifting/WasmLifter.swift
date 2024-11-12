@@ -798,7 +798,8 @@ public class WasmLifter {
         case .wasmJsCall(_):
             assert(self.imports.contains(where: { $0.0 == instr.input(0)}))
             return true
-        case .wasmBeginCatch(_):
+        case .wasmBeginCatch(_),
+             .wasmThrow(_):
             assert(self.imports.contains(where: { $0.0 == instr.input(0)}))
             return true
         default:
@@ -836,7 +837,7 @@ public class WasmLifter {
             }
 
             // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
-            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet || instr.op is WasmBeginCatch {
+            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet || instr.op is WasmBeginCatch || instr.op is WasmThrow {
                 continue
             }
             fatalError("unreachable")
@@ -909,9 +910,11 @@ public class WasmLifter {
             case .wasmJsCall(let op):
                 self.imports.append((instr.input(0), op.functionSignature))
 
-            case .wasmBeginCatch(_):
-                // TODO(mliedtke): This currently assumes that there aren't any user space tags.
-                self.imports.append((instr.input(0), [.wasmExternRef] => .nothing))
+            case .wasmBeginCatch(let op):
+                self.imports.append((instr.input(0), op.signature.parameters => .nothing))
+
+            case .wasmThrow(let op):
+                self.imports.append((instr.input(0), op.parameters => .nothing))
 
             default:
                 assert((instr.op as! WasmOperation).inputTypes.allSatisfy { type in
@@ -1167,8 +1170,9 @@ public class WasmLifter {
         case .wasmBeginCatchAll(_):
             return Data([0x19])
         case .wasmBeginCatch(_):
-            // TODO(mliedtke): We need to encode the correct tag. See the solution in .wasmJSCall but on top of that we should also support non-imported tags...
-            return Data([0x07] + [0x00])
+            return Data([0x07, UInt8(self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTag")) }).firstIndex(where: {
+                wasmInstruction.input(0) == $0.0
+            })!)])
         case .wasmEndCatch(_):
             return Data([])
         case .wasmEndLoop(_),
@@ -1177,6 +1181,10 @@ public class WasmLifter {
                 .wasmEndBlock(_):
             // Basically the same as EndBlock, just an explicit instruction.
             return Data([0x0B])
+        case .wasmThrow(_):
+            return Data([0x08, UInt8(self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTag")) }).firstIndex(where: {
+                wasmInstruction.input(0) == $0.0
+            })!)])
         case .wasmBranch(_):
             let branchDepth = self.currentFunction!.variableAnalyzer.scopes.count - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x0C]) + Leb128.unsignedEncode(branchDepth)

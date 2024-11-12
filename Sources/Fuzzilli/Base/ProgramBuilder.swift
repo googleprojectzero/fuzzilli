@@ -3062,9 +3062,17 @@ public class ProgramBuilder {
         }
 
         public func WasmBuildLegacyCatch(tag: Variable, body: (() -> Void)) {
-            b.emit(WasmBeginCatch(), withInputs: [tag])
+            // TODO(mliedtke): A catch block can produce a result type, however that result type
+            // has to be in sync with the try result type (afaict).
+            b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => .nothing), withInputs: [tag])
             body()
             b.emit(WasmEndCatch())
+        }
+
+        public func WasmBuildThrow(tag: Variable, inputs: [Variable]) {
+            let tagType = b.type(of: tag).wasmType as! WasmTagType
+            assert(tagType.parameters.count == inputs.count)
+            b.emit(WasmThrow(parameters: tagType.parameters), withInputs: [tag] + inputs)
         }
 
         public func generateRandomWasmVar(ofType type: ILType) -> Variable {

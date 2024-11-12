@@ -783,6 +783,46 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "123\n")
     }
 
+    func testTryCatchWasmException() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let throwTag = b.createWasmTag(parameterTypes: [Parameter.wasmi64])
+        let otherTag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                    XCTAssert(b.type(of: label).Is(.label))
+                    function.WasmBuildThrow(tag: throwTag, inputs: [function.consti64(123)])
+                    function.wasmUnreachable()
+                    function.WasmBuildLegacyCatch(tag: otherTag) {
+                        function.wasmUnreachable()
+                    }
+                    function.WasmBuildLegacyCatch(tag: throwTag) {
+                        // TODO(mliedtke): Make the caught value(s) accessible and return the caught value.
+                        function.wasmReturn(function.consti64(123))
+                    }
+                } catchAllBody: {
+                    function.wasmUnreachable()
+                }
+                function.wasmUnreachable()
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "123\n")
+    }
+
     func testUnreachable() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

@@ -132,7 +132,6 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 return
             }
         }
-
     },
 
     // Global Generators
@@ -501,6 +500,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("WasmLegacyCatchGenerator", inContext: .wasmTry, inputs: .required(.object(ofGroup: "WasmTag"))) { b, value in
         let function = b.currentWasmModule.currentWasmFunction
         function.WasmBuildLegacyCatch(tag: value) {
+            // TODO(mliedtke): We should be able to emit a rethrow as well.
             b.buildRecursive()
         }
     },
@@ -523,6 +523,29 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 function.wasmReassign(variable: variable, to: outputVar)
             }
         }
+    },
+
+    CodeGenerator("WasmThrowGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmTag"))) { b, tag in
+        let function = b.currentWasmModule.currentWasmFunction
+        let wasmTagType = b.type(of: tag).wasmTagType!
+        if wasmTagType.isJSTag {
+            // A JSTag cannot be thrown from Wasm.
+            return
+        }
+        var args : [Variable] = []
+        for param in wasmTagType.parameters {
+            switch(param) {
+                case .plain(let t):
+                    if let randVar = b.randomVariable(ofType: t) {
+                        args.append(randVar)
+                    } else {
+                        args.append(function.generateRandomWasmVar(ofType: t))
+                    }
+                default:
+                    fatalError("Unexpected non-plain type in tag")
+            }
+        }
+        function.WasmBuildThrow(tag: tag, inputs: args)
     },
 
     CodeGenerator("WasmBranchGenerator", inContext: .wasmFunction, inputs: .required(.label)) { b, label in

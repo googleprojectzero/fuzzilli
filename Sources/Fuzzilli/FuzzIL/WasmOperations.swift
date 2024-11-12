@@ -1050,8 +1050,11 @@ final class WasmBeginCatchAll : WasmOperation {
 final class WasmBeginCatch : WasmOperation {
     override var opcode: Opcode { .wasmBeginCatch(self) }
 
-    // TODO(mliedtke): Add support for tags and signatures.
-    init() {
+    let signature: Signature
+
+    init(with signature: Signature) {
+        self.signature = signature
+
         super.init(
             inputTypes: [.object(ofGroup: "WasmTag")],
             attributes: [
@@ -1079,6 +1082,25 @@ final class WasmEndTry: WasmOperation {
 
     init() {
         super.init(attributes: [.isPure, .isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmTry])
+    }
+}
+
+final class WasmThrow: WasmOperation {
+    override var opcode: Opcode { .wasmThrow(self) }
+    public let parameters: ParameterList
+
+    init(parameters: ParameterList) {
+        self.parameters = parameters
+        let inputTypes = [ILType.object(ofGroup: "WasmTag")] + parameters.map {p in
+            switch (p) {
+                case .plain(let plain):
+                    return plain
+                default:
+                    break
+            }
+            fatalError("Non-plain parameter in Tag used by throw")
+        }
+        super.init(inputTypes: inputTypes, attributes: [.isJump], requiredContext: [.wasmFunction])
     }
 }
 

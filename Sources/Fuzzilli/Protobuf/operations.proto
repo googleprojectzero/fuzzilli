@@ -1144,6 +1144,8 @@ message WasmBeginCatchAll {
 }
 
 message WasmBeginCatch {
+  repeated WasmILType parameters = 1;
+  WasmILType returnType = 2;
 }
 
 
@@ -1151,6 +1153,10 @@ message WasmEndCatch {
 }
 
 message WasmEndTry {
+}
+
+message WasmThrow {
+  repeated WasmILType parameters = 1;
 }
 
 message WasmBranch {

@@ -354,6 +354,9 @@ public class OperationMutator: BaseInstructionMutator {
             let newStoreType = chooseUniform(from: WasmMemoryStoreType.allCases.filter({$0.numberType() == op.storeType.numberType()}))
             let newStaticOffset = b.randomInt()
             newOp = WasmMemoryStore(storeType: newStoreType, staticOffset: newStaticOffset)
+        case .wasmThrow(let op):
+            // TODO(mliedtke): Allow mutation of the inputs.
+            newOp = op
         case .constSimd128(let op):
             // TODO: ?
             newOp = op
