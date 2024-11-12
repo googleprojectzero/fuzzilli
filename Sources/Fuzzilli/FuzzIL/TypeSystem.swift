@@ -386,6 +386,10 @@ public struct ILType: Hashable {
         return wasmMemoryType != nil && ext?.group == "WasmMemory"
     }
 
+    public var wasmTagType: WasmTagType? {
+        return wasmType as? WasmTagType
+    }
+
     public var properties: Set<String> {
         return ext?.properties ?? Set()
     }
@@ -940,6 +944,25 @@ public class WasmGlobalType: WasmTypeExtension {
     init(valueType: ILType, isMutable: Bool) {
         self.valueType = valueType
         self.isMutable = isMutable
+    }
+}
+
+public class WasmTagType: WasmTypeExtension {
+    public let parameters: ParameterList
+    public let isJSTag: Bool
+
+    override func isEqual(to other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmTagType else { return false }
+        return self.parameters == other.parameters
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine(parameters)
+    }
+
+    init(_ parameters: ParameterList, isJSTag: Bool = false) {
+        self.parameters = parameters
+        self.isJSTag = isJSTag
     }
 }
 

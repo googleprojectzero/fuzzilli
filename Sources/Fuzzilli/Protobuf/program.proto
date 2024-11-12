@@ -285,16 +285,17 @@ message Instruction {
         WasmBeginCatch wasmBeginCatch = 259;
         WasmEndCatch wasmEndCatch = 260;
         WasmEndTry wasmEndTry = 261;
-        ConstSimd128 constSimd128 = 262;
-        WasmSimd128Compare wasmSimd128Compare = 263;
-        WasmSimd128IntegerUnOp wasmSimd128IntegerUnOp = 264;
-        WasmSimd128IntegerBinOp wasmSimd128IntegerBinOp = 265;
-        WasmSimd128FloatUnOp wasmSimd128FloatUnOp = 266;
-        WasmSimd128FloatBinOp wasmSimd128FloatBinOp = 267;
-        WasmI64x2Splat wasmI64x2Splat = 268;
-        WasmI64x2ExtractLane wasmI64x2ExtractLane = 269;
-        WasmI64x2LoadSplat wasmI64x2LoadSplat = 270;
-        WasmUnreachable wasmUnreachable = 271;
+        WasmThrow wasmThrow = 262;
+        ConstSimd128 constSimd128 = 263;
+        WasmSimd128Compare wasmSimd128Compare = 264;
+        WasmSimd128IntegerUnOp wasmSimd128IntegerUnOp = 265;
+        WasmSimd128IntegerBinOp wasmSimd128IntegerBinOp = 266;
+        WasmSimd128FloatUnOp wasmSimd128FloatUnOp = 267;
+        WasmSimd128FloatBinOp wasmSimd128FloatBinOp = 268;
+        WasmI64x2Splat wasmI64x2Splat = 269;
+        WasmI64x2ExtractLane wasmI64x2ExtractLane = 270;
+        WasmI64x2LoadSplat wasmI64x2LoadSplat = 271;
+        WasmUnreachable wasmUnreachable = 272;
     }
 }
 

@@ -1201,12 +1201,19 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmBeginCatchAll = Fuzzilli_Protobuf_WasmBeginCatchAll.with {
                     $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
-            case .wasmBeginCatch(_):
-                $0.wasmBeginCatch = Fuzzilli_Protobuf_WasmBeginCatch()
+            case .wasmBeginCatch(let op):
+                $0.wasmBeginCatch = Fuzzilli_Protobuf_WasmBeginCatch.with {
+                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
+                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                }
             case .wasmEndCatch(_):
                 $0.wasmEndCatch = Fuzzilli_Protobuf_WasmEndCatch()
             case .wasmEndTry(_):
                 $0.wasmEndTry = Fuzzilli_Protobuf_WasmEndTry()
+            case .wasmThrow(let op):
+                $0.wasmThrow = Fuzzilli_Protobuf_WasmThrow.with {
+                    $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
+                }
             case .wasmBranch(_):
                 $0.wasmBranch = Fuzzilli_Protobuf_WasmBranch()
             case .wasmBranchIf(_):
@@ -1955,12 +1962,19 @@ extension Instruction: ProtobufConvertible {
             op = WasmBeginTry(with: parameters => WasmTypeEnumToILType(p.returnType))
         case .wasmBeginCatchAll(let p):
             op = WasmBeginCatchAll(with: [] => WasmTypeEnumToILType(p.returnType))
-        case .wasmBeginCatch(_):
-            op = WasmBeginCatch()
+        case .wasmBeginCatch(let p):
+            let parameters: [Parameter] = p.parameters.map({ param in
+                Parameter.plain(WasmTypeEnumToILType(param))
+            })
+            op = WasmBeginCatch(with: parameters => WasmTypeEnumToILType(p.returnType))
         case .wasmEndCatch(_):
             op = WasmEndCatch()
         case .wasmEndTry(_):
             op = WasmEndTry()
+        case .wasmThrow(let p):
+            op = WasmThrow(parameters: p.parameters.map({ param in
+                Parameter.plain(WasmTypeEnumToILType(param))
+            }))
         case .wasmBranch(_):
             op = WasmBranch()
         case .wasmBranchIf(_):

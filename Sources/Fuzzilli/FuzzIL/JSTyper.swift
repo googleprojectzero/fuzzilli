@@ -955,11 +955,10 @@ public struct JSTyper: Analyzer {
             set(instr.output, .object(ofGroup: "WasmTable"))
 
         case .createWasmJSTag(_):
-            set(instr.output, .object(ofGroup: "WasmTag"))
+            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType(ParameterList([.wasmExternRef]), isJSTag: true)))
 
-        case .createWasmTag(_):
-            // TODO(mliedtke): Extend type with wasm signature information!
-            set(instr.output, .object(ofGroup: "WasmTag"))
+        case .createWasmTag(let op):
+            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameters)))
 
         case .wrapSuspending(_):
             // This operation takes a function but produces an object that can be called from WebAssembly.
