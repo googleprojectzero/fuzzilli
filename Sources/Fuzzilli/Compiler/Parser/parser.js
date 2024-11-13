@@ -159,6 +159,8 @@ function parse(script, proto) {
                                 property.name = field.key.name;
                             } else if (field.key.type === 'NumericLiteral') {
                                 property.index = field.key.value;
+                            } else if (field.key.type === 'StringLiteral') {
+                                property.name = field.key.value;
                             } else {
                                 throw "Unknown property key type: " + field.key.type + " in class declaration";
                             }
@@ -407,6 +409,8 @@ function parse(script, proto) {
                                 property.name = field.key.name;
                             } else if (field.key.type === 'NumericLiteral') {
                                 property.index = field.key.value;
+                            } else if (field.key.type === 'StringLiteral') {
+                                property.name = field.key.value;
                             } else {
                                 throw "Unknown property key type: " + field.key.type;
                             }
