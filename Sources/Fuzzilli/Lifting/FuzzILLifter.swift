@@ -998,8 +998,7 @@ public class FuzzILLifter: Lifter {
             w.increaseIndentionLevel()
         case .wasmBeginCatch(_):
             w.decreaseIndentionLevel()
-            // TODO(mliedtke): Once we support multiple exception tags, we'll need to lift that information here.
-            w.emit("WasmBeginCatch \(input(0))")
+            w.emit("WasmBeginCatch [\(liftCallArguments(instr.innerOutputs))] \(input(0))")
             w.increaseIndentionLevel()
 
         case .wasmEndCatch(_):

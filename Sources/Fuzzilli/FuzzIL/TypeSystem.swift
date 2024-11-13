@@ -1086,6 +1086,18 @@ extension ParameterList {
         }
         return true
     }
+
+    /// Returns an array of `ILType`s. Requires the parameters to be plain parameters only.
+    func convertPlainToILTypes() -> [ILType] {
+        return map { param in
+            switch (param) {
+                case .plain(let plain):
+                    return plain
+                default:
+                    fatalError("Unexpected non-plain parameter \(param)")
+            }
+        }
+    }
 }
 
 // The signature of a (builtin or generated) function or method as seen by the caller.

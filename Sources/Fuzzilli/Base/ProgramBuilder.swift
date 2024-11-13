@@ -3061,11 +3061,11 @@ public class ProgramBuilder {
             b.emit(WasmEndTry())
         }
 
-        public func WasmBuildLegacyCatch(tag: Variable, body: (() -> Void)) {
+        public func WasmBuildLegacyCatch(tag: Variable, body: (([Variable]) -> Void)) {
             // TODO(mliedtke): A catch block can produce a result type, however that result type
             // has to be in sync with the try result type (afaict).
-            b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => .nothing), withInputs: [tag])
-            body()
+            let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => .nothing), withInputs: [tag])
+            body(Array(instr.innerOutputs))
             b.emit(WasmEndCatch())
         }
 
