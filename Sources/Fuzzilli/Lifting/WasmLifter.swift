@@ -226,7 +226,7 @@ public class WasmLifter {
         // This loads a variable from the stack. This is designed for arguments of functions
         func addStackLoad(for variable: Variable) {
             // We expect to do this for innerOutputs.
-            assert(isLocal(variable) && getStackSlot(for: variable)! < self.signature.parameters.count)
+            assert(isLocal(variable) && getStackSlot(for: variable) != nil)
             // This emits a local.get for the function argument.
             self.code += Data([0x20, UInt8(getStackSlot(for: variable)!)])
         }
@@ -824,7 +824,7 @@ public class WasmLifter {
             }
 
             // If we have a stackslot, i.e. it is a local, or argument, then add the stack load.
-            if let stackSlot = currentFunction!.getStackSlot(for: input), stackSlot < currentFunction!.signature.parameters.count {
+            if currentFunction!.getStackSlot(for: input) != nil {
                 // Emit stack load here now.
                 currentFunction!.addStackLoad(for: input)
                 continue
@@ -856,14 +856,21 @@ public class WasmLifter {
         }
 
         // If we have an output, make sure we store it on the stack as this is a "complex" instruction, i.e. has inputs and outputs
-            if instr.numOutputs > 0 {
-                assert(!typer.type(of: instr.output).Is(.label))
-                // Also spill the instruction
-                currentFunction!.spillLocal(forVariable: instr.output)
-                // Add the corresponding stack load as an expression, this adds the number of arguments, as output vars always live after the function arguments.
-                self.writer.addExpr(for: instr.output, bytecode: Data([0x20, UInt8(currentFunction!.localsInfo.count - 1)]))
-            }
+        if instr.numOutputs > 0 {
+            assert(!typer.type(of: instr.output).Is(.label))
+            // Also spill the instruction
+            currentFunction!.spillLocal(forVariable: instr.output)
+            // Add the corresponding stack load as an expression, this adds the number of arguments, as output vars always live after the function arguments.
+            self.writer.addExpr(for: instr.output, bytecode: Data([0x20, UInt8(currentFunction!.localsInfo.count - 1)]))
+        }
 
+        // TODO(cffsmith): Reuse this for handling parameters in loops and blocks.
+        if instr.op is WasmBeginCatch {
+            // As the parameters are pushed "in order" to the stack, they need to be popped in reverse order.
+            for innerOutput in instr.innerOutputs.reversed() {
+                currentFunction!.spillLocal(forVariable: innerOutput)
+            }
+        }
     }
 
     // Analyze which Variables should be imported. Here we should analyze all instructions that could potentially force an import of a Variable that originates in JavaScript.

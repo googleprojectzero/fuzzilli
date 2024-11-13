@@ -904,17 +904,7 @@ final class WasmJsCall: WasmOperation {
 
     init(signature: Signature) {
         self.functionSignature = signature
-        var plainParams: [ILType] = []
-        for param in signature.parameters {
-            switch param {
-            case .plain(let p):
-                plainParams.append(p)
-            case .rest(_), .opt(_):
-                fatalError("We only expect to see .plain parameter types in wasm signatures")
-            }
-        }
-
-        super.init(inputTypes: [.function() | .object(ofGroup: "WebAssembly.SuspendableObject")] + plainParams, outputType: functionSignature.outputType, requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.function() | .object(ofGroup: "WebAssembly.SuspendableObject")] + signature.parameters.convertPlainToILTypes(), outputType: functionSignature.outputType, requiredContext: [.wasmFunction])
     }
 }
 
@@ -927,15 +917,7 @@ final class WasmBeginBlock: WasmOperation {
         self.signature = signature
 
         // TODO(cffsmith): It is possible to just encode a valuetype that is a single return type.
-        var parameterTypes: [ILType] = []
-        for parameter in signature.parameters {
-            switch parameter {
-            case .plain(let typ):
-                parameterTypes.append(typ)
-            default:
-                fatalError("Wrong type of parameter for a Wasm block")
-            }
-        }
+        let parameterTypes = signature.parameters.convertPlainToILTypes()
 
         // TODO(cffsmith): This needs some extra handling as it will put some things onto the stack.
         super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
@@ -981,17 +963,7 @@ final class WasmBeginLoop: WasmOperation {
 
     init(with signature: Signature) {
         self.signature = signature
-
-        var parameterTypes: [ILType] = []
-        for parameter in signature.parameters {
-            switch parameter {
-            case .plain(let typ):
-                parameterTypes.append(typ)
-            default:
-                fatalError("Wrong type of parameter for a Wasm loop")
-            }
-        }
-
+        let parameterTypes = signature.parameters.convertPlainToILTypes()
         super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
@@ -1011,17 +983,7 @@ final class WasmBeginTry: WasmOperation {
 
     init(with signature: Signature) {
         self.signature = signature
-
-        var parameterTypes: [ILType] = []
-        for parameter in signature.parameters {
-            switch parameter {
-            case .plain(let typ):
-                parameterTypes.append(typ)
-            default:
-                fatalError("Wrong type of parameter for a Wasm try block")
-            }
-        }
-
+        let parameterTypes = signature.parameters.convertPlainToILTypes()
         super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmTry])
     }
 }
@@ -1057,6 +1019,7 @@ final class WasmBeginCatch : WasmOperation {
 
         super.init(
             inputTypes: [.object(ofGroup: "WasmTag")],
+            innerOutputTypes: signature.parameters.convertPlainToILTypes(),
             attributes: [
                 .isBlockStart,
                 // The inner context isn't a .wasmTry context any more.
@@ -1091,15 +1054,7 @@ final class WasmThrow: WasmOperation {
 
     init(parameters: ParameterList) {
         self.parameters = parameters
-        let inputTypes = [ILType.object(ofGroup: "WasmTag")] + parameters.map {p in
-            switch (p) {
-                case .plain(let plain):
-                    return plain
-                default:
-                    break
-            }
-            fatalError("Non-plain parameter in Tag used by throw")
-        }
+        let inputTypes = [ILType.object(ofGroup: "WasmTag")] + parameters.convertPlainToILTypes()
         super.init(inputTypes: inputTypes, attributes: [.isJump], requiredContext: [.wasmFunction])
     }
 }
@@ -1147,16 +1102,7 @@ final class BeginWasmFunction: WasmOperation {
 
     init(signature: Signature) {
         self.signature = signature
-
-        var parameterTypes: [ILType] = []
-        for parameter in signature.parameters {
-            switch parameter {
-            case .plain(let typ):
-                parameterTypes.append(typ)
-            default:
-                fatalError("Wrong type of parameter for a Wasm function")
-            }
-        }
+        let parameterTypes = signature.parameters.convertPlainToILTypes()
         super.init(innerOutputTypes: parameterTypes, attributes: [.isBlockStart], requiredContext: [.wasm], contextOpened: [.wasmFunction])
     }
 

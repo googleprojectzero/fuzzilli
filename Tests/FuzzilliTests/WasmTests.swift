@@ -761,7 +761,7 @@ class WasmFoundationTests: XCTestCase {
                         let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
                         function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
                         function.wasmUnreachable()
-                        function.WasmBuildLegacyCatch(tag: jstag) {
+                        function.WasmBuildLegacyCatch(tag: jstag) { args in
                             function.wasmReturn(function.consti64(123))
                         }
                     } catchAllBody: {
@@ -783,6 +783,9 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "123\n")
     }
 
+    // TODO(mliedtke): While this is supported by the Fuzzilli, that doesn't mean it is actually emitted during
+    // fuzzing. Having code generators that also fulfill the prerequisites for these patterns (like having tags
+    // available) could help increasing the chance for emitting thse more complicated patterns.
     func testTryCatchWasmException() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
@@ -793,20 +796,20 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        let throwTag = b.createWasmTag(parameterTypes: [Parameter.wasmi64])
+        let throwTag = b.createWasmTag(parameterTypes: [Parameter.wasmi64, Parameter.wasmi32])
         let otherTag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
                     XCTAssert(b.type(of: label).Is(.label))
-                    function.WasmBuildThrow(tag: throwTag, inputs: [function.consti64(123)])
+                    function.WasmBuildThrow(tag: throwTag, inputs: [function.consti64(123), function.consti32(234)])
                     function.wasmUnreachable()
-                    function.WasmBuildLegacyCatch(tag: otherTag) {
+                    function.WasmBuildLegacyCatch(tag: otherTag) { args in
                         function.wasmUnreachable()
                     }
-                    function.WasmBuildLegacyCatch(tag: throwTag) {
-                        // TODO(mliedtke): Make the caught value(s) accessible and return the caught value.
-                        function.wasmReturn(function.consti64(123))
+                    function.WasmBuildLegacyCatch(tag: throwTag) { args in
+                        let result = function.wasmi64BinOp(args[0], function.extendi32Toi64(args[1], isSigned: true), binOpKind: .Add)
+                        function.wasmReturn(result)
                     }
                 } catchAllBody: {
                     function.wasmUnreachable()
@@ -819,8 +822,8 @@ class WasmFoundationTests: XCTestCase {
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
 
         let prog = b.finalize()
-        let jsProg = fuzzer.lifter.lift(prog)
-        testForOutput(program: jsProg, runner: runner, outputString: "123\n")
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "357\n")
     }
 
     func testUnreachable() throws {
