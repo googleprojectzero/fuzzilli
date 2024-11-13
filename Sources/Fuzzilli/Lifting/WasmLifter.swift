@@ -892,7 +892,7 @@ public class WasmLifter {
     }
 
     private func emitBytesForInstruction(forInstruction instr: Instruction) {
-        functions[functions.count - 1].appendToCode(lift(instr))
+        currentFunction!.appendToCode(lift(instr))
     }
 
     private func emitStackSpillsIfNecessary(forInstruction instr: Instruction) {
@@ -905,7 +905,7 @@ public class WasmLifter {
             if instr.numOutputs > 0 {
                 assert(!typer.type(of: instr.output).Is(.label))
                 // Also spill the instruction
-                functions[functions.count - 1].spillLocal(forVariable: instr.output)
+                currentFunction!.spillLocal(forVariable: instr.output)
                 // Add the corresponding stack load as an expression, this adds the number of arguments, as output vars always live after the function arguments.
                 self.writer.addExpr(for: instr.output, bytecode: Data([0x20, UInt8(currentFunction!.localsInfo.count - 1)]))
             }
@@ -1213,7 +1213,7 @@ public class WasmLifter {
             var storeInstruction = Data()
             // If the variable is a local, we load the stack slot.
             // Check for the stack location of the `to` variable.
-            if let stackSlot = functions[functions.count - 1].getStackSlot(for: wasmInstruction.input(0)) {
+            if let stackSlot = currentFunction!.getStackSlot(for: wasmInstruction.input(0)) {
 
                 // Emit the instruction now, with input and stackslot. Since we load this manually we don't need
                 // to emit bytes in the emitInputLoadsIfNeeded.
