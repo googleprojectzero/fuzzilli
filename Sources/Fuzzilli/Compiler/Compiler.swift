@@ -987,11 +987,53 @@ public class JavaScriptCompiler {
 
             if unaryExpression.operator == "typeof" {
                 return emit(TypeOf(), withInputs: [argument]).output
+            } else if unaryExpression.operator == "delete" {
+                let argumentExpression = unaryExpression.argument.expression!
+
+                if case .memberExpression(let memberExpression) = argumentExpression {
+                    let obj = try compileExpression(memberExpression.object)
+                    let isGuarded = memberExpression.isOptional
+
+                    if memberExpression.name != "" {
+                        // Deleting a non-computed property (e.g., delete obj.prop)
+                        let propertyName = memberExpression.name
+                        let instr = emit(
+                            DeleteProperty(propertyName: propertyName, isGuarded: isGuarded),
+                            withInputs: [obj]
+                        )
+                        return instr.output
+                    } else {
+                        // Deleting a computed property (e.g., delete obj[expr])
+                        let propertyExpression = memberExpression.expression
+                        let propertyExpr = propertyExpression.expression
+                        let property = try compileExpression(propertyExpression)
+
+                        if case .numberLiteral(let numberLiteral) = propertyExpr {
+                            // Delete an element (e.g., delete arr[42])
+                            let index = Int64(numberLiteral.value)
+                            let instr = emit(
+                                DeleteElement(index: index, isGuarded: isGuarded),
+                                withInputs: [obj]
+                            )
+                            return instr.output
+                        } else {
+                            // Use DeleteComputedProperty for other computed properties (e.g., delete obj["key"])
+                            let instr = emit(
+                                DeleteComputedProperty(isGuarded: isGuarded),
+                                withInputs: [obj, property]
+                            )
+                            return instr.output
+                        }
+                    }
+                } else {
+                    throw CompilerError.invalidNodeError("Invalid argument for delete operator; expected a member expression")
+                }
+            } else {
+                guard let op = UnaryOperator(rawValue: unaryExpression.operator) else {
+                    throw CompilerError.invalidNodeError("invalid unary operator: \(unaryExpression.operator)")
+                }
+                return emit(UnaryOperation(op), withInputs: [argument]).output
             }
-            guard let op = UnaryOperator(rawValue: unaryExpression.operator) else {
-                throw CompilerError.invalidNodeError("invalid unary operator: \(unaryExpression.operator)")
-            }
-            return emit(UnaryOperation(op), withInputs: [argument]).output
 
         case .binaryExpression(let binaryExpression):
             let lhs = try compileExpression(binaryExpression.lhs)
