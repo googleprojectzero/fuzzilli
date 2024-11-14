@@ -746,13 +746,14 @@ public class JavaScriptLifter: Lifter {
                 // the function is a MemberExpression since it would otherwise be interpreted as a method call, not a function call.
                 let f = inputAsIdentifier(0)
                 let args = inputs.dropFirst()
-                let expr = CallExpression.new() + f + "(" + liftCallArguments(args) + ")"
+                let expr =  CallExpression.new() + insertVoid() + f + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callFunctionWithSpread(let op):
                 let f = inputAsIdentifier(0)
                 let args = inputs.dropFirst()
-                let expr = CallExpression.new() + f + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
+                let vo = probability(0.05) ? "void " : ""
+                let expr = CallExpression.new() + insertVoid() + f + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
 
             case .construct:
@@ -773,28 +774,28 @@ public class JavaScriptLifter: Lifter {
                 let obj = input(0)
                 let method = MemberExpression.new() + obj + "." + op.methodName
                 let args = inputs.dropFirst()
-                let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
+                let expr = CallExpression.new() + insertVoid() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callMethodWithSpread(let op):
                 let obj = input(0)
                 let method = MemberExpression.new() + obj + "." + op.methodName
                 let args = inputs.dropFirst()
-                let expr = CallExpression.new() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
+                let expr = CallExpression.new() + insertVoid() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callComputedMethod:
                 let obj = input(0)
                 let method = MemberExpression.new() + obj + "[" + input(1).text + "]"
                 let args = inputs.dropFirst(2)
-                let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
+                let expr = CallExpression.new() + insertVoid() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callComputedMethodWithSpread(let op):
                 let obj = input(0)
                 let method = MemberExpression.new() + obj + "[" + input(1).text + "]"
                 let args = inputs.dropFirst(2)
-                let expr = CallExpression.new() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
+                let expr = CallExpression.new() + insertVoid() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
 
             case .unaryOperation(let op):
@@ -951,11 +952,11 @@ public class JavaScriptLifter: Lifter {
                 break
 
             case .callSuperConstructor:
-                let EXPR = CallExpression.new() + "super(" + liftCallArguments(inputs) + ")"
+                let EXPR = CallExpression.new() + insertVoid() + "super(" + liftCallArguments(inputs) + ")"
                 w.emit("\(EXPR);")
 
             case .callSuperMethod(let op):
-                let expr = CallExpression.new() + "super.\(op.methodName)(" + liftCallArguments(inputs)  + ")"
+                let expr = CallExpression.new() + insertVoid() + "super.\(op.methodName)(" + liftCallArguments(inputs)  + ")"
                 w.assign(expr, to: instr.output)
 
             case .getPrivateProperty(let op):
@@ -981,7 +982,7 @@ public class JavaScriptLifter: Lifter {
                 let obj = input(0)
                 let method = MemberExpression.new() + obj + ".#" + op.methodName
                 let args = inputs.dropFirst()
-                let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
+                let expr = CallExpression.new() + insertVoid() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .getSuperProperty(let op):
