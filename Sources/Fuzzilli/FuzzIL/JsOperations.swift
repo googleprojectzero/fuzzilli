@@ -1403,11 +1403,18 @@ public enum BinaryOperator: String, CaseIterable {
     case RShift   = ">>"
     case Exp      = "**"
     case UnRShift = ">>>"
+    // Nullish coalescing operator (??)
+    case NCO = "??"
 
     var token: String {
         return self.rawValue
     }
+
+    static public func allCaseWithoutNCO() -> Array<BinaryOperator> {
+        return BinaryOperator.allCases.filter { $0 != .NCO }
+    }
 }
+
 
 final class BinaryOperation: JsOperation {
     override var opcode: Opcode { .binaryOperation(self) }

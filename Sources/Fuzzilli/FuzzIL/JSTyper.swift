@@ -427,7 +427,8 @@ public struct JSTyper: Analyzer {
                  .UnRShift:
                 return maybeBigIntOr(.integer)
             case .LogicAnd,
-                 .LogicOr:
+                 .LogicOr,
+                 .NCO:
                 return state.type(of: inputs[0]) | state.type(of: inputs[1])
             }
         }

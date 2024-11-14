@@ -845,7 +845,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
         let rhs = b.randomVariable(forUseAs: .number)
-        b.updateProperty(propertyName, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
+        b.updateProperty(propertyName, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCaseWithoutNCO()))
     },
 
     CodeGenerator("PropertyRemovalGenerator", inputs: .preferred(.object())) { b, obj in
@@ -895,7 +895,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let index = b.randomIndex()
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
         let rhs = b.randomVariable(forUseAs: .number)
-        b.updateElement(index, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
+        b.updateElement(index, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCaseWithoutNCO()))
     },
 
     CodeGenerator("ElementRemovalGenerator", inputs: .preferred(.object())) { b, obj in
@@ -937,7 +937,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let propertyName = b.randomVariable()
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
         let rhs = b.randomVariable(forUseAs: .number)
-        b.updateComputedProperty(propertyName, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
+        b.updateComputedProperty(propertyName, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCaseWithoutNCO()))
     },
 
     CodeGenerator("ComputedPropertyRemovalGenerator", inputs: .preferred(.object())) { b, obj in
@@ -1228,7 +1228,7 @@ public let CodeGenerators: [CodeGenerator] = [
         guard !b.currentClassDefinition.privateProperties.isEmpty else { return }
         let propertyName = chooseUniform(from: b.currentClassDefinition.privateProperties)
         b.buildTryCatchFinally(tryBody: {
-            b.updatePrivateProperty(propertyName, of: obj, with: value, using: chooseUniform(from: BinaryOperator.allCases))
+            b.updatePrivateProperty(propertyName, of: obj, with: value, using: chooseUniform(from: BinaryOperator.allCaseWithoutNCO()))
         }, catchBody: { e in })
     },
 
@@ -1281,7 +1281,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
         let rhs = b.randomVariable(forUseAs: .number)
-        b.updateSuperProperty(propertyName, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
+        b.updateSuperProperty(propertyName, with: rhs, using: chooseUniform(from: BinaryOperator.allCaseWithoutNCO()))
     },
 
     RecursiveCodeGenerator("IfElseGenerator", inputs: .preferred(.boolean) ){ b, cond in
