@@ -91,6 +91,7 @@ public let codeGeneratorWeights = [
     "ConstructorGenerator":                     5,
     "SubroutineReturnGenerator":                3,
     "YieldGenerator":                           2,
+    "YieldEachGenerator":                       2,
     "AwaitGenerator":                           2,
     "PropertyRetrievalGenerator":               20,
     "PropertyAssignmentGenerator":              20,
