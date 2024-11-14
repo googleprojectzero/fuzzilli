@@ -1470,6 +1470,50 @@ public let CodeGenerators: [CodeGenerator] = [
         b.setProperty("__proto__", of: obj, to: proto)
     },
 
+    CodeGenerator("PrototypeDeleteGenerator", inputs: .preferred(.object())) { b, obj in
+        b.deleteProperty("__proto__", of: obj)
+    },
+
+
+    CodeGenerator("PrototypeFieldAccessGenerator", inputs: .preferred(.object(), .string)) { b, obj, k in
+        b.getProperty("__proto__." + k.description, of: obj)
+    },
+
+    CodeGenerator("PrototypeFieldOverwriteGenerator", inputs: .preferred(.object(), .string, .object())) { b, obj, k, v in
+        b.setProperty("__proto__." + k.description, of: obj, to: v)
+    },
+
+    CodeGenerator("PrototypeFieldDeleteGenerator", inputs: .preferred(.object(), .string)) { b, obj, k in
+        b.deleteProperty("__proto__." + k.description, of: obj)
+    },
+
+
+    CodeGenerator("PrototypeClassAccessGenerator", inputs: .preferred(.object())) { b, obj in
+            b.getProperty("prototype", of: obj)
+    },
+
+    CodeGenerator("PrototypeClassSetGenerator", inputs: .preferred(.object(), .object())) { b, obj, v in
+            b.setProperty("prototype", of: obj, to: v)
+    },
+
+    CodeGenerator("PrototypeClassDeleteGenerator", inputs: .preferred(.object())) { b, obj in
+            b.deleteProperty("prototype", of: obj)
+    },
+
+
+    CodeGenerator("PrototypeFieldClassAccessGenerator", inputs: .required(.object() + .constructor(), .string)) { b, obj, k in
+            b.getProperty("prototype." + k.description, of: obj)
+    },
+
+    CodeGenerator("PrototypeFieldClassSetGenerator", inputs: .required(.object() + .constructor(), .string, .anything)) { b, obj, k, v in
+            b.setProperty("prototype." + k.description, of: obj, to: v)
+    },
+
+    CodeGenerator("PrototypeFieldClassDeleteGenerator", inputs: .required(.object() + .constructor(), .string)) { b, obj, k in
+            b.deleteProperty("prototype." + k.description, of: obj)
+    },
+
+
     CodeGenerator("CallbackPropertyGenerator", inputs: .preferred(.object(), .function())) { b, obj, callback in
         // TODO add new callbacks like Symbol.toPrimitive?
         let propertyName = chooseUniform(from: ["valueOf", "toString"])
