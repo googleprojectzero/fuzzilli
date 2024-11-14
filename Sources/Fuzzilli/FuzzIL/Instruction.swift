@@ -814,6 +814,12 @@ extension Instruction: ProtobufConvertible {
                 $0.loopBreak = Fuzzilli_Protobuf_LoopBreak()
             case .loopContinue:
                 $0.loopContinue = Fuzzilli_Protobuf_LoopContinue()
+            case .loopLabelBreak:
+                $0.loopLabelBreak = Fuzzilli_Protobuf_LoopLabelBreak()
+            case .loadLabel:
+                $0.loadLabel = Fuzzilli_Protobuf_LoadLabel()
+            case .loopLabelContinue:
+                $0.loopLabelContinue = Fuzzilli_Protobuf_LoopLabelContinue()
             case .beginTry:
                 $0.beginTry = Fuzzilli_Protobuf_BeginTry()
             case .beginCatch:
@@ -1226,6 +1232,12 @@ extension Instruction: ProtobufConvertible {
             op = BeginRepeatLoop(iterations: Int(p.iterations), exposesLoopCounter: p.exposesLoopCounter)
         case .endRepeatLoop:
             op = EndRepeatLoop()
+        case .loopLabelBreak:
+            op = LoopLabelBreak()
+        case .loopLabelContinue:
+            op = LoopLabelContinue()
+        case .loadLabel:
+            op = LoadLabel()
         case .loopBreak:
             op = LoopBreak()
         case .loopContinue:

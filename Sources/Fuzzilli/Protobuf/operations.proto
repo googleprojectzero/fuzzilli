@@ -705,6 +705,15 @@ message BeginRepeatLoop {
 message EndRepeatLoop {
 }
 
+message LoopLabelBreak {
+}
+
+message LoopLabelContinue {
+}
+
+message LoadLabel {
+}
+
 message LoopBreak {
 }
 

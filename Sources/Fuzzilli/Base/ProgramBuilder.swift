@@ -147,11 +147,36 @@ public class ProgramBuilder {
         }
     }
 
+
+    public var loopSta: [Variable]
+
+    public func pushLabel(_ variable: Variable) {
+        loopSta.append(variable)
+    }
+
+    public func popLabel() {
+        loopSta.removeLast()
+    }
+
+    public func randomLabel() -> Variable {
+        if let randomElement = loopSta.randomElement() {
+            return randomElement
+        }
+        return loadString("ErrorLabel")
+    }
+
+    public func isLoopStaNotEmpty() -> Bool { loopSta.count > 0 }
+
+    public func clearLoopSta() {
+        if loopSta.count > 0 { loopSta.removeAll() }
+    }
+
     /// Constructs a new program builder for the given fuzzer.
     init(for fuzzer: Fuzzer, parent: Program?) {
         self.fuzzer = fuzzer
         self.jsTyper = JSTyper(for: fuzzer.environment)
         self.parent = parent
+        self.loopSta = []
     }
 
     /// Resets this builder.
@@ -168,6 +193,7 @@ public class ProgramBuilder {
         jsTyper.reset()
         activeObjectLiterals.removeAll()
         activeClassDefinitions.removeAll()
+        loopSta.removeAll()
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
@@ -2516,6 +2542,18 @@ public class ProgramBuilder {
         emit(BeginRepeatLoop(iterations: numIterations, exposesLoopCounter: false))
         body()
         emit(EndRepeatLoop())
+    }
+
+    public func loadLabel(_ value: Variable) {
+        emit(LoadLabel(), withInputs: [value])
+    }
+
+    public func loopLabelBreak(_ value: Variable) {
+        emit(LoopLabelBreak(), withInputs: [value])
+    }
+
+    public func loopLabelContinue(_ value: Variable) {
+        emit(LoopLabelContinue(), withInputs: [value])
     }
 
     public func loopBreak() {

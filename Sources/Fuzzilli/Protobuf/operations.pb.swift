@@ -2347,6 +2347,36 @@ public struct Fuzzilli_Protobuf_EndRepeatLoop: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_LoopLabelBreak: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_LoopLabelContinue: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_LoadLabel: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_LoopBreak: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -7271,6 +7301,60 @@ extension Fuzzilli_Protobuf_EndRepeatLoop: SwiftProtobuf.Message, SwiftProtobuf.
 
   public static func ==(lhs: Fuzzilli_Protobuf_EndRepeatLoop, rhs: Fuzzilli_Protobuf_EndRepeatLoop) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_LoopLabelBreak: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LoopLabelBreak"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func == (lhs: Fuzzilli_Protobuf_LoopLabelBreak, rhs: Fuzzilli_Protobuf_LoopLabelBreak) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields { return false }
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_LoopLabelContinue: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LoopLabelContinue"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func == (lhs: Fuzzilli_Protobuf_LoopLabelContinue, rhs: Fuzzilli_Protobuf_LoopLabelContinue) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields { return false }
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_LoadLabel: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LoadLabel"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func == (lhs: Fuzzilli_Protobuf_LoadLabel, rhs: Fuzzilli_Protobuf_LoadLabel) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields { return false }
     return true
   }
 }
