@@ -983,9 +983,8 @@ public class JavaScriptCompiler {
             }
 
         case .unaryExpression(let unaryExpression):
-            let argument = try compileExpression(unaryExpression.argument)
-
             if unaryExpression.operator == "typeof" {
+                let argument = try compileExpression(unaryExpression.argument)
                 return emit(TypeOf(), withInputs: [argument]).output
             } else if unaryExpression.operator == "delete" {
                 guard case .memberExpression(let memberExpression) = unaryExpression.argument.expression else {
@@ -1031,6 +1030,7 @@ public class JavaScriptCompiler {
                 guard let op = UnaryOperator(rawValue: unaryExpression.operator) else {
                     throw CompilerError.invalidNodeError("invalid unary operator: \(unaryExpression.operator)")
                 }
+                let argument = try compileExpression(unaryExpression.argument)
                 return emit(UnaryOperation(op), withInputs: [argument]).output
             }
 
