@@ -1004,7 +1004,9 @@ public class JavaScriptCompiler {
             guard !callSuperConstructor.isOptional else {
                 throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super constructor calls")
             }
-            return emit(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments).output
+            emit(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
+            return lookupIdentifier("this")! // we can force unwrap because |this| always exists in the context where |super| exists
+
             
         case .newExpression(let newExpression):
             let callee = try compileExpression(newExpression.callee)

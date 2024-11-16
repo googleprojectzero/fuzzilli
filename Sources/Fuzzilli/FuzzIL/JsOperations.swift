@@ -1633,7 +1633,7 @@ final class CallSuperConstructor: JsOperation {
     }
 
     init(numArguments: Int) {
-        super.init(numInputs: numArguments, numOutputs: 1, firstVariadicInput: 0, attributes: [.isVariadic, .isCall], requiredContext: [.javascript, .method])
+        super.init(numInputs: numArguments, firstVariadicInput: 0, attributes: [.isVariadic, .isCall], requiredContext: [.javascript, .method])
     }
 }
 
