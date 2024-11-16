@@ -20,3 +20,10 @@ console.log(arr);
 const nestedObj = { a: { b: 2 } };
 console.log(delete nestedObj?.a?.b);
 console.log(nestedObj);
+
+try {
+    delete null.a;
+} catch(e) {
+    console.log(e.message);
+}
+console.log(delete null?.a);
