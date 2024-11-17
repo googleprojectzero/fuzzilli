@@ -1931,6 +1931,27 @@ public struct Compiler_Protobuf_TernaryExpression: @unchecked Sendable {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+public struct Compiler_Protobuf_AwaitExpression: @unchecked Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var argument: Compiler_Protobuf_Expression {
+    get {return _storage._argument ?? Compiler_Protobuf_Expression()}
+    set {_uniqueStorage()._argument = newValue}
+  }
+  /// Returns true if `argument` has been explicitly set.
+  public var hasArgument: Bool {return _storage._argument != nil}
+  /// Clears the value of `argument`. Subsequent reads from it will return its default value.
+  public mutating func clearArgument() {_uniqueStorage()._argument = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
 public struct Compiler_Protobuf_Expression: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2141,6 +2162,14 @@ public struct Compiler_Protobuf_Expression: @unchecked Sendable {
     set {_uniqueStorage()._expression = .ternaryExpression(newValue)}
   }
 
+  public var awaitExpression: Compiler_Protobuf_AwaitExpression {
+    get {
+      if case .awaitExpression(let v)? = _storage._expression {return v}
+      return Compiler_Protobuf_AwaitExpression()
+    }
+    set {_uniqueStorage()._expression = .awaitExpression(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Expression: Equatable, Sendable {
@@ -2169,6 +2198,7 @@ public struct Compiler_Protobuf_Expression: @unchecked Sendable {
     case sequenceExpression(Compiler_Protobuf_SequenceExpression)
     case v8IntrinsicIdentifier(Compiler_Protobuf_V8IntrinsicIdentifier)
     case ternaryExpression(Compiler_Protobuf_TernaryExpression)
+    case awaitExpression(Compiler_Protobuf_AwaitExpression)
 
   }
 
@@ -6513,6 +6543,82 @@ extension Compiler_Protobuf_TernaryExpression: SwiftProtobuf.Message, SwiftProto
   }
 }
 
+extension Compiler_Protobuf_AwaitExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AwaitExpression"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "argument"),
+  ]
+
+  fileprivate class _StorageClass {
+    var _argument: Compiler_Protobuf_Expression? = nil
+
+    #if swift(>=5.10)
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+    #else
+      static let defaultInstance = _StorageClass()
+    #endif
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _argument = source._argument
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._argument) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._argument {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_AwaitExpression, rhs: Compiler_Protobuf_AwaitExpression) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._argument != rhs_storage._argument {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Expression"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -6541,6 +6647,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
     23: .same(proto: "sequenceExpression"),
     24: .same(proto: "v8IntrinsicIdentifier"),
     25: .same(proto: "ternaryExpression"),
+    26: .same(proto: "awaitExpression"),
   ]
 
   fileprivate class _StorageClass {
@@ -6903,6 +7010,19 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .ternaryExpression(v)
           }
         }()
+        case 26: try {
+          var v: Compiler_Protobuf_AwaitExpression?
+          var hadOneofValue = false
+          if let current = _storage._expression {
+            hadOneofValue = true
+            if case .awaitExpression(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._expression = .awaitExpression(v)
+          }
+        }()
         default: break
         }
       }
@@ -7015,6 +7135,10 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
       case .ternaryExpression?: try {
         guard case .ternaryExpression(let v)? = _storage._expression else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 25)
+      }()
+      case .awaitExpression?: try {
+        guard case .awaitExpression(let v)? = _storage._expression else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 26)
       }()
       case nil: break
       }
