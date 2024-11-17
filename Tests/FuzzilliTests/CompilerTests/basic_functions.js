@@ -24,7 +24,7 @@ function* f5(n) {
 output(Array.from(f5(3)).length);
 
 async function f6() {
-  return 42;
+  return await 42;
 }
 output(f6().constructor.name);
 
