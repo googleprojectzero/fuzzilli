@@ -421,6 +421,10 @@ message TernaryExpression {
   Expression alternate = 3;
 }
 
+message AwaitExpression {
+    Expression argument = 1;
+}
+
 message Expression {
     oneof expression {
         Identifier identifier = 1;
@@ -448,5 +452,6 @@ message Expression {
         SequenceExpression sequenceExpression = 23;
         V8IntrinsicIdentifier v8IntrinsicIdentifier = 24;
         TernaryExpression ternaryExpression = 25;
+        AwaitExpression awaitExpression = 26;
     }
 }
