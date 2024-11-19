@@ -196,6 +196,11 @@ public let codeGeneratorWeights = [
     "ApiFunctionCallGenerator":                 15,
     "VoidGenerator":                            1,
 
+    // JS generators for wasm features (e.g. APIs on the WebAssembly global object).
+    "WasmGlobalGenerator":                      4,
+    "WasmMemoryGenerator":                      4,
+    "WasmTagGenerator":                         4,
+
     //
     // Wasm generators
     //
@@ -203,9 +208,6 @@ public let codeGeneratorWeights = [
     // This weight is important as we need to have a module for the other generators to work.
     // As they all require .wasm context.
     "WasmModuleGenerator":                      35,
-
-    "WasmGlobalGenerator":                      4,
-    "WasmMemoryGenerator":                      4,
     "WasmDefineMemoryGenerator":                4,
     "WasmMemoryLoadGenerator":                  3,
     "WasmMemoryStoreGenerator":                 3,
@@ -213,7 +215,7 @@ public let codeGeneratorWeights = [
     "WasmGlobalStoreGenerator":                 2,
     "WasmGlobalLoadGenerator":                  2,
     "WasmReassignmentGenerator":                2,
-    "WasmTagGenerator":                         2,
+    "WasmDefineTagGenerator":                   4,
 
     // Primitive Value Generators
     "WasmLoadi32Generator":                     6,

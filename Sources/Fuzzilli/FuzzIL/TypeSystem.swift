@@ -949,6 +949,7 @@ public class WasmGlobalType: WasmTypeExtension {
 
 public class WasmTagType: WasmTypeExtension {
     public let parameters: ParameterList
+    /// Flag whether the tag is the WebAssembly.JSTag.
     public let isJSTag: Bool
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {

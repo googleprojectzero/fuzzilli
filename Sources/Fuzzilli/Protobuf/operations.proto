@@ -1159,6 +1159,10 @@ message WasmThrow {
   repeated WasmILType parameters = 1;
 }
 
+message WasmDefineTag {
+  repeated WasmILType parameters = 1;
+}
+
 message WasmBranch {
 }
 

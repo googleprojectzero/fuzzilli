@@ -1214,6 +1214,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmThrow = Fuzzilli_Protobuf_WasmThrow.with {
                     $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
                 }
+            case .wasmDefineTag(let op):
+                $0.wasmDefineTag = Fuzzilli_Protobuf_WasmDefineTag.with {
+                    $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
+                }
             case .wasmBranch(_):
                 $0.wasmBranch = Fuzzilli_Protobuf_WasmBranch()
             case .wasmBranchIf(_):
@@ -1973,6 +1977,10 @@ extension Instruction: ProtobufConvertible {
             op = WasmEndTry()
         case .wasmThrow(let p):
             op = WasmThrow(parameters: p.parameters.map({ param in
+                Parameter.plain(WasmTypeEnumToILType(param))
+            }))
+        case .wasmDefineTag(let p):
+            op = WasmDefineTag(parameters: p.parameters.map({ param in
                 Parameter.plain(WasmTypeEnumToILType(param))
             }))
         case .wasmBranch(_):

@@ -31,6 +31,7 @@ private enum WasmSection: UInt8 {
     case code
     case data
     case datacount
+    case tag
 }
 
 // This maps ILTypes to their respective binary encoding.
@@ -93,6 +94,9 @@ public class WasmLifter {
 
     // This tracks instructions that define tables in this module. We track the instruction here as the table type and its limits are encoded in the Operation.
     private var tables: [Instruction] = []
+
+    // The tags associated with this module.
+    private var tags: VariableMap<ParameterList> = VariableMap()
 
     // The function index space
     private var functionIdxBase = 0
@@ -299,20 +303,12 @@ public class WasmLifter {
         // Build the header section which includes the Wasm version first
         self.buildHeader()
 
-        // Build the type section next
         self.buildTypeSection()
-
-        // Build the import section next
         self.buildImportSection()
-
-        // build the function section next
         self.buildFunctionSection()
-
         self.buildTableSection()
-
         self.buildMemorySection()
-
-        // Built the global section next
+        self.buildTagSection()
         self.buildGlobalSection()
 
         // Export all functions by default.
@@ -354,9 +350,10 @@ public class WasmLifter {
             typer.type(of: $0.0).Is(.function()) ||
             typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject")) ||
             typer.type(of: $0.0).Is(.object(ofGroup: "WasmTag"))
-        }).count + self.functions.count
+        }).count
+        let typeCount = importCount + self.functions.count + self.tags.reduce(0, {res, _ in res + 1})
 
-        temp += Leb128.unsignedEncode(importCount)
+        temp += Leb128.unsignedEncode(typeCount)
 
         for (importVariable, signature) in self.imports {
             let type = typer.type(of: importVariable)
@@ -389,7 +386,7 @@ public class WasmLifter {
         }
 
         // We only need the parameters here.
-        for (_, functionInfo) in self.functions.enumerated() {
+        for functionInfo in self.functions {
             // The 0x60 encodes functypes, which now expects two vector of
             // returntypes
             temp += [0x60]
@@ -408,6 +405,21 @@ public class WasmLifter {
             } else {
                 temp += Leb128.unsignedEncode(0) // num output types
             }
+        }
+
+        for (_, parameters) in self.tags {
+            temp += [0x60]
+            temp += Leb128.unsignedEncode(parameters.count)
+            for paramType in parameters {
+                switch paramType {
+                case .plain(let paramType):
+                    temp += ILTypeMapping[paramType]!
+                default:
+                    fatalError("unreachable")
+                }
+            }
+            // Tag signatures don't have a return type.
+            temp += Leb128.unsignedEncode(0)
         }
 
         if verbose {
@@ -704,7 +716,31 @@ public class WasmLifter {
 
     }
 
-    // Export all functions by default.
+    private func buildTagSection() {
+        if self.tags.isEmpty {
+            return // Skip the whole section.
+        }
+
+        self.bytecode.append(WasmSection.tag.rawValue)
+        var section = Data()
+        section += Leb128.unsignedEncode(self.tags.reduce(0, {res, _ in res + 1}))
+        for (i, _) in self.tags.enumerated() {
+            section.append(0)
+            section.append(Leb128.unsignedEncode(nextSignatureIdx + self.functions.count + i))
+        }
+
+        self.bytecode.append(Leb128.unsignedEncode(section.count))
+        self.bytecode.append(section)
+
+        if verbose {
+            print("tag section is")
+            for byte in section {
+                print(String(format: "%02X ", byte))
+            }
+        }
+    }
+
+    // Export all functions and globals by default.
     private func buildExportedSection() {
         self.bytecode += [WasmSection.export.rawValue]
 
@@ -800,8 +836,10 @@ public class WasmLifter {
             return true
         case .wasmBeginCatch(_),
              .wasmThrow(_):
-            assert(self.imports.contains(where: { $0.0 == instr.input(0)}))
+            assert(self.imports.contains(where: { $0.0 == instr.input(0)}) || self.tags.contains(instr.input(0)))
             return true
+        case .wasmDefineTag(_):
+            assert(self.tags.contains(instr.output))
         default:
             return true
         }
@@ -873,6 +911,12 @@ public class WasmLifter {
         }
     }
 
+    private func importTagIfNeeded(tag: Variable, parameters: ParameterList) {
+        if (!self.tags.contains(tag) && self.imports.firstIndex(where: {variable, _ in variable == tag}) == nil) {
+            self.imports.append((tag, parameters => .nothing))
+        }
+    }
+
     // Analyze which Variables should be imported. Here we should analyze all instructions that could potentially force an import of a Variable that originates in JavaScript.
     // This usually means if your instruction takes an .object() as an input, it should be checked here.
     // TODO: check if this is still accurate as we now only have defined imports.
@@ -917,11 +961,14 @@ public class WasmLifter {
             case .wasmJsCall(let op):
                 self.imports.append((instr.input(0), op.functionSignature))
 
+            case .wasmDefineTag(let op):
+                self.tags[instr.output] = op.parameters
+
             case .wasmBeginCatch(let op):
-                self.imports.append((instr.input(0), op.signature.parameters => .nothing))
+                importTagIfNeeded(tag: instr.input(0), parameters: op.signature.parameters)
 
             case .wasmThrow(let op):
-                self.imports.append((instr.input(0), op.parameters => .nothing))
+                importTagIfNeeded(tag: instr.input(0), parameters: op.parameters)
 
             default:
                 assert((instr.op as! WasmOperation).inputTypes.allSatisfy { type in
@@ -954,6 +1001,17 @@ public class WasmLifter {
             fatalError("WasmStore/LoadGlobal variable \(input) not found as global!")
         }
         return idx!
+    }
+
+    func resolveTagIdx(forInput input: Variable) -> Int {
+        let tagImports = self.imports.filter{ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTag")) }
+        if let idx = tagImports.firstIndex(where: { $0.0 == input }) {
+            return idx
+        }
+        if let idx = self.tags.map({$0}).firstIndex(where: {$0.0 == input}) {
+            return tagImports.count + idx
+        }
+        fatalError("Invalid tag \(input)")
     }
 
     /// Returns the Bytes that correspond to this instruction.
@@ -1177,9 +1235,7 @@ public class WasmLifter {
         case .wasmBeginCatchAll(_):
             return Data([0x19])
         case .wasmBeginCatch(_):
-            return Data([0x07, UInt8(self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTag")) }).firstIndex(where: {
-                wasmInstruction.input(0) == $0.0
-            })!)])
+            return Data([0x07] + Leb128.unsignedEncode(resolveTagIdx(forInput: wasmInstruction.input(0))))
         case .wasmEndCatch(_):
             return Data([])
         case .wasmEndLoop(_),
@@ -1189,9 +1245,7 @@ public class WasmLifter {
             // Basically the same as EndBlock, just an explicit instruction.
             return Data([0x0B])
         case .wasmThrow(_):
-            return Data([0x08, UInt8(self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTag")) }).firstIndex(where: {
-                wasmInstruction.input(0) == $0.0
-            })!)])
+            return Data([0x08] + Leb128.unsignedEncode(resolveTagIdx(forInput: wasmInstruction.input(0))))
         case .wasmBranch(_):
             let branchDepth = self.currentFunction!.variableAnalyzer.scopes.count - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x0C]) + Leb128.unsignedEncode(branchDepth)

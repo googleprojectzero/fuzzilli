@@ -41,10 +41,6 @@ public struct VariableMap<Value>: Sequence {
         return elements.isEmpty
     }
 
-    public var count: Int {
-        return elements.count
-    }
-
     public subscript(variable: Variable) -> Value? {
         get {
             let index = variable.number
