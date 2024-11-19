@@ -548,6 +548,17 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.WasmBuildThrow(tag: tag, inputs: args)
     },
 
+    CodeGenerator("WasmDefineTagGenerator", inContext: .wasm) {b in
+        let module = b.currentWasmModule
+        // TODO(mliedtke): This is the same as JS' WasmTagGenerator. We should try to share that code.
+        let numParams = Int.random(in: 0...10)
+        var params = ParameterList()
+        for _ in 0..<numParams {
+            params.append(chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]))
+        }
+        module.addTag(parameterTypes: params)
+    },
+
     CodeGenerator("WasmBranchGenerator", inContext: .wasmFunction, inputs: .required(.label)) { b, label in
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmBranch(to: label)

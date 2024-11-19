@@ -705,7 +705,6 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         // JS function that throws.
-        // TODO(mliedtke): Throw from wasm instead once we support wasm throw?
         let functionA = b.buildPlainFunction(with: .parameters()) { _ in
             b.throwException(b.loadInt(3))
         }
@@ -744,7 +743,6 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         // JS function that throws.
-        // TODO(mliedtke): Throw from wasm instead once we support wasm throw?
         let functionA = b.buildPlainFunction(with: .parameters()) { _ in
             b.throwException(b.loadInt(3))
         }
@@ -824,6 +822,56 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "357\n")
+    }
+
+    func testTryCatchWasmExceptionNominal() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let parameterTypes = [Parameter.wasmi32]
+        let importedTag = b.createWasmTag(parameterTypes: parameterTypes)
+        let module = b.buildWasmModule { wasmModule in
+            let definedTag = wasmModule.addTag(parameterTypes: parameterTypes)
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, param in
+                function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                    function.wasmBuildIfElse(param[0]) {
+                        function.WasmBuildThrow(tag: definedTag, inputs: [param[0]])
+                    } elseBody: {
+                        function.WasmBuildThrow(tag: importedTag, inputs: [function.consti32(123)])
+                    }
+                    function.wasmUnreachable()
+                    function.WasmBuildLegacyCatch(tag: importedTag) { args in
+                        function.wasmReturn(function.wasmi32BinOp(args[0], function.consti32(1), binOpKind: .Add))
+                    }
+                    function.WasmBuildLegacyCatch(tag: definedTag) { args in
+                        function.wasmReturn(function.wasmi32BinOp(args[0], function.consti32(4), binOpKind: .Add))
+                    }
+                } catchAllBody: {
+                    function.wasmUnreachable()
+                }
+                function.wasmUnreachable()
+            }
+        }
+        let exports = module.loadExports()
+        let wasmFct = module.getExportedMethod(at: 0)
+        // Passing in 0 takes the else branch that throws 123 with the importedTag.
+        // The catch block for the importedTag then adds 1 and JS prints 124.
+        let wasmOut = b.callMethod(wasmFct, on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        // Passing 42 takes the true branch that throws 42 with the definedTag.
+        // The catch block for the definedTag adds 4 and JS prints 46.
+        let wasmOut2 = b.callMethod(wasmFct, on: exports, withArgs: [b.loadInt(42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut2)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "124\n46\n")
     }
 
     func testUnreachable() throws {

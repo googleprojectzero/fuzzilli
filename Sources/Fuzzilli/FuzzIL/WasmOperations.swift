@@ -729,6 +729,18 @@ final class WasmDefineMemory: WasmOperation {
     }
 }
 
+final class WasmDefineTag: WasmOperation {
+    override var opcode: Opcode { .wasmDefineTag(self) }
+    public let parameters: ParameterList
+
+    init(parameters: ParameterList) {
+        self.parameters = parameters
+        // Note that tags in wasm are nominal (differently to types) meaning that two tags with the same input are not
+        // the same, therefore this operation is not considered to be .pure.
+        super.init(outputType: .object(ofGroup: "WasmTag", withWasmType: WasmTagType(parameters)), attributes: [], requiredContext: [.wasm])
+    }
+}
+
 final class WasmLoadGlobal: WasmOperation {
     override var opcode: Opcode { .wasmLoadGlobal(self) }
 

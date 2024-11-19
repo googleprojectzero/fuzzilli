@@ -295,6 +295,7 @@ enum Opcode {
     case wasmEndCatch(WasmEndCatch)
     case wasmEndTry(WasmEndTry)
     case wasmThrow(WasmThrow)
+    case wasmDefineTag(WasmDefineTag)
 
     case constSimd128(ConstSimd128)
     case wasmSimd128Compare(WasmSimd128Compare)

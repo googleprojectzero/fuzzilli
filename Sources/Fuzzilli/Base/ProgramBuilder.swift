@@ -3229,6 +3229,11 @@ public class ProgramBuilder {
             return b.emit(WasmDefineMemory(limits: Limits(min: minPages, max: maxPages), isShared: isShared, isMemory64: isMemory64)).output
         }
 
+        @discardableResult
+        public func addTag(parameterTypes: ParameterList) -> Variable {
+            return b.emit(WasmDefineTag(parameters: parameterTypes)).output
+        }
+
         private func getModuleVariable() -> Variable {
             guard moduleVariable != nil else {
                 fatalError("WasmModule variable was not set yet!")
@@ -3418,6 +3423,8 @@ public class ProgramBuilder {
         case .wasmDefineGlobal(_),
              .wasmDefineTable(_),
              .wasmDefineMemory(_):
+            break
+        case .wasmDefineTag(_):
             break
         case .beginWasmFunction(let op):
             activeWasmModule!.functions.append(WasmFunction(forBuilder: self, withSignature: op.signature))
