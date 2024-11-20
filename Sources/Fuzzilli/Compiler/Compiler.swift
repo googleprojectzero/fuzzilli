@@ -1005,6 +1005,7 @@ public class JavaScriptCompiler {
                 throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super constructor calls")
             }
             emit(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
+            // In JS, the result of calling the super constructor is just |this|, but in FuzzIL the operation doesn't have an output (because |this| is always available anyway)
             return lookupIdentifier("this")! // we can force unwrap because |this| always exists in the context where |super| exists
 
             
