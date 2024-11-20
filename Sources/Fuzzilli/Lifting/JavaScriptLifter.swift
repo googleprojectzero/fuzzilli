@@ -1169,10 +1169,16 @@ public class JavaScriptLifter: Lifter {
                 w.emit("}")
 
             case .beginForInLoop:
-                let LET = w.declarationKeyword(for: instr.innerOutput)
-                let V = w.declare(instr.innerOutput)
                 let OBJ = input(0)
-                w.emit("for (\(LET) \(V) in \(OBJ)) {")
+                let LET: String = ""
+                if instr.numInputs == 2 {  // Iterator is declared elsewhere
+                    let V = input(1) 
+                    w.emit("for (\(LET) \(V) in \(OBJ)) {")
+                } else {  // Iterator is declared in the function header
+                    let V = w.declare(instr.innerOutput)
+                    let LET = w.declarationKeyword(for: instr.innerOutput)
+                    w.emit("for (\(LET) \(V) in \(OBJ)) {")
+                }
                 w.enterNewBlock()
 
             case .endForInLoop:
@@ -1180,10 +1186,16 @@ public class JavaScriptLifter: Lifter {
                 w.emit("}")
 
             case .beginForOfLoop:
-                let V = w.declare(instr.innerOutput)
-                let LET = w.declarationKeyword(for: instr.innerOutput)
                 let OBJ = input(0)
-                w.emit("for (\(LET) \(V) of \(OBJ)) {")
+                let LET: String = ""
+                if instr.numInputs == 2 {
+                    let V = input(1)
+                    w.emit("for (\(LET) \(V) of \(OBJ)) {")
+                } else {
+                    let V = w.declare(instr.innerOutput)
+                    let LET = w.declarationKeyword(for: instr.innerOutput)
+                    w.emit("for (\(LET) \(V) of \(OBJ)) {")
+                }
                 w.enterNewBlock()
 
             case .beginForOfLoopWithDestruct(let op):

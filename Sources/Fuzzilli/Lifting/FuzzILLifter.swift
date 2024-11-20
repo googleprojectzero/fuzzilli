@@ -667,7 +667,11 @@ public class FuzzILLifter: Lifter {
             w.emit("EndForLoop")
 
         case .beginForInLoop:
-            w.emit("BeginForInLoop \(input(0)) -> \(innerOutput())")
+            if instr.numInputs == 2 {
+                w.emit("BeginForInLoop \(input(0)) -> \(input(1))")  // Iterator is declared beforehand
+            } else {
+                w.emit("BeginForInLoop \(input(0)) -> \(innerOutput())")  // Iterator is declared in the function header
+            }
             w.increaseIndentionLevel()
 
         case .endForInLoop:
@@ -675,7 +679,11 @@ public class FuzzILLifter: Lifter {
             w.emit("EndForInLoop")
 
         case .beginForOfLoop:
-            w.emit("BeginForOfLoop \(input(0)) -> \(innerOutput())")
+            if instr.numInputs == 2 {
+                w.emit("BeginForOfLoop \(input(0)) -> \(input(1))")
+            } else {
+                w.emit("BeginForOfLoop \(input(0)) -> \(innerOutput())")
+            }
             w.increaseIndentionLevel()
 
         case .beginForOfLoopWithDestruct(let op):

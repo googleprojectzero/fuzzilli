@@ -681,12 +681,14 @@ message EndForLoop {
 }
 
 message BeginForInLoop {
+    bool usesPredeclaredIterator = 1;
 }
 
 message EndForInLoop {
 }
 
 message BeginForOfLoop {
+    bool usesPredeclaredIterator = 1;
 }
 
 message BeginForOfLoopWithDestruct {

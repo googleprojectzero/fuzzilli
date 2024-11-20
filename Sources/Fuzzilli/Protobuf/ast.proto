@@ -163,15 +163,21 @@ message ForLoop {
 }
 
 message ForInLoop {
-    VariableDeclarator left = 1;
-    Expression right = 2;
-    Statement body = 3;
+    oneof left {
+        VariableDeclarator variableDeclarator = 1;
+        Identifier identifier = 2;
+    }
+    Expression right = 3;
+    Statement body = 4;
 }
 
 message ForOfLoop {
-    VariableDeclarator left = 1;
-    Expression right = 2;
-    Statement body = 3;
+    oneof left {
+        VariableDeclarator variableDeclarator = 1;
+        Identifier identifier = 2;
+    }
+    Expression right = 3;
+    Statement body = 4;
 }
 
 message BreakStatement {

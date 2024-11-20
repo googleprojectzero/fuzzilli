@@ -794,10 +794,18 @@ public struct JSTyper: Analyzer {
             zip(instr.innerOutputs, inputTypes).forEach({ set($0, $1) })
 
         case .beginForInLoop:
-            set(instr.innerOutput, .string)
+            if instr.numInputs == 2 {
+                set(instr.input(1), .string) // Iterator is declared beforehand
+            } else {
+                set(instr.innerOutput, .string) // Iterator is declared in the function header
+            }
 
         case .beginForOfLoop:
-            set(instr.innerOutput, .anything)
+            if instr.numInputs == 2 {
+                set(instr.input(1), .anything)
+            } else {
+                set(instr.innerOutput, .anything)
+            }
 
         case .beginForOfLoopWithDestruct:
             for v in instr.innerOutputs {

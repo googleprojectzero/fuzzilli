@@ -690,14 +690,26 @@ public struct Compiler_Protobuf_ForInLoop: @unchecked Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var left: Compiler_Protobuf_VariableDeclarator {
-    get {return _storage._left ?? Compiler_Protobuf_VariableDeclarator()}
+  public var left: OneOf_Left? {
+    get {return _storage._left}
     set {_uniqueStorage()._left = newValue}
   }
-  /// Returns true if `left` has been explicitly set.
-  public var hasLeft: Bool {return _storage._left != nil}
-  /// Clears the value of `left`. Subsequent reads from it will return its default value.
-  public mutating func clearLeft() {_uniqueStorage()._left = nil}
+
+  public var variableDeclarator: Compiler_Protobuf_VariableDeclarator {
+    get {
+      if case .variableDeclarator(let v)? = _storage._left {return v}
+      return Compiler_Protobuf_VariableDeclarator()
+    }
+    set {_uniqueStorage()._left = .variableDeclarator(newValue)}
+  }
+
+  public var identifier: Compiler_Protobuf_Identifier {
+    get {
+      if case .identifier(let v)? = _storage._left {return v}
+      return Compiler_Protobuf_Identifier()
+    }
+    set {_uniqueStorage()._left = .identifier(newValue)}
+  }
 
   public var right: Compiler_Protobuf_Expression {
     get {return _storage._right ?? Compiler_Protobuf_Expression()}
@@ -718,6 +730,12 @@ public struct Compiler_Protobuf_ForInLoop: @unchecked Sendable {
   public mutating func clearBody() {_uniqueStorage()._body = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_Left: Equatable, Sendable {
+    case variableDeclarator(Compiler_Protobuf_VariableDeclarator)
+    case identifier(Compiler_Protobuf_Identifier)
+
+  }
 
   public init() {}
 
@@ -729,14 +747,26 @@ public struct Compiler_Protobuf_ForOfLoop: @unchecked Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var left: Compiler_Protobuf_VariableDeclarator {
-    get {return _storage._left ?? Compiler_Protobuf_VariableDeclarator()}
+  public var left: OneOf_Left? {
+    get {return _storage._left}
     set {_uniqueStorage()._left = newValue}
   }
-  /// Returns true if `left` has been explicitly set.
-  public var hasLeft: Bool {return _storage._left != nil}
-  /// Clears the value of `left`. Subsequent reads from it will return its default value.
-  public mutating func clearLeft() {_uniqueStorage()._left = nil}
+
+  public var variableDeclarator: Compiler_Protobuf_VariableDeclarator {
+    get {
+      if case .variableDeclarator(let v)? = _storage._left {return v}
+      return Compiler_Protobuf_VariableDeclarator()
+    }
+    set {_uniqueStorage()._left = .variableDeclarator(newValue)}
+  }
+
+  public var identifier: Compiler_Protobuf_Identifier {
+    get {
+      if case .identifier(let v)? = _storage._left {return v}
+      return Compiler_Protobuf_Identifier()
+    }
+    set {_uniqueStorage()._left = .identifier(newValue)}
+  }
 
   public var right: Compiler_Protobuf_Expression {
     get {return _storage._right ?? Compiler_Protobuf_Expression()}
@@ -757,6 +787,12 @@ public struct Compiler_Protobuf_ForOfLoop: @unchecked Sendable {
   public mutating func clearBody() {_uniqueStorage()._body = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_Left: Equatable, Sendable {
+    case variableDeclarator(Compiler_Protobuf_VariableDeclarator)
+    case identifier(Compiler_Protobuf_Identifier)
+
+  }
 
   public init() {}
 
@@ -3576,13 +3612,14 @@ extension Compiler_Protobuf_ForLoop: SwiftProtobuf.Message, SwiftProtobuf._Messa
 extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ForInLoop"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "left"),
-    2: .same(proto: "right"),
-    3: .same(proto: "body"),
+    1: .same(proto: "variableDeclarator"),
+    2: .same(proto: "identifier"),
+    3: .same(proto: "right"),
+    4: .same(proto: "body"),
   ]
 
   fileprivate class _StorageClass {
-    var _left: Compiler_Protobuf_VariableDeclarator? = nil
+    var _left: Compiler_Protobuf_ForInLoop.OneOf_Left?
     var _right: Compiler_Protobuf_Expression? = nil
     var _body: Compiler_Protobuf_Statement? = nil
 
@@ -3620,9 +3657,34 @@ extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
         // allocates stack space for every case branch when no optimizations are
         // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._left) }()
-        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._right) }()
-        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._body) }()
+        case 1: try {
+          var v: Compiler_Protobuf_VariableDeclarator?
+          var hadOneofValue = false
+          if let current = _storage._left {
+            hadOneofValue = true
+            if case .variableDeclarator(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._left = .variableDeclarator(v)
+          }
+        }()
+        case 2: try {
+          var v: Compiler_Protobuf_Identifier?
+          var hadOneofValue = false
+          if let current = _storage._left {
+            hadOneofValue = true
+            if case .identifier(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._left = .identifier(v)
+          }
+        }()
+        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._right) }()
+        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._body) }()
         default: break
         }
       }
@@ -3635,14 +3697,22 @@ extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
       // allocates stack space for every if/case branch local when no optimizations
       // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
       // https://github.com/apple/swift-protobuf/issues/1182
-      try { if let v = _storage._left {
+      switch _storage._left {
+      case .variableDeclarator?: try {
+        guard case .variableDeclarator(let v)? = _storage._left else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-      } }()
-      try { if let v = _storage._right {
+      }()
+      case .identifier?: try {
+        guard case .identifier(let v)? = _storage._left else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      }()
+      case nil: break
+      }
+      try { if let v = _storage._right {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
       } }()
       try { if let v = _storage._body {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
       } }()
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -3668,13 +3738,14 @@ extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
 extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ForOfLoop"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "left"),
-    2: .same(proto: "right"),
-    3: .same(proto: "body"),
+    1: .same(proto: "variableDeclarator"),
+    2: .same(proto: "identifier"),
+    3: .same(proto: "right"),
+    4: .same(proto: "body"),
   ]
 
   fileprivate class _StorageClass {
-    var _left: Compiler_Protobuf_VariableDeclarator? = nil
+    var _left: Compiler_Protobuf_ForOfLoop.OneOf_Left?
     var _right: Compiler_Protobuf_Expression? = nil
     var _body: Compiler_Protobuf_Statement? = nil
 
@@ -3712,9 +3783,34 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
         // allocates stack space for every case branch when no optimizations are
         // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._left) }()
-        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._right) }()
-        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._body) }()
+        case 1: try {
+          var v: Compiler_Protobuf_VariableDeclarator?
+          var hadOneofValue = false
+          if let current = _storage._left {
+            hadOneofValue = true
+            if case .variableDeclarator(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._left = .variableDeclarator(v)
+          }
+        }()
+        case 2: try {
+          var v: Compiler_Protobuf_Identifier?
+          var hadOneofValue = false
+          if let current = _storage._left {
+            hadOneofValue = true
+            if case .identifier(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._left = .identifier(v)
+          }
+        }()
+        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._right) }()
+        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._body) }()
         default: break
         }
       }
@@ -3727,14 +3823,22 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
       // allocates stack space for every if/case branch local when no optimizations
       // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
       // https://github.com/apple/swift-protobuf/issues/1182
-      try { if let v = _storage._left {
+      switch _storage._left {
+      case .variableDeclarator?: try {
+        guard case .variableDeclarator(let v)? = _storage._left else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-      } }()
-      try { if let v = _storage._right {
+      }()
+      case .identifier?: try {
+        guard case .identifier(let v)? = _storage._left else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      }()
+      case nil: break
+      }
+      try { if let v = _storage._right {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
       } }()
       try { if let v = _storage._body {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
       } }()
     }
     try unknownFields.traverse(visitor: &visitor)
