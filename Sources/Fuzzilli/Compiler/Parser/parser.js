@@ -582,6 +582,10 @@ function parse(script, proto) {
             case 'V8IntrinsicIdentifier': {
                 return makeExpression('V8IntrinsicIdentifier', { name: node.name });
             }
+            case 'AwaitExpression': {
+                let argument = visitExpression(node.argument);
+                return makeExpression('AwaitExpression', { argument });
+            }
             default: {
                 throw "Unhandled node type " + node.type;
             }
