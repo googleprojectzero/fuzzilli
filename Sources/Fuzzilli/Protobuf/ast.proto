@@ -421,6 +421,10 @@ message TernaryExpression {
   Expression alternate = 3;
 }
 
+message AwaitExpression {
+    Expression argument = 1;
+}
+
 message SuperMemberExpression {
     // Since 'super' is not an expression, there's no object field
     oneof property {
@@ -462,7 +466,8 @@ message Expression {
         SequenceExpression sequenceExpression = 23;
         V8IntrinsicIdentifier v8IntrinsicIdentifier = 24;
         TernaryExpression ternaryExpression = 25;
-        SuperMemberExpression superMemberExpression = 26;
-        CallSuperConstructor callSuperConstructor = 27;
+        AwaitExpression awaitExpression = 26;
+        SuperMemberExpression superMemberExpression = 27;
+        CallSuperConstructor callSuperConstructor = 28;
     }
 }

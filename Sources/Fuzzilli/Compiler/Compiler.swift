@@ -1056,15 +1056,56 @@ public class JavaScriptCompiler {
             }
 
         case .unaryExpression(let unaryExpression):
-            let argument = try compileExpression(unaryExpression.argument)
-
             if unaryExpression.operator == "typeof" {
+                let argument = try compileExpression(unaryExpression.argument)
                 return emit(TypeOf(), withInputs: [argument]).output
+            } else if unaryExpression.operator == "delete" {
+                guard case .memberExpression(let memberExpression) = unaryExpression.argument.expression else {
+                    throw CompilerError.invalidNodeError("delete operator must be applied to a member expression")
+                }
+
+                let obj = try compileExpression(memberExpression.object)
+                // isGuarded is true if the member expression is optional (e.g., obj?.prop)
+                let isGuarded = memberExpression.isOptional
+
+                if !memberExpression.name.isEmpty {
+                    // Deleting a non-computed property (e.g., delete obj.prop)
+                    let propertyName = memberExpression.name
+                    let instr = emit(
+                        DeleteProperty(propertyName: propertyName, isGuarded: isGuarded),
+                        withInputs: [obj]
+                    )
+                    return instr.output
+                } else {
+                    // Deleting a computed property (e.g., delete obj[expr])
+                    let propertyExpression = memberExpression.expression
+                    let propertyExpr = propertyExpression.expression
+                    let property = try compileExpression(propertyExpression)
+
+                    if case .numberLiteral(let numberLiteral) = propertyExpr {
+                        // Delete an element (e.g., delete arr[42])
+                        let index = Int64(numberLiteral.value)
+                        let instr = emit(
+                            DeleteElement(index: index, isGuarded: isGuarded),
+                            withInputs: [obj]
+                        )
+                        return instr.output
+                    } else {
+                        // Use DeleteComputedProperty for other computed properties (e.g., delete obj["key"])
+                        let instr = emit(
+                            DeleteComputedProperty(isGuarded: isGuarded),
+                            withInputs: [obj, property]
+                        )
+                        return instr.output
+                    }
+                }
+            } else {
+                guard let op = UnaryOperator(rawValue: unaryExpression.operator) else {
+                    throw CompilerError.invalidNodeError("invalid unary operator: \(unaryExpression.operator)")
+                }
+                let argument = try compileExpression(unaryExpression.argument)
+                return emit(UnaryOperation(op), withInputs: [argument]).output
             }
-            guard let op = UnaryOperator(rawValue: unaryExpression.operator) else {
-                throw CompilerError.invalidNodeError("invalid unary operator: \(unaryExpression.operator)")
-            }
-            return emit(UnaryOperation(op), withInputs: [argument]).output
 
         case .binaryExpression(let binaryExpression):
             let lhs = try compileExpression(binaryExpression.lhs)
@@ -1112,6 +1153,14 @@ public class JavaScriptCompiler {
 
         case .v8IntrinsicIdentifier:
             fatalError("V8IntrinsicIdentifiers must be handled as part of their surrounding CallExpression")
+
+        case .awaitExpression(let awaitExpression):
+                // TODO await is also allowed at the top level of a module
+                if !contextAnalyzer.context.contains(.asyncFunction) {
+                    throw CompilerError.invalidNodeError("`await` is currently only supported in async functions")
+                }
+                let argument = try compileExpression(awaitExpression.argument)
+                return emit(Await(), withInputs: [argument]).output
 
         }
     }
