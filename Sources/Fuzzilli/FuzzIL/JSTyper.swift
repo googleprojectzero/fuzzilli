@@ -120,7 +120,8 @@ public struct JSTyper: Analyzer {
             case .wasmBeginBlock(_),
                  .wasmBeginLoop(_),
                  .wasmBeginTry(_),
-                 .wasmBeginCatch(_):
+                 .wasmBeginCatch(_),
+                 .wasmBeginTryDelegate(_):
                 // Type all the innerOutputs
                 for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmOperation).innerOutputTypes) {
                     setType(of: innerOutput, to: paramType)

@@ -1060,6 +1060,29 @@ final class WasmEndTry: WasmOperation {
     }
 }
 
+/// A special try block that does not have any catch / catch_all handlers but ends with a delegate to handle the exception.
+final class WasmBeginTryDelegate: WasmOperation {
+    override var opcode: Opcode { .wasmBeginTryDelegate(self) }
+
+    let signature: Signature
+
+    init(with signature: Signature) {
+        self.signature = signature
+        let parameterTypes = signature.parameters.convertPlainToILTypes()
+        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [])
+    }
+}
+
+/// Delegates any exception thrown inside WasmBeginTryDelegate and this end to another block defined by the label.
+/// This can be a "proper" try block (in which case its catch blocks apply) or any other block like a loop or an if.
+final class WasmEndTryDelegate: WasmOperation {
+    override var opcode: Opcode { .wasmEndTryDelegate(self) }
+
+    init() {
+        super.init(inputTypes: [.label], attributes: [.isPure, .isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmThrow: WasmOperation {
     override var opcode: Opcode { .wasmThrow(self) }
     public let parameters: ParameterList

@@ -874,6 +874,45 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "124\n46\n")
     }
 
+    func testTryDelegate() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let tag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                function.wasmBuildLegacyTry(with: [] => .nothing) { tryLabel, _ in
+                    // Even though we have a try-catch_all, the delegate "skips" this catch block. The delegate acts as
+                    // if the exception was thrown by the block whose label is passed into it.
+                    function.wasmBuildLegacyTry(with: [] => .nothing) { unusedLabel, _ in
+                        function.wasmBuildLegacyTryDelegate(with: [] => .nothing, body: {label, _ in
+                            function.WasmBuildThrow(tag: tag, inputs: [function.consti32(42)])
+                        }, delegate: tryLabel)
+                        function.wasmUnreachable()
+                    } catchAllBody: {
+                        function.wasmUnreachable()
+                    }
+                    function.wasmUnreachable()
+                    function.WasmBuildLegacyCatch(tag: tag) { args in
+                        function.wasmReturn(args[0])
+                    }
+                }
+                function.wasmUnreachable()
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
     func testUnreachable() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

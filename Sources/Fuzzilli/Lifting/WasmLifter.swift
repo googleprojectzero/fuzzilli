@@ -807,7 +807,8 @@ public class WasmLifter {
         switch instr.op.opcode {
         case .wasmBeginBlock(_),
              .wasmBeginLoop(_),
-             .wasmBeginTry(_):
+             .wasmBeginTry(_),
+             .wasmBeginTryDelegate(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.scopes.count
             // Needs typer analysis
             return true
@@ -1229,8 +1230,9 @@ public class WasmLifter {
         case .wasmBeginLoop(_):
             // 0x03 is the loop instruction and 0x40 is the empty block type, just like in .wasmBeginBlock
             return Data([0x03] + [0x40])
-        case .wasmBeginTry(_):
-            // 0x03 is the loop instruction and 0x40 is the empty block type, just like in .wasmBeginBlock
+        case .wasmBeginTry(_),
+             .wasmBeginTryDelegate(_):
+            // 0x06 is the try instruction and 0x40 is the empty block type, just like in .wasmBeginBlock
             return Data([0x06] + [0x40])
         case .wasmBeginCatchAll(_):
             return Data([0x19])
@@ -1244,6 +1246,9 @@ public class WasmLifter {
                 .wasmEndBlock(_):
             // Basically the same as EndBlock, just an explicit instruction.
             return Data([0x0B])
+        case .wasmEndTryDelegate(_):
+            let branchDepth = self.currentFunction!.variableAnalyzer.scopes.count - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            return Data([0x18]) + Leb128.unsignedEncode(branchDepth)
         case .wasmThrow(_):
             return Data([0x08] + Leb128.unsignedEncode(resolveTagIdx(forInput: wasmInstruction.input(0))))
         case .wasmBranch(_):

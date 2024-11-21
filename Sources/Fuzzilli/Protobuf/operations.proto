@@ -1155,6 +1155,14 @@ message WasmEndCatch {
 message WasmEndTry {
 }
 
+message WasmBeginTryDelegate {
+  repeated WasmILType parameters = 1;
+  WasmILType returnType = 2;
+}
+
+message WasmEndTryDelegate {
+}
+
 message WasmThrow {
   repeated WasmILType parameters = 1;
 }
