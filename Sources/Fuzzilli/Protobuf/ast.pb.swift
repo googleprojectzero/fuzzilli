@@ -1952,6 +1952,66 @@ public struct Compiler_Protobuf_AwaitExpression: @unchecked Sendable {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+public struct Compiler_Protobuf_SuperMemberExpression: @unchecked Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Since 'super' is not an expression, there's no object field
+  public var property: OneOf_Property? {
+    get {return _storage._property}
+    set {_uniqueStorage()._property = newValue}
+  }
+
+  public var name: String {
+    get {
+      if case .name(let v)? = _storage._property {return v}
+      return String()
+    }
+    set {_uniqueStorage()._property = .name(newValue)}
+  }
+
+  public var expression: Compiler_Protobuf_Expression {
+    get {
+      if case .expression(let v)? = _storage._property {return v}
+      return Compiler_Protobuf_Expression()
+    }
+    set {_uniqueStorage()._property = .expression(newValue)}
+  }
+
+  public var isOptional: Bool {
+    get {return _storage._isOptional}
+    set {_uniqueStorage()._isOptional = newValue}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  /// Since 'super' is not an expression, there's no object field
+  public enum OneOf_Property: Equatable, Sendable {
+    case name(String)
+    case expression(Compiler_Protobuf_Expression)
+
+  }
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+public struct Compiler_Protobuf_CallSuperConstructor: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var arguments: [Compiler_Protobuf_Expression] = []
+
+  public var isOptional: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Compiler_Protobuf_Expression: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2170,6 +2230,22 @@ public struct Compiler_Protobuf_Expression: @unchecked Sendable {
     set {_uniqueStorage()._expression = .awaitExpression(newValue)}
   }
 
+  public var superMemberExpression: Compiler_Protobuf_SuperMemberExpression {
+    get {
+      if case .superMemberExpression(let v)? = _storage._expression {return v}
+      return Compiler_Protobuf_SuperMemberExpression()
+    }
+    set {_uniqueStorage()._expression = .superMemberExpression(newValue)}
+  }
+
+  public var callSuperConstructor: Compiler_Protobuf_CallSuperConstructor {
+    get {
+      if case .callSuperConstructor(let v)? = _storage._expression {return v}
+      return Compiler_Protobuf_CallSuperConstructor()
+    }
+    set {_uniqueStorage()._expression = .callSuperConstructor(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Expression: Equatable, Sendable {
@@ -2199,6 +2275,8 @@ public struct Compiler_Protobuf_Expression: @unchecked Sendable {
     case v8IntrinsicIdentifier(Compiler_Protobuf_V8IntrinsicIdentifier)
     case ternaryExpression(Compiler_Protobuf_TernaryExpression)
     case awaitExpression(Compiler_Protobuf_AwaitExpression)
+    case superMemberExpression(Compiler_Protobuf_SuperMemberExpression)
+    case callSuperConstructor(Compiler_Protobuf_CallSuperConstructor)
 
   }
 
@@ -6619,6 +6697,157 @@ extension Compiler_Protobuf_AwaitExpression: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
+extension Compiler_Protobuf_SuperMemberExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SuperMemberExpression"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "name"),
+    2: .same(proto: "expression"),
+    3: .same(proto: "isOptional"),
+  ]
+
+  fileprivate class _StorageClass {
+    var _property: Compiler_Protobuf_SuperMemberExpression.OneOf_Property?
+    var _isOptional: Bool = false
+
+    #if swift(>=5.10)
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+    #else
+      static let defaultInstance = _StorageClass()
+    #endif
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _property = source._property
+      _isOptional = source._isOptional
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._property != nil {try decoder.handleConflictingOneOf()}
+            _storage._property = .name(v)
+          }
+        }()
+        case 2: try {
+          var v: Compiler_Protobuf_Expression?
+          var hadOneofValue = false
+          if let current = _storage._property {
+            hadOneofValue = true
+            if case .expression(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._property = .expression(v)
+          }
+        }()
+        case 3: try { try decoder.decodeSingularBoolField(value: &_storage._isOptional) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      switch _storage._property {
+      case .name?: try {
+        guard case .name(let v)? = _storage._property else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+      }()
+      case .expression?: try {
+        guard case .expression(let v)? = _storage._property else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      }()
+      case nil: break
+      }
+      if _storage._isOptional != false {
+        try visitor.visitSingularBoolField(value: _storage._isOptional, fieldNumber: 3)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_SuperMemberExpression, rhs: Compiler_Protobuf_SuperMemberExpression) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._property != rhs_storage._property {return false}
+        if _storage._isOptional != rhs_storage._isOptional {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_CallSuperConstructor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CallSuperConstructor"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "arguments"),
+    2: .same(proto: "isOptional"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.arguments) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isOptional) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.arguments.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.arguments, fieldNumber: 1)
+    }
+    if self.isOptional != false {
+      try visitor.visitSingularBoolField(value: self.isOptional, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_CallSuperConstructor, rhs: Compiler_Protobuf_CallSuperConstructor) -> Bool {
+    if lhs.arguments != rhs.arguments {return false}
+    if lhs.isOptional != rhs.isOptional {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Expression"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -6648,6 +6877,8 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
     24: .same(proto: "v8IntrinsicIdentifier"),
     25: .same(proto: "ternaryExpression"),
     26: .same(proto: "awaitExpression"),
+    27: .same(proto: "superMemberExpression"),
+    28: .same(proto: "callSuperConstructor"),
   ]
 
   fileprivate class _StorageClass {
@@ -7023,6 +7254,32 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .awaitExpression(v)
           }
         }()
+        case 27: try {
+          var v: Compiler_Protobuf_SuperMemberExpression?
+          var hadOneofValue = false
+          if let current = _storage._expression {
+            hadOneofValue = true
+            if case .superMemberExpression(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._expression = .superMemberExpression(v)
+          }
+        }()
+        case 28: try {
+          var v: Compiler_Protobuf_CallSuperConstructor?
+          var hadOneofValue = false
+          if let current = _storage._expression {
+            hadOneofValue = true
+            if case .callSuperConstructor(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._expression = .callSuperConstructor(v)
+          }
+        }()
         default: break
         }
       }
@@ -7139,6 +7396,14 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
       case .awaitExpression?: try {
         guard case .awaitExpression(let v)? = _storage._expression else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 26)
+      }()
+      case .superMemberExpression?: try {
+        guard case .superMemberExpression(let v)? = _storage._expression else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 27)
+      }()
+      case .callSuperConstructor?: try {
+        guard case .callSuperConstructor(let v)? = _storage._expression else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 28)
       }()
       case nil: break
       }
