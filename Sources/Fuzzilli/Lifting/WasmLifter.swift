@@ -474,13 +474,16 @@ public class WasmLifter {
                 continue
             }
             if type.Is(.object(ofGroup: "WasmMemory")) {
-                let minPages = type.wasmMemoryType!.limits.min
-                let maxPages = type.wasmMemoryType!.limits.max
+                // Emit import type.
                 temp += Data([0x2])
-                if let maxPages = maxPages {
-                    temp += Data([0x1] + Leb128.unsignedEncode(minPages) + Leb128.unsignedEncode(maxPages))
-                } else {
-                    temp += Data([0x0] + Leb128.unsignedEncode(minPages))
+
+                let mem = type.wasmMemoryType!
+                let limits_byte: UInt8 = (mem.isMemory64 ? 4 : 0) | (mem.isShared ? 2 : 0) | (mem.limits.max != nil ? 1 : 0);
+                temp += Data([limits_byte])
+
+                temp += Data(Leb128.unsignedEncode(mem.limits.min))
+                if let maxPages = mem.limits.max {
+                    temp += Data(Leb128.unsignedEncode(maxPages))
                 }
                 continue
             }
@@ -742,18 +745,19 @@ public class WasmLifter {
 
         // The amount of memories we have, per standard this can currently only be one, either defined or imported
         // https://webassembly.github.io/spec/core/syntax/modules.html#memories
-
         temp += Leb128.unsignedEncode(memories.count)
 
-        // TODO(evih): Encode sharedness.
         for instruction in memories {
             let type = typer.type(of: instruction.output)
-            let minPages = type.wasmMemoryType!.limits.min
-            let maxPages = type.wasmMemoryType!.limits.max
-            if let maxPages = maxPages {
-                temp += Data([0x1] + Leb128.unsignedEncode(minPages) + Leb128.unsignedEncode(maxPages))
-            } else {
-                temp += Data([0x0] + Leb128.unsignedEncode(minPages))
+            assert(type.isWasmMemoryType)
+            let mem = type.wasmMemoryType!
+
+            let limits_byte: UInt8 = (mem.isMemory64 ? 4 : 0) | (mem.isShared ? 2 : 0) | (mem.limits.max != nil ? 1 : 0);
+            temp += Data([limits_byte])
+
+            temp += Data(Leb128.unsignedEncode(mem.limits.min))
+            if let maxPages = mem.limits.max {
+                temp += Data(Leb128.unsignedEncode(maxPages))
             }
         }
 
@@ -1081,7 +1085,7 @@ public class WasmLifter {
         }
         fatalError("Invalid tag \(input)")
     }
-  
+
     // This is almost identical to the resolveGlobalIdx.
     func resolveTableIdx(forInput input: Variable) -> Int {
         var idx: Int?
