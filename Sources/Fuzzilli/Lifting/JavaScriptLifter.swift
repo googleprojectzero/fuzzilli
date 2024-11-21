@@ -1546,6 +1546,8 @@ public class JavaScriptLifter: Lifter {
                  .wasmBeginCatch(_),
                  .wasmEndCatch(_),
                  .wasmEndTry(_),
+                 .wasmBeginTryDelegate(_),
+                 .wasmEndTryDelegate(_),
                  .wasmThrow(_),
                  .wasmDefineTag(_),
                  .wasmBranch(_),

@@ -505,6 +505,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("WasmLegacyTryDelegateGenerator", inContext: .wasmFunction, inputs: .required(.label)) { b, label in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmBuildLegacyTryDelegate(with: [] => .nothing, body: { _, _ in
+            b.buildRecursive()
+        }, delegate: label)
+    },
+
     // The variable we reassign to has to be a numerical primitive, e.g. something that looks like a number (can be a global)
     // We cannot reassign to a .wasmFuncRef or .wasmExternRef though, as they need to be in a local slot.
     RecursiveCodeGenerator("WasmIfElseGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32, .wasmNumericalPrimitive)) { b, conditionVar, outputVar in

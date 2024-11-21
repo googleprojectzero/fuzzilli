@@ -3075,6 +3075,12 @@ public class ProgramBuilder {
             b.emit(WasmThrow(parameters: tagType.parameters), withInputs: [tag] + inputs)
         }
 
+        public func wasmBuildLegacyTryDelegate(with signature: Signature, body: (Variable, [Variable]) -> Void, delegate: Variable) {
+            let instr = b.emit(WasmBeginTryDelegate(with: signature))
+            body(instr.innerOutput(0), Array(instr.innerOutputs[1...]))
+            b.emit(WasmEndTryDelegate(), withInputs: [delegate])
+        }
+
         public func generateRandomWasmVar(ofType type: ILType) -> Variable {
             // TODO: add externref and nullrefs
             switch type {

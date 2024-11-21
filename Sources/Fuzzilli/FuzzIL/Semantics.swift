@@ -234,6 +234,8 @@ extension Operation {
         case .wasmBeginCatchAll,
              .wasmBeginCatch:
             return endOp is WasmEndCatch
+        case .wasmBeginTryDelegate:
+            return endOp is WasmEndTryDelegate
         case .wasmBeginIf:
             return endOp is WasmEndIf || endOp is WasmBeginElse
         case .wasmBeginElse:
