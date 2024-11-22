@@ -117,12 +117,21 @@ struct VariableAnalyzer: Analyzer {
     private(set) var visibleVariables = [Variable]()
     private(set) var scopes = Stack<Int>([0])
 
+    /// Track the current maximum branch depth. Note that some wasm blocks are not valid branch targets
+    // (catch, catch_all) and therefore don't contribute to the branch depth.
+    private(set) var wasmBranchDepth = 0
+
     mutating func analyze(_ instr: Instruction) {
         // Scope management (1).
         if instr.isBlockEnd {
             assert(scopes.count > 0, "Trying to end a scope that was never started")
             let variablesInClosedScope = scopes.pop()
             visibleVariables.removeLast(variablesInClosedScope)
+
+            if instr.op is WasmOperation && !(instr.op is WasmEndCatch) {
+                assert(wasmBranchDepth > 0)
+                wasmBranchDepth -= 1
+            }
         }
 
         scopes.top += instr.numOutputs
@@ -132,6 +141,11 @@ struct VariableAnalyzer: Analyzer {
         // This code has to be somewhat careful since e.g. BeginElse both ends and begins a variable scope.
         if instr.isBlockStart {
             scopes.push(0)
+            // TODO(mliedtke): We should probably do this in a more generic way, e.g. adding an extra attribute?
+            // The WasmOperation check isn't required but this way the absolute value doesn't count non-wasm blocks.
+            if instr.op is WasmOperation && !(instr.op is WasmBeginCatch || instr.op is WasmBeginCatchAll) {
+                wasmBranchDepth += 1
+            }
         }
 
         scopes.top += instr.numInnerOutputs

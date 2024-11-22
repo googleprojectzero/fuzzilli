@@ -824,6 +824,64 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "357\n")
     }
 
+    func testBranchInCatch() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.loadBuiltin("output")
+        let tag = b.createWasmTag(parameterTypes: [])
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                    function.WasmBuildThrow(tag: tag, inputs: [])
+                    function.WasmBuildLegacyCatch(tag: tag) { args in
+                        // Note that this has to emit a branch depth of 0 when lifted as a catch block is not a branch target.
+                        function.wasmBranch(to: label)
+                    }
+                }
+                function.wasmReturn(function.consti32(42))
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
+        func testBranchInCatchAll() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.loadBuiltin("output")
+        let tag = b.createWasmTag(parameterTypes: [])
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                function.wasmBuildBlock(with: [] => .nothing) { blockLabel, _ in
+                    function.wasmBuildLegacyTry(with: [] => .nothing) { tryLabel, _ in
+                        function.WasmBuildThrow(tag: tag, inputs: [])
+                    } catchAllBody: {
+                        function.wasmBranch(to: blockLabel)
+                    }
+                    function.wasmReturn(function.consti32(-1))
+                }
+                function.wasmReturn(function.consti32(42))
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
+
     func testTryCatchWasmExceptionNominal() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
