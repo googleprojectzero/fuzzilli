@@ -882,17 +882,13 @@ public class ProgramBuilder {
     // Then we convert that back into a signature with only .plain types and attach that to the WasmJsCall instruction.
     public static func convertJsSignatureToWasmSignature(_ signature: Signature, availableTypes types: WeightedList<ILType>) -> Signature {
         let parameterTypes = prepareArgumentTypes(forParameters: signature.parameters).map { approximateWasmTypeFromJsType($0, availableTypes: types) }
-
-        let outputType = mapJsToWasmType(signature.outputType) ?? chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmExternRef, .wasmFuncRef])
-
+        let outputType = mapJsToWasmType(signature.outputType)
         return Signature(expects: parameterTypes.map { .plain($0) }, returns: outputType)
     }
 
     public static func convertJsSignatureToWasmSignatureDeterministic(_ signature: Signature) -> Signature {
-        let parameterTypes = prepareArgumentTypesDeterministic(forParameters: signature.parameters).map { mapJsToWasmType($0) ?? ILType.wasmi32 }
-
-        let outputType = mapJsToWasmType(signature.outputType) ?? ILType.wasmi32
-
+        let parameterTypes = prepareArgumentTypesDeterministic(forParameters: signature.parameters).map { mapJsToWasmType($0) }
+        let outputType = mapJsToWasmType(signature.outputType)
         return Signature(expects: parameterTypes.map { .plain($0) }, returns: outputType)
     }
 
@@ -943,33 +939,32 @@ public class ProgramBuilder {
         numberOfHiddenVariables -= 1
     }
 
-    // Helper that converts JS Types to their known Wasm counterparts.
-    private static func mapJsToWasmType(_ type: ILType) -> ILType? {
-        switch type {
-        case .integer:
-            return .wasmi32
-        case .number:
-            return .wasmf32
-        case .bigint:
-            return .wasmi64
-        case .undefined:
-            return .wasmExternRef
-        default:
-            break
+    private static func matchingWasmTypes(jsType: ILType) -> [ILType] {
+        if jsType.Is(.integer) {
+            return [.wasmi32, .wasmf64, .wasmf32]
+        } else if jsType.Is(.number) {
+            return [.wasmf32, .wasmf64, .wasmi32]
+        } else if jsType.Is(.bigint) {
+            return [.wasmi64]
+        } else if jsType.Is(.function()) {
+            // TODO(gc): Add support for specific signatures.
+            return [.wasmFuncRef]
+        } else {
+            // TODO(gc): Add support for types of the anyref hierarchy.
+            return [.wasmExternRef]
         }
-
-        return nil
     }
 
-    // Helper function to convert JS Types to Wasm Types or picks from the other available types
-    private static func approximateWasmTypeFromJsType(_ type: ILType, availableTypes: WeightedList<ILType>) -> ILType {
-        if let type = mapJsToWasmType(type), availableTypes.contains(type) {
-            return type
-        }
+    // Helper that converts JS Types to a deterministic known Wasm counterparts.
+    private static func mapJsToWasmType(_ type: ILType) -> ILType {
+        return matchingWasmTypes(jsType: type)[0]
+    }
 
-        assert(!availableTypes.isEmpty)
-        // Otherwise pick a different available Type
-        return availableTypes.randomElement()
+    // Helper function to convert JS Types to an arbitrary matching Wasm type or picks from the other available types-
+    private static func approximateWasmTypeFromJsType(_ type: ILType, availableTypes: WeightedList<ILType>) -> ILType {
+        let matchingTypes = matchingWasmTypes(jsType: type)
+        let intersection = availableTypes.filter({type in matchingTypes.contains(type)})
+        return intersection.count != 0 ? intersection.randomElement() : availableTypes.randomElement()
     }
 
     /// Type information access.

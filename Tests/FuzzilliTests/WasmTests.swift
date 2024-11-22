@@ -33,7 +33,8 @@ func testForOutput(program: String, runner: JavaScriptExecutor, outputString: St
 
 class WasmSignatureConversionTests: XCTestCase {
     func testJsSignatureConversion() {
-        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)])), [.wasmf32] => .wasmi32)
+        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmFuncRef, 1), (.wasmExternRef, 1)])), [.wasmi32] => .wasmi32)
+        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmf32, 1), (.wasmFuncRef, 1), (.wasmExternRef, 1)])), [.wasmf32] => .wasmi32)
     }
 }
 
@@ -175,10 +176,12 @@ class WasmFoundationTests: XCTestCase {
             }
 
             wasmModule.addWasmFunction(with: [] => .wasmf32) { function, _ in
-                let varA = function.consti32(1337)
                 // Manually set the availableTypes here for testing
                 let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionB).signature!, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
-                assert(wasmSignature == [.wasmi32] => .wasmf32)
+                assert(wasmSignature.parameters.count == 1)
+                assert(wasmSignature.parameters[0] == .wasmi32 || wasmSignature.parameters[0] == .wasmf32)
+                assert(wasmSignature.outputType == .wasmi32 || wasmSignature.outputType == .wasmf32)
+                let varA = wasmSignature.parameters[0] == .wasmi32 ? function.consti32(1337) : function.constf32(1337)
                 let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: wasmSignature)!
                 function.wasmReturn(varRet)
             }
@@ -201,12 +204,15 @@ class WasmFoundationTests: XCTestCase {
 
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res1)])
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res2)])
+        // We do not control whether the JS function is imported with a floating point or an integer type, so the
+        // fractional digits might be lost. Round the result to make the output predictable.
+        let res2Rounded = b.callFunction(b.loadBuiltin("Math.round"), withArgs: [res2])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res2Rounded)])
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
 
-        testForOutput(program: jsProg, runner: runner, outputString: "3\n-1335\n-1335.0999755859375\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "3\n-1335\n-1335\n")
     }
 
     func testBasics() throws {
