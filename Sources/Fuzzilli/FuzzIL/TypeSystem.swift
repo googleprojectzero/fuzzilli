@@ -177,6 +177,9 @@ public struct ILType: Hashable {
     // This type is used to indicate block labels in wasm.
     public static let label: ILType = ILType(definiteType: .label)
 
+    /// A label that allows rethrowing the caught exception of a catch block.
+    public static let exceptionLabel: ILType = ILType(definiteType: .exceptionLabel)
+
     public static func wasmMemory(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) -> ILType {
         let wasmMemExt = WasmMemoryType(limits: limits, isShared: isShared, isMemory64: isMemory64)
         return .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow"], withWasmType: wasmMemExt)
@@ -860,9 +863,13 @@ struct BaseType: OptionSet, Hashable {
 
     // These are wasm internal types, these are never lifted as such and are only used to glue together dataflow in wasm.
     static let label       = BaseType(rawValue: 1 << 17)
+    // Any catch block exposes such a label now to rethrow the exception caught by that catch.
+    // Note that in wasm the label is actually the try block's label but as rethrows are only possible inside a catch
+    // block, semantically having a label on the catch makes more sense.
+    static let exceptionLabel = BaseType(rawValue: 1 << 18)
     // This is a reference to a table, which can be passed around to table instructions
     // The lifter will resolve this to the proper index when lifting.
-    static let wasmSimd128    = BaseType(rawValue: 1 << 18)
+    static let wasmSimd128    = BaseType(rawValue: 1 << 19)
 
     static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 

@@ -499,8 +499,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     RecursiveCodeGenerator("WasmLegacyCatchGenerator", inContext: .wasmTry, inputs: .required(.object(ofGroup: "WasmTag"))) { b, value in
         let function = b.currentWasmModule.currentWasmFunction
-        function.WasmBuildLegacyCatch(tag: value) { args in
-            // TODO(mliedtke): We should be able to emit a rethrow as well.
+        function.WasmBuildLegacyCatch(tag: value) { exception, args in
             b.buildRecursive()
         }
     },
@@ -553,6 +552,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             }
         }
         function.WasmBuildThrow(tag: tag, inputs: args)
+    },
+
+    CodeGenerator("WasmRethrowGenerator", inContext: .wasmFunction, inputs: .required(.exceptionLabel)) { b, exception in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmBuildRethrow(exception)
     },
 
     CodeGenerator("WasmDefineTagGenerator", inContext: .wasm) {b in

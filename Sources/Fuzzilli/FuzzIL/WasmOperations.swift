@@ -1031,7 +1031,7 @@ final class WasmBeginCatch : WasmOperation {
 
         super.init(
             inputTypes: [.object(ofGroup: "WasmTag")],
-            innerOutputTypes: signature.parameters.convertPlainToILTypes(),
+            innerOutputTypes: [.exceptionLabel] + signature.parameters.convertPlainToILTypes(),
             attributes: [
                 .isBlockStart,
                 // The inner context isn't a .wasmTry context any more.
@@ -1091,6 +1091,14 @@ final class WasmThrow: WasmOperation {
         self.parameters = parameters
         let inputTypes = [ILType.object(ofGroup: "WasmTag")] + parameters.convertPlainToILTypes()
         super.init(inputTypes: inputTypes, attributes: [.isJump], requiredContext: [.wasmFunction])
+    }
+}
+
+final class WasmRethrow: WasmOperation {
+    override var opcode: Opcode { .wasmRethrow(self) }
+
+    init() {
+        super.init(inputTypes: [.exceptionLabel], attributes: [.isJump], requiredContext: [.wasmFunction])
     }
 }
 

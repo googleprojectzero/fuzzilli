@@ -1221,6 +1221,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmThrow = Fuzzilli_Protobuf_WasmThrow.with {
                     $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
                 }
+            case .wasmRethrow(_):
+                $0.wasmRethrow = Fuzzilli_Protobuf_WasmRethrow()
             case .wasmDefineTag(let op):
                 $0.wasmDefineTag = Fuzzilli_Protobuf_WasmDefineTag.with {
                     $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
@@ -1993,6 +1995,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmThrow(parameters: p.parameters.map({ param in
                 Parameter.plain(WasmTypeEnumToILType(param))
             }))
+        case .wasmRethrow(_):
+            op = WasmRethrow()
         case .wasmDefineTag(let p):
             op = WasmDefineTag(parameters: p.parameters.map({ param in
                 Parameter.plain(WasmTypeEnumToILType(param))

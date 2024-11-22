@@ -273,6 +273,7 @@ public let codeGeneratorWeights = [
     "WasmLegacyCatchGenerator":                 8,
     "WasmLegacyTryDelegateGenerator":           8,
     "WasmThrowGenerator":                       8,
+    "WasmRethrowGenerator":                     8,
     "WasmBranchGenerator":                      10,
     "WasmBranchIfGenerator":                    10,
     "WasmJsCallGenerator":                      30,
