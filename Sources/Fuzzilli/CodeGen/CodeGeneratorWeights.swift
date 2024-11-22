@@ -208,9 +208,9 @@ public let codeGeneratorWeights = [
     // This weight is important as we need to have a module for the other generators to work.
     // As they all require .wasm context.
     "WasmModuleGenerator":                      35,
-    "WasmDefineMemoryGenerator":                4,
-    "WasmMemoryLoadGenerator":                  3,
-    "WasmMemoryStoreGenerator":                 3,
+    "WasmDefineMemoryGenerator":                8,
+    "WasmMemoryLoadGenerator":                  10,
+    "WasmMemoryStoreGenerator":                 10,
     "WasmDefineGlobalGenerator":                2,
     "WasmDefineTableGenerator":                 2,
     "WasmGlobalStoreGenerator":                 2,
@@ -219,11 +219,11 @@ public let codeGeneratorWeights = [
     "WasmDefineTagGenerator":                   4,
 
     // Primitive Value Generators
-    "WasmLoadi32Generator":                     6,
-    "WasmLoadi64Generator":                     6,
-    "WasmLoadf32Generator":                     6,
-    "WasmLoadf64Generator":                     6,
-    "WasmLoadPrimitivesGenerator":              8,
+    "WasmLoadi32Generator":                     4,
+    "WasmLoadi64Generator":                     4,
+    "WasmLoadf32Generator":                     4,
+    "WasmLoadf64Generator":                     4,
+    "WasmLoadPrimitivesGenerator":              4,
 
     // Numerical Operations Generators
     "Wasmi32BinOpGenerator":                    5,
