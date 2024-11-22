@@ -181,8 +181,8 @@ public class WasmLifter {
         var variableAnalyzer = VariableAnalyzer()
         weak var lifter: WasmLifter?
 
-        // Tracks the labels and the scope depth the've been emitted at. This is needed to calculate how far "out" we have to branch to
-        // Whenever we start something that emits a label, we need to track the scope depth here.
+        // Tracks the labels and the branch depth they've been emitted at. This is needed to calculate how far "out" we have to branch to
+        // Whenever we start something that emits a label, we need to track the branch depth here.
         // This should be local to a function
         public var labelBranchDepthMapping: VariableMap<Int> = VariableMap()
 
@@ -809,7 +809,7 @@ public class WasmLifter {
              .wasmBeginLoop(_),
              .wasmBeginTry(_),
              .wasmBeginTryDelegate(_):
-            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.scopes.count
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
         case .wasmNop(_):
@@ -1247,15 +1247,15 @@ public class WasmLifter {
             // Basically the same as EndBlock, just an explicit instruction.
             return Data([0x0B])
         case .wasmEndTryDelegate(_):
-            let branchDepth = self.currentFunction!.variableAnalyzer.scopes.count - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x18]) + Leb128.unsignedEncode(branchDepth)
         case .wasmThrow(_):
             return Data([0x08] + Leb128.unsignedEncode(resolveTagIdx(forInput: wasmInstruction.input(0))))
         case .wasmBranch(_):
-            let branchDepth = self.currentFunction!.variableAnalyzer.scopes.count - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x0C]) + Leb128.unsignedEncode(branchDepth)
         case .wasmBranchIf(_):
-            let branchDepth = self.currentFunction!.variableAnalyzer.scopes.count - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x0D]) + Leb128.unsignedEncode(branchDepth)
         case .wasmBeginIf(_):
             return Data([0x04] + [0x40])
