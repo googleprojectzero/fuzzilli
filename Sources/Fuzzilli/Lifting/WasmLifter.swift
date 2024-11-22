@@ -809,7 +809,12 @@ public class WasmLifter {
              .wasmBeginLoop(_),
              .wasmBeginTry(_),
              .wasmBeginTryDelegate(_):
+             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
+             // Needs typer analysis
+            return true
+        case .wasmBeginCatch(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
+            assert(self.imports.contains(where: { $0.0 == instr.input(0)}) || self.tags.contains(instr.input(0)))
             // Needs typer analysis
             return true
         case .wasmNop(_):
@@ -835,8 +840,7 @@ public class WasmLifter {
         case .wasmJsCall(_):
             assert(self.imports.contains(where: { $0.0 == instr.input(0)}))
             return true
-        case .wasmBeginCatch(_),
-             .wasmThrow(_):
+        case .wasmThrow(_):
             assert(self.imports.contains(where: { $0.0 == instr.input(0)}) || self.tags.contains(instr.input(0)))
             return true
         case .wasmDefineTag(_):
@@ -876,7 +880,7 @@ public class WasmLifter {
             }
 
             // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
-            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet || instr.op is WasmBeginCatch || instr.op is WasmThrow {
+            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet || instr.op is WasmBeginCatch || instr.op is WasmThrow || instr.op is WasmRethrow {
                 continue
             }
             fatalError("unreachable")
@@ -906,7 +910,7 @@ public class WasmLifter {
         // TODO(cffsmith): Reuse this for handling parameters in loops and blocks.
         if instr.op is WasmBeginCatch {
             // As the parameters are pushed "in order" to the stack, they need to be popped in reverse order.
-            for innerOutput in instr.innerOutputs.reversed() {
+            for innerOutput in instr.innerOutputs(1...).reversed() {
                 currentFunction!.spillLocal(forVariable: innerOutput)
             }
         }
@@ -1251,6 +1255,9 @@ public class WasmLifter {
             return Data([0x18]) + Leb128.unsignedEncode(branchDepth)
         case .wasmThrow(_):
             return Data([0x08] + Leb128.unsignedEncode(resolveTagIdx(forInput: wasmInstruction.input(0))))
+        case .wasmRethrow(_):
+            let blockDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]!
+            return Data([0x09] + Leb128.unsignedEncode(blockDepth))
         case .wasmBranch(_):
             let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x0C]) + Leb128.unsignedEncode(branchDepth)

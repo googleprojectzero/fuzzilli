@@ -759,7 +759,7 @@ class WasmFoundationTests: XCTestCase {
                         let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
                         function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
                         function.wasmUnreachable()
-                        function.WasmBuildLegacyCatch(tag: jstag) { args in
+                        function.WasmBuildLegacyCatch(tag: jstag) { exception, args in
                             function.wasmReturn(function.consti64(123))
                         }
                     } catchAllBody: {
@@ -797,15 +797,29 @@ class WasmFoundationTests: XCTestCase {
         let throwTag = b.createWasmTag(parameterTypes: [Parameter.wasmi64, Parameter.wasmi32])
         let otherTag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
         let module = b.buildWasmModule { wasmModule in
+            /* Pseudo-code:
+                function () -> i64 {
+                    try {
+                        throw throwTag(123, 234);
+                        unreachable();
+                    } catch (exception: otherTag) {
+                        unreachable();
+                    } catch (exception: throwTag) {
+                        return exception.0 + exception.1;
+                    } catch (...) {
+                        unreachable();
+                    }
+                }
+            */
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
                     XCTAssert(b.type(of: label).Is(.label))
                     function.WasmBuildThrow(tag: throwTag, inputs: [function.consti64(123), function.consti32(234)])
                     function.wasmUnreachable()
-                    function.WasmBuildLegacyCatch(tag: otherTag) { args in
+                    function.WasmBuildLegacyCatch(tag: otherTag) { exception, args in
                         function.wasmUnreachable()
                     }
-                    function.WasmBuildLegacyCatch(tag: throwTag) { args in
+                    function.WasmBuildLegacyCatch(tag: throwTag) { exception, args in
                         let result = function.wasmi64BinOp(args[0], function.extendi32Toi64(args[1], isSigned: true), binOpKind: .Add)
                         function.wasmReturn(result)
                     }
@@ -829,13 +843,13 @@ class WasmFoundationTests: XCTestCase {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
-        let outputFunc = b.loadBuiltin("output")
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let tag = b.createWasmTag(parameterTypes: [])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
                     function.WasmBuildThrow(tag: tag, inputs: [])
-                    function.WasmBuildLegacyCatch(tag: tag) { args in
+                    function.WasmBuildLegacyCatch(tag: tag) { exception, args in
                         // Note that this has to emit a branch depth of 0 when lifted as a catch block is not a branch target.
                         function.wasmBranch(to: label)
                     }
@@ -857,7 +871,7 @@ class WasmFoundationTests: XCTestCase {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
-        let outputFunc = b.loadBuiltin("output")
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let tag = b.createWasmTag(parameterTypes: [])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
@@ -896,6 +910,26 @@ class WasmFoundationTests: XCTestCase {
         let importedTag = b.createWasmTag(parameterTypes: parameterTypes)
         let module = b.buildWasmModule { wasmModule in
             let definedTag = wasmModule.addTag(parameterTypes: parameterTypes)
+
+            /* Pseudo-code:
+                function (param: i32) -> i32 {
+                    try {
+                        if (param) {
+                            throw definedTag(param);
+                        } else {
+                            throw importedTag(123);
+                        }
+                        unreachable();
+                    } catch (exception: importedTag) {
+                        return exception.0 + 1;
+                    } catch (exception: definedTag) {
+                        return exception.0 + 4;
+                    } catch (...) {
+                        unreachable();
+                    }
+                    unreachable();
+                }
+            */
             wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, param in
                 function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
                     function.wasmBuildIfElse(param[0]) {
@@ -904,10 +938,10 @@ class WasmFoundationTests: XCTestCase {
                         function.WasmBuildThrow(tag: importedTag, inputs: [function.consti32(123)])
                     }
                     function.wasmUnreachable()
-                    function.WasmBuildLegacyCatch(tag: importedTag) { args in
+                    function.WasmBuildLegacyCatch(tag: importedTag) { exception, args in
                         function.wasmReturn(function.wasmi32BinOp(args[0], function.consti32(1), binOpKind: .Add))
                     }
-                    function.WasmBuildLegacyCatch(tag: definedTag) { args in
+                    function.WasmBuildLegacyCatch(tag: definedTag) { exception, args in
                         function.wasmReturn(function.wasmi32BinOp(args[0], function.consti32(4), binOpKind: .Add))
                     }
                 } catchAllBody: {
@@ -942,6 +976,24 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let tag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
         let module = b.buildWasmModule { wasmModule in
+
+            /* Pseudo-code:
+                function () -> i32 {
+                    tryLabel: try {
+                        unusedLabel: try {
+                            try {
+                                throw tag(42);
+                            } delegate tryLabel; // The throw above will be "forwarded" to the tryLabel block.
+                            unreachable();
+                        } catch(...) {
+                            unreachable; // The delegate will skip this catch.
+                        }
+                    } catch (exception: tag) {
+                        return exeption.0; // returns 42.
+                    }
+                    unreachable();
+                }
+            */
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => .nothing) { tryLabel, _ in
                     // Even though we have a try-catch_all, the delegate "skips" this catch block. The delegate acts as
@@ -955,7 +1007,7 @@ class WasmFoundationTests: XCTestCase {
                         function.wasmUnreachable()
                     }
                     function.wasmUnreachable()
-                    function.WasmBuildLegacyCatch(tag: tag) { args in
+                    function.WasmBuildLegacyCatch(tag: tag) { exception, args in
                         function.wasmReturn(args[0])
                     }
                 }
@@ -969,6 +1021,117 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
+    func testTryCatchRethrow() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let tag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
+        let module = b.buildWasmModule { wasmModule in
+
+            /* Pseudo-code:
+                function () -> i32 {
+                    try {
+                        try {
+                            throw tag(123);
+                            unreachable();
+                        } catch (exception: tag) {
+                            rethrow exception;
+                        }
+                    } catch (exception: tag) {
+                        return exception.0; // returns 123;
+                    }
+                    unreachable();
+                }
+            */
+            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                        function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123)])
+                        function.wasmUnreachable()
+                        function.WasmBuildLegacyCatch(tag: tag) { exception, args in
+                            function.wasmBuildRethrow(exception)
+                        }
+                    }
+                    function.WasmBuildLegacyCatch(tag: tag) { exception, args in
+                        function.wasmReturn(args[0])
+                    }
+                }
+                function.wasmUnreachable()
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "123\n")
+    }
+
+    func testTryCatchRethrowOuter() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let tag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
+        let module = b.buildWasmModule { wasmModule in
+            /* Pseudo-code:
+                function () -> i32 {
+                    try {
+                        try {
+                            throw tag(123);
+                        } catch (outerException: tag) {
+                            try {
+                                throw tag(456);
+                            } catch (innerException: tag) {
+                                rethrow outerException;
+                            }
+                        }
+                    } catch (exception: tag) {
+                        return exception.0; // returns 123
+                    }
+                }
+            */
+            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                        function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123)])
+                        function.WasmBuildLegacyCatch(tag: tag) { outerException, args in
+                            function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                                function.WasmBuildThrow(tag: tag, inputs: [function.consti32(456)])
+                                function.wasmUnreachable()
+                                function.WasmBuildLegacyCatch(tag: tag) { innerException, args in
+                                    // There are two "active" exceptions:
+                                    // outerException: [123: i32]
+                                    // innerException: [456: i32]
+                                    function.wasmBuildRethrow(outerException)
+                                }
+                            }
+                        }
+                    }
+                    function.WasmBuildLegacyCatch(tag: tag) { exception, args in
+                        function.wasmReturn(args[0])
+                    }
+                }
+                function.wasmUnreachable()
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "123\n")
     }
 
     func testUnreachable() throws {

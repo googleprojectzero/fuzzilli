@@ -3045,13 +3045,13 @@ public class ProgramBuilder {
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         public func wasmBuildLoop(with signature: Signature, body: (Variable, [Variable]) -> Void) {
             let instr = b.emit(WasmBeginLoop(with: signature))
-            body(instr.innerOutput(0), Array(instr.innerOutputs[1...]))
+            body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndLoop())
         }
 
         public func wasmBuildLegacyTry(with signature: Signature, body: (Variable, [Variable]) -> Void, catchAllBody: (() -> Void)? = nil) {
             let instr = b.emit(WasmBeginTry(with: signature))
-            body(instr.innerOutput(0), Array(instr.innerOutputs[1...]))
+            body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             // TODO(mliedtke): Is a mutator able to remove a catchAll block?
             if let catchAllBody = catchAllBody {
                 b.emit(WasmBeginCatchAll(with: signature))
@@ -3061,11 +3061,11 @@ public class ProgramBuilder {
             b.emit(WasmEndTry())
         }
 
-        public func WasmBuildLegacyCatch(tag: Variable, body: (([Variable]) -> Void)) {
+        public func WasmBuildLegacyCatch(tag: Variable, body: ((Variable, [Variable]) -> Void)) {
             // TODO(mliedtke): A catch block can produce a result type, however that result type
             // has to be in sync with the try result type (afaict).
             let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => .nothing), withInputs: [tag])
-            body(Array(instr.innerOutputs))
+            body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndCatch())
         }
 
@@ -3075,9 +3075,14 @@ public class ProgramBuilder {
             b.emit(WasmThrow(parameters: tagType.parameters), withInputs: [tag] + inputs)
         }
 
+        public func wasmBuildRethrow(_ exception: Variable) {
+            assert(b.type(of: exception).Is(.exceptionLabel))
+            b.emit(WasmRethrow(), withInputs: [exception])
+        }
+
         public func wasmBuildLegacyTryDelegate(with signature: Signature, body: (Variable, [Variable]) -> Void, delegate: Variable) {
             let instr = b.emit(WasmBeginTryDelegate(with: signature))
-            body(instr.innerOutput(0), Array(instr.innerOutputs[1...]))
+            body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndTryDelegate(), withInputs: [delegate])
         }
 
