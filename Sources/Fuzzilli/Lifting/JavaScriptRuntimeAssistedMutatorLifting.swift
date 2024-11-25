@@ -389,6 +389,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
         const OP_LOGICAL_AND = 'LOGICAL_AND';
         const OP_LOGICAL_OR = 'LOGICAL_OR';
         const OP_LOGICAL_NOT = 'LOGICAL_NOT';
+        const OP_NULL_COALESCE = 'NULL_COALESCE';
 
         const OP_BITWISE_AND = 'BITWISE_AND';
         const OP_BITWISE_OR = 'BITWISE_OR';
@@ -511,6 +512,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
           [OP_LOGICAL_AND]: (inputs) => inputs[0] && inputs[1],
           [OP_LOGICAL_OR]: (inputs) => inputs[0] || inputs[1],
           [OP_LOGICAL_NOT]: (inputs) => !inputs[0],
+          [OP_NULL_COALESCE]: (inputs) => inputs[0] ?? inputs[1],
           [OP_BITWISE_AND]: (inputs) => inputs[0] & inputs[1],
           [OP_BITWISE_OR]: (inputs) => inputs[0] | inputs[1],
           [OP_BITWISE_XOR]: (inputs) => inputs[0] ^ inputs[1],

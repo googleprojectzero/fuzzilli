@@ -247,8 +247,7 @@ struct JavaScriptExploreLifting {
         //
         function exploreObject(o) {
             if (o === null) {
-                // Can't do anything with null.
-                return NO_ACTION;
+                return exploreNullish(o);
             }
 
             // TODO: Add special handling for ArrayBuffers: most of the time, wrap these into a Uint8Array to be able to modify them.
@@ -405,6 +404,11 @@ struct JavaScriptExploreLifting {
             return action;
         }
 
+        function exploreNullish(v) {
+            // Best thing we can do with nullish values is a NullCoalescing (??) operation.
+            return new Action(OP_NULL_COALESCE, [exploredValueInput, Inputs.randomArgument()])
+        }
+
         // Explores the given value and returns an action to perform on it.
         function exploreValue(id, v) {
             if (isObject(v)) {
@@ -422,8 +426,7 @@ struct JavaScriptExploreLifting {
             } else if (isBoolean(v)) {
                 return exploreBoolean(v);
             } else if (isUndefined(v)) {
-                // Can't do anything with undefined.
-                return NO_ACTION;
+                return exploreNullish(v);
             } else {
                 throw "Unexpected value type: " + typeof v;
             }

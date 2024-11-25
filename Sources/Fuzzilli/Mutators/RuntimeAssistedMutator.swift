@@ -186,6 +186,7 @@ public class RuntimeAssistedMutator: Mutator {
         case LogicalAnd = "LOGICAL_AND"
         case LogicalOr = "LOGICAL_OR"
         case LogicalNot = "LOGICAL_NOT"
+        case NullCoalesce = "NULL_COALESCE"
         case BitwiseAnd = "BITWISE_AND"
         case BitwiseOr = "BITWISE_OR"
         case BitwiseXor = "BITWISE_XOR"
@@ -385,6 +386,8 @@ extension RuntimeAssistedMutator.Action {
             try translateBinaryOperation(.BitOr)
         case .BitwiseXor:
             try translateBinaryOperation(.Xor)
+        case .NullCoalesce:
+            try translateBinaryOperation(.NullCoalesce)    
         case .LeftShift:
             try translateBinaryOperation(.LShift)
         case .SignedRightShift:
