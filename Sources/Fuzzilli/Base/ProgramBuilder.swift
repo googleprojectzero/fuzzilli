@@ -1269,14 +1269,6 @@ public class ProgramBuilder {
             // Compute variable types to be able to find compatible replacement variables in the host program if necessary.
             typer.analyze(instr)
 
-            // TODO(cffsmith): Maybe use a specific attribute here, all macro instructions that have these stricter type requirements
-            // Alternatively we could also give every instruction that has strict type requirements this flag and all wasm instructions have it by default and some of these "glue" macro instructions in Js have it too.
-            // This is Probably also the case for createWasmTable/createWasmMemory.
-            if instr.op is CreateWasmGlobal {
-                // We cannot remap the output of CreateWasmGlobal
-                continue
-            }
-
             // Maybe remap the outputs of this instruction to existing and "compatible" (because of their type) variables in the host program.
             maybeRemapVariables(instr.outputs, of: instr, withProbability: probabilityOfRemappingAnInstructionsOutputsDuringSplicing)
             maybeRemapVariables(instr.innerOutputs, of: instr, withProbability: probabilityOfRemappingAnInstructionsInnerOutputsDuringSplicing)
@@ -1285,7 +1277,6 @@ public class ProgramBuilder {
             // instructions in their body. This is done through the getRequirements function which uses the data computed in step (1).
             let (requiredContext, requiredInputs) = getRequirements(of: instr)
 
-            // TODO: We could do a further optimization here: if we've already seen a singular operation in the current block, don't splice another singular operation.
             if requiredContext.isSubset(of: context) && requiredInputs.isSubset(of: availableVariables) {
                 candidates.insert(instr.index)
                 // This instruction is available, and so are its outputs...
@@ -1728,6 +1719,13 @@ public class ProgramBuilder {
         }
         for _ in 0..<op.numInnerOutputs {
             inouts.append(nextVariable())
+        }
+
+        // For WasmOperations, we can assert here that the input types are correct.
+        if let op = op as? WasmOperation {
+            for (i, input) in inputs.enumerated() {
+                assert(type(of: input).Is(op.inputTypes[i]), "Input types don't match expected types. Check if the types in your instruction definition are correct or if you are passing the wrong type to this instruction!")
+            }
         }
 
         return internalAppend(Instruction(op, inouts: inouts, flags: .empty))
@@ -2954,13 +2952,12 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmLoadGlobal(globalVariable: Variable) -> Variable {
-            let type = b.type(of: globalVariable)
+            let type = b.type(of: globalVariable).wasmGlobalType!.valueType
             return b.emit(WasmLoadGlobal(globalType: type), withInputs:[globalVariable]).output
         }
 
         public func wasmStoreGlobal(globalVariable: Variable, to value: Variable) {
-            // TODO: track if this store can be done, i.e. check whether the global is mutable
-            let type = b.type(of: globalVariable)
+            let type = b.type(of: globalVariable).wasmGlobalType!.valueType
             b.emit(WasmStoreGlobal(globalType: type), withInputs: [globalVariable, value])
         }
 
@@ -3139,7 +3136,6 @@ public class ProgramBuilder {
         public var currentWasmFunction: WasmFunction {
             return functions.last!
         }
-        public var globals: VariableMap<WasmGlobal> = VariableMap()
         public var tables: [(ILType, Int, Int?)]
         // TODO(evih): Allow multi-memories.
         public var memory: Variable?
@@ -3199,34 +3195,14 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func addGlobal(importing global: Variable) -> Variable {
-            let globalType = b.type(of: global)
-            assert(globalType.isWasmGlobalType)
-            return b.emit(WasmImportGlobal(wasmGlobal: globalType), withInputs: [global]).output
-        }
-
-        @discardableResult
         public func addTable(tableType: ILType, minSize: Int, maxSize: Int? = nil) -> Variable {
             return b.emit(WasmDefineTable(tableInfo: (tableType, minSize,  maxSize))).output
         }
-
-        @discardableResult
-        public func addTable(importing table: Variable) -> Variable {
-            return b.emit(WasmImportTable(tableType: b.type(of: table)), withInputs: [table]).output
-        }
-
         // This result can be ignored right now, as we can only define one memory per module
         // Also this should be tracked like a global / table.
         @discardableResult
         public func addMemory(minPages: Int, maxPages: Int? = nil, isShared: Bool = false, isMemory64: Bool = false) -> Variable {
             return b.emit(WasmDefineMemory(limits: Limits(min: minPages, max: maxPages), isShared: isShared, isMemory64: isMemory64)).output
-        }
-
-        @discardableResult
-        public func addMemory(importing memory: Variable) -> Variable {
-            let memoryType = b.type(of: memory)
-            assert(memoryType.isWasmMemoryType)
-            return b.emit(WasmImportMemory(wasmMemory: memoryType), withInputs: [memory]).output
         }
 
         private func getModuleVariable() -> Variable {
@@ -3415,28 +3391,9 @@ public class ProgramBuilder {
             activeWasmModule = nil
         case .endWasmFunction:
             activeWasmModule!.methods.append("w\(activeWasmModule!.methods.count)")
-        case .wasmDefineGlobal(_):
-            break
-        case .wasmImportGlobal(let op):
-            // TODO: This needs some more polish.
-            // Make sure that it is at least an object of this object group.
-            // assert(op.valueType.Is(self.type(of: instr.input(0))))
-            // assert(self.type(of: instr.input(0)).Is(op.valueType))
-            // If the JsWorld typer cannot guarantuee the same import type here, we have probably reassigned to the global variable, which will most likely lead to an exception on instantiation of the wasm module if the type is not matching to what we try to import.
-            if !self.type(of: instr.input(0)).Is(op.wasmGlobal) {
-                logger.info("Import might have changed due to reassign in mutation, assuming type of \(op.wasmGlobal)")
-                logger.info("This will likely lead to an exception at runtime, we cannot do anything about it here though.")
-            }
-        case .wasmDefineTable(_):
-            break
-        case .wasmImportTable:
-            if self.type(of: instr.input(0)).group != "WasmTable.externref" ||
-               self.type(of: instr.input(0)).group != "WasmTable.funcref" {
-                logger.info("input is not of type wasmtable.externref, might have been reassigned, nothing we can do here.")
-            }
-        case .wasmDefineMemory(_):
-            break
-        case .wasmImportMemory:
+        case .wasmDefineGlobal(_),
+             .wasmDefineTable(_),
+             .wasmDefineMemory(_):
             break
         case .beginWasmFunction(let op):
             activeWasmModule!.functions.append(WasmFunction(forBuilder: self, withSignature: op.signature))

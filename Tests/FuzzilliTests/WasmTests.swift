@@ -107,17 +107,22 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             // Imports are always before internal globals, this breaks the logic if we add a global and then import a global.
-            wasmModule.addGlobal(importing: wasmGlobalf32)
+            wasmModule.addWasmFunction(with: [] => .nothing) { fun, _  in
+                // This load forces an import
+                fun.wasmLoadGlobal(globalVariable: wasmGlobalf32)
+            }
             wasmModule.addGlobal(wasmGlobal: .wasmi64(4141), isMutable: true)
-            wasmModule.addGlobal(importing: wasmGlobali32)
-
+            wasmModule.addWasmFunction(with: [] => .nothing) { fun, _  in
+                // This load forces an import
+                fun.wasmLoadGlobal(globalVariable: wasmGlobali32)
+            }
         }
 
         let nameOfExportedGlobals = [WasmLifter.nameOfGlobal(0), WasmLifter.nameOfGlobal(1), WasmLifter.nameOfGlobal(2)]
 
         let exports = module.loadExports()
 
-        assert(b.type(of: exports) == .object(withProperties: nameOfExportedGlobals))
+        assert(b.type(of: exports) == .object(withProperties: nameOfExportedGlobals, withMethods: ["w1", "w0"]))
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
@@ -265,13 +270,6 @@ class WasmFoundationTests: XCTestCase {
                 function.wasmReturn(params[0])
             }
 
-            let globA = wasmModule.addGlobal(wasmGlobal: .wasmi64(1337), isMutable: true)
-            let globB = wasmModule.addGlobal(wasmGlobal: .wasmi64(1338), isMutable: true)
-
-            wasmModule.addWasmFunction(with: [] => .nothing) { function, _ in
-                function.wasmReassign(variable:  globA, to: globB)
-            }
-
             wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, params in
                 // reassign params[0] = params[0]
                 function.wasmReassign(variable: params[0], to: params[0])
@@ -294,14 +292,12 @@ class WasmFoundationTests: XCTestCase {
 
         let exports = module.loadExports()
 
-        let _ = b.callMethod("w1", on: exports, withArgs: [b.loadBigInt(10)])
-
         let out = b.callMethod("w0", on: exports, withArgs: [b.loadBigInt(10)])
         let _ = b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out)])
 
-        let _ = b.callMethod("w2", on: exports, withArgs: [b.loadBigInt(20)])
+        let _ = b.callMethod("w1", on: exports, withArgs: [b.loadBigInt(20)])
 
-        let outLoop = b.callMethod("w3", on: exports, withArgs: [])
+        let outLoop = b.callMethod("w2", on: exports, withArgs: [])
         let _ = b.callFunction(outputFunc, withArgs: [outLoop])
 
         let prog = b.finalize()
@@ -325,30 +321,39 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             let global = wasmModule.addGlobal(wasmGlobal: .wasmi64(1339), isMutable: true)
-            let importedGlobal = wasmModule.addGlobal(importing: wasmGlobali64)
 
+
+            // Function 0
+            wasmModule.addWasmFunction(with: [] => .nothing) { function, _ in
+                // This forces an import of the wasmGlobali64
+                function.wasmLoadGlobal(globalVariable: wasmGlobali64)
+            }
+
+            // Function 1
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 let varA = function.consti64(1338)
                 let varB = function.consti64(4242)
                 function.wasmStoreGlobal(globalVariable: global, to: varB)
                 let global = function.wasmLoadGlobal(globalVariable: global)
-                function.wasmStoreGlobal(globalVariable: importedGlobal, to: varA)
+                function.wasmStoreGlobal(globalVariable: wasmGlobali64, to: varA)
                 function.wasmReturn(global)
             }
 
+            // Function 2
             wasmModule.addWasmFunction(with: [] => .wasmf64) { function, _ in
-                let result = function.reinterpreti64Asf64(importedGlobal)
+                let globalValue = function.wasmLoadGlobal(globalVariable: wasmGlobali64)
+                let result = function.reinterpreti64Asf64(globalValue)
                 function.wasmReturn(result)
             }
         }
 
         let exports = module.loadExports()
 
-        let _ = b.callMethod(module.getExportedMethod(at: 0), on: exports)
-        let out = b.callMethod(module.getExportedMethod(at: 1), on: exports)
+        let _ = b.callMethod(module.getExportedMethod(at: 1), on: exports)
+        let out = b.callMethod(module.getExportedMethod(at: 2), on: exports)
 
         let nameOfExportedGlobals = [WasmLifter.nameOfGlobal(0), WasmLifter.nameOfGlobal(1)]
-        let nameOfExportedFunctions = [WasmLifter.nameOfFunction(0), WasmLifter.nameOfFunction(1)]
+        let nameOfExportedFunctions = [WasmLifter.nameOfFunction(0), WasmLifter.nameOfFunction(1), WasmLifter.nameOfFunction(2)]
 
         assert(b.type(of: exports) == .object(withProperties: nameOfExportedGlobals, withMethods: nameOfExportedFunctions))
 
@@ -378,7 +383,7 @@ class WasmFoundationTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
-        let javaScriptTable = b.createWasmTable(tableType: .externRefTable, minSize: 10, maxSize: 20)
+        let javaScriptTable = b.createWasmTable(tableType: .wasmExternRef, minSize: 10, maxSize: 20)
 
         let object = b.createObject(with: ["a": b.loadInt(41), "b": b.loadInt(42)])
 
@@ -386,10 +391,7 @@ class WasmFoundationTests: XCTestCase {
         b.callMethod("set", on: javaScriptTable, withArgs: [b.loadInt(1), object])
 
         let module = b.buildWasmModule { wasmModule in
-            // Imports are always before internal tables, this breaks the logic if we add a table and then import a table.
-            // TODO: Track imports and tables?
             let tableRef = wasmModule.addTable(tableType: .wasmFuncRef, minSize: 2)
-            let javaScriptTableRef = wasmModule.addTable(importing: javaScriptTable)
 
             wasmModule.addWasmFunction(with: [] => .wasmExternRef) { function, _ in
                 let offset = function.consti32(0)
@@ -397,7 +399,7 @@ class WasmFoundationTests: XCTestCase {
                 let offset1 = function.consti32(1)
                 function.wasmTableSet(tableRef: tableRef, idx: offset1, to: ref)
                 ref = function.wasmTableGet(tableRef: tableRef, idx: offset1)
-                let otherRef = function.wasmTableGet(tableRef: javaScriptTableRef, idx: offset1)
+                let otherRef = function.wasmTableGet(tableRef: javaScriptTable, idx: offset1)
                 function.wasmReturn(otherRef)
             }
         }
@@ -430,13 +432,11 @@ class WasmFoundationTests: XCTestCase {
         assert(b.type(of: wasmMemory) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: false))
 
         let module = b.buildWasmModule { wasmModule in
-            let memory = wasmModule.addMemory(importing: wasmMemory)
-
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 let value = function.consti32(1337)
                 let offset = function.consti32(10)
-                function.wasmMemoryStore(memory: memory, dynamicOffset: offset, value: value, storeType: .I32StoreMem, staticOffset: 0)
-                let val = function.wasmMemoryLoad(memory: memory, dynamicOffset: offset, loadType: .I64LoadMem, staticOffset: 0)
+                function.wasmMemoryStore(memory: wasmMemory, dynamicOffset: offset, value: value, storeType: .I32StoreMem, staticOffset: 0)
+                let val = function.wasmMemoryLoad(memory: wasmMemory, dynamicOffset: offset, loadType: .I64LoadMem, staticOffset: 0)
                 function.wasmReturn(val)
             }
         }
@@ -521,7 +521,7 @@ class WasmFoundationTests: XCTestCase {
 
         for idx in 0..<WasmMemoryLoadType.allCases.count {
             let res = b.callMethod(module.getExportedMethod(at: idx), on: module.loadExports())
-            b.callFunction(b.loadBuiltin("output"), withArgs: [b.callMethod("toString", on: res)])
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res)])
         }
         let jsProg = fuzzer.lifter.lift(b.finalize())
         testExecuteScript(program: jsProg, runner: runner)
@@ -543,7 +543,7 @@ class WasmFoundationTests: XCTestCase {
             // Create a Wasm function for every memory load type.
             for storeType in WasmMemoryStoreType.allCases {
                 wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                    let storeOffset = function.consti64(13)
+                    let storeOffset = function.consti32(13)
                     let value = switch storeType.numberType() {
                         case .wasmi32: function.consti32(8)
                         case .wasmi64: function.consti64(8)
@@ -558,7 +558,7 @@ class WasmFoundationTests: XCTestCase {
 
         for idx in 0..<WasmMemoryStoreType.allCases.count {
             let res = b.callMethod(module.getExportedMethod(at: idx), on: module.loadExports())
-            b.callFunction(b.loadBuiltin("output"), withArgs: [b.callMethod("toString", on: res)])
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res)])
         }
         let jsProg = fuzzer.lifter.lift(b.finalize())
         testExecuteScript(program: jsProg, runner: runner)
@@ -2235,13 +2235,10 @@ class WasmSpliceTests: XCTestCase {
             b.doReturn(b.loadInt(42))
         }
 
-        // Make sure that even if we lose type information here, that splicing will not pick a Wasm variable for the WasmJSCall instruction.
-        b.setType(ofVariable: f, to: .anything)
-
         b.buildWasmModule { module in
             module.addWasmFunction(with: [] => .nothing) { function, args in
                 let argument = function.consti32(1337)
-                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
+                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
                 splicePoint = b.indexOfNextInstruction()
                 function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
             }
@@ -2279,13 +2276,10 @@ class WasmSpliceTests: XCTestCase {
             b.doReturn(b.loadInt(42))
         }
 
-        // This simulates a reassign or calling a function argument.
-        b.setType(ofVariable: f, to: .anything)
-
         b.buildWasmModule { module in
             module.addWasmFunction(with: [] => .nothing) { function, args in
                 let argument = function.consti32(1337)
-                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
+                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
                 splicePoint = b.indexOfNextInstruction()
                 function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
             }
@@ -2314,7 +2308,7 @@ class WasmSpliceTests: XCTestCase {
             module.addWasmFunction(with: [] => .nothing) { function, _ in
                 let _ = function.constf32(42.42)
                 let argument = function.consti32(1337)
-                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
+                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
                 function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
             }
         }

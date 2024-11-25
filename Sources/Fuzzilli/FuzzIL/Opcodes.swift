@@ -267,11 +267,8 @@ enum Opcode {
 
     case wasmReassign(WasmReassign)
     case wasmDefineGlobal(WasmDefineGlobal)
-    case wasmImportGlobal(WasmImportGlobal)
     case wasmDefineTable(WasmDefineTable)
-    case wasmImportTable(WasmImportTable)
     case wasmDefineMemory(WasmDefineMemory)
-    case wasmImportMemory(WasmImportMemory)
     case wasmLoadGlobal(WasmLoadGlobal)
     case wasmStoreGlobal(WasmStoreGlobal)
     case wasmTableGet(WasmTableGet)

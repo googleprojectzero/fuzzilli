@@ -29,8 +29,8 @@ public class JavaScriptLifter: Lifter {
     /// The version of the ECMAScript standard that this lifter generates code for.
     let version: ECMAScriptVersion
 
-    /// The WasmLifter Instance to lift wasm IL instructions
-    private var wasmLifter: WasmLifter
+    /// This environment is used if we need to re-type a program before we compile Wasm code.
+    private var environment: Environment?
 
     /// Counter to assist the lifter in detecting nested CodeStrings
     private var codeStringNestingLevel = 0
@@ -59,11 +59,12 @@ public class JavaScriptLifter: Lifter {
 
     public init(prefix: String = "",
                 suffix: String = "",
-                ecmaVersion: ECMAScriptVersion) {
+                ecmaVersion: ECMAScriptVersion,
+                environment: Environment? = nil) {
         self.prefix = prefix
         self.suffix = suffix
         self.version = ecmaVersion
-        self.wasmLifter = WasmLifter()
+        self.environment = environment
     }
 
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
@@ -71,18 +72,28 @@ public class JavaScriptLifter: Lifter {
         var needToSupportExploration = false
         var needToSupportProbing = false
         var needToSupportFixup = false
+        var needToSupportWasm = false
         var analyzer = DefUseAnalyzer(for: program)
+        // If this program has a WasmModule, i.e. has a BeginWasmModule / EndWasmModule instruction, we need a typer to collect type information for lifting of that module.
+        // This typer is shared across WasmLifters and a WasmLifter is only valid for a single WasmModule.
+        var typer: JSTyper? = nil
+        // The currently active WasmLifter, we can only have one of them.
+        var wasmLifter: WasmLifter? = nil
         for instr in program.code {
             analyzer.analyze(instr)
             if instr.op is Explore { needToSupportExploration = true }
             if instr.op is Probe { needToSupportProbing = true }
             if instr.op is Fixup { needToSupportFixup = true }
+            if instr.op is BeginWasmModule { needToSupportWasm = true }
         }
         analyzer.finishAnalysis()
 
-        var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers))
+        if needToSupportWasm {
+            // If we need to support Wasm we need to type all instructions outside of Wasm such that the WasmLifter can access extra type information during lifting.
+            typer = JSTyper(for: environment!)
+        }
 
-        assert(self.wasmLifter.isEmpty)
+        var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers))
 
         var wasmCodeStarts: Int? = nil
 
@@ -127,6 +138,9 @@ public class JavaScriptLifter: Lifter {
                 w.emitComment(comment)
             }
 
+            // Collect type information that we might pass to the WasmLifter.
+            typer?.analyze(instr)
+
             // Singular operation handling:
             // All but the first singular operation in the same block are removed.
             // TODO(saelo): instead consider enforcing this in FuzzIL already.
@@ -155,7 +169,7 @@ public class JavaScriptLifter: Lifter {
             if (instr.op as? WasmOperation) != nil {
                 // Forward all the Wasm related instructions to the WasmLifter,
                 // they will be emitted once we see the end of the module.
-                wasmLifter.addInstruction(instr)
+                wasmLifter!.addInstruction(instr)
                 continue;
             }
 
@@ -1385,19 +1399,19 @@ public class JavaScriptLifter: Lifter {
 
             case .beginWasmModule:
                 wasmCodeStarts = instr.index
-                assert(wasmLifter.isEmpty)
+                wasmLifter = WasmLifter(withTyper: typer!)
 
             case .endWasmModule:
                 // Lift the FuzzILCode of this Block first.
                 w.emitComment("WasmModule Code:")
                 let code = Code(program.code[wasmCodeStarts!...instr.index])
+
                 wasmCodeStarts = nil
                 w.emitComment(FuzzILLifter().lift(code))
                 let LET = w.declarationKeyword(for: instr.output)
                 let V = w.declare(instr.output, as: "v\(instr.output.number)")
-                // TODO(do we need this?) assert(!wasmLifter.isEmpty)
                 // TODO: support a better diagnostics mode which stores the .wasm binary file alongside the samples.
-                let (bytecode, importRefs) = wasmLifter.lift()
+                let (bytecode, importRefs) = wasmLifter!.lift()
                 w.emit("\(LET) \(V) = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([")
                 w.enterNewBlock()
                 let blockSize = 10
@@ -1418,16 +1432,16 @@ public class JavaScriptLifter: Lifter {
                     w.leaveCurrentBlock()
                     w.emit("} });")
                 }
-                wasmLifter.reset()
+                wasmLifter = nil
 
             case .createWasmTable(let op):
                 let V = w.declare(instr.output)
                 let LET = w.varKeyword
                 let type: String
                 switch op.tableType {
-                case .externRefTable:
+                case .wasmExternRef:
                     type = "externref"
-                case .funcRefTable:
+                case .wasmFuncRef:
                     type = "anyfunc"
                 default:
                     fatalError("Unknown table type")
@@ -1487,11 +1501,8 @@ public class JavaScriptLifter: Lifter {
                  .wasmTruncateSatf64Toi64(_),
                  .wasmReassign(_),
                  .wasmDefineGlobal(_),
-                 .wasmImportGlobal(_),
                  .wasmDefineTable(_),
-                 .wasmImportTable(_),
                  .wasmDefineMemory(_),
-                 .wasmImportMemory(_),
                  .wasmLoadGlobal(_),
                  .wasmStoreGlobal(_),
                  .wasmTableGet(_),

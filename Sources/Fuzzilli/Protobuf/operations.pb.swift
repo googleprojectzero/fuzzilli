@@ -557,10 +557,8 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
   case constf64 // = 3
   case externref // = 4
   case funcref // = 5
-  case externreftable // = 6
-  case funcreftable // = 7
-  case simd128 // = 8
-  case nothing // = 9
+  case simd128 // = 6
+  case nothing // = 7
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -575,10 +573,8 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
     case 3: self = .constf64
     case 4: self = .externref
     case 5: self = .funcref
-    case 6: self = .externreftable
-    case 7: self = .funcreftable
-    case 8: self = .simd128
-    case 9: self = .nothing
+    case 6: self = .simd128
+    case 7: self = .nothing
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -591,10 +587,8 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
     case .constf64: return 3
     case .externref: return 4
     case .funcref: return 5
-    case .externreftable: return 6
-    case .funcreftable: return 7
-    case .simd128: return 8
-    case .nothing: return 9
+    case .simd128: return 6
+    case .nothing: return 7
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -607,8 +601,6 @@ public enum Fuzzilli_Protobuf_WasmILType: SwiftProtobuf.Enum, Swift.CaseIterable
     .constf64,
     .externref,
     .funcref,
-    .externreftable,
-    .funcreftable,
     .simd128,
     .nothing,
   ]
@@ -4168,53 +4160,6 @@ public struct Fuzzilli_Protobuf_WasmI64x2LoadSplat: Sendable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_WasmImportTable: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var tableType: Fuzzilli_Protobuf_WasmILType = .consti32
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_WasmImportMemory: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var wasmMemory: Fuzzilli_Protobuf_WasmMemory {
-    get {return _wasmMemory ?? Fuzzilli_Protobuf_WasmMemory()}
-    set {_wasmMemory = newValue}
-  }
-  /// Returns true if `wasmMemory` has been explicitly set.
-  public var hasWasmMemory: Bool {return self._wasmMemory != nil}
-  /// Clears the value of `wasmMemory`. Subsequent reads from it will return its default value.
-  public mutating func clearWasmMemory() {self._wasmMemory = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _wasmMemory: Fuzzilli_Protobuf_WasmMemory? = nil
-}
-
-public struct Fuzzilli_Protobuf_WasmImportGlobal: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var valueType: Fuzzilli_Protobuf_WasmILType = .consti32
-
-  public var mutability: Bool = false
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"
@@ -4342,10 +4287,8 @@ extension Fuzzilli_Protobuf_WasmILType: SwiftProtobuf._ProtoNameProviding {
     3: .same(proto: "CONSTf64"),
     4: .same(proto: "EXTERNREF"),
     5: .same(proto: "FUNCREF"),
-    6: .same(proto: "EXTERNREFTABLE"),
-    7: .same(proto: "FUNCREFTABLE"),
-    8: .same(proto: "SIMD128"),
-    9: .same(proto: "NOTHING"),
+    6: .same(proto: "SIMD128"),
+    7: .same(proto: "NOTHING"),
   ]
 }
 
@@ -12078,112 +12021,6 @@ extension Fuzzilli_Protobuf_WasmI64x2LoadSplat: SwiftProtobuf.Message, SwiftProt
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmI64x2LoadSplat, rhs: Fuzzilli_Protobuf_WasmI64x2LoadSplat) -> Bool {
     if lhs.offset != rhs.offset {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_WasmImportTable: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".WasmImportTable"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "tableType"),
-  ]
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularEnumField(value: &self.tableType) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.tableType != .consti32 {
-      try visitor.visitSingularEnumField(value: self.tableType, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_WasmImportTable, rhs: Fuzzilli_Protobuf_WasmImportTable) -> Bool {
-    if lhs.tableType != rhs.tableType {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_WasmImportMemory: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".WasmImportMemory"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "wasmMemory"),
-  ]
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._wasmMemory) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._wasmMemory {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_WasmImportMemory, rhs: Fuzzilli_Protobuf_WasmImportMemory) -> Bool {
-    if lhs._wasmMemory != rhs._wasmMemory {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_WasmImportGlobal: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".WasmImportGlobal"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "valueType"),
-    2: .same(proto: "mutability"),
-  ]
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularEnumField(value: &self.valueType) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.mutability) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.valueType != .consti32 {
-      try visitor.visitSingularEnumField(value: self.valueType, fieldNumber: 1)
-    }
-    if self.mutability != false {
-      try visitor.visitSingularBoolField(value: self.mutability, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_WasmImportGlobal, rhs: Fuzzilli_Protobuf_WasmImportGlobal) -> Bool {
-    if lhs.valueType != rhs.valueType {return false}
-    if lhs.mutability != rhs.mutability {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

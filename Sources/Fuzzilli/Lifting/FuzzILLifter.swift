@@ -809,20 +809,6 @@ public class FuzzILLifter: Lifter {
             let sharedStr = mem.isShared ? " shared" : ""
             w.emit("\(output()) <- WasmDefineMemory [\(mem.limits.min),\(maxPagesStr)],\(isMem64Str)\(sharedStr)")
 
-        case .wasmImportMemory(let op):
-            assert(op.wasmMemory.isWasmMemoryType)
-            let mem = op.wasmMemory.wasmMemoryType!
-            let maxPagesStr = mem.limits.max != nil ? "\(mem.limits.max!)" : ""
-            let isMem64Str = mem.isMemory64 ? " memory64" : ""
-            let sharedStr = mem.isShared ? " shared" : ""
-            w.emit("\(output()) <- WasmImportMemory [\(mem.limits.min),\(maxPagesStr)],\(isMem64Str)\(sharedStr)")
-
-        case .wasmImportTable(_):
-            w.emit("\(output()) <- WasmImportTable \(input(0))")
-
-        case .wasmImportGlobal(_):
-            w.emit("\(output()) <- WasmImportGlobal \(input(0))")
-
         case .wasmLoadGlobal(_):
             w.emit("\(output()) <- WasmLoadGlobal \(input(0))")
 

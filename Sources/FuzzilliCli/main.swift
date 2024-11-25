@@ -449,7 +449,8 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     // A lifter to translate FuzzIL programs to JavaScript.
     let lifter = JavaScriptLifter(prefix: profile.codePrefix,
                                   suffix: profile.codeSuffix,
-                                  ecmaVersion: profile.ecmaVersion)
+                                  ecmaVersion: profile.ecmaVersion,
+                                  environment: environment)
 
     // The evaluator to score produced samples.
     let evaluator = ProgramCoverageEvaluator(runner: runner)
