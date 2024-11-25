@@ -689,7 +689,6 @@ public class WasmLifter {
         // The amount of memories we have, per standard this can currently only be one, either defined or imported
         // https://webassembly.github.io/spec/core/syntax/modules.html#memories
 
-        assert(memories.count <= 1, "Can only define at most one memory")
         temp += Leb128.unsignedEncode(memories.count)
 
         // TODO(evih): Encode sharedness.
