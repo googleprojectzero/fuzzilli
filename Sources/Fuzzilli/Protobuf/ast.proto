@@ -175,9 +175,11 @@ message ForOfLoop {
 }
 
 message BreakStatement {
+    string label = 1; 
 }
 
 message ContinueStatement {
+    string label = 1; 
 }
 
 message CatchClause {
@@ -217,6 +219,12 @@ message SwitchCase {
     repeated Statement consequent = 2;
 }
 
+message LabeledStatement {
+    string label = 1; // The label for the loop or block.
+    Statement statement = 2; // The statement or block associated with the label.
+}
+
+
 message Statement {
     oneof statement {
         EmptyStatement emptyStatement = 1;
@@ -238,6 +246,7 @@ message Statement {
         ThrowStatement throwStatement = 17;
         WithStatement withStatement = 18;
         SwitchStatement switchStatement = 19;
+        LabeledStatement labeledStatement = 20;
     }
 }
 

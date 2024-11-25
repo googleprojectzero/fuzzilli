@@ -701,10 +701,20 @@ public class FuzzILLifter: Lifter {
 
 
         case .loopLabelBreak:
-            w.emit("Break \(input(0))")
+            let labelVar = input(0)  // Directly assign the input(0) value
+            if !labelVar.isEmpty {   // Check if it's a non-empty string
+                w.emit("Break \(labelVar)")
+            } else {
+                w.emit("Break")
+            }
 
         case .loopLabelContinue:
-            w.emit("Continue")
+            let labelVar = input(0)  // Directly assign the input(0) value
+            if !labelVar.isEmpty {   // Check if it's a non-empty string
+                w.emit("Continue \(labelVar)")
+            } else {
+                w.emit("Continue")
+            }
 
         case .loadLabel:
             w.emit("LoadLabel \(input(0))")

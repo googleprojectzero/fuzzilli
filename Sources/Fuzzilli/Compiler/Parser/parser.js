@@ -289,10 +289,19 @@ function parse(script, proto) {
                 return makeStatement('ForOfLoop', forOfLoop);
             }
             case 'BreakStatement': {
-              return makeStatement('BreakStatement', {});
+                let breakStatementProto = {};
+                
+                if (node.label) {
+                    breakStatementProto.label = node.label.name;  // Extract the label if present
+                }
+                return makeStatement('BreakStatement', breakStatementProto);
             }
             case 'ContinueStatement': {
-              return makeStatement('ContinueStatement', {});
+                let continueStatementProto = {};
+                if (node.label) {
+                    continueStatementProto.label = node.label.name;  // Extract the label if present
+                }
+                return makeStatement('ContinueStatement', continueStatementProto);
             }
             case 'TryStatement': {
                 assert(node.block.type === 'BlockStatement', "Expected block statement as body of a try block");
@@ -337,6 +346,13 @@ function parse(script, proto) {
                 if (node.test) {switchCase.test = visitExpression(node.test)}
                 switchCase.consequent = node.consequent.map(visitStatement);
                 return switchCase;
+            }
+            case "LabeledStatement": {
+                let labeledStatementProto = {
+                    label: node.label.name, // Store the label
+                    statement: visitStatement(node.body)
+                };
+                return { labeledStatement: labeledStatementProto };
             }
             default: {
                 throw "Unhandled node type " + node.type;
@@ -594,7 +610,7 @@ protobuf.load(astProtobufDefinitionPath, function(err, root) {
     let ast = parse(script, root);
 
     // Uncomment this to print the AST to stdout (will be very verbose).
-    //console.log(JSON.stringify(ast, null, 2));
+    // console.log(JSON.stringify(ast, null, 2));
     
     const AST = root.lookupType('compiler.protobuf.AST');
     let buffer = AST.encode(ast).finish();
