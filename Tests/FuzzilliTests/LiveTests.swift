@@ -44,10 +44,9 @@ class LiveTests: XCTestCase {
                 b.doReturn(b.binary(args[0], b.loadInt(1), with: .Add))
             }
             // Make at least one Wasm global available
-            let global = b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
+            b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
 
             b.buildWasmModule() { module in
-                module.addGlobal(importing: global)
                 module.addMemory(minPages: 2)
                 module.addWasmFunction(with: [] => .nothing) { function, args in
                     b.buildPrefix()
@@ -69,10 +68,9 @@ class LiveTests: XCTestCase {
                 b.doReturn(args[0])
             }
             // Make at least one Wasm global available
-            let global = b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
+            b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
 
             let m = b.buildWasmModule() { module in
-                module.addGlobal(importing: global)
                 module.addMemory(minPages: 2)
                 module.addWasmFunction(with: [] => .nothing) { function, args in
                     b.buildPrefix()

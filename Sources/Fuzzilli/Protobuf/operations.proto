@@ -855,10 +855,8 @@ enum WasmILType {
   CONSTf64 = 3;
   EXTERNREF = 4;
   FUNCREF = 5;
-  EXTERNREFTABLE = 6;
-  FUNCREFTABLE = 7;
-  SIMD128 = 8;
-  NOTHING = 9;
+  SIMD128 = 6;
+  NOTHING = 7;
 }
 
 message BeginWasmFunction {
@@ -1207,17 +1205,4 @@ message WasmI64x2ExtractLane {
 
 message WasmI64x2LoadSplat {
     int64 offset = 1;
-}
-
-message WasmImportTable {
-  WasmILType tableType = 1;
-}
-
-message WasmImportMemory {
-  WasmMemory wasmMemory = 1;
-}
-
-message WasmImportGlobal {
-  WasmILType valueType = 1;
-  bool mutability = 2;
 }

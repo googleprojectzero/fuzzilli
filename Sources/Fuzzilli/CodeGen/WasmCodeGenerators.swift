@@ -137,55 +137,37 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     // Global Generators
 
-    CodeGenerator("WasmImportGlobalGenerator", inContext: .wasm, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, value in
-        let module = b.currentWasmModule
-        module.addGlobal(importing: value)
-    },
-
     CodeGenerator("WasmDefineGlobalGenerator", inContext: .wasm) { b in
         let module = b.currentWasmModule
 
-        // TODO: add funcrefs and null refs
         let wasmGlobal: WasmGlobal = b.randomWasmGlobal()
-
         module.addGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
     },
 
-    CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction) { b in
-        let module = b.currentWasmModule
-        let function = module.currentWasmFunction
+    CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, global in
+        let function = b.currentWasmModule.currentWasmFunction
 
-        // TODO(cffsmith): Here we should also require this input through some form of type.
-        if module.globals.isEmpty {
+        let type = b.type(of: global)
+
+        if !type.wasmGlobalType!.isMutable {
             return
         }
 
-        let randomGlobal: (Variable, WasmGlobal) = chooseUniform(from: module.globals.map { $0 })
+        let globalType = type.wasmGlobalType!.valueType
 
-        let storeVar = b.randomVariable(ofType: randomGlobal.1.toType())
+        let storeVar = b.randomVariable(ofType: globalType)
 
         if let storeVar = storeVar {
-            function.wasmStoreGlobal(globalVariable: randomGlobal.0, to: storeVar)
+            function.wasmStoreGlobal(globalVariable: global, to: storeVar)
         }
     },
 
-    // TODO: this does not see any js variables, as they are hidden when entering wasm(?) (is this true?)
-    // Same with the global store generator
-    CodeGenerator("WasmGlobalLoadGenerator", inContext: [.wasmFunction]) { b in
-        let module = b.currentWasmModule
-        let function = module.currentWasmFunction
+    CodeGenerator("WasmGlobalLoadGenerator", inContext: [.wasmFunction], inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, global in
+        let function = b.currentWasmModule.currentWasmFunction
 
-        if module.globals.isEmpty {
-            return
-        }
-
-        let randomGlobal: (Variable, WasmGlobal) = chooseUniform(from: module.globals.map { $0 })
-
-        function.wasmLoadGlobal(globalVariable: randomGlobal.0)
+        function.wasmLoadGlobal(globalVariable: global)
     },
 
-    // TODO: add wasmstore/load global generator that does interesting stuff with globals that are defined or imported
-    // TODO: add wasmDefineGlobal generator
 
     // Binary Operations Generators
 

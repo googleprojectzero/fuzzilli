@@ -691,7 +691,8 @@ final class WasmDefineGlobal: WasmOperation {
     init(wasmGlobal: WasmGlobal, isMutable: Bool) {
         self.wasmGlobal = wasmGlobal
         self.isMutable = isMutable
-        super.init(outputType: wasmGlobal.toType(), attributes: [.isPure, .isMutable], requiredContext: [.wasm])
+        let outputType = ILType.object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: wasmGlobal.toType(), isMutable: isMutable))
+        super.init(outputType: outputType, attributes: [.isPure, .isMutable], requiredContext: [.wasm])
     }
 
 }
@@ -708,18 +709,7 @@ final class WasmDefineTable: WasmOperation {
         self.minSize = tableInfo.1
         self.maxSize = tableInfo.2
 
-        let tableType: ILType
-
-        switch tableInfo.0 {
-        case .wasmExternRef:
-            tableType = .externRefTable
-        case .wasmFuncRef:
-            tableType  = .funcRefTable
-        default:
-            fatalError("Unknown table type")
-        }
-
-        super.init(outputType: tableType, attributes: [.isPure, .isMutable], requiredContext: [.wasm])
+        super.init(outputType: .object(ofGroup: "WasmTable"), attributes: [.isPure, .isMutable], requiredContext: [.wasm])
     }
 }
 
@@ -735,65 +725,7 @@ final class WasmDefineMemory: WasmOperation {
 
     init(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) {
         self.wasmMemory = .wasmMemory(limits: limits, isShared: isShared, isMemory64: isMemory64)
-        super.init(outputType: self.wasmMemory, attributes: [.isPure, .isMutable], requiredContext: [.wasm])
-    }
-}
-
-// TODO: Remove this operation.
-final class WasmImportMemory: WasmOperation {
-    override var opcode: Opcode { .wasmImportMemory(self) }
-
-    let wasmMemory: ILType
-
-    init(wasmMemory: ILType) {
-        assert(wasmMemory.isWasmMemoryType)
-        self.wasmMemory = wasmMemory
-        super.init(inputTypes: [wasmMemory], outputType: wasmMemory, attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasm])
-    }
-}
-
-final class WasmImportTable: WasmOperation {
-    override var opcode: Opcode { .wasmImportTable(self) }
-
-    let tableType: ILType
-
-    // TODO: This currently always imports an externRef table, but we should check what it actually is.
-    // This should check against the input
-    init(tableType: ILType) {
-        self.tableType = tableType
-
-        assert(tableType.Is(.object()))
-
-        super.init(inputTypes: [tableType], outputType: convertTableTypeToWasmWorldType(tableType), attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasm])
-    }
-}
-
-// Converts to the wasm equivalent type
-fileprivate func convertTableTypeToWasmWorldType(_ type: ILType) -> ILType {
-    if type.Is(.object(ofGroup: "WasmTable.externref")) {
-        return .externRefTable
-    }
-    if type.Is(.object(ofGroup: "WasmTable.funcref")) {
-        return .funcRefTable
-    }
-    fatalError("unknown type import")
-}
-
-final class WasmImportGlobal: WasmOperation {
-    override var opcode: Opcode { .wasmImportGlobal(self) }
-
-    let wasmGlobal: ILType
-    let isMutable: Bool
-
-    // This is where we need a bit stricter typing. The type that flows into this operation needs to match with the given
-    // valueType here, as otherwise we cannot do meaningful wasm programbuilding (is this true?)
-    init(wasmGlobal: ILType) {
-        self.wasmGlobal = wasmGlobal
-        assert(wasmGlobal.isWasmGlobalType)
-        let wasmGlobalType = wasmGlobal.wasmGlobalType!
-        self.isMutable = wasmGlobalType.isMutable
-        // We need to have this input variable here, such that we preserve the 'use' of the defined js global.
-        super.init(inputTypes: [wasmGlobal], outputType: wasmGlobalType.valueType, attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasm])
+        super.init(outputType: self.wasmMemory, attributes: [.isPure, .isMutable, .isSingular], requiredContext: [.wasm])
     }
 }
 
@@ -802,10 +734,11 @@ final class WasmLoadGlobal: WasmOperation {
 
     let globalType: ILType
 
-    // The first argument is the index into the global section.
     init(globalType: ILType) {
+        assert(globalType.Is(.wasmPrimitive))
         self.globalType = globalType
-        super.init(inputTypes: [globalType], outputType: globalType, attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasmFunction])
+        let inputType = ILType.object(ofGroup: "WasmGlobal")
+        super.init(inputTypes: [inputType], outputType: globalType, attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -816,8 +749,10 @@ final class WasmStoreGlobal: WasmOperation {
 
     init(globalType: ILType) {
         self.globalType = globalType
+        assert(globalType.Is(.wasmPrimitive))
+        let inputType = ILType.object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: globalType, isMutable: true))
         // Takes two inputs, one is the global reference the other is the value that is being stored in the global
-        super.init(inputTypes: [globalType, globalType], attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [inputType, globalType], attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -825,17 +760,14 @@ final class WasmTableGet: WasmOperation {
     override var opcode: Opcode { .wasmTableGet(self) }
 
     init(tableType: ILType) {
-        let outputType: ILType
-        switch tableType {
-        case .externRefTable:
-            outputType = .wasmExternRef
-        case .funcRefTable:
-            outputType = .wasmFuncRef
-        default:
-            fatalError("Variable of invalid type passed to table operation")
-        }
+        assert(tableType.Is(.object(ofGroup: "WasmTable")))
+
+        // TODO: Access the upcoming TableTypeExtension here to get the underlying elementType and then use that.
+        let elementType = ILType.wasmExternRef
+
+        assert(elementType.Is(.wasmFuncRef) || elementType.Is(.wasmExternRef))
         // The input is the table reference and an index.
-        super.init(inputTypes: [tableType, .wasmi32], outputType: outputType, attributes: [.isPure], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.object(ofGroup: "WasmTable"), .wasmi32], outputType: elementType, attributes: [.isPure], requiredContext: [.wasmFunction])
     }
 }
 
@@ -843,16 +775,13 @@ final class WasmTableSet: WasmOperation {
     override var opcode: Opcode { .wasmTableSet(self) }
 
     init(tableType: ILType) {
-        let inputType: ILType
-        switch tableType {
-        case .externRefTable:
-            inputType = .wasmExternRef
-        case .funcRefTable:
-            inputType = .wasmFuncRef
-        default:
-            fatalError("Variable of invalid type passed to table operation")
-        }
-        super.init(inputTypes: [tableType, .wasmi32, inputType], requiredContext: [.wasmFunction])
+        assert(tableType.Is(.object(ofGroup: "WasmTable")))
+
+        // TODO: Access the upcoming TableTypeExtension here to get the underlying elementType and then use that.
+        let elementType = ILType.wasmExternRef
+
+        assert(elementType.Is(.wasmFuncRef) || elementType.Is(.wasmExternRef))
+        super.init(inputTypes: [.object(ofGroup: "WasmTable"), .wasmi32, elementType], requiredContext: [.wasmFunction])
     }
 }
 
@@ -985,7 +914,7 @@ final class WasmJsCall: WasmOperation {
             }
         }
 
-        super.init(inputTypes: [.function()] + plainParams, outputType: functionSignature.outputType, requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.function() | .object(ofGroup: "WebAssembly.SuspendableObject")] + plainParams, outputType: functionSignature.outputType, requiredContext: [.wasmFunction])
     }
 }
 

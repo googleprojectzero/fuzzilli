@@ -64,15 +64,12 @@ public class WasmLifter {
     // The string that is given to the script writer
     private var out: String = ""
 
-    // We need this typer to emit the correct bytecode but at the time when we are lifting this module, the Typer that lives during ProgramBuilding is already gone here.
-    // It would be nice to have e.g. information of JS functions here that were defined in JS, that way we could always pass the correct number of arguments to the JS function. Right now, we instead store the signature in the wasmJsCall instruction.
-    // TODO: we could optimize this and just pass in the typing information gathered during ProgramBuilding.
-    private var typer = JSTyper(for: JavaScriptEnvironment())
+    // This typer holds information from the "outside" JS world.
+    // It is created during lifting of JavaScript and the JavaScriptLifter passes it into the WasmLifter.
+    private var typer: JSTyper
 
     // This contains the instructions that we need to lift.
     private var instructionBuffer: Code = Code()
-
-    private typealias Limit = (Int, Int?)
 
     // TODO(cffsmith): we could do some checking here that the function is actually defined, at that point it would not be static anymore though.
     public static func nameOfFunction(_ idx: Int) -> String {
@@ -84,88 +81,33 @@ public class WasmLifter {
         return "wg\(idx)"
     }
 
-    private struct Import {
-        let importType: ImportType
-        let outputVariable: Variable?
+    // This contains imports, i.e. WasmJsCall arguments, tables, globals and memories that are not defined in this module. We need to track them here so that we can properly wire up the imports when lifting this module.
+    // The Signature is only valid if the Variable is the argument to a WasmJsCall instruction, it is the Signature contained in the instruction. This Signature that is in the instruction is a loose approximation of the JS Signature, it depends on available Wasm types at the time when it was generated.
+    private var imports: [(Variable, Signature?)] = []
 
-        public enum ImportType {
-            case function(Signature)
-            case memory(ILType)
-            // Encodes the table type, can only be externref or funcref and the limits
-            case table(tableType: ILType, limit: Limit)
-            // Encodes the value type and the mutability of the global
-            case global(globalType: ILType, mutability: Bool)
-        }
+    // This tracks instructions that define globals in this module. We track the instruction as all the information, as well as the actual value for initialization is stored in the Operation instead of the Variable.
+    private var globals: [Instruction] = []
 
-        fileprivate var isGlobal: Bool {
-            switch self.importType {
-            case .global:
-                return true
-            default:
-                return false
-            }
-        }
+    // This tracks instructions that define memories in this module. We track the instruction here as the limits are also encoded in the Operation.
+    private var memories: [Instruction] = []
 
-        fileprivate var isTable: Bool {
-            switch self.importType {
-            case .table:
-                return true
-            default:
-                return false
-            }
-        }
-
-        fileprivate var isFunction: Bool {
-            switch self.importType {
-            case .function(_):
-                return true
-            default:
-                return false
-            }
-        }
-    }
-
-    // The list of imports that we need.
-    // Tuples of JS world variables and their import description.
-    // Maps Js world Variables to their import type and their potential Wasm World equivalent outputvariable
-    // I.e. importGlobal returns a Wasm world variable.
-    private var imports: [(Variable, Import)] = [(Variable, Import)]()
-
-    // The globals that this module defines
-    // The variable key is the output of the instruction that has created it.
-    // The bool signifies if the global is mutable or not
-    private var globals: VariableMap<(global: WasmGlobal, mutability: Bool)> = VariableMap()
-
-    // The Tables associated with this module, the elements of the tuple describe the element type, minSize and maxSize respectively.
-    private var tables: VariableMap<(ILType, Int, Int?)> = VariableMap()
-
-    // The memory associated with this module.
-    // This only holds a memory defined in the module, if there is an import of a memory, it is in the imports array.
-    private var memory: ILType? = nil
+    // This tracks instructions that define tables in this module. We track the instruction here as the table type and its limits are encoded in the Operation.
+    private var tables: [Instruction] = []
 
     // The function index space
     private var functionIdxBase = 0
 
-    // This should only be set, once we have preprocessed all imported globals, so that we know where internally defined globals start
+    // This should only be set once we have preprocessed all imported globals, so that we know where internally defined globals start
     private var baseDefinedGlobals: Int? = nil
 
-    // This should only be set, once we have preprocessed all imported tables, so that we know where internally defined tables start
+    // This should only be set once we have preprocessed all imported tables, so that we know where internally defined tables start
     private var baseDefinedTables: Int? = nil
 
     // This tracks in which order we have seen globals, this can probably be unified with the .globals and .imports properties, as they should match in their keys.
     private var globalOrder: [Variable] = []
 
-    public func reset() {
-        self.imports = []
-        self.globals = VariableMap()
-        self.tables = VariableMap()
-        self.memory = nil
-        self.functionIdxBase = 0
-        self.typer.reset()
-        self.out = ""
-        self.bytecode = Data()
-        self.instructionBuffer = Code()
-        self.functions = []
+    public init(withTyper typer: JSTyper) {
+        self.typer = typer
     }
 
     private class WasmExprWriter {
@@ -298,18 +240,15 @@ public class WasmLifter {
 
     public func lift(binaryOutPath path: String? = nil) -> (Data, [Variable]) {
         // Lifting currently happens in three stages.
-        // 1. Collect all necessary information to build all tables later on.
-        //    - For now this only the globalAnalysis, which needs to know how many globals are defined.
+        // 1. Collect all necessary information to build all sections later on.
+        //    - For now this only the importAnalysis, which needs to know how many imported vs internally defined types exist.
         // 2. Lift each instruction within its local context using all information needed from the previous analysis inside of a given function
-        // 3. Use the already lifted functions to emit the whole wasm byte buffer.
+        // 3. Use the already lifted functions to emit the whole Wasm byte buffer.
 
         // Step 1:
-        // Collect all global and table information that we need.
-        globalAndTableAnalysis(forInstructions: self.instructionBuffer)
+        // Collect all information that we need to later wire up the imports correctly, this means we look at instructions that can potentially import any variable that originated outside the Wasm module.
+        importAnalysis(forInstructions: self.instructionBuffer)
         // Todo: maybe add a def-use pass here to figure out where we need stack spills etc? e.g. if we have one use, we can omit the stack spill
-
-        // The typer that lives here in the wasmLifter has not seen the BeginWasmModule instruction, as it only lives "within" it, as such we create an empty definition here.
-        typer.addEmptyWasmModuleDefinition()
 
         //
         // Step 1 Done
@@ -326,8 +265,6 @@ public class WasmLifter {
 
             // TODO: Check if we are in a .wasmFunction context and if so, update variableAnalysis.
             updateVariableAnalysis(forInstruction: instr)
-
-            typer.analyze(instr)
 
             if needsByteEmission {
                 // If we require inputs for this instruction, we probably need to emit them now, either inline the corresponding instruction, iff this is a single use, or load the stack slot or the variable. TODO: not all of this is implemented.
@@ -409,22 +346,25 @@ public class WasmLifter {
 
         var temp = Data()
 
+        // Currently we also need to build a type section entry for the JSPI types, e.g. objects that are of this specific group.
         let importCount = self.imports.filter( {
-            switch $0.1.importType {
-            case .function:
-                return true
-            default:
-                return false
-            }
+            typer.type(of: $0.0).Is(.function()) ||
+            typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))
         }).count + self.functions.count
 
         temp += Leb128.unsignedEncode(importCount)
 
+        for (importVariable, signature) in self.imports {
+            let type = typer.type(of: importVariable)
 
-        for (_, importElem) in self.imports {
-
-            switch importElem.importType {
-            case .function(let signature):
+            // Currently we also need to build a type section entry for the JSPI types, e.g. objects that are of this specific group.
+            if type.Is(.function()) || type.Is(.object(ofGroup: "WebAssembly.SuspendableObject")) {
+                // Get the signature from the imports array.
+                // The signature of this function is a JS signature, it was converted when we decided to perform a WasmJSCall. This means we have selected a somewhat matching signature (see convertJsSignatureToWasmSignature).
+                // The code that follows and the code that performs the call depends on this signature and as such we need to build the right signature here that matches this.
+                // The signature was encoded in the instruction and is also tracked in the imports array, so we use that here.
+                // One could assert that the seen signature here is a possible converted signature, not sure that is necessary though.
+                let signature = signature!
                 temp += [0x60]
                 temp += Leb128.unsignedEncode(signature.parameters.count)
                 for paramType in signature.parameters {
@@ -437,8 +377,6 @@ public class WasmLifter {
                 }
                 temp += Leb128.unsignedEncode(1) // num output types
                 temp += ILTypeMapping[signature.outputType] ?? Data([0x6f])
-            default:
-                continue
             }
         }
 
@@ -488,9 +426,9 @@ public class WasmLifter {
         temp += Leb128.unsignedEncode(self.imports.map { $0 }.count)
 
         // Build the import components of this vector that consist of mod:name, nm:name, and d:importdesc
-        for (idx, (importVariable, importElem)) in self.imports.enumerated() {
+        for (idx, importVariable) in self.imports.map({$0.0}).enumerated() {
             if verbose {
-                print(importElem)
+                print(importVariable)
             }
             // Append the name as a vector
             temp += Leb128.unsignedEncode("imports".count)
@@ -498,8 +436,9 @@ public class WasmLifter {
             let importName = "import_\(idx)_\(importVariable)"
             temp += Leb128.unsignedEncode(importName.count)
             temp += importName.data(using: .utf8)!
-            switch importElem.importType {
-            case .function(_):
+            let type = typer.type(of: importVariable)
+            // This is a temporary workaround for functions that have been marked as suspendable.
+            if type.Is(.function()) || type.Is(.object(ofGroup: "WebAssembly.SuspendableObject")) {
                 if verbose {
                     print(functionIdxBase)
                 }
@@ -507,17 +446,26 @@ public class WasmLifter {
 
                 // Update the index space, these indices have to be set before the exports are set
                 functionIdxBase += 1
-            case .memory(let wasmMemory):
-                // TODO(evih): Encode the sharedness.
-                assert(wasmMemory.isWasmMemoryType)
-                let mem = wasmMemory.wasmMemoryType!
+                continue
+            }
+            if type.Is(.object(ofGroup: "WasmMemory")) {
+                let minPages = type.wasmMemoryType!.limits.min
+                let maxPages = type.wasmMemoryType!.limits.max
                 temp += Data([0x2])
-                if let maxPages = mem.limits.max {
-                    temp += Data([0x1] + Leb128.unsignedEncode(mem.limits.min) + Leb128.unsignedEncode(maxPages))
+                if let maxPages = maxPages {
+                    temp += Data([0x1] + Leb128.unsignedEncode(minPages) + Leb128.unsignedEncode(maxPages))
                 } else {
-                    temp += Data([0x0] + Leb128.unsignedEncode(mem.limits.min))
+                    temp += Data([0x0] + Leb128.unsignedEncode(minPages))
                 }
-            case .table(let tableType, (let minSize, let maxSize)):
+                continue
+            }
+            if type.Is(.object(ofGroup: "WasmTable")) {
+                // let tableType = type.wasmTableType!.tableType
+                let tableType = ILType.wasmExternRef
+                // let minSize = type.wasmTableType!.minSize
+                let minSize = 10
+                // let maxSize = type.wasmTableType!.maxSize
+                let maxSize: Int? = 20
                 temp += Data([0x1])
                 temp += ILTypeMapping[tableType]!
                 if let maxSize = maxSize {
@@ -525,13 +473,17 @@ public class WasmLifter {
                 } else {
                     temp += Data([0x0] + Leb128.unsignedEncode(minSize))
                 }
-            case .global(let valueType, let mutability):
-                assert(valueType.isWasmGlobalType)
-                let wasmGlobalType = valueType.wasmGlobalType!
-                temp += [0x3]
-                temp += ILTypeMapping[wasmGlobalType.valueType]!
-                temp += mutability ? [0x1] : [0x0]
+                continue
             }
+            if type.Is(.object(ofGroup: "WasmGlobal")) {
+                let valueType = type.wasmGlobalType!.valueType
+                let mutability = type.wasmGlobalType!.isMutable
+                temp += [0x3]
+                temp += ILTypeMapping[valueType]!
+                temp += mutability ? [0x1] : [0x0]
+                continue
+            }
+            fatalError("unreachable")
         }
 
         self.bytecode.append(Leb128.unsignedEncode(temp.count))
@@ -573,7 +525,12 @@ public class WasmLifter {
 
         var temp = Leb128.unsignedEncode(self.tables.map { $0 }.count)
 
-        for (_, (tableType, minSize, maxSize)) in self.tables {
+        for instruction in self.tables {
+            let op = instruction.op as! WasmDefineTable
+            let tableType = op.tableType
+            let minSize = op.minSize
+            let maxSize = op.maxSize
+
             temp += ILTypeMapping[tableType]!
             if let maxSize = maxSize {
                 temp += Data([0x1] + Leb128.unsignedEncode(minSize) + Leb128.unsignedEncode(maxSize))
@@ -658,9 +615,12 @@ public class WasmLifter {
         temp += Leb128.unsignedEncode(self.globals.map { $0 }.count)
 
         // TODO: in the future this should maybe be a context that allows instructions? Such that we can fuzz this expression as well?
-        for (_, (global, isMutable)) in self.globals {
+        for instruction in self.globals {
+            let definition = instruction.op as! WasmDefineGlobal
+            let global = definition.wasmGlobal
+
             temp += ILTypeMapping[global.toType()]!
-            temp += Data([isMutable ? 0x1 : 0x0])
+            temp += Data([definition.isMutable ? 0x1 : 0x0])
             // This has to be a constant expression: https://webassembly.github.io/spec/core/valid/instructions.html#constant-expressions
             var temporaryInstruction: Instruction? = nil
             // Also create some temporary output variables that do not have a number, these are only to satisfy the instruction assertions, maybe this can be done more nicely somehow.
@@ -702,16 +662,18 @@ public class WasmLifter {
         // The amount of memories we have, per standard this can currently only be one, either defined or imported
         // https://webassembly.github.io/spec/core/syntax/modules.html#memories
 
-        let hasMemory = memory != nil ? true : false
-        temp += Leb128.unsignedEncode(hasMemory ? 1 : 0)
-        if (hasMemory) {
-            // TODO(evih): Encode sharedness.
-            assert(memory!.isWasmMemoryType)
-            let wasmMemory = memory!.wasmMemoryType!
-            if let maxPages = wasmMemory.limits.max {
-                temp += Data([0x1] + Leb128.unsignedEncode(wasmMemory.limits.min) + Leb128.unsignedEncode(maxPages))
+        assert(memories.count <= 1, "Can only define at most one memory")
+        temp += Leb128.unsignedEncode(memories.count)
+
+        // TODO(evih): Encode sharedness.
+        for instruction in memories {
+            let type = typer.type(of: instruction.output)
+            let minPages = type.wasmMemoryType!.limits.min
+            let maxPages = type.wasmMemoryType!.limits.max
+            if let maxPages = maxPages {
+                temp += Data([0x1] + Leb128.unsignedEncode(minPages) + Leb128.unsignedEncode(maxPages))
             } else {
-                temp += Data([0x0] + Leb128.unsignedEncode(wasmMemory.limits.min))
+                temp += Data([0x0] + Leb128.unsignedEncode(minPages))
             }
         }
 
@@ -737,10 +699,11 @@ public class WasmLifter {
         // This would just be a 'correctness' fix as this mismatch does not have any implications, it should be fixed though to avoid issues down the road as this is a very subtle mismatch.
 
         // Get the number of imported globals.
-        let importedGlobalsCount = self.imports.filter { $1.isGlobal }.count
-        let importedGlobals = self.imports.filter { $1.isGlobal }
+        let importedGlobals = self.imports.map({$0.0}).filter {
+            typer.type(of: $0).Is(.object(ofGroup: "WasmGlobal"))
+        }
 
-        temp += Leb128.unsignedEncode(self.functions.count + importedGlobalsCount + self.globals.map { $0 }.count)
+        temp += Leb128.unsignedEncode(self.functions.count + importedGlobals.count + self.globals.map { $0 }.count)
         for (idx, _) in self.functions.enumerated() {
             // Append the name as a vector
             let name = WasmLifter.nameOfFunction(idx)
@@ -753,24 +716,24 @@ public class WasmLifter {
         for (idx, imp) in importedGlobals.enumerated() {
             // Append the name as a vector
             // Here for the name, we use the index as remembered by the globalsOrder array, to preserve the export order with what the typer of the ProgramBuilder has seen before.
-            let index = self.globalOrder.firstIndex(of: imp.1.outputVariable!)!
+            let index = self.globalOrder.firstIndex(of: imp)!
             let name = WasmLifter.nameOfGlobal(index)
             temp += Leb128.unsignedEncode(name.count)
             temp += name.data(using: .utf8)!
             temp += [0x3, UInt8(idx)]
         }
         // Also export all globals that we have defined.
-        for (idx, (outputVariable, _)) in self.globals.enumerated() {
+        for (idx, instruction) in self.globals.enumerated() {
             // Append the name as a vector
             // Again, the name that we export it as matches the order that the ProgramBuilder's typer has seen it when traversing the Code, which happen's way before our typer here sees it, as we are typing during *lifting* of the JS code.
             // This kinda solves a problem we don't actually have... but it's correct this way :)
-            let index = self.globalOrder.firstIndex(of: outputVariable)!
+            let index = self.globalOrder.firstIndex(of: instruction.output)!
             let name = WasmLifter.nameOfGlobal(index)
             temp += Leb128.unsignedEncode(name.count)
             temp += name.data(using: .utf8)!
             // Add the base, as our exports start after the imports. This variable needs to be incremented in the `buildImportSection` function.
             // TODO: maybe add something like a global base?
-            temp += [0x3, UInt8(importedGlobalsCount + idx)]
+            temp += [0x3, UInt8(importedGlobals.count + idx)]
         }
 
         // Append the length of the section and the section contents itself.
@@ -801,9 +764,7 @@ public class WasmLifter {
             // Just analyze the instruction but do nothing else here.
             // This lets the typer know that we can skip this instruction without breaking any analysis.
             break
-//            typer.analyze(instr)
         case .beginWasmFunction(let op):
-//            typer.setIndexOfLastInstruction(to: instr.index)
             functions.append(FunctionInfo(op.signature, Data(), for: self, withArguments: Array(instr.innerOutputs)))
             // Set the current active function as we are *actively* in it.
             currentFunction = self.functions[self.functions.count - 1]
@@ -814,31 +775,13 @@ public class WasmLifter {
             currentFunction = nil
             break
         case .wasmDefineGlobal(_):
-            // We have already collected this above
-            assert(self.globals.contains(instr.output))
-        case .wasmImportGlobal(_):
-            // We have already collected this above
-            assert(self.imports.map { $0.0 }.contains(instr.input(0)))
+            assert(self.globals.contains(where: { $0.output == instr.output }))
         case .wasmDefineTable(_):
-            // This should have been collected above in the global analysis
-            assert(self.tables.contains(instr.output))
-        case .wasmImportTable(_):
-            assert(self.imports.map { $0.0 }.contains(instr.input(0)))
-            // TODO: fix this in version 1.1
-            // Should be collected in analysis pass.
-            // We don't know the type and limits of this import. Assume opaque externref and some limits for now
-//            self.imports[instr.input(0)] = Import(importType: .table(tableType: .wasmExternRef, limit: (10, 20)), outputVariable: nil)
-        case .wasmDefineMemory(let op):
-            assert(op.wasmMemory.isWasmMemoryType)
-            self.memory = op.wasmMemory
-        case .wasmImportMemory(let op):
-            assert(op.wasmMemory.isWasmMemoryType)
-            self.imports.append((instr.input(0), Import(importType: .memory(op.wasmMemory), outputVariable: nil)))
-        case .wasmJsCall(let op):
-            // Make sure that we have the input variable as an import if we see a call to a JS function.
-            // Here we also see the inputs, which describe the input types that we need.
-            // TODO(cffsmith): don't index by variable to import as we might import multiple times.
-            self.imports.append((instr.input(0), Import(importType: .function(op.functionSignature), outputVariable: nil)))
+            assert(self.tables.contains(where: { $0.output == instr.output }))
+        case .wasmDefineMemory(_):
+            assert(self.memories.contains(where: { $0.output == instr.output }))
+        case .wasmJsCall(_):
+            assert(self.imports.contains(where: { $0.0 == instr.input(0)}))
             return true
         default:
             return true
@@ -874,14 +817,6 @@ public class WasmLifter {
                 continue
             }
 
-            // TODO(cffsmith), we might use imported wasmGlobals as such we need to emit loads to them whenever we encounter them, or it might be a self defined global.
-            if !self.imports.filter({ $0.1.outputVariable == input && $0.1.isGlobal }).isEmpty || self.globals.contains(input){
-                // TODO(cffsmith) create load global function?
-                // Lookup the global now and emit a global.get
-                currentFunction!.appendToCode(Data([0x23] + Leb128.unsignedEncode(resolveGlobalIdx(forInput: input))))
-                continue
-            }
-
             // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
             if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet {
                 continue
@@ -912,52 +847,76 @@ public class WasmLifter {
 
     }
 
-    // Analyze which globals we have and how many are internally defined vs imported.
-    private func globalAndTableAnalysis(forInstructions instrs: Code) {
-        // Collect global information, i.e. definitions and imports here. This allows us to refer to the correct indices from here on.
-        // Also, export the globals in the order we "see" them, which might mismatch the order in which they are laid out in the binary at the end.
+    // Analyze which Variables should be imported. Here we should analyze all instructions that could potentially force an import of a Variable that originates in JavaScript.
+    // This usually means if your instruction takes an .object() as an input, it should be checked here.
+    // TODO: check if this is still accurate as we now only have defined imports.
+    // Also, we export the globals in the order we "see" them, which might mismatch the order in which they are laid out in the binary at the end, which is why we track the order of the globals separately.
+    private func importAnalysis(forInstructions instrs: Code) {
         for instr in self.instructionBuffer {
             switch instr.op.opcode {
-            case .wasmImportGlobal(let op):
-                // Here we need to record the input variable, as this will be used for the import section.
-                // And the expression retriever needs to know here it came frome.
-                self.imports.append((instr.input(0), Import(importType: .global(globalType: op.wasmGlobal, mutability: op.isMutable), outputVariable: instr.output)))
-                // Append this global as seen.
-                self.globalOrder.append(instr.output)
-            case .wasmDefineGlobal(let op):
-                self.globals[instr.output] = (global: op.wasmGlobal, mutability: op.isMutable)
-                // Append this global as seen.
+            case .wasmLoadGlobal(_),
+                 .wasmStoreGlobal(_):
+                let globalVariable = instr.input(0)
+                if !self.globalOrder.contains(globalVariable) {
+                    self.imports.append((globalVariable, nil))
+                    self.globalOrder.append(globalVariable)
+                }
+            case .wasmDefineGlobal(_):
+                self.globals.append(instr)
                 self.globalOrder.append(instr.output)
 
-            case .wasmImportTable(_):
-                // TODO: we don't know anything about the size and type here right now. this should be done properly in a later version.
-                self.imports.append((instr.input(0), Import(importType: .table(tableType: typer.type(of: instr.input(0)), limit: (0, nil)), outputVariable: instr.output)))
-            case .wasmDefineTable(let op):
-                self.tables[instr.output] = (op.tableType, op.minSize, op.maxSize)
+            case .wasmDefineTable(_):
+                self.tables.append(instr)
+            case .wasmDefineMemory:
+                self.memories.append(instr)
+            case .wasmMemoryLoad(_),
+                 .wasmMemoryStore(_):
+                let memory = instr.input(0)
+                if !self.memories.contains(where: {$0.output == memory}) {
+                    // TODO(cffsmith) this needs to be changed once we support multimemory as we probably also need to fix the ordering.
+                    if !self.imports.map({$0.0}).contains(memory) {
+                        self.imports.append((memory, nil))
+                    }
+                }
+            case .wasmTableGet(_),
+                 .wasmTableSet(_):
+                let table = instr.input(0)
+                if !self.tables.contains(where: {$0.output == table}) {
+                    // TODO: check if the ordering here is also somehow important?
+                    if !self.imports.map({$0.0}).contains(table) {
+                        self.imports.append((table, nil))
+                    }
+                }
+
+            case .wasmJsCall(let op):
+                self.imports.append((instr.input(0), op.functionSignature))
+
             default:
+                assert((instr.op as! WasmOperation).inputTypes.allSatisfy { type in
+                    !type.Is(.object())
+                }, "\(instr.op) has an input that is .object() it should probably be handled here.")
                 continue
             }
         }
 
         // The base of the internally defined globals indices come after the imports.
-        self.baseDefinedGlobals = self.imports.filter { $0.1.isGlobal }.count
+        self.baseDefinedGlobals = self.imports.filter({typer.type(of: $0.0).Is(.object(ofGroup: "WasmGlobal")) }).count
         // The number of internally defined tables indices come after the imports.
-        self.baseDefinedTables = self.imports.filter { $0.1.isTable }.count
+        self.baseDefinedTables = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTable")) }).count
     }
 
-    /// Helper function to resolve the index of an input variable in the Wasm global array.
+    /// Helper function to resolve the index, as laid out in the binary format, of an instruction input Variable for a global.
     /// Intended to be called from `lift`.
     func resolveGlobalIdx(forInput input: Variable) -> Int {
         // Get the index for the global and emit it here magically.
-        // The first input has to be in the global or imports arrays.
         var idx: Int?
         // Can be nil now
         // Check if it is an imported global.
-        idx = self.imports.filter { $0.1.isGlobal}.firstIndex(where: { $0.1.outputVariable == input })
-        // It has to be nil if we enter here, and now we need to find it in the locally defined globals map.
-        if self.globals.contains(input) && idx == nil {
+        idx = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmGlobal"))}).firstIndex(where: { $0.0 == input })
+        // It has to be nil if we enter here, and now we need to find it in the locally defined globals.
+        if idx == nil && self.globals.map({ $0.output }).contains(input) {
             // Add the number of imported globals here.
-            idx = self.baseDefinedGlobals! + self.globals.map { $0 }.firstIndex(where: {$0.0 == input})!
+            idx = self.baseDefinedGlobals! + self.globals.firstIndex(where: {$0.output == input})!
         }
         if idx == nil {
             fatalError("WasmStore/LoadGlobal variable \(input) not found as global!")
@@ -972,17 +931,16 @@ public class WasmLifter {
         // Make sure that we actually have a Wasm operation here.
         assert((wasmInstruction.op as? WasmOperation) != nil)
 
+        // This is almost identical to the resolveGlobalIdx.
         func resolveTableIdx(forInput input: Variable) -> Int {
-            // Get the index for the table and emit it here magically.
-            // The first input has to be in the table or imports arrays.
             var idx: Int?
             // Can be nil now
             // Check if it is an imported table.
-            idx = self.imports.filter { $0.1.isTable}.firstIndex(where: { $0.1.outputVariable == input })
+            idx = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTable"))}).firstIndex(where: { $0.0 == input })
             // It has to be nil if we enter here, and now we need to find it in the locally defined tables map.
-            if self.tables.contains(input) && idx == nil {
+            if idx == nil && self.tables.map({ $0.output }).contains(input) {
                 // Add the number of imported tables here.
-                idx = self.baseDefinedTables! + self.tables.map { $0 }.firstIndex(where: {$0.0 == input})!
+                idx = self.baseDefinedTables! + self.tables.firstIndex(where: {$0.output == input})!
             }
             if idx == nil {
                 fatalError("WasmTableGet/WasmTableSet variable \(input) not found as table!")
@@ -1164,15 +1122,14 @@ public class WasmLifter {
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
             return Data([op.storeType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
         case .wasmJsCall(let op):
-            // TODO(cffsmith) fix this....., we need to find the right import to call here...., right now pick the matching signature, although this might not be the correct one, it will work.
-            return Data([0x10]) + Data([UInt8(self.imports.filter({ $0.1.isFunction }).firstIndex(where: {
-                switch $0.1.importType {
-                case .function(let signature):
-                    return signature == op.functionSignature
-                default:
-                    fatalError("unreachable")
-                }
-            })!)])
+            // We filter first, such that we get the index of functions only.
+            let index = imports.filter({
+                // TODO, switch query?
+                typer.type(of: $0.0).Is(.function()) || typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))
+            }).firstIndex(where: {
+                wasmInstruction.input(0) == $0.0 && op.functionSignature == $0.1
+            })!
+            return Data([0x10]) + Leb128.unsignedEncode(index)
         case .wasmBeginBlock(_):
             // A Block can expect an item on the stack at the end, just like a function. This would be encoded just after the block begin (0x02) byte.
             // For now, we just have the empty block but this instruction could take another input which determines the value that we expect on the stack.

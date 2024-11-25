@@ -40,7 +40,9 @@ public struct JSTyper: Analyzer {
         // The signatures are immutable and they are never changed.
         // TODO(cffsmith): Add something in `Code.check()` that makes sure that this is actually upheld for programs.
         var methodSignatures: [(variable: Variable, signature: Signature)] = [(Variable, Signature)]()
-        var globals: VariableMap<ILType> = VariableMap()
+
+        // Stores the globals this module accesses, this is just used below, where we get the correct exports type.
+        var globals: [Variable] = []
 
         public func getExportsType() -> ILType {
             return .object(withProperties: self.globals.enumerated().map { "wg\($0.0)"}, withMethods: self.methodSignatures.enumerated().map { "w\($0.0)" })
@@ -81,26 +83,28 @@ public struct JSTyper: Analyzer {
         assert(activeClassDefinitions.isEmpty)
     }
 
-    // We use the typer for a chunk of Wasm code in the Wasm lifter, therefore we want to be able to start it at the beginning of that function's code.
-    // Use this if you want to bootstrap a typer in the middle of something, usually you don't want to do this though as type information is going to be wrong / incomplete in most cases.
+    // We use the typer for a chunk of Wasm code in the Wasm lifter, therefore
+    // we want to be able to start it at the beginning of that function's code.
+    // Use this if you want to bootstrap a typer in the middle of something,
+    // usually you don't want to do this though as type information is going to
+    // be wrong / incomplete in most cases.
     public mutating func setIndexOfLastInstruction(to index: Int) {
         indexOfLastInstruction = index
     }
 
-    // Array for collecting type changes during instruction execution.
-    // Not currently used, by could be used for example to validate the analysis by adding these as comments to programs.
+    // Array for collecting type changes during instruction execution. Not
+    // currently used, by could be used for example to validate the analysis by
+    // adding these as comments to programs.
     private var typeChanges = [(Variable, ILType)]()
-
-    public mutating func addEmptyWasmModuleDefinition() {
-        self.activeWasmModuleDefinition = WasmModuleDefinition()
-    }
 
     /// Analyze the given instruction, thus updating type information.
     public mutating func analyze(_ instr: Instruction) {
         assert(instr.index == indexOfLastInstruction + 1)
         indexOfLastInstruction += 1
 
-        // This typer is currently "Outside" of the wasm module, we just type the instructions here such that we can set the type of the module at the end. Figure out how we can set the correct type at the end?
+        // This typer is currently "Outside" of the wasm module, we just type
+        // the instructions here such that we can set the type of the module at
+        // the end. Figure out how we can set the correct type at the end?
         if instr.op is WasmOperation {
             switch instr.op.opcode {
             case .beginWasmFunction(let op):
@@ -109,12 +113,10 @@ public struct JSTyper: Analyzer {
                 for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmOperation).innerOutputTypes) {
                     setType(of: innerOutput, to: paramType)
                 }
-                break
             case .endWasmFunction(_):
                 let signature = activeWasmModuleDefinition!.activeFunctionSignature!
                 activeWasmModuleDefinition!.activeFunctionSignature = nil
                 activeWasmModuleDefinition!.methodSignatures.append((instr.output, signature))
-                break
             case .wasmBeginBlock(_),
                  .wasmBeginLoop(_),
                  .wasmBeginTry(_):
@@ -122,14 +124,18 @@ public struct JSTyper: Analyzer {
                 for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmOperation).innerOutputTypes) {
                     setType(of: innerOutput, to: paramType)
                 }
-                break
-            case .wasmImportGlobal(let op):
-                activeWasmModuleDefinition!.globals[instr.output] = op.wasmGlobal
-                break
-            case .wasmDefineGlobal(let op):
-                let wasmType = WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable)
-                activeWasmModuleDefinition!.globals[instr.output] = .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmType)
-                break
+            case .wasmDefineGlobal(_):
+                activeWasmModuleDefinition!.globals.append(instr.output)
+            case .wasmLoadGlobal(let op):
+                assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)
+                if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
+                    activeWasmModuleDefinition!.globals.append(instr.input(0))
+                }
+            case .wasmStoreGlobal(let op):
+                assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)
+                if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
+                    activeWasmModuleDefinition!.globals.append(instr.input(0))
+                }
             default:
                 break
             }
@@ -164,9 +170,9 @@ public struct JSTyper: Analyzer {
             break
         }
 
-        // Sanity checking: every output variable must now have a type.
-        assert(instr.allOutputs.allSatisfy(state.hasType))
-        // No output should be .nothing
+        // Sanity checking: every output variable must now have a type or the Instruction is a Nop (which is why the output will not have a type then).
+        assert(instr.allOutputs.allSatisfy(state.hasType) || instr.isNop)
+        // No JS output should be .nothing
         assert(instr.allOutputs.allSatisfy { !type(of: $0).Is(.nothing) })
 
         // More sanity checking: the outputs of guarded operation should be typed as .anything.
@@ -943,17 +949,10 @@ public struct JSTyper: Analyzer {
             set(instr.output, .wasmMemory(limits: op.memType.limits, isShared: op.memType.isShared, isMemory64: op.memType.isMemory64))
 
         case .createWasmTable(let op):
+            // TODO add this to an extension.
             let type: String
-            switch (op.tableType) {
-            case .funcRefTable:
-                type = "funcref"
-            case .externRefTable:
-                type = "externref"
-            default:
-                fatalError("Unknown wasmTableType")
-            }
             // TODO: fix this.
-            set(instr.output, .object(ofGroup: "WasmTable.\(type)"))
+            set(instr.output, .object(ofGroup: "WasmTable"))
 
         case .wrapSuspending(_):
             // This operation takes a function but produces an object that can be called from WebAssembly.
@@ -969,7 +968,7 @@ public struct JSTyper: Analyzer {
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
-            assert(instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0))
+            assert(instr.isNop || (instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0)))
         }
 
         // We explicitly type the outputs of guarded operations as .anything for two reasons:

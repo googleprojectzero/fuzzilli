@@ -177,10 +177,6 @@ public struct ILType: Hashable {
     // This type is used to indicate block labels in wasm.
     public static let label: ILType = ILType(definiteType: .label)
 
-    // Used to glue together table creation / import with instructions that use tables.
-    public static let externRefTable: ILType = ILType(definiteType: .externRefTable)
-    public static let funcRefTable: ILType = ILType(definiteType: .funcRefTable)
-
     public static func wasmMemory(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) -> ILType {
         let wasmMemExt = WasmMemoryType(limits: limits, isShared: isShared, isMemory64: isMemory64)
         return .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow"], withWasmType: wasmMemExt)
@@ -804,10 +800,6 @@ extension ILType: CustomStringConvertible {
             return ".wasmSimd128"
         case .label:
             return ".label"
-        case .funcRefTable:
-            return ".funcRefTable"
-        case .externRefTable:
-            return ".externRefTable"
         default:
             break
         }
@@ -866,9 +858,7 @@ struct BaseType: OptionSet, Hashable {
     static let label       = BaseType(rawValue: 1 << 17)
     // This is a reference to a table, which can be passed around to table instructions
     // The lifter will resolve this to the proper index when lifting.
-    static let externRefTable = BaseType(rawValue: 1 << 18)
-    static let funcRefTable   = BaseType(rawValue: 1 << 19)
-    static let wasmSimd128    = BaseType(rawValue: 1 << 20)
+    static let wasmSimd128    = BaseType(rawValue: 1 << 18)
 
     static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 
