@@ -699,6 +699,16 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndRepeatLoop")
 
+
+        case .loopLabelBreak:
+            w.emit("Break \(input(0))")
+
+        case .loopLabelContinue:
+            w.emit("Continue")
+
+        case .loadLabel:
+            w.emit("LoadLabel \(input(0))")
+
         case .loopBreak,
              .switchBreak:
             w.emit("Break")

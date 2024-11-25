@@ -1214,6 +1214,21 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
+            case .loopLabelBreak:
+                let VALUE = input(0)
+                let s = "loop_" + VALUE.text.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+                w.emit("break \(s);")
+
+            case .loopLabelContinue:
+                let VALUE = input(0)
+                let s = "loop_" + VALUE.text.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+                w.emit("continue \(s);")
+
+            case .loadLabel:
+                let VALUE = input(0)
+                let s = "loop_" + VALUE.text.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+                w.emit("\(s):")
+
             case .loopBreak(_),
                  .switchBreak:
                 w.emit("break;")

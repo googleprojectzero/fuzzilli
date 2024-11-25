@@ -2040,6 +2040,30 @@ final class EndRepeatLoop: JsOperation {
     }
 }
 
+final class LoopLabelBreak: JsOperation {
+    override var opcode: Opcode { .loopLabelBreak(self) }
+
+    init() {
+        super.init(numInputs: 1, attributes: [.isJump, .isSingular], requiredContext: [.javascript, .loop])
+    }
+}
+
+final class LoopLabelContinue: JsOperation {
+    override var opcode: Opcode { .loopLabelContinue(self) }
+
+    init() {
+        super.init(numInputs: 1, attributes: [.isJump, .isSingular], requiredContext: [.javascript, .loop])
+    }
+}
+
+final class LoadLabel: JsOperation {
+    override var opcode: Opcode { .loadLabel(self) }
+
+    init() {
+        super.init(numInputs: 1, attributes: [.isPure], requiredContext: [.javascript])
+    }
+}
+
 final class LoopBreak: JsOperation {
     override var opcode: Opcode { .loopBreak(self) }
 

@@ -1330,22 +1330,28 @@ public let CodeGenerators: [CodeGenerator] = [
 
     RecursiveCodeGenerator("WhileLoopGenerator") { b in
         let loopVar = b.loadInt(0)
+        let make = randomloadLabel(b)
         b.buildWhileLoop({ b.compare(loopVar, with: b.loadInt(Int64.random(in: 0...10)), using: .lessThan) }) {
             b.buildRecursive()
+            popLabelIfMake(b, make)
             b.unary(.PostInc, loopVar)
         }
     },
 
     RecursiveCodeGenerator("DoWhileLoopGenerator") { b in
         let loopVar = b.loadInt(0)
+        let make = randomloadLabel(b)
         b.buildDoWhileLoop(do: {
             b.buildRecursive()
+            popLabelIfMake(b, make)
             b.unary(.PostInc, loopVar)
         }, while: { b.compare(loopVar, with: b.loadInt(Int64.random(in: 0...10)), using: .lessThan) })
     },
 
     RecursiveCodeGenerator("SimpleForLoopGenerator") { b in
+        let make = randomloadLabel(b)
         b.buildForLoop(i: { b.loadInt(0) }, { i in b.compare(i, with: b.loadInt(Int64.random(in: 0...10)), using: .lessThan) }, { i in b.unary(.PostInc, i) }) { _ in
+            popLabelIfMake(b, make)
             b.buildRecursive()
         }
     },
@@ -1354,27 +1360,35 @@ public let CodeGenerators: [CodeGenerator] = [
         if probability(0.5) {
             // Generate a for-loop without any loop variables.
             let counter = b.loadInt(10)
+            let make = randomloadLabel(b)
             b.buildForLoop({}, { b.unary(.PostDec, counter) }) {
                 b.buildRecursive()
+                popLabelIfMake(b, make)
             }
         } else {
             // Generate a for-loop with two loop variables.
             // TODO could also generate loops with even more loop variables?
+            let make = randomloadLabel(b)
             b.buildForLoop({ return [b.loadInt(0), b.loadInt(10)] }, { vs in b.compare(vs[0], with: vs[1], using: .lessThan) }, { vs in b.unary(.PostInc, vs[0]); b.unary(.PostDec, vs[1]) }) { _ in
                 b.buildRecursive()
+                popLabelIfMake(b, make)
             }
         }
     },
 
     RecursiveCodeGenerator("ForInLoopGenerator", inputs: .preferred(.object())) { b, obj in
+        let make = randomloadLabel(b)
         b.buildForInLoop(obj) { _ in
             b.buildRecursive()
+            popLabelIfMake(b, make)
         }
     },
 
     RecursiveCodeGenerator("ForOfLoopGenerator", inputs: .preferred(.iterable)) { b, obj in
+        let make = randomloadLabel(b)
         b.buildForOfLoop(obj) { _ in
             b.buildRecursive()
+            popLabelIfMake(b, make)
         }
     },
 
@@ -1389,16 +1403,19 @@ public let CodeGenerators: [CodeGenerator] = [
         if indices.isEmpty {
             indices = [0]
         }
-
+        let make = randomloadLabel(b)
         b.buildForOfLoop(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
             b.buildRecursive()
+            popLabelIfMake(b, make)
         }
     },
 
     RecursiveCodeGenerator("RepeatLoopGenerator") { b in
         let numIterations = Int.random(in: 2...100)
+        let make = randomloadLabel(b)
         b.buildRepeatLoop(n: numIterations) { _ in
             b.buildRecursive()
+            popLabelIfMake(b, make)
         }
     },
 
@@ -1409,6 +1426,20 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ContinueGenerator", inContext: .loop) { b in
         assert(b.context.contains(.loop))
         b.loopContinue()
+    },
+
+    CodeGenerator("LoopLabelBreakGenerator", inContext: .loop) { b in
+        assert(b.context.contains(.loop))
+        if b.isLoopStaNotEmpty() {
+            b.loopLabelBreak(b.randomLabel())
+        }
+    },
+
+    CodeGenerator("LoopLabelContinueGenerator", inContext: .loop) { b in
+            assert(b.context.contains(.loop))
+            if b.isLoopStaNotEmpty() {
+                b.loopLabelContinue(b.randomLabel())
+            }
     },
 
     RecursiveCodeGenerator("TryCatchGenerator") { b in

@@ -1296,6 +1296,30 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .endRepeatLoop(newValue)}
   }
 
+  public var loopLabelBreak: Fuzzilli_Protobuf_LoopLabelBreak {
+    get {
+      if case let .loopLabelBreak(v)? = operation { return v }
+      return Fuzzilli_Protobuf_LoopLabelBreak()
+    }
+    set { operation = .loopLabelBreak(newValue) }
+  }
+
+  public var loopLabelContinue: Fuzzilli_Protobuf_LoopLabelContinue {
+    get {
+      if case let .loopLabelContinue(v)? = operation { return v }
+      return Fuzzilli_Protobuf_LoopLabelContinue()
+    }
+      set { operation = .loopLabelContinue(newValue) }
+  }
+
+  public var loadLabel: Fuzzilli_Protobuf_LoadLabel {
+    get {
+      if case let .loadLabel(v)? = operation { return v }
+      return Fuzzilli_Protobuf_LoadLabel()
+    }
+    set { operation = .loadLabel(newValue) }
+  }
+
   public var loopBreak: Fuzzilli_Protobuf_LoopBreak {
     get {
       if case .loopBreak(let v)? = operation {return v}
@@ -1633,6 +1657,9 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case endRepeatLoop(Fuzzilli_Protobuf_EndRepeatLoop)
     case loopBreak(Fuzzilli_Protobuf_LoopBreak)
     case loopContinue(Fuzzilli_Protobuf_LoopContinue)
+    case loopLabelBreak(Fuzzilli_Protobuf_LoopLabelBreak)
+    case loadLabel(Fuzzilli_Protobuf_LoadLabel)
+    case loopLabelContinue(Fuzzilli_Protobuf_LoopLabelContinue)
     case beginTry(Fuzzilli_Protobuf_BeginTry)
     case beginCatch(Fuzzilli_Protobuf_BeginCatch)
     case beginFinally(Fuzzilli_Protobuf_BeginFinally)
@@ -4924,6 +4951,20 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .fixup?: try {
       guard case .fixup(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 179)
+    }()
+    case .loopLabelBreak?: try {
+      guard case let .loopLabelBreak(v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 180)
+    }()
+
+    case .loopLabelContinue?: try {
+      guard case let .loopLabelContinue(v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 191)
+    }()
+
+    case .loadLabel?: try {
+      guard case let .loadLabel(v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 192)
     }()
     case nil: break
     }
