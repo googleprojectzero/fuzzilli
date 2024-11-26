@@ -779,7 +779,7 @@ class WasmFoundationTests: XCTestCase {
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                     function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
                         XCTAssert(b.type(of: label).Is(.label))
-                        let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
+                        let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
                         function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
                         function.wasmUnreachable()
                         function.WasmBuildLegacyCatch(tag: jstag) { exception, args in
