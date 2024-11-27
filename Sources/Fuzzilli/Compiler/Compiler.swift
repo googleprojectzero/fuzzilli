@@ -443,19 +443,48 @@ public class JavaScriptCompiler {
 
             emit(EndForOfLoop())
 
-        case .breakStatement:
-            // If we're in both .loop and .switch context, then the loop must be the most recent context 
-            // (switch blocks don't propagate an outer .loop context) so we just need to check for .loop here
-            if contextAnalyzer.context.contains(.loop){
-                emit(LoopBreak())
-            } else if contextAnalyzer.context.contains(.switchBlock){
-                emit(SwitchBreak())
+        case .breakStatement(let breakStatement):
+            let label = breakStatement.label
+            if !label.isEmpty {
+                let labelVar = emit(LoadString(value: label)).output // Assuming LoopLabelBreak needs a label loaded as input
+                emit(LoopLabelBreak(), withInputs: [labelVar])  // Use the loaded label as input
             } else {
-                throw CompilerError.invalidNodeError("break statement outside of loop or switch")
+                // If we're in both .loop and .switch context, then the loop must be the most recent context 
+                // (switch blocks don't propagate an outer .loop context) so we just need to check for .loop here
+                if contextAnalyzer.context.contains(.loop){
+                    emit(LoopBreak())
+                } else if contextAnalyzer.context.contains(.switchBlock){
+                    emit(SwitchBreak())
+                } else {
+                    throw CompilerError.invalidNodeError("break statement outside of loop or switch")
+                }
             }
 
-        case .continueStatement:
-            emit(LoopContinue())
+        case .continueStatement(let continueStatement):
+            let label = continueStatement.label
+            if !label.isEmpty {
+                let labelVar = emit(LoadString(value: label)).output
+                emit(LoopLabelContinue(), withInputs: [labelVar]) // Emit a labeled continue by loading the label and using it as input
+            } else {
+                emit(LoopContinue())
+            }
+            
+        case .labeledStatement(let labeledStatement):
+            // Step 1: Load the label as a string first
+            let label: String = labeledStatement.label
+            // Emit the LoadString operation to convert the label to a variable
+            let loadStringInstr = emit(LoadString(value: label))  // This creates a FuzzIL instruction for the label string
+            // Extract the output variable from the LoadString instruction
+            let labelVar = loadStringInstr.output  // Get the variable produced by LoadString
+            // Step 2: Emit LoadLabel, passing the label variable as input
+            emit(LoadLabel(), withInputs: [labelVar])  // Pass the output variable as input
+            // Step 3: Push the label to the context (track the label scope)
+            contextAnalyzer.enterLabeledBlock()
+            defer {
+                contextAnalyzer.exitLabeledBlock()
+            }
+            // Step 4: Compile the statement within the labeled block
+            try compileStatement(labeledStatement.statement)
 
         case .tryStatement(let tryStatement):
             emit(BeginTry())

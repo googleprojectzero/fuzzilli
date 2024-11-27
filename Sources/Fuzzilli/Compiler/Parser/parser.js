@@ -289,10 +289,19 @@ function parse(script, proto) {
                 return makeStatement('ForOfLoop', forOfLoop);
             }
             case 'BreakStatement': {
-              return makeStatement('BreakStatement', {});
+                let breakStatementProto = {};
+                
+                if (node.label) {
+                    breakStatementProto.label = node.label.name;  // Extract the label if present
+                }
+                return makeStatement('BreakStatement', breakStatementProto);
             }
             case 'ContinueStatement': {
-              return makeStatement('ContinueStatement', {});
+                let continueStatementProto = {};
+                if (node.label) {
+                    continueStatementProto.label = node.label.name;  // Extract the label if present
+                }
+                return makeStatement('ContinueStatement', continueStatementProto);
             }
             case 'TryStatement': {
                 assert(node.block.type === 'BlockStatement', "Expected block statement as body of a try block");
@@ -331,6 +340,13 @@ function parse(script, proto) {
                 switchStatement.discriminant = visitExpression(node.discriminant);
                 switchStatement.cases = node.cases.map(visitStatement);
                 return makeStatement('SwitchStatement', switchStatement);
+            }
+            case "LabeledStatement": {
+                let labeledStatementProto = {
+                    label: node.label.name, // Store the label
+                    statement: visitStatement(node.body)
+                };
+                return { labeledStatement: labeledStatementProto };
             }
             case 'SwitchCase': {
                 let switchCase = {};

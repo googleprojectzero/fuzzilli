@@ -147,9 +147,30 @@ struct ContextAnalyzer: Analyzer {
         return contextStack.top
     }
 
+    // To track labeled block contexts
+    private var labelContextStack = Stack([false]) 
+    var isInLabeledContext: Bool {
+        return labelContextStack.top
+    }
+
+    // Enter a new labeled block (for example, a loop with a label)
+    mutating func enterLabeledBlock() {
+        labelContextStack.push(true)
+    }
+
+    // Exit the current labeled block
+    mutating func exitLabeledBlock() {
+        if !labelContextStack.isEmpty {
+            labelContextStack.pop()
+        } else {
+            print("Warning: Attempting to exit a labeled block, but stack is empty.")
+        }
+    }
+
     mutating func analyze(_ instr: Instruction) {
         if instr.isBlockEnd {
             contextStack.pop()
+            labelContextStack.pop()
         }
         if instr.isBlockStart {
             var newContext = instr.op.contextOpened
@@ -178,6 +199,8 @@ struct ContextAnalyzer: Analyzer {
                 newContext.remove(.switchCase)
             }
             contextStack.push(newContext)
+            // Push a new false label context for the block
+            labelContextStack.push(false)
         }
     }
 }
