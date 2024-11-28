@@ -403,7 +403,7 @@ class WasmFoundationTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
-        let javaScriptTable = b.createWasmTable(tableType: .wasmExternRef, minSize: 10, maxSize: 20)
+        let javaScriptTable = b.createWasmTable(elementType: .wasmExternRef, limits: Limits(min: 10, max: 20))
 
         let object = b.createObject(with: ["a": b.loadInt(41), "b": b.loadInt(42)])
 
@@ -411,7 +411,7 @@ class WasmFoundationTests: XCTestCase {
         b.callMethod("set", on: javaScriptTable, withArgs: [b.loadInt(1), object])
 
         let module = b.buildWasmModule { wasmModule in
-            let tableRef = wasmModule.addTable(tableType: .wasmExternRef, minSize: 2)
+            let tableRef = wasmModule.addTable(elementType: .wasmExternRef, minSize: 2)
 
             wasmModule.addWasmFunction(with: [] => .wasmExternRef) { function, _ in
                 let offset = function.consti32(0)
@@ -455,7 +455,7 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, params in
                 function.wasmReturn(function.wasmi32BinOp(params[0], function.consti32(1), binOpKind: .Add))
             }
-            wasmModule.addTable(tableType: .wasmFuncRef, minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction])
+            wasmModule.addTable(elementType: .wasmFuncRef, minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction])
         }
 
         let exports = module.loadExports()

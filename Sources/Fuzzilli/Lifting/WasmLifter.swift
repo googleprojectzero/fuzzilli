@@ -564,11 +564,11 @@ public class WasmLifter {
 
         for instruction in self.tables {
             let op = instruction.op as! WasmDefineTable
-            let tableType = op.tableType
-            let minSize = op.minSize
-            let maxSize = op.maxSize
+            let elementType = op.tableType.elementType
+            let minSize = op.tableType.limits.min
+            let maxSize = op.tableType.limits.max
 
-            temp += ILTypeMapping[tableType]!
+            temp += ILTypeMapping[elementType]!
             if let maxSize = maxSize {
                 temp += Data([0x1] + Leb128.unsignedEncode(minSize) + Leb128.unsignedEncode(maxSize))
             } else {
@@ -1014,7 +1014,7 @@ public class WasmLifter {
 
             case .wasmDefineTable(let tableDef):
                 self.tables.append(instr)
-                if tableDef.tableType == .wasmFuncRef {
+                if tableDef.tableType.elementType == .wasmFuncRef {
                     for definedEntry in instr.inputs {
                         if typer.type(of: definedEntry).Is(.function()) && !self.imports.contains(where: { $0.0 == definedEntry }) {
                             // Ensure deterministic lifting.

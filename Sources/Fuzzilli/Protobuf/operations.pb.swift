@@ -3029,7 +3029,7 @@ public struct Fuzzilli_Protobuf_CreateWasmTable: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var tableType: Fuzzilli_Protobuf_WasmILType = .consti32
+  public var elementType: Fuzzilli_Protobuf_WasmILType = .consti32
 
   public var minSize: Int64 = 0
 
@@ -3775,7 +3775,7 @@ public struct Fuzzilli_Protobuf_WasmDefineTable: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var tableType: Fuzzilli_Protobuf_WasmILType = .consti32
+  public var elementType: Fuzzilli_Protobuf_WasmILType = .consti32
 
   public var minSize: Int64 = 0
 
@@ -3842,16 +3842,30 @@ public struct Fuzzilli_Protobuf_WasmStoreGlobal: Sendable {
   public init() {}
 }
 
+/// WasmTableGet and WasmTableSet need a WasmTableType as input.
 public struct Fuzzilli_Protobuf_WasmTableGet: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var tableType: Fuzzilli_Protobuf_WasmILType = .consti32
+  public var elementType: Fuzzilli_Protobuf_WasmILType = .consti32
+
+  public var minSize: Int64 = 0
+
+  public var maxSize: Int64 {
+    get {return _maxSize ?? 0}
+    set {_maxSize = newValue}
+  }
+  /// Returns true if `maxSize` has been explicitly set.
+  public var hasMaxSize: Bool {return self._maxSize != nil}
+  /// Clears the value of `maxSize`. Subsequent reads from it will return its default value.
+  public mutating func clearMaxSize() {self._maxSize = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _maxSize: Int64? = nil
 }
 
 public struct Fuzzilli_Protobuf_WasmTableSet: Sendable {
@@ -3859,11 +3873,24 @@ public struct Fuzzilli_Protobuf_WasmTableSet: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var tableType: Fuzzilli_Protobuf_WasmILType = .consti32
+  public var elementType: Fuzzilli_Protobuf_WasmILType = .consti32
+
+  public var minSize: Int64 = 0
+
+  public var maxSize: Int64 {
+    get {return _maxSize ?? 0}
+    set {_maxSize = newValue}
+  }
+  /// Returns true if `maxSize` has been explicitly set.
+  public var hasMaxSize: Bool {return self._maxSize != nil}
+  /// Clears the value of `maxSize`. Subsequent reads from it will return its default value.
+  public mutating func clearMaxSize() {self._maxSize = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _maxSize: Int64? = nil
 }
 
 public struct Fuzzilli_Protobuf_WasmMemoryLoad: Sendable {
@@ -9498,7 +9525,7 @@ extension Fuzzilli_Protobuf_CreateWasmMemory: SwiftProtobuf.Message, SwiftProtob
 extension Fuzzilli_Protobuf_CreateWasmTable: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateWasmTable"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "tableType"),
+    1: .same(proto: "elementType"),
     2: .same(proto: "minSize"),
     3: .same(proto: "maxSize"),
   ]
@@ -9509,7 +9536,7 @@ extension Fuzzilli_Protobuf_CreateWasmTable: SwiftProtobuf.Message, SwiftProtobu
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularEnumField(value: &self.tableType) }()
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.elementType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
       default: break
@@ -9522,8 +9549,8 @@ extension Fuzzilli_Protobuf_CreateWasmTable: SwiftProtobuf.Message, SwiftProtobu
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if self.tableType != .consti32 {
-      try visitor.visitSingularEnumField(value: self.tableType, fieldNumber: 1)
+    if self.elementType != .consti32 {
+      try visitor.visitSingularEnumField(value: self.elementType, fieldNumber: 1)
     }
     if self.minSize != 0 {
       try visitor.visitSingularInt64Field(value: self.minSize, fieldNumber: 2)
@@ -9535,7 +9562,7 @@ extension Fuzzilli_Protobuf_CreateWasmTable: SwiftProtobuf.Message, SwiftProtobu
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_CreateWasmTable, rhs: Fuzzilli_Protobuf_CreateWasmTable) -> Bool {
-    if lhs.tableType != rhs.tableType {return false}
+    if lhs.elementType != rhs.elementType {return false}
     if lhs.minSize != rhs.minSize {return false}
     if lhs._maxSize != rhs._maxSize {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -11209,7 +11236,7 @@ extension Fuzzilli_Protobuf_WasmDefineGlobal: SwiftProtobuf.Message, SwiftProtob
 extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmDefineTable"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "tableType"),
+    1: .same(proto: "elementType"),
     2: .same(proto: "minSize"),
     3: .same(proto: "maxSize"),
     4: .same(proto: "definedEntryIndices"),
@@ -11221,7 +11248,7 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularEnumField(value: &self.tableType) }()
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.elementType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
       case 4: try { try decoder.decodeRepeatedInt64Field(value: &self.definedEntryIndices) }()
@@ -11235,8 +11262,8 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if self.tableType != .consti32 {
-      try visitor.visitSingularEnumField(value: self.tableType, fieldNumber: 1)
+    if self.elementType != .consti32 {
+      try visitor.visitSingularEnumField(value: self.elementType, fieldNumber: 1)
     }
     if self.minSize != 0 {
       try visitor.visitSingularInt64Field(value: self.minSize, fieldNumber: 2)
@@ -11251,7 +11278,7 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmDefineTable, rhs: Fuzzilli_Protobuf_WasmDefineTable) -> Bool {
-    if lhs.tableType != rhs.tableType {return false}
+    if lhs.elementType != rhs.elementType {return false}
     if lhs.minSize != rhs.minSize {return false}
     if lhs._maxSize != rhs._maxSize {return false}
     if lhs.definedEntryIndices != rhs.definedEntryIndices {return false}
@@ -11363,7 +11390,9 @@ extension Fuzzilli_Protobuf_WasmStoreGlobal: SwiftProtobuf.Message, SwiftProtobu
 extension Fuzzilli_Protobuf_WasmTableGet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmTableGet"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "tableType"),
+    1: .same(proto: "elementType"),
+    2: .same(proto: "minSize"),
+    3: .same(proto: "maxSize"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11372,21 +11401,35 @@ extension Fuzzilli_Protobuf_WasmTableGet: SwiftProtobuf.Message, SwiftProtobuf._
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularEnumField(value: &self.tableType) }()
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.elementType) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
+      case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.tableType != .consti32 {
-      try visitor.visitSingularEnumField(value: self.tableType, fieldNumber: 1)
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.elementType != .consti32 {
+      try visitor.visitSingularEnumField(value: self.elementType, fieldNumber: 1)
     }
+    if self.minSize != 0 {
+      try visitor.visitSingularInt64Field(value: self.minSize, fieldNumber: 2)
+    }
+    try { if let v = self._maxSize {
+      try visitor.visitSingularInt64Field(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmTableGet, rhs: Fuzzilli_Protobuf_WasmTableGet) -> Bool {
-    if lhs.tableType != rhs.tableType {return false}
+    if lhs.elementType != rhs.elementType {return false}
+    if lhs.minSize != rhs.minSize {return false}
+    if lhs._maxSize != rhs._maxSize {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11395,7 +11438,9 @@ extension Fuzzilli_Protobuf_WasmTableGet: SwiftProtobuf.Message, SwiftProtobuf._
 extension Fuzzilli_Protobuf_WasmTableSet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmTableSet"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "tableType"),
+    1: .same(proto: "elementType"),
+    2: .same(proto: "minSize"),
+    3: .same(proto: "maxSize"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11404,21 +11449,35 @@ extension Fuzzilli_Protobuf_WasmTableSet: SwiftProtobuf.Message, SwiftProtobuf._
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularEnumField(value: &self.tableType) }()
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.elementType) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
+      case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.tableType != .consti32 {
-      try visitor.visitSingularEnumField(value: self.tableType, fieldNumber: 1)
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.elementType != .consti32 {
+      try visitor.visitSingularEnumField(value: self.elementType, fieldNumber: 1)
     }
+    if self.minSize != 0 {
+      try visitor.visitSingularInt64Field(value: self.minSize, fieldNumber: 2)
+    }
+    try { if let v = self._maxSize {
+      try visitor.visitSingularInt64Field(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmTableSet, rhs: Fuzzilli_Protobuf_WasmTableSet) -> Bool {
-    if lhs.tableType != rhs.tableType {return false}
+    if lhs.elementType != rhs.elementType {return false}
+    if lhs.minSize != rhs.minSize {return false}
+    if lhs._maxSize != rhs._maxSize {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

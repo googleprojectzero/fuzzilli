@@ -1438,7 +1438,7 @@ public class JavaScriptLifter: Lifter {
                 let V = w.declare(instr.output)
                 let LET = w.varKeyword
                 let type: String
-                switch op.tableType {
+                switch op.tableType.elementType {
                 case .wasmExternRef:
                     type = "externref"
                 case .wasmFuncRef:
@@ -1448,11 +1448,11 @@ public class JavaScriptLifter: Lifter {
                 }
 
                 var maxSizeStr = ""
-                if let maxSize = op.maxSize {
+                if let maxSize = op.tableType.limits.max {
                     maxSizeStr = ", maximum: \(maxSize)"
                 }
 
-                w.emit("\(LET) \(V) = new WebAssembly.Table({ element: \"\(type)\", initial: \(op.minSize)\(maxSizeStr) });")
+                w.emit("\(LET) \(V) = new WebAssembly.Table({ element: \"\(type)\", initial: \(op.tableType.limits.min)\(maxSizeStr) });")
 
             case .createWasmJSTag(_):
                 let V = w.declare(instr.output)

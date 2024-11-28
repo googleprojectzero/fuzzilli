@@ -814,7 +814,7 @@ message CreateWasmMemory {
 }
 
 message CreateWasmTable {
-  WasmILType tableType = 1;
+  WasmILType elementType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
 }
@@ -1053,7 +1053,7 @@ message WasmDefineGlobal {
 }
 
 message WasmDefineTable {
-  WasmILType tableType = 1;
+  WasmILType elementType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
   repeated int64 definedEntryIndices = 4;
@@ -1071,12 +1071,17 @@ message WasmStoreGlobal {
   WasmILType globalType = 2;
 }
 
+// WasmTableGet and WasmTableSet need a WasmTableType as input.
 message WasmTableGet {
-  WasmILType tableType = 1;
+  WasmILType elementType = 1;
+  int64 minSize = 2;
+  optional int64 maxSize = 3;
 }
 
 message WasmTableSet {
-  WasmILType tableType = 1;
+  WasmILType elementType = 1;
+  int64 minSize = 2;
+  optional int64 maxSize = 3;
 }
 
 enum WasmMemoryLoadType {

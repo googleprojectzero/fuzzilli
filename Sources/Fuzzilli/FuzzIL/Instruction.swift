@@ -990,9 +990,9 @@ extension Instruction: ProtobufConvertible {
                 }
             case .createWasmTable(let op):
                 $0.createWasmTable = Fuzzilli_Protobuf_CreateWasmTable.with {
-                    $0.tableType = ILTypeToWasmTypeEnum(op.tableType)
-                    $0.minSize = Int64(op.minSize)
-                    if let maxSize = op.maxSize {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.tableType.elementType)
+                    $0.minSize = Int64(op.tableType.limits.min)
+                    if let maxSize = op.tableType.limits.max {
                         $0.maxSize = Int64(maxSize)
                     }
                 }
@@ -1131,9 +1131,9 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmDefineTable(let op):
                 $0.wasmDefineTable = Fuzzilli_Protobuf_WasmDefineTable.with {
-                    $0.tableType = ILTypeToWasmTypeEnum(op.tableType)
-                    $0.minSize = Int64(op.minSize)
-                    if let maxSize = op.maxSize {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.tableType.elementType)
+                    $0.minSize = Int64(op.tableType.limits.min)
+                    if let maxSize = op.tableType.limits.max {
                         $0.maxSize = Int64(maxSize)
                     }
                     $0.definedEntryIndices = op.definedEntryIndices.map { Int64($0) }
@@ -1157,10 +1157,22 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmStoreGlobal = Fuzzilli_Protobuf_WasmStoreGlobal.with {
                     $0.globalType = ILTypeToWasmTypeEnum(op.globalType)
                 }
-            case .wasmTableGet(_):
-                $0.wasmTableGet = Fuzzilli_Protobuf_WasmTableGet()
-            case .wasmTableSet(_):
-                $0.wasmTableSet = Fuzzilli_Protobuf_WasmTableSet()
+            case .wasmTableGet(let op):
+                $0.wasmTableGet = Fuzzilli_Protobuf_WasmTableGet.with {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.tableType.elementType)
+                    $0.minSize = Int64(op.tableType.limits.min)
+                    if let max = op.tableType.limits.max {
+                        $0.maxSize = Int64(max)
+                    }
+                }
+            case .wasmTableSet(let op):
+                $0.wasmTableSet = Fuzzilli_Protobuf_WasmTableSet.with {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.tableType.elementType)
+                    $0.minSize = Int64(op.tableType.limits.min)
+                    if let max = op.tableType.limits.max {
+                        $0.maxSize = Int64(max)
+                    }
+                }
             case .wasmMemoryLoad(let op):
                 $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with {
                     $0.loadType = convertWasmMemoryLoadType(op.loadType);
@@ -1813,7 +1825,7 @@ extension Instruction: ProtobufConvertible {
             } else {
                 maxSize = nil
             }
-            op = CreateWasmTable(tableType: WasmTypeEnumToILType(p.tableType), minSize: Int(p.minSize), maxSize: maxSize)
+            op = CreateWasmTable(elementType: WasmTypeEnumToILType(p.elementType), limits: Limits(min: Int(p.minSize), max: maxSize))
         case .createWasmJstag(_):
             op = CreateWasmJSTag()
         case .createWasmTag(let p):
@@ -1934,7 +1946,9 @@ extension Instruction: ProtobufConvertible {
         case .wasmDefineGlobal(let p):
             op = WasmDefineGlobal(wasmGlobal: convertWasmGlobal(p.wasmGlobal), isMutable: p.wasmGlobal.isMutable)
         case .wasmDefineTable(let p):
-            op = WasmDefineTable(tableInfo: (WasmTypeEnumToILType(p.tableType), Int(p.minSize), p.hasMaxSize ? Int(p.maxSize) : nil, p.definedEntryIndices.map { Int($0) }))
+            op = WasmDefineTable(elementType: WasmTypeEnumToILType(p.elementType),
+                                 limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil),
+                                 definedEntryIndices: p.definedEntryIndices.map { Int($0) })
         case .wasmDefineMemory(let p):
             let maxPages = p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil
             op = WasmDefineMemory(limits: Limits(min: Int(p.wasmMemory.minPages), max: maxPages), isShared: p.wasmMemory.isShared, isMemory64: p.wasmMemory.isMemory64)
@@ -1943,9 +1957,13 @@ extension Instruction: ProtobufConvertible {
         case .wasmStoreGlobal(let p):
             op = WasmStoreGlobal(globalType: WasmTypeEnumToILType(p.globalType))
         case .wasmTableGet(let p):
-            op = WasmTableGet(tableType: WasmTypeEnumToILType(p.tableType))
+            op = WasmTableGet(tableType: .wasmTable(wasmTableType:
+                WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
+                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil))))
         case .wasmTableSet(let p):
-            op = WasmTableSet(tableType: WasmTypeEnumToILType(p.tableType))
+            op = WasmTableSet(tableType: .wasmTable(wasmTableType:
+                WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
+                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil))))
         case .wasmMemoryLoad(let p):
             op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset)
         case .wasmMemoryStore(let p):

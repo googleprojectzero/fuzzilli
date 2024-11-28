@@ -2480,16 +2480,11 @@ class CreateWasmMemory: JsOperation {
 class CreateWasmTable: JsOperation {
     override var opcode: Opcode { .createWasmTable(self) }
 
-    // We need to store the table type here such that the lifter can easily list the correct type 'externref' or 'anyfunc' when constructing.
-    let tableType: ILType
-    let minSize: Int
-    let maxSize: Int?
+    // We need to store the element type here such that the lifter can easily list the correct type 'externref' or 'anyfunc' when constructing.
+    let tableType: WasmTableType
 
-    init(tableType: ILType, minSize: Int, maxSize: Int? = nil) {
-        self.tableType = tableType
-        assert(tableType.Is(.wasmExternRef) || tableType.Is(.wasmFuncRef))
-        self.minSize = minSize
-        self.maxSize = maxSize
+    init(elementType: ILType, limits: Limits) {
+        self.tableType = WasmTableType(elementType: elementType, limits: limits)
         super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript])
     }
 }
