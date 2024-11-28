@@ -2896,8 +2896,8 @@ public class ProgramBuilder {
         return emit(CreateWasmMemory(limits: Limits(min: minPages, max: maxPages), isShared: isShared, isMemory64: isMemory64)).output
     }
 
-    public func createWasmTable(tableType: ILType, minSize: Int, maxSize: Int? = nil) -> Variable {
-        return emit(CreateWasmTable(tableType: tableType, minSize: minSize, maxSize: maxSize)).output
+    public func createWasmTable(elementType: ILType, limits: Limits) -> Variable {
+        return emit(CreateWasmTable(elementType: elementType, limits: limits)).output
     }
 
     @discardableResult
@@ -3413,8 +3413,8 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func addTable(tableType: ILType, minSize: Int, maxSize: Int? = nil, definedEntryIndices: [Int] = [], definedEntryValues: [Variable] = []) -> Variable {
-            return b.emit(WasmDefineTable(tableInfo: (tableType, minSize,  maxSize, definedEntryIndices)), withInputs: definedEntryValues).output
+        public func addTable(elementType: ILType, minSize: Int, maxSize: Int? = nil, definedEntryIndices: [Int] = [], definedEntryValues: [Variable] = []) -> Variable {
+            return b.emit(WasmDefineTable(elementType: elementType, limits: Limits(min: minSize, max: maxSize), definedEntryIndices: definedEntryIndices), withInputs: definedEntryValues).output
         }
 
         // This result can be ignored right now, as we can only define one memory per module

@@ -243,20 +243,14 @@ public class OperationMutator: BaseInstructionMutator {
             let newMinPages = Int.random(in: 0..<10)
             let newMaxPages = probability(0.5) ? nil : Int.random(in: newMinPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
             newOp = CreateWasmMemory(limits: Limits(min: newMinPages, max: newMaxPages))
-        case .createWasmTable(_):
-            let wasmTableType: ILType
-            if probability(0.5) {
-                wasmTableType = .wasmExternRef
-            } else {
-                wasmTableType = .wasmFuncRef
-            }
+        case .createWasmTable(let op):
             let newMinSize = Int.random(in: 0..<10)
             var newMaxSize: Int? = nil
             if probability(0.5) {
                 // TODO: Think about what actually makes sense here.
                 newMaxSize = Int.random(in: newMinSize..<(newMinSize + 30))
             }
-            newOp = CreateWasmTable(tableType: wasmTableType, minSize: newMinSize, maxSize: newMaxSize)
+            newOp = CreateWasmTable(elementType: op.tableType.elementType, limits: Limits(min: newMinSize, max: newMaxSize))
         // Wasm Operations
         case .consti32(_):
             newOp = Consti32(value: Int32(truncatingIfNeeded: b.randomInt()))

@@ -359,9 +359,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         }
         registerObjectGroup(.jsWasmGlobal)
         registerObjectGroup(.jsWasmMemory)
-        for variant in ["funcref", "externref"] {
-            registerObjectGroup(.wasmTable(variant))
-        }
+        registerObjectGroup(.wasmTable)
         registerObjectGroup(.jsWasmTag)
 
         for group in additionalObjectGroups {
@@ -827,9 +825,7 @@ public extension ILType {
     static let jsInfinity = ILType.float
 
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
-    static func wasmTable(_ variant: String) -> ILType {
-        return .object(ofGroup: "WasmTable.\(variant)", withProperties: ["length"], withMethods: ["get", "grow", "set"])
-    }
+    static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
 }
 
 // Type information for the object groups that we use to model the JavaScript runtime environment.
@@ -1575,18 +1571,16 @@ public extension ObjectGroup {
     )
 
     /// ObjectGroup modelling JavaScript WebAssembly Table objects
-    static func wasmTable(_ variant: String) -> ObjectGroup {
-        return ObjectGroup(
-            name: "WasmTable.\(variant)",
-            instanceType: .wasmTable(variant),
-            properties: [
-                "length": .number
-            ],
-            methods: [
-                "get": [.number] => .anything,
-                "grow": [.number, .opt(.anything)] => .number,
-                "set": [.number, .anything] => .undefined,
-            ]
-        )
-    }
+    static let wasmTable = ObjectGroup(
+        name: "WasmTable",
+        instanceType: .wasmTable,
+        properties: [
+            "length": .number
+        ],
+        methods: [
+            "get": [.number] => .anything,
+            "grow": [.number, .opt(.anything)] => .number,
+            "set": [.number, .anything] => .undefined,
+        ]
+    )
 }

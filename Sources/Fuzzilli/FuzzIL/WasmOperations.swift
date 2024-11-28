@@ -699,20 +699,25 @@ final class WasmDefineGlobal: WasmOperation {
 final class WasmDefineTable: WasmOperation {
     override var opcode: Opcode { .wasmDefineTable(self) }
 
-    let tableType: ILType
-    let minSize: Int
-    let maxSize: Int?
+    let tableType: WasmTableType
     let definedEntryIndices: [Int]
 
-    init(tableInfo: (ILType, Int, Int?, [Int])) {
-        self.tableType = tableInfo.0
-        self.minSize = tableInfo.1
-        self.maxSize = tableInfo.2
-        self.definedEntryIndices = tableInfo.3
+    init(elementType: ILType, limits: Limits, definedEntryIndices: [Int]) {
+        self.tableType = WasmTableType(elementType: elementType, limits: limits)
+        self.definedEntryIndices = definedEntryIndices
 
-        let inputType = tableType == .wasmFuncRef ? .wasmFuncRef | .function() : .object()
+        // TODO(manoskouk): Find a way to define non-function tables with initializers.
+        assert(elementType == .wasmFuncRef || definedEntryIndices.isEmpty)
+        let inputTypes = if elementType == .wasmFuncRef {
+            Array(repeating: .wasmFuncRef | .function(), count: definedEntryIndices.count)
+        } else {
+            [ILType]()
+        }
 
-        super.init(inputTypes: Array(repeating: inputType, count: definedEntryIndices.count), outputType: .object(ofGroup: "WasmTable"), attributes: [.isPure, .isMutable], requiredContext: [.wasm])
+        super.init(inputTypes: inputTypes,
+                   outputType: .wasmTable(wasmTableType: WasmTableType(elementType: tableType.elementType, limits: tableType.limits)),
+                   attributes: [.isPure, .isMutable],
+                   requiredContext: [.wasm])
     }
 }
 
@@ -773,29 +778,27 @@ final class WasmStoreGlobal: WasmOperation {
 final class WasmTableGet: WasmOperation {
     override var opcode: Opcode { .wasmTableGet(self) }
 
+    let tableType: WasmTableType
+
     init(tableType: ILType) {
-        assert(tableType.Is(.object(ofGroup: "WasmTable")))
-
-        // TODO: Access the upcoming TableTypeExtension here to get the underlying elementType and then use that.
-        let elementType = ILType.wasmExternRef
-
-        assert(elementType.Is(.wasmFuncRef) || elementType.Is(.wasmExternRef))
+        assert(tableType.isWasmTableType)
+        self.tableType = tableType.wasmTableType!
+        let elementType = tableType.wasmTableType!.elementType
         // The input is the table reference and an index.
-        super.init(inputTypes: [.object(ofGroup: "WasmTable"), .wasmi32], outputType: elementType, attributes: [.isPure], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [tableType, .wasmi32], outputType: elementType, attributes: [.isPure], requiredContext: [.wasmFunction])
     }
 }
 
 final class WasmTableSet: WasmOperation {
     override var opcode: Opcode { .wasmTableSet(self) }
 
+    let tableType: WasmTableType
+
     init(tableType: ILType) {
-        assert(tableType.Is(.object(ofGroup: "WasmTable")))
-
-        // TODO: Access the upcoming TableTypeExtension here to get the underlying elementType and then use that.
-        let elementType = ILType.wasmExternRef
-
-        assert(elementType.Is(.wasmFuncRef) || elementType.Is(.wasmExternRef))
-        super.init(inputTypes: [.object(ofGroup: "WasmTable"), .wasmi32, elementType], requiredContext: [.wasmFunction])
+        assert(tableType.isWasmTableType)
+        self.tableType = tableType.wasmTableType!
+        let elementType = tableType.wasmTableType!.elementType
+        super.init(inputTypes: [tableType, .wasmi32, elementType], requiredContext: [.wasmFunction])
     }
 }
 

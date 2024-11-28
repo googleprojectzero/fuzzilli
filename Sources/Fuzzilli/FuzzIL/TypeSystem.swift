@@ -185,6 +185,10 @@ public struct ILType: Hashable {
         return .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow"], withWasmType: wasmMemExt)
     }
 
+    public static func wasmTable(wasmTableType: WasmTableType) -> ILType {
+        return .object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"], withWasmType: wasmTableType)
+    }
+
     //
     // Wasm Types
     //
@@ -387,6 +391,14 @@ public struct ILType: Hashable {
 
     public var isWasmMemoryType: Bool {
         return wasmMemoryType != nil && ext?.group == "WasmMemory"
+    }
+
+    public var wasmTableType: WasmTableType? {
+        return ext?.wasmExt as? WasmTableType
+    }
+
+    public var isWasmTableType: Bool {
+        return wasmTableType != nil && ext?.group == "WasmTable"
     }
 
     public var wasmTagType: WasmTagType? {
@@ -975,34 +987,53 @@ public class WasmTagType: WasmTypeExtension {
 }
 
 public struct Limits: Hashable {
-   var min: Int
-   var max: Int?
+    var min: Int
+    var max: Int?
 }
 
 public class WasmMemoryType: WasmTypeExtension {
-   let limits: Limits
-   let isShared: Bool
-   let isMemory64: Bool
+    let limits: Limits
+    let isShared: Bool
+    let isMemory64: Bool
 
-   override func isEqual(to other: WasmTypeExtension) -> Bool {
-       guard let other = other as? WasmMemoryType else { return false }
-       return self.limits == other.limits && self.isShared == other.isShared && self.isMemory64 == other.isMemory64
-   }
+    override func isEqual(to other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmMemoryType else { return false }
+        return self.limits == other.limits && self.isShared == other.isShared && self.isMemory64 == other.isMemory64
+    }
 
-   override public func hash(into hasher: inout Hasher) {
-       hasher.combine(limits)
-       hasher.combine(isShared)
-       hasher.combine(isMemory64)
-   }
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine(limits)
+        hasher.combine(isShared)
+        hasher.combine(isMemory64)
+    }
 
-   init(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) {
-       self.limits = limits
-       self.isShared = isShared
-       self.isMemory64 = isMemory64
-   }
+    init(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) {
+        self.limits = limits
+        self.isShared = isShared
+        self.isMemory64 = isMemory64
+    }
 }
 
-// TODO(manoskouk): Introduce WasmTableType
+public class WasmTableType: WasmTypeExtension {
+    let elementType: ILType
+    let limits: Limits
+
+    override func isEqual(to other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmTableType else { return false }
+        return self.elementType == other.elementType && self.limits == other.limits
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine(elementType)
+        hasher.combine(limits)
+    }
+
+    init(elementType: ILType, limits: Limits) {
+        // TODO(manoskouk): Assert table type is reference type.
+        self.elementType = elementType
+        self.limits = limits
+    }
+}
 
 // Represents one parameter of a function signature.
 public enum Parameter: Hashable {

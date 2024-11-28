@@ -148,16 +148,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // TODO(manoskouk): Generalize these.
         let minSize = 10
         let maxSize: Int? = nil
-        let tableType = ILType.wasmFuncRef
+        let elementType = ILType.wasmFuncRef
 
         var definedEntryIndices: [Int] = []
         var definedEntryValues: [Variable] = []
 
-        let entryType = tableType == .wasmFuncRef ? .wasmFuncRef | .function() : .object()
+        let entryType = elementType == .wasmFuncRef ? .wasmFuncRef | .function() : .object()
 
         // Currently, only generate entries for funcref tables.
         // TODO(manoskouk): Generalize this.
-        if (tableType == .wasmFuncRef) {
+        if (elementType == .wasmFuncRef) {
             let entryValue = b.randomVariable(ofType: entryType)
 
             if entryValue != nil {
@@ -170,7 +170,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             }
         }
 
-        module.addTable(tableType: tableType, minSize: minSize, maxSize: maxSize, definedEntryIndices: definedEntryIndices, definedEntryValues: definedEntryValues)
+        module.addTable(elementType: elementType, minSize: minSize, maxSize: maxSize, definedEntryIndices: definedEntryIndices, definedEntryValues: definedEntryValues)
     },
 
     CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, global in
