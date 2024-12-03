@@ -563,48 +563,48 @@ public class WasmLifter {
     // - one segment per table (assumes entries are continuous)
     // - constant starting index.
     private func buildElementSection() {
-      self.bytecode += [WasmSection.element.rawValue]
-      var temp = Data();
+        self.bytecode += [WasmSection.element.rawValue]
+        var temp = Data();
 
-      let numDefinedTablesWithEntries = self.tables.count { instruction in
-        !(instruction.op as! WasmDefineTable).definedEntryIndices.isEmpty
-      }
-
-      // Element segment count.
-      temp += Leb128.unsignedEncode(numDefinedTablesWithEntries);
-
-      for instruction in self.tables {
-        let definedEntryIndices = (instruction.op as! WasmDefineTable).definedEntryIndices
-        assert(definedEntryIndices.count == instruction.inputs.count)
-        if definedEntryIndices.isEmpty { continue }
-        // Element segment case 2 definition.
-        temp += [0x02]
-        let tableIndex = self.resolveTableIdx(forInput: instruction.output)
-        temp += Leb128.unsignedEncode(tableIndex)
-        // Starting index. Assumes all entries are continuous.
-        temp += [0x41]
-        temp += Leb128.unsignedEncode(definedEntryIndices[0])
-        temp += [0x0b]  // end
-        // elemkind
-        temp += [0x00]
-        // entry count
-        temp += Leb128.unsignedEncode(definedEntryIndices.count)
-        // entries
-        for entry in instruction.inputs {
-          let functionId = resolveFunctionIdx(forInput: entry)
-          temp += Leb128.unsignedEncode(functionId)
+        let numDefinedTablesWithEntries = self.tables.count { instruction in
+            !(instruction.op as! WasmDefineTable).definedEntryIndices.isEmpty
         }
-      }
 
-      self.bytecode.append(Leb128.unsignedEncode(temp.count))
-      self.bytecode.append(temp)
+        // Element segment count.
+        temp += Leb128.unsignedEncode(numDefinedTablesWithEntries);
 
-      if verbose {
-          print("element section is")
-          for byte in temp {
-              print(String(format: "%02X ", byte))
-          }
-      }
+        for instruction in self.tables {
+            let definedEntryIndices = (instruction.op as! WasmDefineTable).definedEntryIndices
+            assert(definedEntryIndices.count == instruction.inputs.count)
+            if definedEntryIndices.isEmpty { continue }
+            // Element segment case 2 definition.
+            temp += [0x02]
+            let tableIndex = self.resolveIdx(ofType: .table, for: instruction.output)
+            temp += Leb128.unsignedEncode(tableIndex)
+            // Starting index. Assumes all entries are continuous.
+            temp += [0x41]
+            temp += Leb128.unsignedEncode(definedEntryIndices[0])
+            temp += [0x0b]  // end
+            // elemkind
+            temp += [0x00]
+            // entry count
+            temp += Leb128.unsignedEncode(definedEntryIndices.count)
+            // entries
+            for entry in instruction.inputs {
+                let functionId = resolveIdx(ofType: .function, for: entry)
+                temp += Leb128.unsignedEncode(functionId)
+            }
+        }
+
+        self.bytecode.append(Leb128.unsignedEncode(temp.count))
+        self.bytecode.append(temp)
+
+        if verbose {
+            print("element section is")
+            for byte in temp {
+                print(String(format: "%02X ", byte))
+            }
+        }
     }
 
     private func buildCodeSection(_ instructions: Code) {
@@ -819,7 +819,7 @@ public class WasmLifter {
         }
 
         for instruction in self.tables {
-          let index = resolveTableIdx(forInput: instruction.output)
+          let index = resolveIdx(ofType: .table, for: instruction.output)
           let name = WasmLifter.nameOfTable(index)
           temp += Leb128.unsignedEncode(name.count)
           temp += name.data(using: .utf8)!
@@ -1039,56 +1039,58 @@ public class WasmLifter {
         self.baseDefinedTables = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTable")) }).count
     }
 
-    /// Helper function to resolve the index, as laid out in the binary format, of an instruction input Variable for a global.
-    /// Intended to be called from `lift`.
-    func resolveGlobalIdx(forInput input: Variable) -> Int {
-        // Get the index for the global and emit it here magically.
-        var idx: Int?
-        // Can be nil now
-        // Check if it is an imported global.
-        idx = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmGlobal"))}).firstIndex(where: { $0.0 == input })
-        // It has to be nil if we enter here, and now we need to find it in the locally defined globals.
-        if idx == nil && self.globals.map({ $0.output }).contains(input) {
-            // Add the number of imported globals here.
-            idx = self.baseDefinedGlobals! + self.globals.firstIndex(where: {$0.output == input})!
-        }
-        if idx == nil {
-            fatalError("WasmStore/LoadGlobal variable \(input) not found as global!")
-        }
-        return idx!
+    /// Describes the types of indexes in the different index spaces in the Wasm binary format.
+    public enum IndexType {
+        case global
+        case table
+        case tag
+        case function
     }
 
-    func resolveTagIdx(forInput input: Variable) -> Int {
-        let tagImports = self.imports.filter{ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTag")) }
-        if let idx = tagImports.firstIndex(where: { $0.0 == input }) {
+    /// Helper function to resolve the index, as laid out in the binary format, of an instruction input Variable of a specific `IndexType`
+    /// Intended to be called from `lift`.
+    func resolveIdx(ofType type: IndexType, for input: Variable) -> Int {
+        let groupType: String? = switch type {
+        case .global:
+            "WasmGlobal"
+        case .table:
+            "WasmTable"
+        case .tag:
+            "WasmTag"
+        default:
+            nil
+        }
+
+        let predicate: ((Variable) -> Bool) = switch type {
+        case .global,
+                .table,
+                .tag:
+            { variable in
+                self.typer.type(of: variable).Is(.object(ofGroup: groupType!))
+            }
+        case .function:
+            { variable in
+                self.typer.type(of: variable).Is(.function()) || self.typer.type(of: variable).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))
+            }
+        }
+
+        let filteredImports = self.imports.filter({ predicate($0.0) })
+        // Check if we can find this in the imports:
+        if let idx = filteredImports.firstIndex(where: { $0.0 == input }) {
             return idx
         }
-        if let idx = self.tags.map({$0}).firstIndex(where: {$0.0 == input}) {
-            return tagImports.count + idx
-        }
-        fatalError("Invalid tag \(input)")
-    }
 
-    // This is almost identical to the resolveGlobalIdx.
-    func resolveTableIdx(forInput input: Variable) -> Int {
-        var idx: Int?
-        // Can be nil now
-        // Check if it is an imported table.
-        idx = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTable"))}).firstIndex(where: { $0.0 == input })
-        // It has to be nil if we enter here, and now we need to find it in the locally defined tables map.
-        if idx == nil && self.tables.map({ $0.output }).contains(input) {
-            // Add the number of imported tables here.
-            idx = self.baseDefinedTables! + self.tables.firstIndex(where: {$0.output == input})!
+        // If we don't have it as an import, look into the respective internally defined sections.
+        switch type {
+        case .global:
+            return self.baseDefinedGlobals! + self.globals.firstIndex(where: {$0.output == input})!
+        case .tag:
+            return filteredImports.count + self.tags.map({$0}).firstIndex(where: {$0.0 == input})!
+        case .table:
+            return self.baseDefinedTables! + self.tables.firstIndex(where: {$0.output == input})!
+        case .function:
+            return self.functionIdxBase + self.functions.firstIndex { $0.outputVariable == input }!
         }
-        if idx == nil {
-            fatalError("WasmTableGet/WasmTableSet variable \(input) not found as table!")
-        }
-        return idx!
-    }
-
-    func resolveFunctionIdx(forInput input: Variable) -> Int {
-        return self.imports.filter({typer.type(of: $0.0).Is(.function()) || typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))}).firstIndex { $0.0 == input } ??
-            self.functionIdxBase + self.functions.firstIndex { $0.outputVariable == input }!
     }
 
     /// Returns the Bytes that correspond to this instruction.
@@ -1252,19 +1254,19 @@ public class WasmLifter {
             // Get the index for the global and emit it here magically.
             // The first input has to be in the global or imports arrays.
             let input = wasmInstruction.input(0)
-            return Data([0x23]) + Leb128.unsignedEncode(resolveGlobalIdx(forInput: input))
+            return Data([0x23]) + Leb128.unsignedEncode(resolveIdx(ofType: .global, for: input))
         case .wasmStoreGlobal(_):
 
             // Get the index for the global and emit it here magically.
             // The first input has to be in the global or imports arrays.
             let input = wasmInstruction.input(0)
-            return Data([0x24]) + Leb128.unsignedEncode(resolveGlobalIdx(forInput: input))
+            return Data([0x24]) + Leb128.unsignedEncode(resolveIdx(ofType: .global, for: input))
         case .wasmTableGet(_):
             let tableRef = wasmInstruction.input(0)
-            return Data([0x25]) + Leb128.unsignedEncode(resolveTableIdx(forInput: tableRef))
+            return Data([0x25]) + Leb128.unsignedEncode(resolveIdx(ofType: .table, for: tableRef))
         case .wasmTableSet(_):
             let tableRef = wasmInstruction.input(0)
-            return Data([0x26]) + Leb128.unsignedEncode(resolveTableIdx(forInput: tableRef))
+            return Data([0x26]) + Leb128.unsignedEncode(resolveIdx(ofType: .table, for: tableRef))
         case .wasmMemoryLoad(let op):
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
             return Data([op.loadType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
@@ -1296,7 +1298,7 @@ public class WasmLifter {
         case .wasmBeginCatchAll(_):
             return Data([0x19])
         case .wasmBeginCatch(_):
-            return Data([0x07] + Leb128.unsignedEncode(resolveTagIdx(forInput: wasmInstruction.input(0))))
+            return Data([0x07] + Leb128.unsignedEncode(resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
         case .wasmEndCatch(_):
             return Data([])
         case .wasmEndLoop(_),
@@ -1309,7 +1311,7 @@ public class WasmLifter {
             let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x18]) + Leb128.unsignedEncode(branchDepth)
         case .wasmThrow(_):
-            return Data([0x08] + Leb128.unsignedEncode(resolveTagIdx(forInput: wasmInstruction.input(0))))
+            return Data([0x08] + Leb128.unsignedEncode(resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
         case .wasmRethrow(_):
             let blockDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]!
             return Data([0x09] + Leb128.unsignedEncode(blockDepth))
@@ -1338,7 +1340,7 @@ public class WasmLifter {
                 storeInstruction = Data([0x21]) + Leb128.unsignedEncode(stackSlot)
             } else {
                 // It has to be global then. Do what StoreGlobal does.
-                storeInstruction = Data([0x24]) + Leb128.unsignedEncode(resolveGlobalIdx(forInput: wasmInstruction.input(0)))
+                storeInstruction = Data([0x24]) + Leb128.unsignedEncode(resolveIdx(ofType: .global, for: wasmInstruction.input(0)))
             }
 
             // Load the input now. For "internal" variables, we should not have an expression.
@@ -1348,7 +1350,7 @@ public class WasmLifter {
                 out += Data([0x20]) + Leb128.unsignedEncode(stackSlot)
             } else {
                 // Has to be a global then. Do what LoadGlobal does.
-                out += Data([0x23]) + Leb128.unsignedEncode(resolveGlobalIdx(forInput: wasmInstruction.input(1)))
+                out += Data([0x23]) + Leb128.unsignedEncode(resolveIdx(ofType: .global, for: wasmInstruction.input(1)))
             }
 
             return out + storeInstruction
