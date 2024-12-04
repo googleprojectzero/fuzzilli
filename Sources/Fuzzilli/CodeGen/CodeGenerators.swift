@@ -974,6 +974,10 @@ public let CodeGenerators: [CodeGenerator] = [
         b.compare(type, with: rhs, using: .strictEqual)
     },
 
+    CodeGenerator("VoidGenerator", inputs: .one) { b, val in
+        b.void(val)
+    },
+
     CodeGenerator("InstanceOfGenerator", inputs: .preferred(.anything, .constructor())) { b, val, cls in
         b.testInstanceOf(val, cls)
     },
