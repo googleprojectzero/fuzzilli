@@ -448,7 +448,7 @@ public class JavaScriptCompiler {
             // (switch blocks don't propagate an outer .loop context) so we just need to check for .loop here
             if contextAnalyzer.context.contains(.loop){
                 emit(LoopBreak())
-            } else if contextAnalyzer.context.contains(.switchBlock){
+            } else if contextAnalyzer.context.contains(.switchCase) {
                 emit(SwitchBreak())
             } else {
                 throw CompilerError.invalidNodeError("break statement outside of loop or switch")
@@ -696,6 +696,30 @@ public class JavaScriptCompiler {
                         }
                     }
                 }
+            case .superMemberExpression(let superMemberExpression):
+                guard superMemberExpression.isOptional == false else {
+                    throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super member expressions")
+                }
+                
+                guard let property = superMemberExpression.property else {
+                    throw CompilerError.invalidNodeError("Missing property in super member expression")
+                }
+                
+                switch property {
+                case .name(let name):
+                    if let op = assignmentOperator {
+                        // Example: super.foo += 1
+                        emit(UpdateSuperProperty(propertyName: name, operator: op), withInputs: [rhs])
+                    } else {
+                        // Example: super.foo = 1
+                        emit(SetSuperProperty(propertyName: name), withInputs: [rhs])
+                    }
+                    
+                case .expression(let expr):
+                    let property = try compileExpression(expr)
+                    // Example: super[expr] = 1
+                    emit(SetComputedSuperProperty(), withInputs: [property, rhs])
+                }
 
 
             case .identifier(let identifier):
@@ -924,6 +948,7 @@ public class JavaScriptCompiler {
 
             // See if this is a function or a method call
             if case .memberExpression(let memberExpression) = callExpression.callee.expression {
+                // obj.foo(...) or obj[expr](...)
                 let object = try compileExpression(memberExpression.object)
                 guard let property = memberExpression.property else { throw CompilerError.invalidNodeError("missing property in member expression in call expression") }
                 switch property {
@@ -941,6 +966,18 @@ public class JavaScriptCompiler {
                         return emit(CallComputedMethod(numArguments: arguments.count, isGuarded: callExpression.isOptional), withInputs: [object, method] + arguments).output
                     }
                 }
+            } else if case .superMemberExpression(let superMemberExpression) = callExpression.callee.expression {
+                // super.foo(...)
+                guard !isSpreading else {
+                    throw CompilerError.unsupportedFeatureError("Spread calls with super are not supported")
+                }
+                guard case .name(let methodName) = superMemberExpression.property else {
+                    throw CompilerError.invalidNodeError("Super method calls must use a property name")
+                }
+                guard !callExpression.isOptional else {
+                    throw CompilerError.unsupportedFeatureError("Optional chaining with super method calls is not supported")
+                }
+                return emit(CallSuperMethod(methodName: methodName, numArguments: arguments.count), withInputs: arguments).output
             // Now check if it is a V8 intrinsic function
             } else if case .v8IntrinsicIdentifier(let v8Intrinsic) = callExpression.callee.expression {
                 guard !isSpreading else { throw CompilerError.unsupportedFeatureError("Not currently supporting spread calls to V8 intrinsics") }
@@ -957,6 +994,21 @@ public class JavaScriptCompiler {
                 }
             }
 
+        case .callSuperConstructor(let callSuperConstructor):
+            let (arguments, spreads) = try compileCallArguments(callSuperConstructor.arguments)
+            let isSpreading = spreads.contains(true)
+            
+            if isSpreading {
+                throw CompilerError.unsupportedFeatureError("Spread arguments are not supported in super constructor calls")
+            }
+            guard !callSuperConstructor.isOptional else {
+                throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super constructor calls")
+            }
+            emit(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
+            // In JS, the result of calling the super constructor is just |this|, but in FuzzIL the operation doesn't have an output (because |this| is always available anyway)
+            return lookupIdentifier("this")! // we can force unwrap because |this| always exists in the context where |super| exists
+
+            
         case .newExpression(let newExpression):
             let callee = try compileExpression(newExpression.callee)
             let (arguments, spreads) = try compileCallArguments(newExpression.arguments)
@@ -981,21 +1033,82 @@ public class JavaScriptCompiler {
                     return emit(GetComputedProperty(isGuarded: memberExpression.isOptional), withInputs: [object, property]).output
                 }
             }
+        
+        case .superMemberExpression(let superMemberExpression):
+            guard superMemberExpression.isOptional == false else {
+                throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super member expressions")
+            }           
+            guard let property = superMemberExpression.property else {
+                throw CompilerError.invalidNodeError("Missing property in super member expression")
+            }
+            
+            switch property {
+            case .name(let name):
+                return emit(GetSuperProperty(propertyName: name), withInputs: []).output
+                
+            case .expression(let expr):
+                if case .numberLiteral(let literal) = expr.expression, let _ = Int64(exactly: literal.value) {
+                    throw CompilerError.unsupportedFeatureError("GetElement is not supported in super member expressions")
+                } else {
+                    let compiledProperty = try compileExpression(expr)
+                    return emit(GetComputedSuperProperty(), withInputs: [compiledProperty]).output
+                }
+            }
 
         case .unaryExpression(let unaryExpression):
-            let argument = try compileExpression(unaryExpression.argument)
-
             if unaryExpression.operator == "typeof" {
+                let argument = try compileExpression(unaryExpression.argument)
                 return emit(TypeOf(), withInputs: [argument]).output
-            }
-            if unaryExpression.operator == "void" {
-                // Emit the new Void_ operation with the argument as input
+            } else if unaryExpression.operator == "void" {
+                let argument = try compileExpression(unaryExpression.argument)
                 return emit(Void_(), withInputs: [argument]).output
+            } else if unaryExpression.operator == "delete" {
+                guard case .memberExpression(let memberExpression) = unaryExpression.argument.expression else {
+                    throw CompilerError.invalidNodeError("delete operator must be applied to a member expression")
+                }
+
+                let obj = try compileExpression(memberExpression.object)
+                // isGuarded is true if the member expression is optional (e.g., obj?.prop)
+                let isGuarded = memberExpression.isOptional
+
+                if !memberExpression.name.isEmpty {
+                    // Deleting a non-computed property (e.g., delete obj.prop)
+                    let propertyName = memberExpression.name
+                    let instr = emit(
+                        DeleteProperty(propertyName: propertyName, isGuarded: isGuarded),
+                        withInputs: [obj]
+                    )
+                    return instr.output
+                } else {
+                    // Deleting a computed property (e.g., delete obj[expr])
+                    let propertyExpression = memberExpression.expression
+                    let propertyExpr = propertyExpression.expression
+                    let property = try compileExpression(propertyExpression)
+
+                    if case .numberLiteral(let numberLiteral) = propertyExpr {
+                        // Delete an element (e.g., delete arr[42])
+                        let index = Int64(numberLiteral.value)
+                        let instr = emit(
+                            DeleteElement(index: index, isGuarded: isGuarded),
+                            withInputs: [obj]
+                        )
+                        return instr.output
+                    } else {
+                        // Use DeleteComputedProperty for other computed properties (e.g., delete obj["key"])
+                        let instr = emit(
+                            DeleteComputedProperty(isGuarded: isGuarded),
+                            withInputs: [obj, property]
+                        )
+                        return instr.output
+                    }
+                }
+            } else {
+                guard let op = UnaryOperator(rawValue: unaryExpression.operator) else {
+                    throw CompilerError.invalidNodeError("invalid unary operator: \(unaryExpression.operator)")
+                }
+                let argument = try compileExpression(unaryExpression.argument)
+                return emit(UnaryOperation(op), withInputs: [argument]).output
             }
-            guard let op = UnaryOperator(rawValue: unaryExpression.operator) else {
-                throw CompilerError.invalidNodeError("invalid unary operator: \(unaryExpression.operator)")
-            }
-            return emit(UnaryOperation(op), withInputs: [argument]).output
 
         case .binaryExpression(let binaryExpression):
             let lhs = try compileExpression(binaryExpression.lhs)
@@ -1043,6 +1156,14 @@ public class JavaScriptCompiler {
 
         case .v8IntrinsicIdentifier:
             fatalError("V8IntrinsicIdentifiers must be handled as part of their surrounding CallExpression")
+
+        case .awaitExpression(let awaitExpression):
+                // TODO await is also allowed at the top level of a module
+                if !contextAnalyzer.context.contains(.asyncFunction) {
+                    throw CompilerError.invalidNodeError("`await` is currently only supported in async functions")
+                }
+                let argument = try compileExpression(awaitExpression.argument)
+                return emit(Await(), withInputs: [argument]).output
 
         }
     }

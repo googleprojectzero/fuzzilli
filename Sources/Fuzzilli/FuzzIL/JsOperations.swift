@@ -1411,6 +1411,8 @@ public enum BinaryOperator: String, CaseIterable {
     case RShift   = ">>"
     case Exp      = "**"
     case UnRShift = ">>>"
+    // Nullish coalescing operator (??)
+    case NullCoalesce = "??"
 
     var token: String {
         return self.rawValue
