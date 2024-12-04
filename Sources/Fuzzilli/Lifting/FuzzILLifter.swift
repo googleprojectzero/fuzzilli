@@ -366,6 +366,9 @@ public class FuzzILLifter: Lifter {
         case .typeOf:
             w.emit("\(output()) <- TypeOf \(input(0))")
 
+        case .void:
+            w.emit("\(output()) <- Void_ \(input(0))")
+
         case .testInstanceOf:
             w.emit("\(output()) <- TestInstanceOf \(input(0)), \(input(1))")
 

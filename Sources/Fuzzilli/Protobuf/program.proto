@@ -203,6 +203,7 @@ message Instruction {
         Explore explore = 177;
         Probe probe = 178;
         Fixup fixup = 179;
+        Void void = 180;
     }
 }
 

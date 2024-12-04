@@ -1030,6 +1030,14 @@ final class TypeOf: JsOperation {
     }
 }
 
+final class Void_: JsOperation {
+    override var opcode: Opcode { .void(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1)
+    }
+}
+
 final class TestInstanceOf: JsOperation {
     override var opcode: Opcode { .testInstanceOf(self) }
 

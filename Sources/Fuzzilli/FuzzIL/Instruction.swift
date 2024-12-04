@@ -565,6 +565,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .typeOf:
                 $0.typeOf = Fuzzilli_Protobuf_TypeOf()
+            case .void:
+                $0.void = Fuzzilli_Protobuf_Void()
             case .testInstanceOf:
                 $0.testInstanceOf = Fuzzilli_Protobuf_TestInstanceOf()
             case .testIn:
@@ -1042,6 +1044,8 @@ extension Instruction: ProtobufConvertible {
             op = ConfigureComputedProperty(flags: flags, type: try convertEnum(p.type, PropertyType.allCases))
         case .typeOf:
             op = TypeOf()
+        case .void:
+            op = Void_()
         case .testInstanceOf:
             op = TestInstanceOf()
         case .testIn:

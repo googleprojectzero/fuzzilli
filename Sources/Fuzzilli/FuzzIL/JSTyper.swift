@@ -675,6 +675,9 @@ public struct JSTyper: Analyzer {
         case .typeOf:
             set(instr.output, .string)
 
+        case .void:
+            set(instr.output, .undefined)
+
         case .testInstanceOf:
             set(instr.output, .boolean)
 
