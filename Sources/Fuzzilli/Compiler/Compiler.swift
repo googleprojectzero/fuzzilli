@@ -988,6 +988,10 @@ public class JavaScriptCompiler {
             if unaryExpression.operator == "typeof" {
                 return emit(TypeOf(), withInputs: [argument]).output
             }
+            if unaryExpression.operator == "void" {
+                // Emit the new Void_ operation with the argument as input
+                return emit(Void_(), withInputs: [argument]).output
+            }
             guard let op = UnaryOperator(rawValue: unaryExpression.operator) else {
                 throw CompilerError.invalidNodeError("invalid unary operator: \(unaryExpression.operator)")
             }
