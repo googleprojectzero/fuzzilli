@@ -680,6 +680,14 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .typeOf(newValue)}
   }
 
+  public var void: Fuzzilli_Protobuf_Void {
+    get {
+      if case .void(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_Void()
+    }
+    set {operation = .void(newValue)}
+  }
+
   public var testInstanceOf: Fuzzilli_Protobuf_TestInstanceOf {
     get {
       if case .testInstanceOf(let v)? = operation {return v}
@@ -1554,6 +1562,7 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case deleteComputedProperty(Fuzzilli_Protobuf_DeleteComputedProperty)
     case configureComputedProperty(Fuzzilli_Protobuf_ConfigureComputedProperty)
     case typeOf(Fuzzilli_Protobuf_TypeOf)
+    case void(Fuzzilli_Protobuf_Void)
     case testInstanceOf(Fuzzilli_Protobuf_TestInstanceOf)
     case testIn(Fuzzilli_Protobuf_TestIn)
     case beginPlainFunction(Fuzzilli_Protobuf_BeginPlainFunction)
@@ -1881,6 +1890,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     177: .same(proto: "explore"),
     178: .same(proto: "probe"),
     179: .same(proto: "fixup"),
+    180: .same(proto: "void"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4199,6 +4209,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .fixup(v)
         }
       }()
+      case 180: try {
+        var v: Fuzzilli_Protobuf_Void?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .void(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .void(v)
+        }
+      }()
       default: break
       }
     }
@@ -4527,6 +4550,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     }()
     case .typeOf?: try {
       guard case .typeOf(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 80)
+    }()
+    case .void?: try {
+      guard case .void(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 80)
     }()
     case .testInstanceOf?: try {

@@ -642,6 +642,10 @@ public class JavaScriptLifter: Lifter {
                 let expr = UnaryExpression.new() + "typeof " + input(0)
                 w.assign(expr, to: instr.output)
 
+            case .void:
+                let expr = UnaryExpression.new() + "void " + input(0)
+                w.assign(expr, to: instr.output)
+
             case .testInstanceOf:
                 let lhs = input(0)
                 let rhs = input(1)
