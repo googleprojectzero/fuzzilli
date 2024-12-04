@@ -54,6 +54,10 @@ extension Operation {
         case .destructArrayAndReassign,
              .destructObjectAndReassign:
             return inputIdx != 0
+        case .beginForInLoop(let op):
+            return op.usesPredeclaredIterator && inputIdx == 1
+        case .beginForOfLoop(let op):
+            return op.usesPredeclaredIterator && inputIdx == 1
         default:
             return false
         }
