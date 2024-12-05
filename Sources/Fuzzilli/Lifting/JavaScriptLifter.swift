@@ -1170,10 +1170,9 @@ public class JavaScriptLifter: Lifter {
 
             case .beginForInLoop:
                 let OBJ = input(0)
-                let LET: String = ""
                 if instr.numInputs == 2 {  // Iterator is declared elsewhere
                     let V = input(1) 
-                    w.emit("for (\(LET) \(V) in \(OBJ)) {")
+                    w.emit("for (\(V) in \(OBJ)) {")
                 } else {  // Iterator is declared in the function header
                     let V = w.declare(instr.innerOutput)
                     let LET = w.declarationKeyword(for: instr.innerOutput)
@@ -1187,10 +1186,9 @@ public class JavaScriptLifter: Lifter {
 
             case .beginForOfLoop:
                 let OBJ = input(0)
-                let LET: String = ""
                 if instr.numInputs == 2 {
                     let V = input(1)
-                    w.emit("for (\(LET) \(V) of \(OBJ)) {")
+                    w.emit("for (\(V) of \(OBJ)) {")
                 } else {
                     let V = w.declare(instr.innerOutput)
                     let LET = w.declarationKeyword(for: instr.innerOutput)
