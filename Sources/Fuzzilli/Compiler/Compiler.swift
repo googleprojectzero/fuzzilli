@@ -910,6 +910,11 @@ public class JavaScriptCompiler {
             }
             emit(functionEnd)
 
+            // Map the function name if it exists
+            if !functionExpression.name.isEmpty {
+                map(functionExpression.name, to: instr.output)
+            }
+
             return instr.output
 
         case .arrowFunctionExpression(let arrowFunction):
@@ -1060,8 +1065,35 @@ public class JavaScriptCompiler {
                 let argument = try compileExpression(unaryExpression.argument)
                 return emit(TypeOf(), withInputs: [argument]).output
             } else if unaryExpression.operator == "void" {
-                let argument = try compileExpression(unaryExpression.argument)
-                return emit(Void_(), withInputs: [argument]).output
+                if case let .functionExpression(functionExpression) = unaryExpression.argument.expression {
+                    // Check if the function has a name
+                    if !functionExpression.name.isEmpty {
+                        let functionName = functionExpression.name
+                        // Check if the function name is already mapped in the current scope
+                        if let existingVariable = lookupIdentifier(functionName) {
+                            // Emit the void operation using the existing variable
+                            let voidOutput = emit(Void_(), withInputs: [existingVariable]).output
+                            return voidOutput
+                        } else {
+                            // Emit the function and map its name
+                            let funcOutput = try emitFunction(functionExpression, name: functionName)
+                            map(functionName, to: funcOutput)
+                            // Emit the void operation using the emitted function's output
+                            let voidOutput = emit(Void_(), withInputs: [funcOutput]).output
+                            return voidOutput
+                        }
+                    } else {
+                        // Emit the anonymous function
+                        let funcOutput = try emitFunction(functionExpression, name: nil)
+                        // Emit the void operation using the anonymous function's output
+                        let voidOutput = emit(Void_(), withInputs: [funcOutput]).output
+                        return voidOutput
+                    }
+                } else {
+                    // Fallback for non-function expressions
+                    let argument = try compileExpression(unaryExpression.argument)
+                    return emit(Void_(), withInputs: [argument]).output
+                }
             } else if unaryExpression.operator == "delete" {
                 guard case .memberExpression(let memberExpression) = unaryExpression.argument.expression else {
                     throw CompilerError.invalidNodeError("delete operator must be applied to a member expression")
@@ -1277,5 +1309,22 @@ public class JavaScriptCompiler {
         code = Code()
         scopes.removeAll()
         nextVariable = 0
+    }
+
+    private func emitFunction(_ functionExpression: Compiler_Protobuf_FunctionExpression, name: String?) throws -> Variable {
+        let parameters = convertParameters(functionExpression.parameters)
+        let functionBegin = BeginPlainFunction(parameters: parameters, isStrict: false)
+        let functionEnd = EndPlainFunction()
+
+        let funcInstr = emit(functionBegin)
+
+        try enterNewScope {
+            mapParameters(functionExpression.parameters, to: funcInstr.innerOutputs)
+            for statement in functionExpression.body {
+                try compileStatement(statement)
+            }
+        }
+        emit(functionEnd)
+        return funcInstr.output
     }
 }
