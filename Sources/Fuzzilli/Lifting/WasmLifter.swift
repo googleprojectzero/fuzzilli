@@ -1375,6 +1375,8 @@ public class WasmLifter {
             // Load the input now. For "internal" variables, we should not have an expression.
             if let expr = self.writer.getExpr(for: wasmInstruction.input(1)) {
                 out += expr
+            } else if let stackSlot = currentFunction!.getStackSlot(for: wasmInstruction.input(1)) {
+                out += Data([0x20]) + Leb128.unsignedEncode(stackSlot)
             } else {
                 // Has to be a global then. Do what LoadGlobal does.
                 out += Data([0x23]) + Leb128.unsignedEncode(resolveGlobalIdx(forInput: wasmInstruction.input(1)))

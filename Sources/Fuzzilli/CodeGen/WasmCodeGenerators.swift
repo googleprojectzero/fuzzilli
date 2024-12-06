@@ -442,21 +442,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     RecursiveCodeGenerator("WasmFunctionGenerator", inContext: .wasm) { b in
         let module = b.currentWasmModule
-
-        // TODO: generalize this and move to b.randomWasmParameters()
-        let returnType: ILType = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
-        let numParams = Int.random(in: 0...10)
-        var params = ParameterList()
-        for _ in 0..<numParams {
-            // TODO currently we don't emit .wasmi64 here as we don't yet have
-            // the correct signatures on the JavaScript side (i.e. for the
-            // exported function) and would therefore generate a lot of "Cannot
-            // convert XYZ to a BigInt" exceptions.
-            params.append(chooseUniform(from: [.wasmi32, .wasmf32, .wasmf64]))
-        }
-        let signature = params => returnType
-
-        module.addWasmFunction(with: signature) { _, _ in
+        module.addWasmFunction(with: b.randomWasmSignature()) { _, _ in
             b.buildPrefix()
             b.buildRecursive()
         }
@@ -590,14 +576,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmDefineTagGenerator", inContext: .wasm) {b in
-        let module = b.currentWasmModule
-        // TODO(mliedtke): This is the same as JS' WasmTagGenerator. We should try to share that code.
-        let numParams = Int.random(in: 0...10)
-        var params = ParameterList()
-        for _ in 0..<numParams {
-            params.append(chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]))
-        }
-        module.addTag(parameterTypes: params)
+        b.currentWasmModule.addTag(parameterTypes: b.randomTagParameters())
     },
 
     CodeGenerator("WasmBranchGenerator", inContext: .wasmFunction, inputs: .required(.label)) { b, label in

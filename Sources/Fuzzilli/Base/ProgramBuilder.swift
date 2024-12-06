@@ -3074,7 +3074,6 @@ public class ProgramBuilder {
         public func wasmBuildLegacyTry(with signature: Signature, body: (Variable, [Variable]) -> Void, catchAllBody: (() -> Void)? = nil) {
             let instr = b.emit(WasmBeginTry(with: signature))
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            // TODO(mliedtke): Is a mutator able to remove a catchAll block?
             if let catchAllBody = catchAllBody {
                 b.emit(WasmBeginCatchAll(with: signature))
                 catchAllBody()
@@ -3286,6 +3285,32 @@ public class ProgramBuilder {
         }, {
             return .wasmi64(self.randomInt())
         })
+    }
+
+    public func randomTagParameters() -> ParameterList {
+        let numParams = Int.random(in: 0...10)
+        var params = ParameterList()
+        for _ in 0..<numParams {
+            // TODO(mliedtke): We should support externref and other types here. The list of types should be
+            // shared with function signature generation etc.
+            params.append(chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]))
+        }
+        return params
+    }
+
+    public func randomWasmSignature() -> Signature {
+        // TODO: generalize this to support more types.
+        let returnType: ILType = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
+        let numParams = Int.random(in: 0...10)
+        var params = ParameterList()
+        for _ in 0..<numParams {
+            // TODO currently we don't emit .wasmi64 here as we don't yet have
+            // the correct signatures on the JavaScript side (i.e. for the
+            // exported function) and would therefore generate a lot of "Cannot
+            // convert XYZ to a BigInt" exceptions.
+            params.append(chooseUniform(from: [.wasmi32, .wasmf32, .wasmf64]))
+        }
+        return params => returnType
     }
 
     @discardableResult

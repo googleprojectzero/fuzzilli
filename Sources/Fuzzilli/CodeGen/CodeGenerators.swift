@@ -1898,14 +1898,7 @@ public let CodeGenerators: [CodeGenerator] = [
         if probability(0.5) {
             b.createWasmJSTag()
         } else {
-            let numParams = Int.random(in: 0...10)
-            var params = ParameterList()
-            for _ in 0..<numParams {
-                // TODO(mliedtke): We should support externref and other types here. The list of types should be
-                // shared with function signature generation etc.
-                params.append(chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]))
-            }
-            b.createWasmTag(parameterTypes: params)
+            b.createWasmTag(parameterTypes: b.randomTagParameters())
         }
     },
 
@@ -1917,6 +1910,46 @@ public let CodeGenerators: [CodeGenerator] = [
 
         let exports = m.loadExports()
 
+        for (methodName, signature) in m.getExportedMethods() {
+            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        }
+    },
+
+    RecursiveCodeGenerator("WasmLegacyTryCatchComplexGenerator", inContext: .javascript) { b in
+        let emitCatchAll = Int.random(in: 0...1)
+        let catchCount = Int.random(in: 0...3)
+        var blockIndex = 1
+        let blockCount = 2 + catchCount + emitCatchAll
+        // Create a few tags in JS.
+        b.createWasmJSTag()
+        b.createWasmTag(parameterTypes: b.randomTagParameters())
+        let m = b.buildWasmModule { m in
+            // Create a few tags in Wasm.
+            m.addTag(parameterTypes: b.randomTagParameters())
+            m.addTag(parameterTypes: b.randomTagParameters())
+            // Build some other wasm module stuff (tables, memories, gobals, ...)
+            b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
+            blockIndex += 1
+            m.addWasmFunction(with: b.randomWasmSignature()) { function, _ in
+                b.buildPrefix()
+                function.wasmBuildLegacyTry(with: [] => .nothing, body: {label, _ in
+                    b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
+                    blockIndex += 1
+                    for _ in 0..<catchCount {
+                        function.WasmBuildLegacyCatch(tag: b.randomVariable(ofType: .object(ofGroup: "WasmTag"))!) { exception, args in
+                            b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
+                            blockIndex += 1
+                        }
+                    }
+                }, catchAllBody: emitCatchAll == 1 ? {
+                    b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
+                    blockIndex += 1
+                } : nil)
+            }
+        }
+        assert(blockIndex == blockCount + 1)
+
+        let exports = m.loadExports()
         for (methodName, signature) in m.getExportedMethods() {
             b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
         }
