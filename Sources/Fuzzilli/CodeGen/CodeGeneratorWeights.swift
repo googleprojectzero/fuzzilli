@@ -200,6 +200,7 @@ public let codeGeneratorWeights = [
     "WasmGlobalGenerator":                      4,
     "WasmMemoryGenerator":                      4,
     "WasmTagGenerator":                         4,
+    "WasmLegacyTryCatchComplexGenerator":       5,
 
     //
     // Wasm generators

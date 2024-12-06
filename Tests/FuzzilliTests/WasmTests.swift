@@ -291,22 +291,39 @@ class WasmFoundationTests: XCTestCase {
                 }
                 function.wasmReturn(ctr)
             }
+
+            let tag = wasmModule.addTag(parameterTypes: [.wasmi32, .wasmi32])
+            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                function.wasmBuildLegacyTry(with: [] => .nothing) { _, _ in
+                    function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123), function.consti32(456)])
+                    function.WasmBuildLegacyCatch(tag: tag) { _, e in
+                        // The exception values are e[0] = 123 and e[1] = 456.
+                        function.wasmReassign(variable: e[0], to: e[1])
+                        // The exception values should now be e[0] = 456, e[1] = 456.
+                        function.wasmReturn(e[0])
+                    }
+                }
+                function.wasmUnreachable()
+            }
         }
 
         let exports = module.loadExports()
 
         let out = b.callMethod("w0", on: exports, withArgs: [b.loadBigInt(10)])
-        let _ = b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out)])
 
-        let _ = b.callMethod("w1", on: exports, withArgs: [b.loadBigInt(20)])
+        b.callMethod("w1", on: exports, withArgs: [b.loadBigInt(20)])
 
         let outLoop = b.callMethod("w2", on: exports, withArgs: [])
-        let _ = b.callFunction(outputFunc, withArgs: [outLoop])
+        b.callFunction(outputFunc, withArgs: [outLoop])
+
+        let outCatchReassign = b.callMethod("w3", on: exports, withArgs: [])
+        b.callFunction(outputFunc, withArgs: [outCatchReassign])
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
 
-        testForOutput(program: jsProg, runner: runner, outputString: "1338\n0\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "1338\n0\n456\n")
     }
 
     func testGlobals() throws {
