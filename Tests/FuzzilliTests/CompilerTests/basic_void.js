@@ -1,12 +1,12 @@
 const test1 = void 1;
-console.log(test1);
+output(test1);
 // Expected output: undefined
 
-void console.log('expression evaluated');
+void output('expression evaluated');
 // Expected output: "expression evaluated"
 
 void (function iife() {
-  console.log('iife is executed');
+  output('iife is executed');
 })();
 
 iife();
