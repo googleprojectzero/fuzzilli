@@ -492,7 +492,8 @@ function parse(script, proto) {
                 let parameters = node.params.map(visitParameter);
                 assert(node.body.type === 'BlockStatement', "Expected block statement as function expression body, found " + node.body.type);
                 let body = node.body.body.map(visitStatement);
-                return makeExpression('FunctionExpression', { type, parameters, body });
+                const functionName = node.id ? node.id.name : null;
+                return makeExpression('FunctionExpression', { name: functionName, type, parameters, body });
             }
             case 'ArrowFunctionExpression': {
                 assert(node.id == null, "Expected node.id to be equal to null");
