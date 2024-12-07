@@ -431,9 +431,12 @@ public class JavaScriptCompiler {
                 emit(EndForInLoop())
 
             case .identifier(let identifier):
-                guard let loopVar = lookupIdentifier(identifier.name) else {
-                    // TODO instead of throwing an error, we should create a global property with the identifier name
-                    throw CompilerError.unsupportedFeatureError("Identifier '\(identifier.name)' not found for for-in loop.")
+                let loopVar: Variable
+                if let existingVar = lookupIdentifier(identifier.name) {
+                    loopVar = existingVar
+                } else {
+                    loopVar = emit(LoadNamedVariable(identifier.name)).output
+                    map(identifier.name, to: loopVar)
                 }
                 emit(BeginForInLoopWithReassignment(), withInputs: [obj, loopVar])
                 try enterNewScope {
@@ -459,9 +462,12 @@ public class JavaScriptCompiler {
                 emit(EndForOfLoop())
 
             case .identifier(let identifier):
-                guard let loopVar = lookupIdentifier(identifier.name) else {
-                    // TODO instead of throwing an error, we should create a global property with the identifier name
-                    throw CompilerError.unsupportedFeatureError("Identifier '\(identifier.name)' not found for for-of loop.")
+                let loopVar: Variable
+                if let existingVar = lookupIdentifier(identifier.name) {
+                    loopVar = existingVar
+                } else {
+                    loopVar = emit(LoadNamedVariable(identifier.name)).output
+                    map(identifier.name, to: loopVar)
                 }
                 emit(BeginForOfLoopWithReassignment(), withInputs: [obj, loopVar])
                 try enterNewScope {
