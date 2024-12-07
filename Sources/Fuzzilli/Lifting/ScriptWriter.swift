@@ -84,4 +84,12 @@ struct ScriptWriter {
         assert(currentIndention.count >= indent.count)
         currentIndention.removeLast(indent.count)
     }
+
+    mutating func insert(_ pos: Int, _ content: String){
+        if code.index(code.startIndex, offsetBy: pos, limitedBy: code.endIndex) != nil {
+            let index = code.index(code.startIndex, offsetBy: pos)
+            code.insert(contentsOf: content, at: index)
+            currentLineNumber += 1
+        }
+    }
 }

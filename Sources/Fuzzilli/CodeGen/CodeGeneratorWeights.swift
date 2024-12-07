@@ -194,4 +194,6 @@ public let codeGeneratorWeights = [
     "ApiMethodCallGenerator":                   15,
     "ApiFunctionCallGenerator":                 15,
     "VoidGenerator":                            1,
+    "LoopLabelBreakGenerator":                  3,
+    "ContinueLabelGenerator":                   3
 ]
