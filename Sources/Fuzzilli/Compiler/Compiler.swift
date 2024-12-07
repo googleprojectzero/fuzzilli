@@ -729,6 +729,30 @@ public class JavaScriptCompiler {
                         }
                     }
                 }
+            case .superMemberExpression(let superMemberExpression):
+                guard superMemberExpression.isOptional == false else {
+                    throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super member expressions")
+                }
+                
+                guard let property = superMemberExpression.property else {
+                    throw CompilerError.invalidNodeError("Missing property in super member expression")
+                }
+                
+                switch property {
+                case .name(let name):
+                    if let op = assignmentOperator {
+                        // Example: super.foo += 1
+                        emit(UpdateSuperProperty(propertyName: name, operator: op), withInputs: [rhs])
+                    } else {
+                        // Example: super.foo = 1
+                        emit(SetSuperProperty(propertyName: name), withInputs: [rhs])
+                    }
+                    
+                case .expression(let expr):
+                    let property = try compileExpression(expr)
+                    // Example: super[expr] = 1
+                    emit(SetComputedSuperProperty(), withInputs: [property, rhs])
+                }
 
 
             case .identifier(let identifier):
@@ -957,6 +981,7 @@ public class JavaScriptCompiler {
 
             // See if this is a function or a method call
             if case .memberExpression(let memberExpression) = callExpression.callee.expression {
+                // obj.foo(...) or obj[expr](...)
                 let object = try compileExpression(memberExpression.object)
                 guard let property = memberExpression.property else { throw CompilerError.invalidNodeError("missing property in member expression in call expression") }
                 switch property {
@@ -974,6 +999,18 @@ public class JavaScriptCompiler {
                         return emit(CallComputedMethod(numArguments: arguments.count, isGuarded: callExpression.isOptional), withInputs: [object, method] + arguments).output
                     }
                 }
+            } else if case .superMemberExpression(let superMemberExpression) = callExpression.callee.expression {
+                // super.foo(...)
+                guard !isSpreading else {
+                    throw CompilerError.unsupportedFeatureError("Spread calls with super are not supported")
+                }
+                guard case .name(let methodName) = superMemberExpression.property else {
+                    throw CompilerError.invalidNodeError("Super method calls must use a property name")
+                }
+                guard !callExpression.isOptional else {
+                    throw CompilerError.unsupportedFeatureError("Optional chaining with super method calls is not supported")
+                }
+                return emit(CallSuperMethod(methodName: methodName, numArguments: arguments.count), withInputs: arguments).output
             // Now check if it is a V8 intrinsic function
             } else if case .v8IntrinsicIdentifier(let v8Intrinsic) = callExpression.callee.expression {
                 guard !isSpreading else { throw CompilerError.unsupportedFeatureError("Not currently supporting spread calls to V8 intrinsics") }
@@ -990,6 +1027,21 @@ public class JavaScriptCompiler {
                 }
             }
 
+        case .callSuperConstructor(let callSuperConstructor):
+            let (arguments, spreads) = try compileCallArguments(callSuperConstructor.arguments)
+            let isSpreading = spreads.contains(true)
+            
+            if isSpreading {
+                throw CompilerError.unsupportedFeatureError("Spread arguments are not supported in super constructor calls")
+            }
+            guard !callSuperConstructor.isOptional else {
+                throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super constructor calls")
+            }
+            emit(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
+            // In JS, the result of calling the super constructor is just |this|, but in FuzzIL the operation doesn't have an output (because |this| is always available anyway)
+            return lookupIdentifier("this")! // we can force unwrap because |this| always exists in the context where |super| exists
+
+            
         case .newExpression(let newExpression):
             let callee = try compileExpression(newExpression.callee)
             let (arguments, spreads) = try compileCallArguments(newExpression.arguments)
@@ -1012,6 +1064,27 @@ public class JavaScriptCompiler {
                 } else {
                     let property = try compileExpression(expr)
                     return emit(GetComputedProperty(isGuarded: memberExpression.isOptional), withInputs: [object, property]).output
+                }
+            }
+        
+        case .superMemberExpression(let superMemberExpression):
+            guard superMemberExpression.isOptional == false else {
+                throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super member expressions")
+            }           
+            guard let property = superMemberExpression.property else {
+                throw CompilerError.invalidNodeError("Missing property in super member expression")
+            }
+            
+            switch property {
+            case .name(let name):
+                return emit(GetSuperProperty(propertyName: name), withInputs: []).output
+                
+            case .expression(let expr):
+                if case .numberLiteral(let literal) = expr.expression, let _ = Int64(exactly: literal.value) {
+                    throw CompilerError.unsupportedFeatureError("GetElement is not supported in super member expressions")
+                } else {
+                    let compiledProperty = try compileExpression(expr)
+                    return emit(GetComputedSuperProperty(), withInputs: [compiledProperty]).output
                 }
             }
 
