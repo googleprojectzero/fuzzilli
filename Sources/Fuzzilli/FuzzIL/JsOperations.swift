@@ -2064,6 +2064,22 @@ final class LoopContinue: JsOperation {
     }
 }
 
+final class BreakNested: JsOperation {
+    override var opcode: Opcode { .breakNested(self) }
+
+    init() {
+        super.init(numInputs: 1, attributes: [.isJump], requiredContext: [.javascript, .loop])
+    }
+}
+
+final class ContinueNested: JsOperation {
+    override var opcode: Opcode { .continueNested(self) }
+
+    init() {
+        super.init(numInputs: 1, attributes: [.isJump], requiredContext: [.javascript, .loop])
+    }
+}
+
 final class BeginTry: JsOperation {
     override var opcode: Opcode { .beginTry(self) }
 

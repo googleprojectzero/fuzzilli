@@ -204,6 +204,8 @@ message Instruction {
         Explore explore = 178;
         Probe probe = 179;
         Fixup fixup = 180;
+        BreakNested breakNested = 181;
+        ContinueNested continueNested = 182;
     }
 }
 

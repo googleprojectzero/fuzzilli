@@ -1415,6 +1415,15 @@ public let CodeGenerators: [CodeGenerator] = [
         b.loopContinue()
     },
 
+    CodeGenerator("LoopLabelBreakGenerator", inContext: .loop) { b in
+        b.breakNested(b.loadInt(Int64.random(in: 0...100)))
+    },
+
+    CodeGenerator("ContinueLabelGenerator", inContext: .loop) { b in
+        assert(b.context.contains(.loop))
+        b.continueNested(b.loadInt(Int64.random(in: 0...100)))
+    },
+
     RecursiveCodeGenerator("TryCatchGenerator") { b in
         // Build either try-catch-finally, try-catch, or try-finally
         withEqualProbability({

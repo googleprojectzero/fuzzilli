@@ -816,6 +816,10 @@ extension Instruction: ProtobufConvertible {
                 $0.loopBreak = Fuzzilli_Protobuf_LoopBreak()
             case .loopContinue:
                 $0.loopContinue = Fuzzilli_Protobuf_LoopContinue()
+            case .breakNested:
+                $0.breakNested = Fuzzilli_Protobuf_BreakNested()
+            case .continueNested:
+                $0.continueNested = Fuzzilli_Protobuf_ContinueNested()
             case .beginTry:
                 $0.beginTry = Fuzzilli_Protobuf_BeginTry()
             case .beginCatch:
@@ -1234,6 +1238,10 @@ extension Instruction: ProtobufConvertible {
             op = LoopBreak()
         case .loopContinue:
             op = LoopContinue()
+        case .breakNested:
+            op = BreakNested()
+        case .continueNested:
+            op = ContinueNested()
         case .beginTry:
             op = BeginTry()
         case .beginCatch:

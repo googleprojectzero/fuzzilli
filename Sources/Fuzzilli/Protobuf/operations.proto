@@ -714,6 +714,12 @@ message LoopBreak {
 message LoopContinue {
 }
 
+message BreakNested {
+}
+
+message ContinueNested {
+}
+
 message BeginTry {
 }
 
