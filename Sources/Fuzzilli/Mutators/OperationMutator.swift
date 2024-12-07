@@ -227,6 +227,10 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = UpdateSuperProperty(propertyName: b.randomPropertyName(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .beginIf(let op):
             newOp = BeginIf(inverted: !op.inverted)
+        case .loopBreakNested(let op):
+            newOp = LoopBreakNested(Int.random(in: 0...10))
+        case .loopContinueNested(let op):
+            newOp = LoopContinueNested(Int.random(in: 0...10))
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }

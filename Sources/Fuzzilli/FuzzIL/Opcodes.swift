@@ -186,6 +186,8 @@ enum Opcode {
     case endRepeatLoop(EndRepeatLoop)
     case loopBreak(LoopBreak)
     case loopContinue(LoopContinue)
+    case loopBreakNested(LoopBreakNested)
+    case loopContinueNested(LoopContinueNested)
     case beginTry(BeginTry)
     case beginCatch(BeginCatch)
     case beginFinally(BeginFinally)
