@@ -1964,19 +1964,17 @@ final class EndForLoop: JsOperation {
     }
 }
 
-final class BeginForInLoop: JsOperation {
-    override var opcode: Opcode { .beginForInLoop(self) }
+final class BeginPlainForInLoop: JsOperation {
+    override var opcode: Opcode { .beginPlainForInLoop(self) }
+    init() {
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
+    }
+}
 
-    let usesPredeclaredIterator: Bool
-
-    init(usesPredeclaredIterator: Bool = false) {
-        self.usesPredeclaredIterator = usesPredeclaredIterator
-        super.init(
-            numInputs: usesPredeclaredIterator ? 2 : 1,
-            numInnerOutputs: usesPredeclaredIterator ? 0 : 1,
-            attributes: [.isBlockStart, .propagatesSurroundingContext],
-            contextOpened: [.javascript, .loop]
-        )
+final class BeginForInLoopWithReassignment: JsOperation {
+    override var opcode: Opcode { .beginForInLoopWithReassignment(self) }
+    init() {
+        super.init(numInputs: 2, numInnerOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1988,20 +1986,17 @@ final class EndForInLoop: JsOperation {
     }
 }
 
-final class BeginForOfLoop: JsOperation {
-    override var opcode: Opcode { .beginForOfLoop(self) }
+final class BeginPlainForOfLoop: JsOperation {
+    override var opcode: Opcode { .beginPlainForOfLoop(self) }
+    init() {
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
+    }
+}
 
-
-    let usesPredeclaredIterator: Bool
-
-    init(usesPredeclaredIterator: Bool = false) {
-        self.usesPredeclaredIterator = usesPredeclaredIterator
-        super.init(
-            numInputs: usesPredeclaredIterator ? 2 : 1,
-            numInnerOutputs: usesPredeclaredIterator ? 0 : 1,
-            attributes: [.isBlockStart, .propagatesSurroundingContext],
-            contextOpened: [.javascript, .loop]
-        )
+final class BeginForOfLoopWithReassignment: JsOperation {
+    override var opcode: Opcode { .beginForOfLoopWithReassignment(self) }
+    init() {
+        super.init(numInputs: 2, numInnerOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
     }
 }
 

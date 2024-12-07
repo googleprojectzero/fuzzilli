@@ -423,7 +423,7 @@ public class JavaScriptCompiler {
                 guard !variableDeclarator.hasValue else {
                     throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-in loop")
                 } 
-                let loopVar = emit(BeginForInLoop(), withInputs: [obj]).innerOutput
+                let loopVar = emit(BeginPlainForInLoop(), withInputs: [obj]).innerOutput
                 try enterNewScope {
                     map(variableDeclarator.name, to: loopVar)
                     try compileBody(forInLoop.body)
@@ -435,7 +435,7 @@ public class JavaScriptCompiler {
                     // TODO instead of throwing an error, we should create a global property with the identifier name
                     throw CompilerError.unsupportedFeatureError("Identifier '\(identifier.name)' not found for for-in loop.")
                 }
-                emit(BeginForInLoop(usesPredeclaredIterator: true), withInputs: [obj, loopVar])
+                emit(BeginForInLoopWithReassignment(), withInputs: [obj, loopVar])
                 try enterNewScope {
                     try compileBody(forInLoop.body)
                 }
@@ -451,7 +451,7 @@ public class JavaScriptCompiler {
                 guard !variableDeclarator.hasValue else {
                     throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-of loop")
                 } 
-                let loopVar = emit(BeginForOfLoop(), withInputs: [obj]).innerOutput
+                let loopVar = emit(BeginPlainForOfLoop(), withInputs: [obj]).innerOutput
                 try enterNewScope {
                     map(variableDeclarator.name, to: loopVar)
                     try compileBody(forOfLoop.body)
@@ -463,7 +463,7 @@ public class JavaScriptCompiler {
                     // TODO instead of throwing an error, we should create a global property with the identifier name
                     throw CompilerError.unsupportedFeatureError("Identifier '\(identifier.name)' not found for for-of loop.")
                 }
-                emit(BeginForOfLoop(usesPredeclaredIterator: true), withInputs: [obj, loopVar])
+                emit(BeginForOfLoopWithReassignment(), withInputs: [obj, loopVar])
                 try enterNewScope {
                     try compileBody(forOfLoop.body)
                 }

@@ -666,24 +666,24 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndForLoop")
 
-        case .beginForInLoop:
-            if instr.numInputs == 2 {
-                w.emit("BeginForInLoop \(input(0)) -> \(input(1))")  // Iterator is declared beforehand
-            } else {
-                w.emit("BeginForInLoop \(input(0)) -> \(innerOutput())")  // Iterator is declared in the function header
-            }
+        case .beginPlainForInLoop:
+            w.emit("BeginPlainForInLoop \(input(0)) -> \(innerOutput())")
+            w.increaseIndentionLevel()
+
+        case .beginForInLoopWithReassignment:
+            w.emit("BeginForInLoopWithReassignment \(input(0)) -> \(input(1))")
             w.increaseIndentionLevel()
 
         case .endForInLoop:
             w.decreaseIndentionLevel()
             w.emit("EndForInLoop")
 
-        case .beginForOfLoop:
-            if instr.numInputs == 2 {
-                w.emit("BeginForOfLoop \(input(0)) -> \(input(1))")
-            } else {
-                w.emit("BeginForOfLoop \(input(0)) -> \(innerOutput())")
-            }
+        case .beginPlainForOfLoop:
+            w.emit("BeginPlainForOfLoop \(input(0)) -> \(innerOutput())")
+            w.increaseIndentionLevel()
+
+        case .beginForOfLoopWithReassignment:
+            w.emit("BeginForOfLoopWithReassignment \(input(0)) -> \(input(1))")
             w.increaseIndentionLevel()
 
         case .beginForOfLoopWithDestruct(let op):

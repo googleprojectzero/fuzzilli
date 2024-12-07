@@ -1366,14 +1366,29 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    RecursiveCodeGenerator("ForInLoopGenerator", inputs: .preferred(.object())) { b, obj in
-        b.buildForInLoop(obj) { _ in
+    RecursiveCodeGenerator("PlainForInLoopGenerator", inputs: .preferred(.object())) { b, obj in
+        b.buildPlainForInLoop(obj) { _ in
             b.buildRecursive()
         }
     },
 
-    RecursiveCodeGenerator("ForOfLoopGenerator", inputs: .preferred(.iterable)) { b, obj in
-        b.buildForOfLoop(obj) { _ in
+    RecursiveCodeGenerator("ForInLoopWithReassignmentGenerator", inputs: .preferred(.object())) { b, obj in
+        // use a pre-declared variable as the iterator variable (i.e., reassign it)
+        let existing = b.randomVariable()
+        b.buildForInLoopWithReassignment(obj, existing) {
+            b.buildRecursive()
+        }
+    },
+
+    RecursiveCodeGenerator("PlainForOfLoopGenerator", inputs: .preferred(.iterable)) { b, obj in
+        b.buildPlainForOfLoop(obj) { _ in
+            b.buildRecursive()
+        }
+    },
+
+    RecursiveCodeGenerator("ForOfLoopWithReassignmentGenerator", inputs: .preferred(.iterable)) { b, obj in
+        let existing = b.randomVariable()
+        b.buildForOfLoopWithReassignment(obj, existing) {
             b.buildRecursive()
         }
     },
@@ -1390,7 +1405,7 @@ public let CodeGenerators: [CodeGenerator] = [
             indices = [0]
         }
 
-        b.buildForOfLoop(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
+        b.buildForOfLoopWithDestruct(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
             b.buildRecursive()
         }
     },

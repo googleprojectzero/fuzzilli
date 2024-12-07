@@ -2488,19 +2488,31 @@ public class ProgramBuilder {
         emit(EndForLoop())
     }
 
-    public func buildForInLoop(_ obj: Variable, _ body: (Variable) -> ()) {
-        let i = emit(BeginForInLoop(), withInputs: [obj]).innerOutput
+    public func buildPlainForInLoop(_ obj: Variable, _ body: (Variable) -> ()) {
+        let i = emit(BeginPlainForInLoop(), withInputs: [obj]).innerOutput
         body(i)
         emit(EndForInLoop())
     }
 
-    public func buildForOfLoop(_ obj: Variable, _ body: (Variable) -> ()) {
-        let i = emit(BeginForOfLoop(), withInputs: [obj]).innerOutput
+    public func buildForInLoopWithReassignment(_ obj: Variable, _ existingVar: Variable, _ body: () -> ()) {
+        emit(BeginForInLoopWithReassignment(), withInputs: [obj, existingVar])
+        body()
+        emit(EndForInLoop())
+    }
+
+    public func buildPlainForOfLoop(_ obj: Variable, _ body: (Variable) -> ()) {
+        let i = emit(BeginPlainForOfLoop(), withInputs: [obj]).innerOutput
         body(i)
         emit(EndForOfLoop())
     }
 
-    public func buildForOfLoop(_ obj: Variable, selecting indices: [Int64], hasRestElement: Bool = false, _ body: ([Variable]) -> ()) {
+    public func buildForOfLoopWithReassignment(_ obj: Variable, _ existingVar: Variable, _ body: () -> ()) {
+        emit(BeginForOfLoopWithReassignment(), withInputs: [obj, existingVar])
+        body()
+        emit(EndForOfLoop())
+    }
+
+    public func buildForOfLoopWithDestruct(_ obj: Variable, selecting indices: [Int64], hasRestElement: Bool = false, _ body: ([Variable]) -> ()) {
         let instr = emit(BeginForOfLoopWithDestruct(indices: indices, hasRestElement: hasRestElement), withInputs: [obj])
         body(Array(instr.innerOutputs))
         emit(EndForOfLoop())

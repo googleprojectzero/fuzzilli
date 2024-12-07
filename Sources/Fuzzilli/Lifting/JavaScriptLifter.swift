@@ -1168,32 +1168,34 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .beginForInLoop:
+            case .beginPlainForInLoop:
                 let OBJ = input(0)
-                if instr.numInputs == 2 {  // Iterator is declared elsewhere
-                    let V = input(1) 
-                    w.emit("for (\(V) in \(OBJ)) {")
-                } else {  // Iterator is declared in the function header
-                    let V = w.declare(instr.innerOutput)
-                    let LET = w.declarationKeyword(for: instr.innerOutput)
-                    w.emit("for (\(LET) \(V) in \(OBJ)) {")
-                }
+                let V = w.declare(instr.innerOutput)
+                let LET = w.declarationKeyword(for: instr.innerOutput)
+                w.emit("for (\(LET) \(V) in \(OBJ)) {")
+                w.enterNewBlock()
+
+            case .beginForInLoopWithReassignment:
+                let OBJ = input(0)
+                let V = input(1)
+                w.emit("for (\(V) in \(OBJ)) {")
                 w.enterNewBlock()
 
             case .endForInLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .beginForOfLoop:
+            case .beginPlainForOfLoop:
                 let OBJ = input(0)
-                if instr.numInputs == 2 {
-                    let V = input(1)
-                    w.emit("for (\(V) of \(OBJ)) {")
-                } else {
-                    let V = w.declare(instr.innerOutput)
-                    let LET = w.declarationKeyword(for: instr.innerOutput)
-                    w.emit("for (\(LET) \(V) of \(OBJ)) {")
-                }
+                let V = w.declare(instr.innerOutput)
+                let LET = w.declarationKeyword(for: instr.innerOutput)
+                w.emit("for (\(LET) \(V) of \(OBJ)) {")
+                w.enterNewBlock()
+
+            case .beginForOfLoopWithReassignment:
+                let OBJ = input(0)
+                let V = input(1)
+                w.emit("for (\(V) of \(OBJ)) {")
                 w.enterNewBlock()
 
             case .beginForOfLoopWithDestruct(let op):

@@ -283,8 +283,10 @@ public struct JSTyper: Analyzer {
         case .endForLoop:
             state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
         case .beginWhileLoopBody,
-             .beginForInLoop,
-             .beginForOfLoop,
+             .beginPlainForInLoop,
+             .beginForInLoopWithReassignment,
+             .beginPlainForOfLoop,
+             .beginForOfLoopWithReassignment,
              .beginForOfLoopWithDestruct,
              .beginRepeatLoop,
              .beginCodeString:
@@ -793,19 +795,17 @@ public struct JSTyper: Analyzer {
             assert(inputTypes.count == instr.numInnerOutputs)
             zip(instr.innerOutputs, inputTypes).forEach({ set($0, $1) })
 
-        case .beginForInLoop:
-            if instr.numInputs == 2 {
-                set(instr.input(1), .string) // Iterator is declared beforehand
-            } else {
-                set(instr.innerOutput, .string) // Iterator is declared in the function header
-            }
+        case .beginPlainForInLoop:
+            set(instr.innerOutput, .string)
 
-        case .beginForOfLoop:
-            if instr.numInputs == 2 {
-                set(instr.input(1), .anything)
-            } else {
-                set(instr.innerOutput, .anything)
-            }
+        case .beginForInLoopWithReassignment:
+            set(instr.input(1), .string)
+
+        case .beginPlainForOfLoop:
+            set(instr.innerOutput, .anything)
+
+        case .beginForOfLoopWithReassignment:
+            set(instr.input(1), .anything)
 
         case .beginForOfLoopWithDestruct:
             for v in instr.innerOutputs {

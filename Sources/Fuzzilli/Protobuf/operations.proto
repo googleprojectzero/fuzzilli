@@ -680,15 +680,19 @@ message BeginForLoopBody {
 message EndForLoop {
 }
 
-message BeginForInLoop {
-    bool usesPredeclaredIterator = 1;
+message BeginPlainForInLoop {
+}
+
+message BeginForInLoopWithReassignment {
 }
 
 message EndForInLoop {
 }
 
-message BeginForOfLoop {
-    bool usesPredeclaredIterator = 1;
+message BeginPlainForOfLoop {
+}
+
+message BeginForOfLoopWithReassignment {
 }
 
 message BeginForOfLoopWithDestruct {
