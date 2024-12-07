@@ -1985,7 +1985,7 @@ final class EndForInLoop: JsOperation {
         super.init(attributes: .isBlockEnd)
     }
 }
-
+// TODO: Support even more types of for loops, e.g.: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of#examples
 final class BeginPlainForOfLoop: JsOperation {
     override var opcode: Opcode { .beginPlainForOfLoop(self) }
     init() {
