@@ -85,18 +85,8 @@ public struct JSTyper: Analyzer {
         assert(activeClassDefinitions.isEmpty)
     }
 
-    // We use the typer for a chunk of Wasm code in the Wasm lifter, therefore
-    // we want to be able to start it at the beginning of that function's code.
-    // Use this if you want to bootstrap a typer in the middle of something,
-    // usually you don't want to do this though as type information is going to
-    // be wrong / incomplete in most cases.
-    public mutating func setIndexOfLastInstruction(to index: Int) {
-        indexOfLastInstruction = index
-    }
-
-    // Array for collecting type changes during instruction execution. Not
-    // currently used, by could be used for example to validate the analysis by
-    // adding these as comments to programs.
+    // Array for collecting type changes during instruction execution.
+    // Not currently used, but could be used for example to validate the analysis by adding these as comments to programs.
     private var typeChanges = [(Variable, ILType)]()
 
     /// Analyze the given instruction, thus updating type information.

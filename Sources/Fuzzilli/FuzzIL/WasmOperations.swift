@@ -42,7 +42,7 @@ final class Consti64: WasmOperation {
 
     init(value: Int64) {
         self.value = value
-        super.init(outputType: .wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(outputType: .wasmi64, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -52,7 +52,7 @@ final class Consti32: WasmOperation {
 
     init(value: Int32) {
         self.value = value
-        super.init(outputType: .wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -62,7 +62,7 @@ final class Constf32: WasmOperation {
 
     init(value: Float32) {
         self.value = value
-        super.init(outputType: .wasmf32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(outputType: .wasmf32, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -72,7 +72,7 @@ final class Constf64: WasmOperation {
 
     init(value: Float64) {
         self.value = value
-        super.init(outputType: .wasmf64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(outputType: .wasmf64, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -88,9 +88,9 @@ final class WasmReturn: WasmOperation {
     init(returnType: ILType) {
         self.returnType = returnType
         if returnType.Is(.nothing) {
-            super.init(inputTypes: [], attributes: [.isPure, .isJump], requiredContext: [.wasmFunction])
+            super.init(inputTypes: [], attributes: [.isJump], requiredContext: [.wasmFunction])
         } else {
-            super.init(inputTypes: [returnType], attributes: [.isPure, .isJump], requiredContext: [.wasmFunction])
+            super.init(inputTypes: [returnType], attributes: [.isJump], requiredContext: [.wasmFunction])
         }
     }
 }
@@ -141,7 +141,7 @@ final class Wasmi32CompareOp: WasmOperation {
 
     init(compareOpKind: WasmIntegerCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [.wasmi32, .wasmi32], outputType: .wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi32, .wasmi32], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -152,7 +152,7 @@ final class Wasmi64CompareOp: WasmOperation {
 
     init(compareOpKind: WasmIntegerCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [.wasmi64, .wasmi64], outputType: .wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi64, .wasmi64], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -189,7 +189,7 @@ final class Wasmf32CompareOp: WasmOperation {
 
     init(compareOpKind: WasmFloatCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [.wasmf32, .wasmf32], outputType: .wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmf32, .wasmf32], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -208,7 +208,7 @@ final class Wasmi32EqualZero: WasmOperation {
     override var opcode: Opcode { .wasmi32EqualZero(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, attributes: [.isPure], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, requiredContext: [.wasmFunction])
     }
 }
 
@@ -216,7 +216,7 @@ final class Wasmi64EqualZero: WasmOperation {
     override var opcode: Opcode { .wasmi64EqualZero(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi64], outputType: .wasmi32, attributes: [.isPure], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi32, requiredContext: [.wasmFunction])
     }
 }
 
@@ -270,7 +270,7 @@ final class Wasmi64BinOp: WasmOperation {
 
     init(binOpKind: WasmIntegerBinaryOpKind) {
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmi64, .wasmi64], outputType: .wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi64, .wasmi64], outputType: .wasmi64, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -281,7 +281,7 @@ final class Wasmi32UnOp: WasmOperation {
 
     init(unOpKind: WasmIntegerUnaryOpKind) {
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -293,7 +293,7 @@ final class Wasmi64UnOp: WasmOperation {
 
     init(unOpKind: WasmIntegerUnaryOpKind) {
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -332,7 +332,7 @@ final class Wasmf32BinOp: WasmOperation {
 
     init(binOpKind: WasmFloatBinaryOpKind) {
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmf32, .wasmf32], outputType: .wasmf32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmf32, .wasmf32], outputType: .wasmf32, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -343,7 +343,7 @@ final class Wasmf64BinOp: WasmOperation {
 
     init(binOpKind: WasmFloatBinaryOpKind) {
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmf64, .wasmf64], outputType: .wasmf64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmf64, .wasmf64], outputType: .wasmf64, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -354,7 +354,7 @@ final class Wasmf32UnOp: WasmOperation {
 
     init(unOpKind: WasmFloatUnaryOpKind) {
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmf32], outputType: .wasmf32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmf32], outputType: .wasmf32, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -365,7 +365,7 @@ final class Wasmf64UnOp: WasmOperation {
 
     init(unOpKind: WasmFloatUnaryOpKind) {
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmf64], outputType: .wasmf64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmf64], outputType: .wasmf64, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -377,7 +377,7 @@ final class WasmWrapi64Toi32: WasmOperation {
     override var opcode: Opcode { .wasmWrapi64Toi32(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi64], outputType: .wasmi32, attributes: [.isPure], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi32, requiredContext: [.wasmFunction])
     }
 }
 
@@ -388,7 +388,7 @@ final class WasmTruncatef32Toi32: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmf32], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf32], outputType: .wasmi32, requiredContext: .wasmFunction)
     }
 }
 
@@ -399,7 +399,7 @@ final class WasmTruncatef64Toi32: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmf64], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf64], outputType: .wasmi32, requiredContext: .wasmFunction)
     }
 }
 
@@ -410,7 +410,7 @@ final class WasmExtendi32Toi64: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmi32], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi32], outputType: .wasmi64, requiredContext: .wasmFunction)
     }
 }
 
@@ -421,7 +421,7 @@ final class WasmTruncatef32Toi64: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmf32], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf32], outputType: .wasmi64, requiredContext: .wasmFunction)
     }
 }
 
@@ -432,7 +432,7 @@ final class WasmTruncatef64Toi64: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmf64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf64], outputType: .wasmi64, requiredContext: .wasmFunction)
     }
 }
 
@@ -443,7 +443,7 @@ final class WasmConverti32Tof32: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmi32], outputType: .wasmf32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi32], outputType: .wasmf32, requiredContext: .wasmFunction)
     }
 }
 
@@ -454,7 +454,7 @@ final class WasmConverti64Tof32: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmi64], outputType: .wasmf32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi64], outputType: .wasmf32, requiredContext: .wasmFunction)
     }
 }
 
@@ -462,7 +462,7 @@ final class WasmDemotef64Tof32: WasmOperation {
     override var opcode: Opcode { .wasmDemotef64Tof32(self) }
 
     init() {
-        super.init(inputTypes: [.wasmf64], outputType: .wasmf32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf64], outputType: .wasmf32, requiredContext: .wasmFunction)
     }
 }
 
@@ -473,7 +473,7 @@ final class WasmConverti32Tof64: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmi32], outputType: .wasmf64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi32], outputType: .wasmf64, requiredContext: .wasmFunction)
     }
 }
 
@@ -484,7 +484,7 @@ final class WasmConverti64Tof64: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmi64], outputType: .wasmf64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi64], outputType: .wasmf64, requiredContext: .wasmFunction)
     }
 }
 
@@ -492,7 +492,7 @@ final class WasmPromotef32Tof64: WasmOperation {
     override var opcode: Opcode { .wasmPromotef32Tof64(self) }
 
     init() {
-        super.init(inputTypes: [.wasmf32], outputType: .wasmf64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf32], outputType: .wasmf64, requiredContext: .wasmFunction)
     }
 }
 
@@ -500,7 +500,7 @@ final class WasmReinterpretf32Asi32: WasmOperation {
     override var opcode: Opcode { .wasmReinterpretf32Asi32(self) }
 
     init() {
-        super.init(inputTypes: [.wasmf32], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf32], outputType: .wasmi32, requiredContext: .wasmFunction)
     }
 }
 
@@ -508,7 +508,7 @@ final class WasmReinterpretf64Asi64: WasmOperation {
     override var opcode: Opcode { .wasmReinterpretf64Asi64(self) }
 
     init() {
-        super.init(inputTypes: [.wasmf64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf64], outputType: .wasmi64, requiredContext: .wasmFunction)
     }
 }
 
@@ -516,7 +516,7 @@ final class WasmReinterpreti32Asf32: WasmOperation {
     override var opcode: Opcode { .wasmReinterpreti32Asf32(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi32], outputType: .wasmf32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi32], outputType: .wasmf32, requiredContext: .wasmFunction)
     }
 }
 
@@ -524,7 +524,7 @@ final class WasmReinterpreti64Asf64: WasmOperation {
     override var opcode: Opcode { .wasmReinterpreti64Asf64(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi64], outputType: .wasmf64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi64], outputType: .wasmf64, requiredContext: .wasmFunction)
     }
 }
 
@@ -532,7 +532,7 @@ final class WasmSignExtend8Intoi32: WasmOperation {
     override var opcode: Opcode { .wasmSignExtend8Intoi32(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, requiredContext: .wasmFunction)
     }
 }
 
@@ -540,7 +540,7 @@ final class WasmSignExtend16Intoi32: WasmOperation {
     override var opcode: Opcode { .wasmSignExtend16Intoi32(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, requiredContext: .wasmFunction)
     }
 }
 
@@ -548,7 +548,7 @@ final class WasmSignExtend8Intoi64: WasmOperation {
     override var opcode: Opcode { .wasmSignExtend8Intoi64(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, requiredContext: .wasmFunction)
     }
 }
 
@@ -556,7 +556,7 @@ final class WasmSignExtend16Intoi64: WasmOperation {
     override var opcode: Opcode { .wasmSignExtend16Intoi64(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, requiredContext: .wasmFunction)
     }
 }
 
@@ -564,7 +564,7 @@ final class WasmSignExtend32Intoi64: WasmOperation {
     override var opcode: Opcode { .wasmSignExtend32Intoi64(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, requiredContext: .wasmFunction)
     }
 }
 
@@ -575,7 +575,7 @@ final class WasmTruncateSatf32Toi32: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmf32], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf32], outputType: .wasmi32, requiredContext: .wasmFunction)
     }
 }
 
@@ -586,7 +586,7 @@ final class WasmTruncateSatf64Toi32: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmf64], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf64], outputType: .wasmi32, requiredContext: .wasmFunction)
     }
 }
 
@@ -597,7 +597,7 @@ final class WasmTruncateSatf32Toi64: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmf32], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf32], outputType: .wasmi64, requiredContext: .wasmFunction)
     }
 }
 
@@ -608,7 +608,7 @@ final class WasmTruncateSatf64Toi64: WasmOperation {
 
     init(isSigned: Bool) {
         self.isSigned = isSigned
-        super.init(inputTypes: [.wasmf64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+        super.init(inputTypes: [.wasmf64], outputType: .wasmi64, requiredContext: .wasmFunction)
     }
 }
 
@@ -692,7 +692,7 @@ final class WasmDefineGlobal: WasmOperation {
         self.wasmGlobal = wasmGlobal
         self.isMutable = isMutable
         let outputType = ILType.object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: wasmGlobal.toType(), isMutable: isMutable))
-        super.init(outputType: outputType, attributes: [.isPure, .isMutable], requiredContext: [.wasm])
+        super.init(outputType: outputType, attributes: [.isMutable], requiredContext: [.wasm])
     }
 }
 
@@ -716,7 +716,7 @@ final class WasmDefineTable: WasmOperation {
 
         super.init(inputTypes: inputTypes,
                    outputType: .wasmTable(wasmTableType: WasmTableType(elementType: tableType.elementType, limits: tableType.limits)),
-                   attributes: [.isPure, .isMutable],
+                   attributes: [.isMutable],
                    requiredContext: [.wasm])
     }
 }
@@ -732,7 +732,7 @@ final class WasmDefineMemory: WasmOperation {
 
     init(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) {
         self.wasmMemory = .wasmMemory(limits: limits, isShared: isShared, isMemory64: isMemory64)
-        super.init(outputType: self.wasmMemory, attributes: [.isPure, .isMutable, .isSingular], requiredContext: [.wasm])
+        super.init(outputType: self.wasmMemory, attributes: [.isMutable, .isSingular], requiredContext: [.wasm])
     }
 }
 
@@ -757,7 +757,7 @@ final class WasmLoadGlobal: WasmOperation {
         assert(globalType.Is(.wasmPrimitive))
         self.globalType = globalType
         let inputType = ILType.object(ofGroup: "WasmGlobal")
-        super.init(inputTypes: [inputType], outputType: globalType, attributes: [.isPure, .isNotInputMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [inputType], outputType: globalType, attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -785,7 +785,7 @@ final class WasmTableGet: WasmOperation {
         self.tableType = tableType.wasmTableType!
         let elementType = tableType.wasmTableType!.elementType
         // The input is the table reference and an index.
-        super.init(inputTypes: [tableType, .wasmi32], outputType: elementType, attributes: [.isPure], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [tableType, .wasmi32], outputType: elementType, requiredContext: [.wasmFunction])
     }
 }
 
@@ -945,7 +945,7 @@ final class WasmEndBlock: WasmOperation {
     override var opcode: Opcode { .wasmEndBlock(self) }
 
     init() {
-        super.init(attributes: [.isPure, .isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction, .wasmBlock])
+        super.init(attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction, .wasmBlock])
     }
 }
 
@@ -981,7 +981,7 @@ final class WasmBeginLoop: WasmOperation {
     init(with signature: Signature) {
         self.signature = signature
         let parameterTypes = signature.parameters.convertPlainToILTypes()
-        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
+        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
@@ -989,7 +989,7 @@ final class WasmEndLoop: WasmOperation {
     override var opcode: Opcode { .wasmEndLoop(self) }
 
     init() {
-        super.init(attributes: [.isPure, .isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
+        super.init(attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1001,7 +1001,7 @@ final class WasmBeginTry: WasmOperation {
     init(with signature: Signature) {
         self.signature = signature
         let parameterTypes = signature.parameters.convertPlainToILTypes()
-        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmTry])
+        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmTry])
     }
 }
 
@@ -1061,7 +1061,7 @@ final class WasmEndTry: WasmOperation {
     override var opcode: Opcode { .wasmEndTry(self) }
 
     init() {
-        super.init(attributes: [.isPure, .isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmTry])
+        super.init(attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmTry])
     }
 }
 
@@ -1074,7 +1074,7 @@ final class WasmBeginTryDelegate: WasmOperation {
     init(with signature: Signature) {
         self.signature = signature
         let parameterTypes = signature.parameters.convertPlainToILTypes()
-        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [])
+        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [])
     }
 }
 
@@ -1084,7 +1084,7 @@ final class WasmEndTryDelegate: WasmOperation {
     override var opcode: Opcode { .wasmEndTryDelegate(self) }
 
     init() {
-        super.init(inputTypes: [.label], attributes: [.isPure, .isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.label], attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1111,7 +1111,7 @@ final class WasmBranch: WasmOperation {
     override var opcode: Opcode { .wasmBranch(self) }
 
     init() {
-        super.init(inputTypes: [.label], attributes: [.isPure], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.label], requiredContext: [.wasmFunction])
 
     }
 }
@@ -1120,7 +1120,7 @@ final class WasmBranchIf: WasmOperation {
     override var opcode: Opcode { .wasmBranchIf(self) }
 
     init() {
-        super.init(inputTypes: [.label, .wasmi32], attributes: [.isPure], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.label, .wasmi32], requiredContext: [.wasmFunction])
     }
 
 }
@@ -1190,7 +1190,7 @@ final class ConstSimd128: WasmOperation {
 
     init(value: [UInt8]) {
         self.value = value;
-        super.init(outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1250,7 +1250,7 @@ final class WasmSimd128Compare: WasmOperation {
     init(shape: WasmSimd128Shape, compareOpKind: WasmSimd128CompareOpKind) {
         self.shape = shape
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1313,7 +1313,7 @@ final class WasmSimd128IntegerUnOp: WasmOperation {
             break
         }
 
-        super.init(inputTypes: [.wasmSimd128], outputType: outputType, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmSimd128], outputType: outputType, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1396,7 +1396,7 @@ final class WasmSimd128IntegerBinOp: WasmOperation {
         }
 
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmSimd128, rhsInputType], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmSimd128, rhsInputType], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1423,7 +1423,7 @@ final class WasmSimd128FloatUnOp: WasmOperation {
         assert(unOpKind.isValidForShape(shape: shape))
         self.shape = shape
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmSimd128], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1454,7 +1454,7 @@ final class WasmSimd128FloatBinOp: WasmOperation {
         assert(binOpKind.isValidForShape(shape: shape))
         self.shape = shape
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1462,7 +1462,7 @@ final class WasmSimd128FloatBinOp: WasmOperation {
 final class WasmI64x2Splat: WasmOperation {
     override var opcode: Opcode { .wasmI64x2Splat(self) }
     init() {
-        super.init(inputTypes: [.wasmi64], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi64], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1473,7 +1473,7 @@ final class WasmI64x2ExtractLane: WasmOperation {
 
   init(lane: Int) {
     self.lane = lane;
-    super.init(inputTypes: [.wasmSimd128 ], outputType: .wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    super.init(inputTypes: [.wasmSimd128 ], outputType: .wasmi64, attributes: [.isMutable], requiredContext: [.wasmFunction])
   }
 }
 
@@ -1482,7 +1482,7 @@ final class WasmI64x2LoadSplat: WasmOperation {
     let offset: Int;
     init(offset: Int) {
         self.offset = offset;
-        super.init(inputTypes: [.object()], outputType: .wasmSimd128, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.object()], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 

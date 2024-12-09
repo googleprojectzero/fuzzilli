@@ -21,7 +21,7 @@ let protoBufFileExtension = ".fzil"
 let jsPrefix = ""
 let jsSuffix = ""
 
-let jsLifter = JavaScriptLifter(prefix: jsPrefix, suffix: jsSuffix, ecmaVersion: ECMAScriptVersion.es6)
+let jsLifter = JavaScriptLifter(prefix: jsPrefix, suffix: jsSuffix, ecmaVersion: ECMAScriptVersion.es6, environment: JavaScriptEnvironment())
 let fuzzILLifter = FuzzILLifter()
 
 // Loads a serialized FuzzIL program from the given file

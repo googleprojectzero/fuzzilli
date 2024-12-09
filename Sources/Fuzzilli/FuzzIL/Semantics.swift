@@ -119,10 +119,9 @@ extension Instruction {
         case (.loadRegExp(let op1), .loadRegExp(let op2)):
             canFold = op1.pattern  == op2.pattern && op1.flags == op2.flags
         default:
-            assert(self.op.name != other.op.name || !isPure)
+            assert(self.op.name != other.op.name)
         }
 
-        assert(!canFold || isPure)
         return canFold
     }
 }
