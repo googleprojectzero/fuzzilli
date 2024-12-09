@@ -149,11 +149,6 @@ public struct Instruction {
     /// Flag accessors.
     ///
 
-    /// A pure operation returns the same value given the same inputs and has no side effects.
-    public var isPure: Bool {
-        return op.attributes.contains(.isPure)
-    }
-
     /// True if the operation of this instruction be mutated in a meaningful way.
     /// An instruction with inputs is always mutable. This only indicates whether the operation can be mutated.
     /// See Operation.Attributes.isMutable

@@ -148,7 +148,7 @@ final class LoadInteger: JsOperation {
 
     init(value: Int64) {
         self.value = value
-        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -160,7 +160,7 @@ final class LoadBigInt: JsOperation {
 
     init(value: Int64) {
         self.value = value
-        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -171,7 +171,7 @@ final class LoadFloat: JsOperation {
 
     init(value: Double) {
         self.value = value
-        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -182,7 +182,7 @@ final class LoadString: JsOperation {
 
     init(value: String) {
         self.value = value
-        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -193,7 +193,7 @@ final class LoadBoolean: JsOperation {
 
     init(value: Bool) {
         self.value = value
-        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -201,7 +201,7 @@ final class LoadUndefined: JsOperation {
     override var opcode: Opcode { .loadUndefined(self) }
 
     init() {
-        super.init(numOutputs: 1, attributes: [.isPure])
+        super.init(numOutputs: 1)
     }
 }
 
@@ -209,7 +209,7 @@ final class LoadNull: JsOperation {
     override var opcode: Opcode { .loadNull(self) }
 
     init() {
-        super.init(numOutputs: 1, attributes: [.isPure])
+        super.init(numOutputs: 1)
     }
 }
 
@@ -217,7 +217,7 @@ final class LoadThis: JsOperation {
     override var opcode: Opcode { .loadThis(self) }
 
     init() {
-        super.init(numOutputs: 1, attributes: [.isPure])
+        super.init(numOutputs: 1)
     }
 }
 
@@ -225,7 +225,7 @@ final class LoadArguments: JsOperation {
     override var opcode: Opcode { .loadArguments(self) }
 
     init() {
-        super.init(numOutputs: 1, attributes: [.isPure], requiredContext: [.javascript, .subroutine])
+        super.init(numOutputs: 1, requiredContext: [.javascript, .subroutine])
     }
 }
 
@@ -425,7 +425,7 @@ final class LoadRegExp: JsOperation {
     init(pattern: String, flags: RegExpFlags) {
         self.pattern = pattern
         self.flags = flags
-        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -2414,7 +2414,7 @@ final class LoadNewTarget: JsOperation {
     override var opcode: Opcode { .loadNewTarget(self) }
 
     init() {
-        super.init(numOutputs: 1, attributes: .isPure, requiredContext: .subroutine)
+        super.init(numOutputs: 1, requiredContext: .subroutine)
     }
 }
 
@@ -2508,7 +2508,7 @@ class CreateWasmJSTag: JsOperation {
     override var opcode: Opcode { .createWasmJSTag(self) }
 
     init() {
-        super.init(numOutputs: 1, attributes: [.isPure], requiredContext: [.javascript])
+        super.init(numOutputs: 1, requiredContext: [.javascript])
     }
 }
 
