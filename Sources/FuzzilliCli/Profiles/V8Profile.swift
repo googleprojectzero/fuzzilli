@@ -525,6 +525,7 @@ let v8Profile = Profile(
             "--wasm-staging",
             "--wasm-fast-api",
             "--expose-fast-api",
+            "--experimental-wasm-memory64",
         ]
 
         guard randomize else { return args }

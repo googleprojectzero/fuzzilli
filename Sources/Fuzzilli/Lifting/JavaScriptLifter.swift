@@ -1379,11 +1379,14 @@ public class JavaScriptLifter: Lifter {
             case .createWasmMemory(let op):
                 let V = w.declare(instr.output)
                 let LET = w.varKeyword
+                let isMemory64 = op.memType.isMemory64
+                let minPageStr = String(op.memType.limits.min) + (isMemory64 ? "n" : "")
                 var maxPagesStr = ""
                 if let maxPages = op.memType.limits.max {
-                    maxPagesStr = ", maximum: \(maxPages)"
+                    maxPagesStr = ", maximum: \(maxPages)" + (isMemory64 ? "n" : "")
                 }
-                w.emit("\(LET) \(V) = new WebAssembly.Memory({ initial: \(op.memType.limits.min)\(maxPagesStr) });")
+                let addressType = isMemory64 ? "'i64'" : "'i32'"
+                w.emit("\(LET) \(V) = new WebAssembly.Memory({ initial: \(minPageStr)\(maxPagesStr), address: \(addressType) });")
 
             case .wrapSuspending(_):
                 let V = w.declare(instr.output)

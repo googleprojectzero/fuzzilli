@@ -994,9 +994,18 @@ public class WasmLifter {
                 }
             case .wasmDefineMemory:
                 self.memories.append(instr)
-            case .wasmMemoryLoad(_),
-                 .wasmMemoryStore(_):
+            case .wasmMemoryLoad(let op):
                 let memory = instr.input(0)
+                assert(typer.type(of: memory).wasmMemoryType!.isMemory64 == op.isMemory64)
+                if !self.memories.contains(where: {$0.output == memory}) {
+                    // TODO(cffsmith) this needs to be changed once we support multimemory as we probably also need to fix the ordering.
+                    if !self.imports.map({$0.0}).contains(memory) {
+                        self.imports.append((memory, nil))
+                    }
+                }
+            case .wasmMemoryStore(let op):
+                let memory = instr.input(0)
+                assert(typer.type(of: memory).wasmMemoryType!.isMemory64 == op.isMemory64)
                 if !self.memories.contains(where: {$0.output == memory}) {
                     // TODO(cffsmith) this needs to be changed once we support multimemory as we probably also need to fix the ordering.
                     if !self.imports.map({$0.0}).contains(memory) {

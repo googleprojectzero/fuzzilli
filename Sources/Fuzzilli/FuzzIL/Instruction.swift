@@ -1174,11 +1174,13 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with {
                     $0.loadType = convertWasmMemoryLoadType(op.loadType);
                     $0.staticOffset = op.staticOffset
+                    $0.isMemory64 = op.isMemory64
                 }
             case .wasmMemoryStore(let op):
                 $0.wasmMemoryStore = Fuzzilli_Protobuf_WasmMemoryStore.with {
                     $0.storeType = convertWasmMemoryStoreType(op.storeType);
                     $0.staticOffset = op.staticOffset
+                    $0.isMemory64 = op.isMemory64
                 }
             case .beginWasmFunction(let op):
                 $0.beginWasmFunction = Fuzzilli_Protobuf_BeginWasmFunction.with {
@@ -1964,9 +1966,9 @@ extension Instruction: ProtobufConvertible {
                 WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
                               limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil))))
         case .wasmMemoryLoad(let p):
-            op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset)
+            op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .wasmMemoryStore(let p):
-            op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset)
+            op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .beginWasmFunction(let p):
             op = BeginWasmFunction(parameterTypes: p.parameters.map { WasmTypeEnumToILType($0) }, returnType: WasmTypeEnumToILType(p.returnType))
         case .endWasmFunction(_):

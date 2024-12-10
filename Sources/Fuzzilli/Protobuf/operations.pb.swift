@@ -3914,6 +3914,8 @@ public struct Fuzzilli_Protobuf_WasmMemoryLoad: Sendable {
 
   public var staticOffset: Int64 = 0
 
+  public var isMemory64: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3927,6 +3929,8 @@ public struct Fuzzilli_Protobuf_WasmMemoryStore: Sendable {
   public var storeType: Fuzzilli_Protobuf_WasmMemoryStoreType = .i32Storemem
 
   public var staticOffset: Int64 = 0
+
+  public var isMemory64: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -11532,6 +11536,7 @@ extension Fuzzilli_Protobuf_WasmMemoryLoad: SwiftProtobuf.Message, SwiftProtobuf
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "loadType"),
     2: .same(proto: "staticOffset"),
+    3: .same(proto: "isMemory64"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11542,6 +11547,7 @@ extension Fuzzilli_Protobuf_WasmMemoryLoad: SwiftProtobuf.Message, SwiftProtobuf
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.loadType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.isMemory64) }()
       default: break
       }
     }
@@ -11554,12 +11560,16 @@ extension Fuzzilli_Protobuf_WasmMemoryLoad: SwiftProtobuf.Message, SwiftProtobuf
     if self.staticOffset != 0 {
       try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
     }
+    if self.isMemory64 != false {
+      try visitor.visitSingularBoolField(value: self.isMemory64, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmMemoryLoad, rhs: Fuzzilli_Protobuf_WasmMemoryLoad) -> Bool {
     if lhs.loadType != rhs.loadType {return false}
     if lhs.staticOffset != rhs.staticOffset {return false}
+    if lhs.isMemory64 != rhs.isMemory64 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11570,6 +11580,7 @@ extension Fuzzilli_Protobuf_WasmMemoryStore: SwiftProtobuf.Message, SwiftProtobu
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "storeType"),
     2: .same(proto: "staticOffset"),
+    3: .same(proto: "isMemory64"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11580,6 +11591,7 @@ extension Fuzzilli_Protobuf_WasmMemoryStore: SwiftProtobuf.Message, SwiftProtobu
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.storeType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.isMemory64) }()
       default: break
       }
     }
@@ -11592,12 +11604,16 @@ extension Fuzzilli_Protobuf_WasmMemoryStore: SwiftProtobuf.Message, SwiftProtobu
     if self.staticOffset != 0 {
       try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
     }
+    if self.isMemory64 != false {
+      try visitor.visitSingularBoolField(value: self.isMemory64, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmMemoryStore, rhs: Fuzzilli_Protobuf_WasmMemoryStore) -> Bool {
     if lhs.storeType != rhs.storeType {return false}
     if lhs.staticOffset != rhs.staticOffset {return false}
+    if lhs.isMemory64 != rhs.isMemory64 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
