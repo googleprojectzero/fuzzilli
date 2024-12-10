@@ -641,18 +641,36 @@ public class Fuzzer {
 
         case .corpusImport:
             assert(!currentCorpusImportJob.isFinished)
-            let program = currentCorpusImportJob.nextProgram()
+            var program = currentCorpusImportJob.nextProgram()
 
             if currentCorpusImportJob.numberOfProgramsImportedSoFar % 500 == 0 {
                 logger.info("Corpus import progress: imported \(currentCorpusImportJob.numberOfProgramsImportedSoFar) of \(currentCorpusImportJob.totalNumberOfProgramsToImport) programs")
             }
 
-            let outcome = importProgram(program, origin: .corpusImport(mode: currentCorpusImportJob.importMode))
+            var outcome = importProgram(program, origin: .corpusImport(mode: currentCorpusImportJob.importMode))
+            if case .failed = outcome {
+                // Wrap the entire program in a try-catch block and retry.
+                // TODO we could be a lot smarter here. For example, we could instrument the program to determine
+                // exactly which instruction causes the exception to be thrown, and then either delete that
+                // instruction or wrap just that instruction in try-catch.
+                let b = makeBuilder()
+                b.buildTryCatchFinally(tryBody: {
+                    b.adopting(from: program) {
+                        for instr in program.code {
+                            b.adopt(instr)
+                        }
+                    }
+                }, catchBody: { _ in })
+                program = b.finalize()
+                currentCorpusImportJob.notifyProgramNeededFixup()
+                outcome = importProgram(program, origin: .corpusImport(mode: currentCorpusImportJob.importMode))
+            }
             currentCorpusImportJob.notifyImportOutcome(outcome)
 
             if currentCorpusImportJob.isFinished {
                 logger.info("Corpus import finished:")
                 logger.info("\(currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs executed successfully during import")
+                logger.info("\(currentCorpusImportJob.numberOfProgramsThatNeededFixup)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs needed fixup during import (wrapping in try-catch)")
                 logger.info("\(currentCorpusImportJob.numberOfProgramsThatTimedOutDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs timed out during import")
                 logger.info("\(currentCorpusImportJob.numberOfProgramsThatFailedDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs failed to execute during import")
                 logger.info("Corpus now contains \(corpus.size) programs")
@@ -799,6 +817,7 @@ public class Fuzzer {
         private(set) var numberOfProgramsThatFailedDuringImport = 0
         private(set) var numberOfProgramsThatTimedOutDuringImport = 0
         private(set) var numberOfProgramsThatExecutedSuccessfullyDuringImport = 0
+        private(set) var numberOfProgramsThatNeededFixup = 0
 
         init(corpus: [Program], mode: CorpusImportMode) {
             self.corpusToImport = corpus.reversed()         // Programs are taken from the end.
@@ -828,6 +847,10 @@ public class Fuzzer {
             case .timedOut:
                 numberOfProgramsThatTimedOutDuringImport += 1
             }
+        }
+
+        mutating func notifyProgramNeededFixup() {
+            numberOfProgramsThatNeededFixup += 1
         }
 
         func progress() -> Double {
