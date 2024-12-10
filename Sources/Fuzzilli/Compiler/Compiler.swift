@@ -27,21 +27,10 @@ public class JavaScriptCompiler {
         case unsupportedFeatureError(String)
     }
 
-    public init(deletingCallTo filteredFunctions: [String] = []) {
-        self.filteredFunctions = filteredFunctions
-    }
+    public init() {}
 
     /// The compiled code.
     private var code = Code()
-
-    /// A list of function names or prefixes (e.g. `assert*`) which should be deleted from the output program.
-    /// The function calls can in general only be removed if their return value isn't used, and so currently they are only
-    /// removed if they make up a full ExpressionStatement, in which case the entire statement is ignored.
-    /// This functionality is useful to remove calls to functions such as `assert*` or `print*` from tests
-    /// as those are not useful for fuzzing.
-    /// The function names may contain the wildcard character `*`, but _only_ as last character, in which case
-    /// a prefix match will be performed instead of a string comparison.
-    private let filteredFunctions: [String]
 
     /// The environment is used to determine if an identifier identifies a builtin object.
     /// TODO we should probably use the correct target environment, with any additional builtins etc. here. But for now, we just manually add `gc` since that's relatively common.
@@ -82,11 +71,6 @@ public class JavaScriptCompiler {
     }
 
     private func compileStatement(_ node: StatementNode) throws {
-        let shouldIgnoreStatement = try performStatementFiltering(node)
-        guard !shouldIgnoreStatement else {
-            return
-        }
-
         guard let stmt = node.statement else {
             throw CompilerError.invalidASTError("missing concrete statement in statement node")
         }
@@ -1237,40 +1221,6 @@ public class JavaScriptCompiler {
 
         assert(variables.count == spreads.count)
         return (variables, spreads)
-    }
-
-    /// Determine whether the given statement should be filtered out.
-    ///
-    /// Currently this function only performs function call filtering based on the `filteredFunctions` array.
-    private func performStatementFiltering(_ statement: StatementNode) throws -> Bool {
-        guard case .expressionStatement(let expressionStatement) = statement.statement else { return false }
-        guard case .callExpression(let callExpression) = expressionStatement.expression.expression else { return false }
-        guard case .identifier(let identifier) = callExpression.callee.expression else { return false }
-
-        let functionName = identifier.name
-        var shouldIgnore = false
-        for filteredFunction in filteredFunctions {
-            if filteredFunction.last == "*" {
-                if functionName.starts(with: filteredFunction.dropLast()) {
-                    shouldIgnore = true
-                }
-            } else {
-                assert(!filteredFunction.contains("*"))
-                if functionName == filteredFunction {
-                    shouldIgnore = true
-                }
-            }
-        }
-
-        if shouldIgnore {
-            // Still generate code for the arguments.
-            // For example, we may still want to emit the function call for something like `assertEq(f(), 42);`
-            for arg in callExpression.arguments {
-                try compileExpression(arg)
-            }
-        }
-
-        return shouldIgnore
     }
 
     private func reset() {

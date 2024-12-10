@@ -97,72 +97,10 @@ struct SimplifyingReducer: Reducer {
         // This will attempt to turn guarded operations into unguarded ones.
         // In the lifted JavaScript code, this would turn something like `try { o.foo(); } catch (e) {}` into `o.foo();`
         for instr in helper.code {
-            var newOp: Operation? = nil
-            switch instr.op.opcode {
-            case .getProperty(let op):
-                if op.isGuarded {
-                    newOp = GetProperty(propertyName: op.propertyName, isGuarded: false)
-                }
-            case .deleteProperty(let op):
-                if op.isGuarded {
-                    newOp = DeleteProperty(propertyName: op.propertyName, isGuarded: false)
-                }
-            case .getElement(let op):
-                if op.isGuarded {
-                    newOp = GetElement(index: op.index, isGuarded: false)
-                }
-            case .deleteElement(let op):
-                if op.isGuarded {
-                    newOp = DeleteElement(index: op.index, isGuarded: false)
-                }
-            case .getComputedProperty(let op):
-                if op.isGuarded {
-                    newOp = GetComputedProperty(isGuarded: false)
-                }
-            case .deleteComputedProperty(let op):
-                if op.isGuarded {
-                    newOp = DeleteComputedProperty(isGuarded: false)
-                }
-            case .callFunction(let op):
-                if op.isGuarded {
-                    newOp = CallFunction(numArguments: op.numArguments, isGuarded: false)
-                }
-            case .callFunctionWithSpread(let op):
-                if op.isGuarded {
-                    newOp = CallFunctionWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
-                }
-            case .construct(let op):
-                if op.isGuarded {
-                    newOp = Construct(numArguments: op.numArguments, isGuarded: false)
-                }
-            case .constructWithSpread(let op):
-                if op.isGuarded {
-                    newOp = ConstructWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
-                }
-            case .callMethod(let op):
-                if op.isGuarded {
-                    newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments, isGuarded: false)
-                }
-            case .callMethodWithSpread(let op):
-                if op.isGuarded {
-                    newOp = CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
-                }
-            case .callComputedMethod(let op):
-                if op.isGuarded {
-                    newOp = CallComputedMethod(numArguments: op.numArguments, isGuarded: false)
-                }
-            case .callComputedMethodWithSpread(let op):
-                if op.isGuarded {
-                    newOp = CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
-                }
-
-            default:
-                assert(!(instr.op is GuardableOperation), "All guardable operations should be covered")
-                break
-            }
-
-            if let op = newOp {
-                helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts, flags: .empty))
+            guard let op = instr.op as? GuardableOperation else { continue }
+            let newOp = GuardableOperation.disableGuard(of: op)
+            if newOp !== op {
+                helper.tryReplacing(instructionAt: instr.index, with: Instruction(newOp, inouts: instr.inouts, flags: .empty))
             }
         }
     }
