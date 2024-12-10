@@ -41,6 +41,14 @@ public enum ExecutionOutcome: CustomStringConvertible, Equatable, Hashable {
             return false
         }
     }
+
+    public func isFailure() -> Bool {
+        if case .failed = self {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 /// The result of executing a program.

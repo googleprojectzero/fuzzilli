@@ -252,7 +252,7 @@ public class DistributedFuzzingParentNode: DistributedFuzzingNode, Module {
             do {
                 let proto = try Fuzzilli_Protobuf_Program(serializedBytes: data)
                 let program = try Program(from: proto)
-                fuzzer.importProgram(program, enableDropout: false, origin: .child(id: child))
+                fuzzer.importProgram(program, origin: .child(id: child), enableDropout: false)
             } catch {
                 logger.warning("Received malformed program from child node: \(error)")
             }
@@ -451,10 +451,10 @@ public class DistributedFuzzingChildNode: DistributedFuzzingNode, Module {
                     // Regardless of the corpus import mode used by the parent node, as a child node we
                     // always add the program to our corpus without further checks or minimization as
                     // that will, if necessary, already have been performed by our parent node.
-                    fuzzer.importProgram(program, enableDropout: true, origin: .corpusImport(mode: .full))
+                    fuzzer.importProgram(program, origin: .corpusImport(mode: .full), enableDropout: true)
                 } else {
                     assert(messageType == .interestingProgram)
-                    fuzzer.importProgram(program, enableDropout: true, origin: .parent)
+                    fuzzer.importProgram(program, origin: .parent, enableDropout: true)
                 }
             } catch {
                 logger.warning("Received malformed program")

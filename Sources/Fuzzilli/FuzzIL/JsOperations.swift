@@ -55,6 +55,90 @@ class GuardableOperation: JsOperation {
         self.isGuarded = isGuarded
         super.init(numInputs: numInputs, numOutputs: numOutputs, numInnerOutputs: numInnerOutputs, firstVariadicInput: firstVariadicInput, attributes: attributes, requiredContext: requiredContext)
     }
+
+    // Helper functions to enable guards.
+    // If the given operation already has guarding enabled, then this function does
+    // nothing and simply returns the input. Otherwise it creates a copy of the
+    // operations which has guarding enabled.
+    static func enableGuard(of operation: GuardableOperation) -> GuardableOperation {
+        if operation.isGuarded {
+            return operation
+        }
+        switch operation.opcode {
+        case .getProperty(let op):
+            return GetProperty(propertyName: op.propertyName, isGuarded: true)
+        case .deleteProperty(let op):
+            return DeleteProperty(propertyName: op.propertyName, isGuarded: true)
+        case .getElement(let op):
+            return GetElement(index: op.index, isGuarded: true)
+        case .deleteElement(let op):
+            return DeleteElement(index: op.index, isGuarded: true)
+        case .getComputedProperty:
+            return GetComputedProperty(isGuarded: true)
+        case .deleteComputedProperty:
+            return DeleteComputedProperty(isGuarded: true)
+        case .callFunction(let op):
+            return CallFunction(numArguments: op.numArguments, isGuarded: true)
+        case .callFunctionWithSpread(let op):
+            return CallFunctionWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: true)
+        case .construct(let op):
+            return Construct(numArguments: op.numArguments, isGuarded: true)
+        case .constructWithSpread(let op):
+            return ConstructWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: true)
+        case .callMethod(let op):
+            return CallMethod(methodName: op.methodName, numArguments: op.numArguments, isGuarded: true)
+        case .callMethodWithSpread(let op):
+            return CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments, spreads: op.spreads, isGuarded: true)
+        case .callComputedMethod(let op):
+            return CallComputedMethod(numArguments: op.numArguments, isGuarded: true)
+        case .callComputedMethodWithSpread(let op):
+            return CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: true)
+        default:
+            fatalError("All guardable operations should be handled")
+        }
+    }
+
+    // Helper functions to disable guards.
+    // If the given operation already has guarding disabled, then this function does
+    // nothing and simply returns the input. Otherwise it creates a copy of the
+    // operations which has guarding disabled.
+    static func disableGuard(of operation: GuardableOperation) -> GuardableOperation {
+        if !operation.isGuarded {
+            return operation
+        }
+        switch operation.opcode {
+        case .getProperty(let op):
+            return GetProperty(propertyName: op.propertyName, isGuarded: false)
+        case .deleteProperty(let op):
+            return DeleteProperty(propertyName: op.propertyName, isGuarded: false)
+        case .getElement(let op):
+            return GetElement(index: op.index, isGuarded: false)
+        case .deleteElement(let op):
+            return DeleteElement(index: op.index, isGuarded: false)
+        case .getComputedProperty:
+            return GetComputedProperty(isGuarded: false)
+        case .deleteComputedProperty:
+            return DeleteComputedProperty(isGuarded: false)
+        case .callFunction(let op):
+            return CallFunction(numArguments: op.numArguments, isGuarded: false)
+        case .callFunctionWithSpread(let op):
+            return CallFunctionWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+        case .construct(let op):
+            return Construct(numArguments: op.numArguments, isGuarded: false)
+        case .constructWithSpread(let op):
+            return ConstructWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+        case .callMethod(let op):
+            return CallMethod(methodName: op.methodName, numArguments: op.numArguments, isGuarded: false)
+        case .callMethodWithSpread(let op):
+            return CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+        case .callComputedMethod(let op):
+            return CallComputedMethod(numArguments: op.numArguments, isGuarded: false)
+        case .callComputedMethodWithSpread(let op):
+            return CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+        default:
+            fatalError("All guardable operations should be handled")
+        }
+    }
 }
 
 final class LoadInteger: JsOperation {
