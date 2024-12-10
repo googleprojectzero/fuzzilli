@@ -701,7 +701,8 @@ public class ProgramBuilder {
                 func useMethodToProduce(_ method: (group: String, method: String)) -> Variable {
                     let group = self.fuzzer.environment.type(ofGroup: method.group)
                     let obj = self.generateTypeInternal(group)
-                    let sig = self.fuzzer.environment.signature(ofMethod: method.method, on: group)
+                    let sig = chooseUniform(from: self.fuzzer.environment
+                      .signatures(ofMethod: method.method, on: group).filter({$0.outputType.Is(type)}))
                     let args = self.findOrGenerateArgumentsInternal(forSignature: sig)
                     return self.callMethod(method.method, on: obj, withArgs: args)
                 }
@@ -956,7 +957,7 @@ public class ProgramBuilder {
     ///
     /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
     public func randomArguments(forCallingMethod methodName: String, on object: Variable) -> [Variable] {
-        let signature = methodSignature(of: methodName, on: object)
+        let signature = chooseUniform(from: methodSignatures(of: methodName, on: object))
         return randomArguments(forCallingFunctionWithSignature: signature)
     }
 
@@ -964,7 +965,7 @@ public class ProgramBuilder {
     ///
     /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
     public func randomArguments(forCallingMethod methodName: String, on objType: ILType) -> [Variable] {
-        let signature = methodSignature(of: methodName, on: objType)
+        let signature = chooseUniform(from: methodSignatures(of: methodName, on: objType))
         return randomArguments(forCallingFunctionWithSignature: signature)
     }
 
@@ -1154,12 +1155,12 @@ public class ProgramBuilder {
         return jsTyper.wasmSignature(ofFunction: function)
     }
 
-    public func methodSignature(of methodName: String, on object: Variable) -> Signature {
-        return jsTyper.inferMethodSignature(of: methodName, on: object)
+    public func methodSignatures(of methodName: String, on object: Variable) -> [Signature] {
+        return jsTyper.inferMethodSignatures(of: methodName, on: object)
     }
 
-    public func methodSignature(of methodName: String, on objType: ILType) -> Signature {
-        return jsTyper.inferMethodSignature(of: methodName, on: objType)
+    public func methodSignatures(of methodName: String, on objType: ILType) -> [Signature] {
+        return jsTyper.inferMethodSignatures(of: methodName, on: objType)
     }
 
     /// Overwrite the current type of the given variable with a new type.

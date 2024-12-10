@@ -482,15 +482,19 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         groups[group.name] = group
         builtinProperties.formUnion(group.properties.keys)
         builtinMethods.formUnion(group.methods.keys)
-        for method in group.methods {
-            if method.value.outputType == .nothing {
-                continue
+        for overloads in group.methods {
+            for method in overloads.value {
+                assert(method.outputType != .nothing,
+                  "Method \(overloads.key) in group \(group.name) has .nothing as outputType")
+                if method.outputType == .undefined {
+                    continue
+                }
+                let type = method.outputType
+                if producingMethods[type] == nil {
+                    producingMethods[type] = []
+                }
+                producingMethods[type]! += [(group: group.name, method: overloads.key)]
             }
-            let type = method.value.outputType
-            if producingMethods[type] == nil {
-                producingMethods[type] = []
-            }
-            producingMethods[type]! += [(group: group.name, method: method.key)]
         }
         for property in group.properties {
             let type: ILType
@@ -559,11 +563,11 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         return .anything
     }
 
-    public func signature(ofMethod methodName: String, on baseType: ILType) -> Signature {
+    public func signatures(ofMethod methodName: String, on baseType: ILType) -> [Signature] {
         if let groupName = baseType.group {
             if let group = groups[groupName] {
-                if let type = group.methods[methodName] {
-                    return type
+                if let signatures = group.methods[methodName] {
+                    return signatures
                 }
             } else {
                 // This shouldn't happen, probably forgot to register the object group
@@ -571,7 +575,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             }
         }
 
-        return Signature.forUnknownFunction
+        return [.forUnknownFunction]
     }
 
     public func getProducingMethods(ofType type: ILType) -> [(group: String, method: String)] {
@@ -593,16 +597,16 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 public struct ObjectGroup {
     public let name: String
     public let properties: [String: ILType]
-    public let methods: [String: Signature]
+    public let methods: [String: [Signature]]
 
     /// The type of instances of this group.
     public let instanceType: ILType
 
-    public init(name: String, instanceType: ILType, properties: [String: ILType], methods: [String: Signature]) {
+    public init(name: String, instanceType: ILType, properties: [String: ILType], overloads: [String: [Signature]]) {
         self.name = name
         self.instanceType = instanceType
         self.properties = properties
-        self.methods = methods
+        self.methods = overloads
 
         // We could also only assert set inclusion here to implement "shared" properties/methods.
         // (which would then need some kind of fallback ObjectGroup that is consulted by the
@@ -611,6 +615,11 @@ public struct ObjectGroup {
         assert(instanceType.properties == Set(properties.keys), "inconsistent property information for object group \(name): \(Set(properties.keys).symmetricDifference(instanceType.properties))")
         assert(instanceType.methods == Set(methods.keys), "inconsistent method information for object group \(name): \(Set(methods.keys).symmetricDifference(instanceType.methods))")
     }
+
+    public init(name: String, instanceType: ILType, properties: [String: ILType], methods: [String: Signature]) {
+       self.init(name: name, instanceType: instanceType, properties: properties, overloads: methods.mapValues({[$0]}))
+    }
+
 }
 
 // Types of builtin objects, functions, and values.

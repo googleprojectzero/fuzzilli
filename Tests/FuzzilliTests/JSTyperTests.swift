@@ -1231,4 +1231,27 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: outputs[1]), .string)
         XCTAssertEqual(b.type(of: outputs[2]), .object())
     }
+
+    func testWasmTypeInference() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildWasmModule { m in
+            m.addWasmFunction(with: [] => .nothing) { f, _ in
+                let ci32 = f.consti32(1337)
+                let ci64 = f.consti64(1338)
+                let cf32 = f.constf32(13.37)
+                let cf64 = f.constf64(13.38)
+
+                XCTAssertEqual(.wasmi32, b.type(of: ci32))
+                XCTAssertEqual(.wasmi64, b.type(of: ci64))
+                XCTAssertEqual(.wasmf32, b.type(of: cf32))
+                XCTAssertEqual(.wasmf64, b.type(of: cf64))
+                XCTAssertTrue(b.type(of: ci32).Is(.wasmPrimitive))
+                XCTAssertTrue(b.type(of: ci64).Is(.wasmPrimitive))
+                XCTAssertTrue(b.type(of: cf32).Is(.wasmPrimitive))
+                XCTAssertTrue(b.type(of: cf64).Is(.wasmPrimitive))
+            }
+        }
+    }
 }

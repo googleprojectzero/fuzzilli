@@ -221,13 +221,13 @@ public struct JSTyper: Analyzer {
         signatures[index] = parameterTypes
     }
 
-    public func inferMethodSignature(of methodName: String, on objType: ILType) -> Signature {
-        return environment.signature(ofMethod: methodName, on: objType)
+    public func inferMethodSignatures(of methodName: String, on objType: ILType) -> [Signature] {
+        return environment.signatures(ofMethod: methodName, on: objType)
     }
 
-    /// Attempts to infer the signature of the given method on the given object type.
-    public func inferMethodSignature(of methodName: String, on object: Variable) -> Signature {
-        return inferMethodSignature(of: methodName, on: state.type(of: object))
+    /// Attempts to infer the signatures of the overloads of the given method on the given object type.
+    public func inferMethodSignatures(of methodName: String, on object: Variable) -> [Signature] {
+        return inferMethodSignatures(of: methodName, on: state.type(of: object))
     }
 
     /// Attempts to infer the type of the given property on the given object type.
@@ -784,9 +784,11 @@ public struct JSTyper: Analyzer {
             set(instr.output, inferConstructedType(of: instr.input(0)))
 
         case .callMethod(let op):
-            set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
+            let sig = chooseUniform(from: inferMethodSignatures(of: op.methodName, on: instr.input(0)))
+            set(instr.output, sig.outputType)
         case .callMethodWithSpread(let op):
-            set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
+            let sig = chooseUniform(from: inferMethodSignatures(of: op.methodName, on: instr.input(0)))
+            set(instr.output, sig.outputType)
 
         case .unaryOperation(let op):
             switch op.op {
@@ -899,7 +901,8 @@ public struct JSTyper: Analyzer {
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .callSuperMethod(let op):
-            set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)
+            let sig = chooseUniform(from: inferMethodSignatures(of: op.methodName, on: currentSuperType()))
+            set(instr.output, sig.outputType)
 
         case .getPrivateProperty:
             // We currently don't track the types of private properties

@@ -1653,7 +1653,8 @@ public let CodeGenerators: [CodeGenerator] = [
                 // This can fail in tests, which lack the full JavaScriptEnvironment
                 guard let method = b.type(of: Math).randomMethod() else { return }
                 var args = [Variable]()
-                for _ in 0..<b.methodSignature(of: method, on: Math).numParameters {
+                let sig = chooseUniform(from: b.methodSignatures(of: method, on: Math))
+                for _ in 0..<sig.numParameters {
                     args.append(chooseUniform(from: values))
                 }
                 b.callMethod(method, on: Math, withArgs: args)
@@ -1851,7 +1852,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ApiMethodCallGenerator", inputs: .required(.object())) { b, o in
         let methodName = b.type(of: o).randomMethod() ?? b.randomMethodName()
 
-        let signature = b.methodSignature(of: methodName, on: o)
+        let signature = chooseUniform(from: b.methodSignatures(of: methodName, on: o))
 
         b.buildTryCatchFinally(tryBody: {
             let args = b.findOrGenerateArguments(forSignature: signature)
