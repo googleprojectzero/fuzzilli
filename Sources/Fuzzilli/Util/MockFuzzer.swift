@@ -112,15 +112,15 @@ class MockEnvironment: ComponentBase, Environment {
         return .anything
     }
 
-    func signature(ofMethod methodName: String, on baseType: ILType) -> Signature {
+    func signatures(ofMethod methodName: String, on baseType: ILType) -> [Signature] {
         if let groupName = baseType.group {
             if let groupMethods = methodsByGroup[groupName] {
                 if let methodSignature = groupMethods[methodName] {
-                    return methodSignature
+                    return [methodSignature]
                 }
             }
         }
-        return Signature.forUnknownFunction
+        return [.forUnknownFunction]
     }
 
     let builtinTypes: [String: ILType]

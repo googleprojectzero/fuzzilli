@@ -2515,7 +2515,6 @@ class ProgramBuilderTests: XCTestCase {
         b.buildPrefix()
 
         let obj = b.findOrGenerateType(objType)
-        print("Generated type \(b.type(of: obj))")
         XCTAssert(b.type(of: obj).Is(objType))
     }
 

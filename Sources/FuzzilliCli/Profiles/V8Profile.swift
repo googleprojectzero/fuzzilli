@@ -457,7 +457,7 @@ let WasmFastCallFuzzer = ProgramTemplate("WasmFastCallFuzzer") { b in
     let call = b.getProperty("call", of: prot)
     let wrapped = b.callMethod("bind", on: call, withArgs: [unwrapped])
 
-    let functionSig = b.methodSignature(of: target.method, on: target.group)
+    let functionSig = chooseUniform(from: b.methodSignatures(of: target.method, on: target.group))
     let wrappedSig = Signature(expects: [.plain(b.type(of: apiObj))] + functionSig.parameters, returns: functionSig.outputType)
 
     let m = b.buildWasmModule { m in
@@ -495,7 +495,7 @@ fileprivate let FastApiCallFuzzer = ProgramTemplate("FastApiCallFuzzer") { b in
         b.build(n: 10)
         let target = fastCallables.randomElement()!
         let apiObj = b.findOrGenerateType(target.group)
-        let functionSig = b.methodSignature(of: target.method, on: target.group)
+        let functionSig = chooseUniform(from: b.methodSignatures(of: target.method, on: target.group))
         let apiCall = b.callMethod(target.method, on: apiObj, withArgs: b.findOrGenerateArguments(forSignature: functionSig), guard: true)
         b.doReturn(apiCall)
     }

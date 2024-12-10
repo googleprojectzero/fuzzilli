@@ -99,8 +99,8 @@ public protocol Environment: Component {
     /// Returns the type of the property on the provided base object.
     func type(ofProperty propertyName: String, on baseType: ILType) -> ILType
 
-    /// Returns the signature of the specified method of he base object.
-    func signature(ofMethod methodName: String, on baseType: ILType) -> Signature
+    /// Returns the signatures of the overloads of the specified method of the base object.
+    func signatures(ofMethod methodName: String, on baseType: ILType) -> [Signature]
 
     /// Returns a list of (object group name, method name) pairs for a given type. The specified
     /// method on the specified object group can be called to generate the given type.
