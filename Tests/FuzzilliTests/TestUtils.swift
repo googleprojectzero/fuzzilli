@@ -37,3 +37,10 @@ func GetJavaScriptExecutorOrSkipTest() throws -> JavaScriptExecutor {
     }
     return runner
 }
+
+func GetJavaScriptExecutorOrSkipTest(type: JavaScriptExecutor.ExecutorType, withArguments args: [String]) throws -> JavaScriptExecutor {
+    guard let runner = JavaScriptExecutor(type: type, withArguments: args) else {
+        throw XCTSkip("Could not find js shell executable. Install Node.js (or if you want to use a different shell, modify the FUZZILLI_TEST_SHELL variable).")
+    }
+    return runner
+}

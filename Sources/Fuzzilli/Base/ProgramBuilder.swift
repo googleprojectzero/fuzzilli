@@ -3187,12 +3187,14 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmMemoryLoad(memory: Variable, dynamicOffset: Variable, loadType: WasmMemoryLoadType, staticOffset: Int64) -> Variable {
-            return b.emit(WasmMemoryLoad(loadType: loadType, staticOffset: staticOffset), withInputs: [memory, dynamicOffset]).output
+            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
+            return b.emit(WasmMemoryLoad(loadType: loadType, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset]).output
         }
 
         public func wasmMemoryStore(memory: Variable, dynamicOffset: Variable, value: Variable, storeType: WasmMemoryStoreType, staticOffset: Int64) {
             assert(b.type(of: value) == storeType.numberType())
-            b.emit(WasmMemoryStore(storeType: storeType, staticOffset: staticOffset), withInputs: [memory, dynamicOffset, value])
+            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
+            b.emit(WasmMemoryStore(storeType: storeType, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset, value])
         }
 
         public func wasmReassign(variable: Variable, to: Variable) {

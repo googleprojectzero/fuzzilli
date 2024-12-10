@@ -50,7 +50,7 @@ class LiveTests: XCTestCase {
             b.createWasmTag(parameterTypes: [.wasmi32, .wasmf64])
 
             b.buildWasmModule() { module in
-                module.addMemory(minPages: 2)
+                module.addMemory(minPages: 2, maxPages: probability(0.5) ? nil : 5, isMemory64: probability(0.5))
                 module.addWasmFunction(with: [] => .nothing) { function, args in
                     b.buildPrefix()
                     b.build(n: 40)
@@ -77,7 +77,7 @@ class LiveTests: XCTestCase {
             b.createWasmTag(parameterTypes: [.wasmi32, .wasmf64])
 
             let m = b.buildWasmModule() { module in
-                module.addMemory(minPages: 2)
+                module.addMemory(minPages: 2, maxPages: probability(0.5) ? nil : 5, isMemory64: probability(0.5))
                 module.addWasmFunction(with: [] => .nothing) { function, args in
                     b.buildPrefix()
                     b.build(n: 40)

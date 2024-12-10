@@ -30,8 +30,11 @@ public class WasmOperation: Operation {
 
     struct WasmConstants {
         static let specWasmMemPageSize: Int = 65536 // 4GB
+        // These are the limits defined in v8/src/wasm/wasm-limits.h which is based on https://www.w3.org/TR/wasm-js-api-2/#limits.
+        // Note that the memory64 limits will be merged later on.
         // This constant limits the amount of *declared* memory. At runtime, memory can grow up to only a limit based on the architecture type.
         static let specMaxWasmMem32Pages: Int = 65536 // 4GB
+        static let specMaxWasmMem64Pages: Int = 262144;  // 16GB
    }
 
 }
@@ -860,11 +863,13 @@ final class WasmMemoryLoad: WasmOperation {
 
     let loadType: WasmMemoryLoadType
     let staticOffset: Int64
+    let isMemory64: Bool
 
-    init(loadType: WasmMemoryLoadType, staticOffset: Int64) {
+    init(loadType: WasmMemoryLoadType, staticOffset: Int64, isMemory64: Bool) {
         self.loadType = loadType
         self.staticOffset = staticOffset
-        let dynamicOffsetType = ILType.wasmi32
+        self.isMemory64 = isMemory64
+        let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
         super.init(inputTypes: [.object(ofGroup: "WasmMemory"), dynamicOffsetType], outputType: loadType.numberType(), attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
@@ -905,11 +910,13 @@ final class WasmMemoryStore: WasmOperation {
 
     let storeType: WasmMemoryStoreType
     let staticOffset: Int64
+    let isMemory64: Bool
 
-    init(storeType: WasmMemoryStoreType, staticOffset: Int64) {
+    init(storeType: WasmMemoryStoreType, staticOffset: Int64, isMemory64: Bool) {
         self.storeType = storeType
         self.staticOffset = staticOffset
-        let dynamicOffsetType = ILType.wasmi32
+        self.isMemory64 = isMemory64
+        let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
         super.init(inputTypes: [.object(ofGroup: "WasmMemory"), dynamicOffsetType, storeType.numberType()], attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }

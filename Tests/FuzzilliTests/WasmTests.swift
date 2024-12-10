@@ -27,8 +27,13 @@ func testExecuteScript(program: String, runner: JavaScriptExecutor) -> JavaScrip
 }
 
 func testForOutput(program: String, runner: JavaScriptExecutor, outputString: String) {
-        let result = testExecuteScript(program: program, runner: runner)
-        XCTAssertEqual(result.output, outputString, "Error Output:\n" + result.error)
+    let result = testExecuteScript(program: program, runner: runner)
+    XCTAssertEqual(result.output, outputString, "Error Output:\n" + result.error)
+}
+
+func testForErrorOutput(program: String, runner: JavaScriptExecutor, errorMessageContains errormsg: String) {
+    let result = testExecuteScript(program: program, runner: runner)
+    XCTAssert(result.output.contains(errormsg), "Error messages don't match, got:\n" + result.output)
 }
 
 class WasmSignatureConversionTests: XCTestCase {
@@ -478,8 +483,11 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "43\n11\n")
     }
 
-    func testMemories() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+    // Test every memory testcase for both memory32 and memory64.
+
+    func importedMemoryTestCase(isMemory64: Bool) throws {
+        let runner = isMemory64 ? try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--experimental-wasm-memory64"])
+                                : try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -488,13 +496,13 @@ class WasmFoundationTests: XCTestCase {
 
         let b = fuzzer.makeBuilder()
 
-        let wasmMemory: Variable = b.createWasmMemory(minPages: 10, maxPages: 20)
-        assert(b.type(of: wasmMemory) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: false))
+        let wasmMemory: Variable = b.createWasmMemory(minPages: 10, maxPages: 20, isMemory64: isMemory64)
+        assert(b.type(of: wasmMemory) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: isMemory64))
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 let value = function.consti32(1337)
-                let offset = function.consti32(10)
+                let offset = isMemory64 ? function.consti64(10) : function.consti32(10)
                 function.wasmMemoryStore(memory: wasmMemory, dynamicOffset: offset, value: value, storeType: .I32StoreMem, staticOffset: 0)
                 let val = function.wasmMemoryLoad(memory: wasmMemory, dynamicOffset: offset, loadType: .I64LoadMem, staticOffset: 0)
                 function.wasmReturn(val)
@@ -525,7 +533,15 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1337\n0\n1337\n")
     }
 
-    func testDefineMemory() throws {
+    func testImportedMemory32() throws {
+        try importedMemoryTestCase(isMemory64: false)
+    }
+
+    func testImportedMemory64() throws {
+        try importedMemoryTestCase(isMemory64: true)
+    }
+
+    func defineMemory(isMemory64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
@@ -536,13 +552,13 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            let memory = wasmModule.addMemory(minPages: 5, maxPages: 12)
+            let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: isMemory64)
 
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
                 let value = function.consti64(1337)
-                let storeOffset = function.consti32(8)
+                let storeOffset = isMemory64 ? function.consti64(8) : function.consti32(8)
                 function.wasmMemoryStore(memory: memory, dynamicOffset: storeOffset, value: value, storeType: .I64StoreMem, staticOffset: 2)
-                let loadOffset = function.consti32(10)
+                let loadOffset = isMemory64 ? function.consti64(10) : function.consti32(10)
                 let val = function.wasmMemoryLoad(memory: memory, dynamicOffset: loadOffset, loadType: .I32LoadMem, staticOffset: 0)
                 function.wasmReturn(val)
             }
@@ -555,8 +571,42 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1337\n")
     }
 
+    func testDefineMemory32() throws {
+        try defineMemory(isMemory64: false)
+    }
+
+    func testDefineMemory64() throws {
+        try defineMemory(isMemory64: true)
+    }
+
+    func testMemory64Index() throws{
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: true)
+
+            wasmModule.addWasmFunction(with: [] => .nothing) { function, _ in
+                let value = function.consti64(1337)
+                let storeOffset = function.consti64(1 << 32)
+                function.wasmMemoryStore(memory: memory, dynamicOffset: storeOffset, value: value, storeType: .I64StoreMem, staticOffset: 2)
+            }
+        }
+
+        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+        b.callFunction(b.loadBuiltin("output"), withArgs: [b.callMethod("toString", on: res0)])
+
+        let jsProg = fuzzer.lifter.lift(b.finalize())
+        testForErrorOutput(program: jsProg, runner: runner, errorMessageContains: "RuntimeError: memory access out of bounds")
+    }
+
     // This test doesn't check the result of the Wasm loads, just exectues them.
-    func testAllMemoryLoadTypesExecution() throws {
+    func allMemoryLoadTypesExecution(isMemory64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
@@ -567,12 +617,12 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            let memory = wasmModule.addMemory(minPages: 1, maxPages: 10)
+            let memory = wasmModule.addMemory(minPages: 1, maxPages: 10, isMemory64: isMemory64)
 
             // Create a Wasm function for every memory load type.
             for loadType in WasmMemoryLoadType.allCases {
                 wasmModule.addWasmFunction(with: [] => loadType.numberType()) { function, _ in
-                    let loadOffset = function.consti32(9)
+                    let loadOffset = isMemory64 ? function.consti64(9) : function.consti32(9)
                     let val = function.wasmMemoryLoad(memory: memory, dynamicOffset: loadOffset, loadType: loadType, staticOffset: 0)
                     function.wasmReturn(val)
                 }
@@ -587,8 +637,16 @@ class WasmFoundationTests: XCTestCase {
         testExecuteScript(program: jsProg, runner: runner)
     }
 
-        // This test doesn't check the result of the Wasm stores, just exectues them.
-    func testAllMemoryStoreTypesExecution() throws {
+    func testAllMemoryLoadTypesExecutionOnMemory32() throws {
+        try allMemoryLoadTypesExecution(isMemory64: false)
+    }
+
+    func testAllMemoryLoadTypesExecutionOnMemory64() throws {
+        try allMemoryLoadTypesExecution(isMemory64: true)
+    }
+
+    // This test doesn't check the result of the Wasm stores, just exectues them.
+    func allMemoryStoreTypesExecution(isMemory64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
@@ -599,11 +657,11 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            let memory = wasmModule.addMemory(minPages: 2)
+            let memory = wasmModule.addMemory(minPages: 2, isMemory64: isMemory64)
             // Create a Wasm function for every memory load type.
             for storeType in WasmMemoryStoreType.allCases {
                 wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                    let storeOffset = function.consti32(13)
+                    let storeOffset = isMemory64 ? function.consti64(13) : function.consti32(13)
                     let value = switch storeType.numberType() {
                         case .wasmi32: function.consti32(8)
                         case .wasmi64: function.consti64(8)
@@ -622,6 +680,14 @@ class WasmFoundationTests: XCTestCase {
         }
         let jsProg = fuzzer.lifter.lift(b.finalize())
         testExecuteScript(program: jsProg, runner: runner)
+    }
+
+    func testAllMemoryStoreTypesExecutionOnMemory32() throws {
+        try allMemoryStoreTypesExecution(isMemory64: false)
+    }
+
+    func testAllMemoryStoreTypesExecutionOnMemory64() throws {
+        try allMemoryStoreTypesExecution(isMemory64: true)
     }
 
     func testLoops() throws {
@@ -2782,9 +2848,7 @@ class WasmSpliceTests: XCTestCase {
 class WasmJSPITests: XCTestCase {
     func testJSPI() throws {
         // We need to have the right arguments here and we need a shell that supports jspi.
-        guard let runner = JavaScriptExecutor(type: .user, withArguments: ["--wasm-staging", "--expose-gc"]) else {
-            throw XCTSkip("Could not find a JS shell.")
-        }
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--wasm-staging", "--expose-gc"])
 
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
