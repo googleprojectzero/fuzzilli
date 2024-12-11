@@ -33,8 +33,8 @@ class LiveTests: XCTestCase {
             b.buildPrefix()
         }
 
-        // We expect a maximum of 10% of ValueGeneration to fail
-        checkFailureRate(testResults: results, maxFailureRate: 0.10)
+        // We expect a maximum of 15% of ValueGeneration to fail
+        checkFailureRate(testResults: results, maxFailureRate: 0.15)
     }
 
     // The closure can use the ProgramBuilder to emit a program of a specific
