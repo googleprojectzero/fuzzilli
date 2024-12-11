@@ -705,10 +705,10 @@ class WasmFoundationTests: XCTestCase {
                 // Test if we can break from this block
                 // We should expect to have executed the first wasmReassign which sets marker to 11
                 let marker = function.consti64(10)
-                function.wasmBuildBlock(with: [] => .nothing) { label, args in
+                function.wasmBuildBlock(with: [] => .nothing, args: []) { label, args in
                     let a = function.consti64(11)
                     function.wasmReassign(variable: marker, to: a)
-                    function.wasmBuildBlock(with: [] => .nothing) { _, _ in
+                    function.wasmBuildBlock(with: [] => .nothing, args: []) { _, _ in
                         // TODO: write codegenerators that use this somehow.
                         // Break to the outer block, this verifies that we can break out of nested block
                         function.wasmBranch(to: label)
@@ -992,7 +992,7 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 
-        func testBranchInCatchAll() throws {
+    func testBranchInCatchAll() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1001,7 +1001,7 @@ class WasmFoundationTests: XCTestCase {
         let tag = b.createWasmTag(parameterTypes: [])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                function.wasmBuildBlock(with: [] => .nothing) { blockLabel, _ in
+                function.wasmBuildBlock(with: [] => .nothing, args: []) { blockLabel, _ in
                     function.wasmBuildLegacyTry(with: [] => .nothing) { tryLabel, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [])
                     } catchAllBody: {
@@ -1258,6 +1258,34 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "123\n")
+    }
+
+    func testBlockWithParameters() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.loadBuiltin("output")
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmf64) { function, _ in
+                let argI32 = function.consti32(12345)
+                let argF64 = function.constf64(543.21)
+                // TODO(mliedtke): We should also be able to have results but I don't think that really works on functions either yet with implicit return...
+                function.wasmBuildBlock(with: [.wasmi32, .wasmf64] => .nothing, args: [argI32, argF64]) { blockLabel, args in
+                    assert(args.count == 2)
+                    let result = function.wasmf64BinOp(function.converti32Tof64(args[0], isSigned: true), args[1], binOpKind: .Add)
+                    function.wasmReturn(result)
+                }
+                function.wasmUnreachable()
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "12888.21\n")
     }
 
     func testUnreachable() throws {

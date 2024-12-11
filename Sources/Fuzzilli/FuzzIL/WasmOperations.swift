@@ -939,12 +939,8 @@ final class WasmBeginBlock: WasmOperation {
 
     init(with signature: Signature) {
         self.signature = signature
-
-        // TODO(cffsmith): It is possible to just encode a valuetype that is a single return type.
         let parameterTypes = signature.parameters.convertPlainToILTypes()
-
-        // TODO(cffsmith): This needs some extra handling as it will put some things onto the stack.
-        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(inputTypes: parameterTypes, outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 

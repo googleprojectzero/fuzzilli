@@ -490,10 +490,21 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmReassign(variable: v, to: reassignmentVariable)
     },
 
-    // TODO(cffsmith): Implement a WasmBlockWithSignatureGenerator
     RecursiveCodeGenerator("WasmBlockGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
-        function.wasmBuildBlock(with: [] => .nothing) { label, args in
+        function.wasmBuildBlock(with: [] => .nothing, args: []) { label, args in
+            b.buildRecursive()
+        }
+    },
+
+    RecursiveCodeGenerator("WasmBlockWithSignatureGenerator", inContext: .wasmFunction) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+        // Choose a few random wasm values as arguments if available.
+        let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
+        // TODO(mliedtke): Also add support for return values (and probably find a suitable mechanism that we can also use for functions).
+        // A good solution would probably be to make the endBlock take the return type as an input.
+        function.wasmBuildBlock(with: parameters => .nothing, args: args) { label, args in
             b.buildRecursive()
         }
     },
