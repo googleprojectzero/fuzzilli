@@ -106,7 +106,8 @@ public class WasmLifter {
     private var functionIdxBase = 0
 
     // The signature index space.
-    private var nextSignatureIdx = 0
+    private var signatures : [Signature] = []
+    private var signatureIndexMap : [Signature: Int] = [:]
 
     // This should only be set once we have preprocessed all imported globals, so that we know where internally defined globals start
     private var baseDefinedGlobals: Int? = nil
@@ -352,53 +353,27 @@ public class WasmLifter {
 
         var temp = Data()
 
-        // Currently we also need to build a type section entry for the JSPI types, e.g. objects that are of this specific group.
-        let importCount = self.imports.filter( {
-            typer.type(of: $0.0).Is(.function()) ||
-            typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject")) ||
-            typer.type(of: $0.0).Is(.object(ofGroup: "WasmTag"))
-        }).count
-        let typeCount = importCount + self.functions.count + self.tags.reduce(0, {res, _ in res + 1})
+        // Collect all signatures.
+        for (_, signature) in self.imports {
+            if let signature {
+                registerSignature(signature)
+            }
+        }
+        for tag in self.tags {
+            registerSignature(tag.1 => .nothing)
+        }
+        for function in self.functions {
+            registerSignature(function.signature)
+        }
+
+        let typeCount = self.signatures.count
 
         temp += Leb128.unsignedEncode(typeCount)
 
-        for (importVariable, signature) in self.imports {
-            let type = typer.type(of: importVariable)
-
-            // Currently we also need to build a type section entry for the JSPI types, e.g. objects that are of this specific group.
-            if type.Is(.function()) || type.Is(.object(ofGroup: "WebAssembly.SuspendableObject")) || type.Is(.object(ofGroup: "WasmTag")) {
-                // Get the signature from the imports array.
-                // The signature of this function is a JS signature, it was converted when we decided to perform a WasmJSCall. This means we have selected a somewhat matching signature (see convertJsSignatureToWasmSignature).
-                // The code that follows and the code that performs the call depends on this signature and as such we need to build the right signature here that matches this.
-                // The signature was encoded in the instruction and is also tracked in the imports array, so we use that here.
-                // One could assert that the seen signature here is a possible converted signature, not sure that is necessary though.
-                let signature = signature!
-                temp += [0x60]
-                temp += Leb128.unsignedEncode(signature.parameters.count)
-                for paramType in signature.parameters {
-                    switch paramType {
-                    case .plain(let paramType):
-                        temp += ILTypeMapping[paramType]!
-                    default:
-                        fatalError("unreachable")
-                    }
-                }
-                if signature.outputType != .nothing {
-                    temp += Leb128.unsignedEncode(1) // num output types
-                    temp += ILTypeMapping[signature.outputType] ?? Data([0x6f])
-                } else {
-                    temp += [0x00] // num output types
-                }
-            }
-        }
-
-        // We only need the parameters here.
-        for functionInfo in self.functions {
-            // The 0x60 encodes functypes, which now expects two vector of
-            // returntypes
+        for signature in self.signatures {
             temp += [0x60]
-            temp += Leb128.unsignedEncode(functionInfo.signature.parameters.count)
-            for paramType in functionInfo.signature.parameters {
+            temp += Leb128.unsignedEncode(signature.parameters.count)
+            for paramType in signature.parameters {
                 switch paramType {
                 case .plain(let paramType):
                     temp += ILTypeMapping[paramType]!
@@ -406,27 +381,12 @@ public class WasmLifter {
                     fatalError("unreachable")
                 }
             }
-            if !functionInfo.signature.outputType.Is(.nothing) {
+            if signature.outputType != .nothing {
                 temp += Leb128.unsignedEncode(1) // num output types
-                temp += ILTypeMapping[functionInfo.signature.outputType]!
+                temp += ILTypeMapping[signature.outputType] ?? Data([0x6f])
             } else {
-                temp += Leb128.unsignedEncode(0) // num output types
+                temp += [0x00] // num output types
             }
-        }
-
-        for (_, parameters) in self.tags {
-            temp += [0x60]
-            temp += Leb128.unsignedEncode(parameters.count)
-            for paramType in parameters {
-                switch paramType {
-                case .plain(let paramType):
-                    temp += ILTypeMapping[paramType]!
-                default:
-                    fatalError("unreachable")
-                }
-            }
-            // Tag signatures don't have a return type.
-            temp += Leb128.unsignedEncode(0)
         }
 
         if verbose {
@@ -441,6 +401,17 @@ public class WasmLifter {
         self.bytecode.append(temp)
     }
 
+    private func registerSignature(_ signature: Signature) {
+        assert(signatures.count == signatureIndexMap.count)
+        if signatureIndexMap[signature] != nil {
+            return
+        }
+        let signatureIndex = signatures.count
+        signatures.append(signature)
+        signatureIndexMap[signature] = signatureIndex
+        assert(signatures.count == signatureIndexMap.count)
+    }
+
     private func buildImportSection() {
         if self.imports.isEmpty {
             return
@@ -453,7 +424,7 @@ public class WasmLifter {
         temp += Leb128.unsignedEncode(self.imports.map { $0 }.count)
 
         // Build the import components of this vector that consist of mod:name, nm:name, and d:importdesc
-        for (idx, importVariable) in self.imports.map({$0.0}).enumerated() {
+        for (idx, (importVariable, signature)) in self.imports.enumerated() {
             if verbose {
                 print(importVariable)
             }
@@ -470,11 +441,10 @@ public class WasmLifter {
                 if verbose {
                     print(functionIdxBase)
                 }
-                temp += [0x0, UInt8(nextSignatureIdx)] // import kind and signature (type) idx
+                temp += [0x0] + Leb128.unsignedEncode(signatureIndexMap[signature!]!)
 
                 // Update the index space, these indices have to be set before the exports are set
                 functionIdxBase += 1
-                nextSignatureIdx += 1
                 continue
             }
             if type.Is(.object(ofGroup: "WasmMemory")) {
@@ -516,8 +486,7 @@ public class WasmLifter {
                 continue
             }
             if type.Is(.object(ofGroup: "WasmTag")) {
-                temp += [0x4, 0x0] + Leb128.unsignedEncode(nextSignatureIdx)
-                nextSignatureIdx += 1
+                temp += [0x4, 0x0] + Leb128.unsignedEncode(signatureIndexMap[signature!]!)
                 continue
             }
             fatalError("unreachable")
@@ -541,8 +510,8 @@ public class WasmLifter {
         // TODO(cffsmith): functions can share type indices. This could be an optimization later on.
         var temp = Leb128.unsignedEncode(self.functions.count)
 
-        for (idx, _) in self.functions.enumerated() {
-            temp.append(Leb128.unsignedEncode(nextSignatureIdx + idx))
+        for info in self.functions {
+            temp.append(Leb128.unsignedEncode(signatureIndexMap[info.signature]!))
         }
 
         // Append the length of the section and the section contents itself.
@@ -785,9 +754,9 @@ public class WasmLifter {
         self.bytecode.append(WasmSection.tag.rawValue)
         var section = Data()
         section += Leb128.unsignedEncode(self.tags.reduce(0, {res, _ in res + 1}))
-        for (i, _) in self.tags.enumerated() {
+        for tag in self.tags {
             section.append(0)
-            section.append(Leb128.unsignedEncode(nextSignatureIdx + self.functions.count + i))
+            section.append(Leb128.unsignedEncode(signatureIndexMap[tag.1 => .nothing]!))
         }
 
         self.bytecode.append(Leb128.unsignedEncode(section.count))
