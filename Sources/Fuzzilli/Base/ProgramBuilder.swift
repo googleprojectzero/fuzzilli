@@ -3209,10 +3209,10 @@ public class ProgramBuilder {
 
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         // TODO(cffsmith): I think the best way to handle these types of blocks is to treat them like inline functions that have a signature. E.g. they behave like a definition and call of a wasmfunction. The output should be the output of the signature.
-        public func wasmBuildBlock(with signature: Signature, body: (Variable, [Variable]) -> ()) {
-            let instr = b.emit(WasmBeginBlock(with: signature))
+        public func wasmBuildBlock(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> ()) {
+            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args)
             b.setType(ofVariable: instr.innerOutput(0), to: .label)
-            body(instr.innerOutput(0), Array(instr.innerOutputs))
+            body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndBlock())
         }
 

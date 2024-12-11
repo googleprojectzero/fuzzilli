@@ -846,12 +846,17 @@ public class WasmLifter {
         assert(instr.op is WasmOperation)
 
         switch instr.op.opcode {
-        case .wasmBeginBlock(_),
-             .wasmBeginLoop(_),
+        case .wasmBeginBlock(let op):
+            // TODO(mliedtke): Repeat this for loops, try and try-delegate blocks.
+            registerSignature(op.signature)
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
+            // Needs typer analysis
+            return true
+        case .wasmBeginLoop(_),
              .wasmBeginTry(_),
              .wasmBeginTryDelegate(_):
-             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
-             // Needs typer analysis
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
+            // Needs typer analysis
             return true
         case .wasmBeginCatch(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
@@ -865,7 +870,7 @@ public class WasmLifter {
         case .beginWasmFunction(let op):
             functions.append(FunctionInfo(op.signature, Data(), for: self, withArguments: Array(instr.innerOutputs)))
             // Set the current active function as we are *actively* in it.
-            currentFunction = self.functions[self.functions.count - 1]
+            currentFunction = functions.last
         case .endWasmFunction(_):
             // TODO: Make sure that the stack is matching the output of the function signature, at least depth wise
             // Make sure that we exit the current function, this is necessary such that the variableAnalyzer can be reset too, it is local to a function definition and we should only pass .wasmFunction context instructions to the variableAnalyzer.
@@ -921,7 +926,7 @@ public class WasmLifter {
             }
 
             // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
-            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet || instr.op is WasmBeginCatch || instr.op is WasmThrow || instr.op is WasmRethrow {
+            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet || instr.op is WasmBeginCatch || instr.op is WasmThrow || instr.op is WasmRethrow || instr.op is WasmBeginBlock {
                 continue
             }
             fatalError("unreachable")
@@ -949,7 +954,7 @@ public class WasmLifter {
         }
 
         // TODO(cffsmith): Reuse this for handling parameters in loops and blocks.
-        if instr.op is WasmBeginCatch {
+        if instr.op is WasmBeginCatch || instr.op is WasmBeginBlock {
             // As the parameters are pushed "in order" to the stack, they need to be popped in reverse order.
             for innerOutput in instr.innerOutputs(1...).reversed() {
                 currentFunction!.spillLocal(forVariable: innerOutput)
@@ -1291,12 +1296,10 @@ public class WasmLifter {
                 wasmInstruction.input(0) == $0.0 && op.functionSignature == $0.1
             })!
             return Data([0x10]) + Leb128.unsignedEncode(index)
-        case .wasmBeginBlock(_):
-            // A Block can expect an item on the stack at the end, just like a function. This would be encoded just after the block begin (0x02) byte.
-            // For now, we just have the empty block but this instruction could take another input which determines the value that we expect on the stack.
-            // It would then behave similar to a function just with different branching behavior.
+        case .wasmBeginBlock(let op):
+            // A Block can "produce" (push) an item on the value stack, just like a function. Similarly, a block can also have parameters.
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
-            return Data([0x02] + [0x40])
+            return Data([0x02] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginLoop(_):
             // 0x03 is the loop instruction and 0x40 is the empty block type, just like in .wasmBeginBlock
             return Data([0x03] + [0x40])
