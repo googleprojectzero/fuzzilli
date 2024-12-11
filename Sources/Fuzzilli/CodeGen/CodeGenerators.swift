@@ -1716,11 +1716,9 @@ public let CodeGenerators: [CodeGenerator] = [
             return
         }
 
-        // Explicitly set the type of the imitation to that of the original value as the static type inference will usually
-        // not be able to figure out that they are compatible. Also in case the original value is a primitive value, the imitation
-        // will (correctly) be determined to be a .object(), but we don't actually want that here, so we override the type.
-        b.setType(ofVariable: imitation, to: b.type(of: orig))
-        assert(b.type(of: imitation) == b.type(of: orig))
+        // TODO(cffsmith): Make the type inference strong enough such that the
+        // inferred type is close enough to the original type.
+        // assert(b.type(of: imitation) == b.type(of: orig))
     },
 
     CodeGenerator("ResizableArrayBufferGenerator", inputs: .one) { b, v in
