@@ -597,7 +597,13 @@ public class Fuzzer {
             return
         }
 
-        currentCorpusImportJob = CorpusImportJob(corpus: corpus, mode: importMode)
+        // In the default corpus import mode (where we only keep interesting samples), the order
+        // of imported programs matters as earlier samples may cause later samples to not be
+        // added to the corpus (because they no longer add any new coverage). To not create an
+        // artifical bias due to the order/filenames, we shuffle the corpus here.
+        let shuffledCorpus = corpus.shuffled()
+
+        currentCorpusImportJob = CorpusImportJob(corpus: shuffledCorpus, mode: importMode)
         changeState(to: .corpusImport)
     }
 
