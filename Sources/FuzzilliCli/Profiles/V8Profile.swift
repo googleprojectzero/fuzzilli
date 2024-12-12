@@ -444,28 +444,23 @@ let fastCallables : [(group: ILType, method: String)] = [
 ]
 
 let WasmFastCallFuzzer = ProgramTemplate("WasmFastCallFuzzer") { b in
-    b.buildPrefix();
+    b.buildPrefix()
     b.build(n: 10)
     let target = fastCallables.randomElement()!
     let apiObj = b.findOrGenerateType(target.group)
 
-    let unwrapped = b.getProperty(target.method, of: apiObj)
-
-    // Wrap the API function so that it can be called from WebAssembly.
-    let function = b.createNamedVariable(forBuiltin: "Function")
-    let prot = b.getProperty("prototype", of: function)
-    let call = b.getProperty("call", of: prot)
-    let wrapped = b.callMethod("bind", on: call, withArgs: [unwrapped])
+    // Bind the API function so that it can be called from WebAssembly.
+    let wrapped = b.bindMethod(target.method, on: apiObj)
 
     let functionSig = chooseUniform(from: b.methodSignatures(of: target.method, on: target.group))
     let wrappedSig = Signature(expects: [.plain(b.type(of: apiObj))] + functionSig.parameters, returns: functionSig.outputType)
 
     let m = b.buildWasmModule { m in
         let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
-        var wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(wrappedSig, availableTypes: allWasmTypes)
+        let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(wrappedSig, availableTypes: allWasmTypes)
         m.addWasmFunction(with: wasmSignature) {fbuilder, _  in
             let args = b.randomWasmArguments(forWasmSignature: wasmSignature)
-            if var args {
+            if let args {
                 let maybeRet = fbuilder.wasmJsCall(function: wrapped, withArgs: args, withWasmSignature: wasmSignature)
                 if let ret = maybeRet {
                   fbuilder.wasmReturn(ret)
@@ -478,7 +473,7 @@ let WasmFastCallFuzzer = ProgramTemplate("WasmFastCallFuzzer") { b in
 
     let exports = m.loadExports()
 
-    for (methodName, signature) in m.getExportedMethods() {
+    for (methodName, _) in m.getExportedMethods() {
         let exportedMethod = b.getProperty(methodName, of: exports)
         b.eval("%WasmTierUpFunction(%@)", with: [exportedMethod])
         let args = b.findOrGenerateArguments(forSignature: wrappedSig)
