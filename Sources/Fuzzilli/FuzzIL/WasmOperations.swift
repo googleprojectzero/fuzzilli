@@ -1004,7 +1004,7 @@ final class WasmBeginTry: WasmOperation {
     init(with signature: Signature) {
         self.signature = signature
         let parameterTypes = signature.parameters.convertPlainToILTypes()
-        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmTry])
+        super.init(inputTypes: parameterTypes, outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmTry])
     }
 }
 
@@ -1077,7 +1077,7 @@ final class WasmBeginTryDelegate: WasmOperation {
     init(with signature: Signature) {
         self.signature = signature
         let parameterTypes = signature.parameters.convertPlainToILTypes()
-        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [])
+        super.init(inputTypes: parameterTypes, outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [])
     }
 }
 

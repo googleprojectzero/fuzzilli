@@ -847,14 +847,22 @@ public class WasmLifter {
 
         switch instr.op.opcode {
         case .wasmBeginBlock(let op):
-            // TODO(mliedtke): Repeat this for loops, try and try-delegate blocks.
+            // TODO(mliedtke): Repeat this for loops and if-else blocks.
             registerSignature(op.signature)
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
-        case .wasmBeginLoop(_),
-             .wasmBeginTry(_),
-             .wasmBeginTryDelegate(_):
+        case .wasmBeginTry(let op):
+            registerSignature(op.signature)
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
+            // Needs typer analysis
+            return true
+        case .wasmBeginTryDelegate(let op):
+            registerSignature(op.signature)
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
+            // Needs typer analysis
+            return true
+        case .wasmBeginLoop(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
@@ -925,8 +933,9 @@ public class WasmLifter {
                 continue
             }
 
+            // TODO(mliedtke): Make this an attribute.
             // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
-            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet || instr.op is WasmBeginCatch || instr.op is WasmThrow || instr.op is WasmRethrow || instr.op is WasmBeginBlock {
+            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet || instr.op is WasmBeginCatch || instr.op is WasmThrow || instr.op is WasmRethrow || instr.op is WasmBeginBlock || instr.op is WasmBeginTry || instr.op is WasmBeginTryDelegate {
                 continue
             }
             fatalError("unreachable")
@@ -953,8 +962,8 @@ public class WasmLifter {
             self.writer.addExpr(for: instr.output, bytecode: Data([0x20, UInt8(currentFunction!.localsInfo.count - 1)]))
         }
 
-        // TODO(cffsmith): Reuse this for handling parameters in loops and blocks.
-        if instr.op is WasmBeginCatch || instr.op is WasmBeginBlock {
+        // TODO(mliedtke): Reuse this for handling parameters in loops, if-else, ...
+        if instr.op is WasmBeginCatch || instr.op is WasmBeginBlock || instr.op is WasmBeginTry || instr.op is WasmBeginTryDelegate {
             // As the parameters are pushed "in order" to the stack, they need to be popped in reverse order.
             for innerOutput in instr.innerOutputs(1...).reversed() {
                 currentFunction!.spillLocal(forVariable: innerOutput)
@@ -1303,10 +1312,10 @@ public class WasmLifter {
         case .wasmBeginLoop(_):
             // 0x03 is the loop instruction and 0x40 is the empty block type, just like in .wasmBeginBlock
             return Data([0x03] + [0x40])
-        case .wasmBeginTry(_),
-             .wasmBeginTryDelegate(_):
-            // 0x06 is the try instruction and 0x40 is the empty block type, just like in .wasmBeginBlock
-            return Data([0x06] + [0x40])
+        case .wasmBeginTry(let op):
+            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+        case .wasmBeginTryDelegate(let op):
+            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginCatchAll(_):
             return Data([0x19])
         case .wasmBeginCatch(_):

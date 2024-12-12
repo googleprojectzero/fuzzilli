@@ -1036,7 +1036,7 @@ public class FuzzILLifter: Lifter {
 
         case .wasmEndTryDelegate(_):
             w.decreaseIndentionLevel()
-            w.emit("WasmEndTryDelegate")
+            w.emit("WasmEndTryDelegate \(input(0))")
 
         case .wasmReassign(_):
             w.emit("\(input(0)) <- WasmReassign \(input(1))")

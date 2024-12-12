@@ -3210,6 +3210,7 @@ public class ProgramBuilder {
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         // TODO(cffsmith): I think the best way to handle these types of blocks is to treat them like inline functions that have a signature. E.g. they behave like a definition and call of a wasmfunction. The output should be the output of the signature.
         public func wasmBuildBlock(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> ()) {
+            assert(signature.parameters.count == args.count)
             let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args)
             b.setType(ofVariable: instr.innerOutput(0), to: .label)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
@@ -3242,8 +3243,9 @@ public class ProgramBuilder {
             b.emit(WasmEndLoop())
         }
 
-        public func wasmBuildLegacyTry(with signature: Signature, body: (Variable, [Variable]) -> Void, catchAllBody: (() -> Void)? = nil) {
-            let instr = b.emit(WasmBeginTry(with: signature))
+        public func wasmBuildLegacyTry(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Void, catchAllBody: (() -> Void)? = nil) {
+            assert(signature.parameters.count == args.count)
+            let instr = b.emit(WasmBeginTry(with: signature), withInputs: args)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             if let catchAllBody = catchAllBody {
                 b.emit(WasmBeginCatchAll(with: signature))
@@ -3272,8 +3274,9 @@ public class ProgramBuilder {
             b.emit(WasmRethrow(), withInputs: [exception])
         }
 
-        public func wasmBuildLegacyTryDelegate(with signature: Signature, body: (Variable, [Variable]) -> Void, delegate: Variable) {
-            let instr = b.emit(WasmBeginTryDelegate(with: signature))
+        public func wasmBuildLegacyTryDelegate(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Void, delegate: Variable) {
+            assert(signature.parameters.count == args.count)
+            let instr = b.emit(WasmBeginTryDelegate(with: signature), withInputs: args)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndTryDelegate(), withInputs: [delegate])
         }

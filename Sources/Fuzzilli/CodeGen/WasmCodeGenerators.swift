@@ -528,7 +528,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     RecursiveCodeGenerator("WasmLegacyTryGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
-        function.wasmBuildLegacyTry(with: [] => .nothing) { label, args in
+        // Choose a few random wasm values as arguments if available.
+        let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
+        function.wasmBuildLegacyTry(with: parameters => .nothing, args: args) { label, args in
             b.buildRecursive(block: 1, of: 2, n: 4)
         } catchAllBody: {
             b.buildRecursive(block: 2, of: 2, n: 4)
@@ -544,7 +547,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     RecursiveCodeGenerator("WasmLegacyTryDelegateGenerator", inContext: .wasmFunction, inputs: .required(.label)) { b, label in
         let function = b.currentWasmModule.currentWasmFunction
-        function.wasmBuildLegacyTryDelegate(with: [] => .nothing, body: { _, _ in
+        // Choose a few random wasm values as arguments if available.
+        let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
+        function.wasmBuildLegacyTryDelegate(with: parameters => .nothing, args: args, body: { _, _ in
             b.buildRecursive()
         }, delegate: label)
     },

@@ -1931,7 +1931,7 @@ public let CodeGenerators: [CodeGenerator] = [
             blockIndex += 1
             m.addWasmFunction(with: b.randomWasmSignature()) { function, _ in
                 b.buildPrefix()
-                function.wasmBuildLegacyTry(with: [] => .nothing, body: {label, _ in
+                function.wasmBuildLegacyTry(with: [] => .nothing, args: [], body: {label, _ in
                     b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
                     blockIndex += 1
                     for _ in 0..<catchCount {
