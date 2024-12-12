@@ -1411,7 +1411,7 @@ class MinimizerTests: XCTestCase {
             let module = b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                     evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
                         evaluator.nextInstructionIsImportant(in: b)
                         let val = function.consti64(42)
                         evaluator.nextInstructionIsImportant(in: b)
@@ -1435,7 +1435,7 @@ class MinimizerTests: XCTestCase {
         do {
             let module = b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                    function.wasmBuildLegacyTry(with: [] => .nothing) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
                         function.wasmReturn(function.consti64(42))
                     }
                     function.wasmUnreachable()
