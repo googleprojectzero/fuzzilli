@@ -498,6 +498,10 @@ let v8Profile = Profile(
             args.append("--battery-saver-mode")
         }
 
+        if probability(0.1) {
+            args.append("--stress-scavenger-pinning-objects-random")
+        }
+
         //
         // Sometimes enable additional verification/stressing logic (which may be fairly expensive).
         //
