@@ -2064,6 +2064,26 @@ final class LoopContinue: JsOperation {
     }
 }
 
+final class LoopBreakNested: JsOperation {
+    override var opcode: Opcode { .loopBreakNested(self) }
+
+    let depth: Int
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .loop])
+    }
+}
+
+final class LoopContinueNested: JsOperation {
+    override var opcode: Opcode { .loopContinueNested(self) }
+
+    let depth: Int
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .loop])
+    }
+}
+
 final class BeginTry: JsOperation {
     override var opcode: Opcode { .beginTry(self) }
 

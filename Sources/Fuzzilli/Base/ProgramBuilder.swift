@@ -2531,6 +2531,14 @@ public class ProgramBuilder {
         emit(LoopContinue(), withInputs: [])
     }
 
+    public func loopBreakNested(_ depth: Int){
+        emit(LoopBreakNested(depth), withInputs: [])
+    }
+
+    public func loopContinueNested(_ depth: Int){
+        emit(LoopContinueNested(depth), withInputs: [])
+    }
+
     public func buildTryCatchFinally(tryBody: () -> (), catchBody: ((Variable) -> ())? = nil, finallyBody: (() -> ())? = nil) {
         assert(catchBody != nil || finallyBody != nil, "Must have either a Catch or a Finally block (or both)")
         emit(BeginTry())

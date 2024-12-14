@@ -164,6 +164,8 @@ public let codeGeneratorWeights = [
     "RepeatLoopGenerator":                      10,
     "SwitchCaseBreakGenerator":                 5,
     "LoopBreakGenerator":                       5,
+    "LoopLabelBreakGenerator":                  3,
+    "LoopLabelContinueGenerator":               3,
     "ContinueGenerator":                        5,
     "TryCatchGenerator":                        5,
     "ThrowGenerator":                           1,
