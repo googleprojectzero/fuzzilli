@@ -886,7 +886,7 @@ public class JavaScriptLifter: Lifter {
                 w.assign(expr, to: instr.output)
 
             case .loadNamedVariable(let op):
-                w.assign(Identifier.new(op.variableName), to: instr.output)
+                w.assign(Identifier.new(op.variableName), to: instr.output, forceInlining: true)
 
             case .storeNamedVariable(let op):
                 let NAME = op.variableName
@@ -1172,22 +1172,34 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .beginForInLoop:
-                let LET = w.declarationKeyword(for: instr.innerOutput)
-                let V = w.declare(instr.innerOutput)
+            case .beginPlainForInLoop:
                 let OBJ = input(0)
+                let V = w.declare(instr.innerOutput)
+                let LET = w.declarationKeyword(for: instr.innerOutput)
                 w.emit("for (\(LET) \(V) in \(OBJ)) {")
+                w.enterNewBlock()
+
+            case .beginForInLoopWithReassignment:
+                let OBJ = input(0)
+                let V = input(1)
+                w.emit("for (\(V) in \(OBJ)) {")
                 w.enterNewBlock()
 
             case .endForInLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .beginForOfLoop:
+            case .beginPlainForOfLoop:
+                let OBJ = input(0)
                 let V = w.declare(instr.innerOutput)
                 let LET = w.declarationKeyword(for: instr.innerOutput)
-                let OBJ = input(0)
                 w.emit("for (\(LET) \(V) of \(OBJ)) {")
+                w.enterNewBlock()
+
+            case .beginForOfLoopWithReassignment:
+                let OBJ = input(0)
+                let V = input(1)
+                w.emit("for (\(V) of \(OBJ)) {")
                 w.enterNewBlock()
 
             case .beginForOfLoopWithDestruct(let op):
@@ -1540,13 +1552,13 @@ public class JavaScriptLifter: Lifter {
         ///
         /// If the expression can be inlined, it will be associated with the variable and returned at its use. If the expression cannot be inlined,
         /// the expression will be emitted either as part of a variable definition or as an expression statement (if the value isn't subsequently used).
-        mutating func assign(_ expr: Expression, to v: Variable, allowInlining: Bool = true) {
+        mutating func assign(_ expr: Expression, to v: Variable, allowInlining: Bool = true, forceInlining: Bool = false) {
             if let V = expressions[v] {
                 // In some situations, for example in the case of guarded operations that require a try-catch around them,
                 // the output variable is declared up-front and so we lift to a variable assignment.
                 assert(V.type === Identifier)
                 emit("\(V) = \(expr);")
-            } else if allowInlining && shouldTryInlining(expr, producing: v) {
+            } else if allowInlining && shouldTryInlining(expr, producing: v) || forceInlining {
                 expressions[v] = expr
                 // If this is an effectful expression, it must be the next expression to be evaluated. To ensure that, we
                 // keep a list of all "pending" effectful expressions, which must be executed in FIFO order.

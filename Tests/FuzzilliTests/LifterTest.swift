@@ -2579,9 +2579,9 @@ class LifterTests: XCTestCase {
         let a3 = b.createArray(with: [b.loadInt(30), b.loadInt(31), b.loadInt(32)])
         let a4 = b.createArray(with: [a1, a2, a3])
         let print = b.loadBuiltin("print")
-        b.buildForOfLoop(a4, selecting: [0,2], hasRestElement: true) { args in
+        b.buildForOfLoopWithDestruct(a4, selecting: [0,2], hasRestElement: true) { args in
             b.callFunction(print, withArgs: [args[0]])
-            b.buildForOfLoop(args[1]) { v in
+            b.buildPlainForOfLoop(args[1]) { v in
                 b.callFunction(print, withArgs: [v])
             }
         }
@@ -2602,13 +2602,40 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testForLoopWithReassignment() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createObject(with: ["x": b.loadInt(42)])
+        let existing = b.loadString("initial")
+        b.buildForInLoopWithReassignment(obj, existing) {
+            b.reassign(existing, to: b.loadString("updated"))
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const o1 = {
+            "x": 42,
+        };
+        let v2 = "initial";
+        for (v2 in o1) {
+            v2 = "updated";
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testBlockStatements() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
         let v0 = b.loadInt(1337)
         let v1 = b.createObject(with: ["a": v0])
-        b.buildForInLoop(v1) { v2 in
+        b.buildPlainForInLoop(v1) { v2 in
             b.blockStatement {
                 let v3 = b.loadInt(1337)
                 b.reassign(v2, to: v3)

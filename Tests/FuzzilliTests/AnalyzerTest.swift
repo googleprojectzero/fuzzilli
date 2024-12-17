@@ -257,15 +257,24 @@ class AnalyzerTests: XCTestCase {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 
-            b.buildForInLoop(args[1]) { _ in
+            b.buildPlainForInLoop(args[1]) { _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 
-            b.buildForOfLoop(args[2]) { _ in
+            let existingVar = b.loadInt(42)
+            b.buildForInLoopWithReassignment(args[1], existingVar) {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 
-            b.buildForOfLoop(args[3], selecting: [0, 1, 3]) { _ in
+            b.buildPlainForOfLoop(args[2]) { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
+            }
+
+            b.buildForOfLoopWithReassignment(args[2], existingVar) {
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
+            }
+
+            b.buildForOfLoopWithDestruct(args[3], selecting: [0, 1, 3]) { _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 

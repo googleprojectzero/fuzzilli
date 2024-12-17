@@ -681,12 +681,12 @@ class JSTyperTests: XCTestCase {
                 }
                 break
             case 2:
-                b.buildForInLoop(obj) { loopVar in
+                b.buildPlainForInLoop(obj) { loopVar in
                     XCTAssertEqual(b.type(of: loopVar), .string)
                     body()
                 }
             case 3:
-                b.buildForOfLoop(obj) { loopVar in
+                b.buildPlainForOfLoop(obj) { loopVar in
                     XCTAssertEqual(b.type(of: loopVar), .anything)
                     body()
                 }

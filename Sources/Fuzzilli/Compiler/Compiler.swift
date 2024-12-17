@@ -412,36 +412,69 @@ public class JavaScriptCompiler {
             }
 
         case .forInLoop(let forInLoop):
-            let initializer = forInLoop.left;
-            guard !initializer.hasValue else {
-                throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-in loop")
-            }
-
+            let initializer = forInLoop.left!
             let obj = try compileExpression(forInLoop.right)
+            // Processing a for-in or for-of loop requires an iterator, which is typically declared in the function header.
+            // Alternatively, an existing variable can be used, resulting in an identifier instead of a variable declarator.
+            // If the identifier is not previously declared, it is implicitly created as a global variable.
 
-            let loopVar = emit(BeginForInLoop(), withInputs: [obj]).innerOutput
-            try enterNewScope {
-                map(initializer.name, to: loopVar)
-                try compileBody(forInLoop.body)
+            switch initializer {
+            case .variableDeclarator(let variableDeclarator):
+                guard !variableDeclarator.hasValue else {
+                    throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-in loop")
+                } 
+                let loopVar = emit(BeginPlainForInLoop(), withInputs: [obj]).innerOutput
+                try enterNewScope {
+                    map(variableDeclarator.name, to: loopVar)
+                    try compileBody(forInLoop.body)
+                }
+                emit(EndForInLoop())
+
+            case .identifier(let identifier):
+                let loopVar: Variable
+                if let existingVar = lookupIdentifier(identifier.name) {
+                    loopVar = existingVar
+                } else {
+                    loopVar = emit(LoadNamedVariable(identifier.name)).output
+                    map(identifier.name, to: loopVar)
+                }
+                emit(BeginForInLoopWithReassignment(), withInputs: [obj, loopVar])
+                try enterNewScope {
+                    try compileBody(forInLoop.body)
+                }
+                emit(EndForInLoop())
             }
-
-            emit(EndForInLoop())
 
         case .forOfLoop(let forOfLoop):
-            let initializer = forOfLoop.left;
-            guard !initializer.hasValue else {
-                throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-of loop")
-            }
-
+            let initializer = forOfLoop.left!
             let obj = try compileExpression(forOfLoop.right)
 
-            let loopVar = emit(BeginForOfLoop(), withInputs: [obj]).innerOutput
-            try enterNewScope {
-                map(initializer.name, to: loopVar)
-                try compileBody(forOfLoop.body)
-            }
+            switch initializer {
+            case .variableDeclarator(let variableDeclarator):
+                guard !variableDeclarator.hasValue else {
+                    throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-of loop")
+                } 
+                let loopVar = emit(BeginPlainForOfLoop(), withInputs: [obj]).innerOutput
+                try enterNewScope {
+                    map(variableDeclarator.name, to: loopVar)
+                    try compileBody(forOfLoop.body)
+                }
+                emit(EndForOfLoop())
 
-            emit(EndForOfLoop())
+            case .identifier(let identifier):
+                let loopVar: Variable
+                if let existingVar = lookupIdentifier(identifier.name) {
+                    loopVar = existingVar
+                } else {
+                    loopVar = emit(LoadNamedVariable(identifier.name)).output
+                    map(identifier.name, to: loopVar)
+                }
+                emit(BeginForOfLoopWithReassignment(), withInputs: [obj, loopVar])
+                try enterNewScope {
+                    try compileBody(forOfLoop.body)
+                }
+                emit(EndForOfLoop())
+            }
 
         case .breakStatement:
             // If we're in both .loop and .switch context, then the loop must be the most recent context 
