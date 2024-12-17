@@ -89,3 +89,14 @@ for (output("inside for loop initializer"); output("inside for loop condition"),
   if (!countdown()) break;
 }
 resetCounter();
+
+for (a of ["new a"]) {}
+output("value of a: " + a);
+
+b = "old b";
+for (b of ["new b"]) {}
+output("value of b: " + b);
+
+var c = "old c";
+for (c of ["new c"]) {}
+output("value of c: " + c);

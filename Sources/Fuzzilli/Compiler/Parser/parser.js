@@ -274,7 +274,11 @@ function parse(script, proto) {
                     let initDecl = { name: decl.id.name };
                     assert(decl.init == null, "Expected no initial value for the variable declared as part of a for-in loop")
                     forInLoop.variableDeclarator = make('VariableDeclarator', initDecl);
-                } else forInLoop.identifier = make('Identifier', { name: node.left.name });
+                } else if (node.left.type === 'Identifier') {
+                    forOfLoop.identifier = make('Identifier', { name: node.left.name });
+                } else {
+                    throw "Unsupported left side of for-in loop: " + node.left.type;
+                }
                 forInLoop.right = visitExpression(node.right);
                 forInLoop.body = visitStatement(node.body);
                 return makeStatement('ForInLoop', forInLoop);
@@ -287,7 +291,11 @@ function parse(script, proto) {
                     let initDecl = { name: decl.id.name };
                     assert(decl.init == null, "Expected no initial value for the variable declared as part of a for-of loop")
                     forOfLoop.variableDeclarator = make('VariableDeclarator', initDecl);
-                } else forOfLoop.identifier = make('Identifier', { name: node.left.name });
+                } else if (node.left.type === 'Identifier') {
+                    forOfLoop.identifier = make('Identifier', { name: node.left.name });
+                } else {
+                    throw "Unsupported left side of for-of loop: " + node.left.type;
+                }
                 forOfLoop.right = visitExpression(node.right);
                 forOfLoop.body = visitStatement(node.body);
                 return makeStatement('ForOfLoop', forOfLoop);
