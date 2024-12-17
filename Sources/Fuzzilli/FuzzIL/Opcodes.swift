@@ -106,6 +106,7 @@ enum Opcode {
     case deleteComputedProperty(DeleteComputedProperty)
     case configureComputedProperty(ConfigureComputedProperty)
     case typeOf(TypeOf)
+    case void(Void_)
     case testInstanceOf(TestInstanceOf)
     case testIn(TestIn)
     case beginPlainFunction(BeginPlainFunction)

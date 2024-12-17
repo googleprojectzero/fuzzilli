@@ -337,6 +337,9 @@ message ConfigureComputedProperty {
 message TypeOf {
 }
 
+message Void {
+}
+
 message TestInstanceOf {
 }
 

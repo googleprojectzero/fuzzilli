@@ -1092,6 +1092,9 @@ public class JavaScriptCompiler {
             if unaryExpression.operator == "typeof" {
                 let argument = try compileExpression(unaryExpression.argument)
                 return emit(TypeOf(), withInputs: [argument]).output
+            } else if unaryExpression.operator == "void" {
+                let argument = try compileExpression(unaryExpression.argument)
+                return emit(Void_(), withInputs: [argument]).output
             } else if unaryExpression.operator == "delete" {
                 guard case .memberExpression(let memberExpression) = unaryExpression.argument.expression else {
                     throw CompilerError.invalidNodeError("delete operator must be applied to a member expression")
