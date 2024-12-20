@@ -110,4 +110,10 @@ public protocol Environment: Component {
     /// property either has the given type, or is a constructor of that type. If the group name is
     /// empty, then the `property name` is either a global property, or a global constructor.
     func getProducingProperties(ofType type: ILType) -> [(group: String, property: String)]
+
+    /// Returns a list of all subtypes of a given type.
+    func getSubtypes(ofType type: ILType) -> [ILType]
+
+    /// Helper function that checks if `type` is contained in the result of `getSubtypes`
+    func isSubtype(_ type: ILType, of parent: ILType) -> Bool
 }

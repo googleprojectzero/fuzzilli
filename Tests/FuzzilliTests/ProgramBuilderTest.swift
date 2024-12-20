@@ -2518,4 +2518,29 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert(b.type(of: obj).Is(objType))
     }
 
+    func testRandomVariableOfTypeOrSubtype() {
+        let type1 = ILType.object(ofGroup: "group1", withProperties: [], withMethods: [])
+        let type2 = ILType.object(ofGroup: "group2", withProperties: [], withMethods: [])
+        let type3 = ILType.object(ofGroup: "group3", withProperties: [], withMethods: [])
+        let type4 = ILType.object(ofGroup: "group4", withProperties: [], withMethods: [])
+
+        let group1 = ObjectGroup(name: "group1", instanceType: type1, properties: [:], methods: [:])
+        let group2 = ObjectGroup(name: "group2", instanceType: type2, properties: [:], methods: [:], parent: "group1")
+        let group3 = ObjectGroup(name: "group3", instanceType: type3, properties: [:], methods: [:], parent: "group2")
+        let group4 = ObjectGroup(name: "group4", instanceType: type4, properties: [:], methods: [:], parent: "group3")
+
+        let env = JavaScriptEnvironment(additionalBuiltins: ["type3": type3], additionalObjectGroups: [group1, group2, group3, group4])
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+        let var3 = b.createNamedVariable(forBuiltin: "type3")
+        XCTAssert(b.type(of: var3).Is(type3))
+        // Get a random variable and then change the type
+        let var1 = b.randomVariable(ofTypeOrSubtype: type1)
+        XCTAssert(var1 != nil)
+        XCTAssert(var1 == var3)
+        let var4 = b.randomVariable(ofTypeOrSubtype: type4)
+        XCTAssert(var4 == nil)
+    }
 }

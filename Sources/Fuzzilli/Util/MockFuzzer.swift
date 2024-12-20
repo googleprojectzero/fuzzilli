@@ -97,6 +97,14 @@ class MockEnvironment: ComponentBase, Environment {
         return []
     }
 
+    func getSubtypes(ofType type: ILType) -> [ILType] {
+        return [type]
+    }
+
+    public func isSubtype(_ type: ILType, of parent: ILType) -> Bool {
+        return type.Is(parent)
+    }
+
     var constructables: [String] {
         return ["blafoo"]
     }
