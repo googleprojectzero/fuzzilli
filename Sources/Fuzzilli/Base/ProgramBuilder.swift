@@ -876,6 +876,13 @@ public class ProgramBuilder {
         return findVariable(satisfying: { self.type(of: $0).Is(type) })
     }
 
+    public func randomVariable(ofTypeOrSubtype type: ILType) -> Variable? {
+        assert(type != .nothing)
+        return findVariable() { (variable: Variable) in
+            fuzzer.environment.isSubtype(self.type(of: variable), of: type)
+        }
+    }
+
     /// Returns a random variable that is not known to have the given type.
     ///
     /// This will return a variable for which `b.type(of: v).Is(type)` is false, i.e. for which our type inference

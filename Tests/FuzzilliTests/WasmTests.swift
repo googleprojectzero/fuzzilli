@@ -599,7 +599,7 @@ class WasmFoundationTests: XCTestCase {
         }
 
         let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
-        b.callFunction(b.loadBuiltin("output"), withArgs: [b.callMethod("toString", on: res0)])
+        b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res0)])
 
         let jsProg = fuzzer.lifter.lift(b.finalize())
         testForErrorOutput(program: jsProg, runner: runner, errorMessageContains: "RuntimeError: memory access out of bounds")
@@ -1098,7 +1098,7 @@ class WasmFoundationTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
-        let outputFunc = b.loadBuiltin("output")
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let tag = b.createWasmTag(parameterTypes: [Parameter.wasmi64, Parameter.wasmi32])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
@@ -1301,7 +1301,7 @@ class WasmFoundationTests: XCTestCase {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
-        let outputFunc = b.loadBuiltin("output")
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmf64) { function, _ in
                 let argI32 = function.consti32(12345)

@@ -305,6 +305,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     private var groups: [String: ObjectGroup] = [:]
     private var producingMethods: [ILType: [(group: String, method: String)]] = [:]
     private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
+    private var subtypes: [ILType: [ILType]] = [:]
 
     public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = []) {
         super.init(name: "JavaScriptEnvironment")
@@ -482,6 +483,21 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         groups[group.name] = group
         builtinProperties.formUnion(group.properties.keys)
         builtinMethods.formUnion(group.methods.keys)
+
+        //
+        // Step 1: Initialize `subtypes`
+        //
+        subtypes[group.instanceType] = [group.instanceType]
+        var current = group
+        while let parent = current.parent {
+            // Parent groups are supposed to be defined before child groups
+            current = groups[parent]!
+            subtypes[current.instanceType]! += [group.instanceType]
+        }
+
+        //
+        // Step 2: Initialize `producingMethods`
+        //
         for overloads in group.methods {
             for method in overloads.value {
                 assert(method.outputType != .nothing,
@@ -496,6 +512,10 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
                 producingMethods[type]! += [(group: group.name, method: overloads.key)]
             }
         }
+
+        //
+        // Step 3: Initialize `producingProperties`
+        //
         for property in group.properties {
             let type: ILType
             if property.value.Is(.constructor()) {
@@ -591,6 +611,19 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         }
         return array
     }
+
+    public func getSubtypes(ofType type: ILType) -> [ILType] {
+        guard let array = subtypes[type] else {
+            return [type]
+        }
+        return array
+    }
+
+    public func isSubtype(_ type: ILType, of parent: ILType) -> Bool {
+        return getSubtypes(ofType: parent).reduce(false) {
+            $0 || type.Is($1)
+        }
+    }
 }
 
 /// A struct to encapsulate property and method type information for a group of related objects.
@@ -598,15 +631,17 @@ public struct ObjectGroup {
     public let name: String
     public let properties: [String: ILType]
     public let methods: [String: [Signature]]
+    public let parent: String?
 
     /// The type of instances of this group.
     public let instanceType: ILType
 
-    public init(name: String, instanceType: ILType, properties: [String: ILType], overloads: [String: [Signature]]) {
+    public init(name: String, instanceType: ILType, properties: [String: ILType], overloads: [String: [Signature]], parent: String? = nil) {
         self.name = name
         self.instanceType = instanceType
         self.properties = properties
         self.methods = overloads
+        self.parent = parent
 
         // We could also only assert set inclusion here to implement "shared" properties/methods.
         // (which would then need some kind of fallback ObjectGroup that is consulted by the
@@ -616,8 +651,8 @@ public struct ObjectGroup {
         assert(instanceType.methods == Set(methods.keys), "inconsistent method information for object group \(name): \(Set(methods.keys).symmetricDifference(instanceType.methods))")
     }
 
-    public init(name: String, instanceType: ILType, properties: [String: ILType], methods: [String: Signature]) {
-       self.init(name: name, instanceType: instanceType, properties: properties, overloads: methods.mapValues({[$0]}))
+    public init(name: String, instanceType: ILType, properties: [String: ILType], methods: [String: Signature], parent: String? = nil) {
+       self.init(name: name, instanceType: instanceType, properties: properties, overloads: methods.mapValues({[$0]}), parent: parent)
     }
 
 }
