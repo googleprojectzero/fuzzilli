@@ -660,7 +660,7 @@ public class ProgramBuilder {
 
     private func generateTypeInternal(_ type: ILType) -> Variable {
         if probability(0.9) {
-            if let existingVariable = randomVariable(ofType: type) {
+            if let existingVariable = randomVariable(ofTypeOrSubtype: type) {
                 return existingVariable
             }
         }
@@ -701,8 +701,13 @@ public class ProgramBuilder {
                 func useMethodToProduce(_ method: (group: String, method: String)) -> Variable {
                     let group = self.fuzzer.environment.type(ofGroup: method.group)
                     let obj = self.generateTypeInternal(group)
-                    let sig = chooseUniform(from: self.fuzzer.environment
-                      .signatures(ofMethod: method.method, on: group).filter({$0.outputType.Is(type)}))
+                    let sig = chooseUniform(
+                    from: self.fuzzer.environment
+                        .signatures(ofMethod: method.method, on: group).filter({
+                        self.fuzzer.environment.isSubtype($0.outputType, of: type)
+                        }))
+
+
                     let args = self.findOrGenerateArgumentsInternal(forSignature: sig)
                     return self.callMethod(method.method, on: obj, withArgs: args)
                 }

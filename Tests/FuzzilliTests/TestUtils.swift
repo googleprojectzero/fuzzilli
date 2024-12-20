@@ -16,7 +16,7 @@ import Foundation
 import XCTest
 @testable import Fuzzilli
 
-extension Program: Equatable {
+extension Program: @retroactive Equatable {
     // Fairly expensive equality testing, but it's only needed for testing anyway... :)
     public static func == (lhs: Program, rhs: Program) -> Bool {
         // We consider two programs to be equal if their code is equal

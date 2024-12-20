@@ -478,6 +478,27 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         return self.groups.keys.contains(name)
     }
 
+    private func addProducingMethod(forType type: ILType, by method: String, on group: String) {
+        if producingMethods[type] == nil {
+        producingMethods[type] = []
+        }
+        producingMethods[type]! += [(group: group, method: method)]
+    }
+
+    @discardableResult private func addProducingProperty(forType type: ILType, by property: String, on group: String) -> ILType {
+        let actualType: ILType
+        if type.Is(.constructor()) {
+            actualType = type.signature!.outputType
+        } else {
+            actualType = type
+        }
+        if producingProperties[actualType] == nil {
+            producingProperties[actualType] = []
+        }
+        producingProperties[actualType]! += [(group: group, property: property)]
+        return actualType
+    }
+
     public func registerObjectGroup(_ group: ObjectGroup) {
         assert(groups[group.name] == nil)
         groups[group.name] = group
@@ -506,10 +527,15 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
                     continue
                 }
                 let type = method.outputType
-                if producingMethods[type] == nil {
-                    producingMethods[type] = []
+                addProducingMethod(forType: type, by: overloads.key, on: group.name)
+                if let groupName = type.group {
+                    if var current = groups[groupName] {
+                        while let parent = current.parent {
+                            current = groups[parent]!
+                            addProducingMethod(forType: current.instanceType, by: overloads.key, on: group.name)
+                        }
+                    }
                 }
-                producingMethods[type]! += [(group: group.name, method: overloads.key)]
             }
         }
 
@@ -517,16 +543,15 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         // Step 3: Initialize `producingProperties`
         //
         for property in group.properties {
-            let type: ILType
-            if property.value.Is(.constructor()) {
-                type = property.value.signature!.outputType
-            } else {
-                type = property.value
+            let producedType = addProducingProperty(forType: property.value, by: property.key, on: group.name)
+            if let groupName = producedType.group {
+                if var current = groups[groupName] {
+                    while let parent = current.parent {
+                        current = groups[parent]!
+                        addProducingProperty(forType: current.instanceType, by: property.key, on: group.name)
+                    }
+                }
             }
-            if producingProperties[type] == nil {
-                producingProperties[type] = []
-            }
-            producingProperties[type]! += [(group: group.name, property: property.key)]
         }
     }
 
@@ -535,19 +560,15 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         builtinTypes[name] = type
         builtins.insert(name)
 
-        let producedType: ILType
-        if type.Is(.constructor()) {
-            guard let sig = type.signature else {
-                return
+        let producedType = addProducingProperty(forType: type, by: name, on: "")
+            if let groupName = producedType.group {
+                if var current = groups[groupName] {
+                    while let parent = current.parent {
+                        current = groups[parent]!
+                        addProducingProperty(forType: current.instanceType, by: name, on: "")
+                    }
+                }
             }
-            producedType = sig.outputType
-        } else {
-            producedType = type
-        }
-        if producingProperties[producedType] == nil {
-            producingProperties[producedType] = []
-        }
-        producingProperties[producedType]!.append((group: "", property: name))
     }
 
     public func type(ofBuiltin builtinName: String) -> ILType {

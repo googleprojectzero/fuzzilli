@@ -2543,4 +2543,66 @@ class ProgramBuilderTests: XCTestCase {
         let var4 = b.randomVariable(ofTypeOrSubtype: type4)
         XCTAssert(var4 == nil)
     }
+
+    func testFindOrGenerateTypeWithSubtype() {
+        let type1 = ILType.object(ofGroup: "group1", withProperties: [], withMethods: [])
+        let type2 = ILType.object(ofGroup: "group2", withProperties: [], withMethods: [])
+        let type3 = ILType.object(ofGroup: "group3", withProperties: [], withMethods: [])
+        let type4 = ILType.object(ofGroup: "group4", withProperties: [], withMethods: [])
+
+        let type4Constructor = ILType.constructor([] => type4)
+
+        let group1 = ObjectGroup(name: "group1", instanceType: type1, properties: [:], methods: [:])
+        let group2 = ObjectGroup(
+            name: "group2", instanceType: type2, properties: [:], methods: [:], parent: "group1")
+        let group3 = ObjectGroup(
+            name: "group3", instanceType: type3, properties: [:], methods: [:], parent: "group2")
+        let group4 = ObjectGroup(
+            name: "group4", instanceType: type4, properties: [:], methods: [:], parent: "group3")
+
+        let env = JavaScriptEnvironment(
+            additionalBuiltins: ["group4": type4Constructor],
+            additionalObjectGroups: [group1, group2, group3, group4])
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+        // Get a random variable and then change the type
+
+        let obj = b.findOrGenerateType(type1)
+        XCTAssert(b.type(of: obj).Is(type4))
+    }
+
+    func testFindOrGenerateTypeWithSubtypeWithMethod() {
+    let type1 = ILType.object(ofGroup: "group1", withProperties: [], withMethods: [])
+    let type2 = ILType.object(ofGroup: "group2", withProperties: [], withMethods: [])
+    let type3 = ILType.object(ofGroup: "group3", withProperties: [], withMethods: [])
+    let type4 = ILType.object(ofGroup: "group4", withProperties: [], withMethods: ["method3"])
+
+    let type4Constructor = ILType.constructor([] => type4)
+
+    let group1 = ObjectGroup(name: "group1", instanceType: type1, properties: [:], methods: [:])
+    let group2 = ObjectGroup(
+        name: "group2", instanceType: type2, properties: [:], methods: [:], parent: "group1")
+    let group3 = ObjectGroup(
+        name: "group3", instanceType: type3, properties: [:], methods: [:], parent: "group2")
+    let group4 = ObjectGroup(
+        name: "group4", instanceType: type4, properties: [:],
+        methods: [
+        "method3": [] => type3
+        ])
+
+    let env = JavaScriptEnvironment(
+        additionalBuiltins: ["group4": type4Constructor],
+        additionalObjectGroups: [group1, group2, group3, group4])
+    let config = Configuration(logLevel: .error)
+    let fuzzer = makeMockFuzzer(config: config, environment: env)
+    let b = fuzzer.makeBuilder()
+    b.buildPrefix()
+    // Get a random variable and then change the type
+
+    let obj = b.findOrGenerateType(type1)
+    XCTAssert(b.type(of: obj).Is(type3))
+    }
+
 }
