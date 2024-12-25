@@ -15,7 +15,7 @@
 // Attempts deduplicate variables containing the same values.
 struct DeduplicatingReducer: Reducer {
     func reduce(with helper: MinimizationHelper) {
-        // Currently we only handle LoadBuiltin, but the code could easily be
+        // Currently we only handle CreateNamedVariable, but the code could easily be
         // extended to cover other types of values as well.
         // It's not obvious however which other values would benefit from this.
         // For example, for identical integer values it may be interesting to
@@ -30,7 +30,7 @@ struct DeduplicatingReducer: Reducer {
 
         var deduplicatedVariables = VariableMap<Variable>()
         var visibleBuiltins = Stack<[String]>([[]])
-        var variableForBuiltin = [String: Variable]()
+        var variableForName = [String: Variable]()
         for instr in helper.code {
             // Instruction replacement.
             let oldInouts = Array(instr.inouts)
@@ -42,7 +42,7 @@ struct DeduplicatingReducer: Reducer {
             // Scope management.
             if instr.isBlockEnd {
                 for builtin in visibleBuiltins.pop() {
-                    variableForBuiltin.removeValue(forKey: builtin)
+                    variableForName.removeValue(forKey: builtin)
                 }
             }
             if instr.isBlockStart {
@@ -50,14 +50,17 @@ struct DeduplicatingReducer: Reducer {
             }
 
             // Value deduplication.
-            if let op = instr.op as? LoadBuiltin {
-                if let replacement = variableForBuiltin[op.builtinName] {
-                    deduplicatedVariables[instr.output] = replacement
-                } else {
-                    // Each builtin must only be present once (all other instances are replaced with the first one).
-                    assert(visibleBuiltins.elementsStartingAtBottom().allSatisfy({ !$0.contains(op.builtinName) }))
-                    visibleBuiltins.top.append(op.builtinName)
-                    variableForBuiltin[op.builtinName] = instr.output
+            if case .createNamedVariable(let op) = instr.op.opcode {
+                // Only deduplicate accesses to existing variables, not newly declared variables (that would not be correct).
+                if op.declarationMode == .none {
+                    if let replacement = variableForName[op.variableName] {
+                        deduplicatedVariables[instr.output] = replacement
+                    } else {
+                        // Each builtin must only be present once (all other instances are replaced with the first one).
+                        assert(visibleBuiltins.elementsStartingAtBottom().allSatisfy({ !$0.contains(op.variableName) }))
+                        visibleBuiltins.top.append(op.variableName)
+                        variableForName[op.variableName] = instr.output
+                    }
                 }
             }
         }

@@ -517,7 +517,7 @@ public class ProgramBuilder {
 
             // We can be sure that we have such a builtin with a signature because the Environment checks this during initialization.
             let signature = fuzzer.environment.type(ofBuiltin: group).signature!
-            let constructor = loadBuiltin(group)
+            let constructor = createNamedVariable(forBuiltin: group)
             let arguments = findOrGenerateArgumentsInternal(forSignature: signature)
             let constructed = construct(constructor, withArgs: arguments)
 
@@ -1940,11 +1940,6 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadBuiltin(_ name: String) -> Variable {
-        return emit(LoadBuiltin(builtinName: name)).output
-    }
-
-    @discardableResult
     public func getProperty(_ name: String, of object: Variable, guard isGuarded: Bool = false) -> Variable {
         return emit(GetProperty(propertyName: name, isGuarded: isGuarded), withInputs: [object]).output
     }
@@ -2325,16 +2320,15 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadNamedVariable(_ name: String) -> Variable {
-        return emit(LoadNamedVariable(name)).output
+    public func createNamedVariable(_ name: String, declarationMode: NamedVariableDeclarationMode, initialValue: Variable? = nil) -> Variable {
+        assert((declarationMode == .none) == (initialValue == nil))
+        let inputs = initialValue != nil ? [initialValue!] : []
+        return emit(CreateNamedVariable(name, declarationMode: declarationMode), withInputs: inputs).output
     }
-
-    public func storeNamedVariable(_ name: String, _ value: Variable) {
-        emit(StoreNamedVariable(name), withInputs: [value])
-    }
-
-    public func defineNamedVariable(_ name: String, _ value: Variable) {
-        emit(DefineNamedVariable(name), withInputs: [value])
+    
+    @discardableResult
+    public func createNamedVariable(forBuiltin builtinName: String) -> Variable {
+        return createNamedVariable(builtinName, declarationMode: .none)
     }
 
     @discardableResult

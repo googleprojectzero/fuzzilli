@@ -67,6 +67,9 @@ public class FuzzILLifter: Lifter {
         case .loadArguments:
             w.emit("\(output()) <- LoadArguments")
 
+        case .createNamedVariable(let op):
+            w.emit("\(output()) <- CreateNamedVariable '\(op.variableName)' declarationMode: \(op.declarationMode)")
+
         case .loadDisposableVariable:
             w.emit("\(output()) <- LoadDisposableVariable \(input(0))")
 
@@ -315,9 +318,6 @@ public class FuzzILLifter: Lifter {
             let values = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("\(output()) <- CreateTemplateString [\(parts)], [\(values)]")
 
-        case .loadBuiltin(let op):
-            w.emit("\(output()) <- LoadBuiltin '\(op.builtinName)'")
-
         case .getProperty(let op):
             let opcode = op.isGuarded ? "GetProperty (guarded)" : "GetProperty"
             w.emit("\(output()) <- \(opcode) \(input(0)), '\(op.propertyName)'")
@@ -501,15 +501,6 @@ public class FuzzILLifter: Lifter {
 
         case .compare(let op):
             w.emit("\(output()) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")
-
-        case .loadNamedVariable(let op):
-            w.emit("\(output()) <- LoadNamedVariable '\(op.variableName)'")
-
-        case .storeNamedVariable(let op):
-            w.emit("StoreNamedVariable '\(op.variableName)' <- \(input(0))")
-
-        case .defineNamedVariable(let op):
-            w.emit("DefineNamedVariable '\(op.variableName)' <- \(input(0))")
 
         case .eval(let op):
             let args = instr.inputs.map(lift).joined(separator: ", ")

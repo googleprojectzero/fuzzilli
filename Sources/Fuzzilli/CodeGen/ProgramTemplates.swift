@@ -228,7 +228,7 @@ public let ProgramTemplates = [
         b.build(n: 25)
 
         // Generate random JSON payloads by stringifying random values
-        let JSON = b.loadBuiltin("JSON")
+        let JSON = b.createNamedVariable(forBuiltin: "JSON")
         var jsonPayloads = [Variable]()
         for _ in 0..<Int.random(in: 1...5) {
             let json = b.callMethod("stringify", on: JSON, withArgs: [b.randomVariable()])
@@ -242,7 +242,7 @@ public let ProgramTemplates = [
             // Helper function to pick a random index in the json string.
             let randIndex = b.buildPlainFunction(with: .parameters(.integer)) { args in
                 let max = args[0]
-                let Math = b.loadBuiltin("Math")
+                let Math = b.createNamedVariable(forBuiltin: "Math")
                 // We "hardcode" the random value here (instead of calling `Math.random()` in JS) so that testcases behave deterministically.
                 var random = b.loadFloat(Double.random(in: 0..<1))
                 random = b.binary(random, max, with: .Mul)
@@ -252,7 +252,7 @@ public let ProgramTemplates = [
 
             // Flip a random character of the JSON string:
             // Select a random index at which to flip the character.
-            let String = b.loadBuiltin("String")
+            let String = b.createNamedVariable(forBuiltin: "String")
             let length = b.getProperty("length", of: json)
             let index = b.callFunction(randIndex, withArgs: [length])
 
