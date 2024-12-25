@@ -179,7 +179,7 @@ class ProgramBuilderTests: XCTestCase {
 
         // Now there's also a variable of unknown type, which may be anything. Since we don't have enough variables
         // of a known type, all queries will use a `MayBe` type query to find matches and so may return the unknown variable.
-        let unknown = b.loadBuiltin("unknown")
+        let unknown = b.createNamedVariable(forBuiltin: "unknown")
         XCTAssertEqual(b.type(of: unknown), .anything)
 
         XCTAssert([i, unknown].contains(b.randomVariable(forUseAs: .integer)))
@@ -227,7 +227,7 @@ class ProgramBuilderTests: XCTestCase {
 
         let _ = b.finalize()
 
-        let unknown = b.loadBuiltin("unknown")
+        let unknown = b.createNamedVariable(forBuiltin: "unknown")
         XCTAssertEqual(b.type(of: unknown), .anything)
         XCTAssertEqual(b.randomVariable(ofType: .integer), nil)
         XCTAssertEqual(b.randomVariable(ofType: .number), nil)
@@ -235,7 +235,7 @@ class ProgramBuilderTests: XCTestCase {
 
         let _ = b.finalize()
 
-        let n = b.loadBuiltin("theNumber")
+        let n = b.createNamedVariable(forBuiltin: "theNumber")
         b.setType(ofVariable: n, to: .number)
         XCTAssertEqual(b.type(of: n), .number)
         XCTAssertEqual(b.randomVariable(ofType: .integer), nil)
@@ -264,7 +264,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(b.randomVariable(preferablyNotOfType: .primitive), nil)
         XCTAssertEqual(b.randomVariable(preferablyNotOfType: .anything), nil)
 
-        let unknown = b.loadBuiltin("unknown")
+        let unknown = b.createNamedVariable(forBuiltin: "unknown")
         XCTAssertEqual(b.type(of: unknown), .anything)
         XCTAssert([v, unknown].contains(b.randomVariable(preferablyNotOfType: .string)))
         XCTAssertEqual(b.randomVariable(preferablyNotOfType: .primitive), unknown)
@@ -293,7 +293,7 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let Math = b.loadBuiltin("Math")
+        let Math = b.createNamedVariable(forBuiltin: "Math")
 
         XCTAssert(b.visibleVariables.contains(Math))
         XCTAssertEqual(b.numberOfVisibleVariables, 1)
@@ -531,7 +531,7 @@ class ProgramBuilderTests: XCTestCase {
         let _ = b.finalize()
 
         // And another similar example, but this time with a union type: .number
-        let Number = b.loadBuiltin("Number")
+        let Number = b.createNamedVariable(forBuiltin: "Number")
         let n1 = b.getProperty("POSITIVE_INFINITY", of: Number)
         let n2 = b.getProperty("MIN_SAFE_INTEGER", of: Number)
         let n3 = b.getProperty("MAX_SAFE_INTEGER", of: Number)
@@ -705,7 +705,7 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let i = b.loadInt(42)
-        let v = b.loadBuiltin("v")
+        let v = b.createNamedVariable(forBuiltin: "v")
 
         b.buildSwitch(on: v) { swtch in
             XCTAssertIdentical(swtch, b.currentSwitchBlock)
@@ -738,7 +738,7 @@ class ProgramBuilderTests: XCTestCase {
         var i2 = b.loadInt(0x42)
         let cond = b.compare(i1, with: i2, using: .lessThan)
         b.buildIfElse(cond, ifBody: {
-            let String = b.loadBuiltin("String")
+            let String = b.createNamedVariable(forBuiltin: "String")
             splicePoint = b.indexOfNextInstruction()
             b.callMethod("fromCharCode", on: String, withArgs: [i1])
             b.callMethod("fromCharCode", on: String, withArgs: [i2])
@@ -757,7 +757,7 @@ class ProgramBuilderTests: XCTestCase {
         // Expected Program
         //
         i2 = b.loadInt(0x41)
-        let String = b.loadBuiltin("String")
+        let String = b.createNamedVariable(forBuiltin: "String")
         b.callMethod("fromCharCode", on: String, withArgs: [i2])
         let expected = b.finalize()
 
@@ -903,7 +903,7 @@ class ProgramBuilderTests: XCTestCase {
         let f = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             let t1 = b.binary(args[0], args[1], with: .Mul)
             let t2 = b.binary(t1, args[2], with: .Add)
-            let print = b.loadBuiltin("print")
+            let print = b.createNamedVariable(forBuiltin: "print")
             splicePoint = b.indexOfNextInstruction()
             b.callFunction(print, withArgs: [t2])
         }
@@ -925,7 +925,7 @@ class ProgramBuilderTests: XCTestCase {
         b.buildPlainFunction(with: .parameters(n: 3)) { args in
             let t1 = b.binary(args[0], args[1], with: .Mul)
             let t2 = b.binary(t1, args[2], with: .Add)
-            let print = b.loadBuiltin("print")
+            let print = b.createNamedVariable(forBuiltin: "print")
             b.callFunction(print, withArgs: [t2])
         }
         let expected = b.finalize()
@@ -1000,7 +1000,7 @@ class ProgramBuilderTests: XCTestCase {
         // Original Program
         //
         b.buildAsyncFunction(with: .parameters(n: 0)) { _ in
-            let promise = b.loadBuiltin("ThePromise")
+            let promise = b.createNamedVariable(forBuiltin: "ThePromise")
             splicePoint = b.indexOfNextInstruction()
             b.await(promise)
         }
@@ -1022,7 +1022,7 @@ class ProgramBuilderTests: XCTestCase {
         // Expected Program
         //
         b.buildAsyncFunction(with: .parameters(n: 1)) { args in
-            let promise = b.loadBuiltin("ThePromise")
+            let promise = b.createNamedVariable(forBuiltin: "ThePromise")
             b.await(promise)
         }
         let expected = b.finalize()
@@ -1038,7 +1038,7 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Original Program
         //
-        let promise = b.loadBuiltin("ThePromise")
+        let promise = b.createNamedVariable(forBuiltin: "ThePromise")
         let f = b.buildAsyncFunction(with: .parameters(n: 0)) { _ in
             let v = b.await(promise)
             let zero = b.loadInt(0)
@@ -1065,7 +1065,7 @@ class ProgramBuilderTests: XCTestCase {
         //
 
         b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
-            let promise = b.loadBuiltin("ThePromise")
+            let promise = b.createNamedVariable(forBuiltin: "ThePromise")
             let v = b.await(promise)
             b.unary(.PostDec, v)
         }
@@ -1243,10 +1243,10 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Original Program
         //
-        let p = b.loadBuiltin("ThePromise")
+        let p = b.createNamedVariable(forBuiltin: "ThePromise")
         let f = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
             let v = b.await(p)
-            let print = b.loadBuiltin("print")
+            let print = b.createNamedVariable(forBuiltin: "print")
             splicePoint = b.indexOfNextInstruction()
             // We can only splice this if we replace |v| with another variable in the host program
             b.callFunction(print, withArgs: [v])
@@ -1356,7 +1356,7 @@ class ProgramBuilderTests: XCTestCase {
         // Original Program
         //
         let f = b.buildPlainFunction(with: .parameters(n: 3)) { args in
-            let Array = b.loadBuiltin("Array")
+            let Array = b.createNamedVariable(forBuiltin: "Array")
             splicePoint = b.indexOfNextInstruction()
             b.callMethod("of", on: Array, withArgs: args)
         }
@@ -1460,7 +1460,7 @@ class ProgramBuilderTests: XCTestCase {
         // Original Program
         //
         var f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            let print = b.loadBuiltin("print")
+            let print = b.createNamedVariable(forBuiltin: "print")
             b.callFunction(print, withArgs: args)
         }
         var n = b.loadInt(1337)
@@ -1523,7 +1523,7 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Here we have a function with one parameter of type .anything.
         var f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            let print = b.loadBuiltin("print")
+            let print = b.createNamedVariable(forBuiltin: "print")
             b.callFunction(print, withArgs: args)
         }
         XCTAssertEqual(b.type(of: f).signature?.parameters, [.anything])
@@ -1559,7 +1559,7 @@ class ProgramBuilderTests: XCTestCase {
         }
         n = b.loadInt(42)
         f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            let print = b.loadBuiltin("print")
+            let print = b.createNamedVariable(forBuiltin: "print")
             b.callFunction(print, withArgs: args)
         }
         b.callFunction(f, withArgs: [n])
@@ -1588,7 +1588,7 @@ class ProgramBuilderTests: XCTestCase {
         b.probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 1.0
 
         // For splicing, we will not use a variable of an unknown type as replacement.
-        let unknown = b.loadBuiltin("unknown")
+        let unknown = b.createNamedVariable(forBuiltin: "unknown")
         XCTAssertEqual(b.type(of: unknown), .anything)
         b.loadBool(true)        // This should also never be used as replacement as it definitely has a different type
         b.splice(from: original, at: splicePoint, mergeDataFlow: true)
@@ -1598,7 +1598,7 @@ class ProgramBuilderTests: XCTestCase {
         // Expected Program
         //
         let expected: Program
-        b.loadBuiltin("unknown")
+        b.createNamedVariable(forBuiltin: "unknown")
         b.loadBool(true)
         i = b.loadInt(42)
         b.unary(.PostInc, i)
@@ -1881,7 +1881,7 @@ class ProgramBuilderTests: XCTestCase {
         var f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
             splicePoint = b.indexOfNextInstruction()
             b.buildForLoop(i: { args[0] }, { i in b.compare(i, with: args[1], using: .lessThan) }, { i in b.unary(.PostInc, i) }) { i in
-                b.callFunction(b.loadBuiltin("print"), withArgs: [i])
+                b.callFunction(b.createNamedVariable(forBuiltin: "print"), withArgs: [i])
                 b.loopBreak()
             }
         }
@@ -1902,7 +1902,7 @@ class ProgramBuilderTests: XCTestCase {
         f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
             splicePoint = b.indexOfNextInstruction()
             b.buildForLoop(i: { args[0] }, { i in b.compare(i, with: args[1], using: .lessThan) }, { i in b.unary(.PostInc, i) }) { i in
-                b.callFunction(b.loadBuiltin("print"), withArgs: [i])
+                b.callFunction(b.createNamedVariable(forBuiltin: "print"), withArgs: [i])
                 b.loopBreak()
             }
         }
@@ -1929,11 +1929,11 @@ class ProgramBuilderTests: XCTestCase {
             let o2 = b.createObject(with: ["i": i, "f": f2])
             b.binary(i, args[0], with: .Add)
             b.setProperty("f", of: o, to: f2)
-            let object = b.loadBuiltin("Object")
+            let object = b.createNamedVariable(forBuiltin: "Object")
             let descriptor = b.createObject(with: ["value": b.loadString("foobar")])
             b.callMethod("defineProperty", on: object, withArgs: [o, b.loadString("s"), descriptor])
             b.callMethod("defineProperty", on: object, withArgs: [o2, b.loadString("s"), descriptor])
-            let json = b.loadBuiltin("JSON")
+            let json = b.createNamedVariable(forBuiltin: "JSON")
             b.callMethod("stringify", on: json, withArgs: [o])
         }
         let original = b.finalize()
@@ -1955,10 +1955,10 @@ class ProgramBuilderTests: XCTestCase {
         b.reassign(f2, to: b.loadFloat(133.7))      // (Possibly) mutating instruction must be included
         let o = b.createObject(with: ["i": i, "f": f])
         b.setProperty("f", of: o, to: f2)     // (Possibly) mutating instruction must be included
-        let object = b.loadBuiltin("Object")
+        let object = b.createNamedVariable(forBuiltin: "Object")
         let descriptor = b.createObject(with: ["value": b.loadString("foobar")])
         b.callMethod("defineProperty", on: object, withArgs: [o, b.loadString("s"), descriptor])    // (Possibly) mutating instruction must be included
-        let json = b.loadBuiltin("JSON")
+        let json = b.createNamedVariable(forBuiltin: "JSON")
         b.callMethod("stringify", on: json, withArgs: [o])
         let expected = b.finalize()
 
@@ -2045,7 +2045,7 @@ class ProgramBuilderTests: XCTestCase {
         // Original Program
         //
         b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { _ in
-            let p = b.loadBuiltin("thePromise")
+            let p = b.createNamedVariable(forBuiltin: "thePromise")
             b.buildDoWhileLoop(do: {
                 let v0 = b.loadInt(42)
                 let _ = b.createObject(with: ["foo": v0])
@@ -2070,7 +2070,7 @@ class ProgramBuilderTests: XCTestCase {
         // Expected Program
         //
         b.buildAsyncFunction(with: .parameters(n: 1)) { _ in
-            let p = b.loadBuiltin("thePromise")
+            let p = b.createNamedVariable(forBuiltin: "thePromise")
             let _ = b.await(p)
         }
         let expected = b.finalize()
@@ -2148,7 +2148,7 @@ class ProgramBuilderTests: XCTestCase {
             splicePoint = b.indexOfNextInstruction()
             return c
         }) {
-            let foobar = b.loadBuiltin("foobar")
+            let foobar = b.createNamedVariable(forBuiltin: "foobar")
             b.callFunction(foobar)
         }
         let original = b.finalize()
@@ -2171,11 +2171,11 @@ class ProgramBuilderTests: XCTestCase {
         // Original Program
         //
         b.buildDoWhileLoop(do: {
-            let foo = b.loadBuiltin("foo")
+            let foo = b.createNamedVariable(forBuiltin: "foo")
             b.callFunction(foo)
         }, while: {
             // Test that splicing out of the header works.
-            let bar = b.loadBuiltin("bar")
+            let bar = b.createNamedVariable(forBuiltin: "bar")
             splicePoint = b.indexOfNextInstruction()
             b.callFunction(bar)
             return b.loadBool(false)
@@ -2191,7 +2191,7 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Expected Program
         //
-        let bar = b.loadBuiltin("bar")
+        let bar = b.createNamedVariable(forBuiltin: "bar")
         b.callFunction(bar)
         let expected = b.finalize()
 
@@ -2286,10 +2286,10 @@ class ProgramBuilderTests: XCTestCase {
             let code = b.buildCodeString() {
                 let i = b.loadInt(42)
                 let o = b.createObject(with: ["i": i])
-                let json = b.loadBuiltin("JSON")
+                let json = b.createNamedVariable(forBuiltin: "JSON")
                 b.callMethod("stringify", on: json, withArgs: [o])
             }
-            let eval = b.loadBuiltin("eval")
+            let eval = b.createNamedVariable(forBuiltin: "eval")
             splicePoint = b.indexOfNextInstruction()
             b.callFunction(eval, withArgs: [code])
         }
@@ -2307,10 +2307,10 @@ class ProgramBuilderTests: XCTestCase {
         let code = b.buildCodeString() {
             let i = b.loadInt(42)
             let o = b.createObject(with: ["i": i])
-            let json = b.loadBuiltin("JSON")
+            let json = b.createNamedVariable(forBuiltin: "JSON")
             b.callMethod("stringify", on: json, withArgs: [o])
         }
-        let eval = b.loadBuiltin("eval")
+        let eval = b.createNamedVariable(forBuiltin: "eval")
         b.callFunction(eval, withArgs: [code])
         let expected = b.finalize()
 
@@ -2404,7 +2404,7 @@ class ProgramBuilderTests: XCTestCase {
 
         b.loadInt(42)
 
-        let constructor = b.loadBuiltin("DataView")
+        let constructor = b.createNamedVariable(forBuiltin: "DataView")
         let signature = env.type(ofBuiltin: "DataView").signature!
 
         let variables = b.findOrGenerateArguments(forSignature: signature)

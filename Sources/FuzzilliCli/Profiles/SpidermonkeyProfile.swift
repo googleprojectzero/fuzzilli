@@ -24,7 +24,7 @@ fileprivate let ForceSpidermonkeyIonGenerator = CodeGenerator("ForceSpidermonkey
 }
 
 fileprivate let GcGenerator = CodeGenerator("GcGenerator") { b in
-    b.callFunction(b.loadBuiltin("gc"))
+    b.callFunction(b.createNamedVariable(forBuiltin: "gc"))
 }
 
 let spidermonkeyProfile = Profile(

@@ -229,6 +229,79 @@ final class LoadArguments: JsOperation {
     }
 }
 
+// Named Variables.
+//
+// Named variables are variables with a specific name. They are created through the
+// CreateNamedVariable operation and are useful whenever the name of a variable is
+// (potentially) important. In particular they are used frequenty when compiling
+// existing JavaScript code to FuzzIL. Furthermore, named variables are also used to
+// access builtins as these are effectively just global/pre-existing named variables.
+//
+// When declaring a new named variable (i.e. when the declarationMode is not .none),
+// then an initial value must be provided (as first and only input to the operation).
+// "Uninitialized" named variables can be created by using `undefined` as initial value.
+//
+// The following code is a simple demonstration of named variables:
+//
+//    // Make an existing named variable (e.g. a builtin) available
+//    v0 <- CreateNamedVariable 'print', declarationMode: .none
+//
+//    // Overwrite an existing named variable
+//    v1 <- CreateNamedVariable 'foo', declarationMode: .none
+//    v2 <- CallFunction v0, v1
+//    v3 <- LoadString 'bar'
+//    Reassign v1, v3
+//
+//    // Declare a new named variable
+//    v4 <- CreateNamedVariable 'baz', declarationMode: .var, v1
+//    v5 <- LoadString 'bla'
+//    Update v4 '+' v5
+//    v5 <- CallFunction v0, v4
+//
+// This will lift to JavaScript code similar to the following:
+//
+//    print(foo);
+//    foo = "bar";
+//    var baz = foo;
+//    baz += "bla";
+//    print(baz);
+//
+public enum NamedVariableDeclarationMode : CaseIterable {
+    // The variable is assumed to already exist and therefore is not declared again.
+    // This is for example used for global variables and builtins, but also to support
+    // variable and function hoisting where an identifier is used before it is defined.
+    case none
+    // Declare the variable as global variable without any declaration keyword.
+    case global
+    // Declare the variable using the 'var' keyword.
+    case `var`
+    // Declare the variable using the 'let' keyword.
+    case `let`
+    // Declare the variable using the 'const' keyword.
+    case const
+}
+
+final class CreateNamedVariable: JsOperation {
+    override var opcode: Opcode { .createNamedVariable(self) }
+
+    let variableName: String
+    let declarationMode: NamedVariableDeclarationMode
+    
+    // Currently, all named variable declarations need an initial value. "undefined" can be
+    // used when no initial value is available, in which case the lifter will not emit an assignment.
+    // We could also consider allowing variable declarations without an initial value, however for
+    // both .global and .const declarations, we always need an initial value to produce valid code.
+    var hasInitialValue: Bool {
+        return declarationMode != .none
+    }
+
+    init(_ name: String, declarationMode: NamedVariableDeclarationMode) {
+        self.variableName = name
+        self.declarationMode = declarationMode
+        super.init(numInputs: declarationMode == .none ? 0 : 1, numOutputs: 1, attributes: .isMutable)
+    }
+}
+
 final class LoadDisposableVariable: JsOperation {
     override var opcode: Opcode { .loadDisposableVariable(self) }
 
@@ -923,17 +996,6 @@ final class CreateTemplateString: JsOperation {
         assert(parts.count > 0)
         self.parts = parts
         super.init(numInputs: parts.count - 1, numOutputs: 1, firstVariadicInput: 0, attributes: [.isMutable, .isVariadic])
-    }
-}
-
-final class LoadBuiltin: JsOperation {
-    override var opcode: Opcode { .loadBuiltin(self) }
-
-    let builtinName: String
-
-    init(builtinName: String) {
-        self.builtinName = builtinName
-        super.init(numOutputs: 1, attributes: .isMutable)
     }
 }
 
@@ -1664,48 +1726,6 @@ final class Compare: JsOperation {
     init(_ comparator: Comparator) {
         self.op = comparator
         super.init(numInputs: 2, numOutputs: 1, attributes: .isMutable)
-    }
-}
-
-// Named Variables.
-//
-// Named variables are used to cover global and `var` variables in JavaScript
-// as well as to support variable hoisting.
-//
-// When a named variable is defined, it becomes a `var` variable in JavaScript.
-// However, it is allowed to access (load/store) a named variable without
-// defining it first, in which case the access becomes either a global variable
-// access (if the variable isn't later defined) or a hoisted variable access.
-final class LoadNamedVariable: JsOperation {
-    override var opcode: Opcode { .loadNamedVariable(self) }
-
-    let variableName: String
-
-    init(_ name: String) {
-        self.variableName = name
-        super.init(numOutputs: 1, attributes: .isMutable)
-    }
-}
-
-final class StoreNamedVariable: JsOperation {
-    override var opcode: Opcode { .storeNamedVariable(self) }
-
-    let variableName: String
-
-    init(_ name: String) {
-        self.variableName = name
-        super.init(numInputs: 1, attributes: .isMutable)
-    }
-}
-
-final class DefineNamedVariable: JsOperation {
-    override var opcode: Opcode { .defineNamedVariable(self) }
-
-    let variableName: String
-
-    init(_ name: String) {
-        self.variableName = name
-        super.init(numInputs: 1, attributes: .isMutable)
     }
 }
 

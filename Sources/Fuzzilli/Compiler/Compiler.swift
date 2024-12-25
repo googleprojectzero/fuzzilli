@@ -39,10 +39,6 @@ public class JavaScriptCompiler {
     /// Contains the mapping from JavaScript variables to FuzzIL variables in every active scope.
     private var scopes = Stack<[String: Variable]>()
 
-    /// List of all named variables.
-    /// TODO instead of a global list, this should be per (var) scope.
-    private var namedVariables = Set<String>()
-
     /// The next free FuzzIL variable.
     private var nextVariable = 0
 
@@ -95,14 +91,26 @@ public class JavaScriptCompiler {
                 if decl.hasValue {
                     initialValue = try compileExpression(decl.value)
                 } else {
+                    // TODO(saelo): consider caching the `undefined` value for future uses
                     initialValue = emit(LoadUndefined()).output
                 }
 
-                if variableDeclaration.kind == .var && namedVariables.contains(decl.name) {
-                    emit(DefineNamedVariable(decl.name), withInputs: [initialValue])
-                } else {
-                    map(decl.name, to: initialValue)
+                let declarationMode: NamedVariableDeclarationMode
+                switch variableDeclaration.kind {
+                case .var:
+                    declarationMode = .var
+                case .let:
+                    declarationMode = .let
+                case .const:
+                    declarationMode = .const
+                case .UNRECOGNIZED(let type):
+                    throw CompilerError.invalidNodeError("invalid variable declaration type \(type)")
                 }
+
+                let v = emit(CreateNamedVariable(decl.name, declarationMode: declarationMode), withInputs: [initialValue]).output
+                // Variables declared with .var are allowed to overwrite each other.
+                assert(!currentScope.keys.contains(decl.name) || declarationMode == .var)
+                mapOrRemap(decl.name, to: v)
             }
 
         case .functionDeclaration(let functionDeclaration):
@@ -126,7 +134,9 @@ public class JavaScriptCompiler {
             }
 
             let instr = emit(functionBegin)
-            map(functionDeclaration.name, to: instr.output)
+            // The function may have been accessed before it was defined due to function hoisting, so
+            // here we may overwrite an existing variable mapping.
+            mapOrRemap(functionDeclaration.name, to: instr.output)
             try enterNewScope {
                 mapParameters(functionDeclaration.parameters, to: instr.innerOutputs)
                 for statement in functionDeclaration.body {
@@ -352,12 +362,12 @@ public class JavaScriptCompiler {
             emit(EndDoWhileLoop(), withInputs: [cond])
 
         case .forLoop(let forLoop):
-            try enterNewScope {
-                var loopVariables = [String]()
+            var loopVariables = [String]()
 
-                // Process initializer.
-                var initialLoopVariableValues = [Variable]()
-                emit(BeginForLoopInitializer())
+            // Process initializer.
+            var initialLoopVariableValues = [Variable]()
+            emit(BeginForLoopInitializer())
+            try enterNewScope {
                 if let initializer = forLoop.initializer {
                     switch initializer {
                     case .declaration(let declaration):
@@ -369,31 +379,37 @@ public class JavaScriptCompiler {
                         try compileExpression(expression)
                     }
                 }
+            }
 
-                // Process condition.
-                var outputs = emit(BeginForLoopCondition(numLoopVariables: loopVariables.count), withInputs: initialLoopVariableValues).innerOutputs
+            // Process condition.
+            var outputs = emit(BeginForLoopCondition(numLoopVariables: loopVariables.count), withInputs: initialLoopVariableValues).innerOutputs
+            var cond: Variable? = nil
+            try enterNewScope {
                 zip(loopVariables, outputs).forEach({ map($0, to: $1 )})
-                let cond: Variable
                 if forLoop.hasCondition {
                     cond = try compileExpression(forLoop.condition)
                 } else {
                     cond = emit(LoadBoolean(value: true)).output
                 }
+            }
 
-                // Process afterthought.
-                outputs = emit(BeginForLoopAfterthought(numLoopVariables: loopVariables.count), withInputs: [cond]).innerOutputs
-                zip(loopVariables, outputs).forEach({ remap($0, to: $1 )})
+            // Process afterthought.
+            outputs = emit(BeginForLoopAfterthought(numLoopVariables: loopVariables.count), withInputs: [cond!]).innerOutputs
+            try enterNewScope {
+                zip(loopVariables, outputs).forEach({ map($0, to: $1 )})
                 if forLoop.hasAfterthought {
                     try compileExpression(forLoop.afterthought)
                 }
-
-                // Process body
-                outputs = emit(BeginForLoopBody(numLoopVariables: loopVariables.count)).innerOutputs
-                zip(loopVariables, outputs).forEach({ remap($0, to: $1 )})
-                try compileBody(forLoop.body)
-
-                emit(EndForLoop())
             }
+
+            // Process body
+            outputs = emit(BeginForLoopBody(numLoopVariables: loopVariables.count)).innerOutputs
+            try enterNewScope {
+                zip(loopVariables, outputs).forEach({ map($0, to: $1 )})
+                try compileBody(forLoop.body)
+            }
+
+            emit(EndForLoop())
 
         case .forInLoop(let forInLoop):
             let initializer = forInLoop.left;
@@ -545,9 +561,8 @@ public class JavaScriptCompiler {
         case .identifier(let identifier):
             // Identifiers can generally turn into one of three things:
             //  1. A FuzzIL variable that has previously been associated with the identifier
-            //  2. A LoadBuiltin operation if the identifier belongs to a builtin object (as defined by the environment)
-            //  3. A LoadUndefined or LoadArguments operations if the identifier is "undefined" or "arguments" respectively
-            //  4. A LoadNamedVariable operation in all other cases (typically global or hoisted variables, but could also be properties in a with statement)
+            //  2. A LoadUndefined or LoadArguments operations if the identifier is "undefined" or "arguments" respectively
+            //  3. A CreateNamedVariable operation in all other cases (typically global or hoisted variables, but could also be properties in a with statement)
 
             // We currently fall-back to case 3 if none of the other works. However, this isn't quite correct as it would incorrectly deal with e.g.
             //
@@ -567,11 +582,6 @@ public class JavaScriptCompiler {
             }
 
             // Case 2
-            if environment.builtins.contains(identifier.name) {
-                return emit(LoadBuiltin(builtinName: identifier.name)).output
-            }
-
-            // Case 3
             assert(identifier.name != "this")   // This is handled via ThisExpression
             if identifier.name == "undefined" {
                 return emit(LoadUndefined()).output
@@ -579,12 +589,12 @@ public class JavaScriptCompiler {
                 return emit(LoadArguments()).output
             }
 
-            // Case 4
-            // In this case, we need to remember that this variable was accessed in the current scope.
-            // If the variable access is hoisted, and the variable is defined later, then this allows
-            // the variable definition to turn into a DefineNamedVariable operation.
-            namedVariables.insert(identifier.name)
-            return emit(LoadNamedVariable(identifier.name)).output
+            // Case 3
+            let v = emit(CreateNamedVariable(identifier.name, declarationMode: .none)).output
+            // Cache the variable in case it is reused again to avoid emitting multiple
+            // CreateNamedVariable operations for the same variable.
+            map(identifier.name, to: v)
+            return v
 
         case .numberLiteral(let literal):
             if let intValue = Int64(exactly: literal.value) {
@@ -599,7 +609,7 @@ public class JavaScriptCompiler {
             } else {
                 // TODO should LoadBigInt support larger integer values (represented as string)?
                 let stringValue = emit(LoadString(value: literal.value)).output
-                let BigInt = emit(LoadBuiltin(builtinName: "BigInt")).output
+                let BigInt = emit(CreateNamedVariable("BigInt", declarationMode: .none)).output
                 return emit(CallFunction(numArguments: 1, isGuarded: false), withInputs: [BigInt, stringValue]).output
             }
 
@@ -652,7 +662,6 @@ public class JavaScriptCompiler {
             }
 
             switch lhs {
-
             case .memberExpression(let memberExpression):
                 // Compile to a Set- or Update{Property/Element/ComputedProperty} operation
                 let object = try compileExpression(memberExpression.object)
@@ -680,6 +689,7 @@ public class JavaScriptCompiler {
                         }
                     }
                 }
+
             case .superMemberExpression(let superMemberExpression):
                 guard superMemberExpression.isOptional == false else {
                     throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super member expressions")
@@ -705,36 +715,24 @@ public class JavaScriptCompiler {
                     emit(SetComputedSuperProperty(), withInputs: [property, rhs])
                 }
 
-
             case .identifier(let identifier):
-                if let lhs = lookupIdentifier(identifier.name) {
-                    // Compile to a Reassign or Update operation
-                    switch assignmentExpression.operator {
-                    case "=":
-                        emit(Reassign(), withInputs: [lhs, rhs])
-                    default:
-                        // It's something like "+=", "-=", etc.
-                        let binaryOperator = String(assignmentExpression.operator.dropLast())
-                        guard let op = BinaryOperator(rawValue: binaryOperator) else {
-                            throw CompilerError.invalidNodeError("Unknown assignment operator \(assignmentExpression.operator)")
-                        }
-                        emit(Update(op), withInputs: [lhs, rhs])
+                // Try to lookup the variable belonging to the identifier. If there is none, we're (probably) dealing with
+                // an access to a global variable/builtin or a hoisted variable access. In the case, create a named variable.
+                let lhs = lookupIdentifier(identifier.name) ?? emit(CreateNamedVariable(identifier.name, declarationMode: .none)).output
+                
+                // Compile to a Reassign or Update operation
+                switch assignmentExpression.operator {
+                case "=":
+                    // TODO(saelo): if we're assigning to a named variable, we could also generate a declaration
+                    // of a global variable here instead. Probably it doeesn't matter in practice though.
+                    emit(Reassign(), withInputs: [lhs, rhs])
+                default:
+                    // It's something like "+=", "-=", etc.
+                    let binaryOperator = String(assignmentExpression.operator.dropLast())
+                    guard let op = BinaryOperator(rawValue: binaryOperator) else {
+                        throw CompilerError.invalidNodeError("Unknown assignment operator \(assignmentExpression.operator)")
                     }
-                } else {
-                    // It's (probably) a hoisted or a global variable access. Compile as a named variable.
-                    switch assignmentExpression.operator {
-                    case "=":
-                        emit(StoreNamedVariable(identifier.name), withInputs: [rhs])
-                    default:
-                        // It's something like "+=", "-=", etc.
-                        let binaryOperator = String(assignmentExpression.operator.dropLast())
-                        guard let op = BinaryOperator(rawValue: binaryOperator) else {
-                            throw CompilerError.invalidNodeError("Unknown assignment operator \(assignmentExpression.operator)")
-                        }
-                        let oldVal = emit(LoadNamedVariable(identifier.name)).output
-                        let newVal = emit(BinaryOperation(op), withInputs: [oldVal, rhs]).output
-                        emit(StoreNamedVariable(identifier.name), withInputs: [newVal])
-                    }
+                    emit(Update(op), withInputs: [lhs, rhs])
                 }
 
             default:
@@ -1176,6 +1174,10 @@ public class JavaScriptCompiler {
 
     private func remap(_ identifier: String, to v: Variable) {
         assert(scopes.top[identifier] != nil)
+        scopes.top[identifier] = v
+    }
+    
+    private func mapOrRemap(_ identifier: String, to v: Variable) {
         scopes.top[identifier] = v
     }
 

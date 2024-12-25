@@ -250,7 +250,7 @@ extension RuntimeAssistedMutator.Action.Input {
             } else {
                 // TODO consider changing loadBigInt to use a string instead
                 let s = b.loadString(value)
-                let BigInt = b.loadBuiltin("BigInt")
+                let BigInt = b.createNamedVariable(forBuiltin: "BigInt")
                 return b.callFunction(BigInt, withArgs: [s])
             }
         case .string(let value):
@@ -415,17 +415,17 @@ extension RuntimeAssistedMutator.Action {
         case .TestIsNaN:
             assert(!isGuarded)
             let v = try translateInput(0)
-            let Number = b.loadBuiltin("Number")
+            let Number = b.createNamedVariable(forBuiltin: "Number")
             b.callMethod("isNaN", on: Number, withArgs: [v])
         case .TestIsFinite:
             assert(!isGuarded)
             let v = try translateInput(0)
-            let Number = b.loadBuiltin("Number")
+            let Number = b.createNamedVariable(forBuiltin: "Number")
             b.callMethod("isFinite", on: Number, withArgs: [v])
         case .SymbolRegistration:
             assert(!isGuarded)
             let s = try translateInput(0)
-            let Symbol = b.loadBuiltin("Symbol")
+            let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
             let description = b.getProperty("description", of: s)
             b.callMethod("for", on: Symbol, withArgs: [description])
         }

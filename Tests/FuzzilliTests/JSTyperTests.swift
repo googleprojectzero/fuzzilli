@@ -726,9 +726,9 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        let va = b.loadBuiltin("A")
-        let vb = b.loadBuiltin("B")
-        let vc = b.loadBuiltin("C")
+        let va = b.createNamedVariable(forBuiltin: "A")
+        let vb = b.createNamedVariable(forBuiltin: "B")
+        let vc = b.createNamedVariable(forBuiltin: "C")
 
         XCTAssertEqual(b.type(of: va), builtinAType)
         XCTAssertEqual(b.type(of: vb), builtinBType)
@@ -759,9 +759,9 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        let aObj = b.loadBuiltin("A")
+        let aObj = b.createNamedVariable(forBuiltin: "A")
         XCTAssertEqual(b.type(of: aObj), .anything)
-        let bObj = b.loadBuiltin("B")
+        let bObj = b.createNamedVariable(forBuiltin: "B")
         XCTAssertEqual(b.type(of: bObj), .object(ofGroup: "B"))
 
         // .foo and .bar are both known for B objects
@@ -774,7 +774,7 @@ class JSTyperTests: XCTestCase {
         p = b.getProperty("baz", of: bObj)
         XCTAssertEqual(b.type(of: p), .anything)
 
-        let cObj = b.loadBuiltin("C")
+        let cObj = b.createNamedVariable(forBuiltin: "C")
         p = b.getProperty("baz", of: cObj)
         XCTAssertEqual(b.type(of: p), propBazType)
 
@@ -809,9 +809,9 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        let aObj = b.loadBuiltin("A")
+        let aObj = b.createNamedVariable(forBuiltin: "A")
         XCTAssertEqual(b.type(of: aObj), .anything)
-        let bObj = b.loadBuiltin("B")
+        let bObj = b.createNamedVariable(forBuiltin: "B")
         XCTAssertEqual(b.type(of: bObj), .object(ofGroup: "B"))
 
         var r = b.callMethod("m1", on: bObj)
@@ -820,7 +820,7 @@ class JSTyperTests: XCTestCase {
         r = b.callMethod("m2", on: bObj)
         XCTAssertEqual(b.type(of: r), .anything)
 
-        let cObj = b.loadBuiltin("C")
+        let cObj = b.createNamedVariable(forBuiltin: "C")
         r = b.callMethod("m2", on: cObj)
         XCTAssertEqual(b.type(of: r), .object(ofGroup: "X"))
     }
@@ -836,7 +836,7 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        let A = b.loadBuiltin("A")
+        let A = b.createNamedVariable(forBuiltin: "A")
         XCTAssertEqual(b.type(of: A), aConstructorType)
 
         // For a known constructor, the resulting type can be inferred
@@ -844,7 +844,7 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: a), .object(ofGroup: "A"))
 
         // For an unknown constructor, the result will be .object()
-        let B = b.loadBuiltin("B")
+        let B = b.createNamedVariable(forBuiltin: "B")
         let b_ = b.construct(B)
         XCTAssertEqual(b.type(of: b_), .object())
 
@@ -869,7 +869,7 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        let a = b.loadBuiltin("a")
+        let a = b.createNamedVariable(forBuiltin: "a")
         XCTAssertEqual(b.type(of: a), aFunctionType)
 
         // For a known function, the resulting type can be inferred
@@ -877,7 +877,7 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: r), .primitive)
 
         // For an unknown function, the result will be .anything
-        let c = b.loadBuiltin("c")
+        let c = b.createNamedVariable(forBuiltin: "c")
         r = b.callFunction(c)
         XCTAssertEqual(b.type(of: r), .anything)
     }
@@ -1223,7 +1223,7 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        let obj = b.loadBuiltin("myO")
+        let obj = b.createNamedVariable(forBuiltin: "myO")
         b.setType(ofVariable: obj, to: .object(ofGroup: "O", withProperties: ["foo", "bar", "baz"]))
 
         let outputs = b.destruct(obj, selecting: ["foo", "bar"], hasRestElement: true)

@@ -118,8 +118,6 @@ extension Instruction {
             canFold = true
         case (.loadRegExp(let op1), .loadRegExp(let op2)):
             canFold = op1.pattern  == op2.pattern && op1.flags == op2.flags
-        case (.loadBuiltin(let op1), .loadBuiltin(let op2)):
-            canFold = op1.builtinName  == op2.builtinName
         default:
             assert(self.op.name != other.op.name || !isPure)
         }

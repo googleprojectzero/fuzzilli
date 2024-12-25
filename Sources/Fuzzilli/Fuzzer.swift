@@ -474,14 +474,11 @@ public class Fuzzer {
             for instr in program.code {
                 var removeInstruction = false
                 switch instr.op.opcode {
-                case .loadNamedVariable(let op):
-                    if shouldRemoveUsesOf(op.variableName) {
+                case .createNamedVariable(let op):
+                    if op.declarationMode == .none && shouldRemoveUsesOf(op.variableName) {
                         removeInstruction = true
                         variablesToReplaceWithDummy.insert(instr.output)
                     }
-                case .loadBuiltin(let op):
-                    // We expect builtins to always be available and don't want to filter them out.
-                    assert(!shouldRemoveUsesOf(op.builtinName))
                 default:
                     break
                 }

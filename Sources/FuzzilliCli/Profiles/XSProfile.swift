@@ -19,7 +19,7 @@ fileprivate let StressXSGC = CodeGenerator("StressXSGC", inputs: .required(.func
 
     let index = b.loadInt(1)
     let end = b.loadInt(128)
-    let gc = b.loadBuiltin("gc")
+    let gc = b.createNamedVariable(forBuiltin: "gc")
     b.callFunction(gc, withArgs: [index])
     b.buildWhileLoop({b.compare(index, with: end, using: .lessThan)}) {
         b.callFunction(f, withArgs: arguments)
@@ -36,7 +36,7 @@ fileprivate let StressXSMemoryFail = CodeGenerator("StressXSMemoryFail", inputs:
 
     let index = b.loadInt(1)
     let max = b.loadInt(1000000)
-    let memoryFail = b.loadBuiltin("memoryFail")
+    let memoryFail = b.createNamedVariable(forBuiltin: "memoryFail")
     b.callFunction(memoryFail, withArgs: [max])    // count how many allocations this function makes
     b.callFunction(f, withArgs: arguments)
     var end = b.callFunction(memoryFail, withArgs: [index])
@@ -49,17 +49,17 @@ fileprivate let StressXSMemoryFail = CodeGenerator("StressXSMemoryFail", inputs:
 }
 
 fileprivate let HardenGenerator = CodeGenerator("HardenGenerator", inputs: .required(.object())) { b, obj in
-    let harden = b.loadBuiltin("harden")
+    let harden = b.createNamedVariable(forBuiltin: "harden")
 
     if probability(0.05) {
-        let lockdown = b.loadBuiltin("lockdown")
+        let lockdown = b.createNamedVariable(forBuiltin: "lockdown")
         b.callFunction(lockdown)
     }
     b.callFunction(harden, withArgs: [obj])
 }
 
 fileprivate let ModuleSourceGenerator = RecursiveCodeGenerator("ModuleSourceGenerator") { b in
-    let moduleSourceConstructor = b.loadBuiltin("ModuleSource")
+    let moduleSourceConstructor = b.createNamedVariable(forBuiltin: "ModuleSource")
 
     let code = b.buildCodeString() {
         b.buildRecursive()
@@ -69,7 +69,7 @@ fileprivate let ModuleSourceGenerator = RecursiveCodeGenerator("ModuleSourceGene
 }
 
 fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenerator") { b in
-    let compartmentConstructor = b.loadBuiltin("Compartment")
+    let compartmentConstructor = b.createNamedVariable(forBuiltin: "Compartment")
 
     var endowments = [String: Variable]()        // may be used as endowments argument or globalLexicals
     var moduleMap = [String: Variable]()
@@ -132,7 +132,7 @@ fileprivate let UnicodeStringGenerator = CodeGenerator("UnicodeStringGenerator")
 fileprivate let HexGenerator = CodeGenerator("HexGenerator") { b in
     let hexValues = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "A", "B", "C", "D", "E", "F"]
 
-    let Uint8Array = b.loadBuiltin("Uint8Array")
+    let Uint8Array = b.createNamedVariable(forBuiltin: "Uint8Array")
 
     withEqualProbability({
             var s = ""
@@ -164,7 +164,7 @@ fileprivate let Base64Generator = CodeGenerator("Base64Generator") { b in
     let base64Alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "/"]
     let base64URLAlphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", "_"]
 
-    let Uint8Array = b.loadBuiltin("Uint8Array")
+    let Uint8Array = b.createNamedVariable(forBuiltin: "Uint8Array")
 
     withEqualProbability({
             var options = [String: Variable]()
@@ -272,7 +272,7 @@ fileprivate let RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
         let resultVar = b.loadNull()
 
         b.buildTryCatchFinally(tryBody: {
-            let symbol = b.loadBuiltin("Symbol")
+            let symbol = b.createNamedVariable(forBuiltin: "Symbol")
             withEqualProbability({
                 let res = b.callMethod("exec", on: regExpVar, withArgs: [subjectVar])
                 b.reassign(resultVar, to: res)

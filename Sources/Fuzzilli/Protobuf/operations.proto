@@ -253,10 +253,6 @@ message CreateArrayWithSpread {
     repeated bool spreads = 1;
 }
 
-message LoadBuiltin {
-    string builtinName = 1;
-}
-
 message GetProperty {
     string propertyName = 1;
     bool isGuarded = 2;
@@ -541,16 +537,16 @@ message Compare {
     Comparator op = 1;
 }
 
-message LoadNamedVariable {
-    string variableName = 1;
+enum NamedVariableDeclarationMode {
+    NONE = 0;
+    GLOBAL = 1;
+    VAR = 2;
+    LET = 3;
 }
 
-message StoreNamedVariable {
+message CreateNamedVariable {
     string variableName = 1;
-}
-
-message DefineNamedVariable {
-    string variableName = 1;
+    NamedVariableDeclarationMode declarationMode = 2;
 }
 
 message Eval {

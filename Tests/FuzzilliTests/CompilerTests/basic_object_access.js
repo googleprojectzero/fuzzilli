@@ -14,9 +14,11 @@ o[3] = o[2] + o[1];
 output(JSON.stringify(o));
 
 with(o) {
-    a = 3;
-    b = 4;
-    c = a + b;
-  }
+  output(a);
+  output(b);
+  a = 3;
+  b = 4;
+  c = a + b;
+}
 
 output(JSON.stringify(o));
