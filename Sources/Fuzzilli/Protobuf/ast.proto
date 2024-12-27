@@ -344,6 +344,7 @@ message FunctionExpression {
     FunctionType type = 1;
     repeated Parameter parameters = 2;
     repeated Statement body = 3;
+    string name = 4;
 }
 
 message ArrowFunctionExpression {
