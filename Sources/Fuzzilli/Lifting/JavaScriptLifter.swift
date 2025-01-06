@@ -219,6 +219,36 @@ public class JavaScriptLifter: Lifter {
             case .loadArguments:
                 w.assign(Identifier.new("arguments"), to: instr.output)
 
+            case .createNamedVariable(let op):
+                assert(op.declarationMode == .none || op.hasInitialValue)
+                if op.hasInitialValue {
+                    switch op.declarationMode {
+                    case .none:
+                        fatalError("This declaration mode doesn't have an initial value")
+                    case .global:
+                        w.emit("\(op.variableName) = \(input(0));")
+                    case .var:
+                        // Small optimization: turn `var x = undefined;` into just `var x;`
+                        let initialValue = input(0).text
+                        if initialValue == "undefined" {
+                            w.emit("var \(op.variableName);")
+                        } else {
+                            w.emit("var \(op.variableName) = \(initialValue);")
+                        }
+                    case .let:
+                        // Small optimization: turn `let x = undefined;` into just `let x;`
+                        let initialValue = input(0).text
+                        if initialValue == "undefined" {
+                            w.emit("let \(op.variableName);")
+                        } else {
+                            w.emit("let \(op.variableName) = \(initialValue);")
+                        }
+                    case .const:
+                        w.emit("const \(op.variableName) = \(input(0));")
+                    }
+                }
+                w.declare(instr.output, as: op.variableName)
+
             case .loadDisposableVariable:
                 let V = w.declare(instr.output);
                 w.emit("using \(V) = \(input(0));");
@@ -540,9 +570,6 @@ public class JavaScriptLifter: Lifter {
                 let escapeSequence = String(repeating: "\\", count: count)
                 let expr = TemplateLiteral.new("\(escapeSequence)`" + parts.joined() + "\(escapeSequence)`")
                 w.assign(expr, to: instr.output)
-
-            case .loadBuiltin(let op):
-                w.assign(Identifier.new(op.builtinName), to: instr.output)
 
             case .getProperty(let op):
                 let obj = input(0)
@@ -892,19 +919,6 @@ public class JavaScriptLifter: Lifter {
                 let rhs = input(1)
                 let expr = BinaryExpression.new() + lhs + " " + op.op.token + " " + rhs
                 w.assign(expr, to: instr.output)
-
-            case .loadNamedVariable(let op):
-                w.assign(Identifier.new(op.variableName), to: instr.output)
-
-            case .storeNamedVariable(let op):
-                let NAME = op.variableName
-                let VALUE = input(0)
-                w.emit("\(NAME) = \(VALUE);")
-
-            case .defineNamedVariable(let op):
-                let NAME = op.variableName
-                let VALUE = input(0)
-                w.emit("var \(NAME) = \(VALUE);")
 
             case .eval(let op):
                 // Woraround until Strings implement the CVarArg protocol in the linux Foundation library...

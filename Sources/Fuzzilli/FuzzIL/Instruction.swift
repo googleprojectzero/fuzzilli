@@ -500,8 +500,6 @@ extension Instruction: ProtobufConvertible {
                 $0.createArrayWithSpread = Fuzzilli_Protobuf_CreateArrayWithSpread.with { $0.spreads = op.spreads }
             case .createTemplateString(let op):
                 $0.createTemplateString = Fuzzilli_Protobuf_CreateTemplateString.with { $0.parts = op.parts }
-            case .loadBuiltin(let op):
-                $0.loadBuiltin = Fuzzilli_Protobuf_LoadBuiltin.with { $0.builtinName = op.builtinName }
             case .getProperty(let op):
                 $0.getProperty = Fuzzilli_Protobuf_GetProperty.with {
                     $0.propertyName = op.propertyName
@@ -697,12 +695,11 @@ extension Instruction: ProtobufConvertible {
                 }
             case .compare(let op):
                 $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, Comparator.allCases) }
-            case .loadNamedVariable(let op):
-                $0.loadNamedVariable = Fuzzilli_Protobuf_LoadNamedVariable.with { $0.variableName = op.variableName }
-            case .storeNamedVariable(let op):
-                $0.storeNamedVariable = Fuzzilli_Protobuf_StoreNamedVariable.with { $0.variableName = op.variableName }
-            case .defineNamedVariable(let op):
-                $0.defineNamedVariable = Fuzzilli_Protobuf_DefineNamedVariable.with { $0.variableName = op.variableName }
+            case .createNamedVariable(let op):
+                $0.createNamedVariable = Fuzzilli_Protobuf_CreateNamedVariable.with {
+                    $0.variableName = op.variableName
+                    $0.declarationMode = convertEnum(op.declarationMode, NamedVariableDeclarationMode.allCases)
+                }
             case .eval(let op):
                 $0.eval = Fuzzilli_Protobuf_Eval.with {
                     $0.code = op.code
@@ -1006,8 +1003,6 @@ extension Instruction: ProtobufConvertible {
             op = CreateArrayWithSpread(spreads: p.spreads)
         case .createTemplateString(let p):
             op = CreateTemplateString(parts: p.parts)
-        case .loadBuiltin(let p):
-            op = LoadBuiltin(builtinName: p.builtinName)
         case .getProperty(let p):
             op = GetProperty(propertyName: p.propertyName, isGuarded: p.isGuarded)
         case .setProperty(let p):
@@ -1141,12 +1136,8 @@ extension Instruction: ProtobufConvertible {
             op = DestructObjectAndReassign(properties: p.properties, hasRestElement: p.hasRestElement_p)
         case .compare(let p):
             op = Compare(try convertEnum(p.op, Comparator.allCases))
-        case .loadNamedVariable(let p):
-            op = LoadNamedVariable(p.variableName)
-        case .storeNamedVariable(let p):
-            op = StoreNamedVariable(p.variableName)
-        case .defineNamedVariable(let p):
-            op = DefineNamedVariable(p.variableName)
+        case .createNamedVariable(let p):
+            op = CreateNamedVariable(p.variableName, declarationMode: try convertEnum(p.declarationMode, NamedVariableDeclarationMode.allCases))
         case .eval(let p):
             let numArguments = inouts.count - (p.hasOutput_p ? 1 : 0)
             op = Eval(p.code, numArguments: numArguments, hasOutput: p.hasOutput_p)

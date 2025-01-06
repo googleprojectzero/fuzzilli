@@ -67,8 +67,6 @@ public class OperationMutator: BaseInstructionMutator {
             var newParts = op.parts
             replaceRandomElement(in: &newParts, generatingRandomValuesWith: { return b.randomString() })
             newOp = CreateTemplateString(parts: newParts)
-        case .loadBuiltin(_):
-            newOp = LoadBuiltin(builtinName: b.randomBuiltin())
         case .objectLiteralAddProperty:
             newOp = ObjectLiteralAddProperty(propertyName: b.randomPropertyName())
         case .objectLiteralAddElement:
@@ -209,13 +207,9 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = DestructObjectAndReassign(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case .compare(_):
             newOp = Compare(chooseUniform(from: Comparator.allCases))
-        case .loadNamedVariable:
+        case .createNamedVariable(let op):
             // We just use property names as variable names here. It's not clear if there's a better alternative and this also works well with `with` statements.
-            newOp = LoadNamedVariable(b.randomPropertyName())
-        case .storeNamedVariable:
-            newOp = StoreNamedVariable(b.randomPropertyName())
-        case .defineNamedVariable:
-            newOp = DefineNamedVariable(b.randomPropertyName())
+            newOp = CreateNamedVariable(b.randomPropertyName(), declarationMode: op.declarationMode)
         case .callSuperMethod(let op):
             let methodName = b.currentSuperType().randomMethod() ?? b.randomMethodName()
             newOp = CallSuperMethod(methodName: methodName, numArguments: op.numArguments)

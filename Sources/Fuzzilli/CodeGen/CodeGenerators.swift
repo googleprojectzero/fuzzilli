@@ -100,7 +100,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     ValueGenerator("BuiltinObjectInstanceGenerator") { b, n in
         let builtin = chooseUniform(from: ["Array", "Map", "WeakMap", "Set", "WeakSet", "Date"])
-        let constructor = b.loadBuiltin(builtin)
+        let constructor = b.createNamedVariable(forBuiltin: builtin)
         if builtin == "Array" {
             let size = b.loadInt(b.randomSize(upTo: 0x1000))
             b.construct(constructor, withArgs: [size])
@@ -113,8 +113,8 @@ public let CodeGenerators: [CodeGenerator] = [
     ValueGenerator("TypedArrayGenerator") { b, n in
         for _ in 0..<n {
             let size = b.loadInt(b.randomSize(upTo: 0x1000))
-            let constructor = b.loadBuiltin(
-                chooseUniform(
+            let constructor = b.createNamedVariable(
+                forBuiltin: chooseUniform(
                     from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
                 )
             )
@@ -277,7 +277,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("DisposableVariableGenerator", inContext: .subroutine, inputs: .one) { b, val in
         assert(b.context.contains(.subroutine))
-        let dispose = b.getProperty("dispose", of: b.loadBuiltin("Symbol"));
+        let dispose = b.getProperty("dispose", of: b.createNamedVariable(forBuiltin: "Symbol"));
         let disposableVariable = b.buildObjectLiteral { obj in
             obj.addProperty("value", as: val)
             obj.addComputedMethod(dispose, with: .parameters(n:0)) { args in
@@ -289,7 +289,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("AsyncDisposableVariableGenerator", inContext: .asyncFunction, inputs: .one) { b, val in
         assert(b.context.contains(.asyncFunction))
-        let asyncDispose = b.getProperty("asyncDispose", of: b.loadBuiltin("Symbol"))
+        let asyncDispose = b.getProperty("asyncDispose", of: b.createNamedVariable(forBuiltin: "Symbol"))
         let asyncDisposableVariable = b.buildObjectLiteral { obj in
             obj.addProperty("value", as: val)
             obj.addComputedMethod(asyncDispose, with: .parameters(n:0)) { args in
@@ -770,11 +770,26 @@ public let CodeGenerators: [CodeGenerator] = [
 
     // We don't treat this as a ValueGenerator since it doesn't create a new value, it only accesses an existing one.
     CodeGenerator("BuiltinGenerator") { b in
-        b.loadBuiltin(b.randomBuiltin())
+        b.createNamedVariable(forBuiltin: b.randomBuiltin())
+    },
+
+    CodeGenerator("NamedVariableGenerator") { b in
+        // We're using the custom property names set from the environment for named variables.
+        // It's not clear if there's something better since that set should be relatively small
+        // (increasing the probability that named variables will be reused), and it also makes
+        // sense to use property names if we're inside a `with` statement.
+        let name = b.randomCustomPropertyName()
+        let declarationMode = chooseUniform(from: NamedVariableDeclarationMode.allCases)
+        if declarationMode != .none {
+            b.createNamedVariable(name, declarationMode: declarationMode, initialValue: b.randomVariable())
+        } else {
+            b.createNamedVariable(name, declarationMode: declarationMode)
+        }
     },
 
     CodeGenerator("BuiltinOverwriteGenerator", inputs: .one) { b, value in
-        b.storeNamedVariable(b.randomBuiltin(), value)
+        let builtin = b.createNamedVariable(b.randomBuiltin(), declarationMode: .none)
+        b.reassign(builtin, to: value)
     },
 
     RecursiveCodeGenerator("PlainFunctionGenerator") { b in
@@ -1477,7 +1492,7 @@ public let CodeGenerators: [CodeGenerator] = [
     //
 
     CodeGenerator("WellKnownPropertyLoadGenerator", inputs: .preferred(.object())) { b, obj in
-        let Symbol = b.loadBuiltin("Symbol")
+        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
         // The Symbol constructor is just a "side effect" of this generator and probably shouldn't be used by following generators.
         b.hide(Symbol)
         let name = chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols)
@@ -1486,7 +1501,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WellKnownPropertyStoreGenerator", inputs: .preferred(.object())) { b, obj in
-        let Symbol = b.loadBuiltin("Symbol")
+        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
         b.hide(Symbol)
         let name = chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols)
         let propertyName = b.getProperty(name, of: Symbol)
@@ -1511,13 +1526,13 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: .preferred(.object(), .object())) { b, obj, this in
         guard let methodName = b.type(of: obj).randomMethod() else { return }
         let arguments = b.randomArguments(forCallingMethod: methodName, on: obj)
-        let Reflect = b.loadBuiltin("Reflect")
+        let Reflect = b.createNamedVariable(forBuiltin: "Reflect")
         let args = b.createArray(with: arguments)
         b.callMethod("apply", on: Reflect, withArgs: [b.getProperty(methodName, of: obj), this, args])
     },
 
     CodeGenerator("ConstructWithDifferentNewTargetGenerator", inputs: .preferred(.constructor(), .constructor())) { b, newTarget, constructor  in
-        let reflect = b.loadBuiltin("Reflect")
+        let reflect = b.createNamedVariable(forBuiltin: "Reflect")
         let arguments = [constructor, b.createArray(with: b.randomArguments(forCalling: constructor)), newTarget]
         b.callMethod("construct", on: reflect, withArgs: arguments)
     },
@@ -1543,7 +1558,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
         let handler = b.createObject(with: handlerProperties)
 
-        let Proxy = b.loadBuiltin("Proxy")
+        let Proxy = b.createNamedVariable(forBuiltin: "Proxy")
         b.hide(Proxy)// We want the proxy to be used by following code generators, not the Proxy constructor
         b.construct(Proxy, withArgs: [target, handler])
     },
@@ -1553,7 +1568,7 @@ public let CodeGenerators: [CodeGenerator] = [
             // TODO could provide type hints here for the parameters.
             b.buildRecursive()
         }
-        let Promise = b.loadBuiltin("Promise")
+        let Promise = b.createNamedVariable(forBuiltin: "Promise")
         b.hide(Promise)   // We want the promise to be used by following code generators, not the Promise constructor
         b.construct(Promise, withArgs: [handler])
     },
@@ -1580,41 +1595,19 @@ public let CodeGenerators: [CodeGenerator] = [
     // Generates a JavaScript 'with' statement
     RecursiveCodeGenerator("WithStatementGenerator", inputs: .preferred(.object())) { b, obj in
         b.buildWith(obj) {
-            withProbability(0.5, do: { () -> Void in
+            for i in 1...3 {
                 let propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
-                b.loadNamedVariable(propertyName)
-            }, else: { () -> Void in
-                let propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
-                let value = b.randomVariable()
-                b.storeNamedVariable(propertyName, value)
-            })
+                b.createNamedVariable(propertyName, declarationMode: .none)
+            }
             b.buildRecursive()
         }
-    },
-
-    CodeGenerator("NamedVariableLoadGenerator") { b in
-        // We're using the custom property names set from the environment for named variables.
-        // It's not clear if there's something better since that set should be relatively small
-        // (increasing the probability that named variables will be reused), and it also makes
-        // sense to use property names if we're inside a `with` statement.
-        b.loadNamedVariable(b.randomCustomPropertyName())
-    },
-
-    CodeGenerator("NamedVariableStoreGenerator") { b in
-        let value = b.randomVariable()
-        b.storeNamedVariable(b.randomCustomPropertyName(), value)
-    },
-
-    CodeGenerator("NamedVariableDefinitionGenerator") { b in
-        let value = b.randomVariable()
-        b.defineNamedVariable(b.randomCustomPropertyName(), value)
     },
 
     RecursiveCodeGenerator("EvalGenerator") { b in
         let code = b.buildCodeString() {
             b.buildRecursive()
         }
-        let eval = b.loadBuiltin("eval")
+        let eval = b.createNamedVariable(forBuiltin: "eval")
         b.callFunction(eval, withArgs: [code])
     },
 
@@ -1629,7 +1622,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let numComputations = Int.random(in: 3...7)
 
         // Common mathematical operations are exposed through the Math builtin in JavaScript.
-        let Math = b.loadBuiltin("Math")
+        let Math = b.createNamedVariable(forBuiltin: "Math")
         b.hide(Math)        // Following code generators should use the numbers generated below, not the Math object.
 
         var values = b.randomVariables(upTo: Int.random(in: 1...3))
@@ -1676,7 +1669,7 @@ public let CodeGenerators: [CodeGenerator] = [
                     }
                 }
             } else {
-                let toPrimitive = b.getProperty("toPrimitive", of: b.loadBuiltin("Symbol"))
+                let toPrimitive = b.getProperty("toPrimitive", of: b.createNamedVariable(forBuiltin: "Symbol"))
                 imitation = b.buildObjectLiteral { obj in
                     obj.addComputedMethod(toPrimitive, with: .parameters(n: 0)) { _ in
                         b.buildRecursive(n: 3)
@@ -1689,7 +1682,7 @@ public let CodeGenerators: [CodeGenerator] = [
             // A lot of functions are also objects, so we could handle them either way. However, it probably makes more sense to handle
             // them as a function since they would otherwise no longer be callable.
             let handler = b.createObject(with: [:])
-            let Proxy = b.loadBuiltin("Proxy")
+            let Proxy = b.createNamedVariable(forBuiltin: "Proxy")
             imitation = b.construct(Proxy, withArgs: [orig, handler])
         } else if b.type(of: orig).Is(.object()) {
             // Either make a class that extends that object's constructor or make a new object with the original object as prototype.
@@ -1724,13 +1717,13 @@ public let CodeGenerators: [CodeGenerator] = [
         if maxSize < size {
             maxSize = size
         }
-        let ArrayBuffer = b.loadBuiltin("ArrayBuffer")
+        let ArrayBuffer = b.createNamedVariable(forBuiltin: "ArrayBuffer")
         b.hide(ArrayBuffer)
         let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
         let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
 
-        let View = b.loadBuiltin(
-            chooseUniform(
+        let View = b.createNamedVariable(
+            forBuiltin: chooseUniform(
                 from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array", "DataView"]
             )
         )
@@ -1743,13 +1736,13 @@ public let CodeGenerators: [CodeGenerator] = [
         if maxSize < size {
             maxSize = size
         }
-        let ArrayBuffer = b.loadBuiltin("SharedArrayBuffer")
+        let ArrayBuffer = b.createNamedVariable(forBuiltin: "SharedArrayBuffer")
         b.hide(ArrayBuffer)
         let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
         let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
 
-        let View = b.loadBuiltin(
-            chooseUniform(
+        let View = b.createNamedVariable(
+            forBuiltin: chooseUniform(
                 from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array", "DataView"]
             )
         )
@@ -1802,7 +1795,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("IteratorGenerator") { b in
-        let Symbol = b.loadBuiltin("Symbol")
+        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
         b.hide(Symbol)
         let iteratorSymbol = b.getProperty("iterator", of: Symbol)
         b.hide(iteratorSymbol)
