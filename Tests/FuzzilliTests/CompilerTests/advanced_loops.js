@@ -89,3 +89,12 @@ for (output("inside for loop initializer"); output("inside for loop condition"),
   if (!countdown()) break;
 }
 resetCounter();
+
+// Test scoping in the different parts of a for loop.
+{
+  global = { start: 0, end: 3, step: 1, value: 42 };
+}
+for (let i = global.start; i < global.end; i += global.step) {
+  output("inside for loop body with global value", global.value);
+}
+
