@@ -866,7 +866,8 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let sf = b.buildPlainFunction(with: .parameters(n: 3), isStrict: true) { args in
+        let sf = b.buildPlainFunction(with: .parameters(n: 3)) { args in
+            b.directive("use strict")
             b.buildIfElse(args[0], ifBody: {
                 let v = b.binary(args[1], args[2], with: .Mul)
                 b.doReturn(v)
@@ -937,7 +938,8 @@ class LifterTests: XCTestCase {
             let r = b.binary(lhs, rhs, with: .Add)
             b.doReturn(r)
         }
-        let f2 = b.buildAsyncGeneratorFunction(with: .parameters(n: 2), isStrict: true) { args in
+        let f2 = b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { args in
+            b.directive("use strict")
             let lhs = b.await(args[0])
             let rhs = b.await(args[1])
             let r = b.binary(lhs, rhs, with: .Mul)

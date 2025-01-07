@@ -576,42 +576,36 @@ extension Instruction: ProtobufConvertible {
             case .beginPlainFunction(let op):
                 $0.beginPlainFunction = Fuzzilli_Protobuf_BeginPlainFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
                 }
             case .endPlainFunction:
                 $0.endPlainFunction = Fuzzilli_Protobuf_EndPlainFunction()
             case .beginArrowFunction(let op):
                 $0.beginArrowFunction = Fuzzilli_Protobuf_BeginArrowFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
                 }
             case .endArrowFunction:
                 $0.endArrowFunction = Fuzzilli_Protobuf_EndArrowFunction()
             case .beginGeneratorFunction(let op):
                 $0.beginGeneratorFunction = Fuzzilli_Protobuf_BeginGeneratorFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
                 }
             case .endGeneratorFunction:
                 $0.endGeneratorFunction = Fuzzilli_Protobuf_EndGeneratorFunction()
             case .beginAsyncFunction(let op):
                 $0.beginAsyncFunction = Fuzzilli_Protobuf_BeginAsyncFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
                 }
             case.endAsyncFunction:
                 $0.endAsyncFunction = Fuzzilli_Protobuf_EndAsyncFunction()
             case .beginAsyncArrowFunction(let op):
                 $0.beginAsyncArrowFunction = Fuzzilli_Protobuf_BeginAsyncArrowFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
                 }
             case .endAsyncArrowFunction:
                 $0.endAsyncArrowFunction = Fuzzilli_Protobuf_EndAsyncArrowFunction()
             case .beginAsyncGeneratorFunction(let op):
                 $0.beginAsyncGeneratorFunction = Fuzzilli_Protobuf_BeginAsyncGeneratorFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
                 }
             case .endAsyncGeneratorFunction:
                 $0.endAsyncGeneratorFunction = Fuzzilli_Protobuf_EndAsyncGeneratorFunction()
@@ -621,6 +615,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .endConstructor:
                 $0.endConstructor = Fuzzilli_Protobuf_EndConstructor()
+            case .directive(let op):
+                $0.directive = Fuzzilli_Protobuf_Directive.with { $0.content = op.content }
             case .return:
                 $0.return = Fuzzilli_Protobuf_Return()
             case .yield:
@@ -1055,32 +1051,32 @@ extension Instruction: ProtobufConvertible {
             op = TestIn()
         case .beginPlainFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginPlainFunction(parameters: parameters, isStrict: p.isStrict)
+            op = BeginPlainFunction(parameters: parameters)
         case .endPlainFunction:
             op = EndPlainFunction()
         case .beginArrowFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginArrowFunction(parameters: parameters, isStrict: p.isStrict)
+            op = BeginArrowFunction(parameters: parameters)
         case .endArrowFunction:
             op = EndArrowFunction()
         case .beginGeneratorFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginGeneratorFunction(parameters: parameters, isStrict: p.isStrict)
+            op = BeginGeneratorFunction(parameters: parameters)
         case .endGeneratorFunction:
             op = EndGeneratorFunction()
         case .beginAsyncFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginAsyncFunction(parameters: parameters, isStrict: p.isStrict)
+            op = BeginAsyncFunction(parameters: parameters)
         case .endAsyncFunction:
             op = EndAsyncFunction()
         case .beginAsyncArrowFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginAsyncArrowFunction(parameters: parameters, isStrict: p.isStrict)
+            op = BeginAsyncArrowFunction(parameters: parameters)
         case .endAsyncArrowFunction:
             op = EndAsyncArrowFunction()
         case .beginAsyncGeneratorFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginAsyncGeneratorFunction(parameters: parameters, isStrict: p.isStrict)
+            op = BeginAsyncGeneratorFunction(parameters: parameters)
         case .endAsyncGeneratorFunction:
             op = EndAsyncGeneratorFunction()
         case .beginConstructor(let p):
@@ -1088,6 +1084,8 @@ extension Instruction: ProtobufConvertible {
             op = BeginConstructor(parameters: parameters)
         case .endConstructor:
             op = EndConstructor()
+        case .directive(let p):
+            op = Directive(p.content)
         case .return:
             let hasReturnValue = inouts.count == 1
             op = Return(hasReturnValue: hasReturnValue)

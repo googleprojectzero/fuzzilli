@@ -28,7 +28,7 @@ struct SimplifyingReducer: Reducer {
             assert(helper.code[group.tail].op is EndAnyFunction)
             if begin is BeginPlainFunction { continue }
 
-            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, isStrict: begin.isStrict), inouts: helper.code[group.head].inouts, flags: .empty)
+            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters), inouts: helper.code[group.head].inouts, flags: .empty)
             let newEnd = Instruction(EndPlainFunction())
 
             // The resulting code may be invalid as we may be changing the context inside the body (e.g. turning an async function into a plain one).
@@ -60,28 +60,6 @@ struct SimplifyingReducer: Reducer {
             case .construct(let op):
                 // Prefer simple function calls over constructor calls if there's no difference
                 newOp = CallFunction(numArguments: op.numArguments, isGuarded: op.isGuarded)
-
-            // Prefer non strict functions over strict ones
-            case .beginPlainFunction(let op):
-                if op.isStrict {
-                    newOp = BeginPlainFunction(parameters: op.parameters, isStrict: false)
-                }
-            case .beginArrowFunction(let op):
-                if op.isStrict {
-                    newOp = BeginArrowFunction(parameters: op.parameters, isStrict: false)
-                }
-            case .beginGeneratorFunction(let op):
-                if op.isStrict {
-                    newOp = BeginGeneratorFunction(parameters: op.parameters, isStrict: false)
-                }
-            case .beginAsyncFunction(let op):
-                if op.isStrict {
-                    newOp = BeginAsyncFunction(parameters: op.parameters, isStrict: false)
-                }
-            case .beginAsyncGeneratorFunction(let op):
-                if op.isStrict {
-                    newOp = BeginAsyncGeneratorFunction(parameters: op.parameters, isStrict: false)
-                }
 
             default:
                 break

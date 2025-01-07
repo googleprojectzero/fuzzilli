@@ -86,6 +86,7 @@ public let codeGeneratorWeights = [
     "TemplateStringGenerator":                  1,
     "StringNormalizeGenerator":                 1,
     "PlainFunctionGenerator":                   15,
+    "StrictModeFunctionGenerator":              3,
     "ArrowFunctionGenerator":                   3,
     "GeneratorFunctionGenerator":               3,
     "AsyncFunctionGenerator":                   3,

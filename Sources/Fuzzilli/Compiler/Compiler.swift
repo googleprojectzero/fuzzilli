@@ -118,16 +118,16 @@ public class JavaScriptCompiler {
             let functionBegin, functionEnd: Operation
             switch functionDeclaration.type {
             case .plain:
-                functionBegin = BeginPlainFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginPlainFunction(parameters: parameters)
                 functionEnd = EndPlainFunction()
             case .generator:
-                functionBegin = BeginGeneratorFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginGeneratorFunction(parameters: parameters)
                 functionEnd = EndGeneratorFunction()
             case .async:
-                functionBegin = BeginAsyncFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginAsyncFunction(parameters: parameters)
                 functionEnd = EndAsyncFunction()
             case .asyncGenerator:
-                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters)
                 functionEnd = EndAsyncGeneratorFunction()
             case .UNRECOGNIZED(let type):
                 throw CompilerError.invalidNodeError("invalid function declaration type \(type)")
@@ -317,6 +317,9 @@ public class JavaScriptCompiler {
             } else {
                 emit(Return(hasReturnValue: false))
             }
+
+        case .directiveStatement(let directiveStatement):
+            emit(Directive(directiveStatement.content))
 
         case .expressionStatement(let expressionStatement):
             try compileExpression(expressionStatement.expression)
@@ -869,16 +872,16 @@ public class JavaScriptCompiler {
             let functionBegin, functionEnd: Operation
             switch functionExpression.type {
             case .plain:
-                functionBegin = BeginPlainFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginPlainFunction(parameters: parameters)
                 functionEnd = EndPlainFunction()
             case .generator:
-                functionBegin = BeginGeneratorFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginGeneratorFunction(parameters: parameters)
                 functionEnd = EndGeneratorFunction()
             case .async:
-                functionBegin = BeginAsyncFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginAsyncFunction(parameters: parameters)
                 functionEnd = EndAsyncFunction()
             case .asyncGenerator:
-                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters)
                 functionEnd = EndAsyncGeneratorFunction()
             case .UNRECOGNIZED(let type):
                 throw CompilerError.invalidNodeError("invalid function declaration type \(type)")
@@ -900,10 +903,10 @@ public class JavaScriptCompiler {
             let functionBegin, functionEnd: Operation
             switch arrowFunction.type {
             case .plain:
-                functionBegin = BeginArrowFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginArrowFunction(parameters: parameters)
                 functionEnd = EndArrowFunction()
             case .async:
-                functionBegin = BeginAsyncArrowFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginAsyncArrowFunction(parameters: parameters)
                 functionEnd = EndAsyncArrowFunction()
             default:
                 throw CompilerError.invalidNodeError("invalid arrow function type \(arrowFunction.type)")

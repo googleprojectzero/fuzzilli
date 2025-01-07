@@ -392,7 +392,7 @@ public class FuzzILLifter: Lifter {
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
              .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("\(output()) <- \(op.name) -> \(params)\(op.isStrict ? ", strict" : "")")
+            w.emit("\(output()) <- \(op.name) -> \(params)")
             w.increaseIndentionLevel()
 
         case .endPlainFunction(let op as EndAnyFunction),
@@ -412,6 +412,9 @@ public class FuzzILLifter: Lifter {
         case .endConstructor(let op):
             w.decreaseIndentionLevel()
             w.emit("\(op.name)")
+
+        case .directive(let op):
+            w.emit("Directive '\(op.content)'")
 
         case .return(let op):
             if op.hasReturnValue {

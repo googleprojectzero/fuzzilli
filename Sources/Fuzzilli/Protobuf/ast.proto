@@ -128,6 +128,10 @@ message ReturnStatement {
     Expression argument = 1;
 }
 
+message DirectiveStatement {
+    string content = 1;
+}
+
 message ExpressionStatement {
     Expression expression = 1;
 }
@@ -225,19 +229,20 @@ message Statement {
         FunctionDeclaration functionDeclaration = 4;
         ClassDeclaration classDeclaration = 5;
         ReturnStatement returnStatement = 6;
-        ExpressionStatement expressionStatement = 7;
-        IfStatement ifStatement = 8;
-        WhileLoop whileLoop = 9;
-        DoWhileLoop doWhileLoop = 10;
-        ForLoop forLoop = 11;
-        ForInLoop forInLoop = 12;
-        ForOfLoop forOfLoop = 13;
-        BreakStatement breakStatement = 14;
-        ContinueStatement continueStatement = 15;
-        TryStatement tryStatement = 16;
-        ThrowStatement throwStatement = 17;
-        WithStatement withStatement = 18;
-        SwitchStatement switchStatement = 19;
+        DirectiveStatement directiveStatement = 7;
+        ExpressionStatement expressionStatement = 8;
+        IfStatement ifStatement = 9;
+        WhileLoop whileLoop = 10;
+        DoWhileLoop doWhileLoop = 11;
+        ForLoop forLoop = 12;
+        ForInLoop forInLoop = 13;
+        ForOfLoop forOfLoop = 14;
+        BreakStatement breakStatement = 15;
+        ContinueStatement continueStatement = 16;
+        TryStatement tryStatement = 17;
+        ThrowStatement throwStatement = 18;
+        WithStatement withStatement = 19;
+        SwitchStatement switchStatement = 20;
     }
 }
 
