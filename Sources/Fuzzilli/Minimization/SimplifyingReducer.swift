@@ -16,6 +16,7 @@
 struct SimplifyingReducer: Reducer {
     func reduce(with helper: MinimizationHelper) {
         simplifyFunctionDefinitions(with: helper)
+        simplifyNamedInstructions(with: helper)
         simplifyGuardedInstructions(with: helper)
         simplifySingleInstructions(with: helper)
         simplifyMultiInstructions(with: helper)
@@ -28,11 +29,35 @@ struct SimplifyingReducer: Reducer {
             assert(helper.code[group.tail].op is EndAnyFunction)
             if begin is BeginPlainFunction { continue }
 
-            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters), inouts: helper.code[group.head].inouts, flags: .empty)
+            let functionName = (begin as? BeginAnyNamedFunction)?.functionName ?? nil
+            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, functionName: functionName), inouts: helper.code[group.head].inouts, flags: .empty)
             let newEnd = Instruction(EndPlainFunction())
 
             // The resulting code may be invalid as we may be changing the context inside the body (e.g. turning an async function into a plain one).
             helper.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], expectCodeToBeValid: false)
+        }
+    }
+
+    func simplifyNamedInstructions(with helper: MinimizationHelper) {
+        // Try to remove the names of values and objects.
+        for instr in helper.code {
+            var newOp: Operation? = nil
+            switch instr.op.opcode {
+            case .beginPlainFunction(let op) where op.functionName != nil:
+                newOp = BeginPlainFunction(parameters: op.parameters, functionName: nil)
+            case .beginGeneratorFunction(let op) where op.functionName != nil:
+                newOp = BeginGeneratorFunction(parameters: op.parameters, functionName: nil)
+            case .beginAsyncFunction(let op) where op.functionName != nil:
+                newOp = BeginAsyncFunction(parameters: op.parameters, functionName: nil)
+            case .beginAsyncGeneratorFunction(let op) where op.functionName != nil:
+                newOp = BeginAsyncGeneratorFunction(parameters: op.parameters, functionName: nil)
+            default:
+                assert((instr.op as? BeginAnyNamedFunction)?.functionName == nil)
+            }
+
+            if let op = newOp {
+                helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts, flags: .empty))
+            }
         }
     }
 

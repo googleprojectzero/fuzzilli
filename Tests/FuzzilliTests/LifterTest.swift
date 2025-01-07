@@ -897,6 +897,61 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testNamedFunctionLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let foo = b.buildPlainFunction(with: .parameters(n: 0), named: "foo") { args in }
+        let bar = b.buildGeneratorFunction(with: .parameters(n: 0), named: "bar") { args in }
+        let baz = b.buildAsyncFunction(with: .parameters(n: 0), named: "baz") { args in }
+        let bla = b.buildAsyncGeneratorFunction(with: .parameters(n: 0), named: "bla") { args in }
+
+        b.callFunction(foo)
+        b.callFunction(bar)
+        b.callFunction(baz)
+        b.callFunction(bla)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        function foo() {
+        }
+        function* bar() {
+        }
+        async function baz() {
+        }
+        async function* bla() {
+        }
+        foo();
+        bar();
+        baz();
+        bla();
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testFunctionHoistingLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let foo = b.createNamedVariable("foo", declarationMode: .none)
+        b.callFunction(foo)
+        b.buildPlainFunction(with: .parameters(n: 0), named: "foo") { args in }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        foo();
+        function foo() {
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
     func testConstructorLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

@@ -1277,8 +1277,24 @@ class BeginAnyFunction: BeginAnySubroutine {
 }
 class EndAnyFunction: EndAnySubroutine {}
 
+// Functions that can (optionally) be given a name.
+class BeginAnyNamedFunction: BeginAnyFunction {
+    // If the function has no name (the name is nil), then a  name is automatically assigned
+    // during lifting. Typically it will be something like `f3`, and the lifter guarantees
+    // that there are no name collisions with other functions.
+    // If a name is present, the lifter will use that for the function. In that case, the
+    // lifter cannot guarantee that there are no name collisions with other named functions.
+    let functionName: String?
+
+    init(parameters: Parameters, functionName: String?, contextOpened: Context = [.javascript, .subroutine]) {
+        assert(functionName == nil || !functionName!.isEmpty)
+        self.functionName = functionName
+        super.init(parameters: parameters, contextOpened: contextOpened)
+    }
+}
+
 // A plain function
-final class BeginPlainFunction: BeginAnyFunction {
+final class BeginPlainFunction: BeginAnyNamedFunction {
     override var opcode: Opcode { .beginPlainFunction(self) }
 }
 final class EndPlainFunction: EndAnyFunction {
@@ -1294,11 +1310,11 @@ final class EndArrowFunction: EndAnyFunction {
 }
 
 // A ES6 generator function
-final class BeginGeneratorFunction: BeginAnyFunction {
+final class BeginGeneratorFunction: BeginAnyNamedFunction {
     override var opcode: Opcode { .beginGeneratorFunction(self) }
 
-    init(parameters: Parameters) {
-        super.init(parameters: parameters, contextOpened: [.javascript, .subroutine, .generatorFunction])
+    init(parameters: Parameters, functionName: String?) {
+        super.init(parameters: parameters, functionName: functionName, contextOpened: [.javascript, .subroutine, .generatorFunction])
     }
 }
 final class EndGeneratorFunction: EndAnyFunction {
@@ -1306,11 +1322,11 @@ final class EndGeneratorFunction: EndAnyFunction {
 }
 
 // A ES6 async function
-final class BeginAsyncFunction: BeginAnyFunction {
+final class BeginAsyncFunction: BeginAnyNamedFunction {
     override var opcode: Opcode { .beginAsyncFunction(self) }
 
-    init(parameters: Parameters) {
-        super.init(parameters: parameters, contextOpened: [.javascript, .subroutine, .asyncFunction])
+    init(parameters: Parameters, functionName: String?) {
+        super.init(parameters: parameters, functionName: functionName, contextOpened: [.javascript, .subroutine, .asyncFunction])
     }
 }
 final class EndAsyncFunction: EndAnyFunction {
@@ -1330,11 +1346,11 @@ final class EndAsyncArrowFunction: EndAnyFunction {
 }
 
 // A ES6 async generator function
-final class BeginAsyncGeneratorFunction: BeginAnyFunction {
+final class BeginAsyncGeneratorFunction: BeginAnyNamedFunction {
     override var opcode: Opcode { .beginAsyncGeneratorFunction(self) }
 
-    init(parameters: Parameters) {
-        super.init(parameters: parameters, contextOpened: [.javascript, .subroutine, .asyncFunction, .generatorFunction])
+    init(parameters: Parameters, functionName: String?) {
+        super.init(parameters: parameters, functionName: functionName, contextOpened: [.javascript, .subroutine, .asyncFunction, .generatorFunction])
     }
 }
 final class EndAsyncGeneratorFunction: EndAnyFunction {

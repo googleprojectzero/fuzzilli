@@ -2120,9 +2120,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildPlainFunction(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
+    public func buildPlainFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil,_ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-        let instr = emit(BeginPlainFunction(parameters: descriptor.parameters))
+        let instr = emit(BeginPlainFunction(parameters: descriptor.parameters, functionName: functionName))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }
@@ -2142,9 +2142,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildGeneratorFunction(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
+    public func buildGeneratorFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-        let instr = emit(BeginGeneratorFunction(parameters: descriptor.parameters))
+        let instr = emit(BeginGeneratorFunction(parameters: descriptor.parameters, functionName: functionName))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }
@@ -2153,9 +2153,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildAsyncFunction(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
+    public func buildAsyncFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-        let instr = emit(BeginAsyncFunction(parameters: descriptor.parameters))
+        let instr = emit(BeginAsyncFunction(parameters: descriptor.parameters, functionName: functionName))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }
@@ -2175,9 +2175,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildAsyncGeneratorFunction(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
+    public func buildAsyncGeneratorFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-        let instr = emit(BeginAsyncGeneratorFunction(parameters: descriptor.parameters))
+        let instr = emit(BeginAsyncGeneratorFunction(parameters: descriptor.parameters, functionName: functionName))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }

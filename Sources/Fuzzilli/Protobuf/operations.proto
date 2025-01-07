@@ -350,6 +350,8 @@ message TestIn {
 
 message BeginPlainFunction {
     Parameters parameters = 1;
+    // Can be missing, in which case the name is auto-assigned.
+    string name = 2;
 }
 
 message EndPlainFunction {
@@ -364,6 +366,8 @@ message EndArrowFunction {
 
 message BeginGeneratorFunction {
     Parameters parameters = 1;
+    // Can be missing, in which case the name is auto-assigned.
+    string name = 2;
 }
 
 message EndGeneratorFunction {
@@ -371,6 +375,8 @@ message EndGeneratorFunction {
 
 message BeginAsyncFunction {
     Parameters parameters = 1;
+    // Can be missing, in which case the name is auto-assigned.
+    string name = 2;
 }
 
 message EndAsyncFunction {
@@ -385,6 +391,8 @@ message EndAsyncArrowFunction {
 
 message BeginAsyncGeneratorFunction {
     Parameters parameters = 1;
+    // Can be missing, in which case the name is auto-assigned.
+    string name = 2;
 }
 
 message EndAsyncGeneratorFunction {

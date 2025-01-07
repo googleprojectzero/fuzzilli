@@ -44,7 +44,7 @@ public class Minimizer: ComponentBase {
     /// Once minimization is finished, the passed block will be invoked on the fuzzer's queue with the minimized program.
     func withMinimizedCopy(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double = 0.0, block: @escaping (Program) -> ()) {
         minimizationQueue.async {
-            let minimizedCode = self.internalMinimize(program, withAspects: aspects, limit: minimizationLimit, runningSynchronously: false)
+            let minimizedCode = self.internalMinimize(program, withAspects: aspects, limit: minimizationLimit, performPostprocessing: true, runningSynchronously: false)
             self.fuzzer.async {
                 let minimizedProgram: Program
                 if self.fuzzer.config.enableInspection {
@@ -59,12 +59,12 @@ public class Minimizer: ComponentBase {
     }
 
     /// Synchronous version of withMinimizedCopy. Should only be used for tests since it otherwise blocks the fuzzer queue.
-    func minimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double = 0.0) -> Program {
-        let minimizedCode = internalMinimize(program, withAspects: aspects, limit: minimizationLimit, runningSynchronously: true)
+    func minimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double = 0.0, performPostprocessing: Bool = true) -> Program {
+        let minimizedCode = internalMinimize(program, withAspects: aspects, limit: minimizationLimit, performPostprocessing: performPostprocessing, runningSynchronously: true)
         return Program(code: minimizedCode, parent: program, contributors: program.contributors)
     }
 
-    private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double, runningSynchronously: Bool) -> Code {
+    private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double, performPostprocessing: Bool, runningSynchronously: Bool) -> Code {
         assert(program.code.countIntructionsWith(flags: .notRemovable) == 0)
 
         let helper = MinimizationHelper(for: aspects, forCode: program.code, of: fuzzer, runningOnFuzzerQueue: runningSynchronously)
@@ -100,16 +100,18 @@ public class Minimizer: ComponentBase {
 
         // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now.
         helper.removeNops()
+
         assert(helper.code.countIntructionsWith(flags: .notRemovable) >= helper.numKeptInstructions)
+        helper.clearFlags()
 
         // Post-process the sample after minimization. This step adds certain features back to the program that may have been minimized away but are typically helpful for future mutations.
         // Currently we run this regardless of whether we're processing a crash or an interesting sample. If we wanted to, we could only run this for interesting samples (that will be mutated again), but its fine to also run it for crashes.
         // Adding instructions will invalidate the keptInstructions array. Since we're not removing any more instructions, clear that array now.
-        helper.clearFlags()
-
-        let postProcessor = MinimizationPostProcessor()
-
-        postProcessor.process(with: helper)
+        // We allow tests to skip post-processing as it can cause non-determinism (e.g. when selecting random return values).
+        if performPostprocessing {
+            let postProcessor = MinimizationPostProcessor()
+            postProcessor.process(with: helper)
+        }
 
         assert(helper.code.isStaticallyValid())
         assert(!helper.code.contains(where: { $0.isNop }))
