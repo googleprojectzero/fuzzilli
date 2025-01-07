@@ -37,6 +37,10 @@
 //
 // Note that this reducer may change the semantics of the program, for example if reassigned variables are themselves reassigned again.
 // However, the reducer will still ensure that its changes to not modify the important aspects of the program before committing them.
+//
+// TODO(saelo): consider replacing this special-purpose reducer with the generic DataFlowSimplifier.
+// For that, the DataFlowSimplifier would also need to consider reassigned inputs as candidate variables
+// and then only choose from the read-only inputs as replacements. Then it should mostly just work.
 struct ReassignmentReducer: Reducer {
     func reduce(with helper: MinimizationHelper) {
         var reassignedVariables = VariableMap<Variable>()

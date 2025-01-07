@@ -18,7 +18,7 @@
 ///  - Loops with many iterations are replaced with loops with fewer iterations
 ///
 /// This reducer should be scheduled after the BlockReducer which attempts to delete loop entirely (instead of simplifying them).
-struct LoopReducer: Reducer {
+struct LoopSimplifier: Reducer {
     // The loop iterations counts that we'll try out when attempting to reduce the number of iterations of a loop.
     private let commonLoopIterationCounts = [5, 10, 25, 50, 100, 250, 500, 1000]
 

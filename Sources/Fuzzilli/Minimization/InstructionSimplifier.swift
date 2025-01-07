@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Attempts to simplify "complex" instructions into simpler instructions.
-struct SimplifyingReducer: Reducer {
+struct InstructionSimplifier: Reducer {
     func reduce(with helper: MinimizationHelper) {
         simplifyFunctionDefinitions(with: helper)
         simplifyNamedInstructions(with: helper)
