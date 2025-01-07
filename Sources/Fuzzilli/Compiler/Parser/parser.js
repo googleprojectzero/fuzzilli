@@ -34,8 +34,8 @@ function tryReadFile(path) {
 
 // Parse the given JavaScript script and return an AST compatible with Fuzzilli's protobuf-based AST format.
 function parse(script, proto) {
-    let ast = Parser.parse(script, { plugins: ["v8intrinsic"] }); 
-    
+    let ast = Parser.parse(script, { plugins: ["v8intrinsic"] });
+
     function assertNoError(err) {
         if (err) throw err;
     }
@@ -77,6 +77,20 @@ function parse(script, proto) {
         return make('Parameter', { name: param.name });
     }
 
+    function visitParameters(params) {
+        return params.map(visitParameter)
+    }
+
+    // Processes the body of a block statement node and returns a list of statements.
+    function visitBody(node) {
+        assert(node.type === 'BlockStatement', "Expected block statement, found " + node.type);
+        let statements = [];
+        for (let stmt of node.body) {
+            statements.push(visitStatement(stmt));
+        }
+        return statements;
+    }
+
     function visitVariableDeclaration(node) {
         let kind;
         if (node.kind === "var") {
@@ -102,22 +116,18 @@ function parse(script, proto) {
         return { kind, declarations };
     }
 
-
     function visitStatement(node) {
         switch (node.type) {
             case 'EmptyStatement': {
                 return makeStatement('EmptyStatement', {});
             }
             case 'BlockStatement': {
-                let body = [];
-                for (let stmt of node.body) {
-                    body.push(visitStatement(stmt));
-                }
-                return makeStatement('BlockStatement', {body});
+                let body = visitBody(node);
+                return makeStatement('BlockStatement', { body });
             }
             case 'ExpressionStatement': {
-                let expr = visitExpression(node.expression);
-                return makeStatement('ExpressionStatement', {expression: expr});
+                let expression = visitExpression(node.expression);
+                return makeStatement('ExpressionStatement', { expression });
             }
             case 'VariableDeclaration': {
                 return makeStatement('VariableDeclaration', visitVariableDeclaration(node));
@@ -133,9 +143,9 @@ function parse(script, proto) {
                 } else if (node.async) {
                     type = 2; //"ASYNC";
                 }
-                let parameters = node.params.map(visitParameter);
+                let parameters = visitParameters(node.params);
                 assert(node.body.type === 'BlockStatement', "Expected block statement as function declaration body, found " + node.body.type);
-                let body = node.body.body.map(visitStatement);
+                let body = visitBody(node.body);
                 return makeStatement('FunctionDeclaration', { name, type, parameters, body });
             }
             case 'ClassDeclaration': {
@@ -182,21 +192,21 @@ function parse(script, proto) {
                             assert(name === 'constructor', "Expected name to be exactly 'constructor'");
                             assert(!isStatic, "Expected isStatic to be false");
 
-                            let parameters = method.params.map(visitParameter);
-                            let body = method.body.body.map(visitStatement);
+                            let parameters = visitParameters(method.params);
+                            let body = visitBody(method.body);
                             field.ctor = make('ClassConstructor', { parameters, body });
                         } else if (method.kind === 'method') {
                             assert(method.body.type === 'BlockStatement', "Expected method.body.type to be exactly 'BlockStatement'");
 
-                            let parameters = method.params.map(visitParameter);
-                            let body = method.body.body.map(visitStatement);
+                            let parameters = visitParameters(method.params);
+                            let body = visitBody(method.body);
                             field.method = make('ClassMethod', { name, isStatic, parameters, body });
                         } else if (method.kind === 'get') {
                             assert(method.params.length === 0, "Expected method.params.length to be exactly 0");
                             assert(!method.generator && !method.async, "Expected both conditions to hold: !method.generator and !method.async");
                             assert(method.body.type === 'BlockStatement', "Expected method.body.type to be exactly 'BlockStatement'");
 
-                            let body = method.body.body.map(visitStatement);
+                            let body = visitBody(method.body);
                             field.getter = make('ClassGetter', { name, isStatic, body });
                         } else if (method.kind === 'set') {
                             assert(method.params.length === 1, "Expected method.params.length to be exactly 1");
@@ -204,7 +214,7 @@ function parse(script, proto) {
                             assert(method.body.type === 'BlockStatement', "Expected method.body.type to be exactly 'BlockStatement'");
 
                             let parameter = visitParameter(method.params[0]);
-                            let body = method.body.body.map(visitStatement);
+                            let body = visitBody(method.body);
                             field.setter = make('ClassSetter', { name, isStatic, parameter, body });
                         } else {
                             throw "Unknown method kind: " + method.kind;
@@ -299,7 +309,7 @@ function parse(script, proto) {
             case 'TryStatement': {
                 assert(node.block.type === 'BlockStatement', "Expected block statement as body of a try block");
                 let tryStatement = {}
-                tryStatement.body = node.block.body.map(visitStatement);
+                tryStatement.body = visitBody(node.block);
                 assert(node.handler !== null || node.finalizer !== null, "TryStatements require either a handler or a finalizer (or both)")
                 if (node.handler !== null) {
                     assert(node.handler.type === 'CatchClause', "Expected catch clause as try handler");
@@ -308,13 +318,13 @@ function parse(script, proto) {
                     if (node.handler.param !== null) {
                         catchClause.parameter = visitParameter(node.handler.param);
                     }
-                    catchClause.body = node.handler.body.body.map(visitStatement);
+                    catchClause.body = visitBody(node.handler.body);
                     tryStatement.catch = make('CatchClause', catchClause);
                 }
                 if (node.finalizer !== null) {
                     assert(node.finalizer.type === 'BlockStatement', "Expected block statement as body of finally block");
                     let finallyClause = {};
-                    finallyClause.body = node.finalizer.body.map(visitStatement);
+                    finallyClause.body = visitBody(node.finalizer);
                     tryStatement.finally = make('FinallyClause', finallyClause);
                 }
                 return makeStatement('TryStatement', tryStatement);
@@ -442,15 +452,15 @@ function parse(script, proto) {
                             } else if (method.async) {
                                 out.type = 2; //"ASYNC";
                             }
-                            out.parameters = method.params.map(visitParameter);
-                            out.body = method.body.body.map(visitStatement);
+                            out.parameters = visitParameters(method.params);
+                            out.body = visitBody(method.body);
                             field.method = make('ObjectMethod', out);
                         } else if (method.kind === 'get') {
                             assert(method.params.length === 0, "Expected method.params.length to be exactly 0");
                             assert(!method.generator && !method.async, "Expected both conditions to hold: !method.generator and !method.async");
                             assert(method.body.type === 'BlockStatement', "Expected method.body.type to be exactly 'BlockStatement'");
 
-                            out.body = method.body.body.map(visitStatement);
+                            out.body = visitBody(method.body);
                             field.getter = make('ObjectGetter', out);
                         } else if (method.kind === 'set') {
                             assert(method.params.length === 1, "Expected method.params.length to be exactly 1");
@@ -458,7 +468,7 @@ function parse(script, proto) {
                             assert(method.body.type === 'BlockStatement', "Expected method.body.type to be exactly 'BlockStatement'");
 
                             out.parameter = visitParameter(method.params[0]);
-                            out.body = method.body.body.map(visitStatement);
+                            out.body = visitBody(method.body);
                             field.setter = make('ObjectSetter', out);
                         } else {
                             throw "Unknown method kind: " + method.kind;
@@ -489,9 +499,9 @@ function parse(script, proto) {
                 } else if (node.async) {
                     type = 2; //"ASYNC";
                 }
-                let parameters = node.params.map(visitParameter);
+                let parameters = visitParameters(node.params);
                 assert(node.body.type === 'BlockStatement', "Expected block statement as function expression body, found " + node.body.type);
-                let body = node.body.body.map(visitStatement);
+                let body = visitBody(node.body);
                 return makeExpression('FunctionExpression', { type, parameters, body });
             }
             case 'ArrowFunctionExpression': {
@@ -501,7 +511,7 @@ function parse(script, proto) {
                 if (node.async) {
                     type = 2; //"ASYNC";
                 }
-                let parameters = node.params.map(visitParameter);
+                let parameters = visitParameters(node.params);
                 let out = { type, parameters };
                 if (node.body.type === 'BlockStatement') {
                     out.block = visitStatement(node.body);
@@ -621,7 +631,7 @@ protobuf.load(astProtobufDefinitionPath, function(err, root) {
 
     // Uncomment this to print the AST to stdout (will be very verbose).
     //console.log(JSON.stringify(ast, null, 2));
-    
+
     const AST = root.lookupType('compiler.protobuf.AST');
     let buffer = AST.encode(ast).finish();
 

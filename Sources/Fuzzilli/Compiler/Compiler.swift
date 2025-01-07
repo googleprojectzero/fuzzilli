@@ -915,7 +915,7 @@ public class JavaScriptCompiler {
                 guard let body = arrowFunction.body else { throw CompilerError.invalidNodeError("missing body in arrow function") }
                 switch body {
                 case .block(let block):
-                    try compileStatement(block)
+                    try compileBody(block)
                 case .expression(let expr):
                     let result = try compileExpression(expr)
                     emit(Return(hasReturnValue: true), withInputs: [result])
