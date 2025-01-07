@@ -338,9 +338,10 @@ public class JavaScriptCompiler {
         case .whileLoop(let whileLoop):
             emit(BeginWhileLoopHeader())
 
-            let cond = try compileExpression(whileLoop.test)
-
-            emit(BeginWhileLoopBody(), withInputs: [cond])
+            try enterNewScope {
+                let cond = try compileExpression(whileLoop.test)
+                emit(BeginWhileLoopBody(), withInputs: [cond])
+            }
 
             try enterNewScope {
                 try compileBody(whileLoop.body)
@@ -357,9 +358,10 @@ public class JavaScriptCompiler {
 
             emit(BeginDoWhileLoopHeader())
 
-            let cond = try compileExpression(doWhileLoop.test)
-
-            emit(EndDoWhileLoop(), withInputs: [cond])
+            try enterNewScope {
+                let cond = try compileExpression(doWhileLoop.test)
+                emit(EndDoWhileLoop(), withInputs: [cond])
+            }
 
         case .forLoop(let forLoop):
             var loopVariables = [String]()
