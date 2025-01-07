@@ -85,6 +85,11 @@ function parse(script, proto) {
     function visitBody(node) {
         assert(node.type === 'BlockStatement', "Expected block statement, found " + node.type);
         let statements = [];
+        for (let directive of node.directives) {
+            // These are things like "use strict". We treat them like statements in our AST representation.
+            assert(directive.value.type == "DirectiveLiteral");
+            statements.push(makeStatement('DirectiveStatement', { content: directive.value.value }));
+        }
         for (let stmt of node.body) {
             statements.push(visitStatement(stmt));
         }

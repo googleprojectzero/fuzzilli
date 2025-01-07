@@ -1266,12 +1266,8 @@ class EndAnySubroutine: JsOperation {
 // Function definitions.
 // Roughly speaking, a function is any subroutine that is supposed to be invoked via CallFunction. In JavaScript, they are typically defined through the 'function' keyword or an arrow function.
 // Functions beginnings are not considered mutable since it likely makes little sense to change things like the number of parameters.
-// It also likely makes little sense to switch a function into/out of strict mode. As such, these attributes are permanent.
 class BeginAnyFunction: BeginAnySubroutine {
-    let isStrict: Bool
-
-    init(parameters: Parameters, isStrict: Bool, contextOpened: Context = [.javascript, .subroutine]) {
-        self.isStrict = isStrict
+    init(parameters: Parameters, contextOpened: Context = [.javascript, .subroutine]) {
         super.init(parameters: parameters,
                    numInputs: 0,
                    numOutputs: 1,
@@ -1301,8 +1297,8 @@ final class EndArrowFunction: EndAnyFunction {
 final class BeginGeneratorFunction: BeginAnyFunction {
     override var opcode: Opcode { .beginGeneratorFunction(self) }
 
-    init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .generatorFunction])
+    init(parameters: Parameters) {
+        super.init(parameters: parameters, contextOpened: [.javascript, .subroutine, .generatorFunction])
     }
 }
 final class EndGeneratorFunction: EndAnyFunction {
@@ -1313,8 +1309,8 @@ final class EndGeneratorFunction: EndAnyFunction {
 final class BeginAsyncFunction: BeginAnyFunction {
     override var opcode: Opcode { .beginAsyncFunction(self) }
 
-    init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction])
+    init(parameters: Parameters) {
+        super.init(parameters: parameters, contextOpened: [.javascript, .subroutine, .asyncFunction])
     }
 }
 final class EndAsyncFunction: EndAnyFunction {
@@ -1325,8 +1321,8 @@ final class EndAsyncFunction: EndAnyFunction {
 final class BeginAsyncArrowFunction: BeginAnyFunction {
     override var opcode: Opcode { .beginAsyncArrowFunction(self) }
 
-    init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction])
+    init(parameters: Parameters) {
+        super.init(parameters: parameters, contextOpened: [.javascript, .subroutine, .asyncFunction])
     }
 }
 final class EndAsyncArrowFunction: EndAnyFunction {
@@ -1337,8 +1333,8 @@ final class EndAsyncArrowFunction: EndAnyFunction {
 final class BeginAsyncGeneratorFunction: BeginAnyFunction {
     override var opcode: Opcode { .beginAsyncGeneratorFunction(self) }
 
-    init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction, .generatorFunction])
+    init(parameters: Parameters) {
+        super.init(parameters: parameters, contextOpened: [.javascript, .subroutine, .asyncFunction, .generatorFunction])
     }
 }
 final class EndAsyncGeneratorFunction: EndAnyFunction {
@@ -1357,6 +1353,32 @@ final class BeginConstructor: BeginAnySubroutine {
 }
 final class EndConstructor: EndAnySubroutine {
     override var opcode: Opcode { .endConstructor(self) }
+}
+
+// A directive for the JavaScript engine.
+//
+// These are strings such as "use strict" that have special meaning
+// if placed at the top of a function. Support in FuzzIL is very basic
+// and simple: a directive is simply a string for which a string literal
+// will be created in the generated JavaScript code. There is also no
+// guarantee that these will be placed at the start of a function's body,
+// and due to mutations they might appear elsewhere in a program (which
+// is probably a feature). They will also quickly be removed by the
+// minimizer if they are not important (which is probably also desirable
+// as strict mode function are more likely to raise exceptions).
+final class Directive: JsOperation {
+    override var opcode: Opcode { .directive(self) }
+
+    let content: String
+
+    init(_ content: String) {
+        // Currently we only support "use strict" and don't support mutating the content.
+        // We could easily change both of these constraints and allow arbitrary directives
+        // or a list of known directives if we deem that useful in the future though.
+        assert(content == "use strict")
+        self.content = content
+        super.init(numInputs: 0, numOutputs: 0, attributes: [], requiredContext: [.javascript])
+    }
 }
 
 final class Return: JsOperation {

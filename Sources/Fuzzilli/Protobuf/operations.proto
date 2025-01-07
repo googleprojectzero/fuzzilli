@@ -350,7 +350,6 @@ message TestIn {
 
 message BeginPlainFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
 }
 
 message EndPlainFunction {
@@ -358,7 +357,6 @@ message EndPlainFunction {
 
 message BeginArrowFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
 }
 
 message EndArrowFunction {
@@ -366,7 +364,6 @@ message EndArrowFunction {
 
 message BeginGeneratorFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
 }
 
 message EndGeneratorFunction {
@@ -374,7 +371,6 @@ message EndGeneratorFunction {
 
 message BeginAsyncFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
 }
 
 message EndAsyncFunction {
@@ -382,7 +378,6 @@ message EndAsyncFunction {
 
 message BeginAsyncArrowFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
 }
 
 message EndAsyncArrowFunction {
@@ -390,7 +385,6 @@ message EndAsyncArrowFunction {
 
 message BeginAsyncGeneratorFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
 }
 
 message EndAsyncGeneratorFunction {
@@ -401,6 +395,10 @@ message BeginConstructor {
 }
 
 message EndConstructor {
+}
+
+message Directive {
+    string content = 1;
 }
 
 message Return {

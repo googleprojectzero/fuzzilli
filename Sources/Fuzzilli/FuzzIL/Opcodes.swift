@@ -125,6 +125,7 @@ enum Opcode {
     case endAsyncGeneratorFunction(EndAsyncGeneratorFunction)
     case beginConstructor(BeginConstructor)
     case endConstructor(EndConstructor)
+    case directive(Directive)
     case `return`(Return)
     case yield(Yield)
     case yieldEach(YieldEach)

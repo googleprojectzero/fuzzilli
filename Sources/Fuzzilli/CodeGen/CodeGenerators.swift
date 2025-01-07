@@ -793,7 +793,18 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("PlainFunctionGenerator") { b in
-        let f = b.buildPlainFunction(with: b.randomParameters(), isStrict: probability(0.1)) { _ in
+        let f = b.buildPlainFunction(with: b.randomParameters()) { _ in
+            b.buildRecursive()
+            b.doReturn(b.randomVariable())
+        }
+        b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+    },
+
+    RecursiveCodeGenerator("StrictModeFunctionGenerator") { b in
+        // We could consider having a standalone DirectiveGenerator, but probably most of the time it won't do anything meaningful.
+        // We could also consider keeping a list of known directives in the Environment, but currently we only use 'use strict'.
+        let f = b.buildPlainFunction(with: b.randomParameters()) { _ in
+            b.directive("use strict")
             b.buildRecursive()
             b.doReturn(b.randomVariable())
         }
@@ -801,7 +812,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("ArrowFunctionGenerator") { b in
-        b.buildArrowFunction(with: b.randomParameters(), isStrict: probability(0.1)) { _ in
+        b.buildArrowFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
             b.doReturn(b.randomVariable())
         }
@@ -809,7 +820,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("GeneratorFunctionGenerator") { b in
-        let f = b.buildGeneratorFunction(with: b.randomParameters(), isStrict: probability(0.1)) { _ in
+        let f = b.buildGeneratorFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
             if probability(0.5) {
                 b.yield(b.randomVariable())
@@ -824,7 +835,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("AsyncFunctionGenerator") { b in
-        let f = b.buildAsyncFunction(with: b.randomParameters(), isStrict: probability(0.1)) { _ in
+        let f = b.buildAsyncFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
             b.await(b.randomVariable())
             b.doReturn(b.randomVariable())
@@ -833,7 +844,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("AsyncArrowFunctionGenerator") { b in
-        b.buildAsyncArrowFunction(with: b.randomParameters(), isStrict: probability(0.1)) { _ in
+        b.buildAsyncArrowFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
             b.await(b.randomVariable())
             b.doReturn(b.randomVariable())
@@ -842,7 +853,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("AsyncGeneratorFunctionGenerator") { b in
-        let f = b.buildAsyncGeneratorFunction(with: b.randomParameters(), isStrict: probability(0.1)) { _ in
+        let f = b.buildAsyncGeneratorFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
             b.await(b.randomVariable())
             if probability(0.5) {

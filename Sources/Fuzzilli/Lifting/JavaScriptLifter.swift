@@ -703,9 +703,6 @@ public class JavaScriptLifter: Lifter {
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 w.emit("\(LET) \(V) = (\(PARAMS)) => {")
                 w.enterNewBlock()
-                if op.isStrict {
-                    w.emit("'use strict';")
-                }
 
             case .beginGeneratorFunction:
                 liftFunctionDefinitionBegin(instr, keyword: "function*", using: &w)
@@ -720,9 +717,6 @@ public class JavaScriptLifter: Lifter {
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 w.emit("\(LET) \(V) = async (\(PARAMS)) => {")
                 w.enterNewBlock()
-                if op.isStrict {
-                    w.emit("'use strict';")
-                }
 
             case .beginAsyncGeneratorFunction:
                 liftFunctionDefinitionBegin(instr, keyword: "async function*", using: &w)
@@ -754,6 +748,10 @@ public class JavaScriptLifter: Lifter {
             case .endConstructor:
                 w.leaveCurrentBlock()
                 w.emit("}")
+
+            case .directive(let op):
+                assert(!op.content.contains("'"))
+                w.emit("'\(op.content)';")
 
             case .return(let op):
                 if op.hasReturnValue {
@@ -1403,9 +1401,6 @@ public class JavaScriptLifter: Lifter {
         let PARAMS = liftParameters(op.parameters, as: vars)
         w.emit("\(FUNCTION) \(NAME)(\(PARAMS)) {")
         w.enterNewBlock()
-        if op.isStrict {
-            w.emit("'use strict';")
-        }
     }
 
     private func liftCallArguments<Arguments: Sequence>(_ args: Arguments, spreading spreads: [Bool] = []) -> String where Arguments.Element == Expression {
