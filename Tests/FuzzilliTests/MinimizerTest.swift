@@ -42,7 +42,8 @@ class MinimizerTests: XCTestCase {
         // Build input program to be minimized.
         var n1 = b.loadInt(42)
         let n2 = b.loadInt(43)
-        var n3 = b.binary(n1, n1, with: .Add)
+        // This will be removed and n3 replaced by n1 (an input of this instruction)
+        let n3 = b.binary(n1, n1, with: .Add)
         let n4 = b.binary(n2, n2, with: .Add)
 
         evaluator.nextInstructionIsImportant(in: b)
@@ -60,11 +61,10 @@ class MinimizerTests: XCTestCase {
 
         // Build expected output program.
         n1 = b.loadInt(42)
-        n3 = b.binary(n1, n1, with: .Add)
         b.loadString("foo")
         bar = b.loadString("bar")
         o1 = b.createObject(with: [:])
-        b.setComputedProperty(bar, of: o1, to: n3)
+        b.setComputedProperty(bar, of: o1, to: n1)
 
         let expectedProgram = b.finalize()
 
@@ -90,7 +90,9 @@ class MinimizerTests: XCTestCase {
             obj.addMethod("m", with: .parameters(n: 1)) { args in
                 let this = args[0]
                 let prefix = b.loadString("Hello World from ")
+                evaluator.nextInstructionIsImportant(in: b)
                 let name = b.getProperty("name", of: this)
+                evaluator.nextInstructionIsImportant(in: b)
                 let msg = b.binary(prefix, name, with: .Add)
                 evaluator.nextInstructionIsImportant(in: b)
                 b.doReturn(msg)
@@ -243,6 +245,7 @@ class MinimizerTests: XCTestCase {
             evaluator.nextInstructionIsImportant(in: b)
             cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
                 let this = args[0]
+                evaluator.nextInstructionIsImportant(in: b)
                 let v = b.getPrivateProperty("name", of: this)
                 evaluator.nextInstructionIsImportant(in: b)
                 b.doReturn(v)
@@ -574,9 +577,7 @@ class MinimizerTests: XCTestCase {
         evaluator.nextInstructionIsImportant(in: b)
         b.setProperty("result", of: o, to: r)
 
-        // As we are not emulating the dataflow through the function call in our evaluator, the minimizer will try to remove the binary ops and integer loads
-        // as they do not directly flow into the property store. To avoid this, we simply mark all binary ops and integer loads as important in this program.
-        evaluator.operationIsImportant(LoadInteger.self)
+        // Make sure to keep the binary operations.
         evaluator.operationIsImportant(BinaryOperation.self)
         // We also need to keep the return instruction as long as the function still exists. However, once the function has been inlined, the return should also disappear.
         evaluator.keepReturnsInFunctions = true
@@ -596,6 +597,7 @@ class MinimizerTests: XCTestCase {
 
         // Perform minimization and check that the two programs are equal.
         let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(FuzzILLifter().lift(expectedProgram), FuzzILLifter().lift(actualProgram))
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
@@ -658,6 +660,7 @@ class MinimizerTests: XCTestCase {
         var o = b.createObject(with: [:])
         let f1 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             b.loadString("unused1")
+            evaluator.nextInstructionIsImportant(in: b)
             let r = b.unary(.PostInc, args[0])
             b.doReturn(r)
         }
@@ -665,12 +668,14 @@ class MinimizerTests: XCTestCase {
             let f3 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
                 b.loadString("unused2")
                 b.loadArguments()
+                evaluator.nextInstructionIsImportant(in: b)
                 let r = b.unary(.PostDec, args[0])
                 b.doReturn(r)
             }
             b.loadString("unused3")
             let a1 = b.callFunction(f1, withArgs: [args[0]])
             let a2 = b.callFunction(f3, withArgs: [args[1]])
+            evaluator.nextInstructionIsImportant(in: b)
             let r = b.binary(a1, a2, with: .Add)
             b.doReturn(r)
         }
@@ -768,6 +773,63 @@ class MinimizerTests: XCTestCase {
         b.reassign(n1, to: n2)
         evaluator.nextInstructionIsImportant(in: b)
         b.setProperty("n3", of: o, to: n3)
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
+    func testNamedVariableRemoval() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        var print = b.createNamedVariable(forBuiltin: "print")
+        var v1 = b.loadInt(42)
+        let n1 = b.createNamedVariable("n1", declarationMode: .var, initialValue: v1)
+        // These uses of n1 can be replaced with v1
+        evaluator.nextInstructionIsImportant(in: b)
+        var s1 = b.binary(n1, n1, with: .Add)
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(print, withArgs: [s1])
+
+        // Similar situation, but now the original input is also reused.
+        var v2 = b.loadInt(43)
+        let n2 = b.createNamedVariable("n2", declarationMode: .var, initialValue: v2)
+        evaluator.nextInstructionIsImportant(in: b)
+        var s2 = b.binary(n2, v2, with: .Add)
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(print, withArgs: [s2])
+
+        // Now the named variable itself is important and so shouldn't be removed.
+        evaluator.nextInstructionIsImportant(in: b)
+        var n3 = b.createNamedVariable("n3", declarationMode: .var, initialValue: n2)
+        // ... but this instruction can be removed (and s4 replaced with n3)
+        let s4 = b.binary(n3, n3, with: .Add)
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(print, withArgs: [n3, s4, n3])
+
+        // This named variable can again be removed though.
+        let n4 = b.createNamedVariable("n4", declarationMode: .var, initialValue: n3)
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(print, withArgs: [n1, n2, n3, n4])
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        print = b.createNamedVariable(forBuiltin: "print")
+        v1 = b.loadInt(42)
+        s1 = b.binary(v1, v1, with: .Add)
+        b.callFunction(print, withArgs: [s1])
+        v2 = b.loadInt(43)
+        s2 = b.binary(v2, v2, with: .Add)
+        b.callFunction(print, withArgs: [s2])
+        n3 = b.createNamedVariable("n3", declarationMode: .var, initialValue: v2)
+        b.callFunction(print, withArgs: [n3, n3, n3])
+        b.callFunction(print, withArgs: [v1, v2, n3, n3])
 
         let expectedProgram = b.finalize()
 
@@ -900,9 +962,10 @@ class MinimizerTests: XCTestCase {
         let f = b.createNamedVariable(forBuiltin: "f")
         var g = b.createNamedVariable(forBuiltin: "g")
         var h = b.createNamedVariable(forBuiltin: "h")
+        var limit = b.loadInt(100)
         // In this case, the for-loop is actually important (we emulate that by marking the EndForLoopAfterthought instruction as important
         b.buildForLoop(i: { evaluator.nextInstructionIsImportant(in: b); return b.callFunction(d) },
-                       { i in b.callFunction(e); return b.compare(i, with: b.loadInt(100), using: .lessThan) },
+                       { i in b.callFunction(e); evaluator.nextInstructionIsImportant(in: b); return b.compare(i, with: limit, using: .lessThan) },
                        { i in b.callFunction(f); evaluator.nextInstructionIsImportant(in: b); b.unary(.PostInc, i); evaluator.nextInstructionIsImportant(in: b) }) { i in
             evaluator.nextInstructionIsImportant(in: b)
             b.callFunction(g, withArgs: [i])
@@ -916,8 +979,9 @@ class MinimizerTests: XCTestCase {
         d = b.createNamedVariable(forBuiltin: "d")
         g = b.createNamedVariable(forBuiltin: "g")
         h = b.createNamedVariable(forBuiltin: "h")
+        limit = b.loadInt(100)
         b.buildForLoop(i: { return b.callFunction(d) },
-                       { i in b.compare(i, with: b.loadInt(100), using: .lessThan) },
+                       { i in b.compare(i, with: limit, using: .lessThan) },
                        { i in b.unary(.PostInc, i) }) { i in
             b.callFunction(g, withArgs: [i])
         }
@@ -1190,17 +1254,26 @@ class MinimizerTests: XCTestCase {
         let vars = b.destruct(o, selecting: ["foo", "bar", "baz"])
         var print = b.createNamedVariable(forBuiltin: "print")
         evaluator.nextInstructionIsImportant(in: b)
-        b.callFunction(print, withArgs: [vars[1]])
+        b.callFunction(print, withArgs: [vars[0], vars[1], vars[2]])
 
         let originalProgram = b.finalize()
 
         // Build expected output program.
         o = b.createNamedVariable(forBuiltin: "TheObject")
+        let foo = b.getProperty("foo", of: o)
         let bar = b.getProperty("bar", of: o)
+        let baz = b.getProperty("baz", of: o)
         print = b.createNamedVariable(forBuiltin: "print")
-        b.callFunction(print, withArgs: [bar])
+        b.callFunction(print, withArgs: [foo, bar, baz])
 
         let expectedProgram = b.finalize()
+
+        // Here we rely on a quirk of the minimization evaluator: it only ensures that the sum
+        // of all important operations doesn't decrease, and so this will allow the DestructObject
+        // to be converted into GetProperty operations but prevent both the DestructObject and the
+        // GetProperty from being removed entirely.
+        evaluator.operationIsImportant(DestructObject.self)
+        evaluator.operationIsImportant(GetProperty.self)
 
         // Perform minimization and check that the two programs are equal.
         let actualProgram = minimize(originalProgram, with: fuzzer)
@@ -1217,17 +1290,26 @@ class MinimizerTests: XCTestCase {
         let vars = b.destruct(o, selecting: [0, 3, 4])
         var print = b.createNamedVariable(forBuiltin: "print")
         evaluator.nextInstructionIsImportant(in: b)
-        b.callFunction(print, withArgs: [vars[2]])
+        b.callFunction(print, withArgs: [vars[0], vars[1], vars[2]])
 
         let originalProgram = b.finalize()
 
         // Build expected output program.
         o = b.createNamedVariable(forBuiltin: "TheArray")
-        let bar = b.getElement(4, of: o)
+        let val0 = b.getElement(0, of: o)
+        let val3 = b.getElement(3, of: o)
+        let val4 = b.getElement(4, of: o)
         print = b.createNamedVariable(forBuiltin: "print")
-        b.callFunction(print, withArgs: [bar])
+        b.callFunction(print, withArgs: [val0, val3, val4])
 
         let expectedProgram = b.finalize()
+
+        // Here we rely on a quirk of the minimization evaluator: it only ensures that the sum
+        // of all important operations doesn't decrease, and so this will allow the DestructArray
+        // to be converted into GetElement operations but prevent both the DestructArray and the
+        // GetElement from being removed entirely.
+        evaluator.operationIsImportant(DestructArray.self)
+        evaluator.operationIsImportant(GetElement.self)
 
         // Perform minimization and check that the two programs are equal.
         let actualProgram = minimize(originalProgram, with: fuzzer)
@@ -1289,14 +1371,14 @@ class MinimizerTests: XCTestCase {
         // Build input program to be minimized.
         let o = b.createNamedVariable(forBuiltin: "o")
         let f = b.createNamedVariable(forBuiltin: "f")
-        let v1 = b.getProperty("p1", of: o, guard: true)
-        let v2 = b.getElement(2, of: o, guard: true)
-        let v3 = b.getComputedProperty(b.loadString("p3"), of: o, guard: true)
-        let v4 = b.callFunction(f, guard: true)
-        let v5 = b.callMethod("m", on: o, guard: true)
-        let keepInputsAlive = b.createNamedVariable(forBuiltin: "keepInputsAlive")
-        evaluator.nextInstructionIsImportant(in: b)
-        b.callFunction(keepInputsAlive, withArgs: [v1, v2, v3, v4, v5])
+        b.getProperty("p1", of: o, guard: true)
+        b.getElement(2, of: o, guard: true)
+        b.getComputedProperty(b.loadString("p3"), of: o, guard: true)
+        b.callFunction(f, guard: true)
+        b.callMethod("m", on: o, guard: true)
+
+        // Make sure that none of the operations are removed.
+        evaluator.operationsAreImportant([GetProperty.self, GetElement.self, GetComputedProperty.self, CallFunction.self, CallMethod.self])
 
         let originalProgram = b.finalize()
 
@@ -1367,8 +1449,14 @@ class MinimizerTests: XCTestCase {
             initialIndicesOfTheImportantInstructions.append(b.indexOfNextInstruction())
         }
 
-        func operationIsImportant<T: Fuzzilli.Operation>(_ op: T.Type) {
-            importantOperations.insert(T.name)
+        func operationIsImportant(_ op: Fuzzilli.Operation.Type) {
+            importantOperations.insert(op.name)
+        }
+
+        func operationsAreImportant(_ ops: [Fuzzilli.Operation.Type]) {
+            for op in ops {
+                operationIsImportant(op)
+            }
         }
 
         func setOriginalProgram(_ program: Program) {
