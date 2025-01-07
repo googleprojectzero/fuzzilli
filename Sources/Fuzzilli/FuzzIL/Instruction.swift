@@ -576,6 +576,9 @@ extension Instruction: ProtobufConvertible {
             case .beginPlainFunction(let op):
                 $0.beginPlainFunction = Fuzzilli_Protobuf_BeginPlainFunction.with {
                     $0.parameters = convertParameters(op.parameters)
+                    if let name = op.functionName {
+                        $0.name = name
+                    }
                 }
             case .endPlainFunction:
                 $0.endPlainFunction = Fuzzilli_Protobuf_EndPlainFunction()
@@ -588,12 +591,18 @@ extension Instruction: ProtobufConvertible {
             case .beginGeneratorFunction(let op):
                 $0.beginGeneratorFunction = Fuzzilli_Protobuf_BeginGeneratorFunction.with {
                     $0.parameters = convertParameters(op.parameters)
+                    if let name = op.functionName {
+                        $0.name = name
+                    }
                 }
             case .endGeneratorFunction:
                 $0.endGeneratorFunction = Fuzzilli_Protobuf_EndGeneratorFunction()
             case .beginAsyncFunction(let op):
                 $0.beginAsyncFunction = Fuzzilli_Protobuf_BeginAsyncFunction.with {
                     $0.parameters = convertParameters(op.parameters)
+                    if let name = op.functionName {
+                        $0.name = name
+                    }
                 }
             case.endAsyncFunction:
                 $0.endAsyncFunction = Fuzzilli_Protobuf_EndAsyncFunction()
@@ -606,6 +615,9 @@ extension Instruction: ProtobufConvertible {
             case .beginAsyncGeneratorFunction(let op):
                 $0.beginAsyncGeneratorFunction = Fuzzilli_Protobuf_BeginAsyncGeneratorFunction.with {
                     $0.parameters = convertParameters(op.parameters)
+                    if let name = op.functionName {
+                        $0.name = name
+                    }
                 }
             case .endAsyncGeneratorFunction:
                 $0.endAsyncGeneratorFunction = Fuzzilli_Protobuf_EndAsyncGeneratorFunction()
@@ -1051,7 +1063,8 @@ extension Instruction: ProtobufConvertible {
             op = TestIn()
         case .beginPlainFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginPlainFunction(parameters: parameters)
+            let functionName = p.name.isEmpty ? nil : p.name
+            op = BeginPlainFunction(parameters: parameters, functionName: functionName)
         case .endPlainFunction:
             op = EndPlainFunction()
         case .beginArrowFunction(let p):
@@ -1061,12 +1074,14 @@ extension Instruction: ProtobufConvertible {
             op = EndArrowFunction()
         case .beginGeneratorFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginGeneratorFunction(parameters: parameters)
+            let functionName = p.name.isEmpty ? nil : p.name
+            op = BeginGeneratorFunction(parameters: parameters, functionName: functionName)
         case .endGeneratorFunction:
             op = EndGeneratorFunction()
         case .beginAsyncFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginAsyncFunction(parameters: parameters)
+            let functionName = p.name.isEmpty ? nil : p.name
+            op = BeginAsyncFunction(parameters: parameters, functionName: functionName)
         case .endAsyncFunction:
             op = EndAsyncFunction()
         case .beginAsyncArrowFunction(let p):
@@ -1076,7 +1091,8 @@ extension Instruction: ProtobufConvertible {
             op = EndAsyncArrowFunction()
         case .beginAsyncGeneratorFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginAsyncGeneratorFunction(parameters: parameters)
+            let functionName = p.name.isEmpty ? nil : p.name
+            op = BeginAsyncGeneratorFunction(parameters: parameters, functionName: functionName)
         case .endAsyncGeneratorFunction:
             op = EndAsyncGeneratorFunction()
         case .beginConstructor(let p):

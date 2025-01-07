@@ -1396,7 +1396,13 @@ public class JavaScriptLifter: Lifter {
         guard let op = instr.op as? BeginAnyFunction else {
             fatalError("Invalid operation passed to liftFunctionDefinitionBegin")
         }
-        let NAME = w.declare(instr.output, as: "f\(instr.output.number)")
+        let functionName: String
+        if let op = instr.op as? BeginAnyNamedFunction, op.functionName != nil {
+            functionName = op.functionName!
+        } else {
+            functionName = "f\(instr.output.number)"
+        }
+        let NAME = w.declare(instr.output, as: functionName)
         let vars = w.declareAll(instr.innerOutputs, usePrefix: "a")
         let PARAMS = liftParameters(op.parameters, as: vars)
         w.emit("\(FUNCTION) \(NAME)(\(PARAMS)) {")

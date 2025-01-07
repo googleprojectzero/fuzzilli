@@ -142,6 +142,90 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    func testFunctionSimplification() {
+        // We prefer plain functions over complex functions because they behave in a
+        // more straight-forward way (e.g. return value doesn't become a Promise).
+
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        let async = b.buildAsyncFunction(with: .parameters(n: 0)) { args in }
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(async)
+
+        let generator = b.buildGeneratorFunction(with: .parameters(n: 0)) { args in }
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(generator)
+
+        let asyncGenerator = b.buildAsyncGeneratorFunction(with: .parameters(n: 0)) { args in }
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(asyncGenerator)
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        let f1 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
+        b.callFunction(f1)
+
+        let f2 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
+        b.callFunction(f2)
+
+        let f3 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
+        b.callFunction(f3)
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        // Post-processing can insert return statements or function parameters, so skip that.
+        let actualProgram = minimize(originalProgram, with: fuzzer, performPostprocessing: false)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
+    func testFunctionNameRemoval() {
+        // We prefer functions with "flexible" names (automatically assigned during lifting)
+        // as there's no risk of name collisions during mutations with those.
+
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        let foo = b.buildPlainFunction(with: .parameters(n: 0), named: "foo") { args in }
+        let bar = b.buildGeneratorFunction(with: .parameters(n: 0), named: "bar") { args in }
+        let baz = b.buildAsyncFunction(with: .parameters(n: 0), named: "baz") { args in }
+        let bla = b.buildAsyncGeneratorFunction(with: .parameters(n: 0), named: "bla") { args in }
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(foo)
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(bar)
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(baz)
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(bla)
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        // See test above for why the different function types also become plain functions.
+        let f1 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
+        let f2 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
+        let f3 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
+        let f4 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
+        b.callFunction(f1)
+        b.callFunction(f2)
+        b.callFunction(f3)
+        b.callFunction(f4)
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        // Post-processing can insert return statements or function parameters, so skip that.
+        let actualProgram = minimize(originalProgram, with: fuzzer, performPostprocessing: false)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
     func testClassDefinitionMinimization() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
@@ -1390,10 +1474,10 @@ class MinimizerTests: XCTestCase {
     }
 
     // Helper function to perform the minimization.
-    func minimize(_ program: Program, with fuzzer: Fuzzer, limit: Double = 0.0) -> Program {
+    func minimize(_ program: Program, with fuzzer: Fuzzer, limit: Double = 0.0, performPostprocessing: Bool = true) -> Program {
         guard let evaluator = fuzzer.evaluator as? EvaluatorForMinimizationTests else { fatalError("Invalid Evaluator used for minimization tests: \(fuzzer.evaluator)") }
         evaluator.setOriginalProgram(program)
         let dummyAspects = ProgramAspects(outcome: .succeeded)
-        return fuzzer.minimizer.minimize(program, withAspects: dummyAspects, limit: limit)
+        return fuzzer.minimizer.minimize(program, withAspects: dummyAspects, limit: limit, performPostprocessing: performPostprocessing)
     }
 }

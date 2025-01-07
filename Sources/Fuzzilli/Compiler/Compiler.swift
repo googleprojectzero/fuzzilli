@@ -118,16 +118,16 @@ public class JavaScriptCompiler {
             let functionBegin, functionEnd: Operation
             switch functionDeclaration.type {
             case .plain:
-                functionBegin = BeginPlainFunction(parameters: parameters)
+                functionBegin = BeginPlainFunction(parameters: parameters, functionName: functionDeclaration.name)
                 functionEnd = EndPlainFunction()
             case .generator:
-                functionBegin = BeginGeneratorFunction(parameters: parameters)
+                functionBegin = BeginGeneratorFunction(parameters: parameters, functionName: functionDeclaration.name)
                 functionEnd = EndGeneratorFunction()
             case .async:
-                functionBegin = BeginAsyncFunction(parameters: parameters)
+                functionBegin = BeginAsyncFunction(parameters: parameters, functionName: functionDeclaration.name)
                 functionEnd = EndAsyncFunction()
             case .asyncGenerator:
-                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters)
+                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters, functionName: functionDeclaration.name)
                 functionEnd = EndAsyncGeneratorFunction()
             case .UNRECOGNIZED(let type):
                 throw CompilerError.invalidNodeError("invalid function declaration type \(type)")
@@ -870,18 +870,19 @@ public class JavaScriptCompiler {
         case .functionExpression(let functionExpression):
             let parameters = convertParameters(functionExpression.parameters)
             let functionBegin, functionEnd: Operation
+            let name = functionExpression.name.isEmpty ? nil : functionExpression.name
             switch functionExpression.type {
             case .plain:
-                functionBegin = BeginPlainFunction(parameters: parameters)
+                functionBegin = BeginPlainFunction(parameters: parameters, functionName: name)
                 functionEnd = EndPlainFunction()
             case .generator:
-                functionBegin = BeginGeneratorFunction(parameters: parameters)
+                functionBegin = BeginGeneratorFunction(parameters: parameters, functionName: name)
                 functionEnd = EndGeneratorFunction()
             case .async:
-                functionBegin = BeginAsyncFunction(parameters: parameters)
+                functionBegin = BeginAsyncFunction(parameters: parameters, functionName: name)
                 functionEnd = EndAsyncFunction()
             case .asyncGenerator:
-                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters)
+                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters, functionName: name)
                 functionEnd = EndAsyncGeneratorFunction()
             case .UNRECOGNIZED(let type):
                 throw CompilerError.invalidNodeError("invalid function declaration type \(type)")

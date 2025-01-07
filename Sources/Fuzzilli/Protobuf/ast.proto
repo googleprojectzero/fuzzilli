@@ -346,9 +346,11 @@ message ArrayExpression {
 }
 
 message FunctionExpression {
-    FunctionType type = 1;
-    repeated Parameter parameters = 2;
-    repeated Statement body = 3;
+    // The name is optional for function expressions
+    string name = 1;
+    FunctionType type = 2;
+    repeated Parameter parameters = 3;
+    repeated Statement body = 4;
 }
 
 message ArrowFunctionExpression {

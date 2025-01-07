@@ -496,6 +496,7 @@ function parse(script, proto) {
                 return makeExpression('ArrayExpression', { elements });
             }
             case 'FunctionExpression': {
+                let name = node.id?.name;
                 let type = 0; //"PLAIN";
                 if (node.generator && node.async) {
                     type = 3; //"ASYNC_GENERATOR";
@@ -507,7 +508,7 @@ function parse(script, proto) {
                 let parameters = visitParameters(node.params);
                 assert(node.body.type === 'BlockStatement', "Expected block statement as function expression body, found " + node.body.type);
                 let body = visitBody(node.body);
-                return makeExpression('FunctionExpression', { type, parameters, body });
+                return makeExpression('FunctionExpression', { name, type, parameters, body });
             }
             case 'ArrowFunctionExpression': {
                 assert(node.id == null, "Expected node.id to be equal to null");

@@ -1372,6 +1372,9 @@ public struct Fuzzilli_Protobuf_BeginPlainFunction: Sendable {
   /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
   public mutating func clearParameters() {self._parameters = nil}
 
+  /// Can be missing, in which case the name is auto-assigned.
+  public var name: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1434,6 +1437,9 @@ public struct Fuzzilli_Protobuf_BeginGeneratorFunction: Sendable {
   /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
   public mutating func clearParameters() {self._parameters = nil}
 
+  /// Can be missing, in which case the name is auto-assigned.
+  public var name: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1464,6 +1470,9 @@ public struct Fuzzilli_Protobuf_BeginAsyncFunction: Sendable {
   public var hasParameters: Bool {return self._parameters != nil}
   /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
   public mutating func clearParameters() {self._parameters = nil}
+
+  /// Can be missing, in which case the name is auto-assigned.
+  public var name: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1526,6 +1535,9 @@ public struct Fuzzilli_Protobuf_BeginAsyncGeneratorFunction: Sendable {
   public var hasParameters: Bool {return self._parameters != nil}
   /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
   public mutating func clearParameters() {self._parameters = nil}
+
+  /// Can be missing, in which case the name is auto-assigned.
+  public var name: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -4999,6 +5011,7 @@ extension Fuzzilli_Protobuf_BeginPlainFunction: SwiftProtobuf.Message, SwiftProt
   public static let protoMessageName: String = _protobuf_package + ".BeginPlainFunction"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "parameters"),
+    2: .same(proto: "name"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5008,6 +5021,7 @@ extension Fuzzilli_Protobuf_BeginPlainFunction: SwiftProtobuf.Message, SwiftProt
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
       default: break
       }
     }
@@ -5021,11 +5035,15 @@ extension Fuzzilli_Protobuf_BeginPlainFunction: SwiftProtobuf.Message, SwiftProt
     try { if let v = self._parameters {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginPlainFunction, rhs: Fuzzilli_Protobuf_BeginPlainFunction) -> Bool {
     if lhs._parameters != rhs._parameters {return false}
+    if lhs.name != rhs.name {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5109,6 +5127,7 @@ extension Fuzzilli_Protobuf_BeginGeneratorFunction: SwiftProtobuf.Message, Swift
   public static let protoMessageName: String = _protobuf_package + ".BeginGeneratorFunction"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "parameters"),
+    2: .same(proto: "name"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5118,6 +5137,7 @@ extension Fuzzilli_Protobuf_BeginGeneratorFunction: SwiftProtobuf.Message, Swift
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
       default: break
       }
     }
@@ -5131,11 +5151,15 @@ extension Fuzzilli_Protobuf_BeginGeneratorFunction: SwiftProtobuf.Message, Swift
     try { if let v = self._parameters {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginGeneratorFunction, rhs: Fuzzilli_Protobuf_BeginGeneratorFunction) -> Bool {
     if lhs._parameters != rhs._parameters {return false}
+    if lhs.name != rhs.name {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5164,6 +5188,7 @@ extension Fuzzilli_Protobuf_BeginAsyncFunction: SwiftProtobuf.Message, SwiftProt
   public static let protoMessageName: String = _protobuf_package + ".BeginAsyncFunction"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "parameters"),
+    2: .same(proto: "name"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5173,6 +5198,7 @@ extension Fuzzilli_Protobuf_BeginAsyncFunction: SwiftProtobuf.Message, SwiftProt
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
       default: break
       }
     }
@@ -5186,11 +5212,15 @@ extension Fuzzilli_Protobuf_BeginAsyncFunction: SwiftProtobuf.Message, SwiftProt
     try { if let v = self._parameters {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginAsyncFunction, rhs: Fuzzilli_Protobuf_BeginAsyncFunction) -> Bool {
     if lhs._parameters != rhs._parameters {return false}
+    if lhs.name != rhs.name {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5274,6 +5304,7 @@ extension Fuzzilli_Protobuf_BeginAsyncGeneratorFunction: SwiftProtobuf.Message, 
   public static let protoMessageName: String = _protobuf_package + ".BeginAsyncGeneratorFunction"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "parameters"),
+    2: .same(proto: "name"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5283,6 +5314,7 @@ extension Fuzzilli_Protobuf_BeginAsyncGeneratorFunction: SwiftProtobuf.Message, 
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
       default: break
       }
     }
@@ -5296,11 +5328,15 @@ extension Fuzzilli_Protobuf_BeginAsyncGeneratorFunction: SwiftProtobuf.Message, 
     try { if let v = self._parameters {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginAsyncGeneratorFunction, rhs: Fuzzilli_Protobuf_BeginAsyncGeneratorFunction) -> Bool {
     if lhs._parameters != rhs._parameters {return false}
+    if lhs.name != rhs.name {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
