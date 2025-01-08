@@ -48,6 +48,23 @@ class LifterTests: XCTestCase {
         }
     }
 
+    func testLiftingWithLineNumbers() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        for _ in 0..<10 {
+            b.buildPrefix()
+            b.build(n: 100, by: .generating)
+            let program = b.finalize()
+
+            let codeWithLinenumbers = fuzzer.lifter.lift(program, withOptions: .includeLineNumbers)
+
+            for (i, line) in codeWithLinenumbers.split(separator: "\n").enumerated() {
+                XCTAssert(line.trimmingCharacters(in: .whitespaces).starts(with: "\(i+1)"))
+            }
+        }
+    }
+
     func testExpressionInlining1() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -500,13 +517,13 @@ class LifterTests: XCTestCase {
         let expected = """
         const v4 = "foobar" + 42;
         const v7 = Symbol.toPrimitive;
-        const o17 = {
-            "p1": 42,
-            "__proto__": null,
+        const v17 = {
+            p1: 42,
+            __proto__: null,
             0: 13.37,
             [-1]: 13.37,
             ["foobar"]: "foobar",
-            "p2": 13.37,
+            p2: 13.37,
             [v4]: 42,
             __proto__: null,
             m(a9, a10) {
@@ -523,6 +540,72 @@ class LifterTests: XCTestCase {
             },
             ...SomeObject,
         };
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testObjectLiteralIsDistinguishableFromBlockStatement() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let i1 = b.loadInt(1)
+        let i2 = b.loadInt(2)
+        b.buildObjectLiteral { obj in
+            obj.addProperty("foo", as: i1)
+            obj.addProperty("bar", as: i2)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        // These must not lift to something like "{ foo: 1, bar: 2 };" as that would be invalid:
+        // the parser cannot distinguish it from a block statement.
+        let expected = """
+        const v2 = { foo: 1, bar: 2 };
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testObjectLiteralInlining() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let print = b.createNamedVariable(forBuiltin: "print")
+
+        // We inline empty object literals.
+        let o1 = b.buildObjectLiteral { obj in }
+        b.callFunction(print, withArgs: [o1])
+
+        // We inline "simple" object literals"
+        let i = b.loadInt(42)
+        let f = b.loadFloat(13.37)
+        let foo = b.loadString("foo")
+        let o2 = b.buildObjectLiteral { obj in
+            obj.addProperty("foo", as: i)
+            obj.addProperty("bar", as: f)
+            obj.addElement(42, as: foo)
+        }
+        b.callFunction(print, withArgs: [o2])
+
+        // We don't inline object literals as soon as they have any methods.
+        let o3 = b.buildObjectLiteral { obj in
+            obj.addMethod("baz", with: .parameters(n: 0)) { _ in }
+        }
+        b.callFunction(print, withArgs: [o3])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        print({});
+        print({ foo: 42, bar: 13.37, 42: "foo" });
+        const v9 = {
+            baz() {
+            },
+        };
+        print(v9);
 
         """
         XCTAssertEqual(actual, expected)
@@ -1036,10 +1119,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o1 = {
-            "a": 1337,
-        };
-        const v2 = o1.a;
+        const v2 = ({ a: 1337 }).a;
         v2 > 10 ? v2 : 10;
 
         """
@@ -1260,15 +1340,13 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o1 = {
-            "foo": 42,
-        };
-        o1.foo = 13.37;
-        o1.foo += "42";
-        o1.bar = 1337;
-        o1.bar *= 1337;
-        o1["baz"] = 42;
-        o1["baz"] &&= 1337;
+        const v1 = { foo: 42 };
+        v1.foo = 13.37;
+        v1.foo += "42";
+        v1.bar = 1337;
+        v1.bar *= 1337;
+        v1["baz"] = 42;
+        v1["baz"] &&= 1337;
         const v6 = [1337,1337,1337];
         v6[0] = 42;
         v6[0] -= 13.37;
@@ -1309,8 +1387,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o0 = {
-        };
+        const v0 = {};
         let v1 = undefined;
         function f2() {
             return v1;
@@ -1318,18 +1395,18 @@ class LifterTests: XCTestCase {
         function f3(a4) {
             v1 = a4;
         }
-        Object.defineProperty(o0, "foo", { configurable: true, enumerable: true, get: f2 });
-        Object.defineProperty(o0, "bar", { set: f3 });
-        Object.defineProperty(o0, "foobar", { enumerable: true, get: f2, set: f3 });
-        Object.defineProperty(o0, "baz", { writable: true, value: 42 });
-        Object.defineProperty(o0, 0, { writable: true, get: f2 });
-        Object.defineProperty(o0, 1, { writable: true, enumerable: true, set: f3 });
-        Object.defineProperty(o0, 2, { writable: true, configurable: true, enumerable: true, get: f2, set: f3 });
-        Object.defineProperty(o0, 3, { value: 42 });
-        Object.defineProperty(o0, ComputedProperty, { configurable: true, get: f2 });
-        Object.defineProperty(o0, ComputedProperty, { enumerable: true, set: f3 });
-        Object.defineProperty(o0, ComputedProperty, { writable: true, get: f2, set: f3 });
-        Object.defineProperty(o0, ComputedProperty, { value: 42 });
+        Object.defineProperty(v0, "foo", { configurable: true, enumerable: true, get: f2 });
+        Object.defineProperty(v0, "bar", { set: f3 });
+        Object.defineProperty(v0, "foobar", { enumerable: true, get: f2, set: f3 });
+        Object.defineProperty(v0, "baz", { writable: true, value: 42 });
+        Object.defineProperty(v0, 0, { writable: true, get: f2 });
+        Object.defineProperty(v0, 1, { writable: true, enumerable: true, set: f3 });
+        Object.defineProperty(v0, 2, { writable: true, configurable: true, enumerable: true, get: f2, set: f3 });
+        Object.defineProperty(v0, 3, { value: 42 });
+        Object.defineProperty(v0, ComputedProperty, { configurable: true, get: f2 });
+        Object.defineProperty(v0, ComputedProperty, { enumerable: true, set: f3 });
+        Object.defineProperty(v0, ComputedProperty, { writable: true, get: f2, set: f3 });
+        Object.defineProperty(v0, ComputedProperty, { value: 42 });
 
         """
 
@@ -1340,30 +1417,27 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let v0 = b.loadInt(1337)
-        let v1 = b.loadString("bar")
-        let v2 = b.loadFloat(13.37)
+        let i = b.loadInt(1337)
+        let s = b.loadString("bar")
+        let f = b.loadFloat(13.37)
         var initialProperties = [String: Variable]()
-        initialProperties["foo"] = v0
-        initialProperties["bar"] = v2
-        let v3 = b.createObject(with: initialProperties)
-        let _ = b.deleteProperty("foo", of: v3)
-        let _ = b.deleteComputedProperty(v1, of: v3)
-        let v10 = b.createArray(with: [b.loadInt(301), b.loadInt(4), b.loadInt(68), b.loadInt(22)])
-        let _ = b.deleteElement(3, of: v10)
+        initialProperties["foo"] = i
+        initialProperties["bar"] = f
+        let o = b.createObject(with: initialProperties)
+        let _ = b.deleteProperty("foo", of: o)
+        let _ = b.deleteComputedProperty(s, of: o)
+        let a = b.createArray(with: [b.loadInt(301), b.loadInt(4), b.loadInt(68), b.loadInt(22)])
+        let _ = b.deleteElement(3, of: a)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o3 = {
-            "bar": 13.37,
-            "foo": 1337,
-        };
-        delete o3.foo;
-        delete o3["bar"];
-        const t4 = [301,4,68,22];
-        delete t4[3];
+        const v3 = { bar: 13.37, foo: 1337 };
+        delete v3.foo;
+        delete v3["bar"];
+        const t1 = [301,4,68,22];
+        delete t1[3];
 
         """
 
@@ -1780,14 +1854,11 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o2 = {
-            "bar": 13.37,
-            "foo": 42,
-        };
-        let {"foo":v3,...v4} = o2;
-        let {"foo":v5,"bar":v6,...v7} = o2;
-        let {...v8} = o2;
-        let {"foo":v9,"bar":v10,} = o2;
+        const v2 = { bar: 13.37, foo: 42 };
+        let {"foo":v3,...v4} = v2;
+        let {"foo":v5,"bar":v6,...v7} = v2;
+        let {...v8} = v2;
+        let {"foo":v9,"bar":v10,} = v2;
 
         """
 
@@ -1815,15 +1886,12 @@ class LifterTests: XCTestCase {
         let v0 = 42;
         let v1 = 13.37;
         let v2 = "Hello";
-        const o3 = {
-            "bar": v1,
-            "foo": v0,
-        };
-        ({"foo":v2,...v0} = o3);
-        ({"foo":v2,"bar":v0,...v1} = o3);
-        ({...v2} = o3);
-        ({"foo":v2,"bar":v1,} = o3);
-        ({} = o3);
+        const v3 = { bar: v1, foo: v0 };
+        ({"foo":v2,...v0} = v3);
+        ({"foo":v2,"bar":v0,...v1} = v3);
+        ({...v2} = v3);
+        ({"foo":v2,"bar":v1,} = v3);
+        ({} = v3);
 
         """
 
@@ -2063,21 +2131,19 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o1 = {
-            "foo": 42,
-        };
-        const v2 = o1.foo;
+        const v1 = { foo: 42 };
+        const v2 = v1.foo;
         switch (v2) {
             case 1337:
-                o1.bar = 1337;
+                v1.bar = 1337;
                 break;
             case "42":
-                o1.baz = "42";
+                v1.baz = "42";
                 break;
             default:
-                o1.foo = 13.37;
+                v1.foo = 13.37;
             case 42:
-                o1.bla = v2;
+                v1.bla = v2;
         }
 
         """
@@ -2688,17 +2754,12 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o1 = {
-            "a": 1337,
-        };
-        for (let v2 in o1) {
+        const v1 = { a: 1337 };
+        for (let v2 in v1) {
             {
                 v2 = 1337;
                 {
-                    const o4 = {
-                        "a": o1,
-                    };
-                    v2 = o4;
+                    v2 = { a: v1 };
                 }
             }
         }
@@ -2713,8 +2774,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         // If there are multiple singular operations inside the same surrounding block, then
-        // all but the first one should be ignored. The JavaScript lifter achieves this simply
-        // by commenting out those operations.
+        // all but the first one should be ignored by the lifter.
 
         b.buildClassDefinition { cls in
             cls.addConstructor(with: .parameters(n: 1)) { args in
@@ -2774,24 +2834,11 @@ class LifterTests: XCTestCase {
             constructor(a2) {
                 this.foo = a2;
             }
-            /*
-            constructor(a4) {
-                this.bar = a4;
-            }
-            */
             baz() {
                 return this.bar;
             }
         }
-        const o10 = {
-            "foo": 42,
-            __proto__: proto1,
-            "bar": 42,
-            /*
-            __proto__: proto2,
-            */
-            "baz": 42,
-        };
+        const v10 = { foo: 42, __proto__: proto1, bar: 42, baz: 42 };
         switch (42) {
             default:
                 print("default case 1");
@@ -2799,19 +2846,9 @@ class LifterTests: XCTestCase {
             case 43:
                 print("case 43");
                 break;
-            /*
-            default:
-                print("default case 2");
-                break;
-            */
             case 44:
                 print("case 44");
                 break;
-            /*
-            default:
-                print("default case 3");
-                break;
-            */
         }
 
         """
@@ -2860,7 +2897,7 @@ class LifterTests: XCTestCase {
             let v3 = this;
             v3 = 42;
         }
-        const o5 = {
+        const v5 = {
             foo() {
                 let v4 = this;
                 v4 = 42;
@@ -2978,13 +3015,13 @@ class LifterTests: XCTestCase {
         let expected = """
         function f0() {
             const v4 = Symbol.dispose;
-            const o6 = {
-                "value": 1,
+            const v6 = {
+                value: 1,
                 [v4]() {
                     return 42;
                 },
             };
-            using v7 = o6;
+            using v7 = v6;
         }
         f0();
 
@@ -3020,13 +3057,13 @@ class LifterTests: XCTestCase {
         let expected = """
         async function f0() {
             const v4 = Symbol.asyncDispose;
-            const o6 = {
-                "value": 1,
+            const v6 = {
+                value: 1,
                 [v4]() {
                     return 42;
                 },
             };
-            await using v7 = o6;
+            await using v7 = v6;
         }
         async function f8() {
             await f0();
