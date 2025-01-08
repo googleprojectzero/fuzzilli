@@ -43,6 +43,17 @@ public class JavaScriptLifter: Lifter {
     }
     private var forLoopHeaderStack = Stack<ForLoopHeader>()
 
+    // Stack for object literals.
+    private var objectLiteralStack = Stack<ObjectLiteralWriter>()
+    private var currentObjectLiteral: ObjectLiteralWriter {
+        get {
+            return objectLiteralStack.top
+        }
+        set(newValue) {
+            objectLiteralStack.top = newValue
+        }
+    }
+
     public init(prefix: String = "",
                 suffix: String = "",
                 ecmaVersion: ECMAScriptVersion) {
@@ -91,9 +102,11 @@ public class JavaScriptLifter: Lifter {
         // need some additional state tracking.
         struct Block {
             var seenSingularOperation = false
-            var currentlyCommentingOut = false
+            var singularOperationName = ""
+            var previouslyIgnoringCode: Bool
         }
-        var activeBlocks = Stack([Block()])
+        var activeBlocks = Stack([Block(previouslyIgnoringCode: false)])
+        var currentlyIgnoringCode = false
 
         // Helper function to bind a variable to |this|. This requires special handling because |this| must never be reassigned (`this = 42;`) as that is a syntax error.
         func bindVariableToThis(_ v: Variable) {
@@ -106,26 +119,28 @@ public class JavaScriptLifter: Lifter {
                 w.emitComment(comment)
             }
 
-            // Singular operation handling: all but the first singular operation in the same block are commented out.
-            if activeBlocks.top.currentlyCommentingOut {
-                w.emit("*/")
-                activeBlocks.top.currentlyCommentingOut = false
+            // Singular operation handling:
+            // All but the first singular operation in the same block are removed.
+            // TODO(saelo): instead consider enforcing this in FuzzIL already.
+            if currentlyIgnoringCode && !activeBlocks.top.previouslyIgnoringCode {
+                currentlyIgnoringCode = false
             }
             if instr.isSingular {
                 if activeBlocks.top.seenSingularOperation {
-                    w.emit("/*")
-                    activeBlocks.top.currentlyCommentingOut = true
+                    currentlyIgnoringCode = true
+                    assert(activeBlocks.top.singularOperationName == instr.op.name)
                 }
                 activeBlocks.top.seenSingularOperation = true
+                activeBlocks.top.singularOperationName = instr.op.name
             }
-
-            // Block handling.
-            // This must happen after the singular operation handling above.
             if instr.isBlockEnd {
-                activeBlocks.pop()
+                currentlyIgnoringCode = activeBlocks.pop().previouslyIgnoringCode
             }
             if instr.isBlockStart {
-                activeBlocks.push(Block())
+                activeBlocks.push(Block(previouslyIgnoringCode: currentlyIgnoringCode))
+            }
+            if currentlyIgnoringCode {
+                continue
             }
 
             // Handling of guarded operations, part 1: unless we have special handling (e.g. for guarded property loads we use `o?.foo`),
@@ -258,65 +273,65 @@ public class JavaScriptLifter: Lifter {
                 w.emit("await using \(V) = \(input(0));");
 
             case .beginObjectLiteral:
-                let end = program.code.findBlockEnd(head: instr.index)
-                let output = program.code[end].output
-                let LET = w.declarationKeyword(for: output)
-                let V = w.declare(output, as: "o\(output.number)")
-                w.emit("\(LET) \(V) = {")
-                w.enterNewBlock()
+                // We force all expressions to evaluate before the object literal.
+                // Technically we could allow expression inlining into object literals, but
+                // in practice it wouldn't work a lot of the time (e.g. whenever we have
+                // more than one value to inline) so isn't all that useful and adds complexity.
+                w.emitPendingExpressions()
+
+                objectLiteralStack.push(ObjectLiteralWriter())
+
+                // Push a dummy script writer so we can assert that nothing writes to it (which shouldn't happen).
+                w.pushTemporaryOutputBuffer(initialIndentionLevel: 0)
 
             case .objectLiteralAddProperty(let op):
                 let PROPERTY = op.propertyName
                 let VALUE = input(0)
-                w.emit("\"\(PROPERTY)\": \(VALUE),")
+                assert(!PROPERTY.contains(" "))
+                currentObjectLiteral.addField("\(PROPERTY): \(VALUE)")
 
             case .objectLiteralAddElement(let op):
                 let INDEX = op.index < 0 ? "[\(op.index)]" : String(op.index)
                 let VALUE = input(0)
-                w.emit("\(INDEX): \(VALUE),")
+                currentObjectLiteral.addField("\(INDEX): \(VALUE)")
 
             case .objectLiteralAddComputedProperty:
                 let PROPERTY = input(0)
                 let VALUE = input(1)
-                w.emit("[\(PROPERTY)]: \(VALUE),")
+                currentObjectLiteral.addField("[\(PROPERTY)]: \(VALUE)")
 
             case .objectLiteralCopyProperties:
                 let EXPR = SpreadExpression.new() + "..." + input(0)
-                w.emit("\(EXPR),")
+                currentObjectLiteral.addField("\(EXPR)")
 
             case .objectLiteralSetPrototype:
                 let PROTO = input(0)
-                w.emit("__proto__: \(PROTO),")
+                currentObjectLiteral.addField("__proto__: \(PROTO)")
 
             case .beginObjectLiteralMethod(let op):
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = op.methodName
-                w.emit("\(METHOD)(\(PARAMS)) {")
-                w.enterNewBlock()
+                currentObjectLiteral.beginMethod("\(METHOD)(\(PARAMS)) {", &w)
                 bindVariableToThis(instr.innerOutput(0))
 
             case .endObjectLiteralMethod:
-                w.leaveCurrentBlock()
-                w.emit("},")
+                currentObjectLiteral.endMethod(&w)
 
             case .beginObjectLiteralComputedMethod(let op):
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = input(0)
-                w.emit("[\(METHOD)](\(PARAMS)) {")
-                w.enterNewBlock()
+                currentObjectLiteral.beginMethod("[\(METHOD)](\(PARAMS)) {", &w)
                 bindVariableToThis(instr.innerOutput(0))
 
             case .endObjectLiteralComputedMethod:
-                w.leaveCurrentBlock()
-                w.emit("},")
+                currentObjectLiteral.endMethod(&w)
 
             case .beginObjectLiteralGetter(let op):
                 assert(instr.numInnerOutputs == 1)
                 let PROPERTY = op.propertyName
-                w.emit("get \(PROPERTY)() {")
-                w.enterNewBlock()
+                currentObjectLiteral.beginMethod("get \(PROPERTY)() {", &w)
                 bindVariableToThis(instr.innerOutput(0))
 
             case .beginObjectLiteralSetter(let op):
@@ -324,18 +339,37 @@ public class JavaScriptLifter: Lifter {
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let PROPERTY = op.propertyName
-                w.emit("set \(PROPERTY)(\(PARAMS)) {")
-                w.enterNewBlock()
+                currentObjectLiteral.beginMethod("set \(PROPERTY)(\(PARAMS)) {", &w)
                 bindVariableToThis(instr.innerOutput(0))
 
             case .endObjectLiteralGetter,
                  .endObjectLiteralSetter:
-                w.leaveCurrentBlock()
-                w.emit("},")
+                currentObjectLiteral.endMethod(&w)
 
             case .endObjectLiteral:
-                w.leaveCurrentBlock()
-                w.emit("};")
+                // We don't expect anything to have been written to the dummy output buffer.
+                // Everything needs to be written into the object literal writer.
+                let dummy = w.popTemporaryOutputBuffer()
+                assert(dummy.isEmpty)
+
+                let literal = objectLiteralStack.pop()
+                if literal.isEmpty {
+                    w.assign(ObjectLiteral.new("{}"), to: instr.output)
+                } else if literal.canInline {
+                    // In this case, we inline the object literal.
+                    let code = "{ \(literal.fields.joined(separator: ", ")) }";
+                    w.assign(ObjectLiteral.new(code), to: instr.output)
+                } else {
+                    let LET = w.declarationKeyword(for: instr.output)
+                    let V = w.declare(instr.output)
+                    w.emit("\(LET) \(V) = {")
+                    w.enterNewBlock()
+                    for field in literal.fields {
+                        w.emitBlock("\(field),")
+                    }
+                    w.leaveCurrentBlock()
+                    w.emit("};")
+                }
 
             case .beginClassDefinition(let op):
                 // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreLifting code to detect constructors works correctly (see shouldTreatAsConstructor).
@@ -1878,7 +1912,15 @@ public class JavaScriptLifter: Lifter {
                 // Pending expressions with no uses are allowed and are for example necessary to be able to
                 // combine multiple expressions into a single comma-expression for e.g. a loop header.
                 // See the loop header lifting code and tests for examples.
-                writer.emit("\(EXPR);")
+                if EXPR.type === ObjectLiteral {
+                    // Special case: we cannot just emit these as expression statements as they would
+                    // not be distinguishable from block statements. So create a dummy variable.
+                    let LET = constKeyword
+                    let V = declare(v)
+                    writer.emit("\(LET) \(V) = \(EXPR);")
+                } else {
+                    writer.emit("\(EXPR);")
+                }
             }
         }
 
@@ -1918,6 +1960,37 @@ public class JavaScriptLifter: Lifter {
                 // is done for example when lifting loop headers.
                 return analyzer.numUses(of: v) <= 1
             }
+        }
+    }
+
+    // Helper class for formatting object literals.
+    private struct ObjectLiteralWriter {
+        var fields: [String] = []
+        var canInline = true
+
+        var isEmpty: Bool { fields.isEmpty }
+
+        mutating func addField(_ fieldDefinition: String) {
+            fields.append(fieldDefinition)
+            canInline = canInline && fields.count < 5
+        }
+
+        mutating func beginMethod(_ header: String, _ writer: inout JavaScriptWriter) {
+            // We don't inline object literals if they have any methods
+            canInline = false
+
+            fields.append(header + "\n")
+            // We must now emit pending expressions to prevent them from being inlined
+            // into the method's body (which would not be semantically correct).
+            writer.emitPendingExpressions()
+            writer.pushTemporaryOutputBuffer(initialIndentionLevel: 0)
+            writer.enterNewBlock()
+        }
+
+        mutating func endMethod(_ writer: inout JavaScriptWriter) {
+            writer.leaveCurrentBlock()
+            let body = writer.popTemporaryOutputBuffer()
+            fields[fields.count - 1] += body + "}"
         }
     }
 }
