@@ -866,9 +866,19 @@ public class WasmLifter {
 
         switch instr.op.opcode {
         case .wasmBeginBlock(let op):
-            // TODO(mliedtke): Repeat this for loops and if-else blocks.
+            // TODO(mliedtke): Repeat this for loops.
             registerSignature(op.signature)
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
+            // Needs typer analysis
+            return true
+        case .wasmBeginIf(let op):
+            registerSignature(op.signature)
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
+            // Needs typer analysis
+            return true
+        case .wasmBeginElse(_):
+            // Note: We need to subtract one because the begin else block closes the if block before opening the else block!
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
             // Needs typer analysis
             return true
         case .wasmBeginTry(let op):
@@ -954,20 +964,12 @@ public class WasmLifter {
 
             // TODO(mliedtke): Make this an attribute.
             // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
-            if instr.op is WasmLoadGlobal       ||
-               instr.op is WasmStoreGlobal      ||
-               instr.op is WasmJsCall           ||
-               instr.op is WasmMemoryStore      ||
-               instr.op is WasmMemoryLoad       ||
-               instr.op is WasmI64x2LoadSplat   ||
-               instr.op is WasmTableGet         ||
-               instr.op is WasmTableSet         ||
-               instr.op is WasmBeginCatch       ||
-               instr.op is WasmThrow            ||
-               instr.op is WasmRethrow          ||
-               instr.op is WasmBeginBlock       ||
-               instr.op is WasmBeginTry         ||
-               instr.op is WasmBeginTryDelegate {
+            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall
+                || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet
+                || instr.op is WasmTableSet || instr.op is WasmBeginCatch || instr.op is WasmThrow
+                || instr.op is WasmRethrow || instr.op is WasmBeginBlock || instr.op is WasmBeginTry
+                || instr.op is WasmI64x2LoadSplat || instr.op is WasmBeginTryDelegate
+                || instr.op is WasmBeginIf || instr.op is WasmBeginElse {
                 continue
             }
             fatalError("unreachable")
@@ -995,7 +997,8 @@ public class WasmLifter {
         }
 
         // TODO(mliedtke): Reuse this for handling parameters in loops, if-else, ...
-        if instr.op is WasmBeginCatch || instr.op is WasmBeginBlock || instr.op is WasmBeginTry || instr.op is WasmBeginTryDelegate {
+        if instr.op is WasmBeginCatch || instr.op is WasmBeginBlock || instr.op is WasmBeginTry
+            || instr.op is WasmBeginTryDelegate || instr.op is WasmBeginIf || instr.op is WasmBeginElse {
             // As the parameters are pushed "in order" to the stack, they need to be popped in reverse order.
             for innerOutput in instr.innerOutputs(1...).reversed() {
                 currentFunction!.spillLocal(forVariable: innerOutput)
@@ -1399,8 +1402,8 @@ public class WasmLifter {
         case .wasmBranchIf(_):
             let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x0D]) + Leb128.unsignedEncode(branchDepth)
-        case .wasmBeginIf(_):
-            return Data([0x04] + [0x40])
+        case .wasmBeginIf(let op):
+            return Data([0x04] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginElse(_):
             // 0x05 is the else block instruction.
             return Data([0x05])

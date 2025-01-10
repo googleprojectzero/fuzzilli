@@ -1196,9 +1196,13 @@ message WasmReassign {
 }
 
 message WasmBeginIf {
+    repeated WasmILType parameters = 1;
+    WasmILType returnType = 2;
 }
 
 message WasmBeginElse {
+    repeated WasmILType parameters = 1;
+    WasmILType returnType = 2;
 }
 
 message WasmEndIf {

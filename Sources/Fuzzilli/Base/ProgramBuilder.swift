@@ -3261,6 +3261,14 @@ public class ProgramBuilder {
             b.emit(WasmEndIf())
         }
 
+        public func wasmBuildIfElse(_ condition: Variable, signature: Signature, args: [Variable], ifBody: (Variable, [Variable]) -> Void, elseBody: (Variable, [Variable]) -> Void) {
+            let beginBlock = b.emit(WasmBeginIf(with: signature), withInputs: args + [condition])
+            ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
+            let elseBlock = b.emit(WasmBeginElse(with: signature))
+            elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
+            b.emit(WasmEndIf())
+        }
+
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         public func wasmBuildLoop(with signature: Signature, body: (Variable, [Variable]) -> Void) {
             let instr = b.emit(WasmBeginLoop(with: signature))

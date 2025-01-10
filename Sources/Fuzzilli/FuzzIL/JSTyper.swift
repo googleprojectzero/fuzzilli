@@ -111,6 +111,8 @@ public struct JSTyper: Analyzer {
                 activeWasmModuleDefinition!.methodSignatures.append((instr.output, signature))
             case .wasmBeginBlock(_),
                  .wasmBeginLoop(_),
+                 .wasmBeginIf(_),
+                 .wasmBeginElse(_),
                  .wasmBeginTry(_),
                  .wasmBeginCatch(_),
                  .wasmBeginTryDelegate(_):

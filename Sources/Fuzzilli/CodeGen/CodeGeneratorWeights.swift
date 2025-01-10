@@ -268,6 +268,7 @@ public let codeGeneratorWeights = [
     // Control Flow Generators
     "WasmFunctionGenerator":                    30,
     "WasmIfElseGenerator":                      15,
+    "WasmIfElseWithSignatureGenerator":         10,
     "WasmReturnGenerator":                      15,
     "WasmBlockGenerator":                       8,
     "WasmBlockWithSignatureGenerator":          8,

@@ -1047,13 +1047,18 @@ public class FuzzILLifter: Lifter {
         case .wasmBranchIf(_):
             w.emit("wasmBranchIf \(instr.input(1)), \(instr.input(0))")
 
-        case .wasmBeginIf(_):
-            w.emit("wasmBeginIf \(instr.input(0))")
+        case .wasmBeginIf(let op):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            if instr.numOutputs > 0 {
+                w.emit("\(output()) <- wasmBeginIf L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature)) [\(inputs)]")
+            } else {
+                w.emit("wasmBeginIf L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature)) [\(inputs)]")
+            }
             w.increaseIndentionLevel()
 
-        case .wasmBeginElse(_):
+        case .wasmBeginElse(let op):
             w.decreaseIndentionLevel()
-            w.emit("wasmBeginElse")
+            w.emit("wasmBeginElse L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
             w.increaseIndentionLevel()
 
         case .wasmEndIf(_):

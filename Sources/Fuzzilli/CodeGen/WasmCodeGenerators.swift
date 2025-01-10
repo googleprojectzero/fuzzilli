@@ -633,6 +633,18 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("WasmIfElseWithSignatureGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, conditionVar in
+        let function = b.currentWasmModule.currentWasmFunction
+        // Choose a few random wasm values as arguments if available.
+        let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
+        function.wasmBuildIfElse(conditionVar, signature: parameters => .nothing, args: args) { label, args in
+            b.buildRecursive(block: 1, of: 2, n: 4)
+        } elseBody: { label, args in
+            b.buildRecursive(block: 2, of: 2, n: 4)
+        }
+    },
+
     CodeGenerator("WasmSelectGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, condition in
         let function = b.currentWasmModule.currentWasmFunction
         let supportedTypes : ILType = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef
