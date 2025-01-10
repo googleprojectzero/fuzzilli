@@ -967,17 +967,28 @@ final class WasmEndBlock: WasmOperation {
 
 final class WasmBeginIf: WasmOperation {
     override var opcode: Opcode { .wasmBeginIf(self) }
+    let signature: Signature
 
-    init() {
-        super.init(inputTypes: [.wasmi32], attributes: [.isBlockStart, .propagatesSurroundingContext, .isNotInputMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+    init(with signature: Signature = [] => .nothing) {
+        self.signature = signature
+        let parameterTypes = signature.parameters.convertPlainToILTypes()
+        // TODO(mliedtke): Why does this set .isNotInputMutable? Try to remove it and see if the WasmLifter failure rate is affected.
+
+        // Note that the condition is the last input! This is due to how lifting works for the wasm
+        // value stack and that the condition is the first value to be removed from the stack, so
+        // it needs to be the last one pushed to it.
+        super.init(inputTypes: parameterTypes + [.wasmi32], outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext, .isNotInputMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
 final class WasmBeginElse: WasmOperation {
     override var opcode: Opcode { .wasmBeginElse(self) }
+    let signature: Signature
 
-    init() {
-        super.init(attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+    init(with signature: Signature = [] => .nothing) {
+        self.signature = signature
+        let parameterTypes = signature.parameters.convertPlainToILTypes()
+        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 

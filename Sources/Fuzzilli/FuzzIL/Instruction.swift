@@ -1242,10 +1242,16 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmBranch = Fuzzilli_Protobuf_WasmBranch()
             case .wasmBranchIf(_):
                 $0.wasmBranchIf = Fuzzilli_Protobuf_WasmBranchIf()
-            case .wasmBeginIf(_):
-                $0.wasmBeginIf = Fuzzilli_Protobuf_WasmBeginIf()
-            case .wasmBeginElse(_):
-                $0.wasmBeginElse = Fuzzilli_Protobuf_WasmBeginElse()
+            case .wasmBeginIf(let op):
+                $0.wasmBeginIf = Fuzzilli_Protobuf_WasmBeginIf.with {
+                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
+                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                }
+            case .wasmBeginElse(let op):
+                $0.wasmBeginElse = Fuzzilli_Protobuf_WasmBeginElse.with {
+                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
+                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                }
             case .wasmEndIf(_):
                 $0.wasmEndIf = Fuzzilli_Protobuf_WasmEndIf()
             case .wasmNop(_):
@@ -2031,10 +2037,16 @@ extension Instruction: ProtobufConvertible {
             op = WasmBranch()
         case .wasmBranchIf(_):
             op = WasmBranchIf()
-        case .wasmBeginIf(_):
-            op = WasmBeginIf()
-        case .wasmBeginElse(_):
-            op = WasmBeginElse()
+        case .wasmBeginIf(let p):
+            let parameters: [Parameter] = p.parameters.map({ param in
+                Parameter.plain(WasmTypeEnumToILType(param))
+            })
+            op = WasmBeginIf(with: parameters => WasmTypeEnumToILType(p.returnType))
+        case .wasmBeginElse(let p):
+            let parameters: [Parameter] = p.parameters.map({ param in
+                Parameter.plain(WasmTypeEnumToILType(param))
+            })
+            op = WasmBeginElse(with: parameters => WasmTypeEnumToILType(p.returnType))
         case .wasmEndIf(_):
             op = WasmEndIf()
         case .wasmNop(_):
