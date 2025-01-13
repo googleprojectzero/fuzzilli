@@ -945,7 +945,8 @@ public class WasmLifter {
         // Check if instruction input is a parameter or if we have an expression for it, if so, we need to load it now.
         for input in instr.inputs {
             // Skip "internal" inputs, i.e. ones that don't map to a slot, such as .label variables
-            if typer.type(of: input).Is(.label) {
+            let inputType = typer.type(of: input)
+            if inputType.Is(.label) || inputType.Is(.exceptionLabel) {
                 continue
             }
 
@@ -962,19 +963,16 @@ public class WasmLifter {
                 continue
             }
 
-            // TODO(mliedtke): Make this an attribute.
-            // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
-            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall
-                || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet
-                || instr.op is WasmTableSet || instr.op is WasmBeginCatch || instr.op is WasmThrow
-                || instr.op is WasmRethrow || instr.op is WasmBeginBlock || instr.op is WasmBeginTry
-                || instr.op is WasmI64x2LoadSplat || instr.op is WasmBeginTryDelegate
-                || instr.op is WasmBeginIf || instr.op is WasmBeginElse {
-                continue
+            // Special inputs that aren't locals (e.g. memories, functions, tags, ...)
+            let isLocallyDefined = inputType.isWasmTagType && tags.contains(input)
+                || inputType.isWasmTableType && tables.contains(where: {$0.output == input})
+                || inputType.Is(.wasmFuncRef) && functions.contains(where: {$0.outputVariable == input})
+                || inputType.isWasmGlobalType && globals.contains(where: {$0.output == input})
+                || inputType.isWasmMemoryType && memories.contains(where: {$0.output == input})
+            if !isLocallyDefined {
+                assert(self.imports.contains(where: {$0.0 == input}), "Variable \(input) needs to be imported during importAnalysis()")
             }
-            fatalError("unreachable")
         }
-
     }
 
     private func emitBytesForInstruction(forInstruction instr: Instruction) throws {

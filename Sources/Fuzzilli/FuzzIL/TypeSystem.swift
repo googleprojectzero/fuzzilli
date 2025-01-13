@@ -405,6 +405,10 @@ public struct ILType: Hashable {
         return wasmType as? WasmTagType
     }
 
+    public var isWasmTagType: Bool {
+        return wasmTagType != nil && ext?.group == "WasmTag"
+    }
+
     public var properties: Set<String> {
         return ext?.properties ?? Set()
     }
