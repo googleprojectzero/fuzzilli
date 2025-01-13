@@ -287,7 +287,7 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
                 let ctr = function.consti32(10)
                 function.wasmBuildLoop(with: [] => .nothing) { label, args in
-                    XCTAssert(b.type(of: label).Is(.label))
+                    XCTAssert(b.type(of: label).Is(.anyLabel))
                     let result = function.wasmi32BinOp(ctr, function.consti32(1), binOpKind: .Sub)
                     function.wasmReassign(variable: ctr, to: result)
                     // The backedge, loop if we are not at zero yet.
@@ -724,7 +724,7 @@ class WasmFoundationTests: XCTestCase {
                 let one = function.consti32(1)
 
                 function.wasmBuildLoop(with: [] => .nothing) { label, args in
-                    XCTAssert(b.type(of: label).Is(.label))
+                    XCTAssert(b.type(of: label).Is(.anyLabel))
                     let result = function.wasmi32BinOp(ctr, one, binOpKind: .Add)
                     let varUpdate = function.wasmi64BinOp(variable, function.consti64(2), binOpKind: .Add)
                     function.wasmReassign(variable: ctr, to: result)
@@ -872,7 +872,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
-                    XCTAssert(b.type(of: label).Is(.label))
+                    XCTAssert(b.type(of: label).Is(.anyLabel))
                     function.wasmReturn(function.consti64(42))
                 } catchAllBody: {}
                 function.wasmUnreachable()
@@ -905,7 +905,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
-                    XCTAssert(b.type(of: label).Is(.label))
+                    XCTAssert(b.type(of: label).Is(.anyLabel))
                     // Manually set the availableTypes here for testing.
                     let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
                     function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
@@ -948,7 +948,7 @@ class WasmFoundationTests: XCTestCase {
             let module = b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                     function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
-                        XCTAssert(b.type(of: label).Is(.label))
+                        XCTAssert(b.type(of: label).Is(.anyLabel))
                         let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
                         function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
                         function.wasmUnreachable()
@@ -1003,7 +1003,7 @@ class WasmFoundationTests: XCTestCase {
             */
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
-                    XCTAssert(b.type(of: label).Is(.label))
+                    XCTAssert(b.type(of: label).Is(.anyLabel))
                     function.WasmBuildThrow(tag: throwTag, inputs: [function.consti64(123), function.consti32(234)])
                     function.wasmUnreachable()
                     function.WasmBuildLegacyCatch(tag: otherTag) { exception, args in
@@ -1172,7 +1172,7 @@ class WasmFoundationTests: XCTestCase {
                 let argI32 = function.consti32(123)
                 let argI64 = function.consti64(321)
                 function.wasmBuildLegacyTry(with: [.wasmi64, .wasmi32] => .nothing, args: [argI64, argI32]) { label, args in
-                    XCTAssert(b.type(of: label).Is(.label))
+                    XCTAssert(b.type(of: label).Is(.anyLabel))
                     XCTAssert(b.type(of: args[0]).Is(.wasmi64))
                     XCTAssert(b.type(of: args[1]).Is(.wasmi32))
                     function.WasmBuildThrow(tag: tag, inputs: args)
@@ -1373,7 +1373,6 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => .wasmf64) { function, _ in
                 let argI32 = function.consti32(12345)
                 let argF64 = function.constf64(543.21)
-                // TODO(mliedtke): We should also be able to have results but I don't think that really works on functions either yet with implicit return...
                 function.wasmBuildBlock(with: [.wasmi32, .wasmf64] => .nothing, args: [argI32, argF64]) { blockLabel, args in
                     assert(args.count == 2)
                     let result = function.wasmf64BinOp(function.converti32Tof64(args[0], isSigned: true), args[1], binOpKind: .Add)
@@ -1389,6 +1388,58 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "12888.21\n")
+    }
+
+    func testBlockWithResult() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                let blockResult = function.wasmBuildBlockWithResult(with: [.wasmi32] => .wasmi64, args: [function.consti32(12345)]) { blockLabel, args in
+                    return function.extendi32Toi64(args[0], isSigned: true)
+                }
+                function.wasmReturn(blockResult)
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "12345\n")
+    }
+
+    func testBranchWithParameter() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                let blockResult = function.wasmBuildBlockWithResult(with: [.wasmi32] => .wasmi32, args: args) { blockLabel, blockArgs in
+                    // TODO(mliedtke): A branch to the function end should also be allowed but
+                    // unfortunately a function doesn't have a label in FuzzIL, yet.
+                    function.wasmBranchIf(blockArgs[0], to: blockLabel, args: [function.wasmi32BinOp(blockArgs[0], args[0], binOpKind: .Add)])
+                    function.wasmBranch(to: blockLabel, args: [function.consti32(12345)])
+                    return function.consti32(-1)
+                }
+                function.wasmReturn(blockResult)
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        let wasmOut2 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut2)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "84\n12345\n")
     }
 
     func testUnreachable() throws {

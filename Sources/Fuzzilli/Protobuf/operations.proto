@@ -1135,6 +1135,7 @@ message WasmBeginBlock {
 }
 
 message WasmEndBlock {
+  WasmILType returnType = 1;
 }
 
 message WasmBeginLoop {
@@ -1186,9 +1187,11 @@ message WasmDefineTag {
 }
 
 message WasmBranch {
+  repeated WasmILType parameters = 1;
 }
 
 message WasmBranchIf {
+  repeated WasmILType parameters = 1;
 }
 
 message WasmReassign {

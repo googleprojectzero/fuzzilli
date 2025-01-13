@@ -3236,21 +3236,30 @@ public class ProgramBuilder {
         // TODO(cffsmith): I think the best way to handle these types of blocks is to treat them like inline functions that have a signature. E.g. they behave like a definition and call of a wasmfunction. The output should be the output of the signature.
         public func wasmBuildBlock(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> ()) {
             assert(signature.parameters.count == args.count)
+            assert(signature.outputType == .nothing)
             let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args)
-            b.setType(ofVariable: instr.innerOutput(0), to: .label)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            b.emit(WasmEndBlock())
+            b.emit(WasmEndBlock(outputType: signature.outputType))
+        }
+
+        @discardableResult
+        public func wasmBuildBlockWithResult(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Variable) -> Variable {
+            assert(signature.parameters.count == args.count)
+            assert(signature.outputType != .nothing)
+            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args)
+            let result = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return b.emit(WasmEndBlock(outputType: signature.outputType), withInputs: [result]).output
         }
 
         // This can branch to label variables only, has a variable input for dataflow purposes.
-        public func wasmBranch(to label: Variable) {
-            assert(b.type(of: label) == .label)
-            b.emit(WasmBranch(), withInputs: [label])
+        public func wasmBranch(to label: Variable, args: [Variable] = []) {
+            assert(b.type(of: label).Is(.anyLabel))
+            b.emit(WasmBranch(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args)
         }
 
-        public func wasmBranchIf(_ condition: Variable, to label: Variable) {
-            assert(b.type(of: label) == .label)
-            b.emit(WasmBranchIf(), withInputs: [label, condition])
+        public func wasmBranchIf(_ condition: Variable, to label: Variable, args: [Variable] = []) {
+            assert(b.type(of: label).Is(.label(args.map({b.type(of: $0)}))), "label type \(b.type(of: label)) doesn't match argument types \(args.map({b.type(of: $0)}))")
+            b.emit(WasmBranchIf(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args + [condition])
         }
 
         public func wasmBuildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: () -> Void) {

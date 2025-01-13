@@ -946,7 +946,7 @@ public class WasmLifter {
         for input in instr.inputs {
             // Skip "internal" inputs, i.e. ones that don't map to a slot, such as .label variables
             let inputType = typer.type(of: input)
-            if inputType.Is(.label) || inputType.Is(.exceptionLabel) {
+            if inputType.Is(.anyLabel) || inputType.Is(.exceptionLabel) {
                 continue
             }
 
@@ -987,7 +987,7 @@ public class WasmLifter {
 
         // If we have an output, make sure we store it on the stack as this is a "complex" instruction, i.e. has inputs and outputs
         if instr.numOutputs > 0 {
-            assert(!typer.type(of: instr.output).Is(.label))
+            assert(!typer.type(of: instr.output).Is(.anyLabel))
             // Also spill the instruction
             currentFunction!.spillLocal(forVariable: instr.output)
             // Add the corresponding stack load as an expression, this adds the number of arguments, as output vars always live after the function arguments.
@@ -1394,12 +1394,12 @@ public class WasmLifter {
         case .wasmRethrow(_):
             let blockDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]!
             return Data([0x09] + Leb128.unsignedEncode(blockDepth))
-        case .wasmBranch(_):
+        case .wasmBranch(let op):
             let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
-            return Data([0x0C]) + Leb128.unsignedEncode(branchDepth)
-        case .wasmBranchIf(_):
+            return Data([0x0C]) + Leb128.unsignedEncode(branchDepth) + Data(op.labelTypes.map {_ in 0x1A})
+        case .wasmBranchIf(let op):
             let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
-            return Data([0x0D]) + Leb128.unsignedEncode(branchDepth)
+            return Data([0x0D]) + Leb128.unsignedEncode(branchDepth) + Data(op.labelTypes.map {_ in 0x1A})
         case .wasmBeginIf(let op):
             return Data([0x04] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginElse(_):
