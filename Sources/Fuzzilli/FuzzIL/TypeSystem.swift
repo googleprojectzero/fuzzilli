@@ -175,7 +175,11 @@ public struct ILType: Hashable {
     // Internal types
 
     // This type is used to indicate block labels in wasm.
-    public static let label: ILType = ILType(definiteType: .label)
+    public static func label(_ parameterTypes: [ILType] = []) -> ILType {
+        return ILType(definiteType: .label, ext: TypeExtension(group: "WasmLabel", properties: [], methods: [], signature: nil, wasmExt: WasmLabelType(parameterTypes)))
+    }
+
+    public static let anyLabel: ILType = ILType(definiteType: .label, ext: TypeExtension(group: "WasmLabel", properties: [], methods: [], signature: nil, wasmExt: nil))
 
     /// A label that allows rethrowing the caught exception of a catch block.
     public static let exceptionLabel: ILType = ILType(definiteType: .exceptionLabel)
@@ -407,6 +411,14 @@ public struct ILType: Hashable {
 
     public var isWasmTagType: Bool {
         return wasmTagType != nil && ext?.group == "WasmTag"
+    }
+
+    public var wasmLabelType: WasmLabelType? {
+        return wasmType as? WasmLabelType
+    }
+
+    public var isWasmLabelType: Bool {
+        return wasmTagType != nil
     }
 
     public var properties: Set<String> {
@@ -977,6 +989,29 @@ public class WasmTagType: WasmTypeExtension {
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmTagType else { return false }
+        return self.parameters == other.parameters && self.isJSTag == other.isJSTag
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine(parameters)
+        hasher.combine(isJSTag)
+    }
+
+    init(_ parameters: ParameterList, isJSTag: Bool = false) {
+        self.parameters = parameters
+        self.isJSTag = isJSTag
+    }
+}
+
+public class WasmLabelType: WasmTypeExtension {
+    // The parameter types for the label, meaning the types of the values that need to be provided
+    // when branching to this label. This is the list of result types for all wasm blocks excluding
+    // the loop for which the parameter types are the parameter types of the block. (This is caused
+    // by the branch instruction branching to the loop header and not the loop end.)
+    public let parameters: [ILType]
+
+    override func isEqual(to other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmLabelType else { return false }
         return self.parameters == other.parameters
     }
 
@@ -984,9 +1019,8 @@ public class WasmTagType: WasmTypeExtension {
         hasher.combine(parameters)
     }
 
-    init(_ parameters: ParameterList, isJSTag: Bool = false) {
+    init(_ parameters: [ILType]) {
         self.parameters = parameters
-        self.isJSTag = isJSTag
     }
 }
 

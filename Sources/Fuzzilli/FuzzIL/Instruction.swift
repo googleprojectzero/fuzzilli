@@ -1194,8 +1194,10 @@ extension Instruction: ProtobufConvertible {
                     $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
                     $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
-            case .wasmEndBlock(_):
-                $0.wasmEndBlock = Fuzzilli_Protobuf_WasmEndBlock()
+            case .wasmEndBlock(let op):
+                $0.wasmEndBlock = Fuzzilli_Protobuf_WasmEndBlock.with {
+                    $0.returnType = ILTypeToWasmTypeEnum(op.outputType)
+                }
             case .wasmBeginLoop(let op):
                 $0.wasmBeginLoop = Fuzzilli_Protobuf_WasmBeginLoop.with {
                     $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
@@ -1238,10 +1240,14 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmDefineTag = Fuzzilli_Protobuf_WasmDefineTag.with {
                     $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
                 }
-            case .wasmBranch(_):
-                $0.wasmBranch = Fuzzilli_Protobuf_WasmBranch()
-            case .wasmBranchIf(_):
-                $0.wasmBranchIf = Fuzzilli_Protobuf_WasmBranchIf()
+            case .wasmBranch(let op):
+                $0.wasmBranch = Fuzzilli_Protobuf_WasmBranch.with {
+                    $0.parameters = op.labelTypes.map(ILTypeToWasmTypeEnum)
+                }
+            case .wasmBranchIf(let op):
+                $0.wasmBranchIf = Fuzzilli_Protobuf_WasmBranchIf.with {
+                    $0.parameters = op.labelTypes.map(ILTypeToWasmTypeEnum)
+                }
             case .wasmBeginIf(let op):
                 $0.wasmBeginIf = Fuzzilli_Protobuf_WasmBeginIf.with {
                     $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
@@ -1991,8 +1997,8 @@ extension Instruction: ProtobufConvertible {
                 Parameter.plain(WasmTypeEnumToILType(param))
             })
             op = WasmBeginBlock(with: parameters => WasmTypeEnumToILType(p.returnType))
-        case .wasmEndBlock(_):
-            op = WasmEndBlock()
+        case .wasmEndBlock(let p):
+            op = WasmEndBlock(outputType: WasmTypeEnumToILType(p.returnType))
         case .wasmBeginLoop(let p):
             let parameters: [Parameter] = p.parameters.map({ param in
                 Parameter.plain(WasmTypeEnumToILType(param))
@@ -2033,10 +2039,10 @@ extension Instruction: ProtobufConvertible {
             op = WasmDefineTag(parameters: p.parameters.map({ param in
                 Parameter.plain(WasmTypeEnumToILType(param))
             }))
-        case .wasmBranch(_):
-            op = WasmBranch()
-        case .wasmBranchIf(_):
-            op = WasmBranchIf()
+        case .wasmBranch(let p):
+            op = WasmBranch(labelTypes: p.parameters.map(WasmTypeEnumToILType))
+        case .wasmBranchIf(let p):
+            op = WasmBranchIf(labelTypes: p.parameters.map(WasmTypeEnumToILType))
         case .wasmBeginIf(let p):
             let parameters: [Parameter] = p.parameters.map({ param in
                 Parameter.plain(WasmTypeEnumToILType(param))

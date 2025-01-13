@@ -560,10 +560,17 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // Choose a few random wasm values as arguments if available.
         let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
         let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
-        // TODO(mliedtke): Also add support for return values (and probably find a suitable mechanism that we can also use for functions).
-        // A good solution would probably be to make the endBlock take the return type as an input.
-        function.wasmBuildBlock(with: parameters => .nothing, args: args) { label, args in
-            b.buildRecursive()
+        // TODO(mliedtke): The selection of types is in sync with ProgramBuilder::randomWasmSignature(). This should allow more types.
+        let outputType: ILType = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
+        if outputType != .nothing {
+            function.wasmBuildBlockWithResult(with: parameters => outputType, args: args) { label, args in
+                b.buildRecursive()
+                return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+            }
+        } else {
+            function.wasmBuildBlock(with: parameters => outputType, args: args) { label, args in
+                b.buildRecursive()
+            }
         }
     },
 
@@ -603,7 +610,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
-    RecursiveCodeGenerator("WasmLegacyTryDelegateGenerator", inContext: .wasmFunction, inputs: .required(.label)) { b, label in
+    RecursiveCodeGenerator("WasmLegacyTryDelegateGenerator", inContext: .wasmFunction, inputs: .required(.anyLabel)) { b, label in
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
         let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
@@ -687,14 +694,20 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         b.currentWasmModule.addTag(parameterTypes: b.randomTagParameters())
     },
 
-    CodeGenerator("WasmBranchGenerator", inContext: .wasmFunction, inputs: .required(.label)) { b, label in
+    CodeGenerator("WasmBranchGenerator", inContext: .wasmFunction, inputs: .required(.anyLabel)) { b, label in
         let function = b.currentWasmModule.currentWasmFunction
-        function.wasmBranch(to: label)
+        let args = b.type(of: label).wasmLabelType!.parameters.map {
+            b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)
+        }
+        function.wasmBranch(to: label, args: args)
     },
 
-    CodeGenerator("WasmBranchIfGenerator", inContext: .wasmFunction, inputs: .required(.label, .wasmi32)) { b, label, conditionVar in
+    CodeGenerator("WasmBranchIfGenerator", inContext: .wasmFunction, inputs: .required(.anyLabel, .wasmi32)) { b, label, conditionVar in
         let function = b.currentWasmModule.currentWasmFunction
-        function.wasmBranchIf(conditionVar, to: label)
+        let args = b.type(of: label).wasmLabelType!.parameters.map {
+            b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)
+        }
+        function.wasmBranchIf(conditionVar, to: label, args: args)
     },
 
     CodeGenerator("ConstSimd128Generator", inContext: .wasmFunction) { b in

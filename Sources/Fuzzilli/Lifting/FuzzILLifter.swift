@@ -967,18 +967,19 @@ public class FuzzILLifter: Lifter {
             }
 
         case .wasmBeginBlock(let op):
-            if instr.numOutputs > 0 {
-                // TODO(cffsmith): Maybe lift labels as e.g. L7 or something like that?
-                w.emit("\(output()) <- WasmBeginBlock L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
-            } else {
-                w.emit("WasmBeginBlock L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
-            }
+            // TODO(cffsmith): Maybe lift labels as e.g. L7 or something like that?
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("WasmBeginBlock (\(op.signature)) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
             w.increaseIndentionLevel()
 
-
-        case .wasmEndBlock(_):
+        case .wasmEndBlock(let op):
             w.decreaseIndentionLevel()
-            w.emit("WasmEndBlock")
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            if op.numOutputs > 0 {
+                w.emit("\(output()) <- WasmEndBlock \(inputs)")
+            } else {
+                w.emit("WasmEndBlock \(inputs)")
+            }
 
         case .wasmBeginLoop(let op):
             if instr.numOutputs > 0 {
@@ -1042,10 +1043,10 @@ public class FuzzILLifter: Lifter {
             w.emit("\(input(0)) <- WasmReassign \(input(1))")
 
         case .wasmBranch(_):
-            w.emit("wasmBranch: \(input(0))")
+            w.emit("wasmBranch: \(instr.inputs.map(lift).joined(separator: ", "))")
 
         case .wasmBranchIf(_):
-            w.emit("wasmBranchIf \(instr.input(1)), \(instr.input(0))")
+            w.emit("wasmBranchIf \(instr.input(1)), \(([instr.input(0)] + Array(instr.inputs)[2...]).map(lift).joined(separator: ", "))")
 
         case .wasmBeginIf(let op):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
