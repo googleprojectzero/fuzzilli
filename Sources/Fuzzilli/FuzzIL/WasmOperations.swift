@@ -979,7 +979,7 @@ final class WasmBeginIf: WasmOperation {
         // Note that the condition is the last input! This is due to how lifting works for the wasm
         // value stack and that the condition is the first value to be removed from the stack, so
         // it needs to be the last one pushed to it.
-        super.init(inputTypes: parameterTypes + [.wasmi32], outputType: signature.outputType, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext, .isNotInputMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(inputTypes: parameterTypes + [.wasmi32], outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext, .isNotInputMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
@@ -991,15 +991,19 @@ final class WasmBeginElse: WasmOperation {
         self.signature = signature
         let parameterTypes = signature.parameters.convertPlainToILTypes()
         let labelTypes = signature.outputType != .nothing ? [signature.outputType] : []
-        super.init(outputType: signature.outputType, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        // The WasmBeginElse acts both as a block end for the true case and as a block start for the
+        // false case. As such, its input types are the results from the true block and its inner
+        // output types are the same as for the corresponding WasmBeginIf.
+        super.init(inputTypes: labelTypes, outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
 final class WasmEndIf: WasmOperation {
     override var opcode: Opcode { .wasmEndIf(self) }
 
-    init() {
-        super.init(attributes: [.isBlockEnd], requiredContext: [.wasmBlock, .wasmFunction])
+    init(outputType: ILType = .nothing) {
+        let inputTypes = outputType != .nothing ? [outputType] : []
+        super.init(inputTypes: inputTypes, outputType: outputType, attributes: [.isBlockEnd], requiredContext: [.wasmBlock, .wasmFunction])
     }
 }
 
@@ -1035,7 +1039,7 @@ final class WasmBeginTry: WasmOperation {
         self.signature = signature
         let parameterTypes = signature.parameters.convertPlainToILTypes()
         let labelTypes = signature.outputType != .nothing ? [signature.outputType] : []
-        super.init(inputTypes: parameterTypes, outputType: signature.outputType, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmTry])
+        super.init(inputTypes: parameterTypes, outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmTry])
     }
 }
 
@@ -1109,7 +1113,7 @@ final class WasmBeginTryDelegate: WasmOperation {
         self.signature = signature
         let parameterTypes = signature.parameters.convertPlainToILTypes()
         let labelTypes = signature.outputType != .nothing ? [signature.outputType] : []
-        super.init(inputTypes: parameterTypes, outputType: signature.outputType, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [])
+        super.init(inputTypes: parameterTypes, outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [])
     }
 }
 

@@ -560,8 +560,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // Choose a few random wasm values as arguments if available.
         let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
         let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
-        // TODO(mliedtke): The selection of types is in sync with ProgramBuilder::randomWasmSignature(). This should allow more types.
-        let outputType: ILType = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
+        let outputType = b.randomWasmBlockOutputType()
         if outputType != .nothing {
             function.wasmBuildBlockWithResult(with: parameters => outputType, args: args) { label, args in
                 b.buildRecursive()
@@ -645,10 +644,21 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // Choose a few random wasm values as arguments if available.
         let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
         let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
-        function.wasmBuildIfElse(conditionVar, signature: parameters => .nothing, args: args) { label, args in
-            b.buildRecursive(block: 1, of: 2, n: 4)
-        } elseBody: { label, args in
-            b.buildRecursive(block: 2, of: 2, n: 4)
+        let outputType = b.randomWasmBlockOutputType()
+        if outputType != .nothing {
+            function.wasmBuildIfElseWithResult(conditionVar, signature: parameters => outputType, args: args) { label, args in
+                b.buildRecursive(block: 1, of: 2, n: 4)
+                return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+            } elseBody: { label, args in
+                b.buildRecursive(block: 2, of: 2, n: 4)
+                return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+            }
+        } else {
+            function.wasmBuildIfElse(conditionVar, signature: parameters => outputType, args: args) { label, args in
+                b.buildRecursive(block: 1, of: 2, n: 4)
+            } elseBody: { label, args in
+                b.buildRecursive(block: 2, of: 2, n: 4)
+            }
         }
     },
 

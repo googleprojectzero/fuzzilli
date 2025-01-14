@@ -797,7 +797,7 @@ public class FuzzILLifter: Lifter {
 
         case .beginWasmFunction(let op):
             // TODO(cffsmith): do this properly?
-            w.emit("BeginWasmFunction [\(liftCallArguments(instr.innerOutputs))] (\(op.signature))")
+            w.emit("BeginWasmFunction (\(op.signature)) -> [\(liftCallArguments(instr.innerOutputs))]")
             w.increaseIndentionLevel()
 
         case .endWasmFunction:
@@ -982,11 +982,7 @@ public class FuzzILLifter: Lifter {
             }
 
         case .wasmBeginLoop(let op):
-            if instr.numOutputs > 0 {
-                w.emit("\(output()) <- WasmBeginLoop L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
-            } else {
-                w.emit("WasmBeginLoop L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
-            }
+            w.emit("WasmBeginLoop L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
             w.increaseIndentionLevel()
 
         case .wasmEndLoop(_):
@@ -994,12 +990,7 @@ public class FuzzILLifter: Lifter {
             w.emit("WasmEndLoop")
 
         case .wasmBeginTry(let op):
-            if instr.numOutputs > 0 {
-                // TODO(cffsmith): Maybe lift labels as e.g. L7 or something like that?
-                w.emit("\(output()) <- WasmBeginTry L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
-            } else {
-                w.emit("WasmBeginTry L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
-            }
+            w.emit("WasmBeginTry L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
             w.increaseIndentionLevel()
 
         case .wasmBeginCatchAll(_):
@@ -1027,12 +1018,7 @@ public class FuzzILLifter: Lifter {
             w.emit("WasmRethrow \(instr.input(0))")
 
         case .wasmBeginTryDelegate(let op):
-            if instr.numOutputs > 0 {
-                // TODO(cffsmith): Maybe lift labels as e.g. L7 or something like that?
-                w.emit("\(output()) <- WasmBeginTryDelegate L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
-            } else {
-                w.emit("WasmBeginTryDelegate L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
-            }
+            w.emit("WasmBeginTryDelegate L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
             w.increaseIndentionLevel()
 
         case .wasmEndTryDelegate(_):
@@ -1050,21 +1036,25 @@ public class FuzzILLifter: Lifter {
 
         case .wasmBeginIf(let op):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            if instr.numOutputs > 0 {
-                w.emit("\(output()) <- wasmBeginIf L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature)) [\(inputs)]")
+            w.emit("wasmBeginIf (\(op.signature)) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
+            w.increaseIndentionLevel()
+
+        case .wasmBeginElse(_):
+            w.decreaseIndentionLevel()
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            // Note that the signature is printed by the WasmBeginIf, so we skip it here for better
+            // readability.
+            w.emit("wasmBeginElse [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
+            w.increaseIndentionLevel()
+
+        case .wasmEndIf(let op):
+            w.decreaseIndentionLevel()
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            if op.numOutputs > 0 {
+                w.emit("\(output()) <- WasmEndIf \(inputs)")
             } else {
-                w.emit("wasmBeginIf L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature)) [\(inputs)]")
+                w.emit("WasmEndIf \(inputs)")
             }
-            w.increaseIndentionLevel()
-
-        case .wasmBeginElse(let op):
-            w.decreaseIndentionLevel()
-            w.emit("wasmBeginElse L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
-            w.increaseIndentionLevel()
-
-        case .wasmEndIf(_):
-            w.decreaseIndentionLevel()
-            w.emit("wasmEndIf")
 
         case .print:
             w.emit("Print \(input(0))")
