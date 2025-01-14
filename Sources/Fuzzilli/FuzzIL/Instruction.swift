@@ -1258,8 +1258,10 @@ extension Instruction: ProtobufConvertible {
                     $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
                     $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
-            case .wasmEndIf(_):
-                $0.wasmEndIf = Fuzzilli_Protobuf_WasmEndIf()
+            case .wasmEndIf(let op):
+                $0.wasmEndIf = Fuzzilli_Protobuf_WasmEndIf.with {
+                    $0.returnType = ILTypeToWasmTypeEnum(op.outputType)
+                }
             case .wasmNop(_):
                 fatalError("Should never be serialized")
             case .wasmUnreachable(_):
@@ -2053,8 +2055,8 @@ extension Instruction: ProtobufConvertible {
                 Parameter.plain(WasmTypeEnumToILType(param))
             })
             op = WasmBeginElse(with: parameters => WasmTypeEnumToILType(p.returnType))
-        case .wasmEndIf(_):
-            op = WasmEndIf()
+        case .wasmEndIf(let p):
+            op = WasmEndIf(outputType: WasmTypeEnumToILType(p.returnType))
         case .wasmNop(_):
             fatalError("Should never be deserialized!")
         case .wasmUnreachable(_):

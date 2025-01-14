@@ -3278,6 +3278,15 @@ public class ProgramBuilder {
             b.emit(WasmEndIf())
         }
 
+        @discardableResult
+        public func wasmBuildIfElseWithResult(_ condition: Variable, signature: Signature, args: [Variable], ifBody: (Variable, [Variable]) -> Variable, elseBody: (Variable, [Variable]) -> Variable) -> Variable{
+            let beginBlock = b.emit(WasmBeginIf(with: signature), withInputs: args + [condition])
+            let trueResult = ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
+            let elseBlock = b.emit(WasmBeginElse(with: signature), withInputs: [trueResult])
+            let falseResult = elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
+            return b.emit(WasmEndIf(outputType: signature.outputType), withInputs: [falseResult]).output
+        }
+
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         public func wasmBuildLoop(with signature: Signature, body: (Variable, [Variable]) -> Void) {
             let instr = b.emit(WasmBeginLoop(with: signature))
@@ -3556,6 +3565,11 @@ public class ProgramBuilder {
             params.append(chooseUniform(from: [.wasmi32, .wasmf32, .wasmf64]))
         }
         return params => returnType
+    }
+
+    public func randomWasmBlockOutputType() -> ILType {
+        // TODO(mliedtke): The selection of types is in sync with ProgramBuilder::randomWasmSignature(). This should allow more types.
+        return chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
     }
 
     @discardableResult
