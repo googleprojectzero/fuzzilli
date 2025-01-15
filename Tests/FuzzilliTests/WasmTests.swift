@@ -753,6 +753,33 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1368\n")
     }
 
+    func testLoopWithParametersAndResult() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => .wasmi32) { function, args in
+                let loopResult = function.wasmBuildLoop(with: [.wasmi32, .wasmi32] => .wasmi32, args: args) { loopLabel, loopArgs in
+                    let incFirst = function.wasmi32BinOp(loopArgs[0], function.consti32(1), binOpKind: .Add)
+                    let incSecond = function.wasmi32BinOp(loopArgs[1], function.consti32(2), binOpKind: .Add)
+                    let condition = function.wasmi32CompareOp(incFirst, incSecond, using: .Gt_s)
+                    function.wasmBranchIf(condition, to: loopLabel, args: [incFirst, incSecond])
+                    return incFirst
+                }
+                function.wasmReturn(loopResult)
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(10), b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "20\n")
+    }
+
     func testIfs() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

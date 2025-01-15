@@ -590,6 +590,28 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("WasmLoopWithSignatureGenerator", inContext: .wasmFunction) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+        // Count upwards here to make it slightly more different from the other loop generator.
+        // Also, instead of using reassign, this generator uses the signature to pass and update the loop counter.
+        let randomArgs = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let randomArgTypes = randomArgs.map{b.type(of: $0)}
+        let args = [function.consti32(0)] + randomArgs
+        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
+        let outputType = b.randomWasmBlockOutputType(allowVoid: false)
+        // Note that due to the do-while style implementation, the actual iteration count is at least 1.
+        let iterationCount = Int32.random(in: 0...16)
+
+        function.wasmBuildLoop(with: parameters => outputType, args: args) { label, loopArgs in
+            b.buildRecursive()
+            let loopCtr = function.wasmi32BinOp(args[0], function.consti32(1), binOpKind: .Add)
+            let condition = function.wasmi32CompareOp(loopCtr, function.consti32(iterationCount), using: .Lt_s)
+            let backedgeArgs = [loopCtr] + randomArgTypes.map{b.randomVariable(ofType: $0)!}
+            function.wasmBranchIf(condition, to: label, args: backedgeArgs)
+            return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+        }
+    },
+
     RecursiveCodeGenerator("WasmLegacyTryGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.

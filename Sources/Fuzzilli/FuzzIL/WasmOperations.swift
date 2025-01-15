@@ -1018,15 +1018,16 @@ final class WasmBeginLoop: WasmOperation {
         // Note that different to all other blocks the loop's label parameters are the input types
         // of the block, not the result types (because a branch to a loop label jumps to the
         // beginning of the loop block instead of the end.)
-        super.init(outputType: .nothing, innerOutputTypes: [.label(parameterTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
+        super.init(inputTypes: parameterTypes, outputType: .nothing, innerOutputTypes: [.label(parameterTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
 final class WasmEndLoop: WasmOperation {
     override var opcode: Opcode { .wasmEndLoop(self) }
 
-    init() {
-        super.init(attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
+    init(outputType: ILType = .nothing) {
+        let inputTypes = outputType != .nothing ? [outputType] : []
+        super.init(inputTypes: inputTypes, outputType: outputType, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 

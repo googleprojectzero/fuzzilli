@@ -891,7 +891,8 @@ public class WasmLifter {
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
-        case .wasmBeginLoop(_):
+        case .wasmBeginLoop(let op):
+            registerSignature(op.signature)
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
@@ -996,7 +997,8 @@ public class WasmLifter {
 
         // TODO(mliedtke): Reuse this for handling parameters in loops, if-else, ...
         if instr.op is WasmBeginCatch || instr.op is WasmBeginBlock || instr.op is WasmBeginTry
-            || instr.op is WasmBeginTryDelegate || instr.op is WasmBeginIf || instr.op is WasmBeginElse {
+            || instr.op is WasmBeginTryDelegate || instr.op is WasmBeginIf || instr.op is WasmBeginElse
+            || instr.op is WasmBeginLoop {
             // As the parameters are pushed "in order" to the stack, they need to be popped in reverse order.
             for innerOutput in instr.innerOutputs(1...).reversed() {
                 currentFunction!.spillLocal(forVariable: innerOutput)
@@ -1363,9 +1365,8 @@ public class WasmLifter {
             // A Block can "produce" (push) an item on the value stack, just like a function. Similarly, a block can also have parameters.
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
             return Data([0x02] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
-        case .wasmBeginLoop(_):
-            // 0x03 is the loop instruction and 0x40 is the empty block type, just like in .wasmBeginBlock
-            return Data([0x03] + [0x40])
+        case .wasmBeginLoop(let op):
+            return Data([0x03] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginTry(let op):
             return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginTryDelegate(let op):

@@ -3294,6 +3294,13 @@ public class ProgramBuilder {
             b.emit(WasmEndLoop())
         }
 
+        @discardableResult
+        public func wasmBuildLoop(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Variable) -> Variable {
+            let instr = b.emit(WasmBeginLoop(with: signature), withInputs: args)
+            let fallthroughResult = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return b.emit(WasmEndLoop(outputType: signature.outputType), withInputs: [fallthroughResult]).output
+        }
+
         public func wasmBuildLegacyTry(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Void, catchAllBody: (() -> Void)? = nil) {
             assert(signature.parameters.count == args.count)
             let instr = b.emit(WasmBeginTry(with: signature), withInputs: args)
@@ -3567,9 +3574,10 @@ public class ProgramBuilder {
         return params => returnType
     }
 
-    public func randomWasmBlockOutputType() -> ILType {
+    public func randomWasmBlockOutputType(allowVoid: Bool = true) -> ILType {
         // TODO(mliedtke): The selection of types is in sync with ProgramBuilder::randomWasmSignature(). This should allow more types.
-        return chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
+        let possibleTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64]
+        return chooseUniform(from: allowVoid ? possibleTypes + [.nothing] : possibleTypes)
     }
 
     @discardableResult

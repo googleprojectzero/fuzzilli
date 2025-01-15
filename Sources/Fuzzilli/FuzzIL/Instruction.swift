@@ -1203,8 +1203,10 @@ extension Instruction: ProtobufConvertible {
                     $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
                     $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
-            case .wasmEndLoop(_):
-                $0.wasmEndLoop = Fuzzilli_Protobuf_WasmEndLoop()
+            case .wasmEndLoop(let op):
+                $0.wasmEndLoop = Fuzzilli_Protobuf_WasmEndLoop.with {
+                    $0.returnType = ILTypeToWasmTypeEnum(op.outputType)
+                }
             case .wasmBeginTry(let op):
                 $0.wasmBeginTry = Fuzzilli_Protobuf_WasmBeginTry.with {
                     $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
@@ -2006,8 +2008,8 @@ extension Instruction: ProtobufConvertible {
                 Parameter.plain(WasmTypeEnumToILType(param))
             })
             op = WasmBeginLoop(with: parameters => WasmTypeEnumToILType(p.returnType))
-        case .wasmEndLoop(_):
-            op = WasmEndLoop()
+        case .wasmEndLoop(let p):
+            op = WasmEndLoop(outputType: WasmTypeEnumToILType(p.returnType))
         case .wasmBeginTry(let p):
             let parameters: [Parameter] = p.parameters.map({ param in
                 Parameter.plain(WasmTypeEnumToILType(param))
