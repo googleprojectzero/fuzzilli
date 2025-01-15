@@ -273,6 +273,7 @@ public let codeGeneratorWeights = [
     "WasmBlockGenerator":                       8,
     "WasmBlockWithSignatureGenerator":          8,
     "WasmLoopGenerator":                        8,
+    "WasmLoopWithSignatureGenerator":           8,
     "WasmLegacyTryGenerator":                   8,
     "WasmLegacyCatchGenerator":                 8,
     "WasmLegacyTryDelegateGenerator":           8,

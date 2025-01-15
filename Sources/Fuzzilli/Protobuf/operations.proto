@@ -1144,6 +1144,7 @@ message WasmBeginLoop {
 }
 
 message WasmEndLoop {
+  WasmILType returnType = 1;
 }
 
 message WasmBeginTry {
