@@ -228,11 +228,11 @@ extension Operation {
             return endOp is WasmEndBlock
         case .wasmBeginLoop:
             return endOp is WasmEndLoop
-        case .wasmBeginTry:
-            return endOp is WasmEndTry
-        case .wasmBeginCatchAll,
+        case .wasmBeginTry,
              .wasmBeginCatch:
-            return endOp is WasmEndCatch
+            return endOp is WasmEndTry || endOp is WasmBeginCatch || endOp is WasmBeginCatchAll
+        case .wasmBeginCatchAll:
+            return endOp is WasmEndTry
         case .wasmBeginTryDelegate:
             return endOp is WasmEndTryDelegate
         case .wasmBeginIf:

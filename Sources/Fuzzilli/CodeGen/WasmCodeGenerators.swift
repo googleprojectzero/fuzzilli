@@ -88,12 +88,12 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                     b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
                     blockIndex += 1
                     for _ in 0..<catchCount {
-                        function.WasmBuildLegacyCatch(tag: b.randomVariable(ofType: .object(ofGroup: "WasmTag"))!) { exception, args in
+                        function.WasmBuildLegacyCatch(tag: b.randomVariable(ofType: .object(ofGroup: "WasmTag"))!) { label, exception, args in
                             b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
                             blockIndex += 1
                         }
                     }
-                }, catchAllBody: emitCatchAll == 1 ? {
+                }, catchAllBody: emitCatchAll == 1 ? { label in
                     b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
                     blockIndex += 1
                 } : nil)
@@ -612,22 +612,23 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
-    RecursiveCodeGenerator("WasmLegacyTryGenerator", inContext: .wasmFunction) { b in
+    RecursiveCodeGenerator("WasmLegacyTryCatchGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
+        // TODO(mliedtke): Make the argument count random here and in other block generators.
         let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
         let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
+        let tags = (0..<Int.random(in: 0...5)).map {_ in b.findVariable { b.type(of: $0).isWasmTagType }}.filter {$0 != nil}.map {$0!}
+        let recursiveCallCount = 2 + tags.count
         function.wasmBuildLegacyTry(with: parameters => .nothing, args: args) { label, args in
-            b.buildRecursive(block: 1, of: 2, n: 4)
-        } catchAllBody: {
-            b.buildRecursive(block: 2, of: 2, n: 4)
-        }
-    },
-
-    RecursiveCodeGenerator("WasmLegacyCatchGenerator", inContext: .wasmTry, inputs: .required(.object(ofGroup: "WasmTag"))) { b, value in
-        let function = b.currentWasmModule.currentWasmFunction
-        function.WasmBuildLegacyCatch(tag: value) { exception, args in
-            b.buildRecursive()
+            b.buildRecursive(block: 1, of: recursiveCallCount, n: 4)
+            for (i, tag) in tags.enumerated() {
+                function.WasmBuildLegacyCatch(tag: tag) { _, _, _ in
+                    b.buildRecursive(block: 2 + i, of: recursiveCallCount, n: 4)
+                }
+            }
+        } catchAllBody: { label in
+            b.buildRecursive(block: 2 + tags.count, of: recursiveCallCount, n: 4)
         }
     },
 

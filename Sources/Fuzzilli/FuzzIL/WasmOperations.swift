@@ -1040,7 +1040,7 @@ final class WasmBeginTry: WasmOperation {
         self.signature = signature
         let parameterTypes = signature.parameters.convertPlainToILTypes()
         let labelTypes = signature.outputType != .nothing ? [signature.outputType] : []
-        super.init(inputTypes: parameterTypes, outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmTry])
+        super.init(inputTypes: parameterTypes, outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
@@ -1054,14 +1054,16 @@ final class WasmBeginCatchAll : WasmOperation {
     init(with signature: Signature) {
         self.signature = signature
 
-        super.init(attributes: [
+        super.init(
+            innerOutputTypes: [.label()],
+            attributes: [
+                .isBlockEnd,
                 .isBlockStart,
-                // The inner context isn't a .wasmTry context any more.
-                .resumesSurroundingContext,
+                .propagatesSurroundingContext,
                 // Wasm only allows a single catch_all per try block.
                 .isSingular
             ],
-            requiredContext: [.wasmTry])
+            requiredContext: [.wasmFunction])
     }
 }
 
@@ -1072,27 +1074,21 @@ final class WasmBeginCatch : WasmOperation {
 
     init(with signature: Signature) {
         self.signature = signature
-
+        // TODO: In an ideal world, the catch would only have one label that is used both for
+        // branching as well as for rethrowing the exception. However, rethrows may only use labels
+        // from catch blocks and branches may use any label but need to be very precise on the type
+        // of the label parameters, so typing the label would require different subtyping based on
+        // the usage. For now, we just emit a label for branching and the ".exceptionLabel" for
+        // rethrows.
         super.init(
             inputTypes: [.object(ofGroup: "WasmTag")],
-            innerOutputTypes: [.exceptionLabel] + signature.parameters.convertPlainToILTypes(),
+            innerOutputTypes: [.label([]), .exceptionLabel] + signature.parameters.convertPlainToILTypes(),
             attributes: [
+                .isBlockEnd,
                 .isBlockStart,
-                // The inner context isn't a .wasmTry context any more.
-                .resumesSurroundingContext,
+                .propagatesSurroundingContext,
             ],
-            requiredContext: [.wasmTry])
-    }
-}
-
-// Ends a catch or a catch_all block inside a (legacy) try block.
-final class WasmEndCatch : WasmOperation {
-    override var opcode: Opcode { .wasmEndCatch(self) }
-
-    init() {
-        // Note that because the WasmBeginCatch(All) skips the surrounding  `.wasmTry` context,
-        // this operation is not used within that context!
-        super.init(attributes: .isBlockEnd, requiredContext: [.wasmFunction])
+            requiredContext: [.wasmFunction])
     }
 }
 
@@ -1100,7 +1096,7 @@ final class WasmEndTry: WasmOperation {
     override var opcode: Opcode { .wasmEndTry(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmTry])
+        super.init(attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
     }
 }
 

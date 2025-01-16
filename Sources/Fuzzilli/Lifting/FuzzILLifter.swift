@@ -996,24 +996,23 @@ public class FuzzILLifter: Lifter {
             }
 
         case .wasmBeginTry(let op):
-            w.emit("WasmBeginTry L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] (\(op.signature))")
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("WasmBeginTry (\(op.signature)) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
             w.increaseIndentionLevel()
 
         case .wasmBeginCatchAll(_):
+            assert(instr.numOutputs == 0)
             w.decreaseIndentionLevel()
-            w.emit("WasmBeginCatchAll")
+            w.emit("WasmBeginCatchAll -> L:\(instr.innerOutput(0))")
             w.increaseIndentionLevel()
         case .wasmBeginCatch(_):
+            assert(instr.numOutputs == 0)
             w.decreaseIndentionLevel()
-            w.emit("WasmBeginCatch L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))] \(input(0))")
-            w.increaseIndentionLevel()
-
-        case .wasmEndCatch(_):
-            w.decreaseIndentionLevel()
-            w.emit("WasmEndCatch")
+            w.emit("WasmBeginCatch \(input(0)) -> L:\(instr.innerOutput(0)) E:\(instr.innerOutput(1)) [\(liftCallArguments(instr.innerOutputs(2...)))]")
             w.increaseIndentionLevel()
 
         case .wasmEndTry(_):
+            assert(instr.numOutputs == 0)
             w.decreaseIndentionLevel()
             w.emit("WasmEndTry")
 

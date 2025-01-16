@@ -128,7 +128,7 @@ struct VariableAnalyzer: Analyzer {
             let variablesInClosedScope = scopes.pop()
             visibleVariables.removeLast(variablesInClosedScope)
 
-            if instr.op is WasmOperation && !(instr.op is WasmEndCatch) {
+            if instr.op is WasmOperation {
                 assert(wasmBranchDepth > 0)
                 wasmBranchDepth -= 1
             }
@@ -141,9 +141,7 @@ struct VariableAnalyzer: Analyzer {
         // This code has to be somewhat careful since e.g. BeginElse both ends and begins a variable scope.
         if instr.isBlockStart {
             scopes.push(0)
-            // TODO(mliedtke): We should probably do this in a more generic way, e.g. adding an extra attribute?
-            // The WasmOperation check isn't required but this way the absolute value doesn't count non-wasm blocks.
-            if instr.op is WasmOperation && !(instr.op is WasmBeginCatch || instr.op is WasmBeginCatchAll) {
+            if instr.op is WasmOperation {
                 wasmBranchDepth += 1
             }
         }
@@ -178,7 +176,7 @@ struct ContextAnalyzer: Analyzer {
                 assert(contextStack.count >= 2)
 
                 // Currently we only support context "skipping" for switch blocks. This logic may need to be refined if it is ever used for other constructs as well.
-                assert((contextStack.top.contains(.switchBlock) && contextStack.top.subtracting(.switchBlock) == .empty) || contextStack.top.contains(.wasmTry))
+                assert((contextStack.top.contains(.switchBlock) && contextStack.top.subtracting(.switchBlock) == .empty))
 
                 newContext.formUnion(contextStack.secondToTop)
             }

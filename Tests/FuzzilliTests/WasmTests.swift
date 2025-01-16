@@ -301,7 +301,7 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { _, _ in
                     function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123), function.consti32(456)])
-                    function.WasmBuildLegacyCatch(tag: tag) { _, e in
+                    function.WasmBuildLegacyCatch(tag: tag) { _, _, e in
                         // The exception values are e[0] = 123 and e[1] = 456.
                         function.wasmReassign(variable: e[0], to: e[1])
                         // The exception values should now be e[0] = 456, e[1] = 456.
@@ -928,7 +928,7 @@ class WasmFoundationTests: XCTestCase {
                 function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     function.wasmReturn(function.consti64(42))
-                } catchAllBody: {}
+                }
                 function.wasmUnreachable()
             }
         }
@@ -964,7 +964,7 @@ class WasmFoundationTests: XCTestCase {
                     let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
                     function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
                     function.wasmUnreachable()
-                } catchAllBody: {
+                } catchAllBody: { label in
                     function.wasmReturn(function.consti64(123))
                 }
                 function.wasmUnreachable()
@@ -1006,10 +1006,10 @@ class WasmFoundationTests: XCTestCase {
                         let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
                         function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
                         function.wasmUnreachable()
-                        function.WasmBuildLegacyCatch(tag: jstag) { exception, args in
+                        function.WasmBuildLegacyCatch(tag: jstag) { label, exception, args in
                             function.wasmReturn(function.consti64(123))
                         }
-                    } catchAllBody: {
+                    } catchAllBody: { label in
                         function.wasmUnreachable()
                     }
                     function.wasmUnreachable()
@@ -1060,14 +1060,14 @@ class WasmFoundationTests: XCTestCase {
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     function.WasmBuildThrow(tag: throwTag, inputs: [function.consti64(123), function.consti32(234)])
                     function.wasmUnreachable()
-                    function.WasmBuildLegacyCatch(tag: otherTag) { exception, args in
+                    function.WasmBuildLegacyCatch(tag: otherTag) { label, exception, args in
                         function.wasmUnreachable()
                     }
-                    function.WasmBuildLegacyCatch(tag: throwTag) { exception, args in
+                    function.WasmBuildLegacyCatch(tag: throwTag) { label, exception, args in
                         let result = function.wasmi64BinOp(args[0], function.extendi32Toi64(args[1], isSigned: true), binOpKind: .Add)
                         function.wasmReturn(result)
                     }
-                } catchAllBody: {
+                } catchAllBody: { label in
                     function.wasmUnreachable()
                 }
                 function.wasmUnreachable()
@@ -1091,11 +1091,10 @@ class WasmFoundationTests: XCTestCase {
         let tag = b.createWasmTag(parameterTypes: [])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { tryLabel, _ in
                     function.WasmBuildThrow(tag: tag, inputs: [])
-                    function.WasmBuildLegacyCatch(tag: tag) { exception, args in
-                        // Note that this has to emit a branch depth of 0 when lifted as a catch block is not a branch target.
-                        function.wasmBranch(to: label)
+                    function.WasmBuildLegacyCatch(tag: tag) { catchLabel, exceptionLabel, args in
+                        function.wasmBranch(to: catchLabel)
                     }
                 }
                 function.wasmReturn(function.consti32(42))
@@ -1122,7 +1121,7 @@ class WasmFoundationTests: XCTestCase {
                 function.wasmBuildBlock(with: [] => .nothing, args: []) { blockLabel, _ in
                     function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { tryLabel, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [])
-                    } catchAllBody: {
+                    } catchAllBody: { label in
                         function.wasmBranch(to: blockLabel)
                     }
                     function.wasmReturn(function.consti32(-1))
@@ -1182,13 +1181,13 @@ class WasmFoundationTests: XCTestCase {
                         function.WasmBuildThrow(tag: importedTag, inputs: [function.consti32(123)])
                     }
                     function.wasmUnreachable()
-                    function.WasmBuildLegacyCatch(tag: importedTag) { exception, args in
+                    function.WasmBuildLegacyCatch(tag: importedTag) { label, exception, args in
                         function.wasmReturn(function.wasmi32BinOp(args[0], function.consti32(1), binOpKind: .Add))
                     }
-                    function.WasmBuildLegacyCatch(tag: definedTag) { exception, args in
+                    function.WasmBuildLegacyCatch(tag: definedTag) { label, exception, args in
                         function.wasmReturn(function.wasmi32BinOp(args[0], function.consti32(4), binOpKind: .Add))
                     }
-                } catchAllBody: {
+                } catchAllBody: { label in
                     function.wasmUnreachable()
                 }
                 function.wasmUnreachable()
@@ -1230,7 +1229,7 @@ class WasmFoundationTests: XCTestCase {
                     XCTAssert(b.type(of: args[0]).Is(.wasmi64))
                     XCTAssert(b.type(of: args[1]).Is(.wasmi32))
                     function.WasmBuildThrow(tag: tag, inputs: args)
-                    function.WasmBuildLegacyCatch(tag: tag) { exception, args in
+                    function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
                         let result = function.wasmi64BinOp(args[0], function.extendi32Toi64(args[1], isSigned: true), binOpKind: .Add)
                         function.wasmReturn(result)
                     }
@@ -1286,11 +1285,11 @@ class WasmFoundationTests: XCTestCase {
                             function.WasmBuildThrow(tag: tag, inputs: args)
                         }, delegate: tryLabel)
                         function.wasmUnreachable()
-                    } catchAllBody: {
+                    } catchAllBody: { label in
                         function.wasmUnreachable()
                     }
                     function.wasmUnreachable()
-                    function.WasmBuildLegacyCatch(tag: tag) { exception, args in
+                    function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
                         function.wasmReturn(args[0])
                     }
                 }
@@ -1337,11 +1336,11 @@ class WasmFoundationTests: XCTestCase {
                     function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123)])
                         function.wasmUnreachable()
-                        function.WasmBuildLegacyCatch(tag: tag) { exception, args in
+                        function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
                             function.wasmBuildRethrow(exception)
                         }
                     }
-                    function.WasmBuildLegacyCatch(tag: tag) { exception, args in
+                    function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
                         function.wasmReturn(args[0])
                     }
                 }
@@ -1388,11 +1387,11 @@ class WasmFoundationTests: XCTestCase {
                 function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
                     function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123)])
-                        function.WasmBuildLegacyCatch(tag: tag) { outerException, args in
+                        function.WasmBuildLegacyCatch(tag: tag) { label, outerException, args in
                             function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
                                 function.WasmBuildThrow(tag: tag, inputs: [function.consti32(456)])
                                 function.wasmUnreachable()
-                                function.WasmBuildLegacyCatch(tag: tag) { innerException, args in
+                                function.WasmBuildLegacyCatch(tag: tag) { label, innerException, args in
                                     // There are two "active" exceptions:
                                     // outerException: [123: i32]
                                     // innerException: [456: i32]
@@ -1401,7 +1400,7 @@ class WasmFoundationTests: XCTestCase {
                             }
                         }
                     }
-                    function.WasmBuildLegacyCatch(tag: tag) { exception, args in
+                    function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
                         function.wasmReturn(args[0])
                     }
                 }

@@ -115,6 +115,7 @@ public struct JSTyper: Analyzer {
                  .wasmBeginElse(_),
                  .wasmBeginTry(_),
                  .wasmBeginCatch(_),
+                 .wasmBeginCatchAll(_),
                  .wasmBeginTryDelegate(_):
                 // Type all the innerOutputs
                 for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmOperation).innerOutputTypes) {
