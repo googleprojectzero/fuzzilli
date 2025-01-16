@@ -386,7 +386,8 @@ public class JavaScriptLifter: Lifter {
                 // We don't expect anything to have been written to the dummy output buffer.
                 // Everything needs to be written into the object literal writer.
                 let dummy = w.popTemporaryOutputBuffer()
-                assert(dummy.isEmpty)
+                // The dummy might still contain the comments.
+                assert(dummy.isEmpty || dummy.split(separator: "\n").allSatisfy( {$0.hasPrefix("//")}))
 
                 let literal = objectLiteralStack.pop()
                 if literal.isEmpty {
