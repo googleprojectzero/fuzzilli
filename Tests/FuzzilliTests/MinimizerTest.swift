@@ -1416,7 +1416,7 @@ class MinimizerTests: XCTestCase {
                         let val = function.consti64(42)
                         evaluator.nextInstructionIsImportant(in: b)
                         function.wasmReturn(val)
-                    } catchAllBody: {
+                    } catchAllBody: { label in
                         function.wasmReturn(function.consti64(-1))
                     }
                     evaluator.nextInstructionIsImportant(in: b)
@@ -1437,6 +1437,9 @@ class MinimizerTests: XCTestCase {
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                     function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
                         function.wasmReturn(function.consti64(42))
+                    // TODO(mliedtke): The catchAllBody should be removed!
+                    // TODO(mliedtke): Also add a test for catch blocks and support reduction of them.
+                    } catchAllBody: { label in
                     }
                     function.wasmUnreachable()
                 }

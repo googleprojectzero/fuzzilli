@@ -897,8 +897,13 @@ public class WasmLifter {
             // Needs typer analysis
             return true
         case .wasmBeginCatch(_):
-            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(1)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
             assert(self.imports.contains(where: { $0.0 == instr.input(0)}) || self.tags.contains(instr.input(0)))
+            // Needs typer analysis
+            return true
+        case .wasmBeginCatchAll(_):
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
             // Needs typer analysis
             return true
         case .wasmNop(_):
@@ -996,11 +1001,16 @@ public class WasmLifter {
         }
 
         // TODO(mliedtke): Reuse this for handling parameters in loops, if-else, ...
-        if instr.op is WasmBeginCatch || instr.op is WasmBeginBlock || instr.op is WasmBeginTry
+        if instr.op is WasmBeginBlock || instr.op is WasmBeginTry
             || instr.op is WasmBeginTryDelegate || instr.op is WasmBeginIf || instr.op is WasmBeginElse
             || instr.op is WasmBeginLoop {
             // As the parameters are pushed "in order" to the stack, they need to be popped in reverse order.
             for innerOutput in instr.innerOutputs(1...).reversed() {
+                currentFunction!.spillLocal(forVariable: innerOutput)
+            }
+        }
+        if instr.op is WasmBeginCatch {
+            for innerOutput in instr.innerOutputs(2...).reversed() {
                 currentFunction!.spillLocal(forVariable: innerOutput)
             }
         }
@@ -1375,8 +1385,6 @@ public class WasmLifter {
             return Data([0x19])
         case .wasmBeginCatch(_):
             return Data([0x07] + Leb128.unsignedEncode(try resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
-        case .wasmEndCatch(_):
-            return Data([])
         case .wasmEndLoop(_),
                 .wasmEndIf(_),
                 .wasmEndTry(_),
@@ -1393,7 +1401,7 @@ public class WasmLifter {
         case .wasmThrow(_):
             return Data([0x08] + Leb128.unsignedEncode(try resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
         case .wasmRethrow(_):
-            let blockDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]!
+            let blockDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x09] + Leb128.unsignedEncode(blockDepth))
         case .wasmBranch(let op):
             let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1

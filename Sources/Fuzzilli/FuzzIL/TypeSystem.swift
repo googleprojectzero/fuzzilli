@@ -175,8 +175,8 @@ public struct ILType: Hashable {
     // Internal types
 
     // This type is used to indicate block labels in wasm.
-    public static func label(_ parameterTypes: [ILType] = []) -> ILType {
-        return ILType(definiteType: .label, ext: TypeExtension(group: "WasmLabel", properties: [], methods: [], signature: nil, wasmExt: WasmLabelType(parameterTypes)))
+    public static func label(_ parameterTypes: [ILType] = [], isCatch: Bool = false) -> ILType {
+        return ILType(definiteType: .label, ext: TypeExtension(group: "WasmLabel", properties: [], methods: [], signature: nil, wasmExt: WasmLabelType(parameterTypes, isCatch: isCatch)))
     }
 
     public static let anyLabel: ILType = ILType(definiteType: .label, ext: TypeExtension(group: "WasmLabel", properties: [], methods: [], signature: nil, wasmExt: nil))
@@ -1008,19 +1008,22 @@ public class WasmLabelType: WasmTypeExtension {
     // when branching to this label. This is the list of result types for all wasm blocks excluding
     // the loop for which the parameter types are the parameter types of the block. (This is caused
     // by the branch instruction branching to the loop header and not the loop end.)
-    public let parameters: [ILType]
+    let parameters: [ILType]
+    let isCatch: Bool
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmLabelType else { return false }
-        return self.parameters == other.parameters
+        return self.parameters == other.parameters && self.isCatch == other.isCatch
     }
 
     override public func hash(into hasher: inout Hasher) {
         hasher.combine(parameters)
+        hasher.combine(isCatch)
     }
 
-    init(_ parameters: [ILType]) {
+    init(_ parameters: [ILType], isCatch: Bool) {
         self.parameters = parameters
+        self.isCatch = isCatch
     }
 }
 
