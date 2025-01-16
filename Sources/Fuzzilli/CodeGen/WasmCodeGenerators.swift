@@ -15,9 +15,97 @@
 //
 // Wasm Code generators.
 //
-// These insert one or more instructions into a wasm module.
+// These Generators all relate to Wasm and either use the WebAssembly object or
+// insert one or more instructions into a wasm module.
 //
 public let WasmCodeGenerators: [CodeGenerator] = [
+
+    /// Wasm related generators in JavaScript
+
+    CodeGenerator("WasmGlobalGenerator", inContext: .javascript) { b in
+        // TODO: add externref/funcref?
+        // TODO: maybe put this as static func into WasmGlobal enum? no access to builder for interesting values though....
+        let wasmGlobal: WasmGlobal = withEqualProbability({
+            return .wasmf32(Float32(b.randomFloat()))
+        }, {
+            return .wasmf64(b.randomFloat())
+        }, {
+            return .wasmi32(Int32(truncatingIfNeeded: b.randomInt()))
+        }, {
+            return .wasmi64(b.randomInt())
+        })
+        b.createWasmGlobal(value: wasmGlobal, isMutable: probability(0.5))
+    },
+
+    CodeGenerator("WasmMemoryGenerator", inContext: .javascript) { b in
+        let minPages = Int.random(in: 0..<10)
+        var maxPages: Int? = nil
+        if probability(0.5) {
+            maxPages = Int.random(in: minPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
+        }
+        b.createWasmMemory(minPages: minPages, maxPages: maxPages, isShared: probability(0.5))
+    },
+
+    CodeGenerator("WasmTagGenerator", inContext: .javascript) { b in
+        if probability(0.5) {
+            b.createWasmJSTag()
+        } else {
+            b.createWasmTag(parameterTypes: b.randomTagParameters())
+        }
+    },
+
+    // Wasm Module Generator, this is fairly important as it creates the context necessary to run the Wasm CodeGenerators.
+    RecursiveCodeGenerator("WasmModuleGenerator", inContext: .javascript) { b in
+        let m = b.buildWasmModule { m in
+            b.buildRecursive()
+        }
+
+        let exports = m.loadExports()
+
+        for (methodName, signature) in m.getExportedMethods() {
+            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        }
+    },
+
+    RecursiveCodeGenerator("WasmLegacyTryCatchComplexGenerator", inContext: .javascript) { b in
+        let emitCatchAll = Int.random(in: 0...1)
+        let catchCount = Int.random(in: 0...3)
+        var blockIndex = 1
+        let blockCount = 2 + catchCount + emitCatchAll
+        // Create a few tags in JS.
+        b.createWasmJSTag()
+        b.createWasmTag(parameterTypes: b.randomTagParameters())
+        let m = b.buildWasmModule { m in
+            // Create a few tags in Wasm.
+            m.addTag(parameterTypes: b.randomTagParameters())
+            m.addTag(parameterTypes: b.randomTagParameters())
+            // Build some other wasm module stuff (tables, memories, gobals, ...)
+            b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
+            blockIndex += 1
+            m.addWasmFunction(with: b.randomWasmSignature()) { function, _ in
+                b.buildPrefix()
+                function.wasmBuildLegacyTry(with: [] => .nothing, args: [], body: {label, _ in
+                    b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
+                    blockIndex += 1
+                    for _ in 0..<catchCount {
+                        function.WasmBuildLegacyCatch(tag: b.randomVariable(ofType: .object(ofGroup: "WasmTag"))!) { exception, args in
+                            b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
+                            blockIndex += 1
+                        }
+                    }
+                }, catchAllBody: emitCatchAll == 1 ? {
+                    b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
+                    blockIndex += 1
+                } : nil)
+            }
+        }
+        assert(blockIndex == blockCount + 1)
+
+        let exports = m.loadExports()
+        for (methodName, signature) in m.getExportedMethods() {
+            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        }
+    },
 
     // Primitive Value Generators
 
@@ -701,9 +789,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmI64x2ExtractLane(input, 0)
     },
 
-//    CodeGenerator("WasmI64x2LoadSplatGenerator", inContext: .wasmFunction, inputs: .required(.wasmMemory)) { b, memoryRef in
-//        let function = b.currentWasmModule.currentWasmFunction
-//        b.currentWasmModule.addMemory(importing: memoryRef);
-//        function.wasmI64x2LoadSplat(memoryRef: memoryRef)
-//    },
+    // CodeGenerator("WasmI64x2LoadSplatGenerator", inContext: .wasmFunction, inputs: .required(.wasmMemory)) { b, memoryRef in
+    //     let function = b.currentWasmModule.currentWasmFunction
+    //     b.currentWasmModule.addMemory(importing: memoryRef);
+    //     function.wasmI64x2LoadSplat(memoryRef: memoryRef)
+    // },
+
+
+    // TODO: Add three generators for JSPI
+    // We need a WrapSuspendingGenerator that takes a callable and wraps it, this should get typed as .object(ofGroup: "WasmSuspenderObject" and we should attach a WasmTypeExtension that stores the signature of the wrapped function
+    // Then we need a WasmJsCallSuspendingFunctionGenerator that takes such a WasmSuspenderObject function, unpacks the signature and emits a WasmJsCall
+    // Then we also need a WrapPromisingGenerator that requires a WebAssembly module object, gets the exports field and its methods and then wraps one of those.
+    // For all of this to work we need to add a WasmTypeExtension and ideally the dynamic object group inference.
 ]

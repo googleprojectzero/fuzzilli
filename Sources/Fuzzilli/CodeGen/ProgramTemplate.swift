@@ -25,3 +25,7 @@ public class ProgramTemplate: Contributor {
     }
 }
 
+/// Strongly typed ProgramTemplate that can be used to differentiate templates that make use of Wasm.
+public class WasmProgramTemplate: ProgramTemplate {
+}
+
