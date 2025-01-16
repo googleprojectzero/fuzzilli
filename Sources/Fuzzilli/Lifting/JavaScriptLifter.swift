@@ -26,6 +26,10 @@ public class JavaScriptLifter: Lifter {
     private let prefix: String
     private let suffix: String
 
+    private let logger: Logger
+    private var wasmLiftingFailures = 0
+    private var liftedSamples = 0
+
     /// The version of the ECMAScript standard that this lifter generates code for.
     let version: ECMAScriptVersion
 
@@ -65,9 +69,11 @@ public class JavaScriptLifter: Lifter {
         self.suffix = suffix
         self.version = ecmaVersion
         self.environment = environment
+        self.logger = Logger(withLabel: "JavaScriptLifter")
     }
 
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
+        liftedSamples += 1
         // Perform some analysis on the program, for example to determine variable uses
         var needToSupportExploration = false
         var needToSupportProbing = false
@@ -204,7 +210,7 @@ public class JavaScriptLifter: Lifter {
             // for more details.
             // We also have some lightweight checking logic to ensure that the input expressions are retrieved in the correct order.
             // This does not guarantee that they will also _evaluate_ in that order at runtime, but it's probably a decent approximation.
-            let inputs = w.retrieve(expressionsFor: instr.inputs)
+            let inputs = w.retrieve(expressionsFor: instr.inputs)!
             var nextExpressionToFetch = 0
             func input(_ i: Int) -> Expression {
                 assert(i == nextExpressionToFetch)
@@ -1420,26 +1426,51 @@ public class JavaScriptLifter: Lifter {
                 let LET = w.declarationKeyword(for: instr.output)
                 let V = w.declare(instr.output, as: "v\(instr.output.number)")
                 // TODO: support a better diagnostics mode which stores the .wasm binary file alongside the samples.
-                let (bytecode, importRefs) = wasmLifter!.lift()
-                w.emit("\(LET) \(V) = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([")
-                w.enterNewBlock()
-                let blockSize = 10
-                for chunk in stride(from: 0, to: bytecode.count, by: blockSize).map({ Array(bytecode[$0 ..< Swift.min($0 + blockSize, bytecode.count)])}) {
-                    let byteString = chunk.map({ String(format: "0x%02X", $0) }).joined(separator: ", ") + ","
-                    w.emit("\(byteString)")
-                }
-                w.leaveCurrentBlock()
-                if importRefs.isEmpty {
-                    w.emit("])));")
-                } else {
-                    w.emit("])),")
-                    w.emit("{ imports: {")
+                do {
+                    let (bytecode, importRefs) = try wasmLifter!.lift()
+                    // Get and check that we have the imports here as expressions and fail otherwise.
+                    let imports: [(Variable, Expression)] = try importRefs.map { ref in
+                        if let expr = w.retrieve(expressionsFor: [ref]) {
+                            return (ref, expr[0])
+                        } else {
+                            throw WasmLifter.CompileError.failedRetrieval
+                        }
+                    }
+                    w.emit("\(LET) \(V) = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([")
                     w.enterNewBlock()
-                    for (idx, importRef) in importRefs.enumerated() {
-                        w.emit("import_\(idx)_\(importRef): \(w.retrieve(expressionsFor: [importRef])[0]),")
+                    let blockSize = 10
+                    for chunk in stride(from: 0, to: bytecode.count, by: blockSize).map({ Array(bytecode[$0 ..< Swift.min($0 + blockSize, bytecode.count)])}) {
+                        let byteString = chunk.map({ String(format: "0x%02X", $0) }).joined(separator: ", ") + ","
+                        w.emit("\(byteString)")
                     }
                     w.leaveCurrentBlock()
-                    w.emit("} });")
+                    if importRefs.isEmpty {
+                        w.emit("])));")
+                    } else {
+                        w.emit("])),")
+                        w.emit("{ imports: {")
+                        w.enterNewBlock()
+                        for (idx, (importRef, expr)) in imports.enumerated() {
+                            w.emit("import_\(idx)_\(importRef): \(expr),")
+                        }
+                        w.leaveCurrentBlock()
+                        w.emit("} });")
+                    }
+                } catch {
+                    wasmLiftingFailures += 1
+                    logger.warning("WasmLifting failed with error \(error), current failure count:  \(wasmLiftingFailures) (failure rate: \(String(format: "%.5f", Double(wasmLiftingFailures) / Double(liftedSamples) * 100.0))%)")
+                    do {
+                        // Try to save this failed program for further analysis if diagnostics are enabled.
+                        if let fuzzer = Fuzzer.current {
+                            fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "FailedWasmLifting-\(error)", content: try program.asProtobuf().serializedData()))
+                        } else {
+                            logger.warning("Not saving sample because no fuzzer was found.")
+                        }
+                    } catch {
+                        logger.warning("Could not serialize program.")
+                    }
+                    // Emit a throwing operation such that we don't keep this sample.
+                    w.emit("throw \"Wasmlifting failed\";")
                 }
                 wasmLifter = nil
 
@@ -1908,7 +1939,7 @@ public class JavaScriptLifter: Lifter {
         /// Otherwise, expression inlining will change the semantics of the program.
         ///
         /// This is a mutating operation as it can modify the list of pending expressions or emit pending expression to retain the correct ordering.
-        mutating func retrieve(expressionsFor queriedVariables: ArraySlice<Variable>) -> [Expression] {
+        mutating func retrieve(expressionsFor queriedVariables: ArraySlice<Variable>) -> [Expression]? {
             // If any of the expression for the variables is pending, then one of two things will happen:
             //
             // 1. Iff the pending expressions that are being retrieved are an exact suffix match of the pending expressions list, then these pending expressions
@@ -1969,7 +2000,7 @@ public class JavaScriptLifter: Lifter {
 
             for v in queriedVariables {
                 guard let expression = expressions[v] else {
-                    fatalError("Don't have an expression for variable \(v)")
+                    return nil
                 }
                 if expression.isEffectful {
                     usePendingExpression(expression, forVariable: v)

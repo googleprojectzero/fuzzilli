@@ -56,6 +56,25 @@ private let ILTypeMapping: [ILType: Data] = [
 /// at the end of the block when we see a EndWasmModule instruction.
 /// This way the WasmLifter has full information before it actually emits any bytes.
 public class WasmLifter {
+    /// This enum describes various failure cases that might arise from mutation
+    /// in the JS part of the sample, which can invalidate some of the Wasm code.
+    public enum CompileError: Error {
+        // If we invalidated some import from JavaScript, see `buildImportSection`.
+        case unknownImportType
+        // If we fail to lookup the index in one of the sections, see `resolveIdx`.
+        case failedIndexLookUp
+        // If the signature is not found, see `getSignatureIdx`.
+        case failedSignatureLookUp
+        // If the branch target is invalid.
+        case invalidBranch
+        // If type information is not available where we need it.
+        case missingTypeInformation
+        // If we fail to find a variable during import linking
+        case failedRetrieval
+    }
+
+    private var logger = Logger(withLabel: "WasmLifter")
+
     // The actual bytecode we compile.
     private var bytecode: Data = Data()
 
@@ -250,7 +269,7 @@ public class WasmLifter {
         self.instructionBuffer.append(instruction)
     }
 
-    public func lift(binaryOutPath path: String? = nil) -> (Data, [Variable]) {
+    public func lift(binaryOutPath path: String? = nil) throws -> (Data, [Variable]) {
         // Lifting currently happens in three stages.
         // 1. Collect all necessary information to build all sections later on.
         //    - For now this only the importAnalysis, which needs to know how many imported vs internally defined types exist.
@@ -259,7 +278,7 @@ public class WasmLifter {
 
         // Step 1:
         // Collect all information that we need to later wire up the imports correctly, this means we look at instructions that can potentially import any variable that originated outside the Wasm module.
-        importAnalysis()
+        try importAnalysis()
         // Todo: maybe add a def-use pass here to figure out where we need stack spills etc? e.g. if we have one use, we can omit the stack spill
 
         //
@@ -282,7 +301,7 @@ public class WasmLifter {
                 // If we require inputs for this instruction, we probably need to emit them now, either inline the corresponding instruction, iff this is a single use, or load the stack slot or the variable. TODO: not all of this is implemented.
                 emitInputLoadsIfNecessary(forInstruction: instr)
                 // Emit the actual bytes that correspond to this instruction to the corresponding function byte array.
-                emitBytesForInstruction(forInstruction: instr)
+                try emitBytesForInstruction(forInstruction: instr)
                 // If this instruction produces any outputs, we might need to explicitly spill to the stack.
                 emitStackSpillsIfNecessary(forInstruction: instr)
             }
@@ -309,18 +328,18 @@ public class WasmLifter {
         self.buildHeader()
 
         self.buildTypeSection()
-        self.buildImportSection()
-        self.buildFunctionSection()
+        try self.buildImportSection()
+        try self.buildFunctionSection()
         self.buildTableSection()
         self.buildMemorySection()
-        self.buildTagSection()
-        self.buildGlobalSection()
+        try self.buildTagSection()
+        try self.buildGlobalSection()
 
         // Export all functions by default.
-        self.buildExportedSection()
+        try self.buildExportedSection()
 
         // Build element segments for defined tables.
-        self.buildElementSection()
+        try self.buildElementSection()
 
         // The actual bytecode of the functions.
         self.buildCodeSection(self.instructionBuffer)
@@ -412,7 +431,15 @@ public class WasmLifter {
         assert(signatures.count == signatureIndexMap.count)
     }
 
-    private func buildImportSection() {
+    private func getSignatureIndex(_ signature: Signature) throws -> Int {
+        if let idx = signatureIndexMap[signature] {
+            return idx
+        }
+
+        throw WasmLifter.CompileError.failedSignatureLookUp
+    }
+
+    private func buildImportSection() throws {
         if self.imports.isEmpty {
             return
         }
@@ -441,7 +468,7 @@ public class WasmLifter {
                 if verbose {
                     print(functionIdxBase)
                 }
-                temp += [0x0] + Leb128.unsignedEncode(signatureIndexMap[signature!]!)
+                temp += [0x0] + Leb128.unsignedEncode(try getSignatureIndex(signature!))
 
                 // Update the index space, these indices have to be set before the exports are set
                 functionIdxBase += 1
@@ -486,10 +513,11 @@ public class WasmLifter {
                 continue
             }
             if type.Is(.object(ofGroup: "WasmTag")) {
-                temp += [0x4, 0x0] + Leb128.unsignedEncode(signatureIndexMap[signature!]!)
+                temp += [0x4, 0x0] + Leb128.unsignedEncode(try getSignatureIndex(signature!))
                 continue
             }
-            fatalError("unreachable")
+
+            throw WasmLifter.CompileError.unknownImportType
         }
 
         self.bytecode.append(Leb128.unsignedEncode(temp.count))
@@ -503,7 +531,7 @@ public class WasmLifter {
         }
     }
 
-    private func buildFunctionSection() {
+    private func buildFunctionSection() throws {
         self.bytecode += [WasmSection.function.rawValue]
 
         // The number of functions we have, as this is a vector of type idxs.
@@ -511,7 +539,7 @@ public class WasmLifter {
         var temp = Leb128.unsignedEncode(self.functions.count)
 
         for info in self.functions {
-            temp.append(Leb128.unsignedEncode(signatureIndexMap[info.signature]!))
+            temp.append(Leb128.unsignedEncode(try getSignatureIndex(info.signature)))
         }
 
         // Append the length of the section and the section contents itself.
@@ -562,7 +590,7 @@ public class WasmLifter {
     // - function-indices-as-elements (i.e. case 2 of the spec: https://webassembly.github.io/spec/core/binary/modules.html#element-section)
     // - one segment per table (assumes entries are continuous)
     // - constant starting index.
-    private func buildElementSection() {
+    private func buildElementSection() throws {
         self.bytecode += [WasmSection.element.rawValue]
         var temp = Data();
 
@@ -579,7 +607,7 @@ public class WasmLifter {
             if definedEntryIndices.isEmpty { continue }
             // Element segment case 2 definition.
             temp += [0x02]
-            let tableIndex = self.resolveIdx(ofType: .table, for: instruction.output)
+            let tableIndex = try self.resolveIdx(ofType: .table, for: instruction.output)
             temp += Leb128.unsignedEncode(tableIndex)
             // Starting index. Assumes all entries are continuous.
             temp += [0x41]
@@ -591,7 +619,7 @@ public class WasmLifter {
             temp += Leb128.unsignedEncode(definedEntryIndices.count)
             // entries
             for entry in instruction.inputs {
-                let functionId = resolveIdx(ofType: .function, for: entry)
+                let functionId = try resolveIdx(ofType: .function, for: entry)
                 temp += Leb128.unsignedEncode(functionId)
             }
         }
@@ -641,15 +669,6 @@ public class WasmLifter {
             // Append the function object to the section
             temp += Leb128.unsignedEncode(funcTemp.count)
             temp += funcTemp
-
-//            let localsCount = functionInfo.localsInfo.count < 0 ? 0 : functionInfo.localsInfo.count
-//            let localsCountBytes = Leb128.unsignedEncode(localsCount)
-//            // TODO(cffsmith): remove this as well.
-//            /*let code = (functionInfo.code ?? Data([0x01, 0x01]))*/
-////            let code = functionInfo.code
-////            assert(localsCount >= 0)
-////            assert(localsCountBytes.count == 1)
-//            // Encode the size of the locals, the size of the code and the end marker
         }
 
         // Append the length of the section and the section contents itself.
@@ -664,7 +683,7 @@ public class WasmLifter {
         }
     }
 
-    private func buildGlobalSection() {
+    private func buildGlobalSection() throws {
         self.bytecode += [WasmSection.global.rawValue]
 
         var temp = Data()
@@ -695,7 +714,7 @@ public class WasmLifter {
                  .imported(_):
                 fatalError("unreachable")
             }
-            temp += lift(temporaryInstruction!)
+            temp += try lift(temporaryInstruction!)
             temp += Data([0x0B])
         }
 
@@ -746,7 +765,7 @@ public class WasmLifter {
 
     }
 
-    private func buildTagSection() {
+    private func buildTagSection() throws {
         if self.tags.isEmpty {
             return // Skip the whole section.
         }
@@ -756,7 +775,7 @@ public class WasmLifter {
         section += Leb128.unsignedEncode(self.tags.reduce(0, {res, _ in res + 1}))
         for tag in self.tags {
             section.append(0)
-            section.append(Leb128.unsignedEncode(signatureIndexMap[tag.1 => .nothing]!))
+            section.append(Leb128.unsignedEncode(try getSignatureIndex(tag.1 => .nothing)))
         }
 
         self.bytecode.append(Leb128.unsignedEncode(section.count))
@@ -772,7 +791,7 @@ public class WasmLifter {
 
     // Export all functions and globals by default.
     // TODO(manoskouk): Also export tables.
-    private func buildExportedSection() {
+    private func buildExportedSection() throws {
         self.bytecode += [WasmSection.export.rawValue]
 
         var temp = Data()
@@ -819,11 +838,11 @@ public class WasmLifter {
         }
 
         for instruction in self.tables {
-          let index = resolveIdx(ofType: .table, for: instruction.output)
-          let name = WasmLifter.nameOfTable(index)
-          temp += Leb128.unsignedEncode(name.count)
-          temp += name.data(using: .utf8)!
-          temp += [0x1, UInt8(index)]
+            let index = try resolveIdx(ofType: .table, for: instruction.output)
+            let name = WasmLifter.nameOfTable(index)
+            temp += Leb128.unsignedEncode(name.count)
+            temp += name.data(using: .utf8)!
+            temp += [0x1, UInt8(index)]
         }
 
         // TODO(mliedtke): Export defined tags.
@@ -943,8 +962,8 @@ public class WasmLifter {
 
     }
 
-    private func emitBytesForInstruction(forInstruction instr: Instruction) {
-        currentFunction!.appendToCode(lift(instr))
+    private func emitBytesForInstruction(forInstruction instr: Instruction) throws {
+        currentFunction!.appendToCode(try lift(instr))
     }
 
     private func emitStackSpillsIfNecessary(forInstruction instr: Instruction) {
@@ -981,7 +1000,7 @@ public class WasmLifter {
     // This usually means if your instruction takes an .object() as an input, it should be checked here.
     // TODO: check if this is still accurate as we now only have defined imports.
     // Also, we export the globals in the order we "see" them, which might mismatch the order in which they are laid out in the binary at the end, which is why we track the order of the globals separately.
-    private func importAnalysis() {
+    private func importAnalysis() throws {
         for instr in self.instructionBuffer {
             switch instr.op.opcode {
             case .wasmLoadGlobal(_),
@@ -1001,7 +1020,8 @@ public class WasmLifter {
                     for definedEntry in instr.inputs {
                         if typer.type(of: definedEntry).Is(.function()) && !self.imports.contains(where: { $0.0 == definedEntry }) {
                             // Ensure deterministic lifting.
-                            let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(typer.type(of: definedEntry).signature!)
+
+                            let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(typer.type(of: definedEntry).signature ?? Signature.forUnknownFunction)
                             self.imports.append((definedEntry, wasmSignature))
                         }
                     }
@@ -1010,6 +1030,9 @@ public class WasmLifter {
                 self.memories.append(instr)
             case .wasmMemoryLoad(let op):
                 let memory = instr.input(0)
+                if !typer.type(of: memory).isWasmMemoryType {
+                    throw WasmLifter.CompileError.missingTypeInformation
+                }
                 assert(typer.type(of: memory).wasmMemoryType!.isMemory64 == op.isMemory64)
                 if !self.memories.contains(where: {$0.output == memory}) {
                     // TODO(cffsmith) this needs to be changed once we support multimemory as we probably also need to fix the ordering.
@@ -1019,6 +1042,9 @@ public class WasmLifter {
                 }
             case .wasmMemoryStore(let op):
                 let memory = instr.input(0)
+                if !typer.type(of: memory).isWasmMemoryType {
+                    throw WasmLifter.CompileError.missingTypeInformation
+                }
                 assert(typer.type(of: memory).wasmMemoryType!.isMemory64 == op.isMemory64)
                 if !self.memories.contains(where: {$0.output == memory}) {
                     // TODO(cffsmith) this needs to be changed once we support multimemory as we probably also need to fix the ordering.
@@ -1070,18 +1096,26 @@ public class WasmLifter {
         case function
     }
 
-    /// Helper function to resolve the index, as laid out in the binary format, of an instruction input Variable of a specific `IndexType`
+    /// Helper function to resolve the index (as laid out in the binary format) of an instruction input Variable of a specific `IndexType`
     /// Intended to be called from `lift`.
-    func resolveIdx(ofType type: IndexType, for input: Variable) -> Int {
-        let groupType: String? = switch type {
+    func resolveIdx(ofType type: IndexType, for input: Variable) throws -> Int {
+        var base = 0
+        var groupType: String? = nil
+
+        switch type {
         case .global:
-            "WasmGlobal"
+            groupType = "WasmGlobal"
+            base = self.baseDefinedGlobals!
         case .table:
-            "WasmTable"
+            groupType = "WasmTable"
+            base = self.baseDefinedTables!
         case .tag:
-            "WasmTag"
-        default:
-            nil
+            groupType = "WasmTag"
+            base = self.imports.filter({
+                self.typer.type(of: $0.0).Is(.object(ofGroup: groupType!))
+            }).count
+        case .function:
+            base = self.functionIdxBase
         }
 
         let predicate: ((Variable) -> Bool) = switch type {
@@ -1104,22 +1138,28 @@ public class WasmLifter {
         }
 
         // If we don't have it as an import, look into the respective internally defined sections.
-        switch type {
+        let idx: Int? = switch type {
         case .global:
-            return self.baseDefinedGlobals! + self.globals.firstIndex(where: {$0.output == input})!
+            self.globals.firstIndex(where: {$0.output == input})
         case .tag:
-            return filteredImports.count + self.tags.map({$0}).firstIndex(where: {$0.0 == input})!
+            self.tags.map({$0}).firstIndex(where: {$0.0 == input})
         case .table:
-            return self.baseDefinedTables! + self.tables.firstIndex(where: {$0.output == input})!
+            self.tables.firstIndex(where: {$0.output == input})
         case .function:
-            return self.functionIdxBase + self.functions.firstIndex { $0.outputVariable == input }!
+            self.functions.firstIndex { $0.outputVariable == input }
         }
+
+        if let idx = idx {
+            return base + idx
+        }
+
+        throw WasmLifter.CompileError.failedIndexLookUp
     }
 
     /// Returns the Bytes that correspond to this instruction.
     /// This will also automatically add bytes that are necessary based on the state of the Lifter.
     /// Example: LoadGlobal with an input variable will resolve the input variable to a concrete global index.
-    private func lift(_ wasmInstruction: Instruction) -> Data {
+    private func lift(_ wasmInstruction: Instruction) throws -> Data {
         // Make sure that we actually have a Wasm operation here.
         assert(wasmInstruction.op is WasmOperation)
 
@@ -1277,19 +1317,19 @@ public class WasmLifter {
             // Get the index for the global and emit it here magically.
             // The first input has to be in the global or imports arrays.
             let input = wasmInstruction.input(0)
-            return Data([0x23]) + Leb128.unsignedEncode(resolveIdx(ofType: .global, for: input))
+            return Data([0x23]) + Leb128.unsignedEncode(try resolveIdx(ofType: .global, for: input))
         case .wasmStoreGlobal(_):
 
             // Get the index for the global and emit it here magically.
             // The first input has to be in the global or imports arrays.
             let input = wasmInstruction.input(0)
-            return Data([0x24]) + Leb128.unsignedEncode(resolveIdx(ofType: .global, for: input))
+            return Data([0x24]) + Leb128.unsignedEncode(try resolveIdx(ofType: .global, for: input))
         case .wasmTableGet(_):
             let tableRef = wasmInstruction.input(0)
-            return Data([0x25]) + Leb128.unsignedEncode(resolveIdx(ofType: .table, for: tableRef))
+            return Data([0x25]) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
         case .wasmTableSet(_):
             let tableRef = wasmInstruction.input(0)
-            return Data([0x26]) + Leb128.unsignedEncode(resolveIdx(ofType: .table, for: tableRef))
+            return Data([0x26]) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
         case .wasmMemoryLoad(let op):
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
             return Data([op.loadType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
@@ -1298,13 +1338,16 @@ public class WasmLifter {
             return Data([op.storeType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
         case .wasmJsCall(let op):
             // We filter first, such that we get the index of functions only.
-            let index = imports.filter({
+            if let index = imports.filter({
                 // TODO, switch query?
                 typer.type(of: $0.0).Is(.function()) || typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))
             }).firstIndex(where: {
                 wasmInstruction.input(0) == $0.0 && op.functionSignature == $0.1
-            })!
-            return Data([0x10]) + Leb128.unsignedEncode(index)
+            }) {
+                return Data([0x10]) + Leb128.unsignedEncode(index)
+            } else {
+                throw WasmLifter.CompileError.failedIndexLookUp
+            }
         case .wasmBeginBlock(let op):
             // A Block can "produce" (push) an item on the value stack, just like a function. Similarly, a block can also have parameters.
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
@@ -1319,7 +1362,7 @@ public class WasmLifter {
         case .wasmBeginCatchAll(_):
             return Data([0x19])
         case .wasmBeginCatch(_):
-            return Data([0x07] + Leb128.unsignedEncode(resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
+            return Data([0x07] + Leb128.unsignedEncode(try resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
         case .wasmEndCatch(_):
             return Data([])
         case .wasmEndLoop(_),
@@ -1330,9 +1373,13 @@ public class WasmLifter {
             return Data([0x0B])
         case .wasmEndTryDelegate(_):
             let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            // Mutation might make this EndTryDelegate branch to itself, which should not happen.
+            if branchDepth < 0 {
+                throw WasmLifter.CompileError.invalidBranch
+            }
             return Data([0x18]) + Leb128.unsignedEncode(branchDepth)
         case .wasmThrow(_):
-            return Data([0x08] + Leb128.unsignedEncode(resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
+            return Data([0x08] + Leb128.unsignedEncode(try resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
         case .wasmRethrow(_):
             let blockDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]!
             return Data([0x09] + Leb128.unsignedEncode(blockDepth))
@@ -1361,7 +1408,7 @@ public class WasmLifter {
                 storeInstruction = Data([0x21]) + Leb128.unsignedEncode(stackSlot)
             } else {
                 // It has to be global then. Do what StoreGlobal does.
-                storeInstruction = Data([0x24]) + Leb128.unsignedEncode(resolveIdx(ofType: .global, for: wasmInstruction.input(0)))
+                storeInstruction = Data([0x24]) + Leb128.unsignedEncode(try resolveIdx(ofType: .global, for: wasmInstruction.input(0)))
             }
 
             // Load the input now. For "internal" variables, we should not have an expression.
@@ -1371,7 +1418,7 @@ public class WasmLifter {
                 out += Data([0x20]) + Leb128.unsignedEncode(stackSlot)
             } else {
                 // Has to be a global then. Do what LoadGlobal does.
-                out += Data([0x23]) + Leb128.unsignedEncode(resolveIdx(ofType: .global, for: wasmInstruction.input(1)))
+                out += Data([0x23]) + Leb128.unsignedEncode(try resolveIdx(ofType: .global, for: wasmInstruction.input(1)))
             }
 
             return out + storeInstruction

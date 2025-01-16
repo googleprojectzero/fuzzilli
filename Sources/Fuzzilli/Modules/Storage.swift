@@ -103,7 +103,7 @@ public class Storage: Module {
         if fuzzer.config.enableDiagnostics {
             fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
                 let filename = "\(self.formatDate())_\(ev.name)_\(String(currentMillis()))"
-                let url = URL(fileURLWithPath: self.diagnosticsDir + filename + ".diag")
+                let url = URL(fileURLWithPath: "\(self.diagnosticsDir)/\(filename).diag")
                 self.createFile(url, withContent: ev.content)
             }
 

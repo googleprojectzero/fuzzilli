@@ -115,7 +115,7 @@ public class REPRL: ComponentBase, ScriptRunner {
             if status < 0 {
                 logger.warning("Script execution failed: \(String(cString: reprl_get_last_error(reprlContext))). Retrying in 1 second...")
                 if fuzzer.config.enableDiagnostics {
-                    fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "REPRLFail", content: scriptBuffer))
+                    fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "REPRLFail", content: scriptBuffer.data(using: .utf8)!))
                 }
                 Thread.sleep(forTimeInterval: 1)
                 status = reprl_execute(reprlContext, ptr, UInt64(script.utf8.count), UInt64(timeout), &execTime, 1)

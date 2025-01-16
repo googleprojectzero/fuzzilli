@@ -1922,7 +1922,20 @@ public class ProgramBuilder {
         // For WasmOperations, we can assert here that the input types are correct.
         if let op = op as? WasmOperation {
             for (i, input) in inputs.enumerated() {
-                assert(type(of: input).Is(op.inputTypes[i]), "Input types don't match expected types. Check if the types in your instruction definition are correct or if you are passing the wrong type to this instruction!")
+                if !type(of:input).Is(op.inputTypes[i]) {
+                    // TODO: try to make sure that mutations don't change the assumptions while ProgramBuilding.
+                    logger.warning("Input types don't match expected types. Check if the types in your instruction definition are correct or if you are passing the wrong type to this instruction!")
+                    logger.warning("Mutations might have also changed this, in which case lifting will likely fail.")
+                    if fuzzer.config.enableDiagnostics {
+                        do {
+                            let program = Program(with: self.code)
+                            let pb = try program.asProtobuf().serializedData()
+                            fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "WasmProgramBuildingEmissionFail", content: pb))
+                        } catch {
+                            logger.warning("Could not dump program to disk!")
+                        }
+                    }
+                }
             }
         }
 

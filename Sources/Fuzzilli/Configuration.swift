@@ -80,7 +80,8 @@ public struct Configuration {
         self.dropoutRate = dropoutRate
         self.minimizationLimit = minimizationLimit
         self.enableDiagnostics = enableDiagnostics
-        self.enableInspection = enableInspection
+        // If we have enabledDiagnostics we should also enable inspection.
+        self.enableInspection = enableDiagnostics || enableInspection
         self.staticCorpus = staticCorpus
         self.tag = tag
     }
