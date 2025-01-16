@@ -97,6 +97,8 @@ Options:
     --additionalArguments=args   : Pass additional arguments to the JS engine. If multiple arguments are passed, they should be separated by a comma.
     --tag=tag                    : Optional string tag associated with this instance which will be stored in the settings.json file as well as in crashing samples.
                                    This can for example be used to remember the target revision that is being fuzzed.
+    --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
+
 """)
     exit(0)
 }
@@ -152,6 +154,7 @@ let swarmTesting = args.has("--swarmTesting")
 let argumentRandomization = args.has("--argumentRandomization")
 let additionalArguments = args["--additionalArguments"] ?? ""
 let tag = args["--tag"]
+let enableWasm = args.has("--wasm")
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -309,7 +312,15 @@ if swarmTesting {
 
 let disabledGenerators = Set(profile.disabledCodeGenerators)
 let additionalCodeGenerators = profile.additionalCodeGenerators
-let standardCodeGenerators: [(CodeGenerator, Int)] = (CodeGenerators + WasmCodeGenerators).map {
+
+let codeGeneratorsToUse = if enableWasm {
+    CodeGenerators + WasmCodeGenerators
+} else {
+    CodeGenerators
+}
+
+
+let standardCodeGenerators: [(CodeGenerator, Int)] = codeGeneratorsToUse.map {
     guard let weight = codeGeneratorWeights[$0.name] else {
         logger.fatal("Missing weight for code generator \($0.name) in CodeGeneratorWeights.swift")
     }
@@ -428,6 +439,14 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
 
     // Program templates to use.
     var programTemplates = profile.additionalProgramTemplates
+
+    // Filter out ProgramTemplates that will use Wasm if we have not enabled it.
+    if !enableWasm {
+        programTemplates = programTemplates.filter {
+            !($0 is WasmProgramTemplate)
+        }
+    }
+
     for template in ProgramTemplates {
         guard let weight = programTemplateWeights[template.name] else {
             print("Missing weight for program template \(template.name) in ProgramTemplateWeights.swift")

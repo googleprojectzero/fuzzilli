@@ -443,7 +443,7 @@ let fastCallables : [(group: ILType, method: String)] = [
     (group: .jsD8FastCAPI, method: "add_32bit_int"),
 ]
 
-let WasmFastCallFuzzer = ProgramTemplate("WasmFastCallFuzzer") { b in
+let WasmFastCallFuzzer = WasmProgramTemplate("WasmFastCallFuzzer") { b in
     b.buildPrefix()
     b.build(n: 10)
     let target = fastCallables.randomElement()!
