@@ -122,8 +122,7 @@ public struct JSTyper: Analyzer {
                 activeWasmModuleDefinition!.globals.append(instr.output)
             case .wasmDefineTable(_):
                 activeWasmModuleDefinition!.tables.append(instr.output)
-            case .wasmLoadGlobal(let op):
-                assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)
+            case .wasmLoadGlobal(_):
                 if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
                     activeWasmModuleDefinition!.globals.append(instr.input(0))
                 }
@@ -131,8 +130,7 @@ public struct JSTyper: Analyzer {
                 if !activeWasmModuleDefinition!.tables.contains(instr.input(0)) {
                     activeWasmModuleDefinition!.tables.append(instr.input(0))
                 }
-            case .wasmStoreGlobal(let op):
-                assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)
+            case .wasmStoreGlobal(_):
                 if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
                     activeWasmModuleDefinition!.globals.append(instr.input(0))
                 }

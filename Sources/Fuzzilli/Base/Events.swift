@@ -62,7 +62,7 @@ public class Events {
     public let InterestingProgramFound = Event<(program: Program, origin: ProgramOrigin)>()
 
     /// Signals a diagnostics event
-    public let DiagnosticsEvent = Event<(name: String, content: String)>()
+    public let DiagnosticsEvent = Event<(name: String, content: Data)>()
 
     /// Signals that a program is about to be executed, and for what purpose.
     public let PreExecute = Event<(program: Program, purpose: ExecutionPurpose)>()
