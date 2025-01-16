@@ -58,8 +58,8 @@ class LiveTests: XCTestCase {
             }
         }
 
-        // We expect a maximum of 10% of Wasm compilation attempts to fail
-        checkFailureRate(testResults: results, maxFailureRate: 0.10)
+        // We expect a maximum of 1% of Wasm compilation attempts to fail.
+        checkFailureRate(testResults: results, maxFailureRate: 0.01)
     }
 
     func testWasmCodeGenerationAndCompilationAndExecution() throws {
