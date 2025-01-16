@@ -1454,6 +1454,67 @@ class MinimizerTests: XCTestCase {
             "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
     }
 
+    func testWasmDataflowMinimization() throws {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        do {
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let val = function.consti64(42)
+                    // We would expect this to be removed by the DataflowSimplifier
+                    let absVal = function.wasmi64UnOp(val, unOpKind: .Clz)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmReturn(absVal)
+                }
+                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let valA = function.consti64(42)
+                    let valB = function.consti64(43)
+                    // We cannot remove this with the DataflowSimplifier as the input types don't match the output type.
+                    let testVal = function.wasmi64CompareOp(valA, valB, using: .Eq)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmReturn(testVal)
+                }
+            }
+
+            evaluator.nextInstructionIsImportant(in: b)
+            let exports = module.loadExports()
+            evaluator.nextInstructionIsImportant(in: b)
+            b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        }
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        do {
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                    function.wasmReturn(function.consti64(42))
+                }
+                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                    let valA = function.consti64(42)
+                    let valB = function.consti64(43)
+                    let testVal = function.wasmi64CompareOp(valA, valB, using: .Eq)
+                    function.wasmReturn(testVal)
+                }
+            }
+
+            let exports = module.loadExports()
+            b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        }
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram,
+            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n" +
+            "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+
+    }
+
     // A mock evaluator that can be configured to treat selected instructions as important, causing them to not be minimized away.
     class EvaluatorForMinimizationTests: ProgramEvaluator {
         /// An abstract instruction used to identify the instructions that are important and should be kept.
