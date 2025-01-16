@@ -373,25 +373,25 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wrapi64Toi32(input)
     },
 
-    CodeGenerator("WasmTruncatef32Toi32Generator", inContext: .wasmFunction, inputs: .required(.wasmf32)) { b, input in
-        // We are using a trick here and for all other unsigned truncations. If the input is a negative float, the operation will result in a runtime error, therefore we will always emit an f32UnOp Abs() operation to make sure that the operation wont throw.
-        // Minimization will then automatically remove the f32UnOp instruction if it is not necessary.
+    CodeGenerator("WasmTruncatef32Toi32Generator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         if probability(0.5) {
-            let res = function.wasmf32UnOp(input, unOpKind: .Abs)
-            function.truncatef32Toi32(res, isSigned: false)
+            let value = function.constf32(Float32(b.randomSize(upTo: Int64(Int32.max))))
+            function.truncatef32Toi32(value, isSigned: false)
         } else {
-            function.truncatef32Toi32(input, isSigned: true)
+            let value = function.constf32(Float32(b.randomInt() % Int64(Int32.max)))
+            function.truncatef32Toi32(value, isSigned: true)
         }
     },
 
-    CodeGenerator("WasmTruncatef64Toi32Generator", inContext: .wasmFunction, inputs: .required(.wasmf64)) { b, input in
+    CodeGenerator("WasmTruncatef64Toi32Generator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         if probability(0.5) {
-            let res = function.wasmf64UnOp(input, unOpKind: .Abs)
-            function.truncatef64Toi32(res, isSigned: false)
+            let value = function.constf64(Float64(b.randomSize(upTo: Int64(Int32.max))))
+            function.truncatef64Toi32(value, isSigned: false)
         } else {
-            function.truncatef64Toi32(input, isSigned: true)
+            let value = function.constf64(Float64(b.randomInt() % Int64(Int32.max)))
+            function.truncatef64Toi32(value, isSigned: true)
         }
     },
 
@@ -410,13 +410,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("WasmTruncatef64Toi64Generator", inContext: .wasmFunction, inputs: .required(.wasmf64)) { b, input in
+    CodeGenerator("WasmTruncatef64Toi64Generator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         if probability(0.5) {
-            let res = function.wasmf64UnOp(input, unOpKind: .Abs)
-            function.truncatef64Toi64(res, isSigned: false)
+            let value = function.constf64(Float64(b.randomSize()))
+            function.truncatef64Toi64(value, isSigned: false)
         } else {
-            function.truncatef64Toi64(input, isSigned: true)
+            let value = function.constf64(Float64(b.randomInt()))
+            function.truncatef64Toi64(value, isSigned: true)
         }
     },
 
