@@ -15,6 +15,25 @@
 import XCTest
 @testable import Fuzzilli
 
+func testAndCompareSerialization(program: Program) {
+    var proto1 = program.asProtobuf()
+    var proto2 = program.asProtobuf()
+    XCTAssertEqual(proto1, proto2)
+
+    let data1 = try! proto1.serializedData()
+    let data2 = try! proto2.serializedData()
+
+    proto1 = try! Fuzzilli_Protobuf_Program(serializedBytes: data1)
+    proto2 = try! Fuzzilli_Protobuf_Program(serializedBytes: data2)
+    XCTAssertEqual(proto1, proto2)
+
+    let copy1 = try! Program(from: proto1)
+    let copy2 = try! Program(from: proto2)
+    XCTAssertEqual(copy1, copy2)
+    XCTAssertEqual(copy1, program)
+    XCTAssertEqual(FuzzILLifter().lift(copy1), FuzzILLifter().lift(program))
+}
+
 class ProgramSerializationTests: XCTestCase {
     func testProtobufSerialization() {
         let fuzzer = makeMockFuzzer()
@@ -23,25 +42,22 @@ class ProgramSerializationTests: XCTestCase {
         for _ in 0..<10 {
             b.buildPrefix()
             b.build(n: 100, by: .generating)
-
             let program = b.finalize()
+            testAndCompareSerialization(program: program)
+        }
+    }
 
-            var proto1 = program.asProtobuf()
-            var proto2 = program.asProtobuf()
-            XCTAssertEqual(proto1, proto2)
+    func testProtobufSerializationWithWasmModule() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
 
-            let data1 = try! proto1.serializedData()
-            let data2 = try! proto2.serializedData()
-
-            proto1 = try! Fuzzilli_Protobuf_Program(serializedBytes: data1)
-            proto2 = try! Fuzzilli_Protobuf_Program(serializedBytes: data2)
-            XCTAssertEqual(proto1, proto2)
-
-            let copy1 = try! Program(from: proto1)
-            let copy2 = try! Program(from: proto2)
-            XCTAssertEqual(copy1, copy2)
-            XCTAssertEqual(copy1, program)
-            XCTAssertEqual(FuzzILLifter().lift(copy1), FuzzILLifter().lift(program))
+        for _ in 0..<10 {
+            b.buildPrefix()
+            b.buildWasmModule { wasmModule in
+                b.build(n: 50, by: .generating)
+            }
+            let program = b.finalize()
+            testAndCompareSerialization(program: program)
         }
     }
 
