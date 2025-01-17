@@ -633,6 +633,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("WasmSelectGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, condition in
+        let function = b.currentWasmModule.currentWasmFunction
+        let supportedTypes : ILType = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef
+        // The condition is an i32, so we should always find at least that one as a possible input.
+        let trueValue = b.randomVariable(ofType: supportedTypes)!
+        let selectType = b.type(of: trueValue)
+        let falseValue = b.randomVariable(ofType: selectType)!
+        function.wasmSelect(type: selectType, on: condition, trueValue: trueValue, falseValue: falseValue)
+    },
+
     CodeGenerator("WasmThrowGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmTag"))) { b, tag in
         let function = b.currentWasmModule.currentWasmFunction
         let wasmTagType = b.type(of: tag).wasmTagType!
