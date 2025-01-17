@@ -1284,7 +1284,10 @@ extension Instruction: ProtobufConvertible {
             case .wasmI64x2ExtractLane(_):
                 $0.wasmI64X2ExtractLane = Fuzzilli_Protobuf_WasmI64x2ExtractLane()
             case .wasmI64x2LoadSplat(let op):
-                $0.wasmI64X2LoadSplat = Fuzzilli_Protobuf_WasmI64x2LoadSplat.with { $0.offset = Int64(op.offset) }
+                $0.wasmI64X2LoadSplat = Fuzzilli_Protobuf_WasmI64x2LoadSplat.with {
+                    $0.staticOffset = op.staticOffset
+                    $0.isMemory64 = op.isMemory64
+                }
             }
         }
 
@@ -2065,7 +2068,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmI64X2ExtractLane(_):
             op = WasmI64x2ExtractLane(lane: 0)
         case .wasmI64X2LoadSplat(let p):
-            op = WasmI64x2LoadSplat(offset: Int(p.offset))
+            op = WasmI64x2LoadSplat(staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

@@ -176,51 +176,20 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmMemoryLoadGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
-        let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
-        let memSize = Int64(memoryTypeInfo.limits.min * WasmOperation.WasmConstants.specWasmMemPageSize)
-        if (memSize == 0) {
-            return
-        }
+        if (b.hasZeroPages(memory: memory)) { return }
+
         let function = b.currentWasmModule.currentWasmFunction
-
+        let (dynamicOffset, staticOffset) = b.generateMemoryIndexes(forMemory: memory)
         let loadType = chooseUniform(from: WasmMemoryLoadType.allCases)
-
-        // Most of the times, generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.
-        // With 10% probability, choose one randomly from the already existing ones.
-        var staticOffset = b.randomNonNegativeIndex()
-        var dynamicOffset: Variable
-        if let randVar = b.randomVariable(ofType: memoryTypeInfo.isMemory64 ? .wasmi64 : .wasmi32), probability(0.1) {
-            dynamicOffset = randVar
-        } else {
-            let dynamicOffsetValue = b.randomNonNegativeIndex() % memSize
-            dynamicOffset = memoryTypeInfo.isMemory64 ? function.consti64(dynamicOffsetValue)
-                                               : function.consti32(Int32(dynamicOffsetValue))
-            staticOffset %= (memSize - dynamicOffsetValue)
-        }
 
         function.wasmMemoryLoad(memory: memory, dynamicOffset: dynamicOffset, loadType: loadType, staticOffset: staticOffset)
     },
 
     CodeGenerator("WasmMemoryStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
-        let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
-        let memSize = Int64(memoryTypeInfo.limits.min * WasmOperation.WasmConstants.specWasmMemPageSize)
-        if (memSize == 0) {
-            return
-        }
-        let function = b.currentWasmModule.currentWasmFunction
+        if (b.hasZeroPages(memory: memory)) { return }
 
-        // Most of the times, generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.
-        // With 10% probability, choose one randomly from the already existing ones.
-        var staticOffset = b.randomNonNegativeIndex()
-        var dynamicOffset: Variable
-        if let randVar = b.randomVariable(ofType: memoryTypeInfo.isMemory64 ? .wasmi64 : .wasmi32), probability(0.1) {
-            dynamicOffset = randVar
-        } else {
-            let dynamicOffsetValue = b.randomNonNegativeIndex() % memSize
-            dynamicOffset = memoryTypeInfo.isMemory64 ? function.consti64(dynamicOffsetValue)
-                                               : function.consti32(Int32(dynamicOffsetValue))
-            staticOffset %= (memSize - dynamicOffsetValue)
-        }
+        let function = b.currentWasmModule.currentWasmFunction
+        let (dynamicOffset, staticOffset) = b.generateMemoryIndexes(forMemory: memory)
 
         // Choose a `WasmMemoryStoreType` for which there is an existing Variable with a matching number type.
         // Shuffle them so we don't have a bias in the ordering.
@@ -789,12 +758,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmI64x2ExtractLane(input, 0)
     },
 
-    // CodeGenerator("WasmI64x2LoadSplatGenerator", inContext: .wasmFunction, inputs: .required(.wasmMemory)) { b, memoryRef in
-    //     let function = b.currentWasmModule.currentWasmFunction
-    //     b.currentWasmModule.addMemory(importing: memoryRef);
-    //     function.wasmI64x2LoadSplat(memoryRef: memoryRef)
-    // },
+    CodeGenerator("WasmI64x2LoadSplatGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
+        if (b.hasZeroPages(memory: memory)) { return }
 
+        let function = b.currentWasmModule.currentWasmFunction
+        let (dynamicOffset, staticOffset) = b.generateMemoryIndexes(forMemory: memory)
+
+        function.wasmI64x2LoadSplat(memory: memory, dynamicOffset: dynamicOffset, staticOffset: staticOffset)
+    },
 
     // TODO: Add three generators for JSPI
     // We need a WrapSuspendingGenerator that takes a callable and wraps it, this should get typed as .object(ofGroup: "WasmSuspenderObject" and we should attach a WasmTypeExtension that stores the signature of the wrapped function

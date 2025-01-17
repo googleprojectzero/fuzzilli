@@ -3377,10 +3377,10 @@ public class ProgramBuilder {
             return b.emit(WasmI64x2ExtractLane(lane: lane), withInputs: [input]).output
         }
 
-        // TODO(nicohartmann): Properly handle memory loads.
         @discardableResult
-        public func wasmI64x2LoadSplat(memoryRef: Variable) -> Variable {
-            return b.emit(WasmI64x2LoadSplat(offset: 0), withInputs: [memoryRef]).output
+        public func wasmI64x2LoadSplat(memory: Variable, dynamicOffset: Variable, staticOffset: Int64) -> Variable {
+            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
+            return b.emit(WasmI64x2LoadSplat(staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset]).output
         }
     }
 
@@ -3471,6 +3471,25 @@ public class ProgramBuilder {
             }
             return moduleVariable!
         }
+    }
+
+    func hasZeroPages(memory: Variable) -> Bool {
+        let memoryTypeInfo = self.type(of: memory).wasmMemoryType!
+        return memoryTypeInfo.limits.min == 0
+    }
+
+    func generateMemoryIndexes(forMemory memory: Variable) -> (Variable, Int64) {
+        let memoryTypeInfo = self.type(of: memory).wasmMemoryType!
+        let memSize = Int64(memoryTypeInfo.limits.min * WasmOperation.WasmConstants.specWasmMemPageSize)
+        let function = self.currentWasmModule.currentWasmFunction
+
+        // Generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.
+        let dynamicOffsetValue = self.randomNonNegativeIndex() % memSize
+        let dynamicOffset = memoryTypeInfo.isMemory64 ? function.consti64(dynamicOffsetValue)
+                                                  : function.consti32(Int32(dynamicOffsetValue))
+        let staticOffset = self.randomNonNegativeIndex() % (memSize - dynamicOffsetValue)
+
+        return (dynamicOffset, staticOffset)
     }
 
     public func randomWasmGlobal() -> WasmGlobal {

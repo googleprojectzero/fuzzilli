@@ -954,7 +954,20 @@ public class WasmLifter {
 
             // TODO(mliedtke): Make this an attribute.
             // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
-            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemoryStore || instr.op is WasmMemoryLoad || instr.op is WasmTableGet || instr.op is WasmTableSet || instr.op is WasmBeginCatch || instr.op is WasmThrow || instr.op is WasmRethrow || instr.op is WasmBeginBlock || instr.op is WasmBeginTry || instr.op is WasmBeginTryDelegate {
+            if instr.op is WasmLoadGlobal       ||
+               instr.op is WasmStoreGlobal      ||
+               instr.op is WasmJsCall           ||
+               instr.op is WasmMemoryStore      ||
+               instr.op is WasmMemoryLoad       ||
+               instr.op is WasmI64x2LoadSplat   ||
+               instr.op is WasmTableGet         ||
+               instr.op is WasmTableSet         ||
+               instr.op is WasmBeginCatch       ||
+               instr.op is WasmThrow            ||
+               instr.op is WasmRethrow          ||
+               instr.op is WasmBeginBlock       ||
+               instr.op is WasmBeginTry         ||
+               instr.op is WasmBeginTryDelegate {
                 continue
             }
             fatalError("unreachable")
@@ -996,6 +1009,21 @@ public class WasmLifter {
         }
     }
 
+    // Helper function for memory accessing instructions.
+    private func memoryOpImportAnalysis(instr: Instruction, isMemory64: Bool) throws {
+        let memory = instr.input(0)
+        if !typer.type(of: memory).isWasmMemoryType {
+            throw WasmLifter.CompileError.missingTypeInformation
+        }
+        assert(typer.type(of: memory).wasmMemoryType!.isMemory64 == isMemory64)
+        if !self.memories.contains(where: {$0.output == memory}) {
+            // TODO(cffsmith) this needs to be changed once we support multimemory as we probably also need to fix the ordering.
+            if !self.imports.map({$0.0}).contains(memory) {
+                self.imports.append((memory, nil))
+            }
+        }
+    }
+
     // Analyze which Variables should be imported. Here we should analyze all instructions that could potentially force an import of a Variable that originates in JavaScript.
     // This usually means if your instruction takes an .object() as an input, it should be checked here.
     // TODO: check if this is still accurate as we now only have defined imports.
@@ -1029,29 +1057,11 @@ public class WasmLifter {
             case .wasmDefineMemory:
                 self.memories.append(instr)
             case .wasmMemoryLoad(let op):
-                let memory = instr.input(0)
-                if !typer.type(of: memory).isWasmMemoryType {
-                    throw WasmLifter.CompileError.missingTypeInformation
-                }
-                assert(typer.type(of: memory).wasmMemoryType!.isMemory64 == op.isMemory64)
-                if !self.memories.contains(where: {$0.output == memory}) {
-                    // TODO(cffsmith) this needs to be changed once we support multimemory as we probably also need to fix the ordering.
-                    if !self.imports.map({$0.0}).contains(memory) {
-                        self.imports.append((memory, nil))
-                    }
-                }
+                try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
             case .wasmMemoryStore(let op):
-                let memory = instr.input(0)
-                if !typer.type(of: memory).isWasmMemoryType {
-                    throw WasmLifter.CompileError.missingTypeInformation
-                }
-                assert(typer.type(of: memory).wasmMemoryType!.isMemory64 == op.isMemory64)
-                if !self.memories.contains(where: {$0.output == memory}) {
-                    // TODO(cffsmith) this needs to be changed once we support multimemory as we probably also need to fix the ordering.
-                    if !self.imports.map({$0.0}).contains(memory) {
-                        self.imports.append((memory, nil))
-                    }
-                }
+                try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
+            case .wasmI64x2LoadSplat(let op):
+                try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
             case .wasmTableGet(_),
                  .wasmTableSet(_):
                 let table = instr.input(0)
@@ -1529,7 +1539,8 @@ public class WasmLifter {
         case .wasmI64x2ExtractLane(let op):
             return Data([0xFD]) + Leb128.unsignedEncode(0x1D) + Leb128.unsignedEncode(op.lane)
          case .wasmI64x2LoadSplat(let op):
-            return Data([0xFD]) + Leb128.unsignedEncode(0x0A) + Leb128.unsignedEncode(0) + Leb128.unsignedEncode(op.offset)
+            // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
+            return Data([0xFD]) + Leb128.unsignedEncode(0x0A) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
 
         default:
              fatalError("unreachable")
