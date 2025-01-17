@@ -260,12 +260,12 @@ public class ProgramBuilder {
     }
 
     /// Returns a random non-negative integer value suitable as index.
-    public func randomNonNegativeIndex() -> Int64 {
+    public func randomNonNegativeIndex(upTo max: Int64 = 0x100000000) -> Int64 {
         // Prefer small indices.
         if probability(0.33) {
             return Int64.random(in: 0...10)
         } else {
-            return randomSize()
+            return randomSize(upTo: max)
         }
     }
 
@@ -3484,10 +3484,10 @@ public class ProgramBuilder {
         let function = self.currentWasmModule.currentWasmFunction
 
         // Generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.
-        let dynamicOffsetValue = self.randomNonNegativeIndex() % memSize
+        let dynamicOffsetValue = self.randomNonNegativeIndex(upTo: memSize)
         let dynamicOffset = memoryTypeInfo.isMemory64 ? function.consti64(dynamicOffsetValue)
                                                   : function.consti32(Int32(dynamicOffsetValue))
-        let staticOffset = self.randomNonNegativeIndex() % (memSize - dynamicOffsetValue)
+        let staticOffset = self.randomNonNegativeIndex(upTo: memSize) % (memSize - dynamicOffsetValue)
 
         return (dynamicOffset, staticOffset)
     }
