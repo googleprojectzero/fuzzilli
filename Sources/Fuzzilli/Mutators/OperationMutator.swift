@@ -558,6 +558,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmEndIf(_),
              .wasmNop(_),
              .wasmUnreachable(_),
+             .wasmSelect(_),
              .wasmDefineTag(_):
              assert(!instr.isOperationMutable)
              fatalError("Unexpected Operation")

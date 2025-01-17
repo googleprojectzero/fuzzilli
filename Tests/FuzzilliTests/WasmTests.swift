@@ -1353,6 +1353,43 @@ class WasmFoundationTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "Caught wasm trap\n")
     }
+
+    func testSelect() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
+                function.wasmReturn(function.wasmSelect(type: .wasmi64, on: args[0],
+                    trueValue: function.consti64(123), falseValue: function.consti64(321)))
+            }
+
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmExternRef, .wasmExternRef] => .wasmExternRef) { function, args in
+                function.wasmReturn(function.wasmSelect(type: .wasmExternRef, on: args[0], trueValue: args[1], falseValue: args[2]))
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        // Select with i64.
+        var wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        // Select with externref.
+        let hello = b.loadString("Hello")
+        let world = b.loadString("World")
+        wasmOut = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [b.loadInt(1), hello, world])
+        b.callFunction(outputFunc, withArgs: [wasmOut])
+        wasmOut = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [b.loadInt(0), hello, world])
+        b.callFunction(outputFunc, withArgs: [wasmOut])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "321\n123\nHello\nWorld\n")
+    }
 }
 
 class WasmNumericalTests: XCTestCase {

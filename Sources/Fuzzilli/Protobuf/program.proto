@@ -301,6 +301,7 @@ message Instruction {
         WasmI64x2ExtractLane wasmI64x2ExtractLane = 275;
         WasmI64x2LoadSplat wasmI64x2LoadSplat = 276;
         WasmUnreachable wasmUnreachable = 277;
+        WasmSelect wasmSelect = 278;
     }
 }
 

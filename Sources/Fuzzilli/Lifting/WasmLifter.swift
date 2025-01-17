@@ -1436,6 +1436,8 @@ public class WasmLifter {
             return Data([0x01])
         case .wasmUnreachable(_):
             return Data([0x00])
+        case .wasmSelect(let op):
+            return Data([0x1c, 0x01]) + ILTypeMapping[op.type]!
         case .constSimd128(let op):
             return Data([0xFD]) + Leb128.unsignedEncode(12) + Data(op.value)
         case .wasmSimd128IntegerUnOp(let op):

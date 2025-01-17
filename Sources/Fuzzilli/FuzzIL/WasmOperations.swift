@@ -932,6 +932,19 @@ final class WasmJsCall: WasmOperation {
     }
 }
 
+final class WasmSelect: WasmOperation {
+    override var opcode: Opcode { .wasmSelect(self) }
+    let type: ILType
+
+    init(type: ILType) {
+        self.type = type
+        // Note that the condition is the third input. This is due to the lifting that pushes all
+        // inputs to the value stack in reverse order (and the select expects the condition as the
+        // first value on the stack.)
+        super.init(inputTypes: [type, type, .wasmi32], outputType: type, requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmBeginBlock: WasmOperation {
     override var opcode: Opcode { .wasmBeginBlock(self) }
 

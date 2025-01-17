@@ -1210,6 +1210,10 @@ message WasmNop {
 message WasmUnreachable {
 }
 
+message WasmSelect {
+    WasmILType type = 1;
+}
+
 message ConstSimd128 {
     repeated uint32 value = 1;
 }

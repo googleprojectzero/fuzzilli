@@ -3328,6 +3328,11 @@ public class ProgramBuilder {
             b.emit(WasmUnreachable())
         }
 
+        @discardableResult
+        public func wasmSelect(type: ILType, on condition: Variable, trueValue: Variable, falseValue: Variable) -> Variable {
+            return b.emit(WasmSelect(type: type), withInputs: [trueValue, falseValue, condition]).output
+        }
+
         public func wasmReturn(_ returnVariable: Variable) {
             let returnType = b.type(of: returnVariable)
             b.emit(WasmReturn(returnType: returnType), withInputs: [returnVariable])
