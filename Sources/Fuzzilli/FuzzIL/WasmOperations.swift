@@ -1482,10 +1482,14 @@ final class WasmI64x2ExtractLane: WasmOperation {
 
 final class WasmI64x2LoadSplat: WasmOperation {
     override var opcode: Opcode { .wasmI64x2LoadSplat(self) }
-    let offset: Int;
-    init(offset: Int) {
-        self.offset = offset;
-        super.init(inputTypes: [.object()], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
+
+    let staticOffset: Int64
+    let isMemory64: Bool
+
+    init(staticOffset: Int64, isMemory64: Bool) {
+        self.staticOffset = staticOffset
+        self.isMemory64 = isMemory64
+        let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
+        super.init(inputTypes: [.object(ofGroup: "WasmMemory"), dynamicOffsetType], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
-

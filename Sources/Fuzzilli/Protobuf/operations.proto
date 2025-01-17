@@ -1246,5 +1246,6 @@ message WasmI64x2ExtractLane {
 }
 
 message WasmI64x2LoadSplat {
-    int64 offset = 1;
+  int64 staticOffset = 1;
+  bool isMemory64 = 2;
 }
