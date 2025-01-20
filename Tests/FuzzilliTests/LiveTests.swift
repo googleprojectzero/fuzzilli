@@ -45,7 +45,7 @@ class LiveTests: XCTestCase {
             }
             // Make at least one Wasm global available
             b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
-            // Make at laest one Wasm tag of each kind available.
+            // Make at least one Wasm tag of each kind available.
             b.createWasmJSTag()
             b.createWasmTag(parameterTypes: [.wasmi32, .wasmf64])
 
@@ -72,7 +72,7 @@ class LiveTests: XCTestCase {
             }
             // Make at least one Wasm global available
             b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
-            // Make at laest one Wasm tag of each kind available.
+            // Make at least one Wasm tag of each kind available.
             b.createWasmJSTag()
             b.createWasmTag(parameterTypes: [.wasmi32, .wasmf64])
 
@@ -84,18 +84,28 @@ class LiveTests: XCTestCase {
                 }
             }
 
-            b.callMethod(m.getExportedMethod(at: 0), on: m.loadExports())
+            // The wasm exception handling proposal contains instructions to deliberately trigger
+            // exceptions. Catch these exceptions here to not treat them as test failures.
+            b.buildTryCatchFinally {
+                b.callMethod(m.getExportedMethod(at: 0), on: m.loadExports())
+            } catchBody: { exception in
+                let wasmGlobal = b.createNamedVariable(forBuiltin: "WebAssembly")
+                let wasmException = b.getProperty("Exception", of: wasmGlobal)
+                b.buildIf(b.unary(.LogicalNot, b.testInstanceOf(exception, wasmException))) {
+                    b.throwException(exception)
+                }
+            }
         }
 
         // TODO(cffsmith): Try to lower this
-        // We expect a maximum of 50% of Wasm execution attempts to fail
-        checkFailureRate(testResults: results, maxFailureRate: 0.50)
+        // We expect a maximum of 25% of Wasm execution attempts to fail.
+        checkFailureRate(testResults: results, maxFailureRate: 0.25)
     }
 
     // The closure can use the ProgramBuilder to emit a program of a specific
     // shape that is then executed with the given runner. We then check that
     // we stay below the maximum failure rate over the given number of iterations.
-    static func runLiveTest(iterations n: Int = 250, withRunner runner: JavaScriptExecutor, body: (inout ProgramBuilder) -> Void) throws -> (failureRate: Double, failureMessages: [String: Int]) {
+    static func runLiveTest(iterations n: Int = 250, withRunner runner: JavaScriptExecutor, body: (ProgramBuilder) -> Void) throws -> (failureRate: Double, failureMessages: [String: Int]) {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -120,9 +130,9 @@ class LiveTests: XCTestCase {
         var results = [ExecutionResult?](repeating: nil, count: n)
 
         for _ in 0..<n {
-            var b = fuzzer.makeBuilder()
+            let b = fuzzer.makeBuilder()
 
-            body(&b)
+            body(b)
 
             let program = b.finalize()
             let jsProgram = fuzzer.lifter.lift(program)
