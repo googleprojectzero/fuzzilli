@@ -3492,7 +3492,12 @@ public class ProgramBuilder {
         let dynamicOffsetValue = self.randomNonNegativeIndex(upTo: memSize)
         let dynamicOffset = memoryTypeInfo.isMemory64 ? function.consti64(dynamicOffsetValue)
                                                   : function.consti32(Int32(dynamicOffsetValue))
-        let staticOffset = self.randomNonNegativeIndex(upTo: memSize) % (memSize - dynamicOffsetValue)
+        var staticOffset: Int64
+        if (dynamicOffsetValue == memSize) {
+            staticOffset = 0
+        } else {
+            staticOffset = self.randomNonNegativeIndex(upTo: memSize) % (memSize - dynamicOffsetValue)
+        }
 
         return (dynamicOffset, staticOffset)
     }
