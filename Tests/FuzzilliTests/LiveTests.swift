@@ -17,7 +17,7 @@ import XCTest
 
 class LiveTests: XCTestCase {
     enum ExecutionResult {
-        case failed(failureMessage: String?)
+        case failed(failureMessage: String)
         case succeeded
     }
 
@@ -142,9 +142,7 @@ class LiveTests: XCTestCase {
                     programs[i].program.storeToDisk(atPath: path.appendingPathComponent("failure_\(i).fzil").path)
                 }
                 failures += 1
-                if let message = message {
-                    failureMessages[message] = (failureMessages[message] ?? 0) + 1
-                }
+                failureMessages[message] = (failureMessages[message] ?? 0) + 1
             case .succeeded:
                 break
             }
@@ -180,6 +178,12 @@ class LiveTests: XCTestCase {
                     if line.contains("Error:") {
                         // Remove anything after a potential 2nd ":", which is usually testcase dependent content, e.g. "SyntaxError: Invalid regular expression: /ep{}[]Z7/: Incomplete quantifier"
                         signature = line.split(separator: ":")[0...1].joined(separator: ":")
+                    } else if line.contains("[object WebAssembly.Exception]") {
+                        // An uncaught thrown wasm tag results in an output like this in d8:
+                        //   undefined:0: [object WebAssembly.Exception]
+                        // Treat anything that contains the WebAssembly.Exception object as one
+                        // special signature.
+                        signature = "<Uncaught WebAssembly.Exception>"
                     }
                 }
 
@@ -193,7 +197,7 @@ class LiveTests: XCTestCase {
                     print(fuzzilProgram)
                 }
 
-                return .failed(failureMessage: signature)
+                return .failed(failureMessage: signature ?? "<Unrecognized error>")
             }
         } catch {
             XCTFail("Could not execute script: \(error)")
