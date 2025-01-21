@@ -400,13 +400,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.extendi32Toi64(input, isSigned: probability(0.5))
     },
 
-    CodeGenerator("WasmTruncatef32Toi64Generator", inContext: .wasmFunction, inputs: .required(.wasmf32)) { b, input in
+    CodeGenerator("WasmTruncatef32Toi64Generator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         if probability(0.5) {
-            let res = function.wasmf32UnOp(input, unOpKind: .Abs)
-            function.truncatef32Toi64(res, isSigned: false)
+            let value = function.constf32(Float32(b.randomSize(upTo: Int64(Int32.max))))
+            function.truncatef32Toi64(value, isSigned: false)
         } else {
-            function.truncatef32Toi64(input, isSigned: true)
+            let value = function.constf32(Float32(b.randomInt() % Int64(Int32.max)))
+            function.truncatef32Toi64(value, isSigned: true)
         }
     },
 
