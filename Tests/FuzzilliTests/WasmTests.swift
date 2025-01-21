@@ -1246,6 +1246,75 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "444\n")
     }
 
+    func testTryWithBlockParametersAndResult() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let tagVoid = b.createWasmTag(parameterTypes: [])
+        let tagi32 = b.createWasmTag(parameterTypes: [.wasmi32])
+        let tagi32Other = b.createWasmTag(parameterTypes: [.wasmi32])
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                let result = function.wasmBuildLegacyTryWithResult(with: [.wasmi32] => .wasmi32, args: args, body: { label, args in
+                    function.wasmBuildIfElse(function.wasmi32EqualZero(args[0])) {
+                        function.WasmBuildThrow(tag: tagVoid, inputs: [])
+                    }
+                    function.wasmBuildIfElse(function.wasmi32CompareOp(args[0], function.consti32(1), using: .Eq)) {
+                        function.WasmBuildThrow(tag: tagi32, inputs: [function.consti32(100)])
+                    }
+                    function.wasmBuildIfElse(function.wasmi32CompareOp(args[0], function.consti32(2), using: .Eq)) {
+                        function.WasmBuildThrow(tag: tagi32Other, inputs: [function.consti32(200)])
+                    }
+                    return args[0]
+                }, catchClauses: [
+                    (tagi32, {label, exception, args in
+                        return args[0]
+                    }),
+                    (tagi32Other, {label, exception, args in
+                        let value = function.wasmi32BinOp(args[0], function.consti32(2), binOpKind: .Add)
+                        function.wasmBranch(to: label, args: [value])
+                        return function.consti32(-1)
+                    }),
+                ], catchAllBody: { _ in
+                    return function.consti32(900)
+                })
+                function.wasmReturn(result)
+            }
+        }
+        let exports = module.loadExports()
+
+        var expectedString = ""
+        // Note that in the comments below "returns" means that this will be passed on as a result
+        // to the EndTry block. At the end of the wasm function it performs a wasm return of the
+        // result of the EndTry.
+        for (input, expected) in [
+                // input 0 throws tagVoid which is not caught, so the catchAllBody returns 900.
+                (0, 900),
+                // input 1 throws tagi32(100) which is caught by a catch clause that returns the
+                // tag argument.
+                (1, 100),
+                // input 2 throws tagi32Other(200) which is caught by a catch clause that branches
+                // to the end of its block adding 2 to the tag argument.
+                (2, 202),
+                // input 3 doesn't throw anything, the try body returns the value directly, meaning
+                // the value "falls-through" from the try body to the endTry operation.
+                (3, 3)] {
+            let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(Int64(input))])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+            expectedString += "\(expected)\n"
+        }
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: expectedString)
+    }
+
     func testTryDelegate() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

@@ -3165,11 +3165,13 @@ public class ProgramBuilder {
             b.emit(WasmBranchIf(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args + [condition])
         }
 
-        public func wasmBuildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: () -> Void) {
+        public func wasmBuildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: (() -> Void)? = nil) {
             b.emit(WasmBeginIf(), withInputs: [condition])
             ifBody()
-            b.emit(WasmBeginElse())
-            elseBody()
+            if let elseBody = elseBody {
+                b.emit(WasmBeginElse())
+                elseBody()
+            }
             b.emit(WasmEndIf())
         }
 
@@ -3213,6 +3215,29 @@ public class ProgramBuilder {
                 catchAllBody(instr.innerOutput(0))
             }
             b.emit(WasmEndTry())
+        }
+
+        // The catchClauses expect a list of (tag, block-generator lambda).
+        // The lambda's inputs are the block label, the exception label (for rethrowing) and the
+        // tag arguments.
+        @discardableResult
+        public func wasmBuildLegacyTryWithResult(with signature: Signature, args: [Variable],
+                body: (Variable, [Variable]) -> Variable,
+                catchClauses: [(tag: Variable, body: (Variable, Variable, [Variable]) -> Variable)],
+                catchAllBody: ((Variable) -> Variable)? = nil) -> Variable {
+            assert(signature.parameters.count == args.count)
+            assert(signature.outputType != .nothing)
+            let instr = b.emit(WasmBeginTry(with: signature), withInputs: args)
+            var result = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            for (tag, generator) in catchClauses {
+                let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => signature.outputType), withInputs: [tag, result])
+                result = generator(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
+            }
+            if let catchAllBody = catchAllBody {
+                let instr = b.emit(WasmBeginCatchAll(with: signature), withInputs: [result])
+                result = catchAllBody(instr.innerOutput(0))
+            }
+            return b.emit(WasmEndTry(outputType: signature.outputType), withInputs: [result]).output
         }
 
         public func WasmBuildLegacyCatch(tag: Variable, body: ((Variable, Variable, [Variable]) -> Void)) {

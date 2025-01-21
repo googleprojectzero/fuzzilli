@@ -633,6 +633,28 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("WasmLegacyTryCatchWithResultGenerator", inContext: .wasmFunction) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+        // Choose a few random wasm values as arguments if available.
+        let args = (0..<Int.random(in: 0...5)).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
+        let tags = (0..<Int.random(in: 0...5)).map {_ in b.findVariable { b.type(of: $0).isWasmTagType }}.filter {$0 != nil}.map {$0!}
+        // Disallowing void here to simplify the logic. The WasmLegacyTryCatchGenerator generates try-catch blocks without a result type.
+        let outputType = b.randomWasmBlockOutputType(allowVoid: false)
+        let signature = parameters => outputType
+        let recursiveCallCount = 2 + tags.count
+        function.wasmBuildLegacyTryWithResult(with: signature, args: args, body: { label, args in
+            b.buildRecursive(block: 1, of: recursiveCallCount, n: 4)
+            return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+        }, catchClauses: tags.enumerated().map {i, tag in (tag, {_, _, _ in
+                b.buildRecursive(block: 2 + i, of: recursiveCallCount, n: 4)
+                return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+        })}, catchAllBody: { label in
+            b.buildRecursive(block: 2 + tags.count, of: recursiveCallCount, n: 4)
+            return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+        })
+    },
+
     RecursiveCodeGenerator("WasmLegacyTryDelegateGenerator", inContext: .wasmFunction, inputs: .required(.anyLabel)) { b, label in
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
