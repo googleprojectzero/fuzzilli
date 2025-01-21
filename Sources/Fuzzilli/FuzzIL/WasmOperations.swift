@@ -1054,8 +1054,11 @@ final class WasmBeginCatchAll : WasmOperation {
     init(with signature: Signature) {
         self.signature = signature
 
+        let inputTypes = signature.outputType != .nothing ? [signature.outputType] : []
         super.init(
-            innerOutputTypes: [.label()],
+            inputTypes: inputTypes,
+            outputType: .nothing,
+            innerOutputTypes: [.label(inputTypes)],
             attributes: [
                 .isBlockEnd,
                 .isBlockStart,
@@ -1074,6 +1077,8 @@ final class WasmBeginCatch : WasmOperation {
 
     init(with signature: Signature) {
         self.signature = signature
+        let labelTypes: [ILType] = signature.outputType != .nothing ? [signature.outputType] : []
+        let inputTypes: [ILType] = [.object(ofGroup: "WasmTag")] + labelTypes
         // TODO: In an ideal world, the catch would only have one label that is used both for
         // branching as well as for rethrowing the exception. However, rethrows may only use labels
         // from catch blocks and branches may use any label but need to be very precise on the type
@@ -1081,8 +1086,8 @@ final class WasmBeginCatch : WasmOperation {
         // the usage. For now, we just emit a label for branching and the ".exceptionLabel" for
         // rethrows.
         super.init(
-            inputTypes: [.object(ofGroup: "WasmTag")],
-            innerOutputTypes: [.label([]), .exceptionLabel] + signature.parameters.convertPlainToILTypes(),
+            inputTypes: inputTypes,
+            innerOutputTypes: [.label(labelTypes), .exceptionLabel] + signature.parameters.convertPlainToILTypes(),
             attributes: [
                 .isBlockEnd,
                 .isBlockStart,
@@ -1095,8 +1100,9 @@ final class WasmBeginCatch : WasmOperation {
 final class WasmEndTry: WasmOperation {
     override var opcode: Opcode { .wasmEndTry(self) }
 
-    init() {
-        super.init(attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
+    init(outputType: ILType = .nothing) {
+        let inputTypes = outputType != .nothing ? [outputType] : []
+        super.init(inputTypes: inputTypes, outputType: outputType, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
     }
 }
 

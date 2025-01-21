@@ -1003,18 +1003,20 @@ public class FuzzILLifter: Lifter {
         case .wasmBeginCatchAll(_):
             assert(instr.numOutputs == 0)
             w.decreaseIndentionLevel()
-            w.emit("WasmBeginCatchAll -> L:\(instr.innerOutput(0))")
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("WasmBeginCatchAll [\(inputs)] -> L:\(instr.innerOutput(0))")
             w.increaseIndentionLevel()
         case .wasmBeginCatch(_):
             assert(instr.numOutputs == 0)
             w.decreaseIndentionLevel()
-            w.emit("WasmBeginCatch \(input(0)) -> L:\(instr.innerOutput(0)) E:\(instr.innerOutput(1)) [\(liftCallArguments(instr.innerOutputs(2...)))]")
+            w.emit("WasmBeginCatch \(input(0)) [\(instr.numInputs > 1 ? input(1) : "")] -> L:\(instr.innerOutput(0)) E:\(instr.innerOutput(1)) [\(liftCallArguments(instr.innerOutputs(2...)))]")
             w.increaseIndentionLevel()
 
-        case .wasmEndTry(_):
-            assert(instr.numOutputs == 0)
+        case .wasmEndTry(let op):
             w.decreaseIndentionLevel()
-            w.emit("WasmEndTry")
+            let outputPrefix = op.numOutputs > 0 ? "\(output()) <- " : ""
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(outputPrefix)WasmEndTry [\(inputs)]")
 
         case .wasmThrow(_):
             w.emit("WasmThrow \(instr.inputs.map(lift).joined(separator: ", "))")

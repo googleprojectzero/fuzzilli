@@ -1162,6 +1162,7 @@ message WasmBeginCatch {
 }
 
 message WasmEndTry {
+  WasmILType returnType = 1;
 }
 
 message WasmBeginTryDelegate {
