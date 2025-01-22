@@ -559,7 +559,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("WasmBlockWithSignatureGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
-        let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let args = (0..<Int.random(in: 0...5)).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
         let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
         let outputType = b.randomWasmBlockOutputType()
         if outputType != .nothing {
@@ -595,7 +595,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         // Count upwards here to make it slightly more different from the other loop generator.
         // Also, instead of using reassign, this generator uses the signature to pass and update the loop counter.
-        let randomArgs = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let randomArgs = (0..<Int.random(in: 0...5)).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
         let randomArgTypes = randomArgs.map{b.type(of: $0)}
         let args = [function.consti32(0)] + randomArgs
         let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
@@ -616,8 +616,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("WasmLegacyTryCatchGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
-        // TODO(mliedtke): Make the argument count random here and in other block generators.
-        let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let args = (0..<Int.random(in: 0...5)).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
         let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
         let tags = (0..<Int.random(in: 0...5)).map {_ in b.findVariable { b.type(of: $0).isWasmTagType }}.filter {$0 != nil}.map {$0!}
         let recursiveCallCount = 2 + tags.count
@@ -658,7 +657,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("WasmLegacyTryDelegateGenerator", inContext: .wasmFunction, inputs: .required(.anyLabel)) { b, label in
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
-        let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let args = (0..<Int.random(in: 0...5)).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
         let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
         function.wasmBuildLegacyTryDelegate(with: parameters => .nothing, args: args, body: { _, _ in
             b.buildRecursive()
@@ -688,7 +687,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("WasmIfElseWithSignatureGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, conditionVar in
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
-        let args = (0..<5).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
+        let args = (0..<Int.random(in: 0...5)).map {_ in b.findVariable {b.type(of: $0).Is(.wasmPrimitive)}}.filter {$0 != nil}.map {$0!}
         let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
         let outputType = b.randomWasmBlockOutputType()
         if outputType != .nothing {

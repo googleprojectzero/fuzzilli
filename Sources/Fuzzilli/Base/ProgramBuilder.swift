@@ -3256,9 +3256,10 @@ public class ProgramBuilder {
             return b.emit(WasmEndTry(outputType: signature.outputType), withInputs: [result]).output
         }
 
+        // Build a legacy catch block without a result type. Note that this may only be placed into
+        // try blocks that also don't have a result type. (Use wasmBuildLegacyTryWithResult to
+        // create a catch block with a result value.)
         public func WasmBuildLegacyCatch(tag: Variable, body: ((Variable, Variable, [Variable]) -> Void)) {
-            // TODO(mliedtke): A catch block can produce a result type, however that result type
-            // has to be in sync with the try result type (afaict).
             let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => .nothing), withInputs: [tag])
             body(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
         }
