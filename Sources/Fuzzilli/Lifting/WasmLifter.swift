@@ -868,7 +868,6 @@ public class WasmLifter {
 
         switch instr.op.opcode {
         case .wasmBeginBlock(let op):
-            // TODO(mliedtke): Repeat this for loops.
             registerSignature(op.signature)
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
@@ -1002,7 +1001,8 @@ public class WasmLifter {
             self.writer.addExpr(for: instr.output, bytecode: Data([0x20, UInt8(currentFunction!.localsInfo.count - 1)]))
         }
 
-        // TODO(mliedtke): Reuse this for handling parameters in loops, if-else, ...
+        // TODO(mliedtke): Could we make the spilling automatic based on types, so that all wasm
+        // blocks automatically spill all their inner outputs that are stack values.
         if instr.op is WasmBeginBlock || instr.op is WasmBeginTry
             || instr.op is WasmBeginTryDelegate || instr.op is WasmBeginIf || instr.op is WasmBeginElse
             || instr.op is WasmBeginLoop {

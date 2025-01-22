@@ -559,6 +559,13 @@ let v8Profile = Profile(
             args.append("--no-short-builtin-calls")
         }
 
+        // Disabling Liftoff enables "direct" coverage for the optimizing compiler, though some
+        // features (like speculative inlining) require a combination of Liftoff and Turbofan.
+        // Note that this flag only affects WebAssembly.
+        if probability(0.5) {
+            args.append("--no-liftoff")
+        }
+
         //
         // Future features that should sometimes be enabled.
         //

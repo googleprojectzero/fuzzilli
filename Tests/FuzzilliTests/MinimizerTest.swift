@@ -1401,18 +1401,39 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(numGuardedOperationsAfter, 0)
     }
 
-    func testWasmCatchAllMinimization() throws {
+    func runWasmMinimization(program: (MinimizerTests.EvaluatorForMinimizationTests, ProgramBuilder) -> ProgramBuilder.WasmModule, minified: (ProgramBuilder) -> ProgramBuilder.WasmModule) throws {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
         let b = fuzzer.makeBuilder()
 
         // Build input program to be minimized.
-        do {
-            let module = b.buildWasmModule { wasmModule in
+        let originalModule = program(evaluator, b)
+        evaluator.nextInstructionIsImportant(in: b)
+        let exports = originalModule.loadExports()
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callMethod(originalModule.getExportedMethod(at: 0), on: exports)
+        let originalProgram = b.finalize()
+
+        let minifiedModule = minified(b)
+        let minifiedExports = minifiedModule.loadExports()
+        b.callMethod(minifiedModule.getExportedMethod(at: 0), on: minifiedExports)
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram,
+            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n" +
+            "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+    }
+
+    // Test removing unneeded WasmBeginCatchAll blocks.
+    func testWasmCatchAllMinimization() throws {
+        try runWasmMinimization { evaluator, b in
+            return b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                     evaluator.nextInstructionIsImportant(in: b)
                     function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
-                        evaluator.nextInstructionIsImportant(in: b)
                         let val = function.consti64(42)
                         evaluator.nextInstructionIsImportant(in: b)
                         function.wasmReturn(val)
@@ -1424,37 +1445,111 @@ class MinimizerTests: XCTestCase {
                 }
             }
 
-            evaluator.nextInstructionIsImportant(in: b)
-            let exports = module.loadExports()
-            evaluator.nextInstructionIsImportant(in: b)
-            b.callMethod(module.getExportedMethod(at: 0), on: exports)
-        }
-        let originalProgram = b.finalize()
-
-        // Build expected output program.
-        do {
-            let module = b.buildWasmModule { wasmModule in
+        } minified: { b in
+            return b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                     function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
                         function.wasmReturn(function.consti64(42))
-                    // TODO(mliedtke): The catchAllBody should be removed!
-                    // TODO(mliedtke): Also add a test for catch blocks and support reduction of them.
-                    } catchAllBody: { label in
+                    }
+                    function.wasmUnreachable()
+                }
+            }
+        }
+    }
+
+    // Test removing unneeded WasmBeginCatch blocks.
+    func testWasmCatchMinimization() throws {
+        try runWasmMinimization { evaluator, b in
+            return b.buildWasmModule { wasmModule in
+                let tag = wasmModule.addTag(parameterTypes: [])
+                let irrelevantTag = wasmModule.addTag(parameterTypes: [])
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.WasmBuildThrow(tag: tag, inputs: [])
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
+                            let val = function.consti64(42)
+                            evaluator.nextInstructionIsImportant(in: b)
+                            function.wasmReturn(val)
+                        }
+                        function.WasmBuildLegacyCatch(tag: irrelevantTag) { label, exception, args in
+                        }
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmUnreachable()
+                }
+            }
+
+        } minified: { b in
+            return b.buildWasmModule { wasmModule in
+                let tag = wasmModule.addTag(parameterTypes: [])
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                        function.WasmBuildThrow(tag: tag, inputs: [])
+                        function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
+                            function.wasmReturn(function.consti64(42))
+                        }
+                    }
+                    function.wasmUnreachable()
+                }
+            }
+        }
+    }
+
+    // Test removing the try block but keeping its inner instructions (the return statement here).
+    func testWasmTryMinimizationKeepBody() throws {
+        try runWasmMinimization { evaluator, b in
+            return b.buildWasmModule { wasmModule in
+                let tag = wasmModule.addTag(parameterTypes: [])
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                        let val = function.consti64(42)
+                            evaluator.nextInstructionIsImportant(in: b)
+                            function.wasmReturn(val)
+                        function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
+                            function.wasmUnreachable()
+                        }
                     }
                     function.wasmUnreachable()
                 }
             }
 
-            let exports = module.loadExports()
-            b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        } minified: { b in
+            return b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                        function.wasmReturn(function.consti64(42))
+                }
+            }
         }
-        let expectedProgram = b.finalize()
+    }
 
-        // Perform minimization and check that the two programs are equal.
-        let actualProgram = minimize(originalProgram, with: fuzzer)
-        XCTAssertEqual(expectedProgram, actualProgram,
-            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n" +
-            "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+    // Test removing the whole try-catch block including all statements.
+    func testWasmTryMinimizationAll() throws {
+        try runWasmMinimization { evaluator, b in
+            return b.buildWasmModule { wasmModule in
+                let tag = wasmModule.addTag(parameterTypes: [])
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                            function.wasmReturn(function.consti64(123))
+                        function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
+                            function.wasmUnreachable()
+                        }
+                    }
+                    let val = function.consti64(42)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmReturn(val)
+                }
+            }
+
+        } minified: { b in
+            return b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                        function.wasmReturn(function.consti64(42))
+                }
+            }
+        }
     }
 
     func testWasmDataflowMinimization() throws {
