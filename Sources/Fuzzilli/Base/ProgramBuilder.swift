@@ -517,7 +517,7 @@ public class ProgramBuilder {
 
             // We can be sure that we have such a builtin with a signature because the Environment checks this during initialization.
             let signature = fuzzer.environment.type(ofBuiltin: group).signature!
-            let constructor = loadBuiltin(group)
+            let constructor = createNamedVariable(forBuiltin: group)
             let arguments = findOrGenerateArgumentsInternal(forSignature: signature)
             let constructed = construct(constructor, withArgs: arguments)
 
@@ -1653,6 +1653,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func loadDisposableVariable(_ value: Variable) -> Variable {
+        return emit(LoadDisposableVariable(), withInputs: [value]).output
+    }
+
+    @discardableResult
+    public func loadAsyncDisposableVariable(_ value: Variable) -> Variable {
+        return emit(LoadAsyncDisposableVariable(), withInputs: [value]).output
+    }
+
+    @discardableResult
     public func loadNewTarget() -> Variable {
         return emit(LoadNewTarget()).output
     }
@@ -1930,11 +1940,6 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadBuiltin(_ name: String) -> Variable {
-        return emit(LoadBuiltin(builtinName: name)).output
-    }
-
-    @discardableResult
     public func getProperty(_ name: String, of object: Variable, guard isGuarded: Bool = false) -> Variable {
         return emit(GetProperty(propertyName: name, isGuarded: isGuarded), withInputs: [object]).output
     }
@@ -2115,9 +2120,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildPlainFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+    public func buildPlainFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil,_ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-        let instr = emit(BeginPlainFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        let instr = emit(BeginPlainFunction(parameters: descriptor.parameters, functionName: functionName))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }
@@ -2126,9 +2131,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildArrowFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+    public func buildArrowFunction(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-        let instr = emit(BeginArrowFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        let instr = emit(BeginArrowFunction(parameters: descriptor.parameters))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }
@@ -2137,9 +2142,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildGeneratorFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+    public func buildGeneratorFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-        let instr = emit(BeginGeneratorFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        let instr = emit(BeginGeneratorFunction(parameters: descriptor.parameters, functionName: functionName))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }
@@ -2148,9 +2153,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildAsyncFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+    public func buildAsyncFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-        let instr = emit(BeginAsyncFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        let instr = emit(BeginAsyncFunction(parameters: descriptor.parameters, functionName: functionName))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }
@@ -2159,9 +2164,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildAsyncArrowFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+    public func buildAsyncArrowFunction(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-        let instr = emit(BeginAsyncArrowFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        let instr = emit(BeginAsyncArrowFunction(parameters: descriptor.parameters))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }
@@ -2170,9 +2175,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildAsyncGeneratorFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+    public func buildAsyncGeneratorFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-        let instr = emit(BeginAsyncGeneratorFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        let instr = emit(BeginAsyncGeneratorFunction(parameters: descriptor.parameters, functionName: functionName))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }
@@ -2189,6 +2194,10 @@ public class ProgramBuilder {
         if enableRecursionGuard { unhide(instr.output) }
         emit(EndConstructor())
         return instr.output
+    }
+
+    public func directive(_ content: String) {
+        emit(Directive(content))
     }
 
     public func doReturn(_ value: Variable? = nil) {
@@ -2315,16 +2324,15 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadNamedVariable(_ name: String) -> Variable {
-        return emit(LoadNamedVariable(name)).output
+    public func createNamedVariable(_ name: String, declarationMode: NamedVariableDeclarationMode, initialValue: Variable? = nil) -> Variable {
+        assert((declarationMode == .none) == (initialValue == nil))
+        let inputs = initialValue != nil ? [initialValue!] : []
+        return emit(CreateNamedVariable(name, declarationMode: declarationMode), withInputs: inputs).output
     }
 
-    public func storeNamedVariable(_ name: String, _ value: Variable) {
-        emit(StoreNamedVariable(name), withInputs: [value])
-    }
-
-    public func defineNamedVariable(_ name: String, _ value: Variable) {
-        emit(DefineNamedVariable(name), withInputs: [value])
+    @discardableResult
+    public func createNamedVariable(forBuiltin builtinName: String) -> Variable {
+        return createNamedVariable(builtinName, declarationMode: .none)
     }
 
     @discardableResult

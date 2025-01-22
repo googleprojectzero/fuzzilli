@@ -53,6 +53,12 @@ message LoadThis {
 message LoadArguments {
 }
 
+message LoadDisposableVariable {
+}
+
+message LoadAsyncDisposableVariable {
+}
+
 message LoadRegExp {
     string pattern = 1;
     uint32 flags = 2;
@@ -247,10 +253,6 @@ message CreateArrayWithSpread {
     repeated bool spreads = 1;
 }
 
-message LoadBuiltin {
-    string builtinName = 1;
-}
-
 message GetProperty {
     string propertyName = 1;
     bool isGuarded = 2;
@@ -348,7 +350,8 @@ message TestIn {
 
 message BeginPlainFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
+    // Can be missing, in which case the name is auto-assigned.
+    string name = 2;
 }
 
 message EndPlainFunction {
@@ -356,7 +359,6 @@ message EndPlainFunction {
 
 message BeginArrowFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
 }
 
 message EndArrowFunction {
@@ -364,7 +366,8 @@ message EndArrowFunction {
 
 message BeginGeneratorFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
+    // Can be missing, in which case the name is auto-assigned.
+    string name = 2;
 }
 
 message EndGeneratorFunction {
@@ -372,7 +375,8 @@ message EndGeneratorFunction {
 
 message BeginAsyncFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
+    // Can be missing, in which case the name is auto-assigned.
+    string name = 2;
 }
 
 message EndAsyncFunction {
@@ -380,7 +384,6 @@ message EndAsyncFunction {
 
 message BeginAsyncArrowFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
 }
 
 message EndAsyncArrowFunction {
@@ -388,7 +391,8 @@ message EndAsyncArrowFunction {
 
 message BeginAsyncGeneratorFunction {
     Parameters parameters = 1;
-    bool isStrict = 2;
+    // Can be missing, in which case the name is auto-assigned.
+    string name = 2;
 }
 
 message EndAsyncGeneratorFunction {
@@ -399,6 +403,10 @@ message BeginConstructor {
 }
 
 message EndConstructor {
+}
+
+message Directive {
+    string content = 1;
 }
 
 message Return {
@@ -535,16 +543,16 @@ message Compare {
     Comparator op = 1;
 }
 
-message LoadNamedVariable {
-    string variableName = 1;
+enum NamedVariableDeclarationMode {
+    NONE = 0;
+    GLOBAL = 1;
+    VAR = 2;
+    LET = 3;
 }
 
-message StoreNamedVariable {
+message CreateNamedVariable {
     string variableName = 1;
-}
-
-message DefineNamedVariable {
-    string variableName = 1;
+    NamedVariableDeclarationMode declarationMode = 2;
 }
 
 message Eval {

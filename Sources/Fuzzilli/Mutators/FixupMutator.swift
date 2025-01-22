@@ -99,7 +99,7 @@ public class FixupMutator: RuntimeAssistedMutator {
             fixup(instr, performing: op, guarded: guarded, withInputs: inputs, with: b)
         }
 
-        func fixupIfUnguarded(_ instr: Instruction, performing op: ActionOperation, guarded: Bool, withInputs inputs: [Action.Input], with b: ProgramBuilder) {
+        func fixupIfGuarded(_ instr: Instruction, performing op: ActionOperation, guarded: Bool, withInputs inputs: [Action.Input], with b: ProgramBuilder) {
             guard guarded else {
                 b.append(instr)
                 return
@@ -116,11 +116,11 @@ public class FixupMutator: RuntimeAssistedMutator {
             // exception would be raised.
             case .callFunction(let op):
                 let inputs = (0..<instr.numInputs).map({ Action.Input.argument(index: $0) })
-                fixupIfUnguarded(instr, performing: .CallFunction, guarded: op.isGuarded, withInputs: inputs, with: b)
+                fixupIfGuarded(instr, performing: .CallFunction, guarded: op.isGuarded, withInputs: inputs, with: b)
 
             case .construct(let op):
                 let inputs = (0..<instr.numInputs).map({ Action.Input.argument(index: $0) })
-                fixupIfUnguarded(instr, performing: .Construct, guarded: op.isGuarded, withInputs: inputs, with: b)
+                fixupIfGuarded(instr, performing: .Construct, guarded: op.isGuarded, withInputs: inputs, with: b)
 
             // For method calls, we also instrument some of the unguarded ones as we may be calling a "boring" method (e.g. one from the Object.prototype)
             // as we lacked knowledge of more interesting methods during static code generation.

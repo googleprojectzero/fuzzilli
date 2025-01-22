@@ -1,29 +1,28 @@
 if (typeof output === 'undefined') output = console.log;
 
 function foo() {
-    output(v1);
-    var v1 = 42;
-    output(v1);
+    output(a);
+    var a = 42;
+    output(a);
 
-    output(v2);
+    output(b);
     do {
-        var v2 = 43;
-        output(v2);
+        var b = 43;
+        output(b);
     } while(false);
-    output(v2);
+    output(b);
 
-    let v3 = 44;
+    let c = 44;
     function bar() {
-        // TODO the following doesn't currently work.
-        //output(v3);
-        //v3 = 45;
-        //output(v3);
-        var v3 = 46;
-        output(v3);
-        v3 = 47;
-        output(v3);
+        output(c);
+        c = 45;
+        output(c);
+        var c = 46;
+        output(c);
+        c = 47;
+        output(c);
     }
     bar();
-    output(v3);
+    output(c);
 }
 foo();

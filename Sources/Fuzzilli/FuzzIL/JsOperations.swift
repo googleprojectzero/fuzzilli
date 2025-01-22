@@ -55,6 +55,90 @@ class GuardableOperation: JsOperation {
         self.isGuarded = isGuarded
         super.init(numInputs: numInputs, numOutputs: numOutputs, numInnerOutputs: numInnerOutputs, firstVariadicInput: firstVariadicInput, attributes: attributes, requiredContext: requiredContext)
     }
+
+    // Helper functions to enable guards.
+    // If the given operation already has guarding enabled, then this function does
+    // nothing and simply returns the input. Otherwise it creates a copy of the
+    // operations which has guarding enabled.
+    static func enableGuard(of operation: GuardableOperation) -> GuardableOperation {
+        if operation.isGuarded {
+            return operation
+        }
+        switch operation.opcode {
+        case .getProperty(let op):
+            return GetProperty(propertyName: op.propertyName, isGuarded: true)
+        case .deleteProperty(let op):
+            return DeleteProperty(propertyName: op.propertyName, isGuarded: true)
+        case .getElement(let op):
+            return GetElement(index: op.index, isGuarded: true)
+        case .deleteElement(let op):
+            return DeleteElement(index: op.index, isGuarded: true)
+        case .getComputedProperty:
+            return GetComputedProperty(isGuarded: true)
+        case .deleteComputedProperty:
+            return DeleteComputedProperty(isGuarded: true)
+        case .callFunction(let op):
+            return CallFunction(numArguments: op.numArguments, isGuarded: true)
+        case .callFunctionWithSpread(let op):
+            return CallFunctionWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: true)
+        case .construct(let op):
+            return Construct(numArguments: op.numArguments, isGuarded: true)
+        case .constructWithSpread(let op):
+            return ConstructWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: true)
+        case .callMethod(let op):
+            return CallMethod(methodName: op.methodName, numArguments: op.numArguments, isGuarded: true)
+        case .callMethodWithSpread(let op):
+            return CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments, spreads: op.spreads, isGuarded: true)
+        case .callComputedMethod(let op):
+            return CallComputedMethod(numArguments: op.numArguments, isGuarded: true)
+        case .callComputedMethodWithSpread(let op):
+            return CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: true)
+        default:
+            fatalError("All guardable operations should be handled")
+        }
+    }
+
+    // Helper functions to disable guards.
+    // If the given operation already has guarding disabled, then this function does
+    // nothing and simply returns the input. Otherwise it creates a copy of the
+    // operations which has guarding disabled.
+    static func disableGuard(of operation: GuardableOperation) -> GuardableOperation {
+        if !operation.isGuarded {
+            return operation
+        }
+        switch operation.opcode {
+        case .getProperty(let op):
+            return GetProperty(propertyName: op.propertyName, isGuarded: false)
+        case .deleteProperty(let op):
+            return DeleteProperty(propertyName: op.propertyName, isGuarded: false)
+        case .getElement(let op):
+            return GetElement(index: op.index, isGuarded: false)
+        case .deleteElement(let op):
+            return DeleteElement(index: op.index, isGuarded: false)
+        case .getComputedProperty:
+            return GetComputedProperty(isGuarded: false)
+        case .deleteComputedProperty:
+            return DeleteComputedProperty(isGuarded: false)
+        case .callFunction(let op):
+            return CallFunction(numArguments: op.numArguments, isGuarded: false)
+        case .callFunctionWithSpread(let op):
+            return CallFunctionWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+        case .construct(let op):
+            return Construct(numArguments: op.numArguments, isGuarded: false)
+        case .constructWithSpread(let op):
+            return ConstructWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+        case .callMethod(let op):
+            return CallMethod(methodName: op.methodName, numArguments: op.numArguments, isGuarded: false)
+        case .callMethodWithSpread(let op):
+            return CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+        case .callComputedMethod(let op):
+            return CallComputedMethod(numArguments: op.numArguments, isGuarded: false)
+        case .callComputedMethodWithSpread(let op):
+            return CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+        default:
+            fatalError("All guardable operations should be handled")
+        }
+    }
 }
 
 final class LoadInteger: JsOperation {
@@ -142,6 +226,103 @@ final class LoadArguments: JsOperation {
 
     init() {
         super.init(numOutputs: 1, attributes: [.isPure], requiredContext: [.javascript, .subroutine])
+    }
+}
+
+/// Named Variables.
+///
+/// Named variables are variables with a specific name. They are created through the
+/// CreateNamedVariable operation and are useful whenever the name of a variable is
+/// (potentially) important. In particular they are used frequenty when compiling
+/// existing JavaScript code to FuzzIL. Furthermore, named variables are also used to
+/// access builtins as these are effectively just global/pre-existing named variables.
+///
+/// When declaring a new named variable (i.e. when the declarationMode is not .none),
+/// then an initial value must be provided (as first and only input to the operation).
+/// "Uninitialized" named variables can be created by using `undefined` as initial value.
+///
+/// The following code is a simple demonstration of named variables:
+///
+///    // Make an existing named variable (e.g. a builtin) available
+///    v0 <- CreateNamedVariable 'print', declarationMode: .none
+///
+///    // Overwrite an existing named variable
+///    v1 <- CreateNamedVariable 'foo', declarationMode: .none
+///    v2 <- CallFunction v0, v1
+///    v3 <- LoadString 'bar'
+///    Reassign v1, v3
+///
+///    // Declare a new named variable
+///    v4 <- CreateNamedVariable 'baz', declarationMode: .var, v1
+///    v5 <- LoadString 'bla'
+///    Update v4 '+' v5
+///    v5 <- CallFunction v0, v4
+///
+/// This will lift to JavaScript code similar to the following:
+///
+///    print(foo);
+///    foo = "bar";
+///    var baz = foo;
+///    baz += "bla";
+///    print(baz);
+///
+public enum NamedVariableDeclarationMode : CaseIterable {
+    // The variable is assumed to already exist and therefore is not declared again.
+    // This is for example used for global variables and builtins, but also to support
+    // variable and function hoisting where an identifier is used before it is defined.
+    case none
+    // Declare the variable as global variable without any declaration keyword.
+    case global
+    // Declare the variable using the 'var' keyword.
+    case `var`
+    // Declare the variable using the 'let' keyword.
+    case `let`
+    // Declare the variable using the 'const' keyword.
+    case const
+}
+
+final class CreateNamedVariable: JsOperation {
+    override var opcode: Opcode { .createNamedVariable(self) }
+
+    let variableName: String
+    let declarationMode: NamedVariableDeclarationMode
+
+    // Currently, all named variable declarations need an initial value. "undefined" can be
+    // used when no initial value is available, in which case the lifter will not emit an assignment.
+    // We could also consider allowing variable declarations without an initial value, however for
+    // both .global and .const declarations, we always need an initial value to produce valid code.
+    var hasInitialValue: Bool {
+        return declarationMode != .none
+    }
+
+    init(_ name: String, declarationMode: NamedVariableDeclarationMode) {
+        self.variableName = name
+        self.declarationMode = declarationMode
+        super.init(numInputs: declarationMode == .none ? 0 : 1, numOutputs: 1, attributes: .isMutable)
+    }
+}
+
+final class LoadDisposableVariable: JsOperation {
+    override var opcode: Opcode { .loadDisposableVariable(self) }
+
+    init() {
+        // Based on spec text, it is a Syntax error if UsingDeclaration and AwaitUsingDeclaration
+        // are not contained, either directly or indirectly, within a Block, CaseBlock, ForStatement,
+        // ForInOfStatement, FunctionBody, GeneratorBody, AsyncGeneratorBody, AsyncFunctionBody,
+        // or ClassStaticBlockBody.
+        // https://tc39.es/proposal-explicit-resource-management/#sec-let-and-const-declarations-static-semantics-early-errors
+
+        // TODO: Add support for block context to complete LoadDisposableVariable and
+        // LoadAsyncDisposableVariable operations.
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .subroutine])
+    }
+}
+
+final class LoadAsyncDisposableVariable: JsOperation {
+    override var opcode: Opcode { .loadAsyncDisposableVariable(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .asyncFunction])
     }
 }
 
@@ -818,17 +999,6 @@ final class CreateTemplateString: JsOperation {
     }
 }
 
-final class LoadBuiltin: JsOperation {
-    override var opcode: Opcode { .loadBuiltin(self) }
-
-    let builtinName: String
-
-    init(builtinName: String) {
-        self.builtinName = builtinName
-        super.init(numOutputs: 1, attributes: .isMutable)
-    }
-}
-
 final class GetProperty: GuardableOperation {
     override var opcode: Opcode { .getProperty(self) }
 
@@ -1096,12 +1266,8 @@ class EndAnySubroutine: JsOperation {
 // Function definitions.
 // Roughly speaking, a function is any subroutine that is supposed to be invoked via CallFunction. In JavaScript, they are typically defined through the 'function' keyword or an arrow function.
 // Functions beginnings are not considered mutable since it likely makes little sense to change things like the number of parameters.
-// It also likely makes little sense to switch a function into/out of strict mode. As such, these attributes are permanent.
 class BeginAnyFunction: BeginAnySubroutine {
-    let isStrict: Bool
-
-    init(parameters: Parameters, isStrict: Bool, contextOpened: Context = [.javascript, .subroutine]) {
-        self.isStrict = isStrict
+    init(parameters: Parameters, contextOpened: Context = [.javascript, .subroutine]) {
         super.init(parameters: parameters,
                    numInputs: 0,
                    numOutputs: 1,
@@ -1111,8 +1277,24 @@ class BeginAnyFunction: BeginAnySubroutine {
 }
 class EndAnyFunction: EndAnySubroutine {}
 
+// Functions that can (optionally) be given a name.
+class BeginAnyNamedFunction: BeginAnyFunction {
+    // If the function has no name (the name is nil), then a  name is automatically assigned
+    // during lifting. Typically it will be something like `f3`, and the lifter guarantees
+    // that there are no name collisions with other functions.
+    // If a name is present, the lifter will use that for the function. In that case, the
+    // lifter cannot guarantee that there are no name collisions with other named functions.
+    let functionName: String?
+
+    init(parameters: Parameters, functionName: String?, contextOpened: Context = [.javascript, .subroutine]) {
+        assert(functionName == nil || !functionName!.isEmpty)
+        self.functionName = functionName
+        super.init(parameters: parameters, contextOpened: contextOpened)
+    }
+}
+
 // A plain function
-final class BeginPlainFunction: BeginAnyFunction {
+final class BeginPlainFunction: BeginAnyNamedFunction {
     override var opcode: Opcode { .beginPlainFunction(self) }
 }
 final class EndPlainFunction: EndAnyFunction {
@@ -1128,11 +1310,11 @@ final class EndArrowFunction: EndAnyFunction {
 }
 
 // A ES6 generator function
-final class BeginGeneratorFunction: BeginAnyFunction {
+final class BeginGeneratorFunction: BeginAnyNamedFunction {
     override var opcode: Opcode { .beginGeneratorFunction(self) }
 
-    init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .generatorFunction])
+    init(parameters: Parameters, functionName: String?) {
+        super.init(parameters: parameters, functionName: functionName, contextOpened: [.javascript, .subroutine, .generatorFunction])
     }
 }
 final class EndGeneratorFunction: EndAnyFunction {
@@ -1140,11 +1322,11 @@ final class EndGeneratorFunction: EndAnyFunction {
 }
 
 // A ES6 async function
-final class BeginAsyncFunction: BeginAnyFunction {
+final class BeginAsyncFunction: BeginAnyNamedFunction {
     override var opcode: Opcode { .beginAsyncFunction(self) }
 
-    init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction])
+    init(parameters: Parameters, functionName: String?) {
+        super.init(parameters: parameters, functionName: functionName, contextOpened: [.javascript, .subroutine, .asyncFunction])
     }
 }
 final class EndAsyncFunction: EndAnyFunction {
@@ -1155,8 +1337,8 @@ final class EndAsyncFunction: EndAnyFunction {
 final class BeginAsyncArrowFunction: BeginAnyFunction {
     override var opcode: Opcode { .beginAsyncArrowFunction(self) }
 
-    init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction])
+    init(parameters: Parameters) {
+        super.init(parameters: parameters, contextOpened: [.javascript, .subroutine, .asyncFunction])
     }
 }
 final class EndAsyncArrowFunction: EndAnyFunction {
@@ -1164,11 +1346,11 @@ final class EndAsyncArrowFunction: EndAnyFunction {
 }
 
 // A ES6 async generator function
-final class BeginAsyncGeneratorFunction: BeginAnyFunction {
+final class BeginAsyncGeneratorFunction: BeginAnyNamedFunction {
     override var opcode: Opcode { .beginAsyncGeneratorFunction(self) }
 
-    init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction, .generatorFunction])
+    init(parameters: Parameters, functionName: String?) {
+        super.init(parameters: parameters, functionName: functionName, contextOpened: [.javascript, .subroutine, .asyncFunction, .generatorFunction])
     }
 }
 final class EndAsyncGeneratorFunction: EndAnyFunction {
@@ -1187,6 +1369,32 @@ final class BeginConstructor: BeginAnySubroutine {
 }
 final class EndConstructor: EndAnySubroutine {
     override var opcode: Opcode { .endConstructor(self) }
+}
+
+// A directive for the JavaScript engine.
+//
+// These are strings such as "use strict" that have special meaning
+// if placed at the top of a function. Support in FuzzIL is very basic
+// and simple: a directive is simply a string for which a string literal
+// will be created in the generated JavaScript code. There is also no
+// guarantee that these will be placed at the start of a function's body,
+// and due to mutations they might appear elsewhere in a program (which
+// is probably a feature). They will also quickly be removed by the
+// minimizer if they are not important (which is probably also desirable
+// as strict mode function are more likely to raise exceptions).
+final class Directive: JsOperation {
+    override var opcode: Opcode { .directive(self) }
+
+    let content: String
+
+    init(_ content: String) {
+        // Currently we only support "use strict" and don't support mutating the content.
+        // We could easily change both of these constraints and allow arbitrary directives
+        // or a list of known directives if we deem that useful in the future though.
+        assert(content == "use strict")
+        self.content = content
+        super.init(numInputs: 0, numOutputs: 0, attributes: [], requiredContext: [.javascript])
+    }
 }
 
 final class Return: JsOperation {
@@ -1556,48 +1764,6 @@ final class Compare: JsOperation {
     init(_ comparator: Comparator) {
         self.op = comparator
         super.init(numInputs: 2, numOutputs: 1, attributes: .isMutable)
-    }
-}
-
-// Named Variables.
-//
-// Named variables are used to cover global and `var` variables in JavaScript
-// as well as to support variable hoisting.
-//
-// When a named variable is defined, it becomes a `var` variable in JavaScript.
-// However, it is allowed to access (load/store) a named variable without
-// defining it first, in which case the access becomes either a global variable
-// access (if the variable isn't later defined) or a hoisted variable access.
-final class LoadNamedVariable: JsOperation {
-    override var opcode: Opcode { .loadNamedVariable(self) }
-
-    let variableName: String
-
-    init(_ name: String) {
-        self.variableName = name
-        super.init(numOutputs: 1, attributes: .isMutable)
-    }
-}
-
-final class StoreNamedVariable: JsOperation {
-    override var opcode: Opcode { .storeNamedVariable(self) }
-
-    let variableName: String
-
-    init(_ name: String) {
-        self.variableName = name
-        super.init(numInputs: 1, attributes: .isMutable)
-    }
-}
-
-final class DefineNamedVariable: JsOperation {
-    override var opcode: Opcode { .defineNamedVariable(self) }
-
-    let variableName: String
-
-    init(_ name: String) {
-        self.variableName = name
-        super.init(numInputs: 1, attributes: .isMutable)
     }
 }
 

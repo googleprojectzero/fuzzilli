@@ -361,6 +361,10 @@ extension Instruction: ProtobufConvertible {
                 $0.loadThis = Fuzzilli_Protobuf_LoadThis()
             case .loadArguments:
                 $0.loadArguments = Fuzzilli_Protobuf_LoadArguments()
+            case .loadDisposableVariable:
+                $0.loadDisposableVariable = Fuzzilli_Protobuf_LoadDisposableVariable()
+            case .loadAsyncDisposableVariable:
+                $0.loadAsyncDisposableVariable = Fuzzilli_Protobuf_LoadAsyncDisposableVariable()
             case .loadRegExp(let op):
                 $0.loadRegExp = Fuzzilli_Protobuf_LoadRegExp.with { $0.pattern = op.pattern; $0.flags = op.flags.rawValue }
             case .beginObjectLiteral:
@@ -496,8 +500,6 @@ extension Instruction: ProtobufConvertible {
                 $0.createArrayWithSpread = Fuzzilli_Protobuf_CreateArrayWithSpread.with { $0.spreads = op.spreads }
             case .createTemplateString(let op):
                 $0.createTemplateString = Fuzzilli_Protobuf_CreateTemplateString.with { $0.parts = op.parts }
-            case .loadBuiltin(let op):
-                $0.loadBuiltin = Fuzzilli_Protobuf_LoadBuiltin.with { $0.builtinName = op.builtinName }
             case .getProperty(let op):
                 $0.getProperty = Fuzzilli_Protobuf_GetProperty.with {
                     $0.propertyName = op.propertyName
@@ -574,42 +576,48 @@ extension Instruction: ProtobufConvertible {
             case .beginPlainFunction(let op):
                 $0.beginPlainFunction = Fuzzilli_Protobuf_BeginPlainFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
+                    if let name = op.functionName {
+                        $0.name = name
+                    }
                 }
             case .endPlainFunction:
                 $0.endPlainFunction = Fuzzilli_Protobuf_EndPlainFunction()
             case .beginArrowFunction(let op):
                 $0.beginArrowFunction = Fuzzilli_Protobuf_BeginArrowFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
                 }
             case .endArrowFunction:
                 $0.endArrowFunction = Fuzzilli_Protobuf_EndArrowFunction()
             case .beginGeneratorFunction(let op):
                 $0.beginGeneratorFunction = Fuzzilli_Protobuf_BeginGeneratorFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
+                    if let name = op.functionName {
+                        $0.name = name
+                    }
                 }
             case .endGeneratorFunction:
                 $0.endGeneratorFunction = Fuzzilli_Protobuf_EndGeneratorFunction()
             case .beginAsyncFunction(let op):
                 $0.beginAsyncFunction = Fuzzilli_Protobuf_BeginAsyncFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
+                    if let name = op.functionName {
+                        $0.name = name
+                    }
                 }
             case.endAsyncFunction:
                 $0.endAsyncFunction = Fuzzilli_Protobuf_EndAsyncFunction()
             case .beginAsyncArrowFunction(let op):
                 $0.beginAsyncArrowFunction = Fuzzilli_Protobuf_BeginAsyncArrowFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
                 }
             case .endAsyncArrowFunction:
                 $0.endAsyncArrowFunction = Fuzzilli_Protobuf_EndAsyncArrowFunction()
             case .beginAsyncGeneratorFunction(let op):
                 $0.beginAsyncGeneratorFunction = Fuzzilli_Protobuf_BeginAsyncGeneratorFunction.with {
                     $0.parameters = convertParameters(op.parameters)
-                    $0.isStrict = op.isStrict
+                    if let name = op.functionName {
+                        $0.name = name
+                    }
                 }
             case .endAsyncGeneratorFunction:
                 $0.endAsyncGeneratorFunction = Fuzzilli_Protobuf_EndAsyncGeneratorFunction()
@@ -619,6 +627,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .endConstructor:
                 $0.endConstructor = Fuzzilli_Protobuf_EndConstructor()
+            case .directive(let op):
+                $0.directive = Fuzzilli_Protobuf_Directive.with { $0.content = op.content }
             case .return:
                 $0.return = Fuzzilli_Protobuf_Return()
             case .yield:
@@ -693,12 +703,11 @@ extension Instruction: ProtobufConvertible {
                 }
             case .compare(let op):
                 $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, Comparator.allCases) }
-            case .loadNamedVariable(let op):
-                $0.loadNamedVariable = Fuzzilli_Protobuf_LoadNamedVariable.with { $0.variableName = op.variableName }
-            case .storeNamedVariable(let op):
-                $0.storeNamedVariable = Fuzzilli_Protobuf_StoreNamedVariable.with { $0.variableName = op.variableName }
-            case .defineNamedVariable(let op):
-                $0.defineNamedVariable = Fuzzilli_Protobuf_DefineNamedVariable.with { $0.variableName = op.variableName }
+            case .createNamedVariable(let op):
+                $0.createNamedVariable = Fuzzilli_Protobuf_CreateNamedVariable.with {
+                    $0.variableName = op.variableName
+                    $0.declarationMode = convertEnum(op.declarationMode, NamedVariableDeclarationMode.allCases)
+                }
             case .eval(let op):
                 $0.eval = Fuzzilli_Protobuf_Eval.with {
                     $0.code = op.code
@@ -900,6 +909,10 @@ extension Instruction: ProtobufConvertible {
             op = LoadThis()
         case .loadArguments:
             op = LoadArguments()
+        case .loadDisposableVariable:
+            op = LoadDisposableVariable()
+        case .loadAsyncDisposableVariable:
+            op = LoadAsyncDisposableVariable()
         case .loadRegExp(let p):
             op = LoadRegExp(pattern: p.pattern, flags: RegExpFlags(rawValue: p.flags))
         case .beginObjectLiteral:
@@ -1002,8 +1015,6 @@ extension Instruction: ProtobufConvertible {
             op = CreateArrayWithSpread(spreads: p.spreads)
         case .createTemplateString(let p):
             op = CreateTemplateString(parts: p.parts)
-        case .loadBuiltin(let p):
-            op = LoadBuiltin(builtinName: p.builtinName)
         case .getProperty(let p):
             op = GetProperty(propertyName: p.propertyName, isGuarded: p.isGuarded)
         case .setProperty(let p):
@@ -1056,32 +1067,36 @@ extension Instruction: ProtobufConvertible {
             op = TestIn()
         case .beginPlainFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginPlainFunction(parameters: parameters, isStrict: p.isStrict)
+            let functionName = p.name.isEmpty ? nil : p.name
+            op = BeginPlainFunction(parameters: parameters, functionName: functionName)
         case .endPlainFunction:
             op = EndPlainFunction()
         case .beginArrowFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginArrowFunction(parameters: parameters, isStrict: p.isStrict)
+            op = BeginArrowFunction(parameters: parameters)
         case .endArrowFunction:
             op = EndArrowFunction()
         case .beginGeneratorFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginGeneratorFunction(parameters: parameters, isStrict: p.isStrict)
+            let functionName = p.name.isEmpty ? nil : p.name
+            op = BeginGeneratorFunction(parameters: parameters, functionName: functionName)
         case .endGeneratorFunction:
             op = EndGeneratorFunction()
         case .beginAsyncFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginAsyncFunction(parameters: parameters, isStrict: p.isStrict)
+            let functionName = p.name.isEmpty ? nil : p.name
+            op = BeginAsyncFunction(parameters: parameters, functionName: functionName)
         case .endAsyncFunction:
             op = EndAsyncFunction()
         case .beginAsyncArrowFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginAsyncArrowFunction(parameters: parameters, isStrict: p.isStrict)
+            op = BeginAsyncArrowFunction(parameters: parameters)
         case .endAsyncArrowFunction:
             op = EndAsyncArrowFunction()
         case .beginAsyncGeneratorFunction(let p):
             let parameters = convertParameters(p.parameters)
-            op = BeginAsyncGeneratorFunction(parameters: parameters, isStrict: p.isStrict)
+            let functionName = p.name.isEmpty ? nil : p.name
+            op = BeginAsyncGeneratorFunction(parameters: parameters, functionName: functionName)
         case .endAsyncGeneratorFunction:
             op = EndAsyncGeneratorFunction()
         case .beginConstructor(let p):
@@ -1089,6 +1104,8 @@ extension Instruction: ProtobufConvertible {
             op = BeginConstructor(parameters: parameters)
         case .endConstructor:
             op = EndConstructor()
+        case .directive(let p):
+            op = Directive(p.content)
         case .return:
             let hasReturnValue = inouts.count == 1
             op = Return(hasReturnValue: hasReturnValue)
@@ -1137,12 +1154,8 @@ extension Instruction: ProtobufConvertible {
             op = DestructObjectAndReassign(properties: p.properties, hasRestElement: p.hasRestElement_p)
         case .compare(let p):
             op = Compare(try convertEnum(p.op, Comparator.allCases))
-        case .loadNamedVariable(let p):
-            op = LoadNamedVariable(p.variableName)
-        case .storeNamedVariable(let p):
-            op = StoreNamedVariable(p.variableName)
-        case .defineNamedVariable(let p):
-            op = DefineNamedVariable(p.variableName)
+        case .createNamedVariable(let p):
+            op = CreateNamedVariable(p.variableName, declarationMode: try convertEnum(p.declarationMode, NamedVariableDeclarationMode.allCases))
         case .eval(let p):
             let numArguments = inouts.count - (p.hasOutput_p ? 1 : 0)
             op = Eval(p.code, numArguments: numArguments, hasOutput: p.hasOutput_p)

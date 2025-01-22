@@ -138,7 +138,7 @@ class MinimizationHelper {
             }
         }
 
-        // Run the modified program and see if the patch changed its behaviour
+        // Run the modified program and see if the reduction altered its behaviour
         var stillHasAspects = false
         performOnFuzzerQueue {
             for _ in 0..<numExecutions {

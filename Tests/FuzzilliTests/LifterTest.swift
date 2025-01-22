@@ -48,19 +48,36 @@ class LifterTests: XCTestCase {
         }
     }
 
+    func testLiftingWithLineNumbers() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        for _ in 0..<10 {
+            b.buildPrefix()
+            b.build(n: 100, by: .generating)
+            let program = b.finalize()
+
+            let codeWithLinenumbers = fuzzer.lifter.lift(program, withOptions: .includeLineNumbers)
+
+            for (i, line) in codeWithLinenumbers.split(separator: "\n").enumerated() {
+                XCTAssert(line.trimmingCharacters(in: .whitespaces).starts(with: "\(i+1)"))
+            }
+        }
+    }
+
     func testExpressionInlining1() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let Object = b.loadBuiltin("Object")
+        let Object = b.createNamedVariable(forBuiltin: "Object")
         let obj = b.construct(Object)
-        let o = b.loadBuiltin("SomeObj")
+        let o = b.createNamedVariable(forBuiltin: "SomeObj")
         let foo = b.getProperty("foo", of: o)
         let bar = b.getProperty("bar", of: foo)
         let i = b.loadInt(42)
         let r = b.callMethod("baz", on: bar, withArgs: [i, i])
         b.setProperty("r", of: obj, to: r)
-        let Math = b.loadBuiltin("Math")
+        let Math = b.createNamedVariable(forBuiltin: "Math")
         let lhs = b.callMethod("random", on: Math)
         let rhs = b.loadFloat(13.37)
         let s = b.binary(lhs, rhs, with: .Add)
@@ -85,10 +102,10 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let Object = b.loadBuiltin("Object")
+        let Object = b.createNamedVariable(forBuiltin: "Object")
         let obj = b.construct(Object)
         let i = b.loadInt(42)
-        let o = b.loadBuiltin("SomeObj")
+        let o = b.createNamedVariable(forBuiltin: "SomeObj")
         let foo = b.getProperty("foo", of: o)
         let bar = b.getProperty("bar", of: foo)
         let baz = b.getProperty("baz", of: bar)
@@ -113,9 +130,9 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         // Test that effectful operations aren't reordered in any sematic-changing way.
-        let Object = b.loadBuiltin("Object")
+        let Object = b.createNamedVariable(forBuiltin: "Object")
         let obj = b.construct(Object)
-        let effectful = b.loadBuiltin("effectful")
+        let effectful = b.createNamedVariable(forBuiltin: "effectful")
 
         var lhs = b.callMethod("func1", on: effectful)
         var rhs = b.callMethod("func2", on: effectful)
@@ -229,13 +246,13 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let someValue = b.loadBuiltin("someValue")
-        let computeThreshold = b.loadBuiltin("computeThreshold")
+        let someValue = b.createNamedVariable(forBuiltin: "someValue")
+        let computeThreshold = b.createNamedVariable(forBuiltin: "computeThreshold")
         let threshold = b.callFunction(computeThreshold)
         let cond = b.compare(someValue, with: threshold, using: .lessThan)
         // The comparison and the function call can be inlined into the header of the if-statement.
         b.buildIf(cond) {
-            let doSomething = b.loadBuiltin("doSomething")
+            let doSomething = b.createNamedVariable(forBuiltin: "doSomething")
             b.callFunction(doSomething)
         }
 
@@ -257,7 +274,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let v0 = b.loadInt(0)
-        let f = b.loadBuiltin("computeNumIterations")
+        let f = b.createNamedVariable(forBuiltin: "computeNumIterations")
         let numIterations = b.callFunction(f)
         // The function call should not be inlined into the loop header as that would change the programs behavior.
         b.buildWhileLoop({ b.compare(v0, with: numIterations, using: .lessThan) }) {
@@ -284,12 +301,12 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         // Test that (potentially) effectful operations are only executed once.
-        let Object = b.loadBuiltin("Object")
+        let Object = b.createNamedVariable(forBuiltin: "Object")
         let o = b.construct(Object)
         let v0 = b.loadInt(1337)
-        let f1 = b.loadBuiltin("func1")
+        let f1 = b.createNamedVariable(forBuiltin: "func1")
         let r1 = b.callFunction(f1, withArgs: [v0])
-        let f2 = b.loadBuiltin("func2")
+        let f2 = b.createNamedVariable(forBuiltin: "func2")
         let r2 = b.callFunction(f2, withArgs: [r1])
         b.setProperty("x", of: o, to: r2)
         b.setProperty("y", of: o, to: r2)
@@ -372,7 +389,7 @@ class LifterTests: XCTestCase {
         b.buildPlainFunction(with: .parameters(n: 1)) { args in
             let p = args[0]
             let two = b.loadInt(2)
-            let Math = b.loadBuiltin("Math")
+            let Math = b.createNamedVariable(forBuiltin: "Math")
             let x = b.getProperty("x", of: p)
             let xSquared = b.binary(x, two, with: .Exp)
             let y = b.getProperty("y", of: p)
@@ -442,8 +459,8 @@ class LifterTests: XCTestCase {
         // variable access also does not raise an exception.
         b.loadInt(42)
         b.loadString("foobar")
-        b.loadNamedVariable("nonexistant")
-        let v = b.loadNamedVariable("alsoNonexistantButSafeToAccessViaTypeOf")
+        b.createNamedVariable("nonexistant", declarationMode: .none)
+        let v = b.createNamedVariable("alsoNonexistantButSafeToAccessViaTypeOf", declarationMode: .none)
         b.typeof(v)
 
         let program = b.finalize()
@@ -466,8 +483,8 @@ class LifterTests: XCTestCase {
         let v3 = b.loadString("foobar")
         let null = b.loadNull()
         let v4 = b.binary(v3, v1, with: .Add)
-        let otherObject = b.loadBuiltin("SomeObject")
-        let toPrimitive = b.getProperty("toPrimitive", of: b.loadBuiltin("Symbol"))
+        let otherObject = b.createNamedVariable(forBuiltin: "SomeObject")
+        let toPrimitive = b.getProperty("toPrimitive", of: b.createNamedVariable(forBuiltin: "Symbol"))
         b.buildObjectLiteral { obj in
             obj.addProperty("p1", as: v1)
             obj.addProperty("__proto__", as: null)
@@ -500,13 +517,13 @@ class LifterTests: XCTestCase {
         let expected = """
         const v4 = "foobar" + 42;
         const v7 = Symbol.toPrimitive;
-        const o17 = {
-            "p1": 42,
-            "__proto__": null,
+        const v17 = {
+            p1: 42,
+            __proto__: null,
             0: 13.37,
             [-1]: 13.37,
             ["foobar"]: "foobar",
-            "p2": 13.37,
+            p2: 13.37,
             [v4]: 42,
             __proto__: null,
             m(a9, a10) {
@@ -523,6 +540,72 @@ class LifterTests: XCTestCase {
             },
             ...SomeObject,
         };
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testObjectLiteralIsDistinguishableFromBlockStatement() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let i1 = b.loadInt(1)
+        let i2 = b.loadInt(2)
+        b.buildObjectLiteral { obj in
+            obj.addProperty("foo", as: i1)
+            obj.addProperty("bar", as: i2)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        // These must not lift to something like "{ foo: 1, bar: 2 };" as that would be invalid:
+        // the parser cannot distinguish it from a block statement.
+        let expected = """
+        const v2 = { foo: 1, bar: 2 };
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testObjectLiteralInlining() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let print = b.createNamedVariable(forBuiltin: "print")
+
+        // We inline empty object literals.
+        let o1 = b.buildObjectLiteral { obj in }
+        b.callFunction(print, withArgs: [o1])
+
+        // We inline "simple" object literals"
+        let i = b.loadInt(42)
+        let f = b.loadFloat(13.37)
+        let foo = b.loadString("foo")
+        let o2 = b.buildObjectLiteral { obj in
+            obj.addProperty("foo", as: i)
+            obj.addProperty("bar", as: f)
+            obj.addElement(42, as: foo)
+        }
+        b.callFunction(print, withArgs: [o2])
+
+        // We don't inline object literals as soon as they have any methods.
+        let o3 = b.buildObjectLiteral { obj in
+            obj.addMethod("baz", with: .parameters(n: 0)) { _ in }
+        }
+        b.callFunction(print, withArgs: [o3])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        print({});
+        print({ foo: 42, bar: 13.37, 42: "foo" });
+        const v9 = {
+            baz() {
+            },
+        };
+        print(v9);
 
         """
         XCTAssertEqual(actual, expected)
@@ -608,7 +691,7 @@ class LifterTests: XCTestCase {
             }
         }
         b.construct(C, withArgs: [b.loadInt(42)])
-        b.reassign(C, to: b.loadBuiltin("Uint8Array"))
+        b.reassign(C, to: b.createNamedVariable(forBuiltin: "Uint8Array"))
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -727,13 +810,13 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let Math = b.loadBuiltin("Math")
+        let Math = b.createNamedVariable(forBuiltin: "Math")
         let v = b.callMethod("random", on: Math)
         let two_v = b.binary(v, v, with: .Add)
         let three_v = b.binary(two_v, v, with: .Add)
         let twelve_v = b.binary(b.loadInt(4), three_v, with: .Mul)
         let six_v = b.binary(twelve_v, b.loadInt(2), with: .Div)
-        let print = b.loadBuiltin("print")
+        let print = b.createNamedVariable(forBuiltin: "print")
         b.callFunction(print, withArgs: [six_v])
 
         let program = b.finalize()
@@ -779,26 +862,26 @@ class LifterTests: XCTestCase {
             let code2 = b.buildCodeString() {
                 let code3 = b.buildCodeString() {
                     let code4 = b.buildCodeString() {
-                        let print = b.loadBuiltin("print")
+                        let print = b.createNamedVariable(forBuiltin: "print")
                         let msg = b.loadString("Hello")
                         b.callFunction(print, withArgs: [msg])
                     }
                     let code5 = b.buildCodeString() {
-                        let print = b.loadBuiltin("print")
+                        let print = b.createNamedVariable(forBuiltin: "print")
                         let msg = b.loadString("World")
                         b.callFunction(print, withArgs: [msg])
                     }
-                    let eval = b.loadBuiltin("eval")
+                    let eval = b.createNamedVariable(forBuiltin: "eval")
                     b.callFunction(eval, withArgs: [code4])
                     b.callFunction(eval, withArgs: [code5])
                 }
-                let eval = b.loadBuiltin("eval")
+                let eval = b.createNamedVariable(forBuiltin: "eval")
                 b.callFunction(eval, withArgs: [code3])
             }
-            let eval = b.loadBuiltin("eval")
+            let eval = b.createNamedVariable(forBuiltin: "eval")
             b.callFunction(eval, withArgs: [code2])
         }
-        let eval = b.loadBuiltin("eval")
+        let eval = b.createNamedVariable(forBuiltin: "eval")
         b.callFunction(eval, withArgs: [code1])
 
         let program = b.finalize()
@@ -866,7 +949,8 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let sf = b.buildPlainFunction(with: .parameters(n: 3), isStrict: true) { args in
+        let sf = b.buildPlainFunction(with: .parameters(n: 3)) { args in
+            b.directive("use strict")
             b.buildIfElse(args[0], ifBody: {
                 let v = b.binary(args[1], args[2], with: .Mul)
                 b.doReturn(v)
@@ -896,6 +980,61 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testNamedFunctionLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let foo = b.buildPlainFunction(with: .parameters(n: 0), named: "foo") { args in }
+        let bar = b.buildGeneratorFunction(with: .parameters(n: 0), named: "bar") { args in }
+        let baz = b.buildAsyncFunction(with: .parameters(n: 0), named: "baz") { args in }
+        let bla = b.buildAsyncGeneratorFunction(with: .parameters(n: 0), named: "bla") { args in }
+
+        b.callFunction(foo)
+        b.callFunction(bar)
+        b.callFunction(baz)
+        b.callFunction(bla)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        function foo() {
+        }
+        function* bar() {
+        }
+        async function baz() {
+        }
+        async function* bla() {
+        }
+        foo();
+        bar();
+        baz();
+        bla();
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testFunctionHoistingLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let foo = b.createNamedVariable("foo", declarationMode: .none)
+        b.callFunction(foo)
+        b.buildPlainFunction(with: .parameters(n: 0), named: "foo") { args in }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        foo();
+        function foo() {
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
     func testConstructorLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -906,7 +1045,7 @@ class LifterTests: XCTestCase {
             b.setProperty("bar", of: this, to: args[2])
         }
         b.construct(c1, withArgs: [b.loadInt(42), b.loadInt(43)])
-        let c2 = b.loadBuiltin("Object")
+        let c2 = b.createNamedVariable(forBuiltin: "Object")
         b.reassign(c1, to: c2)
         b.construct(c1, withArgs: [b.loadInt(44), b.loadInt(45)])
 
@@ -937,14 +1076,15 @@ class LifterTests: XCTestCase {
             let r = b.binary(lhs, rhs, with: .Add)
             b.doReturn(r)
         }
-        let f2 = b.buildAsyncGeneratorFunction(with: .parameters(n: 2), isStrict: true) { args in
+        let f2 = b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { args in
+            b.directive("use strict")
             let lhs = b.await(args[0])
             let rhs = b.await(args[1])
             let r = b.binary(lhs, rhs, with: .Mul)
             b.yield(r)
         }
-        b.callFunction(f1, withArgs: [b.loadBuiltin("promise1"), b.loadBuiltin("promise2")])
-        b.callFunction(f2, withArgs: [b.loadBuiltin("promise3"), b.loadBuiltin("promise4")])
+        b.callFunction(f1, withArgs: [b.createNamedVariable(forBuiltin: "promise1"), b.createNamedVariable(forBuiltin: "promise2")])
+        b.callFunction(f2, withArgs: [b.createNamedVariable(forBuiltin: "promise3"), b.createNamedVariable(forBuiltin: "promise4")])
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -979,10 +1119,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o1 = {
-            "a": 1337,
-        };
-        const v2 = o1.a;
+        const v2 = ({ a: 1337 }).a;
         v2 > 10 ? v2 : 10;
 
         """
@@ -1052,9 +1189,9 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let foo = b.loadBuiltin("foo")
-        let bar = b.loadBuiltin("bar")
-        let baz = b.loadBuiltin("baz")
+        let foo = b.createNamedVariable(forBuiltin: "foo")
+        let bar = b.createNamedVariable(forBuiltin: "bar")
+        let baz = b.createNamedVariable(forBuiltin: "baz")
         let i = b.loadInt(42)
         b.reassign(i, to: b.loadInt(43))
         b.callFunction(foo, withArgs: [i])
@@ -1131,7 +1268,7 @@ class LifterTests: XCTestCase {
         b.createTemplateString(from: [""], interpolating: [])
         let bar = b.loadString("bar")
         b.createTemplateString(from: ["foo", "baz"], interpolating: [bar])
-        let marker = b.callFunction(b.loadBuiltin("getMarker"))
+        let marker = b.callFunction(b.createNamedVariable(forBuiltin: "getMarker"))
         let space = b.loadString(" ")
         let inner = b.createTemplateString(from: ["Hello", "World"], interpolating: [space])
         let _ = b.createTemplateString(from: ["", "", "", ""], interpolating: [marker, inner, marker] )
@@ -1154,7 +1291,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let o = b.loadBuiltin("Obj")
+        let o = b.createNamedVariable(forBuiltin: "Obj")
         let propA = b.getProperty("a", of: o)
         let propB = b.getProperty("b", of: propA)
         let propC = b.getProperty("c", of: propB)
@@ -1203,15 +1340,13 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o1 = {
-            "foo": 42,
-        };
-        o1.foo = 13.37;
-        o1.foo += "42";
-        o1.bar = 1337;
-        o1.bar *= 1337;
-        o1["baz"] = 42;
-        o1["baz"] &&= 1337;
+        const v1 = { foo: 42 };
+        v1.foo = 13.37;
+        v1.foo += "42";
+        v1.bar = 1337;
+        v1.bar *= 1337;
+        v1["baz"] = 42;
+        v1["baz"] &&= 1337;
         const v6 = [1337,1337,1337];
         v6[0] = 42;
         v6[0] -= 13.37;
@@ -1242,7 +1377,7 @@ class LifterTests: XCTestCase {
         b.configureElement(1, of: obj, usingFlags: [.writable, .enumerable], as: .setter(f2))
         b.configureElement(2, of: obj, usingFlags: [.writable, .enumerable, .configurable], as: .getterSetter(f1, f2))
         b.configureElement(3, of: obj, usingFlags: [], as: .value(num))
-        let p = b.loadBuiltin("ComputedProperty")
+        let p = b.createNamedVariable(forBuiltin: "ComputedProperty")
         b.configureComputedProperty(p, of: obj, usingFlags: [.configurable], as: .getter(f1))
         b.configureComputedProperty(p, of: obj, usingFlags: [.enumerable], as: .setter(f2))
         b.configureComputedProperty(p, of: obj, usingFlags: [.writable], as: .getterSetter(f1, f2))
@@ -1252,8 +1387,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o0 = {
-        };
+        const v0 = {};
         let v1 = undefined;
         function f2() {
             return v1;
@@ -1261,18 +1395,18 @@ class LifterTests: XCTestCase {
         function f3(a4) {
             v1 = a4;
         }
-        Object.defineProperty(o0, "foo", { configurable: true, enumerable: true, get: f2 });
-        Object.defineProperty(o0, "bar", { set: f3 });
-        Object.defineProperty(o0, "foobar", { enumerable: true, get: f2, set: f3 });
-        Object.defineProperty(o0, "baz", { writable: true, value: 42 });
-        Object.defineProperty(o0, 0, { writable: true, get: f2 });
-        Object.defineProperty(o0, 1, { writable: true, enumerable: true, set: f3 });
-        Object.defineProperty(o0, 2, { writable: true, configurable: true, enumerable: true, get: f2, set: f3 });
-        Object.defineProperty(o0, 3, { value: 42 });
-        Object.defineProperty(o0, ComputedProperty, { configurable: true, get: f2 });
-        Object.defineProperty(o0, ComputedProperty, { enumerable: true, set: f3 });
-        Object.defineProperty(o0, ComputedProperty, { writable: true, get: f2, set: f3 });
-        Object.defineProperty(o0, ComputedProperty, { value: 42 });
+        Object.defineProperty(v0, "foo", { configurable: true, enumerable: true, get: f2 });
+        Object.defineProperty(v0, "bar", { set: f3 });
+        Object.defineProperty(v0, "foobar", { enumerable: true, get: f2, set: f3 });
+        Object.defineProperty(v0, "baz", { writable: true, value: 42 });
+        Object.defineProperty(v0, 0, { writable: true, get: f2 });
+        Object.defineProperty(v0, 1, { writable: true, enumerable: true, set: f3 });
+        Object.defineProperty(v0, 2, { writable: true, configurable: true, enumerable: true, get: f2, set: f3 });
+        Object.defineProperty(v0, 3, { value: 42 });
+        Object.defineProperty(v0, ComputedProperty, { configurable: true, get: f2 });
+        Object.defineProperty(v0, ComputedProperty, { enumerable: true, set: f3 });
+        Object.defineProperty(v0, ComputedProperty, { writable: true, get: f2, set: f3 });
+        Object.defineProperty(v0, ComputedProperty, { value: 42 });
 
         """
 
@@ -1283,30 +1417,27 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let v0 = b.loadInt(1337)
-        let v1 = b.loadString("bar")
-        let v2 = b.loadFloat(13.37)
+        let i = b.loadInt(1337)
+        let s = b.loadString("bar")
+        let f = b.loadFloat(13.37)
         var initialProperties = [String: Variable]()
-        initialProperties["foo"] = v0
-        initialProperties["bar"] = v2
-        let v3 = b.createObject(with: initialProperties)
-        let _ = b.deleteProperty("foo", of: v3)
-        let _ = b.deleteComputedProperty(v1, of: v3)
-        let v10 = b.createArray(with: [b.loadInt(301), b.loadInt(4), b.loadInt(68), b.loadInt(22)])
-        let _ = b.deleteElement(3, of: v10)
+        initialProperties["foo"] = i
+        initialProperties["bar"] = f
+        let o = b.createObject(with: initialProperties)
+        let _ = b.deleteProperty("foo", of: o)
+        let _ = b.deleteComputedProperty(s, of: o)
+        let a = b.createArray(with: [b.loadInt(301), b.loadInt(4), b.loadInt(68), b.loadInt(22)])
+        let _ = b.deleteElement(3, of: a)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o3 = {
-            "bar": 13.37,
-            "foo": 1337,
-        };
-        delete o3.foo;
-        delete o3["bar"];
-        const t4 = [301,4,68,22];
-        delete t4[3];
+        const v3 = { bar: 13.37, foo: 1337 };
+        delete v3.foo;
+        delete v3["bar"];
+        const t1 = [301,4,68,22];
+        delete t1[3];
 
         """
 
@@ -1317,7 +1448,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let o = b.loadBuiltin("o")
+        let o = b.createNamedVariable(forBuiltin: "o")
         let a = b.getProperty("a", of: o, guard: true)
         b.getProperty("b", of: a, guard: true)
         b.getElement(0, of: o, guard: true)
@@ -1361,15 +1492,15 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f1 = b.loadBuiltin("f1")
-        let f2 = b.loadBuiltin("f2")
+        let f1 = b.createNamedVariable(forBuiltin: "f1")
+        let f2 = b.createNamedVariable(forBuiltin: "f2")
         b.callFunction(f1, guard: true)
         let v1 = b.callFunction(f2, guard: true)
-        let c1 = b.loadBuiltin("c1")
-        let c2 = b.loadBuiltin("c2")
+        let c1 = b.createNamedVariable(forBuiltin: "c1")
+        let c2 = b.createNamedVariable(forBuiltin: "c2")
         b.construct(c1, guard: true)
         let v2 = b.construct(c2, guard: true)
-        let o = b.loadBuiltin("obj")
+        let o = b.createNamedVariable(forBuiltin: "obj")
         b.callMethod("m", on: o, guard: true)
         let v3 = b.callMethod("n", on: o, guard: true)
         b.callComputedMethod(b.loadString("o"), on: o, withArgs: [v1, v2, v3], guard: true)
@@ -1429,9 +1560,9 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let s = b.loadString("print('Hello World!')")
-        var eval = b.loadBuiltin("eval")
+        var eval = b.createNamedVariable(forBuiltin: "eval")
         b.callFunction(eval, withArgs: [s])
-        let this = b.loadBuiltin("this")
+        let this = b.createNamedVariable(forBuiltin: "this")
         eval = b.getProperty("eval", of: this)
         // The property load must not be inlined, otherwise it would not be distinguishable from a method call (like the one following it).
         b.callFunction(eval, withArgs: [s])
@@ -1462,7 +1593,7 @@ class LifterTests: XCTestCase {
         initialValues.append(b.loadString("World"))
         let values = b.createArray(with: initialValues)
         let n = b.loadFloat(13.37)
-        let Array = b.loadBuiltin("Array")
+        let Array = b.createNamedVariable(forBuiltin: "Array")
         let _ = b.callFunction(Array, withArgs: [values,n], spreading: [true,false])
 
         let program = b.finalize()
@@ -1480,7 +1611,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let Math = b.loadBuiltin("Math")
+        let Math = b.createNamedVariable(forBuiltin: "Math")
         let r = b.callMethod("random", on: Math)
         b.callMethod("sin", on: Math, withArgs: [r])
 
@@ -1499,7 +1630,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let Math = b.loadBuiltin("Math")
+        let Math = b.createNamedVariable(forBuiltin: "Math")
         var initialValues = [Variable]()
         initialValues.append(b.loadInt(1))
         initialValues.append(b.loadInt(3))
@@ -1528,7 +1659,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let s = b.loadString("Hello World")
-        let Symbol = b.loadBuiltin("Symbol")
+        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
         let iterator = b.getProperty("iterator", of: Symbol)
         let r = b.callComputedMethod(iterator, on: s)
         b.callMethod("next", on: r)
@@ -1548,8 +1679,8 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let SomeObj = b.loadBuiltin("SomeObject")
-        let RandomMethod = b.loadBuiltin("RandomMethod")
+        let SomeObj = b.createNamedVariable(forBuiltin: "SomeObject")
+        let RandomMethod = b.createNamedVariable(forBuiltin: "RandomMethod")
         let randomMethod = b.callFunction(RandomMethod)
         let args = b.createArray(with: [b.loadInt(1), b.loadInt(2), b.loadInt(3), b.loadInt(4)])
         b.callComputedMethod(randomMethod, on: SomeObj, withArgs: [args], spreading: [true])
@@ -1577,7 +1708,7 @@ class LifterTests: XCTestCase {
         let values = b.createArray(with: initialValues)
         let n1 = b.loadFloat(13.37)
         let n2 = b.loadFloat(13.38)
-        let Array = b.loadBuiltin("Array")
+        let Array = b.createNamedVariable(forBuiltin: "Array")
         b.construct(Array, withArgs: [n1,values,n2], spreading: [false,true,false])
 
         let program = b.finalize()
@@ -1723,14 +1854,11 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o2 = {
-            "bar": 13.37,
-            "foo": 42,
-        };
-        let {"foo":v3,...v4} = o2;
-        let {"foo":v5,"bar":v6,...v7} = o2;
-        let {...v8} = o2;
-        let {"foo":v9,"bar":v10,} = o2;
+        const v2 = { bar: 13.37, foo: 42 };
+        let {"foo":v3,...v4} = v2;
+        let {"foo":v5,"bar":v6,...v7} = v2;
+        let {...v8} = v2;
+        let {"foo":v9,"bar":v10,} = v2;
 
         """
 
@@ -1758,15 +1886,12 @@ class LifterTests: XCTestCase {
         let v0 = 42;
         let v1 = 13.37;
         let v2 = "Hello";
-        const o3 = {
-            "bar": v1,
-            "foo": v0,
-        };
-        ({"foo":v2,...v0} = o3);
-        ({"foo":v2,"bar":v0,...v1} = o3);
-        ({...v2} = o3);
-        ({"foo":v2,"bar":v1,} = o3);
-        ({} = o3);
+        const v3 = { bar: v1, foo: v0 };
+        ({"foo":v2,...v0} = v3);
+        ({"foo":v2,"bar":v0,...v1} = v3);
+        ({...v2} = v3);
+        ({"foo":v2,"bar":v1,} = v3);
+        ({} = v3);
 
         """
 
@@ -1837,28 +1962,35 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let print = b.loadBuiltin("print")
+        let print = b.createNamedVariable(forBuiltin: "print")
         let i1 = b.loadInt(42)
         let i2 = b.loadInt(1337)
-        b.defineNamedVariable("a", i1)
-        let vb = b.loadNamedVariable("b")
-        b.callFunction(print, withArgs: [vb])
-        b.storeNamedVariable("c", i2)
-        b.defineNamedVariable("b", i2)
-        b.storeNamedVariable("b", i1)
-        let vc = b.loadNamedVariable("c")
+        let va = b.createNamedVariable("a", declarationMode: .let, initialValue: i1)
+        b.callFunction(print, withArgs: [va])
+        let vb1 = b.createNamedVariable("b", declarationMode: .none)
+        b.callFunction(print, withArgs: [vb1])
+        b.createNamedVariable("c", declarationMode: .global, initialValue: i2)
+        let vb2 = b.createNamedVariable("b", declarationMode: .var, initialValue: i2)
+        b.reassign(vb2, to: i1)
+        let vc = b.createNamedVariable("c", declarationMode: .none)
         b.callFunction(print, withArgs: [vc])
+        let undefined = b.loadUndefined()
+        let vd = b.createNamedVariable("d", declarationMode: .let, initialValue: undefined)
+        b.callFunction(print, withArgs: [vd])
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        var a = 42;
+        let a = 42;
+        print(a);
         print(b);
         c = 1337;
         var b = 1337;
         b = 42;
         print(c);
+        let d;
+        print(d);
 
         """
 
@@ -1999,21 +2131,19 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o1 = {
-            "foo": 42,
-        };
-        const v2 = o1.foo;
+        const v1 = { foo: 42 };
+        const v2 = v1.foo;
         switch (v2) {
             case 1337:
-                o1.bar = 1337;
+                v1.bar = 1337;
                 break;
             case "42":
-                o1.baz = "42";
+                v1.baz = "42";
                 break;
             default:
-                o1.foo = 13.37;
+                v1.foo = 13.37;
             case 42:
-                o1.bla = v2;
+                v1.bla = v2;
         }
 
         """
@@ -2048,7 +2178,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let shouldContinue = b.loadBuiltin("shouldContinue")
+        let shouldContinue = b.createNamedVariable(forBuiltin: "shouldContinue")
         b.buildWhileLoop({ b.callFunction(shouldContinue) }) {
 
         }
@@ -2069,8 +2199,8 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f = b.loadBuiltin("f")
-        let g = b.loadBuiltin("g")
+        let f = b.createNamedVariable(forBuiltin: "f")
+        let g = b.createNamedVariable(forBuiltin: "g")
         let loopVar = b.loadInt(10)
         b.buildWhileLoop({ b.callFunction(f); b.callFunction(g); return loopVar }) {
             b.unary(.PostDec, loopVar)
@@ -2094,8 +2224,8 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        var f = b.loadBuiltin("f")
-        var g = b.loadBuiltin("g")
+        var f = b.createNamedVariable(forBuiltin: "f")
+        var g = b.createNamedVariable(forBuiltin: "g")
         b.buildWhileLoop({ b.callFunction(f); let cond = b.callFunction(g); return cond }) {
         }
 
@@ -2110,10 +2240,10 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(actual, expected)
 
-        f = b.loadBuiltin("f")
-        g = b.loadBuiltin("g")
+        f = b.createNamedVariable(forBuiltin: "f")
+        g = b.createNamedVariable(forBuiltin: "g")
         b.buildWhileLoop({ let cond = b.callFunction(f); b.callFunction(g); return cond }) {
-            b.callFunction(b.loadBuiltin("body"))
+            b.callFunction(b.createNamedVariable(forBuiltin: "body"))
         }
 
         program = b.finalize()
@@ -2138,11 +2268,11 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         b.buildWhileLoop({
-            let foobar = b.loadBuiltin("foobar")
+            let foobar = b.createNamedVariable(forBuiltin: "foobar")
             let v = b.callFunction(foobar)
             return b.binary(v, v, with: .Add)
         }) {
-            let doLoopBodyStuff = b.loadBuiltin("doLoopBodyStuff")
+            let doLoopBodyStuff = b.createNamedVariable(forBuiltin: "doLoopBodyStuff")
             b.callFunction(doLoopBodyStuff)
         }
 
@@ -2166,10 +2296,10 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let print = b.loadBuiltin("print")
-        let f = b.callFunction(b.loadBuiltin("f"))
-        let g = b.callFunction(b.loadBuiltin("g"))
-        let h = b.callFunction(b.loadBuiltin("h"))
+        let print = b.createNamedVariable(forBuiltin: "print")
+        let f = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
+        let g = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
+        let h = b.callFunction(b.createNamedVariable(forBuiltin: "h"))
         b.buildWhileLoop({ b.callFunction(print, withArgs: [f]); return b.loadBool(false) }) {
             b.callFunction(print, withArgs: [g])
         }
@@ -2201,7 +2331,7 @@ class LifterTests: XCTestCase {
             let loopVar2 = b.loadInt(0)
             b.buildDoWhileLoop(do: {
                 b.unary(.PostInc, loopVar2)
-            }, while: { b.callFunction(b.loadBuiltin("f"), withArgs: [loopVar2]) })
+            }, while: { b.callFunction(b.createNamedVariable(forBuiltin: "f"), withArgs: [loopVar2]) })
             b.unary(.PostInc, loopVar1)
         }, while: { b.compare(loopVar1, with: b.loadInt(42), using: .lessThan) })
 
@@ -2228,9 +2358,9 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         b.buildDoWhileLoop(do: {
-            let doSomething = b.loadBuiltin("doSomething")
+            let doSomething = b.createNamedVariable(forBuiltin: "doSomething")
             b.callFunction(doSomething)
-        }, while: { b.callFunction(b.loadBuiltin("f")); return b.callFunction(b.loadBuiltin("g")) })
+        }, while: { b.callFunction(b.createNamedVariable(forBuiltin: "f")); return b.callFunction(b.createNamedVariable(forBuiltin: "g")) })
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -2249,10 +2379,10 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let print = b.loadBuiltin("print")
-        let f = b.callFunction(b.loadBuiltin("f"))
-        let g = b.callFunction(b.loadBuiltin("g"))
-        let h = b.callFunction(b.loadBuiltin("h"))
+        let print = b.createNamedVariable(forBuiltin: "print")
+        let f = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
+        let g = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
+        let h = b.callFunction(b.createNamedVariable(forBuiltin: "h"))
         b.buildDoWhileLoop(do: {
             b.callFunction(print, withArgs: [f])
         }, while: { b.callFunction(print, withArgs: [g]); return b.loadBool(false) })
@@ -2281,7 +2411,7 @@ class LifterTests: XCTestCase {
 
         b.buildForLoop(i: { b.loadInt(0) }, { i in b.compare(i, with: b.loadInt(10), using: .lessThan) }, { i in b.unary(.PostInc, i) }) { i in
             b.buildForLoop(i: { b.loadInt(0) }, { j in b.compare(j, with: i, using: .lessThan) }, { j in b.unary(.PostInc, j) }) { j in
-                let print = b.loadBuiltin("print")
+                let print = b.createNamedVariable(forBuiltin: "print")
                 b.callFunction(print, withArgs: [i, j])
             }
         }
@@ -2326,10 +2456,10 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        b.buildForLoop({ return [b.callFunction(b.loadBuiltin("f1")), b.callFunction(b.loadBuiltin("f2"))] },
-                       { vars in b.callFunction(b.loadBuiltin("f3"), withArgs: [vars[0]]); return b.callFunction(b.loadBuiltin("f4"), withArgs: [vars[1]]) },
-                       { vars in b.callFunction(b.loadBuiltin("f5"), withArgs: [vars[1]]); b.callFunction(b.loadBuiltin("f6"), withArgs: [vars[0]]) }) { vars in
-            b.callFunction(b.loadBuiltin("f7"), withArgs: vars)
+        b.buildForLoop({ return [b.callFunction(b.createNamedVariable(forBuiltin: "f1")), b.callFunction(b.createNamedVariable(forBuiltin: "f2"))] },
+                       { vars in b.callFunction(b.createNamedVariable(forBuiltin: "f3"), withArgs: [vars[0]]); return b.callFunction(b.createNamedVariable(forBuiltin: "f4"), withArgs: [vars[1]]) },
+                       { vars in b.callFunction(b.createNamedVariable(forBuiltin: "f5"), withArgs: [vars[1]]); b.callFunction(b.createNamedVariable(forBuiltin: "f6"), withArgs: [vars[0]]) }) { vars in
+            b.callFunction(b.createNamedVariable(forBuiltin: "f7"), withArgs: vars)
         }
 
         let program = b.finalize()
@@ -2348,10 +2478,10 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        b.buildForLoop({ let x = b.callFunction(b.loadBuiltin("f")); let y = b.callFunction(b.loadBuiltin("g")); b.callFunction(b.loadBuiltin("h")); return [x, y] },
+        b.buildForLoop({ let x = b.callFunction(b.createNamedVariable(forBuiltin: "f")); let y = b.callFunction(b.createNamedVariable(forBuiltin: "g")); b.callFunction(b.createNamedVariable(forBuiltin: "h")); return [x, y] },
                        { vs in return b.compare(vs[0], with: vs[1], using: .lessThan) },
                        { vs in b.reassign(vs[0], to: vs[1], with: .Add) }) { vs in
-            b.callFunction(b.loadBuiltin("print"), withArgs: vs)
+            b.callFunction(b.createNamedVariable(forBuiltin: "print"), withArgs: vs)
         }
 
         let program = b.finalize()
@@ -2378,10 +2508,10 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        b.buildForLoop({ b.callFunction(b.loadBuiltin("foo")); b.callFunction(b.loadBuiltin("bar")) },
+        b.buildForLoop({ b.callFunction(b.createNamedVariable(forBuiltin: "foo")); b.callFunction(b.createNamedVariable(forBuiltin: "bar")) },
                        {
-                            let shouldContinue = b.callFunction(b.loadBuiltin("shouldContinue"))
-                            b.buildIf(b.callFunction(b.loadBuiltin("shouldNotContinue"))) {
+                            let shouldContinue = b.callFunction(b.createNamedVariable(forBuiltin: "shouldContinue"))
+                            b.buildIf(b.callFunction(b.createNamedVariable(forBuiltin: "shouldNotContinue"))) {
                                 b.reassign(shouldContinue, to: b.loadBool(false))
                             }
                             return shouldContinue
@@ -2415,7 +2545,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         b.buildForLoop(i: { b.loadInt(0) }, { b.compare($0, with: b.loadInt(100), using: .lessThan) }, { b.reassign($0, to: b.loadInt(10), with: .Add) }) { i in
-            b.callFunction(b.loadBuiltin("print"), withArgs: [i])
+            b.callFunction(b.createNamedVariable(forBuiltin: "print"), withArgs: [i])
         }
 
         let program = b.finalize()
@@ -2435,7 +2565,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        b.buildForLoop(i: { b.callFunction(b.loadBuiltin("f")); return b.callFunction(b.loadBuiltin("g")) }, {_ in b.loadBool(true) }, { _ in }) { i in
+        b.buildForLoop(i: { b.callFunction(b.createNamedVariable(forBuiltin: "f")); return b.callFunction(b.createNamedVariable(forBuiltin: "g")) }, {_ in b.loadBool(true) }, { _ in }) { i in
             b.loopBreak()
         }
 
@@ -2483,12 +2613,12 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let print = b.loadBuiltin("print")
-        let f = b.callFunction(b.loadBuiltin("f"))
-        let g = b.callFunction(b.loadBuiltin("g"))
-        let h = b.callFunction(b.loadBuiltin("h"))
-        let i = b.callFunction(b.loadBuiltin("i"))
-        let j = b.callFunction(b.loadBuiltin("j"))
+        let print = b.createNamedVariable(forBuiltin: "print")
+        let f = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
+        let g = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
+        let h = b.callFunction(b.createNamedVariable(forBuiltin: "h"))
+        let i = b.callFunction(b.createNamedVariable(forBuiltin: "i"))
+        let j = b.callFunction(b.createNamedVariable(forBuiltin: "j"))
 
         b.buildForLoop({ b.callFunction(print, withArgs: [f]) }, { b.callFunction(print, withArgs: [g]) }, { b.callFunction(print, withArgs: [h]) }) {
             b.callFunction(print, withArgs: [i])
@@ -2552,7 +2682,7 @@ class LifterTests: XCTestCase {
         b.buildRepeatLoop(n: 1337) { i in
             b.reassign(s, to: i, with: .Add)
         }
-        let print = b.loadBuiltin("print")
+        let print = b.createNamedVariable(forBuiltin: "print")
         b.callFunction(print, withArgs: [s])
 
         let program = b.finalize()
@@ -2578,7 +2708,7 @@ class LifterTests: XCTestCase {
         let a2 = b.createArray(with: [b.loadInt(20), b.loadInt(21), b.loadInt(22), b.loadInt(23)])
         let a3 = b.createArray(with: [b.loadInt(30), b.loadInt(31), b.loadInt(32)])
         let a4 = b.createArray(with: [a1, a2, a3])
-        let print = b.loadBuiltin("print")
+        let print = b.createNamedVariable(forBuiltin: "print")
         b.buildForOfLoopWithDestruct(a4, selecting: [0,2], hasRestElement: true) { args in
             b.callFunction(print, withArgs: [args[0]])
             b.buildPlainForOfLoop(args[1]) { v in
@@ -2651,17 +2781,12 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const o1 = {
-            "a": 1337,
-        };
-        for (let v2 in o1) {
+        const v1 = { a: 1337 };
+        for (let v2 in v1) {
             {
                 v2 = 1337;
                 {
-                    const o4 = {
-                        "a": o1,
-                    };
-                    v2 = o4;
+                    v2 = { a: v1 };
                 }
             }
         }
@@ -2676,8 +2801,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         // If there are multiple singular operations inside the same surrounding block, then
-        // all but the first one should be ignored. The JavaScript lifter achieves this simply
-        // by commenting out those operations.
+        // all but the first one should be ignored by the lifter.
 
         b.buildClassDefinition { cls in
             cls.addConstructor(with: .parameters(n: 1)) { args in
@@ -2696,8 +2820,8 @@ class LifterTests: XCTestCase {
             }
         }
 
-        let p1 = b.loadBuiltin("proto1")
-        let p2 = b.loadBuiltin("proto2")
+        let p1 = b.createNamedVariable(forBuiltin: "proto1")
+        let p2 = b.createNamedVariable(forBuiltin: "proto2")
         let v = b.loadInt(42)
 
         b.buildObjectLiteral { obj in
@@ -2708,7 +2832,7 @@ class LifterTests: XCTestCase {
             obj.addProperty("baz", as: v)
         }
 
-        let print = b.loadBuiltin("print")
+        let print = b.createNamedVariable(forBuiltin: "print")
         let v2 = b.loadInt(43)
         let v3 = b.loadInt(44)
         b.buildSwitch(on: v) { swtch in
@@ -2737,24 +2861,11 @@ class LifterTests: XCTestCase {
             constructor(a2) {
                 this.foo = a2;
             }
-            /*
-            constructor(a4) {
-                this.bar = a4;
-            }
-            */
             baz() {
                 return this.bar;
             }
         }
-        const o10 = {
-            "foo": 42,
-            __proto__: proto1,
-            "bar": 42,
-            /*
-            __proto__: proto2,
-            */
-            "baz": 42,
-        };
+        const v10 = { foo: 42, __proto__: proto1, bar: 42, baz: 42 };
         switch (42) {
             default:
                 print("default case 1");
@@ -2762,19 +2873,9 @@ class LifterTests: XCTestCase {
             case 43:
                 print("case 43");
                 break;
-            /*
-            default:
-                print("default case 2");
-                break;
-            */
             case 44:
                 print("case 44");
                 break;
-            /*
-            default:
-                print("default case 3");
-                break;
-            */
         }
 
         """
@@ -2823,7 +2924,7 @@ class LifterTests: XCTestCase {
             let v3 = this;
             v3 = 42;
         }
-        const o5 = {
+        const v5 = {
             foo() {
                 let v4 = this;
                 v4 = 42;
@@ -2868,7 +2969,7 @@ class LifterTests: XCTestCase {
         b.binary(v0, v2, with: .Add)
         let v3 = b.loadInt(42)
         b.reassign(v3, to: v0)
-        let print = b.loadBuiltin("print")
+        let print = b.createNamedVariable(forBuiltin: "print")
         b.callFunction(print, withArgs: [v0, v1, v2])
         b.getProperty("foo", of: v1)
         b.getProperty("bar", of: v2)
@@ -2912,6 +3013,89 @@ class LifterTests: XCTestCase {
         function f1() {
             v0 = new.target;
         }
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testLoadDisposableVariableLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            let v1 = b.loadInt(1)
+            let v2 = b.loadInt(42)
+            let dispose = b.getProperty("dispose", of: b.createNamedVariable(forBuiltin: "Symbol"));
+            let disposableVariable = b.buildObjectLiteral { obj in
+                obj.addProperty("value", as: v1)
+                obj.addComputedMethod(dispose, with: .parameters(n:0)) { args in
+                    b.doReturn(v2)
+                }
+            }
+            b.loadDisposableVariable(disposableVariable)
+        }
+        b.callFunction(f)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        function f0() {
+            const v4 = Symbol.dispose;
+            const v6 = {
+                value: 1,
+                [v4]() {
+                    return 42;
+                },
+            };
+            using v7 = v6;
+        }
+        f0();
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testLoadAsyncDisposableVariableLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
+            let v1 = b.loadInt(1)
+            let v2 = b.loadInt(42)
+            let asyncDispose = b.getProperty("asyncDispose", of: b.createNamedVariable(forBuiltin: "Symbol"))
+            let asyncDisposableVariable = b.buildObjectLiteral { obj in
+                obj.addProperty("value", as: v1)
+                obj.addComputedMethod(asyncDispose, with: .parameters(n:0)) { args in
+                    b.doReturn(v2)
+                }
+            }
+            b.loadAsyncDisposableVariable(asyncDisposableVariable)
+        }
+
+        let g = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
+            b.await(b.callFunction(f))
+        }
+        b.callFunction(g)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        async function f0() {
+            const v4 = Symbol.asyncDispose;
+            const v6 = {
+                value: 1,
+                [v4]() {
+                    return 42;
+                },
+            };
+            await using v7 = v6;
+        }
+        async function f8() {
+            await f0();
+        }
+        f8();
 
         """
         XCTAssertEqual(actual, expected)

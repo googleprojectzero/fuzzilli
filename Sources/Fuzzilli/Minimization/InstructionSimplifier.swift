@@ -13,9 +13,10 @@
 // limitations under the License.
 
 // Attempts to simplify "complex" instructions into simpler instructions.
-struct SimplifyingReducer: Reducer {
+struct InstructionSimplifier: Reducer {
     func reduce(with helper: MinimizationHelper) {
         simplifyFunctionDefinitions(with: helper)
+        simplifyNamedInstructions(with: helper)
         simplifyGuardedInstructions(with: helper)
         simplifySingleInstructions(with: helper)
         simplifyMultiInstructions(with: helper)
@@ -28,11 +29,35 @@ struct SimplifyingReducer: Reducer {
             assert(helper.code[group.tail].op is EndAnyFunction)
             if begin is BeginPlainFunction { continue }
 
-            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, isStrict: begin.isStrict), inouts: helper.code[group.head].inouts, flags: .empty)
+            let functionName = (begin as? BeginAnyNamedFunction)?.functionName ?? nil
+            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, functionName: functionName), inouts: helper.code[group.head].inouts, flags: .empty)
             let newEnd = Instruction(EndPlainFunction())
 
             // The resulting code may be invalid as we may be changing the context inside the body (e.g. turning an async function into a plain one).
             helper.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], expectCodeToBeValid: false)
+        }
+    }
+
+    func simplifyNamedInstructions(with helper: MinimizationHelper) {
+        // Try to remove the names of values and objects.
+        for instr in helper.code {
+            var newOp: Operation? = nil
+            switch instr.op.opcode {
+            case .beginPlainFunction(let op) where op.functionName != nil:
+                newOp = BeginPlainFunction(parameters: op.parameters, functionName: nil)
+            case .beginGeneratorFunction(let op) where op.functionName != nil:
+                newOp = BeginGeneratorFunction(parameters: op.parameters, functionName: nil)
+            case .beginAsyncFunction(let op) where op.functionName != nil:
+                newOp = BeginAsyncFunction(parameters: op.parameters, functionName: nil)
+            case .beginAsyncGeneratorFunction(let op) where op.functionName != nil:
+                newOp = BeginAsyncGeneratorFunction(parameters: op.parameters, functionName: nil)
+            default:
+                assert((instr.op as? BeginAnyNamedFunction)?.functionName == nil)
+            }
+
+            if let op = newOp {
+                helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts, flags: .empty))
+            }
         }
     }
 
@@ -61,28 +86,6 @@ struct SimplifyingReducer: Reducer {
                 // Prefer simple function calls over constructor calls if there's no difference
                 newOp = CallFunction(numArguments: op.numArguments, isGuarded: op.isGuarded)
 
-            // Prefer non strict functions over strict ones
-            case .beginPlainFunction(let op):
-                if op.isStrict {
-                    newOp = BeginPlainFunction(parameters: op.parameters, isStrict: false)
-                }
-            case .beginArrowFunction(let op):
-                if op.isStrict {
-                    newOp = BeginArrowFunction(parameters: op.parameters, isStrict: false)
-                }
-            case .beginGeneratorFunction(let op):
-                if op.isStrict {
-                    newOp = BeginGeneratorFunction(parameters: op.parameters, isStrict: false)
-                }
-            case .beginAsyncFunction(let op):
-                if op.isStrict {
-                    newOp = BeginAsyncFunction(parameters: op.parameters, isStrict: false)
-                }
-            case .beginAsyncGeneratorFunction(let op):
-                if op.isStrict {
-                    newOp = BeginAsyncGeneratorFunction(parameters: op.parameters, isStrict: false)
-                }
-
             default:
                 break
             }
@@ -97,72 +100,10 @@ struct SimplifyingReducer: Reducer {
         // This will attempt to turn guarded operations into unguarded ones.
         // In the lifted JavaScript code, this would turn something like `try { o.foo(); } catch (e) {}` into `o.foo();`
         for instr in helper.code {
-            var newOp: Operation? = nil
-            switch instr.op.opcode {
-            case .getProperty(let op):
-                if op.isGuarded {
-                    newOp = GetProperty(propertyName: op.propertyName, isGuarded: false)
-                }
-            case .deleteProperty(let op):
-                if op.isGuarded {
-                    newOp = DeleteProperty(propertyName: op.propertyName, isGuarded: false)
-                }
-            case .getElement(let op):
-                if op.isGuarded {
-                    newOp = GetElement(index: op.index, isGuarded: false)
-                }
-            case .deleteElement(let op):
-                if op.isGuarded {
-                    newOp = DeleteElement(index: op.index, isGuarded: false)
-                }
-            case .getComputedProperty(let op):
-                if op.isGuarded {
-                    newOp = GetComputedProperty(isGuarded: false)
-                }
-            case .deleteComputedProperty(let op):
-                if op.isGuarded {
-                    newOp = DeleteComputedProperty(isGuarded: false)
-                }
-            case .callFunction(let op):
-                if op.isGuarded {
-                    newOp = CallFunction(numArguments: op.numArguments, isGuarded: false)
-                }
-            case .callFunctionWithSpread(let op):
-                if op.isGuarded {
-                    newOp = CallFunctionWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
-                }
-            case .construct(let op):
-                if op.isGuarded {
-                    newOp = Construct(numArguments: op.numArguments, isGuarded: false)
-                }
-            case .constructWithSpread(let op):
-                if op.isGuarded {
-                    newOp = ConstructWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
-                }
-            case .callMethod(let op):
-                if op.isGuarded {
-                    newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments, isGuarded: false)
-                }
-            case .callMethodWithSpread(let op):
-                if op.isGuarded {
-                    newOp = CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
-                }
-            case .callComputedMethod(let op):
-                if op.isGuarded {
-                    newOp = CallComputedMethod(numArguments: op.numArguments, isGuarded: false)
-                }
-            case .callComputedMethodWithSpread(let op):
-                if op.isGuarded {
-                    newOp = CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
-                }
-
-            default:
-                assert(!(instr.op is GuardableOperation), "All guardable operations should be covered")
-                break
-            }
-
-            if let op = newOp {
-                helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts, flags: .empty))
+            guard let op = instr.op as? GuardableOperation else { continue }
+            let newOp = GuardableOperation.disableGuard(of: op)
+            if newOp !== op {
+                helper.tryReplacing(instructionAt: instr.index, with: Instruction(newOp, inouts: instr.inouts, flags: .empty))
             }
         }
     }

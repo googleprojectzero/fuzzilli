@@ -27,21 +27,10 @@ public class JavaScriptCompiler {
         case unsupportedFeatureError(String)
     }
 
-    public init(deletingCallTo filteredFunctions: [String] = []) {
-        self.filteredFunctions = filteredFunctions
-    }
+    public init() {}
 
     /// The compiled code.
     private var code = Code()
-
-    /// A list of function names or prefixes (e.g. `assert*`) which should be deleted from the output program.
-    /// The function calls can in general only be removed if their return value isn't used, and so currently they are only
-    /// removed if they make up a full ExpressionStatement, in which case the entire statement is ignored.
-    /// This functionality is useful to remove calls to functions such as `assert*` or `print*` from tests
-    /// as those are not useful for fuzzing.
-    /// The function names may contain the wildcard character `*`, but _only_ as last character, in which case
-    /// a prefix match will be performed instead of a string comparison.
-    private let filteredFunctions: [String]
 
     /// The environment is used to determine if an identifier identifies a builtin object.
     /// TODO we should probably use the correct target environment, with any additional builtins etc. here. But for now, we just manually add `gc` since that's relatively common.
@@ -49,10 +38,6 @@ public class JavaScriptCompiler {
 
     /// Contains the mapping from JavaScript variables to FuzzIL variables in every active scope.
     private var scopes = Stack<[String: Variable]>()
-
-    /// List of all named variables.
-    /// TODO instead of a global list, this should be per (var) scope.
-    private var namedVariables = Set<String>()
 
     /// The next free FuzzIL variable.
     private var nextVariable = 0
@@ -82,11 +67,6 @@ public class JavaScriptCompiler {
     }
 
     private func compileStatement(_ node: StatementNode) throws {
-        let shouldIgnoreStatement = try performStatementFiltering(node)
-        guard !shouldIgnoreStatement else {
-            return
-        }
-
         guard let stmt = node.statement else {
             throw CompilerError.invalidASTError("missing concrete statement in statement node")
         }
@@ -111,14 +91,26 @@ public class JavaScriptCompiler {
                 if decl.hasValue {
                     initialValue = try compileExpression(decl.value)
                 } else {
+                    // TODO(saelo): consider caching the `undefined` value for future uses
                     initialValue = emit(LoadUndefined()).output
                 }
 
-                if variableDeclaration.kind == .var && namedVariables.contains(decl.name) {
-                    emit(DefineNamedVariable(decl.name), withInputs: [initialValue])
-                } else {
-                    map(decl.name, to: initialValue)
+                let declarationMode: NamedVariableDeclarationMode
+                switch variableDeclaration.kind {
+                case .var:
+                    declarationMode = .var
+                case .let:
+                    declarationMode = .let
+                case .const:
+                    declarationMode = .const
+                case .UNRECOGNIZED(let type):
+                    throw CompilerError.invalidNodeError("invalid variable declaration type \(type)")
                 }
+
+                let v = emit(CreateNamedVariable(decl.name, declarationMode: declarationMode), withInputs: [initialValue]).output
+                // Variables declared with .var are allowed to overwrite each other.
+                assert(!currentScope.keys.contains(decl.name) || declarationMode == .var)
+                mapOrRemap(decl.name, to: v)
             }
 
         case .functionDeclaration(let functionDeclaration):
@@ -126,23 +118,25 @@ public class JavaScriptCompiler {
             let functionBegin, functionEnd: Operation
             switch functionDeclaration.type {
             case .plain:
-                functionBegin = BeginPlainFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginPlainFunction(parameters: parameters, functionName: functionDeclaration.name)
                 functionEnd = EndPlainFunction()
             case .generator:
-                functionBegin = BeginGeneratorFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginGeneratorFunction(parameters: parameters, functionName: functionDeclaration.name)
                 functionEnd = EndGeneratorFunction()
             case .async:
-                functionBegin = BeginAsyncFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginAsyncFunction(parameters: parameters, functionName: functionDeclaration.name)
                 functionEnd = EndAsyncFunction()
             case .asyncGenerator:
-                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters, functionName: functionDeclaration.name)
                 functionEnd = EndAsyncGeneratorFunction()
             case .UNRECOGNIZED(let type):
                 throw CompilerError.invalidNodeError("invalid function declaration type \(type)")
             }
 
             let instr = emit(functionBegin)
-            map(functionDeclaration.name, to: instr.output)
+            // The function may have been accessed before it was defined due to function hoisting, so
+            // here we may overwrite an existing variable mapping.
+            mapOrRemap(functionDeclaration.name, to: instr.output)
             try enterNewScope {
                 mapParameters(functionDeclaration.parameters, to: instr.innerOutputs)
                 for statement in functionDeclaration.body {
@@ -324,6 +318,9 @@ public class JavaScriptCompiler {
                 emit(Return(hasReturnValue: false))
             }
 
+        case .directiveStatement(let directiveStatement):
+            emit(Directive(directiveStatement.content))
+
         case .expressionStatement(let expressionStatement):
             try compileExpression(expressionStatement.expression)
 
@@ -344,9 +341,10 @@ public class JavaScriptCompiler {
         case .whileLoop(let whileLoop):
             emit(BeginWhileLoopHeader())
 
-            let cond = try compileExpression(whileLoop.test)
-
-            emit(BeginWhileLoopBody(), withInputs: [cond])
+            try enterNewScope {
+                let cond = try compileExpression(whileLoop.test)
+                emit(BeginWhileLoopBody(), withInputs: [cond])
+            }
 
             try enterNewScope {
                 try compileBody(whileLoop.body)
@@ -363,17 +361,18 @@ public class JavaScriptCompiler {
 
             emit(BeginDoWhileLoopHeader())
 
-            let cond = try compileExpression(doWhileLoop.test)
-
-            emit(EndDoWhileLoop(), withInputs: [cond])
+            try enterNewScope {
+                let cond = try compileExpression(doWhileLoop.test)
+                emit(EndDoWhileLoop(), withInputs: [cond])
+            }
 
         case .forLoop(let forLoop):
-            try enterNewScope {
-                var loopVariables = [String]()
+            var loopVariables = [String]()
 
-                // Process initializer.
-                var initialLoopVariableValues = [Variable]()
-                emit(BeginForLoopInitializer())
+            // Process initializer.
+            var initialLoopVariableValues = [Variable]()
+            emit(BeginForLoopInitializer())
+            try enterNewScope {
                 if let initializer = forLoop.initializer {
                     switch initializer {
                     case .declaration(let declaration):
@@ -385,31 +384,37 @@ public class JavaScriptCompiler {
                         try compileExpression(expression)
                     }
                 }
+            }
 
-                // Process condition.
-                var outputs = emit(BeginForLoopCondition(numLoopVariables: loopVariables.count), withInputs: initialLoopVariableValues).innerOutputs
+            // Process condition.
+            var outputs = emit(BeginForLoopCondition(numLoopVariables: loopVariables.count), withInputs: initialLoopVariableValues).innerOutputs
+            var cond: Variable? = nil
+            try enterNewScope {
                 zip(loopVariables, outputs).forEach({ map($0, to: $1 )})
-                let cond: Variable
                 if forLoop.hasCondition {
                     cond = try compileExpression(forLoop.condition)
                 } else {
                     cond = emit(LoadBoolean(value: true)).output
                 }
+            }
 
-                // Process afterthought.
-                outputs = emit(BeginForLoopAfterthought(numLoopVariables: loopVariables.count), withInputs: [cond]).innerOutputs
-                zip(loopVariables, outputs).forEach({ remap($0, to: $1 )})
+            // Process afterthought.
+            outputs = emit(BeginForLoopAfterthought(numLoopVariables: loopVariables.count), withInputs: [cond!]).innerOutputs
+            try enterNewScope {
+                zip(loopVariables, outputs).forEach({ map($0, to: $1 )})
                 if forLoop.hasAfterthought {
                     try compileExpression(forLoop.afterthought)
                 }
-
-                // Process body
-                outputs = emit(BeginForLoopBody(numLoopVariables: loopVariables.count)).innerOutputs
-                zip(loopVariables, outputs).forEach({ remap($0, to: $1 )})
-                try compileBody(forLoop.body)
-
-                emit(EndForLoop())
             }
+
+            // Process body
+            outputs = emit(BeginForLoopBody(numLoopVariables: loopVariables.count)).innerOutputs
+            try enterNewScope {
+                zip(loopVariables, outputs).forEach({ map($0, to: $1 )})
+                try compileBody(forLoop.body)
+            }
+
+            emit(EndForLoop())
 
         case .forInLoop(let forInLoop):
             let initializer = forInLoop.left!
@@ -589,14 +594,12 @@ public class JavaScriptCompiler {
             let consequent = try compileExpression(ternaryExpression.consequent)
             let alternate = try compileExpression(ternaryExpression.alternate)
             return emit(TernaryOperation(), withInputs: [condition, consequent, alternate]).output
-        
 
         case .identifier(let identifier):
             // Identifiers can generally turn into one of three things:
             //  1. A FuzzIL variable that has previously been associated with the identifier
-            //  2. A LoadBuiltin operation if the identifier belongs to a builtin object (as defined by the environment)
-            //  3. A LoadUndefined or LoadArguments operations if the identifier is "undefined" or "arguments" respectively
-            //  4. A LoadNamedVariable operation in all other cases (typically global or hoisted variables, but could also be properties in a with statement)
+            //  2. A LoadUndefined or LoadArguments operations if the identifier is "undefined" or "arguments" respectively
+            //  3. A CreateNamedVariable operation in all other cases (typically global or hoisted variables, but could also be properties in a with statement)
 
             // We currently fall-back to case 3 if none of the other works. However, this isn't quite correct as it would incorrectly deal with e.g.
             //
@@ -616,11 +619,6 @@ public class JavaScriptCompiler {
             }
 
             // Case 2
-            if environment.builtins.contains(identifier.name) {
-                return emit(LoadBuiltin(builtinName: identifier.name)).output
-            }
-
-            // Case 3
             assert(identifier.name != "this")   // This is handled via ThisExpression
             if identifier.name == "undefined" {
                 return emit(LoadUndefined()).output
@@ -628,12 +626,12 @@ public class JavaScriptCompiler {
                 return emit(LoadArguments()).output
             }
 
-            // Case 4
-            // In this case, we need to remember that this variable was accessed in the current scope.
-            // If the variable access is hoisted, and the variable is defined later, then this allows
-            // the variable definition to turn into a DefineNamedVariable operation.
-            namedVariables.insert(identifier.name)
-            return emit(LoadNamedVariable(identifier.name)).output
+            // Case 3
+            let v = emit(CreateNamedVariable(identifier.name, declarationMode: .none)).output
+            // Cache the variable in case it is reused again to avoid emitting multiple
+            // CreateNamedVariable operations for the same variable.
+            map(identifier.name, to: v)
+            return v
 
         case .numberLiteral(let literal):
             if let intValue = Int64(exactly: literal.value) {
@@ -648,7 +646,7 @@ public class JavaScriptCompiler {
             } else {
                 // TODO should LoadBigInt support larger integer values (represented as string)?
                 let stringValue = emit(LoadString(value: literal.value)).output
-                let BigInt = emit(LoadBuiltin(builtinName: "BigInt")).output
+                let BigInt = emit(CreateNamedVariable("BigInt", declarationMode: .none)).output
                 return emit(CallFunction(numArguments: 1, isGuarded: false), withInputs: [BigInt, stringValue]).output
             }
 
@@ -701,7 +699,6 @@ public class JavaScriptCompiler {
             }
 
             switch lhs {
-
             case .memberExpression(let memberExpression):
                 // Compile to a Set- or Update{Property/Element/ComputedProperty} operation
                 let object = try compileExpression(memberExpression.object)
@@ -729,15 +726,16 @@ public class JavaScriptCompiler {
                         }
                     }
                 }
+
             case .superMemberExpression(let superMemberExpression):
                 guard superMemberExpression.isOptional == false else {
                     throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super member expressions")
                 }
-                
+
                 guard let property = superMemberExpression.property else {
                     throw CompilerError.invalidNodeError("Missing property in super member expression")
                 }
-                
+
                 switch property {
                 case .name(let name):
                     if let op = assignmentOperator {
@@ -747,43 +745,31 @@ public class JavaScriptCompiler {
                         // Example: super.foo = 1
                         emit(SetSuperProperty(propertyName: name), withInputs: [rhs])
                     }
-                    
+
                 case .expression(let expr):
                     let property = try compileExpression(expr)
                     // Example: super[expr] = 1
                     emit(SetComputedSuperProperty(), withInputs: [property, rhs])
                 }
 
-
             case .identifier(let identifier):
-                if let lhs = lookupIdentifier(identifier.name) {
-                    // Compile to a Reassign or Update operation
-                    switch assignmentExpression.operator {
-                    case "=":
-                        emit(Reassign(), withInputs: [lhs, rhs])
-                    default:
-                        // It's something like "+=", "-=", etc.
-                        let binaryOperator = String(assignmentExpression.operator.dropLast())
-                        guard let op = BinaryOperator(rawValue: binaryOperator) else {
-                            throw CompilerError.invalidNodeError("Unknown assignment operator \(assignmentExpression.operator)")
-                        }
-                        emit(Update(op), withInputs: [lhs, rhs])
+                // Try to lookup the variable belonging to the identifier. If there is none, we're (probably) dealing with
+                // an access to a global variable/builtin or a hoisted variable access. In the case, create a named variable.
+                let lhs = lookupIdentifier(identifier.name) ?? emit(CreateNamedVariable(identifier.name, declarationMode: .none)).output
+
+                // Compile to a Reassign or Update operation
+                switch assignmentExpression.operator {
+                case "=":
+                    // TODO(saelo): if we're assigning to a named variable, we could also generate a declaration
+                    // of a global variable here instead. Probably it doeesn't matter in practice though.
+                    emit(Reassign(), withInputs: [lhs, rhs])
+                default:
+                    // It's something like "+=", "-=", etc.
+                    let binaryOperator = String(assignmentExpression.operator.dropLast())
+                    guard let op = BinaryOperator(rawValue: binaryOperator) else {
+                        throw CompilerError.invalidNodeError("Unknown assignment operator \(assignmentExpression.operator)")
                     }
-                } else {
-                    // It's (probably) a hoisted or a global variable access. Compile as a named variable.
-                    switch assignmentExpression.operator {
-                    case "=":
-                        emit(StoreNamedVariable(identifier.name), withInputs: [rhs])
-                    default:
-                        // It's something like "+=", "-=", etc.
-                        let binaryOperator = String(assignmentExpression.operator.dropLast())
-                        guard let op = BinaryOperator(rawValue: binaryOperator) else {
-                            throw CompilerError.invalidNodeError("Unknown assignment operator \(assignmentExpression.operator)")
-                        }
-                        let oldVal = emit(LoadNamedVariable(identifier.name)).output
-                        let newVal = emit(BinaryOperation(op), withInputs: [oldVal, rhs]).output
-                        emit(StoreNamedVariable(identifier.name), withInputs: [newVal])
-                    }
+                    emit(Update(op), withInputs: [lhs, rhs])
                 }
 
             default:
@@ -917,18 +903,19 @@ public class JavaScriptCompiler {
         case .functionExpression(let functionExpression):
             let parameters = convertParameters(functionExpression.parameters)
             let functionBegin, functionEnd: Operation
+            let name = functionExpression.name.isEmpty ? nil : functionExpression.name
             switch functionExpression.type {
             case .plain:
-                functionBegin = BeginPlainFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginPlainFunction(parameters: parameters, functionName: name)
                 functionEnd = EndPlainFunction()
             case .generator:
-                functionBegin = BeginGeneratorFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginGeneratorFunction(parameters: parameters, functionName: name)
                 functionEnd = EndGeneratorFunction()
             case .async:
-                functionBegin = BeginAsyncFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginAsyncFunction(parameters: parameters, functionName: name)
                 functionEnd = EndAsyncFunction()
             case .asyncGenerator:
-                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginAsyncGeneratorFunction(parameters: parameters, functionName: name)
                 functionEnd = EndAsyncGeneratorFunction()
             case .UNRECOGNIZED(let type):
                 throw CompilerError.invalidNodeError("invalid function declaration type \(type)")
@@ -950,10 +937,10 @@ public class JavaScriptCompiler {
             let functionBegin, functionEnd: Operation
             switch arrowFunction.type {
             case .plain:
-                functionBegin = BeginArrowFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginArrowFunction(parameters: parameters)
                 functionEnd = EndArrowFunction()
             case .async:
-                functionBegin = BeginAsyncArrowFunction(parameters: parameters, isStrict: false)
+                functionBegin = BeginAsyncArrowFunction(parameters: parameters)
                 functionEnd = EndAsyncArrowFunction()
             default:
                 throw CompilerError.invalidNodeError("invalid arrow function type \(arrowFunction.type)")
@@ -965,7 +952,7 @@ public class JavaScriptCompiler {
                 guard let body = arrowFunction.body else { throw CompilerError.invalidNodeError("missing body in arrow function") }
                 switch body {
                 case .block(let block):
-                    try compileStatement(block)
+                    try compileBody(block)
                 case .expression(let expr):
                     let result = try compileExpression(expr)
                     emit(Return(hasReturnValue: true), withInputs: [result])
@@ -1030,7 +1017,7 @@ public class JavaScriptCompiler {
         case .callSuperConstructor(let callSuperConstructor):
             let (arguments, spreads) = try compileCallArguments(callSuperConstructor.arguments)
             let isSpreading = spreads.contains(true)
-            
+
             if isSpreading {
                 throw CompilerError.unsupportedFeatureError("Spread arguments are not supported in super constructor calls")
             }
@@ -1041,7 +1028,6 @@ public class JavaScriptCompiler {
             // In JS, the result of calling the super constructor is just |this|, but in FuzzIL the operation doesn't have an output (because |this| is always available anyway)
             return lookupIdentifier("this")! // we can force unwrap because |this| always exists in the context where |super| exists
 
-            
         case .newExpression(let newExpression):
             let callee = try compileExpression(newExpression.callee)
             let (arguments, spreads) = try compileCallArguments(newExpression.arguments)
@@ -1066,19 +1052,19 @@ public class JavaScriptCompiler {
                     return emit(GetComputedProperty(isGuarded: memberExpression.isOptional), withInputs: [object, property]).output
                 }
             }
-        
+
         case .superMemberExpression(let superMemberExpression):
             guard superMemberExpression.isOptional == false else {
                 throw CompilerError.unsupportedFeatureError("Optional chaining is not supported in super member expressions")
-            }           
+            }
             guard let property = superMemberExpression.property else {
                 throw CompilerError.invalidNodeError("Missing property in super member expression")
             }
-            
+
             switch property {
             case .name(let name):
                 return emit(GetSuperProperty(propertyName: name), withInputs: []).output
-                
+
             case .expression(let expr):
                 if case .numberLiteral(let literal) = expr.expression, let _ = Int64(exactly: literal.value) {
                     throw CompilerError.unsupportedFeatureError("GetElement is not supported in super member expressions")
@@ -1228,6 +1214,10 @@ public class JavaScriptCompiler {
         scopes.top[identifier] = v
     }
 
+    private func mapOrRemap(_ identifier: String, to v: Variable) {
+        scopes.top[identifier] = v
+    }
+
     private func mapParameters(_ parameters: [Compiler_Protobuf_Parameter], to variables: ArraySlice<Variable>) {
         assert(parameters.count == variables.count)
         for (param, v) in zip(parameters, variables) {
@@ -1270,40 +1260,6 @@ public class JavaScriptCompiler {
 
         assert(variables.count == spreads.count)
         return (variables, spreads)
-    }
-
-    /// Determine whether the given statement should be filtered out.
-    ///
-    /// Currently this function only performs function call filtering based on the `filteredFunctions` array.
-    private func performStatementFiltering(_ statement: StatementNode) throws -> Bool {
-        guard case .expressionStatement(let expressionStatement) = statement.statement else { return false }
-        guard case .callExpression(let callExpression) = expressionStatement.expression.expression else { return false }
-        guard case .identifier(let identifier) = callExpression.callee.expression else { return false }
-
-        let functionName = identifier.name
-        var shouldIgnore = false
-        for filteredFunction in filteredFunctions {
-            if filteredFunction.last == "*" {
-                if functionName.starts(with: filteredFunction.dropLast()) {
-                    shouldIgnore = true
-                }
-            } else {
-                assert(!filteredFunction.contains("*"))
-                if functionName == filteredFunction {
-                    shouldIgnore = true
-                }
-            }
-        }
-
-        if shouldIgnore {
-            // Still generate code for the arguments.
-            // For example, we may still want to emit the function call for something like `assertEq(f(), 42);`
-            for arg in callExpression.arguments {
-                try compileExpression(arg)
-            }
-        }
-
-        return shouldIgnore
     }
 
     private func reset() {

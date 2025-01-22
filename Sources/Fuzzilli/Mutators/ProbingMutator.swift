@@ -213,7 +213,7 @@ public class ProbingMutator: RuntimeAssistedMutator {
         case .element(let index):
             b.setElement(index, of: obj, to: value)
         case .symbol(let desc):
-            let Symbol = b.loadBuiltin("Symbol")
+            let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
             let symbol = b.getProperty(extractSymbolNameFromDescription(desc), of: Symbol)
             b.setComputedProperty(symbol, of: obj, to: value)
         }
@@ -258,7 +258,7 @@ public class ProbingMutator: RuntimeAssistedMutator {
         case .element(let index):
             b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: config)
         case .symbol(let desc):
-            let Symbol = b.loadBuiltin("Symbol")
+            let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
             let symbol = b.getProperty(extractSymbolNameFromDescription(desc), of: Symbol)
             b.configureComputedProperty(symbol, of: obj, usingFlags: PropertyFlags.random(), as: config)
         }

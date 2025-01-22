@@ -24,15 +24,6 @@ let jsSuffix = ""
 let jsLifter = JavaScriptLifter(prefix: jsPrefix, suffix: jsSuffix, ecmaVersion: ECMAScriptVersion.es6)
 let fuzzILLifter = FuzzILLifter()
 
-// Default list of functions that are filtered out during compilation. These are functions that may be used in testcases but which do not influence the test's behaviour and so should be omitted for fuzzing.
-// The functions can use the wildcard '*' character as _last_ character, in which case a prefix match will be performed.
-let filteredFunctionsForCompiler = [
-    "assert*",
-    "print*",
-    "enterFunc",
-    "startTest"
-]
-
 // Loads a serialized FuzzIL program from the given file
 func loadProgram(from path: String) throws -> Program {
     let data = try Data(contentsOf: URL(fileURLWithPath: path))
@@ -183,7 +174,7 @@ else if args.has("--compile") {
         exit(-1)
     }
 
-    let compiler = JavaScriptCompiler(deletingCallTo: filteredFunctionsForCompiler)
+    let compiler = JavaScriptCompiler()
     let program: Program
     do {
         program = try compiler.compile(ast)
