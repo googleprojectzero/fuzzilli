@@ -2140,11 +2140,24 @@ final class EndForLoop: JsOperation {
     }
 }
 
-final class BeginForInLoop: JsOperation {
-    override var opcode: Opcode { .beginForInLoop(self) }
+final class BeginPlainForInLoop: JsOperation {
+    override var opcode: Opcode { .beginPlainForInLoop(self) }
+    let variableName: String
+    let declarationMode: NamedVariableDeclarationMode
 
+    init(_ variableName: String, declarationMode: NamedVariableDeclarationMode) {
+        self.variableName = variableName
+        self.declarationMode = declarationMode
+        let declaresInner = declarationMode == .let || declarationMode == .const
+
+        super.init(numInputs: 1, numOutputs: declaresInner ? 0 : 1, numInnerOutputs: declaresInner ? 1 : 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
+    }
+}
+
+final class BeginForInLoopWithReassignment: JsOperation {
+    override var opcode: Opcode { .beginForInLoopWithReassignment(self) }
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
+        super.init(numInputs: 2, numInnerOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -2155,12 +2168,25 @@ final class EndForInLoop: JsOperation {
         super.init(attributes: .isBlockEnd)
     }
 }
+// TODO: Support even more types of for loops, e.g.: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of#examples
+final class BeginPlainForOfLoop: JsOperation {
+    override var opcode: Opcode { .beginPlainForOfLoop(self) }
+    let variableName: String
+    let declarationMode: NamedVariableDeclarationMode
 
-final class BeginForOfLoop: JsOperation {
-    override var opcode: Opcode { .beginForOfLoop(self) }
+    init(_ variableName: String, declarationMode: NamedVariableDeclarationMode) {
+        self.variableName = variableName
+        self.declarationMode = declarationMode
+        let declaresInner = declarationMode == .let || declarationMode == .const
 
+        super.init(numInputs: 1, numOutputs: declaresInner ? 0 : 1, numInnerOutputs: declaresInner ? 1 : 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
+    }
+}
+
+final class BeginForOfLoopWithReassignment: JsOperation {
+    override var opcode: Opcode { .beginForOfLoopWithReassignment(self) }
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
+        super.init(numInputs: 2, numInnerOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
     }
 }
 

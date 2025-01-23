@@ -417,36 +417,117 @@ public class JavaScriptCompiler {
             emit(EndForLoop())
 
         case .forInLoop(let forInLoop):
-            let initializer = forInLoop.left;
-            guard !initializer.hasValue else {
-                throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-in loop")
-            }
-
+            let initializer = forInLoop.left!
             let obj = try compileExpression(forInLoop.right)
+            // Processing a for-in or for-of loop requires an iterator, which is typically declared in the function header.
+            // Alternatively, an existing variable can be used, resulting in an identifier instead of a variable declarator.
+            // If the identifier is not previously declared, it is implicitly created as a global variable.
 
-            let loopVar = emit(BeginForInLoop(), withInputs: [obj]).innerOutput
-            try enterNewScope {
-                map(initializer.name, to: loopVar)
-                try compileBody(forInLoop.body)
+            switch initializer {
+            case .variableDeclaration(let variableDeclaration):
+                guard variableDeclaration.declarations.count == 1 else {
+                    throw CompilerError.invalidNodeError("Expected only one variable to be declared in a for-in loop")
+                }
+                let decl = variableDeclaration.declarations[0]
+                guard !decl.hasValue else {
+                    throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-in loop")
+                } 
+                let kind: NamedVariableDeclarationMode
+                switch variableDeclaration.kind {
+                case .var:
+                    kind = .var
+                case .let:
+                    kind = .let
+                case .const:
+                    kind = .const
+                case .UNRECOGNIZED(let type):
+                    throw CompilerError.invalidNodeError("invalid variable declaration type \(type)")
+                }
+                let newVariableName = decl.name
+                let loopVar : Variable
+                if kind == .const || kind == .let {
+                    loopVar = emit(BeginPlainForInLoop(newVariableName, declarationMode: kind), withInputs: [obj]).innerOutput
+                    try enterNewScope {
+                        map(newVariableName, to: loopVar)
+                        try compileBody(forInLoop.body)
+                    }
+                } else {
+                    loopVar = emit(BeginPlainForInLoop(newVariableName, declarationMode: kind), withInputs: [obj]).output
+                    map(newVariableName, to: loopVar)
+                    try enterNewScope {
+                        try compileBody(forInLoop.body)
+                    }
+                }
+                emit(EndForInLoop())
+
+            case .identifier(let identifier):
+                if let pre_existing_variable = lookupIdentifier(identifier.name) {
+                    emit(BeginForInLoopWithReassignment(), withInputs: [obj, pre_existing_variable])
+                } else {
+                    // A for-in loop with an identifier that is not previously declared is implicitly a global variable.
+                    let new_global_iterator = emit(BeginPlainForInLoop(identifier.name, declarationMode: .global), withInputs: [obj]).output
+                    map(identifier.name, to: new_global_iterator)
+                }
+                try enterNewScope {
+                    try compileBody(forInLoop.body)
+                }
+                emit(EndForInLoop())
             }
-
-            emit(EndForInLoop())
 
         case .forOfLoop(let forOfLoop):
-            let initializer = forOfLoop.left;
-            guard !initializer.hasValue else {
-                throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-of loop")
-            }
-
+            let initializer = forOfLoop.left!
             let obj = try compileExpression(forOfLoop.right)
 
-            let loopVar = emit(BeginForOfLoop(), withInputs: [obj]).innerOutput
-            try enterNewScope {
-                map(initializer.name, to: loopVar)
-                try compileBody(forOfLoop.body)
-            }
+            switch initializer {
+            case .variableDeclaration(let variableDeclaration):
+                guard variableDeclaration.declarations.count == 1 else {
+                    throw CompilerError.invalidNodeError("Expected only one variable to be declared in a for-of loop")
+                }
+                let decl = variableDeclaration.declarations[0]
+                guard !decl.hasValue else {
+                    throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-of loop")
+                } 
+                let kind: NamedVariableDeclarationMode
+                switch variableDeclaration.kind {
+                case .var:
+                    kind = .var
+                case .let:
+                    kind = .let
+                case .const:
+                    kind = .const
+                case .UNRECOGNIZED(let type):
+                    throw CompilerError.invalidNodeError("invalid variable declaration type \(type)")
+                }
+                let newVariableName = decl.name
+                let loopVar : Variable
+                if kind == .const || kind == .let {
+                    loopVar = emit(BeginPlainForOfLoop(newVariableName, declarationMode: kind), withInputs: [obj]).innerOutput
+                    try enterNewScope {
+                        map(newVariableName, to: loopVar)
+                        try compileBody(forOfLoop.body)
+                    }
+                } else {
+                    loopVar = emit(BeginPlainForOfLoop(newVariableName, declarationMode: kind), withInputs: [obj]).output
+                    map(newVariableName, to: loopVar)
+                    try enterNewScope {
+                        try compileBody(forOfLoop.body)
+                    }
+                }
+                emit(EndForOfLoop())
 
-            emit(EndForOfLoop())
+            case .identifier(let identifier):
+                if let pre_existing_variable = lookupIdentifier(identifier.name) {
+                    emit(BeginForOfLoopWithReassignment(), withInputs: [obj, pre_existing_variable])
+                } else {
+                    // A for-of loop with an identifier that is not previously declared is implicitly a global variable.
+                    let new_global_iterator = emit(BeginPlainForOfLoop(identifier.name, declarationMode: .global), withInputs: [obj]).output
+                    map(identifier.name, to: new_global_iterator)
+                }
+                try enterNewScope {
+                    try compileBody(forOfLoop.body)
+                }
+                emit(EndForOfLoop())
+            }
 
         case .breakStatement:
             // If we're in both .loop and .switch context, then the loop must be the most recent context 
@@ -597,7 +678,6 @@ public class JavaScriptCompiler {
             let v = emit(CreateNamedVariable(identifier.name, declarationMode: .none)).output
             // Cache the variable in case it is reused again to avoid emitting multiple
             // CreateNamedVariable operations for the same variable.
-            map(identifier.name, to: v)
             return v
 
         case .numberLiteral(let literal):
@@ -722,13 +802,15 @@ public class JavaScriptCompiler {
             case .identifier(let identifier):
                 // Try to lookup the variable belonging to the identifier. If there is none, we're (probably) dealing with
                 // an access to a global variable/builtin or a hoisted variable access. In the case, create a named variable.
-                let lhs = lookupIdentifier(identifier.name) ?? emit(CreateNamedVariable(identifier.name, declarationMode: .none)).output
+                guard let lhs = lookupIdentifier(identifier.name) else {
+                    let lhs = emit(CreateNamedVariable(identifier.name, declarationMode: .global), withInputs: [rhs]).output
+                    map(identifier.name, to: lhs)
+                    break
+                }
 
                 // Compile to a Reassign or Update operation
                 switch assignmentExpression.operator {
                 case "=":
-                    // TODO(saelo): if we're assigning to a named variable, we could also generate a declaration
-                    // of a global variable here instead. Probably it doeesn't matter in practice though.
                     emit(Reassign(), withInputs: [lhs, rhs])
                 default:
                     // It's something like "+=", "-=", etc.

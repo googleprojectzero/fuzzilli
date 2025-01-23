@@ -673,16 +673,34 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndForLoop")
 
-        case .beginForInLoop:
-            w.emit("BeginForInLoop \(input(0)) -> \(innerOutput())")
+        case .beginPlainForInLoop(let op):
+            let declaresInner = op.declarationMode == .const || op.declarationMode == .let
+            if declaresInner {
+                w.emit("BeginPlainForInLoop \(input(0)) -> '\(op.variableName)', '\(op.declarationMode)', \(innerOutput())")
+            } else {
+                w.emit("BeginPlainForInLoop \(input(0)) -> '\(op.variableName)', '\(op.declarationMode)', \(output())")
+            }
+            w.increaseIndentionLevel()
+
+        case .beginForInLoopWithReassignment:
+            w.emit("BeginForInLoopWithReassignment \(input(0)) -> \(input(1))")
             w.increaseIndentionLevel()
 
         case .endForInLoop:
             w.decreaseIndentionLevel()
             w.emit("EndForInLoop")
 
-        case .beginForOfLoop:
-            w.emit("BeginForOfLoop \(input(0)) -> \(innerOutput())")
+        case .beginPlainForOfLoop(let op):
+            let declaresInner = op.declarationMode == .const || op.declarationMode == .let
+            if declaresInner {
+                w.emit("BeginPlainForOfLoop \(input(0)) -> '\(op.variableName)', '\(op.declarationMode)', \(innerOutput())")
+            } else {
+                w.emit("BeginPlainForOfLoop \(input(0)) -> '\(op.variableName)', '\(op.declarationMode)', \(output())")
+            }
+            w.increaseIndentionLevel()
+
+        case .beginForOfLoopWithReassignment:
+            w.emit("BeginForOfLoopWithReassignment \(input(0)) -> \(input(1))")
             w.increaseIndentionLevel()
 
         case .beginForOfLoopWithDestruct(let op):

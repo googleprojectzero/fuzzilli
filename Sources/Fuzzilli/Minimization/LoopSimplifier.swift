@@ -40,9 +40,11 @@ struct LoopSimplifier: Reducer {
                 tryReplaceDoWhileLoopWithRepeatLoop(group, with: helper)
             case .beginRepeatLoop:
                 tryReduceRepeatLoopIterationCount(group, with: helper)
-            case .beginForInLoop,
-                    .beginForOfLoop,
-                    .beginForOfLoopWithDestruct:
+            case .beginPlainForInLoop,
+                 .beginForInLoopWithReassignment,
+                 .beginPlainForOfLoop,
+                 .beginForOfLoopWithReassignment,
+                 .beginForOfLoopWithDestruct:
                 // These loops are (usually) guaranteed to terminate, and should probably anyway not be replaced by repeat-loops.
                 break
             default:

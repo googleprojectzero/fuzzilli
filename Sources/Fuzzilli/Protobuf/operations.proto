@@ -691,13 +691,23 @@ message BeginForLoopBody {
 message EndForLoop {
 }
 
-message BeginForInLoop {
+message BeginPlainForInLoop {
+    string variableName = 1;
+    NamedVariableDeclarationMode declarationMode = 2;
+}
+
+message BeginForInLoopWithReassignment {
 }
 
 message EndForInLoop {
 }
 
-message BeginForOfLoop {
+message BeginPlainForOfLoop {
+    string variableName = 1;
+    NamedVariableDeclarationMode declarationMode = 2;
+}
+
+message BeginForOfLoopWithReassignment {
 }
 
 message BeginForOfLoopWithDestruct {

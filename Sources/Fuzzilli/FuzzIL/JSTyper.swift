@@ -220,6 +220,21 @@ public struct JSTyper: Analyzer {
             let cls = activeClassDefinitions.pop()
             // Can now compute the full type of the class variable
             set(cls.output, cls.classType + .constructor(cls.constructorParameters => cls.instanceType))
+        case .beginPlainForInLoop(let op):
+            let declaresInner = op.declarationMode == .let || op.declarationMode == .const
+            if declaresInner {
+                set(instr.innerOutput, .string)
+            } else {
+                set(instr.output, .string)
+            }
+        case .beginPlainForOfLoop(let op):
+            let declaresInner = op.declarationMode == .let || op.declarationMode == .const
+            if declaresInner {
+                set(instr.innerOutput, .anything)
+            } else {
+                set(instr.output, .anything)
+            }
+
         default:
             // Only instructions starting a block with output variables should be handled here.
             assert(instr.numOutputs == 0 || !instr.isBlockStart)
@@ -283,8 +298,10 @@ public struct JSTyper: Analyzer {
         case .endForLoop:
             state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
         case .beginWhileLoopBody,
-             .beginForInLoop,
-             .beginForOfLoop,
+             .beginPlainForInLoop,
+             .beginForInLoopWithReassignment,
+             .beginPlainForOfLoop,
+             .beginForOfLoopWithReassignment,
              .beginForOfLoopWithDestruct,
              .beginRepeatLoop,
              .beginCodeString:
@@ -805,11 +822,27 @@ public struct JSTyper: Analyzer {
             assert(inputTypes.count == instr.numInnerOutputs)
             zip(instr.innerOutputs, inputTypes).forEach({ set($0, $1) })
 
-        case .beginForInLoop:
-            set(instr.innerOutput, .string)
+        case .beginPlainForInLoop(let op):
+            let declaresInner = op.declarationMode == .let || op.declarationMode == .const
+            if declaresInner {
+                set(instr.innerOutput, .string)
+            } else {
+                set(instr.output, .string)
+            }
 
-        case .beginForOfLoop:
-            set(instr.innerOutput, .anything)
+        case .beginForInLoopWithReassignment:
+            set(instr.input(1), .string)
+
+        case .beginPlainForOfLoop(let op):
+            let declaresInner = op.declarationMode == .let || op.declarationMode == .const
+            if declaresInner {
+                set(instr.innerOutput, .anything)
+            } else {
+                set(instr.output, .anything)
+            }
+
+        case .beginForOfLoopWithReassignment:
+            set(instr.input(1), .anything)
 
         case .beginForOfLoopWithDestruct:
             for v in instr.innerOutputs {

@@ -1226,22 +1226,38 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .beginForInLoop:
-                let LET = w.declarationKeyword(for: instr.innerOutput)
-                let V = w.declare(instr.innerOutput)
+            case .beginPlainForInLoop(let op):
+                let declaresInner = op.declarationMode == .let || op.declarationMode == .const
                 let OBJ = input(0)
-                w.emit("for (\(LET) \(V) in \(OBJ)) {")
+                let LET = op.declarationMode != .global ? "\(op.declarationMode) " : ""
+                let V = op.variableName
+                w.declare(declaresInner ? instr.innerOutput : instr.output, as: V)
+                w.emit("for (\(LET)\(V) in \(OBJ)) {")
+                w.enterNewBlock()
+
+            case .beginForInLoopWithReassignment:
+                let OBJ = input(0)
+                let V = input(1)
+                w.emit("for (\(V) in \(OBJ)) {")
                 w.enterNewBlock()
 
             case .endForInLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .beginForOfLoop:
-                let V = w.declare(instr.innerOutput)
-                let LET = w.declarationKeyword(for: instr.innerOutput)
+            case .beginPlainForOfLoop(let op):
+                let declaresInner = op.declarationMode == .let || op.declarationMode == .const
                 let OBJ = input(0)
-                w.emit("for (\(LET) \(V) of \(OBJ)) {")
+                let LET = op.declarationMode != .global ? "\(op.declarationMode) " : ""
+                let V = op.variableName
+                w.declare(declaresInner ? instr.innerOutput : instr.output, as: V)
+                w.emit("for (\(LET)\(V) of \(OBJ)) {")
+                w.enterNewBlock()
+
+            case .beginForOfLoopWithReassignment:
+                let OBJ = input(0)
+                let V = input(1)
+                w.emit("for (\(V) of \(OBJ)) {")
                 w.enterNewBlock()
 
             case .beginForOfLoopWithDestruct(let op):

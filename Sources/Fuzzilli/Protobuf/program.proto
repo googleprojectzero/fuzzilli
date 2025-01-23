@@ -1,4 +1,4 @@
-// Copyright 2024 Google LLC
+// Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -175,35 +175,37 @@ message Instruction {
         BeginForLoopAfterthought beginForLoopAfterthought = 149;
         BeginForLoopBody beginForLoopBody = 150;
         EndForLoop endForLoop = 151;
-        BeginForInLoop beginForInLoop = 152;
-        EndForInLoop endForInLoop = 153;
-        BeginForOfLoop beginForOfLoop = 154;
-        BeginForOfLoopWithDestruct beginForOfLoopWithDestruct = 155;
-        EndForOfLoop endForOfLoop = 156;
-        BeginRepeatLoop beginRepeatLoop = 157;
-        EndRepeatLoop endRepeatLoop = 158;
-        LoopBreak loopBreak = 159;
-        LoopContinue loopContinue = 160;
-        BeginTry beginTry = 161;
-        BeginCatch beginCatch = 162;
-        BeginFinally beginFinally = 163;
-        EndTryCatchFinally endTryCatchFinally = 164;
-        ThrowException throwException = 165;
-        BeginCodeString beginCodeString = 166;
-        EndCodeString endCodeString = 167;
-        BeginBlockStatement beginBlockStatement = 168;
-        EndBlockStatement endBlockStatement = 169;
-        BeginSwitch beginSwitch = 170;
-        BeginSwitchCase beginSwitchCase = 171;
-        BeginSwitchDefaultCase beginSwitchDefaultCase = 172;
-        EndSwitchCase endSwitchCase = 173;
-        EndSwitch endSwitch = 174;
-        SwitchBreak switchBreak = 175;
-        LoadNewTarget loadNewTarget = 176;
-        Print print = 177;
-        Explore explore = 178;
-        Probe probe = 179;
-        Fixup fixup = 180;
+        BeginPlainForInLoop beginPlainForInLoop = 152;
+        BeginForInLoopWithReassignment beginForInLoopWithReassignment = 153;
+        EndForInLoop endForInLoop = 154;
+        BeginPlainForOfLoop beginPlainForOfLoop = 155;
+        BeginForOfLoopWithReassignment beginForOfLoopWithReassignment = 156;
+        BeginForOfLoopWithDestruct beginForOfLoopWithDestruct = 157;
+        EndForOfLoop endForOfLoop = 158;
+        BeginRepeatLoop beginRepeatLoop = 159;
+        EndRepeatLoop endRepeatLoop = 160;
+        LoopBreak loopBreak = 161;
+        LoopContinue loopContinue = 162;
+        BeginTry beginTry = 163;
+        BeginCatch beginCatch = 164;
+        BeginFinally beginFinally = 165;
+        EndTryCatchFinally endTryCatchFinally = 166;
+        ThrowException throwException = 167;
+        BeginCodeString beginCodeString = 168;
+        EndCodeString endCodeString = 169;
+        BeginBlockStatement beginBlockStatement = 170;
+        EndBlockStatement endBlockStatement = 171;
+        BeginSwitch beginSwitch = 172;
+        BeginSwitchCase beginSwitchCase = 173;
+        BeginSwitchDefaultCase beginSwitchDefaultCase = 174;
+        EndSwitchCase endSwitchCase = 175;
+        EndSwitch endSwitch = 176;
+        SwitchBreak switchBreak = 177;
+        LoadNewTarget loadNewTarget = 178;
+        Print print = 179;
+        Explore explore = 180;
+        Probe probe = 181;
+        Fixup fixup = 182;
     }
 }
 

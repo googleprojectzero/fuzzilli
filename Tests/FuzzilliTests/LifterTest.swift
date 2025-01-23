@@ -2709,9 +2709,9 @@ class LifterTests: XCTestCase {
         let a3 = b.createArray(with: [b.loadInt(30), b.loadInt(31), b.loadInt(32)])
         let a4 = b.createArray(with: [a1, a2, a3])
         let print = b.createNamedVariable(forBuiltin: "print")
-        b.buildForOfLoop(a4, selecting: [0,2], hasRestElement: true) { args in
+        b.buildForOfLoopWithDestruct(a4, selecting: [0,2], hasRestElement: true) { args in
             b.callFunction(print, withArgs: [args[0]])
-            b.buildForOfLoop(args[1]) { v in
+            b.buildPlainForOfLoop(args[1], "bar", declarationMode: .const) { v in
                 b.callFunction(print, withArgs: [v])
             }
         }
@@ -2722,9 +2722,34 @@ class LifterTests: XCTestCase {
         let expected = """
         for (let [v17,,...v18] of [[10,11,12,13,14],[20,21,22,23],[30,31,32]]) {
             print(v17);
-            for (const v20 of v18) {
-                print(v20);
+            for (const bar of v18) {
+                print(bar);
             }
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testForLoopWithReassignment() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createObject(with: ["x": b.loadInt(42)])
+        let existing = b.loadString("initial")
+        b.buildForInLoopWithReassignment(obj, existing) {
+            b.reassign(existing, to: b.loadString("updated"))
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v1 = { x: 42 };
+        let v2 = "initial";
+        for (v2 in v1) {
+            v2 = "updated";
         }
 
         """
@@ -2738,7 +2763,7 @@ class LifterTests: XCTestCase {
 
         let v0 = b.loadInt(1337)
         let v1 = b.createObject(with: ["a": v0])
-        b.buildForInLoop(v1) { v2 in
+        b.buildPlainForInLoop(v1, "foo", declarationMode: .let) { v2 in
             b.blockStatement {
                 let v3 = b.loadInt(1337)
                 b.reassign(v2, to: v3)
@@ -2755,11 +2780,11 @@ class LifterTests: XCTestCase {
 
         let expected = """
         const v1 = { a: 1337 };
-        for (let v2 in v1) {
+        for (let foo in v1) {
             {
-                v2 = 1337;
+                foo = 1337;
                 {
-                    v2 = { a: v1 };
+                    foo = { a: v1 };
                 }
             }
         }

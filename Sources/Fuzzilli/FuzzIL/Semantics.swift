@@ -54,6 +54,10 @@ extension Operation {
         case .destructArrayAndReassign,
              .destructObjectAndReassign:
             return inputIdx != 0
+        case .beginForInLoopWithReassignment:
+            return inputIdx == 1
+        case .beginForOfLoopWithReassignment:
+            return inputIdx == 1
         default:
             return false
         }
@@ -204,9 +208,11 @@ extension Operation {
             return endOp is BeginForLoopBody
         case .beginForLoopBody:
             return endOp is EndForLoop
-        case .beginForInLoop:
+        case .beginPlainForInLoop,
+             .beginForInLoopWithReassignment:
             return endOp is EndForInLoop
-        case .beginForOfLoop,
+        case .beginPlainForOfLoop,
+             .beginForOfLoopWithReassignment,
              .beginForOfLoopWithDestruct:
             return endOp is EndForOfLoop
         case .beginRepeatLoop:
