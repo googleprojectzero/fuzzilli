@@ -11,6 +11,12 @@ let astProtobufDefinitionPath = process.argv[2];
 let inputFilePath = process.argv[3];
 let outputFilePath = process.argv[4];
 
+const varKindMap = {
+    "var": 0,
+    "let": 1,
+    "const": 2
+};
+
 function assert(cond, msg) {
     if (!cond) {
         if (typeof msg !== 'undefined') {
@@ -97,15 +103,9 @@ function parse(script, proto) {
     }
 
     function visitVariableDeclaration(node) {
-        let kind;
-        if (node.kind === "var") {
-            kind = 0;
-        } else if (node.kind === "let") {
-            kind = 1;
-        } else if (node.kind === "const") {
-            kind = 2;
-        } else {
-            throw "Unknown variable declaration kind: " + node.kind;
+        let kind = varKindMap[node.kind];
+        if (kind === undefined) {
+            throw new Error("Unknown variable declaration kind: " + node.kind);
         }
 
         let declarations = [];
@@ -288,9 +288,18 @@ function parse(script, proto) {
                     let decl = node.left.declarations[0];
                     let initDecl = { name: decl.id.name };
                     assert(decl.init == null, "Expected no initial value for the variable declared as part of a for-in loop")
-                    forInLoop.variableDeclarator = make('VariableDeclarator', initDecl);
+                    // TODO: Support destructuring / member expressions
+                    assert(decl.id.type == "Identifier", "Expected identifier for the variable declared as part of a for-in loop")
+                    let kind = varKindMap[node.left.kind];
+                    if (kind === undefined) {
+                        throw new Error("Unknown variable declaration kind: " + node.kind);
+                    }
+                    forInLoop.variableDeclaration = make('VariableDeclaration', {
+                        kind: kind,
+                        declarations: [initDecl]
+                    });
                 } else if (node.left.type === 'Identifier') {
-                    forOfLoop.identifier = make('Identifier', { name: node.left.name });
+                    forInLoop.identifier = make('Identifier', { name: node.left.name });
                 } else {
                     throw "Unsupported left side of for-in loop: " + node.left.type;
                 }
@@ -305,7 +314,16 @@ function parse(script, proto) {
                     let decl = node.left.declarations[0];
                     let initDecl = { name: decl.id.name };
                     assert(decl.init == null, "Expected no initial value for the variable declared as part of a for-of loop")
-                    forOfLoop.variableDeclarator = make('VariableDeclarator', initDecl);
+                    // TODO: Support destructuring / member expressions
+                    assert(decl.id.type == "Identifier", "Expected identifier for the variable declared as part of a for-of loop")
+                    let kind = varKindMap[node.left.kind];
+                    if (kind === undefined) {
+                        throw new Error("Unknown variable declaration kind: " + node.kind);
+                    }
+                    forOfLoop.variableDeclaration = make('VariableDeclaration', {
+                        kind: kind,
+                        declarations: [initDecl]
+                    });
                 } else if (node.left.type === 'Identifier') {
                     forOfLoop.identifier = make('Identifier', { name: node.left.name });
                 } else {

@@ -692,6 +692,8 @@ message EndForLoop {
 }
 
 message BeginPlainForInLoop {
+    string variableName = 1;
+    NamedVariableDeclarationMode declarationMode = 2;
 }
 
 message BeginForInLoopWithReassignment {
@@ -701,6 +703,8 @@ message EndForInLoop {
 }
 
 message BeginPlainForOfLoop {
+    string variableName = 1;
+    NamedVariableDeclarationMode declarationMode = 2;
 }
 
 message BeginForOfLoopWithReassignment {

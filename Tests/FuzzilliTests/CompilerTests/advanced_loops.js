@@ -1,102 +1,65 @@
-if (typeof output === 'undefined') output = console.log;
+var foo = 0
+console.log(foo)
+// ------------------ Plain For-of loops ------------------
+for (const a of ["a"]) {}
+for (let b of ["b"]) {}
+for (var c of ["c"]) {}
+for (d of ["d"]) {}
 
-let counter = 5;
-function countdown() {
-  return counter--;
-}
-function resetCounter() {
-  counter = 5;
-}
+try {foo = a }
+catch (err) { console.log("Test 1 successful");}
+try {foo = b }
+catch (err) { console.log("Test 2 successful");}
+if (c === "c") console.log("Test 3 successful");
+if (d === "d") console.log("Test 4 successful");
 
-//
-// While loops
-//
-while (countdown()) {
-  output("inside while loop body");
-}
-resetCounter()
+// --------------- Reassigning For-of loops ---------------
 
-while (output("inside while loop header"), output("still inside while loop header"), countdown()) {
-  output("inside while loop body");
-}
-resetCounter();
+const e = "e";
+let f = "f";
+var g = "g";
+h = "h";
 
-while (output("inside while loop header"), counter) {
-  output("inside while loop body");
-  countdown();
-}
-resetCounter();
+try { for (e of ["e_new"]) {} } 
+catch (err) { console.log("Test 5 successful");} // can not reassign const
+for (f of ["f_new"]) {}
+for (g of ["g_new"]) {}
+for (h of ["h_new"]) {}
 
-while ((function() { let c = countdown(); output("inside temporary function, c = " + c); return c; })()) {
-  output("inside while loop body");
-}
-resetCounter();
+if (e == "e") console.log("Test 6 successful");
+if (f == "f_new") console.log("Test 7 successful");
+if (g == "g_new") console.log("Test 8 successful");
+if (h == "h_new") console.log("Test 9 successful");
 
-//
-// Do-While loops
-//
-do {
-  output("inside do-while loop body");
-} while (countdown())
-resetCounter()
-
-do {
-  output("inside do-while loop body");
-} while (output("inside do-while loop header"), output("still inside do-while loop header"), countdown())
-resetCounter();
-
-do {
-  output("inside do-while loop body");
-  countdown();
-} while (output("inside do-while loop header"), counter)
-resetCounter();
-
-do {
-  output("inside do-while loop body");
-} while ((function() { let c = countdown(); output("inside temporary function, c = " + c); return c; })())
-resetCounter();
+// ------------------ Plain For-in loops ------------------
 
 
-//
-// For loops
-//
-for (;;) {
-  if (!counter--) {
-    break;
-  }
-  output("inside for loop body");
-  continue;
-  output("should not be reached");
-}
-resetCounter();
+for (const i in ["i"]) {}
+for (let j in ["j"]) {}
+for (var k in ["k"]) {}
+for (l in ["l"]) {}
 
-for (let i = 0, j = 10; i < j; i++, j--) {
-  output("inside for loop body, i: " + i + " j: " + j);
-}
+try {foo = i }
+catch (err) { console.log("Test 10 successful");}
+try {foo = j }
+catch (err) { console.log("Test 11 successful");}
+if (k === "0") console.log("Test 12 successful");
+if (l === "0") console.log("Test 13 successful");
 
-for (; countdown();) {
-  output("inside for loop body");
-}
-resetCounter();
+// --------------- Reassigning For-in loops ---------------
 
-for (let i = 0; ; i++) {
-  output("inside for loop body");
-  if (i >= 5) break;
-}
+const m = "m";
+let n = "n";
+var o = "o";
+p = "p";
 
-for (output("inside for loop initializer"); output("inside for loop condition"), true; output("inside for loop afterthought")) {
-  output("inside for loop body");
-  if (!countdown()) break;
-}
-resetCounter();
+try { for (m in ["m_new"]) {} } 
+catch (err) { console.log("Test 14 successful");}
+for (n in ["n_new"]) {}
+for (o in ["o_new"]) {}
+for (p in ["p_new"]) {}
 
-for (a of ["new a"]) {}
-output("value of a: " + a);
-
-b = "old b";
-for (b of ["new b"]) {}
-output("value of b: " + b);
-
-var c = "old c";
-for (c of ["new c"]) {}
-output("value of c: " + c);
+if (m == "m") console.log("Test 15 successful");
+if (n != "n") console.log("Test 16 successful");
+if (o != "o") console.log("Test 17 successful");
+if (p != "p") console.log("Test 18 successful");

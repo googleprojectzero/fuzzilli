@@ -2142,8 +2142,15 @@ final class EndForLoop: JsOperation {
 
 final class BeginPlainForInLoop: JsOperation {
     override var opcode: Opcode { .beginPlainForInLoop(self) }
-    init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
+    let variableName: String
+    let declarationMode: NamedVariableDeclarationMode
+
+    init(_ variableName: String, declarationMode: NamedVariableDeclarationMode) {
+        self.variableName = variableName
+        self.declarationMode = declarationMode
+        let declaresInner = declarationMode == .let || declarationMode == .const
+
+        super.init(numInputs: 1, numOutputs: declaresInner ? 0 : 1, numInnerOutputs: declaresInner ? 1 : 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -2164,8 +2171,15 @@ final class EndForInLoop: JsOperation {
 // TODO: Support even more types of for loops, e.g.: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of#examples
 final class BeginPlainForOfLoop: JsOperation {
     override var opcode: Opcode { .beginPlainForOfLoop(self) }
-    init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
+    let variableName: String
+    let declarationMode: NamedVariableDeclarationMode
+
+    init(_ variableName: String, declarationMode: NamedVariableDeclarationMode) {
+        self.variableName = variableName
+        self.declarationMode = declarationMode
+        let declaresInner = declarationMode == .let || declarationMode == .const
+
+        super.init(numInputs: 1, numOutputs: declaresInner ? 0 : 1, numInnerOutputs: declaresInner ? 1 : 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
     }
 }
 

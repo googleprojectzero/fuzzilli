@@ -257,7 +257,7 @@ class AnalyzerTests: XCTestCase {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 
-            b.buildPlainForInLoop(args[1]) { _ in
+            b.buildPlainForInLoop(args[1], "foo", declarationMode: .const) { _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 
@@ -266,7 +266,7 @@ class AnalyzerTests: XCTestCase {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 
-            b.buildPlainForOfLoop(args[2]) { _ in
+            b.buildPlainForOfLoop(args[2], "foo", declarationMode: .const) { _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 

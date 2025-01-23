@@ -801,14 +801,20 @@ extension Instruction: ProtobufConvertible {
                 $0.beginForLoopBody = Fuzzilli_Protobuf_BeginForLoopBody()
             case .endForLoop:
                 $0.endForLoop = Fuzzilli_Protobuf_EndForLoop()
-            case .beginPlainForInLoop:
-                $0.beginPlainForInLoop = Fuzzilli_Protobuf_BeginPlainForInLoop()
+            case .beginPlainForInLoop(let op):
+                $0.beginPlainForInLoop = Fuzzilli_Protobuf_BeginPlainForInLoop.with {
+                    $0.variableName = op.variableName
+                    $0.declarationMode = convertEnum(op.declarationMode, NamedVariableDeclarationMode.allCases)
+                }
             case .beginForInLoopWithReassignment:
                 $0.beginForInLoopWithReassignment = Fuzzilli_Protobuf_BeginForInLoopWithReassignment()
             case .endForInLoop:
                 $0.endForInLoop = Fuzzilli_Protobuf_EndForInLoop()
-            case .beginPlainForOfLoop:
-                $0.beginPlainForOfLoop = Fuzzilli_Protobuf_BeginPlainForOfLoop()
+            case .beginPlainForOfLoop(let op):
+                $0.beginPlainForOfLoop = Fuzzilli_Protobuf_BeginPlainForOfLoop.with {
+                    $0.variableName = op.variableName
+                    $0.declarationMode = convertEnum(op.declarationMode, NamedVariableDeclarationMode.allCases)
+                }
             case .beginForOfLoopWithReassignment:
                 $0.beginForOfLoopWithReassignment = Fuzzilli_Protobuf_BeginForOfLoopWithReassignment()
             case .beginForOfLoopWithDestruct(let op):
@@ -1233,14 +1239,14 @@ extension Instruction: ProtobufConvertible {
             op = BeginForLoopBody(numLoopVariables: inouts.count)
         case .endForLoop:
             op = EndForLoop()
-        case .beginPlainForInLoop:
-            op = BeginPlainForInLoop()
+        case .beginPlainForInLoop(let p):
+            op = BeginPlainForInLoop(p.variableName, declarationMode: try convertEnum(p.declarationMode, NamedVariableDeclarationMode.allCases))
         case .beginForInLoopWithReassignment:
             op = BeginForInLoopWithReassignment()
         case .endForInLoop:
             op = EndForInLoop()
-        case .beginPlainForOfLoop:
-            op = BeginPlainForOfLoop()
+        case .beginPlainForOfLoop(let p):
+            op = BeginPlainForOfLoop(p.variableName, declarationMode: try convertEnum(p.declarationMode, NamedVariableDeclarationMode.allCases))
         case .beginForOfLoopWithReassignment:
             op = BeginForOfLoopWithReassignment()
         case .beginForOfLoopWithDestruct(let p):

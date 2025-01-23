@@ -168,7 +168,7 @@ message ForLoop {
 
 message ForInLoop {
     oneof left {
-        VariableDeclarator variableDeclarator = 1;
+        VariableDeclaration variableDeclaration = 1;
         Identifier identifier = 2;
     }
     Expression right = 3;
@@ -177,7 +177,7 @@ message ForInLoop {
 
 message ForOfLoop {
     oneof left {
-        VariableDeclarator variableDeclarator = 1;
+        VariableDeclaration variableDeclaration = 1;
         Identifier identifier = 2;
     }
     Expression right = 3;

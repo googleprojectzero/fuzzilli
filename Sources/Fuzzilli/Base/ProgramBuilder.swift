@@ -2501,8 +2501,13 @@ public class ProgramBuilder {
         emit(EndForLoop())
     }
 
-    public func buildPlainForInLoop(_ obj: Variable, _ body: (Variable) -> ()) {
-        let i = emit(BeginPlainForInLoop(), withInputs: [obj]).innerOutput
+    public func buildPlainForInLoop(_ obj: Variable, _ name: String, declarationMode: NamedVariableDeclarationMode, _ body: (Variable) -> ()) {
+        let i: Variable
+        if declarationMode == .let || declarationMode == .const {
+            i = emit(BeginPlainForInLoop(name, declarationMode: declarationMode), withInputs: [obj]).innerOutput
+        } else {
+            i = emit(BeginPlainForInLoop(name, declarationMode: declarationMode), withInputs: [obj]).output
+        }
         body(i)
         emit(EndForInLoop())
     }
@@ -2513,8 +2518,13 @@ public class ProgramBuilder {
         emit(EndForInLoop())
     }
 
-    public func buildPlainForOfLoop(_ obj: Variable, _ body: (Variable) -> ()) {
-        let i = emit(BeginPlainForOfLoop(), withInputs: [obj]).innerOutput
+    public func buildPlainForOfLoop(_ obj: Variable, _ name: String, declarationMode: NamedVariableDeclarationMode, _ body: (Variable) -> ()) {
+        let i: Variable
+        if declarationMode == .let || declarationMode == .const {
+            i = emit(BeginPlainForOfLoop(name, declarationMode: declarationMode), withInputs: [obj]).innerOutput
+        } else {
+            i = emit(BeginPlainForOfLoop(name, declarationMode: declarationMode), withInputs: [obj]).output
+        }
         body(i)
         emit(EndForOfLoop())
     }

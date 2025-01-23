@@ -1421,7 +1421,11 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("PlainForInLoopGenerator", inputs: .preferred(.object())) { b, obj in
-        b.buildPlainForInLoop(obj) { _ in
+        // .none declaration mode is for reassigning loops
+        let validDeclarationModes = NamedVariableDeclarationMode.allCases.filter { $0 != .none }
+        let name = b.randomCustomPropertyName()
+        let declarationMode = chooseUniform(from: NamedVariableDeclarationMode.allCases)
+        b.buildPlainForInLoop(obj, name, declarationMode: declarationMode) { _ in
             b.buildRecursive()
         }
     },
@@ -1435,7 +1439,10 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("PlainForOfLoopGenerator", inputs: .preferred(.iterable)) { b, obj in
-        b.buildPlainForOfLoop(obj) { _ in
+        let validDeclarationModes = NamedVariableDeclarationMode.allCases.filter { $0 != .none }
+        let name = b.randomCustomPropertyName()
+        let declarationMode = chooseUniform(from: NamedVariableDeclarationMode.allCases)
+        b.buildPlainForOfLoop(obj, name, declarationMode: declarationMode) { _ in
             b.buildRecursive()
         }
     },
