@@ -301,6 +301,11 @@ message Instruction {
         WasmSimdLoad wasmSimdLoad = 275;
         WasmUnreachable wasmUnreachable = 276;
         WasmSelect wasmSelect = 277;
+        WasmBeginTypeGroup wasmBeginTypeGroup = 278;
+        WasmEndTypeGroup wasmEndTypeGroup = 279;
+        WasmDefineArrayType wasmDefineArrayType = 280;
+        WasmArrayNewFixed wasmArrayNewFixed = 281;
+        WasmArrayGet wasmArrayGet = 282;
     }
 }
 

@@ -135,7 +135,7 @@ public class Operation {
         // The instruction cannot be mutated with the input mutator
         // This is not the case for most instructions except wasm instructions where we need to
         // preserve types for correctness. Note: this is different than the .isMutable attribute.
-        static let isNotInputMutable               = Attributes(rawValue: 1 << 11)
+        static let isNotInputMutable            = Attributes(rawValue: 1 << 11)
     }
 }
 

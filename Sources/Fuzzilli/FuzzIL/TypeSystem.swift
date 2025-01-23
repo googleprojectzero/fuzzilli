@@ -210,9 +210,18 @@ public struct ILType: Hashable {
     public static let wasmExternRef = ILType(definiteType: .wasmExternRef)
     public static let wasmFuncRef = ILType(definiteType: .wasmFuncRef)
     public static let wasmSimd128 = ILType(definiteType: .wasmSimd128)
+    public static let wasmGenericRef = ILType(definiteType: .wasmRef)
+
+    public static let wasmTypeDef = ILType(definiteType: .wasmTypeDef)
+
+    // TODO(mliedtke): Add wasmRefNull() and extend the WasmReferenceType with a null bool.
+    static func wasmRef(_ kind: WasmReferenceType.Kind) -> ILType {
+        return ILType(definiteType: .wasmRef, ext: TypeExtension(
+            properties: [], methods: [], signature: nil, wasmExt: WasmReferenceType(kind)))
+    }
 
     // The union of all primitive wasm types
-    public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef | .wasmSimd128
+    public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef | .wasmSimd128 | .wasmGenericRef
 
     public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
 
@@ -431,6 +440,14 @@ public struct ILType: Hashable {
         return wasmTagType != nil
     }
 
+    public var wasmReferenceType: WasmReferenceType? {
+        return wasmType as? WasmReferenceType
+    }
+
+    public var isWasmReferenceType: Bool {
+        return wasmReferenceType != nil
+    }
+
     public var properties: Set<String> {
         return ext?.properties ?? Set()
     }
@@ -457,6 +474,13 @@ public struct ILType: Hashable {
 
     public func randomMethod() -> String? {
         return ext?.methods.randomElement()
+    }
+
+    // Returns how many additional inputs an operation using this type will need
+    // to "refine" the type. This value is 1 for indexed wasm-gc reference
+    // types, zero otherwise.
+    public func requiredInputCount() -> Int {
+        return Int(wasmReferenceType?.kind == .Index ? 1 : 0)
     }
 
 
@@ -851,6 +875,13 @@ extension ILType: CustomStringConvertible {
             return ".wasmSimd128"
         case .label:
             return ".label"
+        case .wasmRef:
+            switch self.wasmReferenceType!.kind {
+                case .Abstract:
+                    fatalError("unimplemented")
+                case .Index:
+                    return ".ref(Index)"
+            }
         default:
             break
         }
@@ -914,6 +945,11 @@ struct BaseType: OptionSet, Hashable {
     // This is a reference to a table, which can be passed around to table instructions
     // The lifter will resolve this to the proper index when lifting.
     static let wasmSimd128    = BaseType(rawValue: 1 << 19)
+
+    // Wasm-gc types
+    // TODO(mliedtke): wasmExternRef and wasmFuncRef need to be integrated into this.
+    static let wasmRef = BaseType(rawValue: 1 << 20)
+    static let wasmTypeDef = BaseType(rawValue: 1 << 21)
 
     static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 
@@ -1040,6 +1076,27 @@ public class WasmLabelType: WasmTypeExtension {
     init(_ parameters: [ILType], isCatch: Bool) {
         self.parameters = parameters
         self.isCatch = isCatch
+    }
+}
+
+public class WasmReferenceType: WasmTypeExtension {
+    enum Kind {
+        case Index    // user-defined types
+        case Abstract // abstract language types like extern, func, any, none
+    }
+    let kind: Kind
+
+    init(_ kind: Kind) {
+        self.kind = kind
+    }
+
+    override func isEqual(to other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmReferenceType else { return false }
+        return kind == other.kind
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine(kind)
     }
 }
 
@@ -1378,4 +1435,33 @@ public postfix func ... (t: ILType) -> Parameter {
 infix operator =>: AdditionPrecedence
 public func => (parameters: [Parameter], returnType: ILType) -> Signature {
     return Signature(expects: ParameterList(parameters), returns: returnType)
+}
+
+class WasmTypeDescription: Hashable {
+    public let type: ILType
+    public let typeGroupIndex: Int
+    public let isAbstract: Bool
+
+    init(type: ILType, typeGroupIndex: Int, isAbstract: Bool = true) {
+        self.type = type
+        self.typeGroupIndex = typeGroupIndex
+        self.isAbstract = isAbstract
+    }
+
+    static func == (lhs: WasmTypeDescription, rhs: WasmTypeDescription) -> Bool {
+        ObjectIdentifier(lhs) == ObjectIdentifier(rhs)
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(self))
+    }
+}
+
+class WasmArrayTypeDescription : WasmTypeDescription {
+    let elementType: WasmTypeDescription
+
+    init(elementType: WasmTypeDescription, typeGroupIndex: Int) {
+        self.elementType = elementType
+        super.init(type: .wasmRef(.Index), typeGroupIndex: typeGroupIndex, isAbstract: false)
+    }
 }

@@ -1067,6 +1067,16 @@ public class ProgramBuilder {
         return jsTyper.type(of: v)
     }
 
+    // Returns the type description of the provided wasm type definition.
+    func typeDescription(of v: Variable) -> WasmTypeDescription {
+        return jsTyper.wasmTypes.getTypeDescription(of: v)
+    }
+
+    // Returns the type description of the provided variable's wasm object.
+    func typeDescription(usage v: Variable) -> WasmTypeDescription {
+        return jsTyper.wasmTypes.getTypeDescription(usage: v)
+    }
+
     /// Returns the type of the `super` binding at the current position.
     public func currentSuperType() -> ILType {
         return jsTyper.currentSuperType()
@@ -3363,6 +3373,19 @@ public class ProgramBuilder {
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
             return b.emit(WasmSimdLoad(kind: kind, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset]).output
         }
+
+        @discardableResult
+        public func wasmArrayNewFixed(arrayType: Variable, elements: [Variable]) -> Variable {
+            let arrayDesc = b.jsTyper.wasmTypes.getTypeDescription(of: arrayType) as! WasmArrayTypeDescription
+            assert(elements.allSatisfy {b.jsTyper.type(of: $0).Is(arrayDesc.elementType.type)})
+            return b.emit(WasmArrayNewFixed(size: elements.count, elementType: arrayDesc.elementType.type), withInputs: [arrayType] + elements).output
+        }
+
+        @discardableResult
+        public func wasmArrayGet(array: Variable, index: Variable) -> Variable {
+            let arrayDesc = b.jsTyper.wasmTypes.getTypeDescription(usage: array) as! WasmArrayTypeDescription
+            return b.emit(WasmArrayGet(elementType: arrayDesc.elementType.type), withInputs: [array, index]).output
+        }
     }
 
     public class WasmModule {
@@ -3531,6 +3554,19 @@ public class ProgramBuilder {
         emit(EndWasmModule())
 
         return module
+    }
+
+    @discardableResult
+    func wasmDefineTypeGroup(typeGenerator: () -> [Variable]) -> [Variable] {
+        emit(WasmBeginTypeGroup())
+        let types = typeGenerator()
+        return Array(emit(WasmEndTypeGroup(typesCount: types.count), withInputs: types).outputs)
+    }
+
+    @discardableResult
+    func wasmDefineArrayType(elementType: ILType, indexType: Variable? = nil) -> Variable {
+        let inputs = indexType != nil ? [indexType!] : []
+        return emit(WasmDefineArrayType(elementType: elementType), withInputs: inputs).output
     }
 
     /// Returns the next free variable.

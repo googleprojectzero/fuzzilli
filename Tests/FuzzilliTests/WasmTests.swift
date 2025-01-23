@@ -1690,6 +1690,49 @@ class WasmFoundationTests: XCTestCase {
     }
 }
 
+class WasmGCTests: XCTestCase {
+    func testArray() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let typeGroup = b.wasmDefineTypeGroup {
+            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32)
+            let arrayOfArrays = b.wasmDefineArrayType(elementType: .wasmRef(.Index), indexType: arrayi32)
+            return [arrayi32, arrayOfArrays]
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                let array = function.wasmArrayNewFixed(arrayType: typeGroup[0], elements: [
+                    function.consti32(42),
+                    function.consti32(43),
+                    function.consti32(44),
+                ])
+                let arrayOfArrays = function.wasmArrayNewFixed(arrayType: typeGroup[1], elements: [array])
+                let innerArray = function.wasmArrayGet(array: arrayOfArrays, index: function.consti32(0))
+                function.wasmReturn(function.wasmArrayGet(array: innerArray, index: function.consti32(1)))
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "43\n")
+
+        // TODO(mliedtke): Remove once we have proper serialization tests.
+        let proto = prog.asProtobuf()
+        let copy = try! Program(from: proto)
+        let jsProgFromProto = fuzzer.lifter.lift(copy, withOptions: [.includeComments])
+        testForOutput(program: jsProgFromProto, runner: runner, outputString: "43\n")
+    }
+}
+
 class WasmNumericalTests: XCTestCase {
     // Integer BinaryOperations
     func testi64BinaryOperations() throws {

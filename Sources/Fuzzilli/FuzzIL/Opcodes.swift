@@ -312,4 +312,10 @@ enum Opcode {
 
     case wasmUnreachable(WasmUnreachable)
     case wasmSelect(WasmSelect)
+
+    case wasmBeginTypeGroup(WasmBeginTypeGroup)
+    case wasmEndTypeGroup(WasmEndTypeGroup)
+    case wasmDefineArrayType(WasmDefineArrayType)
+    case wasmArrayNewFixed(WasmArrayNewFixed)
+    case wasmArrayGet(WasmArrayGet)
 }

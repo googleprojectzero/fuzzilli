@@ -239,6 +239,8 @@ extension Operation {
             return endOp is WasmEndIf || endOp is WasmBeginElse
         case .wasmBeginElse:
             return endOp is WasmEndIf
+        case .wasmBeginTypeGroup:
+            return endOp is WasmEndTypeGroup
         default:
             fatalError("Unknown block operation \(beginOp)")
         }
