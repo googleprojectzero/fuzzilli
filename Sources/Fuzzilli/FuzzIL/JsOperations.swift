@@ -2524,6 +2524,39 @@ class CreateWasmTag: JsOperation {
     }
 }
 
+class WasmTypeOperation : Operation {}
+
+class WasmBeginTypeGroup: WasmTypeOperation {
+    override var opcode: Opcode { .wasmBeginTypeGroup(self) }
+    init() {
+        super.init(attributes: [.isBlockStart], requiredContext: [.javascript],
+                   contextOpened: [.wasmTypeGroup])
+    }
+}
+
+class WasmEndTypeGroup: WasmTypeOperation {
+    override var opcode: Opcode { .wasmEndTypeGroup(self) }
+    var typesCount: Int {
+        return numInputs
+    }
+
+    init(typesCount: Int) {
+        super.init(numInputs: typesCount, numOutputs: typesCount, firstVariadicInput: 0,
+                   attributes: [.isBlockEnd, .resumesSurroundingContext, .isVariadic],
+                   requiredContext: [.wasmTypeGroup])
+    }
+}
+
+class WasmDefineArrayType: WasmTypeOperation {
+    override var opcode: Opcode { .wasmDefineArrayType(self) }
+    let elementType : ILType
+
+    init(elementType: ILType) {
+        self.elementType = elementType
+        super.init(numInputs: elementType.requiredInputCount(), numOutputs: 1, requiredContext: [.wasmTypeGroup])
+    }
+}
+
 /// Internal operations.
 ///
 /// These can be used for internal fuzzer operations but will not appear in the corpus.

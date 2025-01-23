@@ -370,6 +370,8 @@ extension Instruction: ProtobufConvertible {
                 return .funcref
             case .wasmSimd128:
                 return .simd128
+            case .wasmRef(.Index):
+                return .indexref
             default:
                 fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a Protobuf_WasmILType! for instruction \(self)")
             }
@@ -1340,6 +1342,22 @@ extension Instruction: ProtobufConvertible {
                     $0.staticOffset = op.staticOffset
                     $0.isMemory64 = op.isMemory64
                 }
+            case .wasmBeginTypeGroup(_):
+                $0.wasmBeginTypeGroup = Fuzzilli_Protobuf_WasmBeginTypeGroup()
+            case .wasmEndTypeGroup(_):
+                $0.wasmEndTypeGroup = Fuzzilli_Protobuf_WasmEndTypeGroup()
+            case .wasmDefineArrayType(let op):
+                $0.wasmDefineArrayType = Fuzzilli_Protobuf_WasmDefineArrayType.with {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
+                }
+            case .wasmArrayNewFixed(let op):
+                $0.wasmArrayNewFixed = Fuzzilli_Protobuf_WasmArrayNewFixed.with {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
+                }
+            case .wasmArrayGet(let op):
+                $0.wasmArrayGet = Fuzzilli_Protobuf_WasmArrayGet.with {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
+                }
             }
         }
 
@@ -1386,6 +1404,8 @@ extension Instruction: ProtobufConvertible {
                 return .wasmFuncRef
             case .simd128:
                 return .wasmSimd128
+            case .indexref:
+                return .wasmRef(.Index)
             case .nothing:
                 return .nothing
             case .UNRECOGNIZED(let value):
@@ -2156,6 +2176,18 @@ extension Instruction: ProtobufConvertible {
             op = WasmI64x2ExtractLane(lane: 0)
         case .wasmSimdLoad(let p):
             op = WasmSimdLoad(kind: convertProtoWasmSimdLoadKind(p.kind), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
+        case .wasmBeginTypeGroup(_):
+            op = WasmBeginTypeGroup()
+        case .wasmEndTypeGroup(_):
+            assert(inouts.count % 2 == 0)
+            op = WasmEndTypeGroup(typesCount: inouts.count / 2)
+        case .wasmDefineArrayType(let p):
+            op = WasmDefineArrayType(elementType: WasmTypeEnumToILType(p.elementType))
+        case .wasmArrayNewFixed(let p):
+            op = WasmArrayNewFixed(size: inouts.count - 2,
+                elementType: WasmTypeEnumToILType(p.elementType))
+        case .wasmArrayGet(let p):
+            op = WasmArrayGet(elementType: WasmTypeEnumToILType(p.elementType))
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

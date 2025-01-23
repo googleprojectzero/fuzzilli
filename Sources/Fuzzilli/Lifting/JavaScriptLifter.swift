@@ -102,6 +102,7 @@ public class JavaScriptLifter: Lifter {
         var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers))
 
         var wasmCodeStarts: Int? = nil
+        var wasmTypeGroupStarts: Int? = nil
 
         if options.contains(.includeComments), let header = program.comments.at(.header) {
             w.emitComment(header)
@@ -177,6 +178,19 @@ public class JavaScriptLifter: Lifter {
                 // they will be emitted once we see the end of the module.
                 wasmLifter!.addInstruction(instr)
                 continue;
+            }
+
+            if instr.op is WasmTypeOperation {
+                if instr.op is WasmBeginTypeGroup {
+                    assert(wasmTypeGroupStarts == nil)
+                    wasmTypeGroupStarts = instr.index
+                } else if instr.op is WasmEndTypeGroup {
+                    w.emitComment("Wasm type group:")
+                    let code = Code(program.code[wasmTypeGroupStarts!...instr.index])
+                    wasmTypeGroupStarts = nil
+                    w.emitComment(FuzzILLifter().lift(code))
+                }
+                continue
             }
 
             // Handling of guarded operations, part 1: unless we have special handling (e.g. for guarded property loads we use `o?.foo`),
@@ -1610,7 +1624,12 @@ public class JavaScriptLifter: Lifter {
                  .wasmSimd128Compare(_),
                  .wasmI64x2Splat(_),
                  .wasmI64x2ExtractLane(_),
-                 .wasmSimdLoad(_):
+                 .wasmSimdLoad(_),
+                 .wasmBeginTypeGroup(_),
+                 .wasmEndTypeGroup(_),
+                 .wasmDefineArrayType(_),
+                 .wasmArrayNewFixed(_),
+                 .wasmArrayGet(_):
                  fatalError("unreachable")
             }
 

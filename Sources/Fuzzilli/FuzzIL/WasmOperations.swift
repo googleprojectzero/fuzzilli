@@ -1554,3 +1554,32 @@ final class WasmSimdLoad: WasmOperation {
         super.init(inputTypes: [.object(ofGroup: "WasmMemory"), dynamicOffsetType], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
+
+class WasmArrayNewFixed: WasmOperation {
+    override var opcode: Opcode { .wasmArrayNewFixed(self) }
+
+    let size: Int
+    let elementType: ILType
+
+    init(size: Int, elementType: ILType) {
+        self.size = size
+        self.elementType = elementType
+        // TODO(mliedtke): Mark this operation variadic and extend
+        // OperationMutator::extendVariadicOperationByOneInput and ensure correct types of added
+        // inputs. (This requires some integration for .wasmRef(Index) to ensure it isn't just an
+        // index type but a matching one!)
+        super.init(inputTypes: [.wasmTypeDef] + (0..<size).map {_ in elementType},
+            outputType: .wasmRef(.Index), requiredContext: [.wasmFunction])
+    }
+}
+
+class WasmArrayGet: WasmOperation {
+    override var opcode: Opcode { .wasmArrayGet(self) }
+    let elementType: ILType
+
+    init(elementType: ILType) {
+        self.elementType = elementType
+        super.init(inputTypes: [.wasmRef(.Index), .wasmi32], outputType: elementType,
+            requiredContext: [.wasmFunction])
+    }
+}

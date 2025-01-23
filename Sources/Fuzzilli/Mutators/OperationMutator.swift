@@ -558,7 +558,12 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmNop(_),
              .wasmUnreachable(_),
              .wasmSelect(_),
-             .wasmDefineTag(_):
+             .wasmDefineTag(_),
+             .wasmBeginTypeGroup(_),
+             .wasmEndTypeGroup(_),
+             .wasmDefineArrayType(_),
+             .wasmArrayNewFixed(_),
+             .wasmArrayGet(_):
              assert(!instr.isOperationMutable)
              fatalError("Unexpected Operation")
         }

@@ -2257,6 +2257,46 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmSelect(newValue)}
   }
 
+  public var wasmBeginTypeGroup: Fuzzilli_Protobuf_WasmBeginTypeGroup {
+    get {
+      if case .wasmBeginTypeGroup(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmBeginTypeGroup()
+    }
+    set {operation = .wasmBeginTypeGroup(newValue)}
+  }
+
+  public var wasmEndTypeGroup: Fuzzilli_Protobuf_WasmEndTypeGroup {
+    get {
+      if case .wasmEndTypeGroup(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmEndTypeGroup()
+    }
+    set {operation = .wasmEndTypeGroup(newValue)}
+  }
+
+  public var wasmDefineArrayType: Fuzzilli_Protobuf_WasmDefineArrayType {
+    get {
+      if case .wasmDefineArrayType(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmDefineArrayType()
+    }
+    set {operation = .wasmDefineArrayType(newValue)}
+  }
+
+  public var wasmArrayNewFixed: Fuzzilli_Protobuf_WasmArrayNewFixed {
+    get {
+      if case .wasmArrayNewFixed(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmArrayNewFixed()
+    }
+    set {operation = .wasmArrayNewFixed(newValue)}
+  }
+
+  public var wasmArrayGet: Fuzzilli_Protobuf_WasmArrayGet {
+    get {
+      if case .wasmArrayGet(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmArrayGet()
+    }
+    set {operation = .wasmArrayGet(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable, Sendable {
@@ -2536,6 +2576,11 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmSimdLoad(Fuzzilli_Protobuf_WasmSimdLoad)
     case wasmUnreachable(Fuzzilli_Protobuf_WasmUnreachable)
     case wasmSelect(Fuzzilli_Protobuf_WasmSelect)
+    case wasmBeginTypeGroup(Fuzzilli_Protobuf_WasmBeginTypeGroup)
+    case wasmEndTypeGroup(Fuzzilli_Protobuf_WasmEndTypeGroup)
+    case wasmDefineArrayType(Fuzzilli_Protobuf_WasmDefineArrayType)
+    case wasmArrayNewFixed(Fuzzilli_Protobuf_WasmArrayNewFixed)
+    case wasmArrayGet(Fuzzilli_Protobuf_WasmArrayGet)
 
   }
 
@@ -2862,6 +2907,11 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     275: .same(proto: "wasmSimdLoad"),
     276: .same(proto: "wasmUnreachable"),
     277: .same(proto: "wasmSelect"),
+    278: .same(proto: "wasmBeginTypeGroup"),
+    279: .same(proto: "wasmEndTypeGroup"),
+    280: .same(proto: "wasmDefineArrayType"),
+    281: .same(proto: "wasmArrayNewFixed"),
+    282: .same(proto: "wasmArrayGet"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6454,6 +6504,71 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSelect(v)
         }
       }()
+      case 278: try {
+        var v: Fuzzilli_Protobuf_WasmBeginTypeGroup?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmBeginTypeGroup(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmBeginTypeGroup(v)
+        }
+      }()
+      case 279: try {
+        var v: Fuzzilli_Protobuf_WasmEndTypeGroup?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmEndTypeGroup(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmEndTypeGroup(v)
+        }
+      }()
+      case 280: try {
+        var v: Fuzzilli_Protobuf_WasmDefineArrayType?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmDefineArrayType(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmDefineArrayType(v)
+        }
+      }()
+      case 281: try {
+        var v: Fuzzilli_Protobuf_WasmArrayNewFixed?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmArrayNewFixed(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmArrayNewFixed(v)
+        }
+      }()
+      case 282: try {
+        var v: Fuzzilli_Protobuf_WasmArrayGet?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmArrayGet(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmArrayGet(v)
+        }
+      }()
       default: break
       }
     }
@@ -7571,6 +7686,26 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .wasmSelect?: try {
       guard case .wasmSelect(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 277)
+    }()
+    case .wasmBeginTypeGroup?: try {
+      guard case .wasmBeginTypeGroup(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 278)
+    }()
+    case .wasmEndTypeGroup?: try {
+      guard case .wasmEndTypeGroup(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 279)
+    }()
+    case .wasmDefineArrayType?: try {
+      guard case .wasmDefineArrayType(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 280)
+    }()
+    case .wasmArrayNewFixed?: try {
+      guard case .wasmArrayNewFixed(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 281)
+    }()
+    case .wasmArrayGet?: try {
+      guard case .wasmArrayGet(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 282)
     }()
     case nil: break
     }

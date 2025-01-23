@@ -34,6 +34,15 @@ private enum WasmSection: UInt8 {
     case tag
 }
 
+// TODO(mliedtke): Adapt existing prefixed instructions to use the enum for
+// better readability.
+private enum Prefix: UInt8 {
+    case GC = 0xFB
+    case Numeric = 0xFC
+    case Simd = 0xFD
+    case Atomic = 0xFE
+}
+
 // This maps ILTypes to their respective binary encoding.
 private let ILTypeMapping: [ILType: Data] = [
     .wasmi32 : Data([0x7f]),
@@ -120,6 +129,12 @@ public class WasmLifter {
 
     // The tags associated with this module.
     private var tags: VariableMap<ParameterList> = VariableMap()
+
+    private var typeGroups: Set<Int> = []
+    private var freeTypes: Set<Variable> = []
+
+    private var typeDescToIndex : [WasmTypeDescription:Int] = [:]
+    private var userDefinedTypesCount = 0
 
     // The function index space
     private var functionIdxBase = 0
@@ -366,6 +381,34 @@ public class WasmLifter {
         self.bytecode += [0x1, 0x0, 0x0, 0x0]
     }
 
+    private func encodeType(of variable: Variable, type: ILType) -> Data {
+        return type.Is(.wasmRef(.Index))
+            ? encodeType(typer.wasmTypes.getTypeDescription(usage: variable))
+            // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
+            : ILTypeMapping[type]!
+    }
+
+    private func encodeType(_ typeDesc: WasmTypeDescription) -> Data {
+        if typeDesc.isAbstract {
+            return ILTypeMapping[typeDesc.type]!
+        } else {
+            let isNullable = true // TODO(mliedtke): Allow non-nullable reference types.
+            let nullabilityByte: UInt8 = isNullable ? 0x63 : 0x64
+            return Data([nullabilityByte])
+                + Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+        }
+    }
+
+    private func buildTypeEntry(for desc: WasmTypeDescription, data: inout Data) {
+        if let arrayDesc = desc as? WasmArrayTypeDescription {
+            data += [0x5e]
+            data += encodeType(arrayDesc.elementType)
+            data += [1] // TODO(mliedtke): Also support immutable arrays.
+        } else {
+            fatalError("Unsupported WasmTypeDescription!")
+        }
+    }
+
     private func buildTypeSection() {
         self.bytecode += [WasmSection.type.rawValue]
 
@@ -385,9 +428,20 @@ public class WasmLifter {
             registerSignature(function.signature)
         }
 
-        let typeCount = self.signatures.count
-
+        let typeCount = self.signatures.count + typeGroups.count
         temp += Leb128.unsignedEncode(typeCount)
+
+        // TODO(mliedtke): Integrate this with the whole signature mechanism as
+        // these signatures could contain wasm-gc types.
+        for typeGroupIndex in typeGroups {
+            let typeGroup = typer.wasmTypes.getTypeGroup(typeGroupIndex)
+            temp += [0x4e]
+            temp += Leb128.unsignedEncode(typeGroup.count)
+            for typeDef in typeGroup {
+                buildTypeEntry(for: typer.wasmTypes.getTypeDescription(of: typeDef), data: &temp)
+            }
+        }
+        // TODO(mliedtke): Also add "free types" which aren't in any explicit type group.
 
         for signature in self.signatures {
             temp += [0x60]
@@ -425,7 +479,7 @@ public class WasmLifter {
         if signatureIndexMap[signature] != nil {
             return
         }
-        let signatureIndex = signatures.count
+        let signatureIndex = userDefinedTypesCount + signatures.count
         signatures.append(signature)
         signatureIndexMap[signature] = signatureIndex
         assert(signatures.count == signatureIndexMap.count)
@@ -658,11 +712,10 @@ public class WasmLifter {
             // TODO: this should be encapsulated more nicely. There should be an interface that gets the locals without the parameters. As this is currently mainly used to get the slots info.
             // Encode number of locals
             funcTemp += Leb128.unsignedEncode(functionInfo.localsInfo.count - functionInfo.signature.parameters.count)
-            for (_, type) in functionInfo.localsInfo[functionInfo.signature.parameters.count...] {
+            for (variable, type) in functionInfo.localsInfo[functionInfo.signature.parameters.count...] {
                 // Encode the locals
                 funcTemp += Leb128.unsignedEncode(1)
-                // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
-                funcTemp += ILTypeMapping[type]!
+                funcTemp += encodeType(of: variable, type: type)
             }
             // append the actual code and the end marker
             funcTemp += functionInfo.code
@@ -976,6 +1029,7 @@ public class WasmLifter {
                 || inputType.Is(.wasmFuncRef) && functions.contains(where: {$0.outputVariable == input})
                 || inputType.isWasmGlobalType && globals.contains(where: {$0.output == input})
                 || inputType.isWasmMemoryType && memories.contains(where: {$0.output == input})
+                || inputType.Is(.wasmTypeDef)
             if !isLocallyDefined {
                 assert(self.imports.contains(where: {$0.0 == input}), "Variable \(input) needs to be imported during importAnalysis()")
             }
@@ -1045,6 +1099,22 @@ public class WasmLifter {
     // Also, we export the globals in the order we "see" them, which might mismatch the order in which they are laid out in the binary at the end, which is why we track the order of the globals separately.
     private func importAnalysis() throws {
         for instr in self.instructionBuffer {
+            // TODO(mliedtke): Can we rewrite the whole import analysis to not care about specific
+            // operations at all but instead always decide based on the ILType?
+            for input in instr.inputs {
+                let inputType = typer.type(of: input)
+                if inputType.Is(.wasmTypeDef) {
+                    let typeDesc = typer.wasmTypes.getTypeDescription(of: input)
+                    if !typeDesc.isAbstract {
+                        if typeDesc.typeGroupIndex != -1 {
+                            typeGroups.insert(typeDesc.typeGroupIndex)
+                        } else {
+                            freeTypes.insert(input)
+                        }
+                    }
+                }
+            }
+
             switch instr.op.opcode {
             case .wasmLoadGlobal(_),
                  .wasmStoreGlobal(_):
@@ -1119,6 +1189,19 @@ public class WasmLifter {
         self.baseDefinedGlobals = self.imports.filter({typer.type(of: $0.0).Is(.object(ofGroup: "WasmGlobal")) }).count
         // The number of internally defined tables indices come after the imports.
         self.baseDefinedTables = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTable")) }).count
+
+        // Eagerly map all types in typegroups to module-specific indices. (We can't do this when
+        // building the type section as the instructions get lowered before we emit the type
+        // section.)
+        var currentTypeIndex = 0
+        for typeGroupIndex in typeGroups {
+            for typeDef in typer.wasmTypes.getTypeGroup(typeGroupIndex) {
+                let typeDesc = typer.wasmTypes.getTypeDescription(of: typeDef)
+                typeDescToIndex[typeDesc] = currentTypeIndex
+                currentTypeIndex += 1
+            }
+        }
+        userDefinedTypesCount = currentTypeIndex
     }
 
     /// Describes the types of indexes in the different index spaces in the Wasm binary format.
@@ -1563,6 +1646,14 @@ public class WasmLifter {
          case .wasmSimdLoad(let op):
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
             return Data([0xFD, op.kind.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
+        case .wasmArrayNewFixed(let op):
+            let typeDesc = typer.wasmTypes.getTypeDescription(of: wasmInstruction.input(0))
+            let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            return Data([Prefix.GC.rawValue, 0x08]) + arrayIndex + Leb128.unsignedEncode(op.size)
+        case .wasmArrayGet(_):
+            let typeDesc = typer.wasmTypes.getTypeDescription(usage: wasmInstruction.input(0))
+            let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            return Data([Prefix.GC.rawValue, 0x0B]) + arrayIndex
 
         default:
              fatalError("unreachable")

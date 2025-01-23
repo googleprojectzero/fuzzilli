@@ -1104,6 +1104,28 @@ public class FuzzILLifter: Lifter {
         case .wasmSimdLoad(let op):
             w.emit("\(output()) <- WasmSimdLoad \(op.kind) \(input(0)) + \(op.staticOffset)")
 
+        case .wasmArrayNewFixed(_):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- WasmArrayNewFixed [\(inputs)]")
+
+        case .wasmArrayGet(_):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- WasmArrayGet [\(inputs)]")
+
+        case .wasmBeginTypeGroup(_):
+            w.emit("WasmBeginTypeGroup")
+            w.increaseIndentionLevel()
+
+        case .wasmEndTypeGroup(_):
+            w.decreaseIndentionLevel()
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            let outputs = instr.outputs.map(lift).joined(separator: ", ")
+            w.emit("\(outputs) <- WasmEndTypeGroup [\(inputs)]")
+
+        case .wasmDefineArrayType(let op):
+            let typeInput = op.elementType.requiredInputCount() == 1 ? " \(input(0))" : ""
+            w.emit("\(output()) <- WasmDefineArrayType \(op.elementType)\(typeInput)")
+
         default:
             fatalError("No FuzzIL lifting for this operation!")
         }
