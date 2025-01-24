@@ -1092,10 +1092,16 @@ public class WasmLifter {
                 self.tags[instr.output] = op.parameters
 
             case .wasmBeginCatch(let op):
+                if !typer.type(of: instr.input(0)).isWasmTagType {
+                    throw WasmLifter.CompileError.missingTypeInformation
+                }
                 assert(typer.type(of: instr.input(0)).wasmTagType!.parameters == op.signature.parameters)
                 importTagIfNeeded(tag: instr.input(0), parameters: op.signature.parameters)
 
             case .wasmThrow(let op):
+                if !typer.type(of: instr.input(0)).isWasmTagType {
+                    throw WasmLifter.CompileError.missingTypeInformation
+                }
                 assert(typer.type(of: instr.input(0)).wasmTagType!.parameters == op.parameters)
                 importTagIfNeeded(tag: instr.input(0), parameters: op.parameters)
 
