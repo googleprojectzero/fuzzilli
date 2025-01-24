@@ -97,7 +97,6 @@ class LiveTests: XCTestCase {
             }
         }
 
-        // TODO(cffsmith): Try to lower this
         // We expect a maximum of 25% of Wasm execution attempts to fail.
         checkFailureRate(testResults: results, maxFailureRate: 0.25)
     }
