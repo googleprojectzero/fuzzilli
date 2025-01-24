@@ -1058,6 +1058,7 @@ class TypeSystemTests: XCTestCase {
     let primitiveTypes: [ILType] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
 
     // A set of different types used by various tests.
+    // TODO(cffsmith): Test and adjust types with a WasmTypeExtension.
     let typeSuite: [ILType] = [.undefined,
                                .integer,
                                .float,

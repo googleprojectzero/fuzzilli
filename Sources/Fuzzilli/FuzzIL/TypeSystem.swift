@@ -30,7 +30,7 @@
 // The following base types are defined:
 //     .undefined
 //     .integer
-//     .biging
+//     .bigint
 //     .float
 //     .boolean
 //     .string
@@ -473,7 +473,8 @@ public struct ILType: Hashable {
         let definiteType = self.definiteType.intersection(other.definiteType)
         let possibleType = self.possibleType.union(other.possibleType)
 
-        // Fast union case
+        // Fast union case.
+        // Identity comparison avoids comparing each property of the class.
         if self.ext === other.ext {
             return ILType(definiteType: definiteType, possibleType: possibleType, ext: self.ext)
         }
@@ -520,7 +521,8 @@ public struct ILType: Hashable {
         // "add back" the definite type to the possible type (which at this point would just be String).
         possibleType.formUnion(definiteType)
 
-        // Fast intersection case
+        // Fast intersection case.
+        // Identity comparison avoids comparing each property of the class.
         if self.ext === other.ext {
             return ILType(definiteType: definiteType, possibleType: possibleType, ext: self.ext)
         }
