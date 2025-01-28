@@ -408,7 +408,7 @@ class WasmFoundationTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
-        let javaScriptTable = b.createWasmTable(elementType: .wasmExternRef, limits: Limits(min: 10, max: 20))
+        let javaScriptTable = b.createWasmTable(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25))
 
         let object = b.createObject(with: ["a": b.loadInt(41), "b": b.loadInt(42)])
 

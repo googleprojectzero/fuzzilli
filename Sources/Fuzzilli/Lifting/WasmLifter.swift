@@ -489,12 +489,10 @@ public class WasmLifter {
                 continue
             }
             if type.Is(.object(ofGroup: "WasmTable")) {
-                // let tableType = type.wasmTableType!.tableType
-                let tableType = ILType.wasmExternRef
-                // let minSize = type.wasmTableType!.minSize
-                let minSize = 10
-                // let maxSize = type.wasmTableType!.maxSize
-                let maxSize: Int? = 20
+                let tableType = type.wasmTableType!.elementType
+                assert(tableType == ILType.wasmExternRef)
+                let minSize = type.wasmTableType!.limits.min
+                let maxSize = type.wasmTableType!.limits.max
                 temp += Data([0x1])
                 temp += ILTypeMapping[tableType]!
                 if let maxSize = maxSize {
