@@ -562,7 +562,7 @@ public class ProgramBuilder {
     }
 
     private func generateTypeInternal(_ type: ILType) -> Variable {
-        if probability(0.9) {
+        if probability(0.9) && !type.isEnumeration {
             if let existingVariable = randomVariable(ofTypeOrSubtype: type) {
                 return existingVariable
             }
@@ -581,7 +581,11 @@ public class ProgramBuilder {
         // TODO: Not sure how we should handle merge types, e.g. .string + .object(...).
         let typeGenerators: [(ILType, () -> Variable)] = [
             (.integer, { return self.loadInt(self.randomInt()) }),
-            (.string, { return self.loadString(self.randomString()) }),
+            (.string, {
+                if type.isEnumeration {
+                    return self.loadString(type.enumValues.randomElement()!)
+                }
+                return self.loadString(self.randomString()) }),
             (.boolean, { return self.loadBool(probability(0.5)) }),
             (.bigint, { return self.loadBigInt(self.randomInt()) }),
             (.float, { return self.loadFloat(self.randomFloat()) }),

@@ -2605,4 +2605,28 @@ class ProgramBuilderTests: XCTestCase {
     XCTAssert(b.type(of: obj).Is(type3))
     }
 
+    func testFindOrGenerateTypeEnum() {
+        let allowedValues = ["hello", "world", "foo", "bar"]
+
+        let enumType = ILType.enumeration(ofName: "myEnum", withValues: allowedValues)
+        let env = JavaScriptEnvironment()
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+        // Get a random variable and then change the type
+
+        let obj = b.findOrGenerateType(enumType)
+        XCTAssert(b.type(of: obj).Is(.string))
+        let program = b.finalize()
+        var analyzer = DefUseAnalyzer(for: program)
+        analyzer.analyze()
+        let instruction = analyzer.definition(of: obj)
+        switch instruction.op.opcode {
+            case .loadString(let value):
+              XCTAssert(allowedValues.contains(value.value))
+            default:
+              XCTAssert(false)
+        }
+    }
 }
