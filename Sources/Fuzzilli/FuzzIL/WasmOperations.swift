@@ -1523,13 +1523,30 @@ final class WasmI64x2ExtractLane: WasmOperation {
   }
 }
 
-final class WasmI64x2LoadSplat: WasmOperation {
-    override var opcode: Opcode { .wasmI64x2LoadSplat(self) }
+final class WasmSimdLoad: WasmOperation {
+    enum Kind: UInt8, CaseIterable {
+        // TODO(mliedtke): Test all the other variants!
+        case LoadS128    = 0x00
+        case Load8x8S    = 0x01
+        case Load8x8U    = 0x02
+        case Load16x4S   = 0x03
+        case Load16x4U   = 0x04
+        case Load32x2S   = 0x05
+        case Load32x2U   = 0x06
+        case Load8Splat  = 0x07
+        case Load16Splat = 0x08
+        case Load32Splat = 0x09
+        case Load64Splat = 0x0A
+    }
 
+    override var opcode: Opcode { .wasmSimdLoad(self) }
+
+    let kind: Kind
     let staticOffset: Int64
     let isMemory64: Bool
 
-    init(staticOffset: Int64, isMemory64: Bool) {
+    init(kind: Kind, staticOffset: Int64, isMemory64: Bool) {
+        self.kind = kind
         self.staticOffset = staticOffset
         self.isMemory64 = isMemory64
         let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32

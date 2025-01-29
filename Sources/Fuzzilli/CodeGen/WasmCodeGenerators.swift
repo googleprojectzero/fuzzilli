@@ -850,13 +850,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmI64x2ExtractLane(input, 0)
     },
 
-    CodeGenerator("WasmI64x2LoadSplatGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
+    CodeGenerator("WasmSimdLoadGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
         if (b.hasZeroPages(memory: memory)) { return }
 
         let function = b.currentWasmModule.currentWasmFunction
         let (dynamicOffset, staticOffset) = b.generateMemoryIndexes(forMemory: memory)
-
-        function.wasmI64x2LoadSplat(memory: memory, dynamicOffset: dynamicOffset, staticOffset: staticOffset)
+        let kind = chooseUniform(from: WasmSimdLoad.Kind.allCases)
+        function.wasmSimdLoad(kind: kind, memory: memory, dynamicOffset: dynamicOffset, staticOffset: staticOffset)
     },
 
     // TODO: Add three generators for JSPI

@@ -1607,7 +1607,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmSimd128Compare(_),
                  .wasmI64x2Splat(_),
                  .wasmI64x2ExtractLane(_),
-                 .wasmI64x2LoadSplat(_):
+                 .wasmSimdLoad(_):
                  fatalError("unreachable")
             }
 

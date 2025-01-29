@@ -1099,8 +1099,8 @@ public class FuzzILLifter: Lifter {
         case .wasmI64x2ExtractLane(let op):
             w.emit("\(output()) <- WasmI64x2ExtractLane \(input(0)) \(op.lane)")
 
-        case .wasmI64x2LoadSplat(_):
-            w.emit("\(output()) <- WasmI64x2LoadSplat \(input(0))")
+        case .wasmSimdLoad(let op):
+            w.emit("\(output()) <- WasmSimdLoad \(op.kind) \(input(0)) + \(op.staticOffset)")
 
         default:
             fatalError("No FuzzIL lifting for this operation!")
