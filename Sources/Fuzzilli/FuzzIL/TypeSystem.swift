@@ -151,6 +151,12 @@ public struct ILType: Hashable {
         return ILType(definiteType: .object, ext: ext)
     }
 
+    /// Constructs an enum type, which is a string with a limited set of allowed values.
+    public static func enumeration(ofName name: String, withValues values: [String]) -> ILType {
+        let ext = TypeExtension(group: name, properties: Set(values), methods: Set(), signature: nil, wasmExt: nil)
+        return ILType(definiteType: .string, ext: ext)
+    }
+
     /// An object for which it is not known what properties or methods it has, if any.
     public static let unknownObject: ILType = .object()
 
@@ -369,6 +375,10 @@ public struct ILType: Hashable {
         return Is(.constructor()) ? ext?.signature : nil
     }
 
+    public var isEnumeration : Bool {
+        return Is(.string) && ext != nil
+    }
+
     public var group: String? {
         return ext?.group
     }
@@ -423,6 +433,10 @@ public struct ILType: Hashable {
 
     public var properties: Set<String> {
         return ext?.properties ?? Set()
+    }
+
+    public var enumValues: Set<String> {
+        return properties
     }
 
     public var methods: Set<String> {

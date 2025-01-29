@@ -94,16 +94,12 @@ fileprivate let WorkerGenerator = RecursiveCodeGenerator("WorkerGenerator") { b 
 fileprivate let GcGenerator = CodeGenerator("GcGenerator") { b in
     let gc = b.createNamedVariable(forBuiltin: "gc")
 
-    // Do minor GCs more frequently.
-    let type = b.loadString(probability(0.25) ? "major" : "minor")
-    // If the execution type is 'async', gc() returns a Promise, we currently
-    // do not really handle other than typing the return of gc to .undefined |
-    // .jsPromise. One could either chain a .then or create two wrapper
-    // functions that are differently typed such that fuzzilli always knows
-    // what the type of the return value is.
-    let execution = b.loadString(probability(0.5) ? "sync" : "async")
-    b.callFunction(gc, withArgs: [b.createObject(with: ["type": type, "execution": execution])])
-}
+    // `gc()` takes a `type` parameter. If the value is 'async', gc() returns a
+    // Promise. We currently do not really handle this other than typing the
+    // return of gc to .undefined | .jsPromise. One could either chain a .then
+    // or create two wrapper functions that are differently typed such that
+    // fuzzilli always knows what the type of the return value is.
+    b.callFunction(gc, withArgs: b.findOrGenerateArguments(forSignature: b.fuzzer.environment.type(ofBuiltin: "gc").signature!)) }
 
 fileprivate let WasmStructGenerator = CodeGenerator("WasmStructGenerator") { b in
     b.eval("%WasmStruct()", hasOutput: true);
@@ -427,6 +423,9 @@ public extension ILType {
     static let jsD8FastCAPI = ILType.object(ofGroup: "D8FastCAPI", withProperties: [], withMethods: ["throw_no_fallback", "add_32bit_int"])
 
     static let jsD8FastCAPIConstructor = ILType.constructor(Signature(expects: [], returns: ILType.jsD8FastCAPI))
+
+    static let gcTypeEnum = ILType.enumeration(ofName: "gcType", withValues: ["minor", "major"])
+    static let gcExecutionEnum = ILType.enumeration(ofName: "gcExecution", withValues: ["async", "sync"])
 }
 
 let jsD8 = ObjectGroup(name: "D8", instanceType: .jsD8, properties: ["test" : .jsD8Test], methods: [:])
@@ -437,6 +436,13 @@ let jsD8FastCAPI = ObjectGroup(name: "D8FastCAPI", instanceType: .jsD8FastCAPI, 
         methods:["throw_no_fallback": Signature(expects: [], returns: ILType.integer),
                  "add_32bit_int": Signature(expects: [Parameter.plain(ILType.integer), Parameter.plain(ILType.integer)], returns: ILType.integer)
     ])
+
+let gcOptions = ObjectGroup(
+    name: "GCOptions",
+    instanceType: .object(ofGroup: "GCOptions", withProperties: ["type", "execution"], withMethods: []),
+    properties: ["type": .gcTypeEnum,
+                 "execution": .gcExecutionEnum],
+    methods: [:])
 
 let fastCallables : [(group: ILType, method: String)] = [
     (group: .jsD8FastCAPI, method: "throw_no_fallback"),
@@ -733,12 +739,12 @@ let v8Profile = Profile(
     disabledMutators: [],
 
     additionalBuiltins: [
-        "gc"                                            : .function([] => (.undefined | .jsPromise)),
+        "gc"                                            : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
         "d8"                                            : .jsD8,
         "Worker"                                        : .constructor([.anything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
 
-    additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI],
+    additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],
 
     optionalPostProcessor: nil
 )
