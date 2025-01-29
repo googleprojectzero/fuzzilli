@@ -751,6 +751,76 @@ public enum Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf.Enum, Swift.Cas
 
 }
 
+public enum Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case loads128 // = 0
+  case load8X8S // = 1
+  case load8X8U // = 2
+  case load16X4S // = 3
+  case load16X4U // = 4
+  case load32X2S // = 5
+  case load32X2U // = 6
+  case load8Splat // = 7
+  case load16Splat // = 8
+  case load32Splat // = 9
+  case load64Splat // = 10
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .loads128
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .loads128
+    case 1: self = .load8X8S
+    case 2: self = .load8X8U
+    case 3: self = .load16X4S
+    case 4: self = .load16X4U
+    case 5: self = .load32X2S
+    case 6: self = .load32X2U
+    case 7: self = .load8Splat
+    case 8: self = .load16Splat
+    case 9: self = .load32Splat
+    case 10: self = .load64Splat
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .loads128: return 0
+    case .load8X8S: return 1
+    case .load8X8U: return 2
+    case .load16X4S: return 3
+    case .load16X4U: return 4
+    case .load32X2S: return 5
+    case .load32X2U: return 6
+    case .load8Splat: return 7
+    case .load16Splat: return 8
+    case .load32Splat: return 9
+    case .load64Splat: return 10
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmSimdLoadKind] = [
+    .loads128,
+    .load8X8S,
+    .load8X8U,
+    .load16X4S,
+    .load16X4U,
+    .load32X2S,
+    .load32X2U,
+    .load8Splat,
+    .load16Splat,
+    .load32Splat,
+    .load64Splat,
+  ]
+
+}
+
 /// Parameters used by function definitions, not an operation by itself.
 public struct Fuzzilli_Protobuf_Parameters: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -4309,10 +4379,12 @@ public struct Fuzzilli_Protobuf_WasmI64x2ExtractLane: Sendable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_WasmI64x2LoadSplat: Sendable {
+public struct Fuzzilli_Protobuf_WasmSimdLoad: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var kind: Fuzzilli_Protobuf_WasmSimdLoadKind = .loads128
 
   public var staticOffset: Int64 = 0
 
@@ -4485,6 +4557,22 @@ extension Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf._ProtoNameProvidi
     6: .same(proto: "I64_STOREMEM_8"),
     7: .same(proto: "I64_STOREMEM_16"),
     8: .same(proto: "I64_STOREMEM_32"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "LOADS128"),
+    1: .same(proto: "LOAD8x8S"),
+    2: .same(proto: "LOAD8x8U"),
+    3: .same(proto: "LOAD16x4S"),
+    4: .same(proto: "LOAD16x4U"),
+    5: .same(proto: "LOAD32x2S"),
+    6: .same(proto: "LOAD32x2U"),
+    7: .same(proto: "LOAD8SPLAT"),
+    8: .same(proto: "LOAD16SPLAT"),
+    9: .same(proto: "LOAD32SPLAT"),
+    10: .same(proto: "LOAD64SPLAT"),
   ]
 }
 
@@ -12597,11 +12685,12 @@ extension Fuzzilli_Protobuf_WasmI64x2ExtractLane: SwiftProtobuf.Message, SwiftPr
   }
 }
 
-extension Fuzzilli_Protobuf_WasmI64x2LoadSplat: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".WasmI64x2LoadSplat"
+extension Fuzzilli_Protobuf_WasmSimdLoad: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmSimdLoad"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "staticOffset"),
-    2: .same(proto: "isMemory64"),
+    1: .same(proto: "kind"),
+    2: .same(proto: "staticOffset"),
+    3: .same(proto: "isMemory64"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -12610,24 +12699,29 @@ extension Fuzzilli_Protobuf_WasmI64x2LoadSplat: SwiftProtobuf.Message, SwiftProt
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.isMemory64) }()
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.isMemory64) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.kind != .loads128 {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
+    }
     if self.staticOffset != 0 {
-      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 1)
+      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
     }
     if self.isMemory64 != false {
-      try visitor.visitSingularBoolField(value: self.isMemory64, fieldNumber: 2)
+      try visitor.visitSingularBoolField(value: self.isMemory64, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_WasmI64x2LoadSplat, rhs: Fuzzilli_Protobuf_WasmI64x2LoadSplat) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmSimdLoad, rhs: Fuzzilli_Protobuf_WasmSimdLoad) -> Bool {
+    if lhs.kind != rhs.kind {return false}
     if lhs.staticOffset != rhs.staticOffset {return false}
     if lhs.isMemory64 != rhs.isMemory64 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}

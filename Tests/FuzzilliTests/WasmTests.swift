@@ -690,6 +690,45 @@ class WasmFoundationTests: XCTestCase {
         try allMemoryStoreTypesExecution(isMemory64: true)
     }
 
+    func wasmSimdLoad(isMemory64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: isMemory64)
+
+            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                value: function.consti64(3), storeType: .I64StoreMem, staticOffset: 0)
+                function.wasmMemoryStore(memory: memory, dynamicOffset: const(8),
+                value: function.consti64(6), storeType: .I64StoreMem, staticOffset: 0)
+
+                let val = function.wasmSimdLoad(kind: .LoadS128, memory: memory,
+                    dynamicOffset: const(0), staticOffset: 0)
+                let sum = function.wasmi64BinOp(function.wasmI64x2ExtractLane(val, 0),
+                    function.wasmI64x2ExtractLane(val, 1), binOpKind: .Add)
+                function.wasmReturn(sum)
+            }
+        }
+
+        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+        b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res0)])
+
+        let jsProg = fuzzer.lifter.lift(b.finalize())
+        testForOutput(program: jsProg, runner: runner, outputString: "9\n")
+    }
+
+    func testWasmSimdLoadOnMemory32() throws {
+        try wasmSimdLoad(isMemory64: false)
+    }
+
+    func testWasmSimdLoadOnMemory64() throws {
+        try wasmSimdLoad(isMemory64: true)
+    }
+
     func testLoops() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

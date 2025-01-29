@@ -3346,9 +3346,9 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmI64x2LoadSplat(memory: Variable, dynamicOffset: Variable, staticOffset: Int64) -> Variable {
+        func wasmSimdLoad(kind: WasmSimdLoad.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: Int64) -> Variable {
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
-            return b.emit(WasmI64x2LoadSplat(staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset]).output
+            return b.emit(WasmSimdLoad(kind: kind, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset]).output
         }
     }
 

@@ -1071,7 +1071,7 @@ public class WasmLifter {
                 try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
             case .wasmMemoryStore(let op):
                 try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
-            case .wasmI64x2LoadSplat(let op):
+            case .wasmSimdLoad(let op):
                 try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
             case .wasmTableGet(_),
                  .wasmTableSet(_):
@@ -1556,9 +1556,9 @@ public class WasmLifter {
             return Data([0xFD]) + Leb128.unsignedEncode(0x12)
         case .wasmI64x2ExtractLane(let op):
             return Data([0xFD]) + Leb128.unsignedEncode(0x1D) + Leb128.unsignedEncode(op.lane)
-         case .wasmI64x2LoadSplat(let op):
+         case .wasmSimdLoad(let op):
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
-            return Data([0xFD]) + Leb128.unsignedEncode(0x0A) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
+            return Data([0xFD, op.kind.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
 
         default:
              fatalError("unreachable")

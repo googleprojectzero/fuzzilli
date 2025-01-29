@@ -377,7 +377,7 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmI64x2ExtractLane(let op):
             // TODO: ?
             newOp = op
-        case .wasmI64x2LoadSplat(let op):
+        case .wasmSimdLoad(let op):
             // TODO: ?
             newOp = op
         case .createWasmJSTag(let op):

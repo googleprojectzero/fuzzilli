@@ -1255,7 +1255,22 @@ message WasmI64x2Splat {
 message WasmI64x2ExtractLane {
 }
 
-message WasmI64x2LoadSplat {
-  int64 staticOffset = 1;
-  bool isMemory64 = 2;
+enum WasmSimdLoadKind {
+  LOADS128 = 0;
+  LOAD8x8S = 1;
+  LOAD8x8U = 2;
+  LOAD16x4S = 3;
+  LOAD16x4U = 4;
+  LOAD32x2S = 5;
+  LOAD32x2U = 6;
+  LOAD8SPLAT = 7;
+  LOAD16SPLAT = 8;
+  LOAD32SPLAT = 9;
+  LOAD64SPLAT = 10;
+}
+
+message WasmSimdLoad {
+  WasmSimdLoadKind kind = 1;
+  int64 staticOffset = 2;
+  bool isMemory64 = 3;
 }

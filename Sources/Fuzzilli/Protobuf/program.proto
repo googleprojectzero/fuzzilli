@@ -298,7 +298,7 @@ message Instruction {
         WasmSimd128FloatBinOp wasmSimd128FloatBinOp = 272;
         WasmI64x2Splat wasmI64x2Splat = 273;
         WasmI64x2ExtractLane wasmI64x2ExtractLane = 274;
-        WasmI64x2LoadSplat wasmI64x2LoadSplat = 275;
+        WasmSimdLoad wasmSimdLoad = 275;
         WasmUnreachable wasmUnreachable = 276;
         WasmSelect wasmSelect = 277;
     }
