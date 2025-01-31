@@ -238,7 +238,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             }
         }
 
-        module.addTable(elementType: elementType, minSize: minSize, maxSize: maxSize, definedEntryIndices: definedEntryIndices, definedEntryValues: definedEntryValues)
+        module.addTable(elementType: elementType, minSize: minSize, maxSize: maxSize, definedEntryIndices: definedEntryIndices, definedEntryValues: definedEntryValues, isTable64: probability(0.5))
     },
 
     CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, global in

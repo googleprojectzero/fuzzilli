@@ -1017,6 +1017,7 @@ extension Instruction: ProtobufConvertible {
                     if let maxSize = op.tableType.limits.max {
                         $0.maxSize = Int64(maxSize)
                     }
+                    $0.isTable64 = op.tableType.isTable64
                 }
             case .createWasmJSTag(_):
                 $0.createWasmJstag = Fuzzilli_Protobuf_CreateWasmJSTag()
@@ -1161,6 +1162,7 @@ extension Instruction: ProtobufConvertible {
                         $0.maxSize = Int64(maxSize)
                     }
                     $0.definedEntryIndices = op.definedEntryIndices.map { Int64($0) }
+                    $0.isTable64 = op.tableType.isTable64
                 }
             case .wasmDefineMemory(let op):
                 assert(op.wasmMemory.isWasmMemoryType)
@@ -1188,6 +1190,7 @@ extension Instruction: ProtobufConvertible {
                     if let max = op.tableType.limits.max {
                         $0.maxSize = Int64(max)
                     }
+                    $0.isTable64 = op.tableType.isTable64
                 }
             case .wasmTableSet(let op):
                 $0.wasmTableSet = Fuzzilli_Protobuf_WasmTableSet.with {
@@ -1196,6 +1199,7 @@ extension Instruction: ProtobufConvertible {
                     if let max = op.tableType.limits.max {
                         $0.maxSize = Int64(max)
                     }
+                    $0.isTable64 = op.tableType.isTable64
                 }
             case .wasmMemoryLoad(let op):
                 $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with {
@@ -1904,7 +1908,7 @@ extension Instruction: ProtobufConvertible {
             } else {
                 maxSize = nil
             }
-            op = CreateWasmTable(elementType: WasmTypeEnumToILType(p.elementType), limits: Limits(min: Int(p.minSize), max: maxSize))
+            op = CreateWasmTable(elementType: WasmTypeEnumToILType(p.elementType), limits: Limits(min: Int(p.minSize), max: maxSize), isTable64: p.isTable64)
         case .createWasmJstag(_):
             op = CreateWasmJSTag()
         case .createWasmTag(let p):
@@ -2029,7 +2033,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmDefineTable(let p):
             op = WasmDefineTable(elementType: WasmTypeEnumToILType(p.elementType),
                                  limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil),
-                                 definedEntryIndices: p.definedEntryIndices.map { Int($0) })
+                                 definedEntryIndices: p.definedEntryIndices.map { Int($0) }, isTable64: p.isTable64)
         case .wasmDefineMemory(let p):
             let maxPages = p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil
             op = WasmDefineMemory(limits: Limits(min: Int(p.wasmMemory.minPages), max: maxPages), isShared: p.wasmMemory.isShared, isMemory64: p.wasmMemory.isMemory64)
@@ -2040,11 +2044,11 @@ extension Instruction: ProtobufConvertible {
         case .wasmTableGet(let p):
             op = WasmTableGet(tableType: .wasmTable(wasmTableType:
                 WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
-                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil))))
+                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64)))
         case .wasmTableSet(let p):
             op = WasmTableSet(tableType: .wasmTable(wasmTableType:
                 WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
-                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil))))
+                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64)))
         case .wasmMemoryLoad(let p):
             op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .wasmMemoryStore(let p):

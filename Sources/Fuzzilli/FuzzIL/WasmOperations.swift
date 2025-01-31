@@ -705,8 +705,8 @@ final class WasmDefineTable: WasmOperation {
     let tableType: WasmTableType
     let definedEntryIndices: [Int]
 
-    init(elementType: ILType, limits: Limits, definedEntryIndices: [Int]) {
-        self.tableType = WasmTableType(elementType: elementType, limits: limits)
+    init(elementType: ILType, limits: Limits, definedEntryIndices: [Int], isTable64: Bool) {
+        self.tableType = WasmTableType(elementType: elementType, limits: limits, isTable64: isTable64)
         self.definedEntryIndices = definedEntryIndices
 
         // TODO(manoskouk): Find a way to define non-function tables with initializers.
@@ -718,7 +718,7 @@ final class WasmDefineTable: WasmOperation {
         }
 
         super.init(inputTypes: inputTypes,
-                   outputType: .wasmTable(wasmTableType: WasmTableType(elementType: tableType.elementType, limits: tableType.limits)),
+                   outputType: .wasmTable(wasmTableType: WasmTableType(elementType: tableType.elementType, limits: tableType.limits, isTable64: isTable64)),
                    attributes: [.isMutable],
                    requiredContext: [.wasm])
     }
@@ -786,9 +786,9 @@ final class WasmTableGet: WasmOperation {
     init(tableType: ILType) {
         assert(tableType.isWasmTableType)
         self.tableType = tableType.wasmTableType!
-        let elementType = tableType.wasmTableType!.elementType
-        // The input is the table reference and an index.
-        super.init(inputTypes: [tableType, .wasmi32], outputType: elementType, requiredContext: [.wasmFunction])
+        let elementType = self.tableType.elementType
+        let offsetType = self.tableType.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+        super.init(inputTypes: [tableType, offsetType], outputType: elementType, requiredContext: [.wasmFunction])
     }
 }
 
@@ -800,8 +800,9 @@ final class WasmTableSet: WasmOperation {
     init(tableType: ILType) {
         assert(tableType.isWasmTableType)
         self.tableType = tableType.wasmTableType!
-        let elementType = tableType.wasmTableType!.elementType
-        super.init(inputTypes: [tableType, .wasmi32, elementType], requiredContext: [.wasmFunction])
+        let elementType = self.tableType.elementType
+        let offsetType = self.tableType.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+        super.init(inputTypes: [tableType, offsetType, elementType], requiredContext: [.wasmFunction])
     }
 }
 

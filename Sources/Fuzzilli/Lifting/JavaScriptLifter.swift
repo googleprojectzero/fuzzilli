@@ -1488,12 +1488,15 @@ public class JavaScriptLifter: Lifter {
                     fatalError("Unknown table type")
                 }
 
+                let isTable64: Bool = op.tableType.isTable64
+                let minSizeStr = String(op.tableType.limits.min) + (isTable64 ? "n" : "")
                 var maxSizeStr = ""
                 if let maxSize = op.tableType.limits.max {
-                    maxSizeStr = ", maximum: \(maxSize)"
+                    maxSizeStr = ", maximum: \(maxSize)" + (isTable64 ? "n" : "")
                 }
+                let addressType = isTable64 ? "'i64'" : "'i32'"
 
-                w.emit("\(LET) \(V) = new WebAssembly.Table({ element: \"\(type)\", initial: \(op.tableType.limits.min)\(maxSizeStr) });")
+                w.emit("\(LET) \(V) = new WebAssembly.Table({ element: \"\(type)\", initial: \(minSizeStr)\(maxSizeStr), address: \(addressType) });")
 
             case .createWasmJSTag(_):
                 let V = w.declare(instr.output)
