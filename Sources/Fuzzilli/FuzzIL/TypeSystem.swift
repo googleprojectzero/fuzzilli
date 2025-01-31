@@ -1074,21 +1074,24 @@ public class WasmMemoryType: WasmTypeExtension {
 public class WasmTableType: WasmTypeExtension {
     let elementType: ILType
     let limits: Limits
+    let isTable64: Bool
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmTableType else { return false }
-        return self.elementType == other.elementType && self.limits == other.limits
+        return self.elementType == other.elementType && self.limits == other.limits && self.isTable64 == other.isTable64
     }
 
     override public func hash(into hasher: inout Hasher) {
         hasher.combine(elementType)
         hasher.combine(limits)
+        hasher.combine(isTable64)
     }
 
-    init(elementType: ILType, limits: Limits) {
+    init(elementType: ILType, limits: Limits, isTable64: Bool) {
         // TODO(manoskouk): Assert table type is reference type.
         self.elementType = elementType
         self.limits = limits
+        self.isTable64 = isTable64
     }
 }
 

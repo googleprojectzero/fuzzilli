@@ -3112,6 +3112,8 @@ public struct Fuzzilli_Protobuf_CreateWasmTable: Sendable {
   /// Clears the value of `maxSize`. Subsequent reads from it will return its default value.
   public mutating func clearMaxSize() {self._maxSize = nil}
 
+  public var isTable64: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3872,6 +3874,8 @@ public struct Fuzzilli_Protobuf_WasmDefineTable: Sendable {
 
   public var definedEntryIndices: [Int64] = []
 
+  public var isTable64: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3943,6 +3947,8 @@ public struct Fuzzilli_Protobuf_WasmTableGet: Sendable {
   /// Clears the value of `maxSize`. Subsequent reads from it will return its default value.
   public mutating func clearMaxSize() {self._maxSize = nil}
 
+  public var isTable64: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3967,6 +3973,8 @@ public struct Fuzzilli_Protobuf_WasmTableSet: Sendable {
   public var hasMaxSize: Bool {return self._maxSize != nil}
   /// Clears the value of `maxSize`. Subsequent reads from it will return its default value.
   public mutating func clearMaxSize() {self._maxSize = nil}
+
+  public var isTable64: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -9656,6 +9664,7 @@ extension Fuzzilli_Protobuf_CreateWasmTable: SwiftProtobuf.Message, SwiftProtobu
     1: .same(proto: "elementType"),
     2: .same(proto: "minSize"),
     3: .same(proto: "maxSize"),
+    4: .same(proto: "isTable64"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -9667,6 +9676,7 @@ extension Fuzzilli_Protobuf_CreateWasmTable: SwiftProtobuf.Message, SwiftProtobu
       case 1: try { try decoder.decodeSingularEnumField(value: &self.elementType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.isTable64) }()
       default: break
       }
     }
@@ -9686,6 +9696,9 @@ extension Fuzzilli_Protobuf_CreateWasmTable: SwiftProtobuf.Message, SwiftProtobu
     try { if let v = self._maxSize {
       try visitor.visitSingularInt64Field(value: v, fieldNumber: 3)
     } }()
+    if self.isTable64 != false {
+      try visitor.visitSingularBoolField(value: self.isTable64, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -9693,6 +9706,7 @@ extension Fuzzilli_Protobuf_CreateWasmTable: SwiftProtobuf.Message, SwiftProtobu
     if lhs.elementType != rhs.elementType {return false}
     if lhs.minSize != rhs.minSize {return false}
     if lhs._maxSize != rhs._maxSize {return false}
+    if lhs.isTable64 != rhs.isTable64 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11400,6 +11414,7 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
     2: .same(proto: "minSize"),
     3: .same(proto: "maxSize"),
     4: .same(proto: "definedEntryIndices"),
+    5: .same(proto: "isTable64"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11412,6 +11427,7 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
       case 4: try { try decoder.decodeRepeatedInt64Field(value: &self.definedEntryIndices) }()
+      case 5: try { try decoder.decodeSingularBoolField(value: &self.isTable64) }()
       default: break
       }
     }
@@ -11434,6 +11450,9 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
     if !self.definedEntryIndices.isEmpty {
       try visitor.visitPackedInt64Field(value: self.definedEntryIndices, fieldNumber: 4)
     }
+    if self.isTable64 != false {
+      try visitor.visitSingularBoolField(value: self.isTable64, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11442,6 +11461,7 @@ extension Fuzzilli_Protobuf_WasmDefineTable: SwiftProtobuf.Message, SwiftProtobu
     if lhs.minSize != rhs.minSize {return false}
     if lhs._maxSize != rhs._maxSize {return false}
     if lhs.definedEntryIndices != rhs.definedEntryIndices {return false}
+    if lhs.isTable64 != rhs.isTable64 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11553,6 +11573,7 @@ extension Fuzzilli_Protobuf_WasmTableGet: SwiftProtobuf.Message, SwiftProtobuf._
     1: .same(proto: "elementType"),
     2: .same(proto: "minSize"),
     3: .same(proto: "maxSize"),
+    4: .same(proto: "isTable64"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11564,6 +11585,7 @@ extension Fuzzilli_Protobuf_WasmTableGet: SwiftProtobuf.Message, SwiftProtobuf._
       case 1: try { try decoder.decodeSingularEnumField(value: &self.elementType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.isTable64) }()
       default: break
       }
     }
@@ -11583,6 +11605,9 @@ extension Fuzzilli_Protobuf_WasmTableGet: SwiftProtobuf.Message, SwiftProtobuf._
     try { if let v = self._maxSize {
       try visitor.visitSingularInt64Field(value: v, fieldNumber: 3)
     } }()
+    if self.isTable64 != false {
+      try visitor.visitSingularBoolField(value: self.isTable64, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11590,6 +11615,7 @@ extension Fuzzilli_Protobuf_WasmTableGet: SwiftProtobuf.Message, SwiftProtobuf._
     if lhs.elementType != rhs.elementType {return false}
     if lhs.minSize != rhs.minSize {return false}
     if lhs._maxSize != rhs._maxSize {return false}
+    if lhs.isTable64 != rhs.isTable64 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11601,6 +11627,7 @@ extension Fuzzilli_Protobuf_WasmTableSet: SwiftProtobuf.Message, SwiftProtobuf._
     1: .same(proto: "elementType"),
     2: .same(proto: "minSize"),
     3: .same(proto: "maxSize"),
+    4: .same(proto: "isTable64"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11612,6 +11639,7 @@ extension Fuzzilli_Protobuf_WasmTableSet: SwiftProtobuf.Message, SwiftProtobuf._
       case 1: try { try decoder.decodeSingularEnumField(value: &self.elementType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.isTable64) }()
       default: break
       }
     }
@@ -11631,6 +11659,9 @@ extension Fuzzilli_Protobuf_WasmTableSet: SwiftProtobuf.Message, SwiftProtobuf._
     try { if let v = self._maxSize {
       try visitor.visitSingularInt64Field(value: v, fieldNumber: 3)
     } }()
+    if self.isTable64 != false {
+      try visitor.visitSingularBoolField(value: self.isTable64, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11638,6 +11669,7 @@ extension Fuzzilli_Protobuf_WasmTableSet: SwiftProtobuf.Message, SwiftProtobuf._
     if lhs.elementType != rhs.elementType {return false}
     if lhs.minSize != rhs.minSize {return false}
     if lhs._maxSize != rhs._maxSize {return false}
+    if lhs.isTable64 != rhs.isTable64 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

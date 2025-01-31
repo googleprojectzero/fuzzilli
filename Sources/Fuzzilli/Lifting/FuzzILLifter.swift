@@ -776,7 +776,8 @@ public class FuzzILLifter: Lifter {
             if let maxSize = op.tableType.limits.max {
                 maxSizeStr = "\(maxSize)"
             }
-            w.emit("\(output()) <- CreateWasmTable \(op.tableType.elementType) [\(op.tableType.limits.min),\(maxSizeStr)]")
+            let isTable64Str = op.tableType.isTable64 ? ", table64" : ""
+            w.emit("\(output()) <- CreateWasmTable \(op.tableType.elementType) [\(op.tableType.limits.min),\(maxSizeStr)\(isTable64Str)]")
 
         case .createWasmJSTag(_):
             w.emit("\(output()) <- CreateWasmJSTag")
@@ -811,7 +812,8 @@ public class FuzzILLifter: Lifter {
             let entries = op.definedEntryIndices.enumerated().map { index, entry in
                 "\(entry) : \(input(index))"
             }.joined(separator: ", ")
-            w.emit("\(output()) <- WasmDefineTable \(op.tableType.elementType), (\(op.tableType.limits.min), \(String(describing: op.tableType.limits.max))), [\(entries)]")
+            let isTable64Str = op.tableType.isTable64 ? ", table64" : ""
+            w.emit("\(output()) <- WasmDefineTable \(op.tableType.elementType)\(isTable64Str) (\(op.tableType.limits.min), \(String(describing: op.tableType.limits.max))), [\(entries)]")
 
         case .wasmDefineMemory(let op):
             assert(op.wasmMemory.isWasmMemoryType)

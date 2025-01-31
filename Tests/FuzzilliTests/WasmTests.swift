@@ -399,8 +399,9 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1338\n4242\n6.61e-321\n")
     }
 
-    func testTables() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+    func importedTableTestCase(isTable64: Bool) throws {
+        let runner = isTable64 ? try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--experimental-wasm-memory64"])
+                                : try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -408,20 +409,21 @@ class WasmFoundationTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
-        let javaScriptTable = b.createWasmTable(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25))
+        let javaScriptTable = b.createWasmTable(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64)
+        assert(b.type(of: javaScriptTable) == .wasmTable(wasmTableType: WasmTableType(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64)))
 
         let object = b.createObject(with: ["a": b.loadInt(41), "b": b.loadInt(42)])
 
         // Set a value into the table
-        b.callMethod("set", on: javaScriptTable, withArgs: [b.loadInt(1), object])
+        b.callMethod("set", on: javaScriptTable, withArgs: [isTable64 ? b.loadBigInt(1) : b.loadInt(1), object])
 
         let module = b.buildWasmModule { wasmModule in
-            let tableRef = wasmModule.addTable(elementType: .wasmExternRef, minSize: 2)
+            let tableRef = wasmModule.addTable(elementType: .wasmExternRef, minSize: 2, isTable64: isTable64)
 
             wasmModule.addWasmFunction(with: [] => .wasmExternRef) { function, _ in
-                let offset = function.consti32(0)
+                let offset = isTable64 ? function.consti64(0) : function.consti32(0)
                 var ref = function.wasmTableGet(tableRef: tableRef, idx: offset)
-                let offset1 = function.consti32(1)
+                let offset1 = isTable64 ? function.consti64(1) : function.consti32(1)
                 function.wasmTableSet(tableRef: tableRef, idx: offset1, to: ref)
                 ref = function.wasmTableGet(tableRef: tableRef, idx: offset1)
                 let otherRef = function.wasmTableGet(tableRef: javaScriptTable, idx: offset1)
@@ -443,8 +445,17 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "{\"a\":41,\"b\":42}\n")
     }
 
-    func testDefinedTables() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+    func testImportedTable32() throws {
+        try importedTableTestCase(isTable64: false)
+    }
+
+    func testImportedTable64() throws {
+        try importedTableTestCase(isTable64: true)
+    }
+
+    func defineTable(isTable64: Bool) throws {
+        let runner = isTable64 ? try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--experimental-wasm-memory64"])
+                                : try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -460,15 +471,15 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, params in
                 function.wasmReturn(function.wasmi32BinOp(params[0], function.consti32(1), binOpKind: .Add))
             }
-            wasmModule.addTable(elementType: .wasmFuncRef, minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction])
+            wasmModule.addTable(elementType: .wasmFuncRef, minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction], isTable64: isTable64)
         }
 
         let exports = module.loadExports()
 
         let table = b.getProperty("wt0", of: exports)
 
-        let tableElement0 = b.callMethod("get", on: table, withArgs: [b.loadInt(0)])
-        let tableElement1 = b.callMethod("get", on: table, withArgs: [b.loadInt(1)])
+        let tableElement0 = b.callMethod("get", on: table, withArgs: [isTable64 ? b.loadBigInt(0) : b.loadInt(0)])
+        let tableElement1 = b.callMethod("get", on: table, withArgs: [isTable64 ? b.loadBigInt(1) : b.loadInt(1)])
 
         let output0 = b.callFunction(tableElement0, withArgs: [b.loadInt(42)])
         let output1 = b.callFunction(tableElement1, withArgs: [])
@@ -481,6 +492,14 @@ class WasmFoundationTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
 
         testForOutput(program: jsProg, runner: runner, outputString: "43\n11\n")
+    }
+
+    func testDefineTable32() throws {
+        try defineTable(isTable64: false)
+    }
+
+    func testDefineTable64() throws {
+        try defineTable(isTable64: true)
     }
 
     // Test every memory testcase for both memory32 and memory64.

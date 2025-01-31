@@ -953,7 +953,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, .wasmMemory(limits: op.memType.limits, isShared: op.memType.isShared, isMemory64: op.memType.isMemory64))
 
         case .createWasmTable(let op):
-            set(instr.output, .wasmTable(wasmTableType: WasmTableType(elementType: op.tableType.elementType, limits: op.tableType.limits)))
+            set(instr.output, .wasmTable(wasmTableType: WasmTableType(elementType: op.tableType.elementType, limits: op.tableType.limits, isTable64: op.tableType.isTable64)))
 
         case .createWasmJSTag(_):
             set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType(ParameterList([.wasmExternRef]), isJSTag: true)))

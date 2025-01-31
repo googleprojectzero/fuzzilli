@@ -2498,8 +2498,8 @@ class CreateWasmTable: JsOperation {
     // We need to store the element type here such that the lifter can easily list the correct type 'externref' or 'anyfunc' when constructing.
     let tableType: WasmTableType
 
-    init(elementType: ILType, limits: Limits) {
-        self.tableType = WasmTableType(elementType: elementType, limits: limits)
+    init(elementType: ILType, limits: Limits, isTable64: Bool = false) {
+        self.tableType = WasmTableType(elementType: elementType, limits: limits, isTable64: isTable64)
         super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript])
     }
 }

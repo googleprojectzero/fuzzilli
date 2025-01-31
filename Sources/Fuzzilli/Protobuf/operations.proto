@@ -817,6 +817,7 @@ message CreateWasmTable {
   WasmILType elementType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
+  bool isTable64 = 4;
 }
 
 message CreateWasmJSTag {
@@ -1061,6 +1062,7 @@ message WasmDefineTable {
   int64 minSize = 2;
   optional int64 maxSize = 3;
   repeated int64 definedEntryIndices = 4;
+  bool isTable64 = 5;
 }
 
 message WasmDefineMemory {
@@ -1080,12 +1082,14 @@ message WasmTableGet {
   WasmILType elementType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
+  bool isTable64 = 4;
 }
 
 message WasmTableSet {
   WasmILType elementType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
+  bool isTable64 = 4;
 }
 
 enum WasmMemoryLoadType {

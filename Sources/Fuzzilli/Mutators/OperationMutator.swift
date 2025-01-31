@@ -250,7 +250,7 @@ public class OperationMutator: BaseInstructionMutator {
                 // TODO: Think about what actually makes sense here.
                 newMaxSize = Int.random(in: newMinSize..<(newMinSize + 30))
             }
-            newOp = CreateWasmTable(elementType: op.tableType.elementType, limits: Limits(min: newMinSize, max: newMaxSize))
+            newOp = CreateWasmTable(elementType: op.tableType.elementType, limits: Limits(min: newMinSize, max: newMaxSize), isTable64: op.tableType.isTable64)
         // Wasm Operations
         case .consti32(_):
             newOp = Consti32(value: Int32(truncatingIfNeeded: b.randomInt()))

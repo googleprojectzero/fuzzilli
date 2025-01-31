@@ -489,16 +489,19 @@ public class WasmLifter {
                 continue
             }
             if type.Is(.object(ofGroup: "WasmTable")) {
-                let tableType = type.wasmTableType!.elementType
-                assert(tableType == ILType.wasmExternRef)
-                let minSize = type.wasmTableType!.limits.min
-                let maxSize = type.wasmTableType!.limits.max
+                // Emit import type.
                 temp += Data([0x1])
-                temp += ILTypeMapping[tableType]!
-                if let maxSize = maxSize {
-                    temp += Data([0x1] + Leb128.unsignedEncode(minSize) + Leb128.unsignedEncode(maxSize))
-                } else {
-                    temp += Data([0x0] + Leb128.unsignedEncode(minSize))
+
+                let table = type.wasmTableType!
+                assert(table.elementType == ILType.wasmExternRef)
+                temp += ILTypeMapping[table.elementType]!
+
+                let limits_byte: UInt8 = (table.isTable64 ? 4 : 0) | (table.limits.max != nil ? 1 : 0)
+                temp += Data([limits_byte])
+
+                temp += Data(Leb128.unsignedEncode(table.limits.min))
+                if let maxSize = table.limits.max {
+                    temp += Data(Leb128.unsignedEncode(maxSize))
                 }
                 continue
             }
@@ -559,15 +562,15 @@ public class WasmLifter {
 
         for instruction in self.tables {
             let op = instruction.op as! WasmDefineTable
-            let elementType = op.tableType.elementType
-            let minSize = op.tableType.limits.min
-            let maxSize = op.tableType.limits.max
+            let table = op.tableType
+            temp += ILTypeMapping[table.elementType]!
 
-            temp += ILTypeMapping[elementType]!
-            if let maxSize = maxSize {
-                temp += Data([0x1] + Leb128.unsignedEncode(minSize) + Leb128.unsignedEncode(maxSize))
-            } else {
-                temp += Data([0x0] + Leb128.unsignedEncode(minSize))
+            let limits_byte: UInt8 = (table.isTable64 ? 4 : 0) | (table.limits.max != nil ? 1 : 0)
+            temp += Data([limits_byte])
+
+            temp += Data(Leb128.unsignedEncode(table.limits.min))
+            if let maxSize = table.limits.max {
+                temp += Data(Leb128.unsignedEncode(maxSize))
             }
         }
         // Append the length of the section and the section contents itself.
@@ -600,7 +603,8 @@ public class WasmLifter {
         temp += Leb128.unsignedEncode(numDefinedTablesWithEntries);
 
         for instruction in self.tables {
-            let definedEntryIndices = (instruction.op as! WasmDefineTable).definedEntryIndices
+            let table = instruction.op as! WasmDefineTable
+            let definedEntryIndices = table.definedEntryIndices
             assert(definedEntryIndices.count == instruction.inputs.count)
             if definedEntryIndices.isEmpty { continue }
             // Element segment case 2 definition.
@@ -608,7 +612,7 @@ public class WasmLifter {
             let tableIndex = try self.resolveIdx(ofType: .table, for: instruction.output)
             temp += Leb128.unsignedEncode(tableIndex)
             // Starting index. Assumes all entries are continuous.
-            temp += [0x41]
+            temp += table.tableType.isTable64 ? [0x42] : [0x41]
             temp += Leb128.unsignedEncode(definedEntryIndices[0])
             temp += [0x0b]  // end
             // elemkind
