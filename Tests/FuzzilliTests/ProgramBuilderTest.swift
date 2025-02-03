@@ -2657,4 +2657,27 @@ class ProgramBuilderTests: XCTestCase {
               XCTAssert(false)
         }
     }
+
+    func testFindOrGenerateWithCodeGenerator() {
+        let type1 = ILType.object(ofGroup: "group1", withProperties: [], withMethods: [])
+        let group1 = ObjectGroup(name: "group1", instanceType: type1, properties: [:], methods: [:])
+
+        let testGenerator = CodeGenerator("testGenerator", produces: type1) { b in
+            let builtin = b.createNamedVariable(forBuiltin: "foo")
+            b.callFunction(builtin)
+        }
+
+        let env = JavaScriptEnvironment(
+            additionalBuiltins: ["foo" : .function([] => type1)],
+            additionalObjectGroups: [group1])
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env, codeGenerators: [(testGenerator, 1)])
+
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+
+        XCTAssert(b.randomVariable(ofTypeOrSubtype: type1) == nil)
+        let obj = b.findOrGenerateType(type1)
+        XCTAssert(b.type(of: obj).Is(type1))
+    }
 }

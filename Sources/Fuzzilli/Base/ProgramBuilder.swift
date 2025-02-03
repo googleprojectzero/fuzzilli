@@ -675,6 +675,19 @@ public class ProgramBuilder {
                     } else if let property = maybeProperty {
                         return usePropertyToProduce(property)
                     }
+
+                    let codeGenerators =
+                        self.fuzzer.codeGenerators.filter({$0.requiredContext.isSubset(of: self.context) &&
+                            $0.produces != nil && $0.produces!.Is(type)})
+                    if codeGenerators.count > 0 {
+                      let generator = codeGenerators.randomElement()
+                      self.run(generator)
+                      // The generator we ran above is supposed to generate the
+                      // requested type. If no variable of that type exists
+                      // now, then either the generator or its annotation is
+                      // wrong.
+                      return self.randomVariable(ofTypeOrSubtype: type)!
+                    }
                     // Otherwise this is one of the following:
                     // 1. an object with more type information, i.e. it has a group, but no associated builtin, e.g. we cannot construct it with new.
                     // 2. an object without a group, but it has some required fields.
