@@ -164,6 +164,8 @@ public class CodeGenerator: Contributor {
     /// The inputs expected by this generator.
     public let inputs: Inputs
 
+    public let produces: ILType?
+
     /// The contexts in which this code generator can run.
     /// This code generator will only be executed if requiredContext.isSubset(of: currentContext)
     public let requiredContext: Context
@@ -171,7 +173,7 @@ public class CodeGenerator: Contributor {
     /// Warpper around the actual generator function called.
     private let adapter: GeneratorAdapter
 
-    fileprivate init(name: String, isValueGenerator: Bool, isRecursive: Bool, inputs: Inputs, context: Context, adapter: GeneratorAdapter) {
+    fileprivate init(name: String, isValueGenerator: Bool, isRecursive: Bool, inputs: Inputs, produces: ILType? = nil, context: Context, adapter: GeneratorAdapter) {
         assert(!isValueGenerator || context.isValueBuildableContext)
         assert(!isValueGenerator || inputs.count == 0)
         assert(inputs.count == adapter.expectedNumberOfInputs)
@@ -179,6 +181,7 @@ public class CodeGenerator: Contributor {
         self.isValueGenerator = isValueGenerator
         self.isRecursive = isRecursive
         self.inputs = inputs
+        self.produces = produces
         self.requiredContext = context
         self.adapter = adapter
         super.init(name: name)
@@ -194,28 +197,28 @@ public class CodeGenerator: Contributor {
         return codeSizeAfterGeneration - codeSizeBeforeGeneration
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, _ f: @escaping GeneratorFuncNoArgs) {
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: .none, context: context, adapter: GeneratorAdapterNoArgs(f: f))
+    public convenience init(_ name: String, inContext context: Context = .javascript, produces: ILType? = nil, _ f: @escaping GeneratorFuncNoArgs) {
+        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: .none, produces: produces, context: context, adapter: GeneratorAdapterNoArgs(f: f))
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, _ f: @escaping GeneratorFunc1Arg) {
+    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, produces: ILType? = nil, _ f: @escaping GeneratorFunc1Arg) {
         assert(inputs.count == 1)
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, context: context, adapter: GeneratorAdapter1Arg(f: f))
+        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, produces: produces, context: context, adapter: GeneratorAdapter1Arg(f: f))
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, _ f: @escaping GeneratorFunc2Args) {
+    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, produces: ILType? = nil, _ f: @escaping GeneratorFunc2Args) {
         assert(inputs.count == 2)
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, context: context, adapter: GeneratorAdapter2Args(f: f))
+        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, produces: produces, context: context, adapter: GeneratorAdapter2Args(f: f))
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, _ f: @escaping GeneratorFunc3Args) {
+    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, produces: ILType? = nil, _ f: @escaping GeneratorFunc3Args) {
         assert(inputs.count == 3)
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, context: context, adapter: GeneratorAdapter3Args(f: f))
+        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, produces: produces, context: context, adapter: GeneratorAdapter3Args(f: f))
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, _ f: @escaping GeneratorFunc4Args) {
+    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, produces: ILType? = nil, _ f: @escaping GeneratorFunc4Args) {
         assert(inputs.count == 4)
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, context: context, adapter: GeneratorAdapter4Args(f: f))
+        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, produces: produces, context: context, adapter: GeneratorAdapter4Args(f: f))
     }
 }
 
