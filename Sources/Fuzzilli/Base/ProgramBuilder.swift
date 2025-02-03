@@ -614,7 +614,6 @@ public class ProgramBuilder {
                         self.fuzzer.environment.isSubtype($0.outputType, of: type)
                         }))
 
-
                     let args = self.findOrGenerateArgumentsInternal(forSignature: sig)
                     return self.callMethod(method.method, on: obj, withArgs: args)
                 }
