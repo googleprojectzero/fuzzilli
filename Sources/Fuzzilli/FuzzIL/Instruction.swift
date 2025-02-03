@@ -948,6 +948,15 @@ extension Instruction: ProtobufConvertible {
                 $0.beginForLoopBody = Fuzzilli_Protobuf_BeginForLoopBody()
             case .endForLoop:
                 $0.endForLoop = Fuzzilli_Protobuf_EndForLoop()
+            case .beginForAwaitOfLoop:
+                $0.beginForAwaitOfLoop = Fuzzilli_Protobuf_BeginForAwaitOfLoop()
+            case .beginForAwaitOfLoopWithDestruct(let op):
+                $0.beginForAwaitOfLoopWithDestruct = Fuzzilli_Protobuf_BeginForAwaitOfLoopWithDestruct.with {
+                    $0.indices = op.indices.map({ Int32($0) })
+                    $0.hasRestElement_p = op.hasRestElement
+                }
+            case .endForAwaitOfLoop:
+                $0.endForAwaitOfLoop = Fuzzilli_Protobuf_EndForAwaitOfLoop()
             case .beginForInLoop:
                 $0.beginForInLoop = Fuzzilli_Protobuf_BeginForInLoop()
             case .endForInLoop:
@@ -1852,6 +1861,12 @@ extension Instruction: ProtobufConvertible {
             op = BeginForLoopBody(numLoopVariables: inouts.count)
         case .endForLoop:
             op = EndForLoop()
+        case .beginForAwaitOfLoop:
+            op = BeginForAwaitOfLoop()
+        case .beginForAwaitOfLoopWithDestruct(let p):
+            op = BeginForAwaitOfLoopWithDestruct(indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
+        case .endForAwaitOfLoop:
+            op = EndForAwaitOfLoop()
         case .beginForInLoop:
             op = BeginForInLoop()
         case .endForInLoop:

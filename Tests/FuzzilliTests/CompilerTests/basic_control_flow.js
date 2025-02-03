@@ -34,6 +34,13 @@ for (let i = 0; i < a; i++) {
   output("inside for loop");
 }
 
+async function f() {
+  for await (let x of [1, 2, 3]) {
+    output("inside for-await-of loop");
+  }
+}
+f();
+
 for (let p in [1,2,3]) {
   output("inside for-in loop");
 }

@@ -2140,6 +2140,37 @@ final class EndForLoop: JsOperation {
     }
 }
 
+final class BeginForAwaitOfLoop: JsOperation {
+    override var opcode: Opcode { .beginForAwaitOfLoop(self) }
+
+    init() {
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.asyncFunction], contextOpened: [.javascript, .loop])
+    }
+}
+
+final class BeginForAwaitOfLoopWithDestruct: JsOperation {
+    override var opcode: Opcode { .beginForAwaitOfLoopWithDestruct(self) }
+
+    let indices: [Int64]
+    let hasRestElement: Bool
+    
+    init(indices: [Int64], hasRestElement: Bool) {
+        assert(indices.count >= 1)
+        self.indices = indices
+        self.hasRestElement = hasRestElement
+        super.init(numInputs: 1, numInnerOutputs: indices.count, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.asyncFunction], contextOpened: [.javascript, .loop])
+    }  
+}
+
+final class EndForAwaitOfLoop: JsOperation {
+    override var opcode: Opcode { .endForAwaitOfLoop(self) }
+
+    init() {
+        super.init(attributes: .isBlockEnd)
+    }
+}
+
+
 final class BeginForInLoop: JsOperation {
     override var opcode: Opcode { .beginForInLoop(self) }
 

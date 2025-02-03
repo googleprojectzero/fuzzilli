@@ -1263,6 +1263,25 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
+            case .beginForAwaitOfLoop:
+                let V = w.declare(instr.innerOutput)
+                let LET = w.declarationKeyword(for: instr.innerOutput)
+                let OBJ = input(0)
+                w.emit("for await (\(LET) \(V) of \(OBJ)) {")
+                w.enterNewBlock()
+
+            case .beginForAwaitOfLoopWithDestruct(let op):
+                let outputs = w.declareAll(instr.innerOutputs)
+                let PATTERN = liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement)
+                let LET = w.varKeyword
+                let OBJ = input(0)
+                w.emit("for await (\(LET) [\(PATTERN)] of \(OBJ)) {")
+                w.enterNewBlock()
+
+            case .endForAwaitOfLoop:
+                w.leaveCurrentBlock()
+                w.emit("}")
+
             case .beginForInLoop:
                 let LET = w.declarationKeyword(for: instr.innerOutput)
                 let V = w.declare(instr.innerOutput)

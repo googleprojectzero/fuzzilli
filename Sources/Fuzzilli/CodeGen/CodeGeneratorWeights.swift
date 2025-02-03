@@ -159,6 +159,8 @@ public let codeGeneratorWeights = [
     "DoWhileLoopGenerator":                     15,
     "SimpleForLoopGenerator":                   10,
     "ComplexForLoopGenerator":                  10,
+    "ForAwaitOfLoopGenerator":                  10,
+    "ForAwaitOfWithDestructLoopGenerator":      3,
     "ForInLoopGenerator":                       10,
     "ForOfLoopGenerator":                       10,
     "ForOfWithDestructLoopGenerator":           3,
