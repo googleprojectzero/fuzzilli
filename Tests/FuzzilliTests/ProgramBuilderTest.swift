@@ -2518,6 +2518,34 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert(b.type(of: obj).Is(objType))
     }
 
+    func testFindOrGenerateTypeWithMethodOverload() {
+        // Types
+        let jsD8 = ILType.object(ofGroup: "D8", withProperties: [], withMethods: ["test"])
+        let objType = ILType.object(ofGroup: "Test", withProperties: [], withMethods: [])
+
+        // Object groups
+        let jsD8Group = ObjectGroup(
+            name: "D8",
+            instanceType: jsD8,
+            properties: [:],
+            overloads: ["test" : [
+                Signature(expects: [.string], returns: .integer),
+                Signature(expects: [.integer, .integer], returns: .string),
+                Signature(expects: [], returns: objType)
+                ]])
+
+        let testGroup = ObjectGroup(name: "Test", instanceType: objType, properties: [:], methods: [:])
+
+        let env = JavaScriptEnvironment(additionalBuiltins: ["d8" : jsD8], additionalObjectGroups: [jsD8Group, testGroup])
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+
+        let obj = b.findOrGenerateType(objType)
+        XCTAssert(b.type(of: obj).Is(objType))
+    }
+
     func testRandomVariableOfTypeOrSubtype() {
         let type1 = ILType.object(ofGroup: "group1", withProperties: [], withMethods: [])
         let type2 = ILType.object(ofGroup: "group2", withProperties: [], withMethods: [])

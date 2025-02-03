@@ -775,7 +775,11 @@ public struct JSTyper: Analyzer {
             set(instr.output, inferConstructedType(of: instr.input(0)))
 
         case .callMethod(let op):
-            let sig = chooseUniform(from: inferMethodSignatures(of: op.methodName, on: instr.input(0)))
+            let sigs = inferMethodSignatures(of: op.methodName, on: instr.input(0))
+            // op.numInputs - 1 because the signature.numParameters does not include the receiver.
+            // TODO: We could make the overload resolution here more accurate
+            // by also comparing the types of parameters.
+            let sig = sigs.filter({$0.numParameters == op.numInputs - 1}).first ?? chooseUniform(from: sigs)
             set(instr.output, sig.outputType)
         case .callMethodWithSpread(let op):
             let sig = chooseUniform(from: inferMethodSignatures(of: op.methodName, on: instr.input(0)))
