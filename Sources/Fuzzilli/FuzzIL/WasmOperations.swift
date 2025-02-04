@@ -1568,7 +1568,7 @@ class WasmArrayNewFixed: WasmOperation {
         // OperationMutator::extendVariadicOperationByOneInput and ensure correct types of added
         // inputs. (This requires some integration for .wasmRef(Index) to ensure it isn't just an
         // index type but a matching one!)
-        super.init(inputTypes: [.wasmTypeDef] + (0..<size).map {_ in elementType},
+        super.init(inputTypes: [.wasmTypeDef()] + (0..<size).map {_ in elementType},
             outputType: .wasmRef(.Index), requiredContext: [.wasmFunction])
     }
 }

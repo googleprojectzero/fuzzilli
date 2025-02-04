@@ -212,12 +212,16 @@ public struct ILType: Hashable {
     public static let wasmSimd128 = ILType(definiteType: .wasmSimd128)
     public static let wasmGenericRef = ILType(definiteType: .wasmRef)
 
-    public static let wasmTypeDef = ILType(definiteType: .wasmTypeDef)
+    static func wasmTypeDef() -> ILType{
+        return ILType(definiteType: .wasmTypeDef, ext: TypeExtension(
+            properties: [], methods: [], signature: nil, wasmExt: WasmTypeDefinition()))
+    }
 
     // TODO(mliedtke): Add wasmRefNull() and extend the WasmReferenceType with a null bool.
-    static func wasmRef(_ kind: WasmReferenceType.Kind) -> ILType {
+    static func wasmRef(_ kind: WasmReferenceType.Kind, description: WasmTypeDescription? = nil) -> ILType {
         return ILType(definiteType: .wasmRef, ext: TypeExtension(
-            properties: [], methods: [], signature: nil, wasmExt: WasmReferenceType(kind)))
+            properties: [], methods: [], signature: nil,
+            wasmExt: WasmReferenceType(kind, description: description)))
     }
 
     // The union of all primitive wasm types
@@ -447,6 +451,15 @@ public struct ILType: Hashable {
     public var isWasmReferenceType: Bool {
         return wasmReferenceType != nil
     }
+
+    public var wasmTypeDefinition: WasmTypeDefinition? {
+        return wasmType as? WasmTypeDefinition
+    }
+
+    public var isWasmTypeDefinition: Bool {
+        return wasmTypeDefinition != nil
+    }
+
 
     public var properties: Set<String> {
         return ext?.properties ?? Set()
@@ -1079,6 +1092,29 @@ public class WasmLabelType: WasmTypeExtension {
     }
 }
 
+// TODO(mliedtke): Does this justify a separate class or should the WasmTypeDescription just be a
+// WasmTypeExtension?
+public class WasmTypeDefinition: WasmTypeExtension {
+    var description : WasmTypeDescription? = nil
+
+    override func isEqual(to other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmTypeDefinition else { return false }
+        // TODO(mliedtke): We treat two definitions as equal if they don't have a description, so
+        // that the .Is(.wasmTypeDef()) works as desired. We should improve the type system to
+        // support proper subsumption rules for the wasm type extensions instead.
+        return description == nil || other.description == nil || description == other.description
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine(description)
+    }
+
+    func getReferenceTypeTo() -> ILType {
+        assert(description != nil)
+        return .wasmRef(.Index, description: description)
+    }
+}
+
 public class WasmReferenceType: WasmTypeExtension {
     enum Kind {
         case Index    // user-defined types
@@ -1086,8 +1122,13 @@ public class WasmReferenceType: WasmTypeExtension {
     }
     let kind: Kind
 
-    init(_ kind: Kind) {
+    // TODO(mliedtke): We ignore it intentionally in the isEqual and hash for now but that's a very
+    // unsound design, we should instead fix the TypeSystem rules for subsumption etc.
+    var description : WasmTypeDescription?
+
+    init(_ kind: Kind, description: WasmTypeDescription? = nil) {
         self.kind = kind
+        self.description = description
     }
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
@@ -1437,15 +1478,13 @@ public func => (parameters: [Parameter], returnType: ILType) -> Signature {
     return Signature(expects: ParameterList(parameters), returns: returnType)
 }
 
+// TODO(mliedtke): We'll probbaly need some base class for array, struct and function definitions
+// like this, right now it seems a bit useless, however.
 class WasmTypeDescription: Hashable {
-    public let type: ILType
     public let typeGroupIndex: Int
-    public let isAbstract: Bool
 
-    init(type: ILType, typeGroupIndex: Int, isAbstract: Bool = true) {
-        self.type = type
+    init(typeGroupIndex: Int) {
         self.typeGroupIndex = typeGroupIndex
-        self.isAbstract = isAbstract
     }
 
     static func == (lhs: WasmTypeDescription, rhs: WasmTypeDescription) -> Bool {
@@ -1458,10 +1497,10 @@ class WasmTypeDescription: Hashable {
 }
 
 class WasmArrayTypeDescription : WasmTypeDescription {
-    let elementType: WasmTypeDescription
+    let elementType: ILType
 
-    init(elementType: WasmTypeDescription, typeGroupIndex: Int) {
+    init(elementType: ILType, typeGroupIndex: Int) {
         self.elementType = elementType
-        super.init(type: .wasmRef(.Index), typeGroupIndex: typeGroupIndex, isAbstract: false)
+        super.init(typeGroupIndex: typeGroupIndex)
     }
 }

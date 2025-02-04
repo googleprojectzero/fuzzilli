@@ -29,9 +29,9 @@ public struct JSTyper: Analyzer {
     // These are keyed by the index of the start of the subroutine definition.
     private var signatures = [Int: ParameterList]()
 
-    // All extra type information for wasm-gc structs that is not modeled by the
-    // ILType.
-    var wasmTypes = WasmTypes()
+    // Tracks the wasm recursive type groups and their contained types.
+    private var typeGroups : [[Variable]] = []
+    private var isWithinTypeGroup = false
 
     // Tracks the active function definitions and contains the instruction that started the function.
     private var activeFunctionDefinitions = Stack<Instruction>()
@@ -84,7 +84,8 @@ public struct JSTyper: Analyzer {
         indexOfLastInstruction = -1
         state.reset()
         signatures.removeAll()
-        wasmTypes = WasmTypes()
+        typeGroups.removeAll()
+        isWithinTypeGroup = false
         assert(activeFunctionDefinitions.isEmpty)
         assert(activeObjectLiterals.isEmpty)
         assert(activeClassDefinitions.isEmpty)
@@ -93,6 +94,55 @@ public struct JSTyper: Analyzer {
     // Array for collecting type changes during instruction execution.
     // Not currently used, but could be used for example to validate the analysis by adding these as comments to programs.
     private var typeChanges = [(Variable, ILType)]()
+
+    mutating func addArrayType(def: Variable, elementType: ILType, elementRef: Variable? = nil) {
+        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+        if let elementRef = elementRef {
+            type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
+                elementType: type(of: elementRef).wasmTypeDefinition!.getReferenceTypeTo(),
+                typeGroupIndex: tgIndex)
+        } else {
+            type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
+                elementType: elementType,
+                typeGroupIndex: tgIndex)
+        }
+        if isWithinTypeGroup {
+            typeGroups[typeGroups.count - 1].append(def)
+        }
+    }
+
+    func getTypeDescription(of: Variable) -> WasmTypeDescription {
+        return type(of: of).wasmTypeDefinition!.description!
+    }
+
+    func getTypeGroup(_ index: Int) -> [Variable] {
+        return typeGroups[index]
+    }
+
+    func getTypeGroupCount() -> Int {
+        return typeGroups.count
+    }
+
+    mutating func startTypeGroup() {
+        assert(!isWithinTypeGroup)
+        isWithinTypeGroup = true
+        typeGroups.append([])
+    }
+
+    mutating func finishTypeGroup() {
+        assert(isWithinTypeGroup)
+        isWithinTypeGroup = false
+    }
+
+    mutating func attachTypeDescription(to: Variable, typeDef: Variable) {
+        type(of: to).wasmReferenceType!.description = getTypeDescription(of: typeDef)
+    }
+    mutating func attachTypeDescription(to: Variable, typeDef: WasmTypeDescription) {
+        type(of: to).wasmReferenceType!.description = typeDef
+    }
+    func getTypeDescription(usage: Variable) -> WasmTypeDescription {
+        return type(of: usage).wasmReferenceType!.description!
+    }
 
     /// Analyze the given instruction, thus updating type information.
     public mutating func analyze(_ instr: Instruction) {
@@ -103,6 +153,18 @@ public struct JSTyper: Analyzer {
         // the instructions here such that we can set the type of the module at
         // the end. Figure out how we can set the correct type at the end?
         if instr.op is WasmOperation {
+            // TODO(mliedtke): Prior to wasm-gc types it was very convenient to just specify the
+            // output type in the WasmOperation. This doesn't scale very well with wasm-gc where
+            // the actual output type very much depends on the inputs of an operation (e.g.
+            // array.get). We should consider undoing that special-casing and explicitly adding
+            // typing for all wasm operations here just like it is done for JS operations.
+            if instr.numOutputs > 0 {
+                if instr.numOutputs > 1 {
+                    fatalError("More than one output for a wasm instruction!")
+                }
+                setType(of: instr.output, to: (instr.op as! WasmOperation).outputType)
+            }
+
             switch instr.op.opcode {
             case .beginWasmFunction(let op):
                 activeWasmModuleDefinition?.activeFunctionSignature = op.signature
@@ -143,19 +205,12 @@ public struct JSTyper: Analyzer {
                     activeWasmModuleDefinition!.globals.append(instr.input(0))
                 }
             case .wasmArrayNewFixed(_):
-                wasmTypes.attachTypeDescription(to: instr.output, typeDef: instr.input(0))
+                attachTypeDescription(to: instr.output, typeDef: instr.input(0))
             case .wasmArrayGet(_):
-                let arrayType = wasmTypes.getTypeDescription(usage: instr.input(0)) as! WasmArrayTypeDescription
-                wasmTypes.attachTypeDescription(to: instr.output, typeDef: arrayType.elementType)
+                let arrayType = getTypeDescription(usage: instr.input(0)) as! WasmArrayTypeDescription
+                set(instr.output, arrayType.elementType)
             default:
                 break
-            }
-
-            if instr.numOutputs > 0 {
-                if instr.numOutputs > 1 {
-                    fatalError("More than one output for a wasm instruction!")
-                }
-                setType(of: instr.output, to: (instr.op as! WasmOperation).outputType)
             }
         }
 
@@ -999,20 +1054,22 @@ public struct JSTyper: Analyzer {
             set(instr.output, .function(newParameters => signature.outputType))
 
         case .wasmBeginTypeGroup(_):
-            wasmTypes.startTypeGroup()
+            startTypeGroup()
 
         case .wasmEndTypeGroup(_):
             // For now just forward the type information based on the inputs.
             zip(instr.inputs, instr.outputs).forEach {input, output in
                 set(output, state.type(of: input))
-                wasmTypes.propagate(from: input, to: output)
             }
-            wasmTypes.finishTypeGroup()
+            finishTypeGroup()
 
         case .wasmDefineArrayType(let op):
-            set(instr.output, .wasmTypeDef)
+            // TODO(mliedtke): Instead of first typing it as generic .wasmTypeDef() and then
+            // refining that type in addArrayType, it might be nicer to just let addArrayType
+            // return the full type and pass that on to the set operation.
+            set(instr.output, .wasmTypeDef())
             let elementRef = op.elementType.requiredInputCount() == 1 ? instr.input(0) : nil
-            wasmTypes.addArrayType(def: instr.output, elementType: op.elementType, elementRef: elementRef)
+            addArrayType(def: instr.output, elementType: op.elementType, elementRef: elementRef)
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
@@ -1389,71 +1446,6 @@ public struct JSTyper: Analyzer {
                 // therefore we have to manually specify the old type here.
                 updateType(of: v, to: newType, from: oldParentState.types[v])
             }
-        }
-    }
-
-    class WasmTypes {
-        private var typeDefinitions = VariableMap<WasmTypeDescription>()
-        private var typeGroups : [[Variable]] = []
-        private var isWithinTypeGroup = false
-
-        private var typeUsages = VariableMap<WasmTypeDescription>()
-
-        public func addArrayType(def: Variable, elementType: ILType, elementRef: Variable? = nil) {
-            let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
-            if let elementRef = elementRef {
-                typeDefinitions[def] = WasmArrayTypeDescription(
-                    elementType: typeDefinitions[elementRef]!, typeGroupIndex: tgIndex)
-            } else {
-                // TODO(mliedtke): How bad is it if we create a gazillion of instances of these WasmTypeDescriptions for `.wasmi32`?
-                // Should we share a single instance instead?
-                typeDefinitions[def] = WasmArrayTypeDescription(
-                    elementType: WasmTypeDescription(type: elementType, typeGroupIndex: -1),
-                    typeGroupIndex: tgIndex)
-            }
-            if isWithinTypeGroup {
-                typeGroups[typeGroups.count - 1].append(def)
-            }
-        }
-
-        public func propagate(from: Variable, to: Variable) {
-            typeDefinitions[to] = typeDefinitions[from]!
-        }
-
-        public func getTypeDescription(of: Variable) -> WasmTypeDescription {
-            return typeDefinitions[of]!
-        }
-
-        public func getTypeGroup(_ index: Int) -> [Variable] {
-            return typeGroups[index]
-        }
-
-        public func getTypeGroupCount() -> Int {
-            return typeGroups.count
-        }
-
-        public func startTypeGroup() {
-            assert(!isWithinTypeGroup)
-            isWithinTypeGroup = true
-            typeGroups.append([])
-        }
-
-        public func finishTypeGroup() {
-            assert(isWithinTypeGroup)
-            isWithinTypeGroup = false
-        }
-
-        // TODO(mliedtke): Instead of creating these types aside the ILType tracked by the JSTyper,
-        // could we make it somehow "part" of the derived type information without it flowing into
-        // any operation or any other "consistent" state of the IL?
-        public func attachTypeDescription(to: Variable, typeDef: Variable) {
-            typeUsages[to] = getTypeDescription(of: typeDef)
-        }
-        public func attachTypeDescription(to: Variable, typeDef: WasmTypeDescription) {
-            typeUsages[to] = typeDef
-        }
-        public func getTypeDescription(usage: Variable) -> WasmTypeDescription {
-            return typeUsages[usage]!
         }
     }
 }
