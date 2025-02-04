@@ -84,7 +84,7 @@ public class JavaScriptLifter: Lifter {
         // This typer is shared across WasmLifters and a WasmLifter is only valid for a single WasmModule.
         var typer: JSTyper? = nil
         // The currently active WasmLifter, we can only have one of them.
-        var wasmLifter: WasmLifter? = nil
+        var wasmInstructions = Code()
         for instr in program.code {
             analyzer.analyze(instr)
             if instr.op is Explore { needToSupportExploration = true }
@@ -176,8 +176,8 @@ public class JavaScriptLifter: Lifter {
             if (instr.op as? WasmOperation) != nil {
                 // Forward all the Wasm related instructions to the WasmLifter,
                 // they will be emitted once we see the end of the module.
-                wasmLifter!.addInstruction(instr)
-                continue;
+                wasmInstructions.append(instr)
+                continue
             }
 
             if instr.op is WasmTypeOperation {
@@ -1429,7 +1429,7 @@ public class JavaScriptLifter: Lifter {
 
             case .beginWasmModule:
                 wasmCodeStarts = instr.index
-                wasmLifter = WasmLifter(withTyper: typer!)
+                assert(wasmInstructions.isEmpty)
 
             case .endWasmModule:
                 // Lift the FuzzILCode of this Block first.
@@ -1442,7 +1442,7 @@ public class JavaScriptLifter: Lifter {
                 let V = w.declare(instr.output, as: "v\(instr.output.number)")
                 // TODO: support a better diagnostics mode which stores the .wasm binary file alongside the samples.
                 do {
-                    let (bytecode, importRefs) = try wasmLifter!.lift()
+                    let (bytecode, importRefs) = try WasmLifter(withTyper: typer!, withWasmCode: wasmInstructions).lift()
                     // Get and check that we have the imports here as expressions and fail otherwise.
                     let imports: [(Variable, Expression)] = try importRefs.map { ref in
                         if let expr = w.retrieve(expressionsFor: [ref]) {
@@ -1487,7 +1487,7 @@ public class JavaScriptLifter: Lifter {
                     // Emit a throwing operation such that we don't keep this sample.
                     w.emit("throw \"Wasmlifting failed\";")
                 }
-                wasmLifter = nil
+                wasmInstructions.removeAll()
 
             case .createWasmTable(let op):
                 let V = w.declare(instr.output)

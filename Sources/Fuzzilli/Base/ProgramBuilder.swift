@@ -1067,16 +1067,6 @@ public class ProgramBuilder {
         return jsTyper.type(of: v)
     }
 
-    // Returns the type description of the provided wasm type definition.
-    func typeDescription(of v: Variable) -> WasmTypeDescription {
-        return jsTyper.wasmTypes.getTypeDescription(of: v)
-    }
-
-    // Returns the type description of the provided variable's wasm object.
-    func typeDescription(usage v: Variable) -> WasmTypeDescription {
-        return jsTyper.wasmTypes.getTypeDescription(usage: v)
-    }
-
     /// Returns the type of the `super` binding at the current position.
     public func currentSuperType() -> ILType {
         return jsTyper.currentSuperType()
@@ -3376,15 +3366,15 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmArrayNewFixed(arrayType: Variable, elements: [Variable]) -> Variable {
-            let arrayDesc = b.jsTyper.wasmTypes.getTypeDescription(of: arrayType) as! WasmArrayTypeDescription
-            assert(elements.allSatisfy {b.jsTyper.type(of: $0).Is(arrayDesc.elementType.type)})
-            return b.emit(WasmArrayNewFixed(size: elements.count, elementType: arrayDesc.elementType.type), withInputs: [arrayType] + elements).output
+            let arrayDesc = b.jsTyper.getTypeDescription(of: arrayType) as! WasmArrayTypeDescription
+            assert(elements.allSatisfy {b.jsTyper.type(of: $0).Is(arrayDesc.elementType)})
+            return b.emit(WasmArrayNewFixed(size: elements.count, elementType: arrayDesc.elementType), withInputs: [arrayType] + elements).output
         }
 
         @discardableResult
         public func wasmArrayGet(array: Variable, index: Variable) -> Variable {
-            let arrayDesc = b.jsTyper.wasmTypes.getTypeDescription(usage: array) as! WasmArrayTypeDescription
-            return b.emit(WasmArrayGet(elementType: arrayDesc.elementType.type), withInputs: [array, index]).output
+            let arrayDesc = b.jsTyper.getTypeDescription(usage: array) as! WasmArrayTypeDescription
+            return b.emit(WasmArrayGet(elementType: arrayDesc.elementType), withInputs: [array, index]).output
         }
     }
 
