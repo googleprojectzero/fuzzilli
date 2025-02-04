@@ -1420,6 +1420,33 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("ForAwaitOfLoopGenerator", inContext: .asyncFunction, inputs: .preferred(.iterable)) { b, obj in
+        assert(b.context.contains(.asyncFunction))
+
+        b.buildForAwaitOfLoop(obj) { _ in
+            b.buildRecursive()
+        }
+    },
+
+    RecursiveCodeGenerator("ForAwaitOfWithDestructLoopGenerator", inContext: .asyncFunction, inputs: .preferred(.iterable)) { b, obj in
+        assert(b.context.contains(.asyncFunction))
+
+        var indices: [Int64] = []
+        for idx in 0..<Int64.random(in: 1..<5) {
+            withProbability(0.8) {
+                indices.append(idx)
+            }
+        }
+
+        if indices.isEmpty {
+            indices = [0]
+        }
+        
+        b.buildForAwaitOfLoop(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
+            b.buildRecursive()
+        }
+    },
+
     RecursiveCodeGenerator("ForInLoopGenerator", inputs: .preferred(.object())) { b, obj in
         b.buildForInLoop(obj) { _ in
             b.buildRecursive()

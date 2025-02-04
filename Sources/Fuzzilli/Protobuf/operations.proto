@@ -735,6 +735,17 @@ message BeginForLoopBody {
 message EndForLoop {
 }
 
+message BeginForAwaitOfLoop {
+}
+
+message BeginForAwaitOfLoopWithDestruct {
+    repeated int32 indices = 1;
+    bool hasRestElement = 2;
+}
+
+message EndForAwaitOfLoop {
+}
+
 message BeginForInLoop {
 }
 

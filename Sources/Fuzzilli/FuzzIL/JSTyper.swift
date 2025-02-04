@@ -398,6 +398,8 @@ public struct JSTyper: Analyzer {
         case .endForLoop:
             state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
         case .beginWhileLoopBody,
+             .beginForAwaitOfLoop,
+             .beginForAwaitOfLoopWithDestruct,
              .beginForInLoop,
              .beginForOfLoop,
              .beginForOfLoopWithDestruct,
@@ -409,6 +411,7 @@ public struct JSTyper: Analyzer {
             // Push a new state tracking the types inside the loop
             state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
         case .endWhileLoop,
+             .endForAwaitOfLoop,
              .endForInLoop,
              .endForOfLoop,
              .endRepeatLoop,
@@ -925,6 +928,14 @@ public struct JSTyper: Analyzer {
             let inputTypes = activeForLoopVariableTypes.pop()
             assert(inputTypes.count == instr.numInnerOutputs)
             zip(instr.innerOutputs, inputTypes).forEach({ set($0, $1) })
+
+        case .beginForAwaitOfLoop:
+            set(instr.innerOutput, .string)
+            
+        case .beginForAwaitOfLoopWithDestruct:
+            for v in instr.innerOutputs {
+                set(v, .anything)
+            }
 
         case .beginForInLoop:
             set(instr.innerOutput, .string)

@@ -166,6 +166,12 @@ message ForLoop {
     Statement body = 5;
 }
 
+message ForAwaitOfLoop {
+    VariableDeclarator left = 1;
+    Expression right = 2;
+    Statement body= 3;
+}
+
 message ForInLoop {
     VariableDeclarator left = 1;
     Expression right = 2;
@@ -235,14 +241,15 @@ message Statement {
         WhileLoop whileLoop = 10;
         DoWhileLoop doWhileLoop = 11;
         ForLoop forLoop = 12;
-        ForInLoop forInLoop = 13;
-        ForOfLoop forOfLoop = 14;
-        BreakStatement breakStatement = 15;
-        ContinueStatement continueStatement = 16;
-        TryStatement tryStatement = 17;
-        ThrowStatement throwStatement = 18;
-        WithStatement withStatement = 19;
-        SwitchStatement switchStatement = 20;
+        ForAwaitOfLoop ForAwaitOfLoop = 13;
+        ForInLoop forInLoop = 14;
+        ForOfLoop forOfLoop = 15;
+        BreakStatement breakStatement = 16;
+        ContinueStatement continueStatement = 17;
+        TryStatement tryStatement = 18;
+        ThrowStatement throwStatement = 19;
+        WithStatement withStatement = 20;
+        SwitchStatement switchStatement = 21;
     }
 }
 

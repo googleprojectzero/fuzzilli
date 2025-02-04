@@ -281,6 +281,18 @@ function parse(script, proto) {
                 forLoop.body = visitStatement(node.body);
                 return makeStatement('ForLoop', forLoop);
             }
+            case 'ForAwaitOfStatement': {
+                assert(node.left.type === 'VaraibleDeclaration', "Expected variable declaration as init part of a for-await-of loop, found " + node.left.type)
+                assert(node.left.declarations.length === 1, "Expected exactly one variable declaration in the init part of a for-await-of loop");
+                let decl = node.left.declarations[0];
+                let forAwaitOfLoop = {};
+                let initDecl = { name: decl.id.name };
+                assert(decl.init == null, "Expected no initial value for the varaible declared as part of a for-await-of loop")
+                forAwaitOfLoop.left = make('VariableDeclarator', initDecl);
+                forAwaitOfLoop.right = visitExpression(node.right);
+                forAwaitOfLoop.body = visitStatement(node.body);
+                return makeStatement('ForAwaitOfLoop', forAwaitOfLoop);
+            }
             case 'ForInStatement': {
                 assert(node.left.type === 'VariableDeclaration', "Expected variable declaration as init part of a for-in loop, found " + node.left.type);
                 assert(node.left.declarations.length === 1, "Expected exactly one variable declaration in the init part of a for-in loop");

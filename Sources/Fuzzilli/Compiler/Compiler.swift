@@ -416,6 +416,27 @@ public class JavaScriptCompiler {
 
             emit(EndForLoop())
 
+        case .forAwaitOfLoop(let forAwaitOfLoop):
+            let initializer = forAwaitOfLoop.left;
+
+            if !contextAnalyzer.context.contains(.asyncFunction) {
+                    throw CompilerError.invalidNodeError("`for await...of` is currently only supported in async functions")
+            }
+
+            guard !initializer.hasValue else {
+                throw CompilerError.invalidNodeError("Expected no initial value for the variable declared in a for-await-of loop")
+            }
+
+            let obj = try compileExpression(forAwaitOfLoop.right)
+
+            let loopVar = emit(BeginForAwaitOfLoop(), withInputs: [obj]).innerOutput
+            try enterNewScope {
+                map(initializer.name, to: loopVar)
+                try compileBody(forAwaitOfLoop.body)
+            }
+
+            emit(EndForAwaitOfLoop())
+
         case .forInLoop(let forInLoop):
             let initializer = forInLoop.left;
             guard !initializer.hasValue else {

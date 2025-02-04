@@ -697,6 +697,45 @@ public struct Compiler_Protobuf_ForLoop: @unchecked Sendable {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+public struct Compiler_Protobuf_ForAwaitOfLoop: @unchecked Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var left: Compiler_Protobuf_VariableDeclarator {
+    get {return _storage._left ?? Compiler_Protobuf_VariableDeclarator()}
+    set {_uniqueStorage()._left = newValue}
+  }
+  /// Returns true if `left` has been explicitly set.
+  public var hasLeft: Bool {return _storage._left != nil}
+  /// Clears the value of `left`. Subsequent reads from it will return its default value.
+  public mutating func clearLeft() {_uniqueStorage()._left = nil}
+
+  public var right: Compiler_Protobuf_Expression {
+    get {return _storage._right ?? Compiler_Protobuf_Expression()}
+    set {_uniqueStorage()._right = newValue}
+  }
+  /// Returns true if `right` has been explicitly set.
+  public var hasRight: Bool {return _storage._right != nil}
+  /// Clears the value of `right`. Subsequent reads from it will return its default value.
+  public mutating func clearRight() {_uniqueStorage()._right = nil}
+
+  public var body: Compiler_Protobuf_Statement {
+    get {return _storage._body ?? Compiler_Protobuf_Statement()}
+    set {_uniqueStorage()._body = newValue}
+  }
+  /// Returns true if `body` has been explicitly set.
+  public var hasBody: Bool {return _storage._body != nil}
+  /// Clears the value of `body`. Subsequent reads from it will return its default value.
+  public mutating func clearBody() {_uniqueStorage()._body = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
 public struct Compiler_Protobuf_ForInLoop: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1072,6 +1111,14 @@ public struct Compiler_Protobuf_Statement: @unchecked Sendable {
     set {_uniqueStorage()._statement = .forLoop(newValue)}
   }
 
+  public var forAwaitOfLoop: Compiler_Protobuf_ForAwaitOfLoop {
+    get {
+      if case .forAwaitOfLoop(let v)? = _storage._statement {return v}
+      return Compiler_Protobuf_ForAwaitOfLoop()
+    }
+    set {_uniqueStorage()._statement = .forAwaitOfLoop(newValue)}
+  }
+
   public var forInLoop: Compiler_Protobuf_ForInLoop {
     get {
       if case .forInLoop(let v)? = _storage._statement {return v}
@@ -1151,6 +1198,7 @@ public struct Compiler_Protobuf_Statement: @unchecked Sendable {
     case whileLoop(Compiler_Protobuf_WhileLoop)
     case doWhileLoop(Compiler_Protobuf_DoWhileLoop)
     case forLoop(Compiler_Protobuf_ForLoop)
+    case forAwaitOfLoop(Compiler_Protobuf_ForAwaitOfLoop)
     case forInLoop(Compiler_Protobuf_ForInLoop)
     case forOfLoop(Compiler_Protobuf_ForOfLoop)
     case breakStatement(Compiler_Protobuf_BreakStatement)
@@ -3737,6 +3785,98 @@ extension Compiler_Protobuf_ForLoop: SwiftProtobuf.Message, SwiftProtobuf._Messa
   }
 }
 
+extension Compiler_Protobuf_ForAwaitOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ForAwaitOfLoop"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "left"),
+    2: .same(proto: "right"),
+    3: .same(proto: "body"),
+  ]
+
+  fileprivate class _StorageClass {
+    var _left: Compiler_Protobuf_VariableDeclarator? = nil
+    var _right: Compiler_Protobuf_Expression? = nil
+    var _body: Compiler_Protobuf_Statement? = nil
+
+    #if swift(>=5.10)
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+    #else
+      static let defaultInstance = _StorageClass()
+    #endif
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _left = source._left
+      _right = source._right
+      _body = source._body
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._left) }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._right) }()
+        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._body) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._left {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+      try { if let v = _storage._right {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      } }()
+      try { if let v = _storage._body {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      } }()
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ForAwaitOfLoop, rhs: Compiler_Protobuf_ForAwaitOfLoop) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._left != rhs_storage._left {return false}
+        if _storage._right != rhs_storage._right {return false}
+        if _storage._body != rhs_storage._body {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ForInLoop"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -4382,14 +4522,15 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
     10: .same(proto: "whileLoop"),
     11: .same(proto: "doWhileLoop"),
     12: .same(proto: "forLoop"),
-    13: .same(proto: "forInLoop"),
-    14: .same(proto: "forOfLoop"),
-    15: .same(proto: "breakStatement"),
-    16: .same(proto: "continueStatement"),
-    17: .same(proto: "tryStatement"),
-    18: .same(proto: "throwStatement"),
-    19: .same(proto: "withStatement"),
-    20: .same(proto: "switchStatement"),
+    13: .same(proto: "forAwaitOfLoop"),
+    14: .same(proto: "forInLoop"),
+    15: .same(proto: "forOfLoop"),
+    16: .same(proto: "breakStatement"),
+    17: .same(proto: "continueStatement"),
+    18: .same(proto: "tryStatement"),
+    19: .same(proto: "throwStatement"),
+    20: .same(proto: "withStatement"),
+    21: .same(proto: "switchStatement"),
   ]
 
   fileprivate class _StorageClass {
@@ -4584,106 +4725,119 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
           }
         }()
         case 13: try {
+          var v: Compiler_Protobuf_ForAwaitOfLoop?
+          var hadOneofValue = false
+          if let current = _storage._statement {
+            hadOneofValue = true
+            if case .forAwaitOfLoop(let m) = current { v = m }
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._statement = .forAwaitOfLoop(v)
+          }
+        }()
+        case 14: try {
           var v: Compiler_Protobuf_ForInLoop?
           var hadOneofValue = false
           if let current = _storage._statement {
             hadOneofValue = true
-            if case .forInLoop(let m) = current {v = m}
+            if case .forInLoop(let m) = current { v = m }
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            if hadOneofValue { try decoder.handleConflictingOneOf() }
             _storage._statement = .forInLoop(v)
           }
         }()
-        case 14: try {
+        case 15: try {
           var v: Compiler_Protobuf_ForOfLoop?
           var hadOneofValue = false
           if let current = _storage._statement {
             hadOneofValue = true
-            if case .forOfLoop(let m) = current {v = m}
+            if case .forOfLoop(let m) = current { v = m }
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            if hadOneofValue { try decoder.handleConflictingOneOf() }
             _storage._statement = .forOfLoop(v)
           }
         }()
-        case 15: try {
+        case 16: try {
           var v: Compiler_Protobuf_BreakStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
             hadOneofValue = true
-            if case .breakStatement(let m) = current {v = m}
+            if case .breakStatement(let m) = current { v = m }
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            if hadOneofValue { try decoder.handleConflictingOneOf() }
             _storage._statement = .breakStatement(v)
           }
         }()
-        case 16: try {
+        case 17: try {
           var v: Compiler_Protobuf_ContinueStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
             hadOneofValue = true
-            if case .continueStatement(let m) = current {v = m}
+            if case .continueStatement(let m) = current { v = m }
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            if hadOneofValue { try decoder.handleConflictingOneOf() }
             _storage._statement = .continueStatement(v)
           }
         }()
-        case 17: try {
+        case 18: try {
           var v: Compiler_Protobuf_TryStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
             hadOneofValue = true
-            if case .tryStatement(let m) = current {v = m}
+            if case .tryStatement(let m) = current { v = m }
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            if hadOneofValue { try decoder.handleConflictingOneOf() }
             _storage._statement = .tryStatement(v)
           }
         }()
-        case 18: try {
+        case 19: try {
           var v: Compiler_Protobuf_ThrowStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
             hadOneofValue = true
-            if case .throwStatement(let m) = current {v = m}
+            if case .throwStatement(let m) = current { v = m }
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            if hadOneofValue { try decoder.handleConflictingOneOf() }
             _storage._statement = .throwStatement(v)
           }
         }()
-        case 19: try {
+        case 20: try {
           var v: Compiler_Protobuf_WithStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
             hadOneofValue = true
-            if case .withStatement(let m) = current {v = m}
+            if case .withStatement(let m) = current { v = m }
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            if hadOneofValue { try decoder.handleConflictingOneOf() }
             _storage._statement = .withStatement(v)
           }
         }()
-        case 20: try {
+        case 21: try {
           var v: Compiler_Protobuf_SwitchStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
             hadOneofValue = true
-            if case .switchStatement(let m) = current {v = m}
+            if case .switchStatement(let m) = current { v = m }
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            if hadOneofValue { try decoder.handleConflictingOneOf() }
             _storage._statement = .switchStatement(v)
           }
         }()
@@ -4748,37 +4902,41 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
         guard case .forLoop(let v)? = _storage._statement else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
       }()
+      case .forAwaitOfLoop?: try {
+        guard case .forAwaitOfLoop(let v)? = _storage._statement else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+      }()
       case .forInLoop?: try {
         guard case .forInLoop(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
       }()
       case .forOfLoop?: try {
         guard case .forOfLoop(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
       }()
       case .breakStatement?: try {
         guard case .breakStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
       }()
       case .continueStatement?: try {
         guard case .continueStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
       }()
       case .tryStatement?: try {
         guard case .tryStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
       }()
       case .throwStatement?: try {
         guard case .throwStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
       }()
       case .withStatement?: try {
         guard case .withStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
       }()
       case .switchStatement?: try {
         guard case .switchStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
       }()
       case nil: break
       }
