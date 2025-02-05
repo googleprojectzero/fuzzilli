@@ -1629,6 +1629,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmEndTypeGroup(_),
                  .wasmDefineArrayType(_),
                  .wasmArrayNewFixed(_),
+                 .wasmArrayNewDefault(_),
                  .wasmArrayGet(_):
                  fatalError("unreachable")
             }
