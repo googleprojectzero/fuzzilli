@@ -2297,6 +2297,14 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmArrayNewDefault(newValue)}
   }
 
+  public var wasmArrayLen: Fuzzilli_Protobuf_WasmArrayLen {
+    get {
+      if case .wasmArrayLen(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmArrayLen()
+    }
+    set {operation = .wasmArrayLen(newValue)}
+  }
+
   public var wasmArrayGet: Fuzzilli_Protobuf_WasmArrayGet {
     get {
       if case .wasmArrayGet(let v)? = operation {return v}
@@ -2589,6 +2597,7 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmDefineArrayType(Fuzzilli_Protobuf_WasmDefineArrayType)
     case wasmArrayNewFixed(Fuzzilli_Protobuf_WasmArrayNewFixed)
     case wasmArrayNewDefault(Fuzzilli_Protobuf_WasmArrayNewDefault)
+    case wasmArrayLen(Fuzzilli_Protobuf_WasmArrayLen)
     case wasmArrayGet(Fuzzilli_Protobuf_WasmArrayGet)
 
   }
@@ -2921,7 +2930,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     280: .same(proto: "wasmDefineArrayType"),
     281: .same(proto: "wasmArrayNewFixed"),
     282: .same(proto: "wasmArrayNewDefault"),
-    283: .same(proto: "wasmArrayGet"),
+    283: .same(proto: "wasmArrayLen"),
+    284: .same(proto: "wasmArrayGet"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6580,6 +6590,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 283: try {
+        var v: Fuzzilli_Protobuf_WasmArrayLen?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmArrayLen(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmArrayLen(v)
+        }
+      }()
+      case 284: try {
         var v: Fuzzilli_Protobuf_WasmArrayGet?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7730,9 +7753,13 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .wasmArrayNewDefault(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 282)
     }()
+    case .wasmArrayLen?: try {
+      guard case .wasmArrayLen(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 283)
+    }()
     case .wasmArrayGet?: try {
       guard case .wasmArrayGet(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 283)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 284)
     }()
     case nil: break
     }

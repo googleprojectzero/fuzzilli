@@ -564,6 +564,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmDefineArrayType(_),
              .wasmArrayNewFixed(_),
              .wasmArrayNewDefault(_),
+             .wasmArrayLen(_),
              .wasmArrayGet(_):
              assert(!instr.isOperationMutable)
              fatalError("Unexpected Operation")

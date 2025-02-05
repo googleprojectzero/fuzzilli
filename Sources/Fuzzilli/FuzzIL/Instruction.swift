@@ -1356,6 +1356,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmArrayNewDefault(_):
                 $0.wasmArrayNewDefault = Fuzzilli_Protobuf_WasmArrayNewDefault()
+            case .wasmArrayLen(_):
+                $0.wasmArrayLen = Fuzzilli_Protobuf_WasmArrayLen()
             case .wasmArrayGet(let op):
                 $0.wasmArrayGet = Fuzzilli_Protobuf_WasmArrayGet.with {
                     $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
@@ -2190,6 +2192,8 @@ extension Instruction: ProtobufConvertible {
                 elementType: WasmTypeEnumToILType(p.elementType))
         case .wasmArrayNewDefault(_):
             op = WasmArrayNewDefault()
+        case .wasmArrayLen(_):
+            op = WasmArrayLen()
         case .wasmArrayGet(let p):
             op = WasmArrayGet(elementType: WasmTypeEnumToILType(p.elementType))
         }
