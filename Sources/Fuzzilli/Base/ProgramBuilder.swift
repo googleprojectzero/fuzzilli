@@ -3376,6 +3376,10 @@ public class ProgramBuilder {
             return b.emit(WasmArrayNewDefault(), withInputs: [arrayType, size]).output
         }
 
+        public func wasmArrayLen(_ array: Variable) -> Variable {
+            return b.emit(WasmArrayLen(), withInputs: [array]).output
+        }
+
         @discardableResult
         public func wasmArrayGet(array: Variable, index: Variable) -> Variable {
             let arrayDesc = b.jsTyper.getTypeDescription(usage: array) as! WasmArrayTypeDescription

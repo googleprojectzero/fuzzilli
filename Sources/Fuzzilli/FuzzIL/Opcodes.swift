@@ -318,5 +318,6 @@ enum Opcode {
     case wasmDefineArrayType(WasmDefineArrayType)
     case wasmArrayNewFixed(WasmArrayNewFixed)
     case wasmArrayNewDefault(WasmArrayNewDefault)
+    case wasmArrayLen(WasmArrayLen)
     case wasmArrayGet(WasmArrayGet)
 }

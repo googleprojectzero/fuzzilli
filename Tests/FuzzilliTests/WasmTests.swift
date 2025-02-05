@@ -1765,6 +1765,38 @@ class WasmGCTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "0\n")
     }
+
+    func testArrayLen() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let arrayType = b.wasmDefineTypeGroup {
+            return [b.wasmDefineArrayType(elementType: .wasmi32)]
+        }[0]
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                let arraySize3 = function.wasmArrayNewDefault(arrayType: arrayType, size: function.consti32(3))
+                let arraySize7 = function.wasmArrayNewDefault(arrayType: arrayType, size: function.consti32(7))
+                let result = function.wasmi32BinOp(
+                    function.wasmArrayLen(arraySize3),
+                    function.wasmArrayLen(arraySize7),
+                    binOpKind: .Mul)
+                function.wasmReturn(result)
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "21\n")
+    }
 }
 
 class WasmNumericalTests: XCTestCase {
