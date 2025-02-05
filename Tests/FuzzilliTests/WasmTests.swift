@@ -1731,6 +1731,40 @@ class WasmGCTests: XCTestCase {
         let jsProgFromProto = fuzzer.lifter.lift(copy, withOptions: [.includeComments])
         testForOutput(program: jsProgFromProto, runner: runner, outputString: "43\n")
     }
+
+    func testArrayNewDefault() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let typeGroup = b.wasmDefineTypeGroup {
+            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32)
+            let arrayf64 = b.wasmDefineArrayType(elementType: .wasmf64)
+            return [arrayi32, arrayf64]
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                let array1 = function.wasmArrayNewDefault(arrayType: typeGroup[0], size: function.consti32(3))
+                let array2 = function.wasmArrayNewDefault(arrayType: typeGroup[1], size: function.consti32(2))
+                let sum = function.wasmi32BinOp(
+                    function.wasmArrayGet(array: array1, index: function.consti32(0)),
+                    function.truncatef64Toi32(function.wasmArrayGet(array: array2, index: function.consti32(1)), isSigned: true),
+                    binOpKind: .Add)
+                function.wasmReturn(sum)
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "0\n")
+    }
 }
 
 class WasmNumericalTests: XCTestCase {

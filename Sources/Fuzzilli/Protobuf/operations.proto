@@ -1295,6 +1295,9 @@ message WasmArrayNewFixed {
     WasmILType elementType = 1;
 }
 
+message WasmArrayNewDefault {
+}
+
 message WasmArrayGet {
     WasmILType elementType = 1;
 }

@@ -204,7 +204,8 @@ public struct JSTyper: Analyzer {
                 if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
                     activeWasmModuleDefinition!.globals.append(instr.input(0))
                 }
-            case .wasmArrayNewFixed(_):
+            case .wasmArrayNewFixed(_),
+                 .wasmArrayNewDefault(_):
                 attachTypeDescription(to: instr.output, typeDef: instr.input(0))
             case .wasmArrayGet(_):
                 let arrayType = getTypeDescription(usage: instr.input(0)) as! WasmArrayTypeDescription

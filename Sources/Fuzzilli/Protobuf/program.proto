@@ -305,7 +305,8 @@ message Instruction {
         WasmEndTypeGroup wasmEndTypeGroup = 279;
         WasmDefineArrayType wasmDefineArrayType = 280;
         WasmArrayNewFixed wasmArrayNewFixed = 281;
-        WasmArrayGet wasmArrayGet = 282;
+        WasmArrayNewDefault wasmArrayNewDefault = 282;
+        WasmArrayGet wasmArrayGet = 283;
     }
 }
 

@@ -1573,6 +1573,15 @@ class WasmArrayNewFixed: WasmOperation {
     }
 }
 
+class WasmArrayNewDefault: WasmOperation {
+    override var opcode: Opcode { .wasmArrayNewDefault(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmTypeDef(), .wasmi32],
+            outputType: .wasmRef(.Index), requiredContext: [.wasmFunction])
+    }
+}
+
 class WasmArrayGet: WasmOperation {
     override var opcode: Opcode { .wasmArrayGet(self) }
     let elementType: ILType
