@@ -1132,6 +1132,9 @@ public class FuzzILLifter: Lifter {
             let typeInput = op.elementType.requiredInputCount() == 1 ? " \(input(0))" : ""
             w.emit("\(output()) <- WasmDefineArrayType \(op.elementType)\(typeInput)")
 
+        case .wasmDefineForwardOrSelfReference(_):
+            w.emit("\(output()) <- WasmDefineForwardOrSelfReference")
+
         default:
             fatalError("No FuzzIL lifting for this operation!")
         }

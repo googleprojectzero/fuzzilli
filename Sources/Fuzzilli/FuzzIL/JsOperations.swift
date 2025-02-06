@@ -2557,6 +2557,14 @@ class WasmDefineArrayType: WasmTypeOperation {
     }
 }
 
+class WasmDefineForwardOrSelfReference: WasmTypeOperation {
+    override var opcode: Opcode { .wasmDefineForwardOrSelfReference(self) }
+
+    init() {
+        super.init(numInputs: 0, numOutputs: 1, requiredContext: [.wasmTypeGroup])
+    }
+}
+
 /// Internal operations.
 ///
 /// These can be used for internal fuzzer operations but will not appear in the corpus.

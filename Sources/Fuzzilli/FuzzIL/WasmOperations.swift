@@ -1586,6 +1586,9 @@ class WasmArrayLen: WasmOperation {
     override var opcode: Opcode { .wasmArrayLen(self) }
 
     init() {
+        // TODO(mliedtke): Once we have struct types, we'll need to adapt these input types to
+        // be limited to array types (similar in other operations like array.get and operations
+        // expecting an array type definiiton like array.new_fixed.)
         super.init(inputTypes: [.wasmRef(.Index)], outputType: .wasmi32,
             requiredContext: [.wasmFunction])
     }

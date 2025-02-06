@@ -30,7 +30,8 @@ public struct JSTyper: Analyzer {
     private var signatures = [Int: ParameterList]()
 
     // Tracks the wasm recursive type groups and their contained types.
-    private var typeGroups : [[Variable]] = []
+    private var typeGroups: [[Variable]] = []
+    private var selfReferences: [Variable: [(inout JSTyper, Variable?) -> ()]] = [:]
     private var isWithinTypeGroup = false
 
     // Tracks the active function definitions and contains the instruction that started the function.
@@ -98,6 +99,22 @@ public struct JSTyper: Analyzer {
     mutating func addArrayType(def: Variable, elementType: ILType, elementRef: Variable? = nil) {
         let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
         if let elementRef = elementRef {
+            if (type(of: elementRef).wasmTypeDefinition!.description == .selfReference) {
+                // Register a "resolver" callback that does one of the two:
+                // 1) If replacement == nil, it replaces the .selfReference with the "outer" array
+                //    type (`def`), so the elementType's ILType is now the same as the outer
+                //    ILType.
+                // 2) If replacement != nil, it replaces the .selfReference with the replacement
+                //    for which we now have a "resolved" ILType that we can embed into the
+                //    elementType. This can lead to cyclic / recursive ILTypes as well.
+                // This callback will be called either when using a WasmResolveForwardReferenceType
+                // operation (triggering case 2) or when reaching the wasmEndTypeGroup of the
+                // current type group (case 1).
+                selfReferences[elementRef, default: []].append({typer, replacement in
+                    (typer.type(of: def).wasmTypeDefinition!.description as! WasmArrayTypeDescription).elementType
+                        = typer.type(of: replacement ?? def).wasmTypeDefinition!.getReferenceTypeTo()
+                })
+            }
             type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
                 elementType: type(of: elementRef).wasmTypeDefinition!.getReferenceTypeTo(),
                 typeGroupIndex: tgIndex)
@@ -125,12 +142,19 @@ public struct JSTyper: Analyzer {
 
     mutating func startTypeGroup() {
         assert(!isWithinTypeGroup)
+        assert(selfReferences.count == 0)
         isWithinTypeGroup = true
         typeGroups.append([])
     }
 
     mutating func finishTypeGroup() {
         assert(isWithinTypeGroup)
+        for (_, resolvers) in selfReferences {
+            for resolve in resolvers {
+                resolve(&self, nil)
+            }
+        }
+
         isWithinTypeGroup = false
     }
 
@@ -1071,6 +1095,9 @@ public struct JSTyper: Analyzer {
             set(instr.output, .wasmTypeDef())
             let elementRef = op.elementType.requiredInputCount() == 1 ? instr.input(0) : nil
             addArrayType(def: instr.output, elementType: op.elementType, elementRef: elementRef)
+
+        case .wasmDefineForwardOrSelfReference(_):
+            set(instr.output, .wasmSelfReference())
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
