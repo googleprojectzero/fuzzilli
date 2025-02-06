@@ -1352,6 +1352,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmDefineForwardOrSelfReference(_):
                 $0.wasmDefineForwardOrSelfReference = Fuzzilli_Protobuf_WasmDefineForwardOrSelfReference()
+            case .wasmResolveForwardReference(_):
+                $0.wasmResolveForwardReference = Fuzzilli_Protobuf_WasmResolveForwardReference()
             case .wasmArrayNewFixed(let op):
                 $0.wasmArrayNewFixed = Fuzzilli_Protobuf_WasmArrayNewFixed.with {
                     $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
@@ -2191,6 +2193,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmDefineArrayType(elementType: WasmTypeEnumToILType(p.elementType))
         case .wasmDefineForwardOrSelfReference(_):
             op = WasmDefineForwardOrSelfReference()
+        case .wasmResolveForwardReference(_):
+            op = WasmResolveForwardReference()
         case .wasmArrayNewFixed(let p):
             op = WasmArrayNewFixed(size: inouts.count - 2,
                 elementType: WasmTypeEnumToILType(p.elementType))

@@ -3573,6 +3573,11 @@ public class ProgramBuilder {
         return emit(WasmDefineForwardOrSelfReference()).output
     }
 
+    func wasmResolveForwardReference(_ forwardReference: Variable, to: Variable) {
+        assert(type(of: forwardReference).wasmTypeDefinition?.description == .selfReference)
+        emit(WasmResolveForwardReference(), withInputs: [forwardReference, to])
+    }
+
     /// Returns the next free variable.
     func nextVariable() -> Variable {
         assert(numVariables < Code.maxNumberOfVariables, "Too many variables")

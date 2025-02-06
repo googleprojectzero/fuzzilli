@@ -1294,6 +1294,9 @@ message WasmDefineArrayType {
 message WasmDefineForwardOrSelfReference {
 }
 
+message WasmResolveForwardReference {
+}
+
 message WasmArrayNewFixed {
     WasmILType elementType = 1;
 }

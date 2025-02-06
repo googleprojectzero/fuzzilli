@@ -154,6 +154,7 @@ public struct JSTyper: Analyzer {
                 resolve(&self, nil)
             }
         }
+        selfReferences.removeAll()
 
         isWithinTypeGroup = false
     }
@@ -1098,6 +1099,24 @@ public struct JSTyper: Analyzer {
 
         case .wasmDefineForwardOrSelfReference(_):
             set(instr.output, .wasmSelfReference())
+
+        case .wasmResolveForwardReference(_):
+            // Resolve all usages of the forward reference (if any).
+            if let resolvers = selfReferences[instr.input(0)] {
+                for resolve in resolvers {
+                    resolve(&self, instr.input(1))
+                }
+                // Remove the resolvers as the usages have been updated.
+                selfReferences.removeValue(forKey: instr.input(0))
+            }
+            // Invalidate the type of the forward reference. A ForwardOrSelfReference operation
+            // should not be used any more after being resolved.
+            // TODO(mliedtke): Replace this with a simple set and remove the assert that prevents
+            // using .nothing? Check this logic especially with respect to code generation and
+            // mutation: What happens if we insert a `ResolveForwardReference` via a mutator and
+            // there already is a `ResolveForwardReference` defined at a later point in the IL?
+            // set(instr.input(0), .nothing)
+            state.updateType(of: instr.input(0), to: .nothing)
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
