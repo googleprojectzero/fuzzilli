@@ -2289,6 +2289,14 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmDefineForwardOrSelfReference(newValue)}
   }
 
+  public var wasmResolveForwardReference: Fuzzilli_Protobuf_WasmResolveForwardReference {
+    get {
+      if case .wasmResolveForwardReference(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmResolveForwardReference()
+    }
+    set {operation = .wasmResolveForwardReference(newValue)}
+  }
+
   public var wasmArrayNewFixed: Fuzzilli_Protobuf_WasmArrayNewFixed {
     get {
       if case .wasmArrayNewFixed(let v)? = operation {return v}
@@ -2604,6 +2612,7 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmEndTypeGroup(Fuzzilli_Protobuf_WasmEndTypeGroup)
     case wasmDefineArrayType(Fuzzilli_Protobuf_WasmDefineArrayType)
     case wasmDefineForwardOrSelfReference(Fuzzilli_Protobuf_WasmDefineForwardOrSelfReference)
+    case wasmResolveForwardReference(Fuzzilli_Protobuf_WasmResolveForwardReference)
     case wasmArrayNewFixed(Fuzzilli_Protobuf_WasmArrayNewFixed)
     case wasmArrayNewDefault(Fuzzilli_Protobuf_WasmArrayNewDefault)
     case wasmArrayLen(Fuzzilli_Protobuf_WasmArrayLen)
@@ -2938,10 +2947,11 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     279: .same(proto: "wasmEndTypeGroup"),
     280: .same(proto: "wasmDefineArrayType"),
     281: .same(proto: "wasmDefineForwardOrSelfReference"),
-    282: .same(proto: "wasmArrayNewFixed"),
-    283: .same(proto: "wasmArrayNewDefault"),
-    284: .same(proto: "wasmArrayLen"),
-    285: .same(proto: "wasmArrayGet"),
+    282: .same(proto: "wasmResolveForwardReference"),
+    283: .same(proto: "wasmArrayNewFixed"),
+    284: .same(proto: "wasmArrayNewDefault"),
+    285: .same(proto: "wasmArrayLen"),
+    286: .same(proto: "wasmArrayGet"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6587,6 +6597,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 282: try {
+        var v: Fuzzilli_Protobuf_WasmResolveForwardReference?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmResolveForwardReference(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmResolveForwardReference(v)
+        }
+      }()
+      case 283: try {
         var v: Fuzzilli_Protobuf_WasmArrayNewFixed?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6599,7 +6622,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmArrayNewFixed(v)
         }
       }()
-      case 283: try {
+      case 284: try {
         var v: Fuzzilli_Protobuf_WasmArrayNewDefault?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6612,7 +6635,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmArrayNewDefault(v)
         }
       }()
-      case 284: try {
+      case 285: try {
         var v: Fuzzilli_Protobuf_WasmArrayLen?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6625,7 +6648,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmArrayLen(v)
         }
       }()
-      case 285: try {
+      case 286: try {
         var v: Fuzzilli_Protobuf_WasmArrayGet?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7772,21 +7795,25 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .wasmDefineForwardOrSelfReference(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 281)
     }()
+    case .wasmResolveForwardReference?: try {
+      guard case .wasmResolveForwardReference(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 282)
+    }()
     case .wasmArrayNewFixed?: try {
       guard case .wasmArrayNewFixed(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 282)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 283)
     }()
     case .wasmArrayNewDefault?: try {
       guard case .wasmArrayNewDefault(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 283)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 284)
     }()
     case .wasmArrayLen?: try {
       guard case .wasmArrayLen(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 284)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 285)
     }()
     case .wasmArrayGet?: try {
       guard case .wasmArrayGet(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 285)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 286)
     }()
     case nil: break
     }

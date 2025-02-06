@@ -1839,6 +1839,48 @@ class WasmGCTests: XCTestCase {
         let jsProgFromProto = fuzzer.lifter.lift(copy, withOptions: [.includeComments])
         testForOutput(program: jsProgFromProto, runner: runner, outputString: "12\n")
     }
+
+    func testForwardReferenceType() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let typeGroup = b.wasmDefineTypeGroup {
+            let forwardReference = b.wasmDefineForwardOrSelfReference()
+            let arrayOfArrayi32 = b.wasmDefineArrayType(elementType: .wasmRef(.Index), indexType: forwardReference)
+            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32)
+            b.wasmResolveForwardReference(forwardReference, to: arrayi32)
+            return [arrayOfArrayi32, arrayi32]
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                let arrayi32 = function.wasmArrayNewFixed(arrayType: typeGroup[1], elements: [function.consti32(42)])
+                let arrayOfArrayi32 = function.wasmArrayNewFixed(arrayType: typeGroup[0], elements: [arrayi32])
+                let zero = function.consti32(0)
+                let result = function.wasmArrayGet(
+                        array: function.wasmArrayGet(array: arrayOfArrayi32, index: zero),
+                        index: zero)
+                function.wasmReturn(result)
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+
+        // TODO(mliedtke): Remove once we have proper serialization tests.
+        let proto = prog.asProtobuf()
+        let copy = try! Program(from: proto)
+        let jsProgFromProto = fuzzer.lifter.lift(copy, withOptions: [.includeComments])
+        testForOutput(program: jsProgFromProto, runner: runner, outputString: "42\n")
+    }
 }
 
 class WasmNumericalTests: XCTestCase {

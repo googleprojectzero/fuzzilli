@@ -305,10 +305,11 @@ message Instruction {
         WasmEndTypeGroup wasmEndTypeGroup = 279;
         WasmDefineArrayType wasmDefineArrayType = 280;
         WasmDefineForwardOrSelfReference wasmDefineForwardOrSelfReference = 281;
-        WasmArrayNewFixed wasmArrayNewFixed = 282;
-        WasmArrayNewDefault wasmArrayNewDefault = 283;
-        WasmArrayLen wasmArrayLen = 284;
-        WasmArrayGet wasmArrayGet = 285;
+        WasmResolveForwardReference wasmResolveForwardReference = 282;
+        WasmArrayNewFixed wasmArrayNewFixed = 283;
+        WasmArrayNewDefault wasmArrayNewDefault = 284;
+        WasmArrayLen wasmArrayLen = 285;
+        WasmArrayGet wasmArrayGet = 286;
     }
 }
 

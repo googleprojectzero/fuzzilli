@@ -1135,6 +1135,9 @@ public class FuzzILLifter: Lifter {
         case .wasmDefineForwardOrSelfReference(_):
             w.emit("\(output()) <- WasmDefineForwardOrSelfReference")
 
+        case .wasmResolveForwardReference(_):
+            w.emit("WasmResolveForwardReference [\(input(0)) => \(input(1))]")
+
         default:
             fatalError("No FuzzIL lifting for this operation!")
         }
