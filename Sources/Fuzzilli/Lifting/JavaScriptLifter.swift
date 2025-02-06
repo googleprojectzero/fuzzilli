@@ -1686,7 +1686,36 @@ public class JavaScriptLifter: Lifter {
         }
     }
 
+    private func liftParameterPattern(_ pattern: ParameterPattern, variables: inout [String]) -> String {
+        switch pattern {
+        case .identifier:
+            return variables.removeFirst()
+        case .object(let properties):
+            let liftedProperties = properties.map { (key, valuePattern) -> String in
+                let liftedValue = liftParameterPattern(valuePattern, variables: &variables)
+                return "\(key): \(liftedValue)"
+            }
+            return "{ " + liftedProperties.joined(separator: ", ") + " }"
+        case .array(let elements):
+            let liftedElements = elements.map { element -> String in
+                return liftParameterPattern(element, variables: &variables)
+            }
+            return "[" + liftedElements.joined(separator: ", ") + "]"
+        case .rest(let inner):
+            return "..." + liftParameterPattern(inner, variables: &variables)
+        }
+    }
+
+    // Lifts the Parameters into a JavaScript parameter list string.
+    // If an explicit patterns array is present, it uses it (and consumes identifiers from the provided `variables`).
+    // Otherwise, it simply uses the list of variable names.
     private func liftParameters(_ parameters: Parameters, as variables: [String]) -> String {
+        if let patterns = parameters.patterns {
+            var varsCopy = variables
+            let lifted = patterns.map { liftParameterPattern($0, variables: &varsCopy) }
+            return lifted.joined(separator: ", ")
+        }
+
         assert(parameters.count == variables.count)
         var paramList = [String]()
         for v in variables {

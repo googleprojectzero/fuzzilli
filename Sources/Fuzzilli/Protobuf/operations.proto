@@ -19,6 +19,39 @@ package fuzzilli.protobuf;
 message Parameters {
     uint32 count = 1;
     bool hasRest = 2;
+    // If provided, specifies the explicit structure of the parameters.
+    // When omitted, the parameters are assumed to be plain identifiers.
+    repeated Parameter patterns = 3;
+}
+
+message Parameter {
+    oneof pattern {
+        IdentifierParameter identifierParameter = 1;
+        ObjectParameter objectParameter = 2;
+        ArrayParameter arrayParameter = 3;
+        RestParameter restParameter = 4;
+    }
+}
+
+message IdentifierParameter {
+    string name = 1;
+}
+
+message ObjectParameter {
+    repeated ObjectParameterProperty parameters = 1;
+}
+
+message ObjectParameterProperty {
+    string parameterKey = 1;
+    Parameter parameterValue = 2;
+}
+
+message ArrayParameter {
+    repeated Parameter elements = 1;
+}
+
+message RestParameter {
+    Parameter argument = 1;
 }
 
 message LoadInteger {

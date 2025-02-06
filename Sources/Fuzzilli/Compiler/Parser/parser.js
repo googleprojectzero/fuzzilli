@@ -73,8 +73,52 @@ function parse(script, proto) {
     }
 
     function visitParameter(param) {
-        assert(param.type == 'Identifier', "Expected parameter type to have type 'Identifier', found " + param.type);
-        return make('Parameter', { name: param.name });
+        assert(['Identifier', 'ObjectPattern', 'ArrayPattern', 'RestElement'].includes(param.type));
+    
+        switch (param.type) {
+            case 'Identifier': {
+                return make('IdentifierParameter', { identifierParameter: { name: param.name } });
+            }
+            case 'ObjectPattern': {
+                const parameters = param.properties.map(property => {
+                    assert(property.type === 'ObjectProperty');
+                    assert(property.computed === false);
+                    assert(property.method === false);
+                    let parameterKey;
+                    if (property.key.type === 'Identifier') {
+                        parameterKey = property.key.name;
+                    } else if (property.key.type === 'Literal') {
+                        // Internally, literal keys are stored as strings.
+                        parameterKey = property.key.value.toString();
+                    } else {
+                        throw new Error('Unsupported property key type: ' + property.key.type);
+                    }
+                    const parameterValue = visitParameter(property.value);
+                    return make('ObjectParameterProperty', {
+                        parameterKey: parameterKey,
+                        parameterValue: parameterValue
+                    });
+                });
+                return make('ObjectParameter', { objectParameter: { parameters } });
+            }
+            case 'ArrayPattern': {
+                const elements = param.elements.map(element => {
+                    if (element === null) {
+                        throw new Error('Holes in array parameters are not supported');
+                    } else {
+                        return visitParameter(element);
+                    }
+                });
+                return make('ArrayParameter', { arrayParameter: { elements } });
+            }
+            case 'RestElement': {
+                const argument = visitParameter(param.argument);
+                return make('RestParameter', { restParameter: { argument } });
+            }
+            default: {
+                throw new Error('Unsupported parameter type: ' + param.type);
+            }
+        }
     }
 
     function visitParameters(params) {

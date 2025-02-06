@@ -327,6 +327,36 @@ extension Instruction: ProtobufConvertible {
             return Fuzzilli_Protobuf_Parameters.with {
                 $0.count = UInt32(parameters.count)
                 $0.hasRest_p = parameters.hasRestParameter
+                // If we have an explicit patterns array, convert it.
+                if let patterns = parameters.patterns {
+                    $0.patterns = patterns.map { convertParameterPattern($0) }
+                }
+            }
+        }
+
+        func convertParameterPattern(_ pattern: ParameterPattern) -> Fuzzilli_Protobuf_Parameter {
+            return Fuzzilli_Protobuf_Parameter.with {
+                switch pattern {
+                case .identifier:
+                    $0.identifierParameter = Fuzzilli_Protobuf_IdentifierParameter()
+                case .object(let properties):
+                    $0.objectParameter = Fuzzilli_Protobuf_ObjectParameter.with {
+                        $0.parameters = properties.map { (key, valuePattern) in
+                            return Fuzzilli_Protobuf_ObjectParameterProperty.with {
+                                $0.parameterKey = key
+                                $0.parameterValue = convertParameterPattern(valuePattern)
+                            }
+                        }
+                    }
+                case .array(let elements):
+                    $0.arrayParameter = Fuzzilli_Protobuf_ArrayParameter.with {
+                        $0.elements = elements.map { convertParameterPattern($0) }
+                    }
+                case .rest(let inner):
+                    $0.restParameter = Fuzzilli_Protobuf_RestParameter.with {
+                        $0.argument = convertParameterPattern(inner)
+                    }
+                }
             }
         }
 
@@ -1362,7 +1392,30 @@ extension Instruction: ProtobufConvertible {
         }
 
         func convertParameters(_ parameters: Fuzzilli_Protobuf_Parameters) -> Parameters {
-            return Parameters(count: Int(parameters.count), hasRestParameter: parameters.hasRest_p)
+            if !parameters.patterns.isEmpty {
+                let patterns = parameters.patterns.map { convertParameterPattern($0) }
+                return Parameters(count: Int(parameters.count), patterns: patterns, hasRestParameter: parameters.hasRest_p)
+            } else {
+                return Parameters(count: Int(parameters.count), hasRestParameter: parameters.hasRest_p)
+            }
+        }
+        func convertParameterPattern(_ proto: Fuzzilli_Protobuf_Parameter) -> ParameterPattern {
+            switch proto.pattern {
+            case .identifierParameter:
+                return .identifier
+            case .objectParameter(let object):
+                let properties = object.parameters.map { property in
+                    return (property.parameterKey, convertParameterPattern(property.parameterValue))
+                }
+                return .object(properties: properties)
+            case .arrayParameter(let array):
+                let elements = array.elements.map { convertParameterPattern($0) }
+                return .array(elements: elements)
+            case .restParameter(let rest):
+                return .rest(convertParameterPattern(rest.argument))
+            default:
+                fatalError("Invalid parameter pattern")
+            }
         }
 
         // Converts to the Wasm world global type

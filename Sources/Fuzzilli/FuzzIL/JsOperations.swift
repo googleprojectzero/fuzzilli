@@ -1225,21 +1225,38 @@ final class TestIn: JsOperation {
 
 }
 
+public indirect enum ParameterPattern {
+    case identifier
+    case object(properties: [(String, ParameterPattern)])
+    case array(elements: [ParameterPattern])
+    case rest(ParameterPattern)
+}
+
 // The parameters of a FuzzIL subroutine.
 public struct Parameters {
-    /// The total number of parameters.
-    private let numParameters: UInt32
+    private let numVariables: UInt32
     /// Whether the last parameter is a rest parameter.
     let hasRestParameter: Bool
+    /// If necessary, the detailed structure of parameters.
+    public let patterns: [ParameterPattern]?
 
-    /// The total number of parameters. This is equivalent to the number of inner outputs produced from the parameters.
+    /// The total number of variables (i.e. inner outputs after destructuring parameters).
     var count: Int {
-        return Int(numParameters)
+        return Int(numVariables)
     }
 
+    /// Plain initializer
     init(count: Int, hasRestParameter: Bool = false) {
-        self.numParameters = UInt32(count)
+        self.numVariables = UInt32(count)
         self.hasRestParameter = hasRestParameter
+        self.patterns = nil
+    }
+
+    /// Full initializer that also specifies the detailed structure of the parameters.
+    public init(count: Int, patterns: [ParameterPattern], hasRestParameter: Bool = false) {
+        self.numVariables = UInt32(count)
+        self.hasRestParameter = hasRestParameter
+        self.patterns = patterns
     }
 }
 
