@@ -304,10 +304,11 @@ message Instruction {
         WasmBeginTypeGroup wasmBeginTypeGroup = 278;
         WasmEndTypeGroup wasmEndTypeGroup = 279;
         WasmDefineArrayType wasmDefineArrayType = 280;
-        WasmArrayNewFixed wasmArrayNewFixed = 281;
-        WasmArrayNewDefault wasmArrayNewDefault = 282;
-        WasmArrayLen wasmArrayLen = 283;
-        WasmArrayGet wasmArrayGet = 284;
+        WasmDefineForwardOrSelfReference wasmDefineForwardOrSelfReference = 281;
+        WasmArrayNewFixed wasmArrayNewFixed = 282;
+        WasmArrayNewDefault wasmArrayNewDefault = 283;
+        WasmArrayLen wasmArrayLen = 284;
+        WasmArrayGet wasmArrayGet = 285;
     }
 }
 

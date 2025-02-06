@@ -217,6 +217,12 @@ public struct ILType: Hashable {
             properties: [], methods: [], signature: nil, wasmExt: WasmTypeDefinition()))
     }
 
+    static func wasmSelfReference() -> ILType {
+        let type = wasmTypeDef()
+        type.wasmTypeDefinition!.description = .selfReference
+        return type
+    }
+
     // TODO(mliedtke): Add wasmRefNull() and extend the WasmReferenceType with a null bool.
     static func wasmRef(_ kind: WasmReferenceType.Kind, description: WasmTypeDescription? = nil) -> ILType {
         return ILType(definiteType: .wasmRef, ext: TypeExtension(
@@ -1481,6 +1487,7 @@ public func => (parameters: [Parameter], returnType: ILType) -> Signature {
 // TODO(mliedtke): We'll probbaly need some base class for array, struct and function definitions
 // like this, right now it seems a bit useless, however.
 class WasmTypeDescription: Hashable {
+    static let selfReference = WasmTypeDescription(typeGroupIndex: -1)
     public let typeGroupIndex: Int
 
     init(typeGroupIndex: Int) {
@@ -1497,7 +1504,7 @@ class WasmTypeDescription: Hashable {
 }
 
 class WasmArrayTypeDescription : WasmTypeDescription {
-    let elementType: ILType
+    var elementType: ILType
 
     init(elementType: ILType, typeGroupIndex: Int) {
         self.elementType = elementType

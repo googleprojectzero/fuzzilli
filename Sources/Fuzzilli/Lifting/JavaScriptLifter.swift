@@ -1628,6 +1628,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmBeginTypeGroup(_),
                  .wasmEndTypeGroup(_),
                  .wasmDefineArrayType(_),
+                 .wasmDefineForwardOrSelfReference(_),
                  .wasmArrayNewFixed(_),
                  .wasmArrayNewDefault(_),
                  .wasmArrayLen(_),

@@ -3568,6 +3568,11 @@ public class ProgramBuilder {
         return emit(WasmDefineArrayType(elementType: elementType), withInputs: inputs).output
     }
 
+    @discardableResult
+    func wasmDefineForwardOrSelfReference() -> Variable {
+        return emit(WasmDefineForwardOrSelfReference()).output
+    }
+
     /// Returns the next free variable.
     func nextVariable() -> Variable {
         assert(numVariables < Code.maxNumberOfVariables, "Too many variables")
