@@ -1105,6 +1105,45 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testUnusualFunctionLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // numVariables refers to the number of parameters after destructuring, i.e. the local variables in the function.
+        let numVariables = 5
+        let objPattern: ParameterPattern = .object(properties: [
+            ("a", .identifier),
+            ("b", .identifier)
+        ])
+        let arrPattern: ParameterPattern = .array(elements: [.identifier, .identifier])
+        let restElem: ParameterPattern = .rest(.identifier)
+        let params = Parameters(count: numVariables, patterns: [objPattern, arrPattern, restElem], hasRestParameter: false)
+
+
+        let f = b.buildUnusualFunction(with: params) { args in
+            b.doReturn(b.createArray(with: [args[0], args[1], args[2], args[3], args[4]]))
+        }
+
+        let objArg: Variable = b.createObject(with: ["a" : b.loadInt(1337), "b" : b.loadInt(42)])
+        let arrArg: Variable = b.createArray(with: [b.loadInt(9000), b.loadInt(9001)])
+        let arrArg2: Variable = b.createArray(with: [b.loadInt(8000), b.loadInt(8001)])
+
+        b.callFunction(f, withArgs: [objArg, arrArg, arrArg2])
+
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        function f0({ a: a1, b: a2 }, [a3, a4], ...a5) {
+            return [a1,a2,a3,a4,a5];
+        }
+        f0({ a: 1337, b: 42 }, [9000,9001], [8000,8001]);
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
     func testConditionalOperationLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
