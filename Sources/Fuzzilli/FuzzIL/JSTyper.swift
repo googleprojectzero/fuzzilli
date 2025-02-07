@@ -302,8 +302,7 @@ public struct JSTyper: Analyzer {
 
     /// Recursively infers an ILType for a parameter in the outer view.
     /// For identifiers the type is `.anything`, for arrays we require an iterable,
-    /// and for objects we produce an object type whose properties are determined by
-    /// recursively processing the parameter pattern.
+    /// and for objects we produce an object type with the property names.
     private func inferOuterParameterType(from pattern: ParameterPattern) -> ILType {
         switch pattern {
         case .identifier:
