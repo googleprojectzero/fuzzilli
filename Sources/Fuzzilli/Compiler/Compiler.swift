@@ -473,7 +473,10 @@ public class JavaScriptCompiler {
                 try enterNewScope {
                     let beginCatch = emit(BeginCatch())
                     if tryStatement.catch.hasParameter {
-                        map(tryStatement.catch.parameter.name, to: beginCatch.innerOutput)
+                        guard case let .identifierParameter(identifier) = tryStatement.catch.parameter.pattern else {
+                            throw CompilerError.unsupportedFeatureError("Only identifier parameters are supported in catch blocks")
+                        }
+                        map(identifier.name, to: beginCatch.innerOutput)
                     }
                     for statement in tryStatement.catch.body {
                         try compileStatement(statement)
@@ -1186,14 +1189,113 @@ public class JavaScriptCompiler {
     }
 
     private func mapParameters(_ parameters: [Compiler_Protobuf_Parameter], to variables: ArraySlice<Variable>) {
-        assert(parameters.count == variables.count)
-        for (param, v) in zip(parameters, variables) {
-            map(param.name, to: v)
+        // This function maps all identifiers in the function's signature to variables.
+        // These variables are the ones that will be used in the function's body.
+        // Example: Consider f([a, b]). This function has 1 parameter but 2 identifiers. We map a and b, not the parameter.  
+        var flatParameterIdentifiers: [String] = []
+        func extractIdentifiers(from param: Compiler_Protobuf_Parameter) {
+            switch param.pattern {
+            case .identifierParameter(let identifier):
+                flatParameterIdentifiers.append(identifier.name)
+            case .objectParameter(let object):
+                for property in object.parameters {
+                    extractIdentifiers(from: property.parameterValue)
+                }
+            case .arrayParameter(let array):
+                for element in array.elements {
+                    extractIdentifiers(from: element)
+                }
+            case .restParameter(let rest):
+                extractIdentifiers(from: rest.argument)
+            case .none:
+                fatalError("Unexpected parameter type: .none in mapParameters")
+            }
+        }
+        for param in parameters {
+            extractIdentifiers(from: param)
+        }
+        assert(flatParameterIdentifiers.count == variables.count, "The number of variables (\(variables.count)) does not match the number of parameters (\(flatParameterIdentifiers.count)).")
+        for (name, v) in zip(flatParameterIdentifiers, variables) {
+            map(name, to: v)
         }
     }
 
     private func convertParameters(_ parameters: [Compiler_Protobuf_Parameter]) -> Parameters {
-        return Parameters(count: parameters.count)
+        // This function creates a Parameters instance from the parameters of a function.
+        // 'Parameters' is mainly used for lifting and type inference.
+        // Only if the function has a complex parameter pattern, we store the patterns of the parameters. 
+        var totalParameterCount = 0
+        var patterns = [ParameterPattern]()
+
+        func processParameter(_ param: Compiler_Protobuf_Parameter) -> ParameterPattern {
+            switch param.pattern {
+            case .identifierParameter:
+                totalParameterCount += 1
+                return .identifier
+            case .objectParameter(let object):
+                var properties = [(String, ParameterPattern)]()
+                for property in object.parameters {
+                    let key = property.parameterKey
+                    let valuePattern = processParameter(property.parameterValue)
+                    properties.append((key, valuePattern))
+                }
+                return .object(properties: properties)
+            case .arrayParameter(let array):
+                var elements = [ParameterPattern]()
+                for element in array.elements {
+                    let elementPattern = processParameter(element)
+                    elements.append(elementPattern)
+                }
+                return .array(elements: elements)
+            case .restParameter(let rest):
+                return .rest(processParameter(rest.argument))
+            default:
+                fatalError("Unexpected parameter type in convertParameters")
+            }
+        }
+
+        for param in parameters {
+            let pattern = processParameter(param)
+            patterns.append(pattern)
+        }
+
+        // Ensure that only the last parameter is a rest parameter.
+        for (index, pattern) in patterns.enumerated() {
+            if case .rest(_) = pattern, index != patterns.count - 1 {
+                fatalError("Only the last parameter can be a rest parameter")
+            }
+        }
+
+        var hasRestParameter = false
+        if patterns.count > 0 {
+            let lastPattern = patterns[patterns.count - 1]
+            switch lastPattern {
+            case .rest(_):
+                hasRestParameter = true
+            default:
+                hasRestParameter = false
+            }
+        }
+
+        // Determine if any parameter is complex (i.e. not a plain identifier)
+        var hasComplexPattern = false
+        for pattern in patterns {
+            switch pattern {
+            case .identifier:
+                continue
+            case .rest:
+                continue
+            default:
+                hasComplexPattern = true
+                break
+            }
+        }
+        // Save memory by only storing the patterns if there is at least one complex pattern.
+        if hasComplexPattern {
+            return Parameters(count: totalParameterCount, patterns: patterns, hasRestParameter: hasRestParameter)
+        } else {
+            return Parameters(count: totalParameterCount, hasRestParameter: hasRestParameter)
+        }
     }
 
     /// Convenience accessor for the currently active scope.

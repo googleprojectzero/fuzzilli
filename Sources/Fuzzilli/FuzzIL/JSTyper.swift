@@ -258,8 +258,96 @@ public struct JSTyper: Analyzer {
 
     /// Attempts to infer the parameter types of the given subroutine definition.
     /// If parameter types have been added for this function, they are returned, otherwise generic parameter types (i.e. .anything parameters) for the parameters specified in the operation are generated.
-    private func inferSubroutineParameterList(of op: BeginAnySubroutine, at index: Int) -> ParameterList {
-        return signatures[index] ?? ParameterList(numParameters: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
+    /// 
+    /// The inference mode is controlled by the `outerView` flag:
+    /// - When `outerView` is true (the default), one parameter is produced per top-level
+    ///   pattern. This view is used for creating the function signature so that callees know
+    ///   what parameters can be used to call the function.
+    /// - The 'innerView' refers to the local variables in the function that are created from destructuring patterns.
+    ///   This view is used for updating the types of the local variables in the function.
+    private func inferSubroutineParameterList(of op: BeginAnySubroutine, at index: Int, outerView: Bool) -> ParameterList {
+        // If we already have a stored signature, return it.
+        if let signature = signatures[index] {
+            return signature
+        }
+        
+        // If no detailed patterns are provided, use a plain conversion.
+        guard let patterns = op.parameters.patterns else {
+            return ParameterList(numParameters: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
+        }
+        
+        var parameterList = ParameterList()
+        
+        // Process each top-level parameter pattern.
+        for (i, pattern) in patterns.enumerated() {
+            // Determine whether the current parameter should be considered a rest parameter.
+            let isRest = op.parameters.hasRestParameter && i == patterns.count - 1
+            
+            if outerView {
+                // Outer view: produce one parameter per top-level pattern.
+                // If the parameter is destructured, its type reflects its composite structure.
+                let type = inferOuterParameterType(from: pattern)
+                let parameter: Parameter = isRest ? .rest(type) : .plain(type)
+                parameterList.append(parameter)
+            } else {
+                // Inner view: recursively flatten the pattern into its individual bindings.
+                // Each binding becomes its own Parameter.
+                let parameters = inferInnerParameters(from: pattern, isRest: isRest)
+                parameterList.append(contentsOf: parameters)
+            }
+        }
+        
+        return parameterList
+    }
+
+    /// Recursively infers an ILType for a parameter in the outer view.
+    /// For identifiers the type is `.anything`, for arrays we require an iterable,
+    /// and for objects we produce an object type with the property names.
+    private func inferOuterParameterType(from pattern: ParameterPattern) -> ILType {
+        switch pattern {
+        case .identifier:
+            return .anything
+            
+        case .array:
+            return .iterable
+            
+        case .object(let properties):
+            // For an object pattern, we recursively collect the property names.
+            var propertyNames = [String]()
+            for (key, _) in properties {
+                propertyNames.append(key)
+            }
+            return .object(withProperties: propertyNames)
+            
+        case .rest:
+            return .iterable
+        }
+    }
+
+    private func inferInnerParameters(from pattern: ParameterPattern, isRest: Bool = false) -> [Parameter] {
+        switch pattern {
+        case .identifier:
+            let param: Parameter = isRest ? .rest(.anything) : .plain(.anything)
+            return [param]
+            
+        case .array(let elements):
+            var params = [Parameter]()
+            for (i, element) in elements.enumerated() {
+                let elementIsRest = isRest && (i == elements.count - 1)
+                params.append(contentsOf: inferInnerParameters(from: element, isRest: elementIsRest))
+            }
+            return params
+            
+        case .object(let properties):
+            var params = [Parameter]()
+            for (_, subpattern) in properties {
+                params.append(contentsOf: inferInnerParameters(from: subpattern))
+            }
+            return params
+            
+        case .rest(let inner):
+            return [.rest(inferOuterParameterType(from: inner))]
+        }
     }
 
     // Set type to current state and save type change event
@@ -285,15 +373,15 @@ public struct JSTyper: Analyzer {
         case .beginPlainFunction(let op):
             // Plain functions can also be used as constructors.
             // The return value type will only be known after fully processing the function definitions.
-            set(instr.output, .functionAndConstructor(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
+            set(instr.output, .functionAndConstructor(inferSubroutineParameterList(of: op, at: instr.index, outerView: true) => .anything))
         case .beginArrowFunction(let op as BeginAnyFunction),
              .beginGeneratorFunction(let op as BeginAnyFunction),
              .beginAsyncFunction(let op as BeginAnyFunction),
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
              .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
-            set(instr.output, .function(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
+            set(instr.output, .function(inferSubroutineParameterList(of: op, at: instr.index, outerView: true) => .anything))
         case .beginConstructor(let op):
-            set(instr.output, .constructor(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
+            set(instr.output, .constructor(inferSubroutineParameterList(of: op, at: instr.index, outerView: true) => .anything))
         case .beginCodeString:
             set(instr.output, .string)
         case .beginClassDefinition(let op):
@@ -632,13 +720,13 @@ public struct JSTyper: Analyzer {
         case .beginObjectLiteralMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeObjectLiterals.top)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
             activeObjectLiterals.top.add(method: op.methodName)
 
         case .beginObjectLiteralComputedMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeObjectLiterals.top)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
 
         case .beginObjectLiteralGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
@@ -650,7 +738,7 @@ public struct JSTyper: Analyzer {
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeObjectLiterals.top)
             assert(instr.numInnerOutputs == 2)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
             activeObjectLiterals.top.add(property: op.propertyName)
 
         case .endObjectLiteral:
@@ -660,7 +748,7 @@ public struct JSTyper: Analyzer {
         case .beginClassConstructor(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
-            let parameters = inferSubroutineParameterList(of: op, at: instr.index)
+            let parameters = inferSubroutineParameterList(of: op, at: instr.index, outerView: false)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: parameters)
             activeClassDefinitions.top.constructorParameters = parameters
 
@@ -670,7 +758,7 @@ public struct JSTyper: Analyzer {
         case .beginClassInstanceMethod(let op):
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
             activeClassDefinitions.top.instanceType.add(method: op.methodName)
 
         case .beginClassInstanceGetter(let op):
@@ -683,7 +771,7 @@ public struct JSTyper: Analyzer {
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
             assert(instr.numInnerOutputs == 2)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
             activeClassDefinitions.top.instanceType.add(property: op.propertyName)
 
         case .classAddStaticProperty(let op):
@@ -697,7 +785,7 @@ public struct JSTyper: Analyzer {
         case .beginClassStaticMethod(let op):
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), activeClassDefinitions.top.classType)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
             activeClassDefinitions.top.classType.add(method: op.methodName)
 
         case .beginClassStaticGetter(let op):
@@ -710,18 +798,18 @@ public struct JSTyper: Analyzer {
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeClassDefinitions.top.classType)
             assert(instr.numInnerOutputs == 2)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
             activeClassDefinitions.top.classType.add(property: op.propertyName)
 
         case .beginClassPrivateInstanceMethod(let op):
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
 
         case .beginClassPrivateStaticMethod(let op):
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), activeClassDefinitions.top.classType)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
 
         case .createArray,
              .createIntArray,
@@ -884,12 +972,12 @@ public struct JSTyper: Analyzer {
              .beginAsyncFunction(let op as BeginAnyFunction),
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
              .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
-            processParameterDeclarations(instr.innerOutputs, parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs, parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
 
         case .beginConstructor(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), .object())
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index, outerView: false))
 
         case .callSuperMethod(let op):
             let sig = chooseUniform(from: inferMethodSignatures(of: op.methodName, on: currentSuperType()))

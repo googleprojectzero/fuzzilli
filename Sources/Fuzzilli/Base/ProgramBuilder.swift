@@ -2346,6 +2346,10 @@ public class ProgramBuilder {
             let parameters = Parameters(count: parameterTypes.count, hasRestParameter: parameterTypes.hasRestParameter)
             return SubroutineDescriptor(withParameters: parameters, ofTypes: parameterTypes)
         }
+        
+        public static func parameters(_ parameters: Parameters) -> SubroutineDescriptor {
+            return SubroutineDescriptor(withParameters: parameters)
+        }
 
         private init(withParameters parameters: Parameters, ofTypes parameterTypes: ParameterList? = nil) {
             if let types = parameterTypes {
@@ -2365,6 +2369,17 @@ public class ProgramBuilder {
     public func buildPlainFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil,_ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginPlainFunction(parameters: descriptor.parameters, functionName: functionName))
+        if enableRecursionGuard { hide(instr.output) }
+        body(Array(instr.innerOutputs))
+        if enableRecursionGuard { unhide(instr.output) }
+        emit(EndPlainFunction())
+        return instr.output
+    }
+
+    @discardableResult
+    public func buildUnusualFunction(with parameters: Parameters, named functionName: String? = nil, _ body: ([Variable]) -> ()) -> Variable {
+        // Emit the BeginPlainFunction with the provided Parameters (which carry the detailed patterns).
+        let instr = emit(BeginPlainFunction(parameters: parameters, functionName: functionName))
         if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
         if enableRecursionGuard { unhide(instr.output) }
