@@ -294,12 +294,12 @@ function parse(script, proto) {
                 return makeStatement('ForInLoop', forInLoop);
             }
             case 'ForOfStatement': {
-                assert(node.left.type === 'VariableDeclaration', "Expected variable declaration as init part of a for-in loop, found " + node.left.type);
-                assert(node.left.declarations.length === 1, "Expected exactly one variable declaration in the init part of a for-in loop");
+                assert(node.left.type === 'VariableDeclaration', "Expected variable declaration as init part of a for-of loop, found " + node.left.type);
+                assert(node.left.declarations.length === 1, "Expected exactly one variable declaration in the init part of a for-of loop");
                 let decl = node.left.declarations[0];
                 let forOfLoop = {};
                 let initDecl = { name: decl.id.name };
-                assert(decl.init == null, "Expected no initial value for the variable declared as part of a for-in loop")
+                assert(decl.init == null, "Expected no initial value for the variable declared as part of a for-of loop")
                 forOfLoop.left = make('VariableDeclarator', initDecl);
                 forOfLoop.right = visitExpression(node.right);
                 forOfLoop.body = visitStatement(node.body);
