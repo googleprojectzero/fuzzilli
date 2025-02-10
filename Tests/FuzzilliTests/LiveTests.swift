@@ -39,6 +39,15 @@ class LiveTests: XCTestCase {
         let runner =  try GetJavaScriptExecutorOrSkipTest()
 
         let results = try Self.runLiveTest(withRunner: runner) { b in
+            // Fuzzilli can't handle situations where there aren't any variables available.
+            // Calling buildPrefix() however would significantly increase the error rate due to
+            // the prefix itself failing. Instead we just create a dummy integer to bypass these
+            // checks for having a prefix.
+            b.loadInt(123)
+            // Make sure we have some wasm-gc types that can be used by the wasm module.
+            b.wasmDefineTypeGroup {
+                b.build(n: 5)
+            }
             // Make sure that we have at least one JavaScript function that we can call.
             b.buildPlainFunction(with: .parameters(n: 1)) { args in
                 b.doReturn(b.binary(args[0], b.loadInt(1), with: .Add))
@@ -66,6 +75,15 @@ class LiveTests: XCTestCase {
         let runner =  try GetJavaScriptExecutorOrSkipTest()
 
         let results = try Self.runLiveTest(withRunner: runner) { b in
+            // Fuzzilli can't handle situations where there aren't any variables available.
+            // Calling buildPrefix() however would significantly increase the error rate due to
+            // the prefix itself failing. Instead we just create a dummy integer to bypass these
+            // checks for having a prefix.
+            b.loadInt(123)
+            // Make sure we have some wasm-gc types that can be used by the wasm module.
+            b.wasmDefineTypeGroup {
+                b.build(n: 5)
+            }
             // Make sure that we have at least one JavaScript function that we can call.
             b.buildPlainFunction(with: .parameters(n: 1)) { args in
                 b.doReturn(args[0])

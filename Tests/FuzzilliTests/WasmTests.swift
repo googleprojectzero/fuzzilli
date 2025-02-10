@@ -1722,14 +1722,8 @@ class WasmGCTests: XCTestCase {
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
 
         let prog = b.finalize()
-        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "43\n")
-
-        // TODO(mliedtke): Remove once we have proper serialization tests.
-        let proto = prog.asProtobuf()
-        let copy = try! Program(from: proto)
-        let jsProgFromProto = fuzzer.lifter.lift(copy, withOptions: [.includeComments])
-        testForOutput(program: jsProgFromProto, runner: runner, outputString: "43\n")
     }
 
     func testArrayNewDefault() throws {

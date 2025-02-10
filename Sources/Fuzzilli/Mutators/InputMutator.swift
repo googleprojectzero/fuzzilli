@@ -68,7 +68,7 @@ public class InputMutator: BaseInstructionMutator {
         } else {
             switch self.typeAwareness {
             case .loose:
-                replacement = b.randomVariable()
+                replacement = b.randomJsVariable()
             case .aware:
                 let type = b.type(of: inouts[selectedInput])
                 replacement = b.randomVariable(forUseAs: type)

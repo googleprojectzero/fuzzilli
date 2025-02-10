@@ -20,7 +20,7 @@ struct VariadicInputReducer: Reducer {
             let index = instr.index
 
             var instr = instr
-            repeat {
+            loop: repeat {
                 assert(instr.isVariadic)
                 // Remove the last variadic input (if it exists)
                 guard instr.numInputs > instr.firstVariadicInput else { break }
@@ -71,6 +71,11 @@ struct VariadicInputReducer: Reducer {
                     newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
                 case .createTemplateString(let op):
                     newOp = CreateTemplateString(parts: op.parts.dropLast())
+                case .wasmEndTypeGroup(_):
+                    // TODO(mliedtke): We should support reduction of type groups. Ideally,
+                    // starting with the `EndTypeGroup` we should remove all types that are unused
+                    // (and relabel) the used ones.
+                    break loop
                 default:
                     fatalError("Unknown variadic operation \(instr.op)")
                 }

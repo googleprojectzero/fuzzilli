@@ -78,7 +78,7 @@ public let CodeGenerators: [CodeGenerator] = [
             b.createArray(with: [])
         } else {
             for _ in 0..<n {
-                let initialValues = (0..<Int.random(in: 1...5)).map({ _ in b.randomVariable() })
+                let initialValues = (0..<Int.random(in: 1...5)).map({ _ in b.randomJsVariable() })
                 b.createArray(with: initialValues)
             }
         }
@@ -177,7 +177,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
             // Add a few random properties to the |this| object.
             for property in properties {
-                let value = b.hasVisibleVariables ? b.randomVariable() : b.loadInt(b.randomInt())
+                let value = b.hasVisibleVariables ? b.randomJsVariable() : b.loadInt(b.randomInt())
                 b.setProperty(property, of: this, to: value)
             }
         }
@@ -225,7 +225,7 @@ public let CodeGenerators: [CodeGenerator] = [
     ValueGenerator("TrivialFunctionGenerator") { b, n in
         // Generating more than one function has a fairly high probability of generating
         // essentially identical functions, so we just generate one.
-        let maybeReturnValue = b.hasVisibleVariables ? b.randomVariable() : nil
+        let maybeReturnValue = b.hasVisibleVariables ? b.randomJsVariable() : nil
         b.buildPlainFunction(with: .parameters(n: 0)) { _ in
             if let returnValue = maybeReturnValue {
                 b.doReturn(returnValue)
@@ -271,7 +271,7 @@ public let CodeGenerators: [CodeGenerator] = [
             b.doReturn(arguments)
         }
 
-        let args = b.randomVariables(n: Int.random(in: 0...5))
+        let args = b.randomJsVariables(n: Int.random(in: 0...5))
         b.callFunction(f, withArgs: args)
     },
 
@@ -281,7 +281,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let disposableVariable = b.buildObjectLiteral { obj in
             obj.addProperty("value", as: val)
             obj.addComputedMethod(dispose, with: .parameters(n:0)) { args in
-                b.doReturn(b.randomVariable())
+                b.doReturn(b.randomJsVariable())
             }
         }
         b.loadDisposableVariable(disposableVariable)
@@ -293,7 +293,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let asyncDisposableVariable = b.buildObjectLiteral { obj in
             obj.addProperty("value", as: val)
             obj.addComputedMethod(asyncDispose, with: .parameters(n:0)) { args in
-                b.doReturn(b.randomVariable())
+                b.doReturn(b.randomJsVariable())
             }
         }
         b.loadAsyncDisposableVariable(asyncDisposableVariable)
@@ -317,7 +317,7 @@ public let CodeGenerators: [CodeGenerator] = [
             attempts += 1
         } while b.currentObjectLiteral.properties.contains(propertyName)
 
-        b.currentObjectLiteral.addProperty(propertyName, as: b.randomVariable())
+        b.currentObjectLiteral.addProperty(propertyName, as: b.randomJsVariable())
     },
 
     CodeGenerator("ObjectLiteralElementGenerator", inContext: .objectLiteral, inputs: .one) { b, value in
@@ -341,7 +341,7 @@ public let CodeGenerators: [CodeGenerator] = [
         var attempts = 0
         repeat {
             guard attempts < 10 else { return }
-            propertyName = b.randomVariable()
+            propertyName = b.randomJsVariable()
             attempts += 1
         } while b.currentObjectLiteral.computedProperties.contains(propertyName)
 
@@ -377,7 +377,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         b.currentObjectLiteral.addMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
     },
 
@@ -389,13 +389,13 @@ public let CodeGenerators: [CodeGenerator] = [
         var attempts = 0
         repeat {
             guard attempts < 10 else { return }
-            methodName = b.randomVariable()
+            methodName = b.randomJsVariable()
             attempts += 1
         } while b.currentObjectLiteral.computedMethods.contains(methodName)
 
         b.currentObjectLiteral.addComputedMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
     },
 
@@ -413,7 +413,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         b.currentObjectLiteral.addGetter(for: propertyName) { this in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
     },
 
@@ -468,7 +468,7 @@ public let CodeGenerators: [CodeGenerator] = [
             attempts += 1
         } while b.currentClassDefinition.instanceProperties.contains(propertyName)
 
-        var value: Variable? = probability(0.5) ? b.randomVariable() : nil
+        var value: Variable? = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addInstanceProperty(propertyName, value: value)
     },
 
@@ -482,7 +482,7 @@ public let CodeGenerators: [CodeGenerator] = [
             index &+= 1
         }
 
-        let value = probability(0.5) ? b.randomVariable() : nil
+        let value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addInstanceElement(index, value: value)
     },
 
@@ -494,11 +494,11 @@ public let CodeGenerators: [CodeGenerator] = [
         var attempts = 0
         repeat {
             guard attempts < 10 else { return }
-            propertyName = b.randomVariable()
+            propertyName = b.randomJsVariable()
             attempts += 1
         } while b.currentClassDefinition.instanceComputedProperties.contains(propertyName)
 
-        let value = probability(0.5) ? b.randomVariable() : nil
+        let value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addInstanceComputedProperty(propertyName, value: value)
     },
 
@@ -516,7 +516,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         b.currentClassDefinition.addInstanceMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
     },
 
@@ -534,7 +534,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         b.currentClassDefinition.addInstanceGetter(for: propertyName) { this in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
     },
 
@@ -567,7 +567,7 @@ public let CodeGenerators: [CodeGenerator] = [
             attempts += 1
         } while b.currentClassDefinition.staticProperties.contains(propertyName)
 
-        var value: Variable? = probability(0.5) ? b.randomVariable() : nil
+        var value: Variable? = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addStaticProperty(propertyName, value: value)
     },
 
@@ -581,7 +581,7 @@ public let CodeGenerators: [CodeGenerator] = [
             index &+= 1
         }
 
-        let value = probability(0.5) ? b.randomVariable() : nil
+        let value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addStaticElement(index, value: value)
     },
 
@@ -593,11 +593,11 @@ public let CodeGenerators: [CodeGenerator] = [
         var attempts = 0
         repeat {
             guard attempts < 10 else { return }
-            propertyName = b.randomVariable()
+            propertyName = b.randomJsVariable()
             attempts += 1
         } while b.currentClassDefinition.staticComputedProperties.contains(propertyName)
 
-        let value = probability(0.5) ? b.randomVariable() : nil
+        let value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addStaticComputedProperty(propertyName, value: value)
     },
 
@@ -623,7 +623,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         b.currentClassDefinition.addStaticMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
     },
 
@@ -641,7 +641,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         b.currentClassDefinition.addStaticGetter(for: propertyName) { this in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
     },
 
@@ -674,7 +674,7 @@ public let CodeGenerators: [CodeGenerator] = [
             attempts += 1
         } while b.currentClassDefinition.privateFields.contains(propertyName)
 
-        var value = probability(0.5) ? b.randomVariable() : nil
+        var value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addPrivateInstanceProperty(propertyName, value: value)
     },
 
@@ -692,7 +692,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         b.currentClassDefinition.addPrivateInstanceMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
     },
 
@@ -708,7 +708,7 @@ public let CodeGenerators: [CodeGenerator] = [
             attempts += 1
         } while b.currentClassDefinition.privateFields.contains(propertyName)
 
-        var value = probability(0.5) ? b.randomVariable() : nil
+        var value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addPrivateStaticProperty(propertyName, value: value)
     },
 
@@ -726,14 +726,14 @@ public let CodeGenerators: [CodeGenerator] = [
 
         b.currentClassDefinition.addPrivateStaticMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
     },
 
     CodeGenerator("ArrayWithSpreadGenerator") { b in
         var initialValues = [Variable]()
         for _ in 0..<Int.random(in: 0...5) {
-            initialValues.append(b.randomVariable())
+            initialValues.append(b.randomJsVariable())
         }
 
         // Pick some random inputs to spread.
@@ -747,7 +747,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("TemplateStringGenerator") { b in
         var interpolatedValues = [Variable]()
         for _ in 1..<Int.random(in: 1...5) {
-            interpolatedValues.append(b.randomVariable())
+            interpolatedValues.append(b.randomJsVariable())
         }
 
         var parts = [String]()
@@ -781,7 +781,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let name = b.randomCustomPropertyName()
         let declarationMode = chooseUniform(from: NamedVariableDeclarationMode.allCases)
         if declarationMode != .none {
-            b.createNamedVariable(name, declarationMode: declarationMode, initialValue: b.randomVariable())
+            b.createNamedVariable(name, declarationMode: declarationMode, initialValue: b.randomJsVariable())
         } else {
             b.createNamedVariable(name, declarationMode: declarationMode)
         }
@@ -795,7 +795,7 @@ public let CodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("PlainFunctionGenerator") { b in
         let f = b.buildPlainFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
         b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
     },
@@ -806,7 +806,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let f = b.buildPlainFunction(with: b.randomParameters()) { _ in
             b.directive("use strict")
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
         b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
     },
@@ -814,7 +814,7 @@ public let CodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("ArrowFunctionGenerator") { b in
         b.buildArrowFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
         // These are "typically" used as arguments, so we don't directly generate a call operation here.
     },
@@ -823,13 +823,13 @@ public let CodeGenerators: [CodeGenerator] = [
         let f = b.buildGeneratorFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
             if probability(0.5) {
-                b.yield(b.randomVariable())
+                b.yield(b.randomJsVariable())
             } else {
-                let randomVariables = b.randomVariables(n: Int.random(in: 1...5))
+                let randomVariables = b.randomJsVariables(n: Int.random(in: 1...5))
                 let array = b.createArray(with: randomVariables)
                 b.yieldEach(array)
             }
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
         b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
     },
@@ -837,8 +837,8 @@ public let CodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("AsyncFunctionGenerator") { b in
         let f = b.buildAsyncFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
-            b.await(b.randomVariable())
-            b.doReturn(b.randomVariable())
+            b.await(b.randomJsVariable())
+            b.doReturn(b.randomJsVariable())
         }
         b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
     },
@@ -846,8 +846,8 @@ public let CodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("AsyncArrowFunctionGenerator") { b in
         b.buildAsyncArrowFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
-            b.await(b.randomVariable())
-            b.doReturn(b.randomVariable())
+            b.await(b.randomJsVariable())
+            b.doReturn(b.randomJsVariable())
         }
         // These are "typically" used as arguments, so we don't directly generate a call operation here.
     },
@@ -855,15 +855,15 @@ public let CodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("AsyncGeneratorFunctionGenerator") { b in
         let f = b.buildAsyncGeneratorFunction(with: b.randomParameters()) { _ in
             b.buildRecursive()
-            b.await(b.randomVariable())
+            b.await(b.randomJsVariable())
             if probability(0.5) {
-                b.yield(b.randomVariable())
+                b.yield(b.randomJsVariable())
             } else {
-                let randomVariables = b.randomVariables(n: Int.random(in: 1...5))
+                let randomVariables = b.randomJsVariables(n: Int.random(in: 1...5))
                 let array = b.createArray(with: randomVariables)
                 b.yieldEach(array)
             }
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
         b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
     },
@@ -919,7 +919,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // Getter/Setters must be functions or else a runtime exception will be raised.
         withEqualProbability({
-            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomVariable()))
+            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomJsVariable()))
         }, {
             guard let getterFunc = b.randomVariable(ofType: .function()) else { return }
             b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .getter(getterFunc))
@@ -941,7 +941,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ElementAssignmentGenerator", inputs: .preferred(.object())) { b, obj in
         let index = b.randomIndex()
-        let value = b.randomVariable()
+        let value = b.randomJsVariable()
         b.setElement(index, of: obj, to: value)
     },
 
@@ -961,7 +961,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ElementConfigurationGenerator", inputs: .preferred(.object())) { b, obj in
         let index = b.randomIndex()
         withEqualProbability({
-            b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomVariable()))
+            b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomJsVariable()))
         }, {
             guard let getterFunc = b.randomVariable(ofType: .function()) else { return }
             b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .getter(getterFunc))
@@ -976,34 +976,34 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ComputedPropertyRetrievalGenerator", inputs: .preferred(.object())) { b, obj in
-        let propertyName = b.randomVariable()
+        let propertyName = b.randomJsVariable()
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.getComputedProperty(propertyName, of: obj, guard: needGuard)
     },
 
     CodeGenerator("ComputedPropertyAssignmentGenerator", inputs: .preferred(.object())) { b, obj in
-        let propertyName = b.randomVariable()
-        let value = b.randomVariable()
+        let propertyName = b.randomJsVariable()
+        let value = b.randomJsVariable()
         b.setComputedProperty(propertyName, of: obj, to: value)
     },
 
     CodeGenerator("ComputedPropertyUpdateGenerator", inputs: .preferred(.object())) { b, obj in
-        let propertyName = b.randomVariable()
+        let propertyName = b.randomJsVariable()
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
         let rhs = b.randomVariable(forUseAs: .number)
         b.updateComputedProperty(propertyName, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
     CodeGenerator("ComputedPropertyRemovalGenerator", inputs: .preferred(.object())) { b, obj in
-        let propertyName = b.randomVariable()
+        let propertyName = b.randomJsVariable()
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.deleteComputedProperty(propertyName, of: obj, guard: needGuard)
     },
 
     CodeGenerator("ComputedPropertyConfigurationGenerator", inputs: .preferred(.object())) { b, obj in
-        let propertyName = b.randomVariable()
+        let propertyName = b.randomJsVariable()
         withEqualProbability({
-            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomVariable()))
+            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomJsVariable()))
         }, {
             guard let getterFunc = b.randomVariable(ofType: .function()) else { return }
             b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .getter(getterFunc))
@@ -1033,7 +1033,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("InGenerator", inputs: .preferred(.object())) { b, obj in
-        let prop = b.randomVariable()
+        let prop = b.randomJsVariable()
         b.testIn(prop, obj)
     },
 
@@ -1171,7 +1171,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("DupGenerator") { b in
-        b.dup(b.randomVariable())
+        b.dup(b.randomJsVariable())
     },
 
     CodeGenerator("ReassignmentGenerator", inputs: .one) { b, v in
@@ -1200,7 +1200,7 @@ public let CodeGenerators: [CodeGenerator] = [
         for idx in 0..<Int64.random(in: 0..<5) {
             withProbability(0.7) {
                 indices.append(idx)
-                candidates.append(b.randomVariable())
+                candidates.append(b.randomJsVariable())
             }
         }
         b.destruct(arr, selecting: indices, into: candidates, lastIsRest: probability(0.33))
@@ -1230,12 +1230,12 @@ public let CodeGenerators: [CodeGenerator] = [
         }
 
         var candidates = properties.map{ _ in
-            b.randomVariable()
+            b.randomJsVariable()
         }
 
         let hasRestElement = probability(0.33)
         if hasRestElement {
-            candidates.append(b.randomVariable())
+            candidates.append(b.randomJsVariable())
         }
 
         b.destruct(obj, selecting: properties.sorted(), into: candidates, hasRestElement: hasRestElement)
@@ -1318,19 +1318,19 @@ public let CodeGenerators: [CodeGenerator] = [
         }
 
         // TODO: we could try to determine if the type of this property is known and then try to find a compatible variable.
-        b.setSuperProperty(propertyName, to: b.randomVariable())
+        b.setSuperProperty(propertyName, to: b.randomJsVariable())
     },
 
     CodeGenerator("ComputedSuperPropertyRetrievalGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
-        let property = b.randomVariable()
+        let property = b.randomJsVariable()
         b.getComputedSuperProperty(property)
     },
 
     CodeGenerator("ComputedSuperPropertyAssignmentGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
-        let property = b.randomVariable()
-        b.setComputedSuperProperty(property, to: b.randomVariable())
+        let property = b.randomJsVariable()
+        b.setComputedSuperProperty(property, to: b.randomJsVariable())
     },
 
     CodeGenerator("SuperPropertyUpdateGenerator", inContext: .method) { b in
@@ -1494,7 +1494,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ThrowGenerator") { b in
-        let v = b.randomVariable()
+        let v = b.randomJsVariable()
         b.throwException(v)
     },
 
@@ -1516,7 +1516,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.hide(Symbol)
         let name = chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols)
         let propertyName = b.getProperty(name, of: Symbol)
-        let val = b.randomVariable()
+        let val = b.randomJsVariable()
         b.setComputedProperty(propertyName, of: obj, to: val)
     },
 
@@ -1551,7 +1551,7 @@ public let CodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("WeirdClassGenerator") { b in
         // See basically https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields#examples
         let base = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
         b.buildClassDefinition(withSuperclass: base) { cls in
             b.buildRecursive()
@@ -1599,7 +1599,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     // Tries to change the element kind of an array
     CodeGenerator("ElementKindChangeGenerator", inputs: .one) { b, obj in
-        let value = b.randomVariable()
+        let value = b.randomJsVariable()
         b.setElement(Int64.random(in: 0..<10), of: obj, to: value)
     },
 
@@ -1636,7 +1636,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let Math = b.createNamedVariable(forBuiltin: "Math")
         b.hide(Math)        // Following code generators should use the numbers generated below, not the Math object.
 
-        var values = b.randomVariables(upTo: Int.random(in: 1...3))
+        var values = b.randomJsVariables(upTo: Int.random(in: 1...3))
         for _ in 0..<Int.random(in: 1...2) {
             values.append(b.loadInt(b.randomInt()))
         }

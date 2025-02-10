@@ -378,7 +378,7 @@ public class WasmLifter {
         self.bytecode += [0x1, 0x0, 0x0, 0x0]
     }
 
-    private func encodeType(_ type: ILType) -> Data {
+    private func encodeType(_ type: ILType, defaultType: ILType? = nil) -> Data {
         if type.Is(.wasmGenericRef) {
             let isNullable = true // TODO(mliedtke): Allow non-nullable reference types.
             let nullabilityByte: UInt8 = isNullable ? 0x63 : 0x64
@@ -387,7 +387,7 @@ public class WasmLifter {
                 + Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
         }
         // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
-        return ILTypeMapping[type]!
+        return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!
     }
 
     private func buildTypeEntry(for desc: WasmTypeDescription, data: inout Data) {
@@ -440,14 +440,14 @@ public class WasmLifter {
             for paramType in signature.parameters {
                 switch paramType {
                 case .plain(let paramType):
-                    temp += ILTypeMapping[paramType]!
+                    temp += encodeType(paramType)
                 default:
                     fatalError("unreachable")
                 }
             }
             if signature.outputType != .nothing {
                 temp += Leb128.unsignedEncode(1) // num output types
-                temp += ILTypeMapping[signature.outputType] ?? Data([0x6f])
+                temp += encodeType(signature.outputType, defaultType: .wasmExternRef)
             } else {
                 temp += [0x00] // num output types
             }
@@ -539,7 +539,7 @@ public class WasmLifter {
 
                 let table = type.wasmTableType!
                 assert(table.elementType == ILType.wasmExternRef)
-                temp += ILTypeMapping[table.elementType]!
+                temp += encodeType(table.elementType)
 
                 let limits_byte: UInt8 = (table.isTable64 ? 4 : 0) | (table.limits.max != nil ? 1 : 0)
                 temp += Data([limits_byte])
@@ -554,7 +554,7 @@ public class WasmLifter {
                 let valueType = type.wasmGlobalType!.valueType
                 let mutability = type.wasmGlobalType!.isMutable
                 temp += [0x3]
-                temp += ILTypeMapping[valueType]!
+                temp += encodeType(valueType)
                 temp += mutability ? [0x1] : [0x0]
                 continue
             }
@@ -608,7 +608,7 @@ public class WasmLifter {
         for instruction in self.tables {
             let op = instruction.op as! WasmDefineTable
             let table = op.tableType
-            temp += ILTypeMapping[table.elementType]!
+            temp += encodeType(table.elementType)
 
             let limits_byte: UInt8 = (table.isTable64 ? 4 : 0) | (table.limits.max != nil ? 1 : 0)
             temp += Data([limits_byte])
@@ -741,7 +741,7 @@ public class WasmLifter {
             let definition = instruction.op as! WasmDefineGlobal
             let global = definition.wasmGlobal
 
-            temp += ILTypeMapping[global.toType()]!
+            temp += encodeType(global.toType())
             temp += Data([definition.isMutable ? 0x1 : 0x0])
             // This has to be a constant expression: https://webassembly.github.io/spec/core/valid/instructions.html#constant-expressions
             var temporaryInstruction: Instruction? = nil
@@ -1529,7 +1529,7 @@ public class WasmLifter {
         case .wasmUnreachable(_):
             return Data([0x00])
         case .wasmSelect(let op):
-            return Data([0x1c, 0x01]) + ILTypeMapping[op.type]!
+            return Data([0x1c, 0x01]) + encodeType(op.type)
         case .constSimd128(let op):
             return Data([0xFD]) + Leb128.unsignedEncode(12) + Data(op.value)
         case .wasmSimd128IntegerUnOp(let op):

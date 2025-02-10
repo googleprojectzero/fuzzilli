@@ -102,6 +102,12 @@ struct BlockReducer: Reducer {
             case .wasmBeginTry:
                 reduceWasmTryCatch(group, with: helper)
 
+            case .wasmBeginTypeGroup:
+                // TODO(mliedtke): We should support reduction of type groups. Ideally, starting
+                // with the `EndTypeGroup` we should remove all types that are unused (and relabel)
+                // the used ones. (See also the VariadicInputReducer.)
+                break
+
             default:
                 fatalError("Unknown block group: \(helper.code[group.head].op.name)")
             }

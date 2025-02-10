@@ -370,9 +370,10 @@ extension Instruction: ProtobufConvertible {
                 return .funcref
             case .wasmSimd128:
                 return .simd128
-            case .wasmRef(.Index):
-                return .indexref
             default:
+                if (underlyingWasmType <= .wasmGenericRef) {
+                    return .indexref
+                }
                 fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a Protobuf_WasmILType! for instruction \(self)")
             }
         }
