@@ -598,52 +598,52 @@ public class OperationMutator: BaseInstructionMutator {
         switch instr.op.opcode {
         case .createArray(let op):
             newOp = CreateArray(numInitialValues: op.numInitialValues + 1)
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
         case .createArrayWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CreateArrayWithSpread(spreads: spreads)
         case .callFunction(let op):
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CallFunction(numArguments: op.numArguments + 1, isGuarded: op.isGuarded)
         case .callFunctionWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CallFunctionWithSpread(numArguments: op.numArguments + 1, spreads: spreads, isGuarded: op.isGuarded)
         case .construct(let op):
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = Construct(numArguments: op.numArguments + 1, isGuarded: op.isGuarded)
         case .constructWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = ConstructWithSpread(numArguments: op.numArguments + 1, spreads: spreads, isGuarded: op.isGuarded)
         case .callMethod(let op):
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments + 1, isGuarded: op.isGuarded)
         case .callMethodWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments + 1, spreads: spreads, isGuarded: op.isGuarded)
         case .callComputedMethod(let op):
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CallComputedMethod(numArguments: op.numArguments + 1, isGuarded: op.isGuarded)
         case .callComputedMethodWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CallComputedMethodWithSpread(numArguments: op.numArguments + 1, spreads: spreads, isGuarded: op.isGuarded)
         case .callSuperConstructor(let op):
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CallSuperConstructor(numArguments: op.numArguments + 1)
         case .callPrivateMethod(let op):
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CallPrivateMethod(methodName: op.methodName, numArguments: op.numArguments + 1)
         case .callSuperMethod(let op):
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments + 1)
         case .createTemplateString(let op):
             var parts = op.parts
             parts.append(b.randomString())
-            inputs.append(b.randomVariable())
+            inputs.append(b.randomJsVariable())
             newOp = CreateTemplateString(parts: parts)
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")

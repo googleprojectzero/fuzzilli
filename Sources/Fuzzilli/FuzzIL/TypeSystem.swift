@@ -362,7 +362,8 @@ public struct ILType: Hashable {
         }
 
         // Wasm type extension.
-        guard !self.hasWasmTypeInfo || self.wasmType == other.wasmType else {
+        guard !self.hasWasmTypeInfo || (self.hasWasmTypeInfo && other.hasWasmTypeInfo
+            && self.wasmType!.subsumes(other.wasmType!)) else {
             return false
         }
 
@@ -1030,6 +1031,11 @@ public class WasmTypeExtension: Hashable {
     public func hash(into hasher: inout Hasher) {
         fatalError("unreachable")
     }
+
+    func subsumes(_ other: WasmTypeExtension) -> Bool {
+        // Default: Only if the type extensions are equal, one subsumes the other.
+        self == other
+    }
 }
 
 public class WasmGlobalType: WasmTypeExtension {
@@ -1139,7 +1145,11 @@ public class WasmReferenceType: WasmTypeExtension {
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmReferenceType else { return false }
-        return kind == other.kind
+        return kind == other.kind && description == other.description
+    }
+
+    override func subsumes(_ other: WasmTypeExtension) -> Bool {
+        self == other || self.description == nil
     }
 
     override public func hash(into hasher: inout Hasher) {

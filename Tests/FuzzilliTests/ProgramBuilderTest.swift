@@ -307,7 +307,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(b.numberOfVisibleVariables, 2)
 
         for _ in 0..<10 {
-            XCTAssertNotEqual(b.randomVariable(), Math)
+            XCTAssertNotEqual(b.randomJsVariable(), Math)
         }
 
         // Make sure the variable stays hidden when entering new scopes.
@@ -316,7 +316,7 @@ class ProgramBuilderTests: XCTestCase {
 
             XCTAssert(!b.visibleVariables.contains(Math))
             for _ in 0..<10 {
-                XCTAssertNotEqual(b.randomVariable(), Math)
+                XCTAssertNotEqual(b.randomJsVariable(), Math)
             }
 
             b.callMethod("log2", on: Math, withArgs: [v])
@@ -342,23 +342,23 @@ class ProgramBuilderTests: XCTestCase {
 
                 XCTAssert(!b.visibleVariables.contains(Math))
                 for _ in 0..<10 {
-                    XCTAssertNotEqual(b.randomVariable(), Math)
-                    XCTAssertNotEqual(b.randomVariable(), v2)
-                    XCTAssertNotEqual(b.randomVariable(), v3)
-                    XCTAssertNotEqual(b.randomVariable(), v4)
+                    XCTAssertNotEqual(b.randomJsVariable(), Math)
+                    XCTAssertNotEqual(b.randomJsVariable(), v2)
+                    XCTAssertNotEqual(b.randomJsVariable(), v3)
+                    XCTAssertNotEqual(b.randomJsVariable(), v4)
                 }
             }
             XCTAssertEqual(b.numberOfVisibleVariables, 6)
 
             XCTAssert(!b.visibleVariables.contains(Math))
             for _ in 0..<10 {
-                XCTAssertNotEqual(b.randomVariable(), Math)
+                XCTAssertNotEqual(b.randomJsVariable(), Math)
             }
         }
 
         XCTAssert(!b.visibleVariables.contains(Math))
         for _ in 0..<10 {
-            XCTAssertNotEqual(b.randomVariable(), Math)
+            XCTAssertNotEqual(b.randomJsVariable(), Math)
         }
 
         b.unhide(Math)
@@ -381,7 +381,7 @@ class ProgramBuilderTests: XCTestCase {
             // The function variable is hidden during it's initial creation, so that all the code
             // generated for its body doesn't operate on it (and e.g. cause trivial recursion).
             XCTAssertFalse(b.visibleVariables.contains(functionVar))
-            XCTAssertNotEqual(b.randomVariable(), functionVar)
+            XCTAssertNotEqual(b.randomJsVariable(), functionVar)
             XCTAssertNotEqual(b.randomVariable(ofType: .function()), functionVar)
         }
         XCTAssertEqual(functionVar, realFunctionVar)

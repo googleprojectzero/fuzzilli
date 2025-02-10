@@ -295,4 +295,14 @@ public let codeGeneratorWeights = [
     "WasmSimdLoadGenerator":                    5,
 
     "WasmSelectGenerator":                      10,
+
+    // Wasm-gc type generators
+    // These run in the javascript context and define types to be used within wasm modules.
+    "WasmRecursiveTypeGroupGenerator":          5,
+    "WasmArrayTypeGenerator":                   5,
+
+    // Wasm-gc generators
+    "WasmArrayNewGenerator":                    5,
+    "WasmArrayLengthGenerator":                 5,
+    "WasmArrayGetGenerator":                    5,
 ]

@@ -630,7 +630,7 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalI64NonMutable, .nothing)
         XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalF64Mutable, .nothing)
         XCTAssertEqual(ILTypeGlobalI64Mutable & .object(withProperties: ["value"]), .nothing)
-        XCTAssertEqual((ILTypeGlobalI64Mutable & ILType.object(withWasmType: wasmi64Mutable)), ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64Mutable)) 
+        XCTAssertEqual((ILTypeGlobalI64Mutable & ILType.object(withWasmType: wasmi64Mutable)), ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64Mutable))
     }
 
     func testWasmGlobalIsAndMayBe() {
@@ -1053,6 +1053,25 @@ class TypeSystemTests: XCTestCase {
         for t in wasmTypes {
             XCTAssertEqual(t <= .anything, false)
         }
+    }
+
+    func testWasmTypeExtensionSubsumptionRules() {
+        XCTAssert(ILType.wasmRef(.Index) <= ILType.wasmRef(.Index))
+        XCTAssertFalse(ILType.wasmi32 <= ILType.wasmRef(.Index))
+        XCTAssertFalse(ILType.wasmRef(.Index) <= ILType.wasmi32)
+        let arrayi32Desc = WasmArrayTypeDescription(elementType: .wasmi32, typeGroupIndex: 0)
+        let arrayi64Desc = WasmArrayTypeDescription(elementType: .wasmi64, typeGroupIndex: 0)
+        XCTAssertFalse(ILType.wasmRef(.Index, description: arrayi32Desc)
+            >= ILType.wasmRef(.Index, description: arrayi64Desc))
+        XCTAssertFalse(ILType.wasmRef(.Index, description: arrayi64Desc)
+            >= ILType.wasmRef(.Index, description: arrayi32Desc))
+        XCTAssert(ILType.wasmRef(.Index, description: arrayi32Desc)
+            >= ILType.wasmRef(.Index, description: arrayi32Desc))
+        XCTAssert(ILType.wasmRef(.Index) >= ILType.wasmRef(.Index, description: arrayi32Desc))
+        XCTAssertFalse(ILType.wasmRef(.Index) <= ILType.wasmRef(.Index, description: arrayi32Desc))
+
+        XCTAssert(ILType.wasmRef(.Index) <= ILType.wasmGenericRef)
+        XCTAssertFalse(ILType.wasmGenericRef <= ILType.wasmRef(.Index))
     }
 
     let primitiveTypes: [ILType] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]

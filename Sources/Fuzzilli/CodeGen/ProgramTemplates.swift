@@ -136,7 +136,7 @@ public let ProgramTemplates = [
             assert(args.count > 0)
             // Generate (larger) function body
             b.build(n: 30)
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
 
         // Generate some random instructions now
@@ -175,7 +175,7 @@ public let ProgramTemplates = [
             assert(args.count > 0)
             // Generate (larger) function body
             b.build(n: 20)
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
 
         // Generate a second larger function
@@ -183,7 +183,7 @@ public let ProgramTemplates = [
             assert(args.count > 0)
             // Generate (larger) function body
             b.build(n: 20)
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
 
         // Generate some random instructions now
@@ -294,7 +294,7 @@ public let ProgramTemplates = [
 
             // Build the main body.
             b.build(n: 20)
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
 
         // Generate some more random instructions.
@@ -327,7 +327,7 @@ public let ProgramTemplates = [
         let JSON = b.createNamedVariable(forBuiltin: "JSON")
         var jsonPayloads = [Variable]()
         for _ in 0..<Int.random(in: 1...5) {
-            let json = b.callMethod("stringify", on: JSON, withArgs: [b.randomVariable()])
+            let json = b.callMethod("stringify", on: JSON, withArgs: [b.randomJsVariable()])
             jsonPayloads.append(json)
         }
 

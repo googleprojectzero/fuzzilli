@@ -79,7 +79,7 @@ public class ProgramBuilder {
     private var variablesInScope = [Variable]()
 
     /// Keeps track of variables that have explicitly been hidden and so should not be
-    /// returned from e.g. `randomVariable()`. See `hide()` for more details.
+    /// returned from e.g. `randomJsVariable()`. See `hide()` for more details.
     private var hiddenVariables = VariableSet()
     private var numberOfHiddenVariables = 0
 
@@ -593,7 +593,7 @@ public class ProgramBuilder {
                     let (pattern, flags) = self.randomRegExpPatternAndFlags()
                     return self.loadRegExp(pattern, flags)
                 }),
-            (.iterable, { return self.createArray(with: self.randomVariables(upTo: 5)) }),
+            (.iterable, { return self.createArray(with: self.randomJsVariables(upTo: 5)) }),
             (.function(), {
                     // TODO: We could technically generate a full function here but then we would enter the full code generation logic which could do anything.
                     // Because we want to avoid this, we will just pick anything that can be a function.
@@ -629,7 +629,7 @@ public class ProgramBuilder {
                             // This is a constructor, we have to call it.
                             let sig = builtinType.signature
                             if sig == nil {
-                                let result = self.randomVariable()
+                                let result = self.randomJsVariable()
                                 return result
                             }
                             let args = self.findOrGenerateArgumentsInternal(forSignature: sig!)
@@ -645,7 +645,7 @@ public class ProgramBuilder {
                         // This is a constructor, we have to call it.
                         let sig = self.type(of: prop).signature
                         if sig == nil {
-                            let result = self.randomVariable()
+                            let result = self.randomJsVariable()
                             return result
                         }
                         let args = self.findOrGenerateArgumentsInternal(forSignature: sig!)
@@ -715,20 +715,20 @@ public class ProgramBuilder {
     /// Access to variables.
     ///
 
-    /// Returns a random variable.
-    public func randomVariable() -> Variable {
+    /// Returns a random JavaScript variable.
+    public func randomJsVariable() -> Variable {
         assert(hasVisibleVariables)
-        return findVariable()!
+        return randomVariable(ofType: .anything)!
     }
 
-    /// Returns up to N (different) random variables.
+    /// Returns up to N (different) random JavaScript variables.
     /// This method will only return fewer than N variables if the number of currently visible variables is less than N.
-    public func randomVariables(upTo n: Int) -> [Variable] {
+    public func randomJsVariables(upTo n: Int) -> [Variable] {
         guard hasVisibleVariables else { return [] }
 
         var variables = [Variable]()
         while variables.count < n {
-            guard let newVar = findVariable(satisfying: { !variables.contains($0) }) else {
+            guard let newVar = findVariable(satisfying: { !variables.contains($0) && type(of: $0).Is(.anything) }) else {
                 break
             }
             variables.append(newVar)
@@ -736,10 +736,10 @@ public class ProgramBuilder {
         return variables
     }
 
-    /// Returns up to N potentially duplicate random variables.
-    public func randomVariables(n: Int) -> [Variable] {
+    /// Returns up to N potentially duplicate random JavaScript variables.
+    public func randomJsVariables(n: Int) -> [Variable] {
         assert(hasVisibleVariables)
-        return (0..<n).map { _ in randomVariable() }
+        return (0..<n).map { _ in randomJsVariable() }
     }
 
     /// This probability affects the behavior of `randomVariable(forUseAs:)`. In particular, it determines how much variables with
@@ -788,7 +788,7 @@ public class ProgramBuilder {
 
         // Worst case fall back to completely random variables. This should happen rarely, as we'll usually have
         // at least some variables of type .anything.
-        return result ?? randomVariable()
+        return result ?? randomJsVariable()
     }
 
     /// Returns a random variable that is known to have the given type.
@@ -933,7 +933,8 @@ public class ProgramBuilder {
         for v in visibleVariables {
             // Filter for primitive wasm types here.
             let t = type(of: v)
-            if t.Is(.wasmPrimitive) {
+            // TODO(mliedtke): Support wasm-gc types in wasm-js calls.
+            if t.Is(.wasmPrimitive) && !t.Is(.wasmGenericRef) {
                 visibleTypes[t] = (visibleTypes[t] ?? 0) + 1
             }
         }
@@ -992,7 +993,7 @@ public class ProgramBuilder {
         var arguments: [Variable] = []
         var spreads: [Bool] = []
         for _ in 0...n {
-            let val = randomVariable()
+            let val = randomJsVariable()
             arguments.append(val)
             // Prefer to spread values that we know are iterable, as non-iterable values will lead to exceptions ("TypeError: Found non-callable @@iterator")
             if type(of: val).Is(.iterable) {
@@ -1007,7 +1008,7 @@ public class ProgramBuilder {
 
     /// Hide the specified variable, preventing it from being used as input by subsequent code.
     ///
-    /// Hiding a variable prevents it from being returned from `randomVariable()` and related functions, which
+    /// Hiding a variable prevents it from being returned from `randomJsVariable()` and related functions, which
     /// in turn prevents it from being used as input for later instructions, unless the hidden variable is explicitly specified
     /// as input, which is still allowed.
     ///
@@ -3376,6 +3377,7 @@ public class ProgramBuilder {
             return b.emit(WasmArrayNewDefault(), withInputs: [arrayType, size]).output
         }
 
+        @discardableResult
         public func wasmArrayLen(_ array: Variable) -> Variable {
             return b.emit(WasmArrayLen(), withInputs: [array]).output
         }
@@ -3545,6 +3547,14 @@ public class ProgramBuilder {
         return chooseUniform(from: allowVoid ? possibleTypes + [.nothing] : possibleTypes)
     }
 
+    public func randomWasmBlockArguments(upTo n: Int) -> [Variable] {
+        (0..<Int.random(in: 0...n)).map {_ in findVariable {
+            // TODO(mliedtke): Also support wasm-gc types in wasm blocks.
+            // This requires updating the inner output types based on the input types.
+            type(of: $0).Is(.wasmPrimitive) && !type(of: $0).Is(.wasmGenericRef)
+        }}.filter {$0 != nil}.map {$0!}
+    }
+
     @discardableResult
     public func buildWasmModule(_ body: (WasmModule) -> ()) -> WasmModule {
         emit(BeginWasmModule())
@@ -3560,6 +3570,17 @@ public class ProgramBuilder {
         emit(WasmBeginTypeGroup())
         let types = typeGenerator()
         return Array(emit(WasmEndTypeGroup(typesCount: types.count), withInputs: types).outputs)
+    }
+
+    func wasmDefineTypeGroup(recursiveGenerator: () -> ()) {
+        emit(WasmBeginTypeGroup())
+        recursiveGenerator()
+        // Make all type definitions visible.
+        let types = scopes.elementsStartingAtTop().joined().filter {
+            let t = type(of: $0)
+            return t.Is(.wasmTypeDef()) && t.wasmTypeDefinition?.description != .selfReference
+        }
+        emit(WasmEndTypeGroup(typesCount: types.count), withInputs: types)
     }
 
     @discardableResult

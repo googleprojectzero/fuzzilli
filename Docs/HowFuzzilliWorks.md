@@ -256,8 +256,8 @@ Up to this point, a code generator is a simple function that fetches zero or mor
 
 ```swift
 CodeGenerator("FunctionCallGenerator") { b in
-    let function = b.randomVariable()
-    let arguments = [b.randomVariable(), b.randomVariable(), b.randomVariable()]
+    let function = b.randomJsVariable()
+    let arguments = [b.randomJsVariable(), b.randomJsVariable(), b.randomJsVariable()]
     b.callFunction(f, with: arguments)
 }
 ```
@@ -648,7 +648,7 @@ ProgramTemplate("JITFunction") { b in
     let f = b.buildPlainFunction(with: b.randomParameters()) { args in
         assert(args.count > 0)
         b.build(n: 30)
-        b.doReturn(b.randomVariable())
+        b.doReturn(b.randomJsVariable())
     }
 
     // Trigger JIT optimization
@@ -709,8 +709,8 @@ CodeGenerator("FunctionCallGenerator", inputs: .preferred(.function())) { b, f i
 },
 
 CodeGenerator("ComputedPropertyAssignmentGenerator", inputs: .preferred(.object())) { b, obj in
-    let propertyName = b.randomVariable()
-    let value = b.randomVariable()
+    let propertyName = b.randomJsVariable()
+    let value = b.randomJsVariable()
     let needGuard = b.type(of: obj).MayBe(.nullish)
     b.setComputedProperty(propertyName, of: obj, to: value, guard: needGuard)
 },

@@ -77,7 +77,7 @@ fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenera
 
     for _ in 0..<Int.random(in: 1...4) {
         let propertyName = b.randomCustomPropertyName()
-        endowments[propertyName] = b.randomVariable()
+        endowments[propertyName] = b.randomJsVariable()
     }
     var endowmentsObject = b.createObject(with: endowments)
 
@@ -85,16 +85,16 @@ fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenera
     let moduleMapObject = b.createObject(with: moduleMap)
     let resolveHook = b.buildPlainFunction(with: .parameters(n: 2)) { _ in
         b.buildRecursive(block: 1, of: 4)
-        b.doReturn(b.randomVariable())
+        b.doReturn(b.randomJsVariable())
     }
     let moduleMapHook = b.buildPlainFunction(with: .parameters(n: 1)) { _ in
         b.buildRecursive(block: 2, of: 4)
-        b.doReturn(b.randomVariable())
+        b.doReturn(b.randomJsVariable())
     }
     let loadNowHook = b.dup(moduleMapHook)
     let loadHook = b.buildAsyncFunction(with: .parameters(n: 1)) { _ in
         b.buildRecursive(block: 3, of: 4)
-        b.doReturn(b.randomVariable())
+        b.doReturn(b.randomJsVariable())
     }
     options["resolveHook"] = resolveHook
     options["moduleMapHook"] = moduleMapHook
@@ -103,7 +103,7 @@ fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenera
 
     if probability(0.5) {
         options["globalLexicals"] = endowmentsObject
-        endowmentsObject = b.createObject(with: [:]) 
+        endowmentsObject = b.createObject(with: [:])
     }
     let optionsObject = b.createObject(with: options)
 
@@ -362,8 +362,8 @@ let jsModuleSources = ObjectGroup(
     name: "ModuleSource",
     instanceType: .jsModuleSource,
     properties: [
-        "bindings" : .object(), 
-        "needsImport" : .object(), 
+        "bindings" : .object(),
+        "needsImport" : .object(),
         "needsImportMeta" : .object(),
     ],
     methods: [:]

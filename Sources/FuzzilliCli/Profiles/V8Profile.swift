@@ -131,12 +131,12 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
         }
 
         var properties = ["a"]
-        var values = [b.randomVariable()]
+        var values = [b.randomJsVariable()]
         for _ in 0..<3 {
             let property = chooseUniform(from: propertyNames)
             guard !properties.contains(property) else { continue }
             properties.append(property)
-            values.append(b.randomVariable())
+            values.append(b.randomJsVariable())
         }
         assert(Set(properties).count == values.count)
         return (properties, values)
@@ -207,12 +207,12 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
         assert(b.type(of: obj).Is(objType))
         let numProperties = Int.random(in: 1...3)
         for _ in 0..<numProperties {
-            b.setProperty(chooseUniform(from: propertyNames), of: obj, to: b.randomVariable())
+            b.setProperty(chooseUniform(from: propertyNames), of: obj, to: b.randomJsVariable())
         }
     }
     let propertyConfigureGenerator = CodeGenerator("PropertyConfigure", inputs: .required(objType)) { b, obj in
         assert(b.type(of: obj).Is(objType))
-        b.configureProperty(chooseUniform(from: propertyNames), of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomVariable()))
+        b.configureProperty(chooseUniform(from: propertyNames), of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomJsVariable()))
     }
     let functionDefinitionGenerator = RecursiveCodeGenerator("FunctionDefinition") { b in
         // We use either a randomly generated signature or a fixed on that ensures we use our object type frequently.
@@ -224,7 +224,7 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
 
         let f = b.buildPlainFunction(with: parameters) { params in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
 
         for _ in 0..<3 {
@@ -291,7 +291,7 @@ fileprivate let ValueSerializerFuzzer = ProgramTemplate("ValueSerializerFuzzer")
     let Uint8Array = b.createNamedVariable(forBuiltin: "Uint8Array")
 
     // Serialize a random object
-    let content = b.callMethod("serialize", on: serializer, withArgs: [b.randomVariable()])
+    let content = b.callMethod("serialize", on: serializer, withArgs: [b.randomJsVariable()])
     let u8 = b.construct(Uint8Array, withArgs: [content])
 
     // Choose a random byte to change
@@ -501,7 +501,7 @@ fileprivate let FastApiCallFuzzer = ProgramTemplate("FastApiCallFuzzer") { b in
         b.doReturn(apiCall)
     }
 
-    let args = b.randomVariables(n: Int.random(in: 0...5))
+    let args = b.randomJsVariables(n: Int.random(in: 0...5))
     b.callFunction(f, withArgs: args)
 
     b.eval("%PrepareFunctionForOptimization(%@)", with: [f]);
