@@ -31,6 +31,9 @@ public struct JSTyper: Analyzer {
 
     // Tracks the wasm recursive type groups and their contained types.
     private var typeGroups: [[Variable]] = []
+    // Tracks the direct and transitive dependencies of each type group index to the respective
+    // type group indices.
+    private var typeGroupDependencies: [Int:Set<Int>] = [:]
     private var selfReferences: [Variable: [(inout JSTyper, Variable?) -> ()]] = [:]
     private var isWithinTypeGroup = false
 
@@ -99,7 +102,8 @@ public struct JSTyper: Analyzer {
     mutating func addArrayType(def: Variable, elementType: ILType, elementRef: Variable? = nil) {
         let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
         if let elementRef = elementRef {
-            if (type(of: elementRef).wasmTypeDefinition!.description == .selfReference) {
+            let elementDesc = type(of: elementRef).wasmTypeDefinition!.description!
+            if elementDesc == .selfReference {
                 // Register a "resolver" callback that does one of the two:
                 // 1) If replacement == nil, it replaces the .selfReference with the "outer" array
                 //    type (`def`), so the elementType's ILType is now the same as the outer
@@ -118,6 +122,18 @@ public struct JSTyper: Analyzer {
             type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
                 elementType: type(of: elementRef).wasmTypeDefinition!.getReferenceTypeTo(),
                 typeGroupIndex: tgIndex)
+            // If the element type originates from another recursive type group, add a dependency.
+            if elementDesc.typeGroupIndex != -1 && elementDesc.typeGroupIndex != tgIndex {
+                // Dependencies to other type groups can only refer to previous type groups.
+                // This is implicitly guaranteed by the FuzzIL as later type groups' types aren't
+                // visible yet.
+                assert(elementDesc.typeGroupIndex < tgIndex)
+                if typeGroupDependencies[tgIndex, default: []].insert(elementDesc.typeGroupIndex).inserted {
+                    // For simplicity also duplicate all dependencies, so that each set contains
+                    // all dependent groups including transitive dependencies.
+                    typeGroupDependencies[tgIndex]!.formUnion(typeGroupDependencies[elementDesc.typeGroupIndex] ?? [])
+                }
+            }
         } else {
             type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
                 elementType: elementType,
@@ -138,6 +154,10 @@ public struct JSTyper: Analyzer {
 
     func getTypeGroupCount() -> Int {
         return typeGroups.count
+    }
+
+    func getTypeGroupDependencies(typeGroupIndex: Int) -> Set<Int> {
+        return typeGroupDependencies[typeGroupIndex] ?? []
     }
 
     mutating func startTypeGroup() {
