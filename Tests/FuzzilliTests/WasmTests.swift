@@ -1875,6 +1875,41 @@ class WasmGCTests: XCTestCase {
         let jsProgFromProto = fuzzer.lifter.lift(copy, withOptions: [.includeComments])
         testForOutput(program: jsProgFromProto, runner: runner, outputString: "42\n")
     }
+
+    func testDependentTypeGroups() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let typeGroupA = b.wasmDefineTypeGroup {
+            return [b.wasmDefineArrayType(elementType: .wasmi32)]
+        }
+        let typeGroupB = b.wasmDefineTypeGroup {
+            let typeWithDependency = b.wasmDefineArrayType(elementType: .wasmRef(.Index), indexType: typeGroupA[0])
+            let arrayi64 = b.wasmDefineArrayType(elementType: .wasmi64)
+            return [arrayi64, typeWithDependency]
+        }
+
+        // Note that even though the module doesn't use typeGroupA nor any type dependent on
+        // typeGroupA, it still needs to import both typegroups.
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, args in
+                let arrayi64 = function.wasmArrayNewFixed(arrayType: typeGroupB[0], elements: [function.consti64(42)])
+                let result = function.wasmArrayGet(array: arrayi64, index: function.consti32(0))
+                function.wasmReturn(result)
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
 }
 
 class WasmNumericalTests: XCTestCase {

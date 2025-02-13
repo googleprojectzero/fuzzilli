@@ -424,7 +424,7 @@ public class WasmLifter {
 
         // TODO(mliedtke): Integrate this with the whole signature mechanism as
         // these signatures could contain wasm-gc types.
-        for typeGroupIndex in typeGroups {
+        for typeGroupIndex in typeGroups.sorted() {
             let typeGroup = typer.getTypeGroup(typeGroupIndex)
             temp += [0x4e]
             temp += Leb128.unsignedEncode(typeGroup.count)
@@ -1097,7 +1097,10 @@ public class WasmLifter {
                 if inputType.Is(.wasmTypeDef()) {
                     let typeDesc = typer.getTypeDescription(of: input)
                     if typeDesc.typeGroupIndex != -1 {
-                        typeGroups.insert(typeDesc.typeGroupIndex)
+                        // Add typegroups and their dependencies.
+                        if typeGroups.insert(typeDesc.typeGroupIndex).inserted {
+                            typeGroups.formUnion(typer.getTypeGroupDependencies(typeGroupIndex: typeDesc.typeGroupIndex))
+                        }
                     } else {
                         freeTypes.insert(input)
                     }
@@ -1183,7 +1186,7 @@ public class WasmLifter {
         // building the type section as the instructions get lowered before we emit the type
         // section.)
         var currentTypeIndex = 0
-        for typeGroupIndex in typeGroups {
+        for typeGroupIndex in typeGroups.sorted() {
             for typeDef in typer.getTypeGroup(typeGroupIndex) {
                 let typeDesc = typer.getTypeDescription(of: typeDef)
                 typeDescToIndex[typeDesc] = currentTypeIndex
