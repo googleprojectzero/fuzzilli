@@ -286,6 +286,7 @@ enum Opcode {
     case wasmEndLoop(WasmEndLoop)
     case wasmBranch(WasmBranch)
     case wasmBranchIf(WasmBranchIf)
+    case wasmBranchTable(WasmBranchTable)
     case wasmNop(WasmNop)
     case wasmBeginIf(WasmBeginIf)
     case wasmBeginElse(WasmBeginElse)

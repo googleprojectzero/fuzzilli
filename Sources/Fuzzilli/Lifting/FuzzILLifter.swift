@@ -1038,14 +1038,19 @@ public class FuzzILLifter: Lifter {
             w.emit("\(input(0)) <- WasmReassign \(input(1))")
 
         case .wasmBranch(_):
-            w.emit("wasmBranch: \(instr.inputs.map(lift).joined(separator: ", "))")
+            w.emit("WasmBranch: \(instr.inputs.map(lift).joined(separator: ", "))")
 
         case .wasmBranchIf(_):
-            w.emit("wasmBranchIf \(instr.input(1)), \(([instr.input(0)] + Array(instr.inputs)[2...]).map(lift).joined(separator: ", "))")
+            w.emit("WasmBranchIf \(instr.input(1)), \(([instr.input(0)] + Array(instr.inputs)[2...]).map(lift).joined(separator: ", "))")
+
+        case .wasmBranchTable(let op):
+            let table = (0..<op.valueCount).enumerated().map {"\($0) => \(instr.input($1)), "}.joined()
+                + "default => \(instr.input(op.valueCount))"
+            w.emit("WasmBranchTable on \(instr.input(op.valueCount+1)) [\(table)] args: \(Array(instr.inputs)[(op.valueCount+2)...])")
 
         case .wasmBeginIf(let op):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            w.emit("wasmBeginIf (\(op.signature)) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
+            w.emit("WasmBeginIf (\(op.signature)) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
             w.increaseIndentionLevel()
 
         case .wasmBeginElse(_):
@@ -1053,7 +1058,7 @@ public class FuzzILLifter: Lifter {
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             // Note that the signature is printed by the WasmBeginIf, so we skip it here for better
             // readability.
-            w.emit("wasmBeginElse [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
+            w.emit("WasmBeginElse [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
             w.increaseIndentionLevel()
 
         case .wasmEndIf(let op):

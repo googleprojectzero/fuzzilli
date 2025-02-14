@@ -1622,6 +1622,74 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "84\n12345\n")
     }
 
+    func testBranchTableVoid() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                function.wasmBuildBlock(with: [] => .nothing, args: []) { label1, _ in
+                    function.wasmBuildBlock(with: [] => .nothing, args: []) { label2, _ in
+                        function.wasmBranchTable(on: args[0], labels: [label1, label2], args: [])
+                    }
+                    function.wasmReturn(function.consti32(2))
+                }
+                function.wasmReturn(function.consti32(1))
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        let wasmOut2 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut2)])
+        let wasmOut3 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(-1)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut3)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [])
+        testForOutput(program: jsProg, runner: runner, outputString: "1\n2\n2\n")
+    }
+
+    func testBranchTableWithArguments() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => .wasmi64) { function, args in
+                // Fuzzilli doesn't have support for handling stack-polymorphic cases after
+                // non-returning instructions like br_table or return.
+                let dummy = function.consti64(-1)
+                let block1Result = function.wasmBuildBlockWithResult(with: [] => .wasmi64, args: []) { label1, _ in
+                    let block2Result = function.wasmBuildBlockWithResult(with: [] => .wasmi64, args: []) { label2, _ in
+                        let block3Result = function.wasmBuildBlockWithResult(with: [] => .wasmi64, args: []) { label3, _ in
+                            function.wasmBranchTable(on: args[0], labels: [label1, label2, label3], args: [args[1]])
+                            return dummy
+                        }
+                        function.wasmReturn(function.wasmi64BinOp(block3Result, function.consti64(3), binOpKind: .Add))
+                        return dummy
+                    }
+                    function.wasmReturn(function.wasmi64BinOp(block2Result, function.consti64(2), binOpKind: .Add))
+                    return dummy
+                }
+                function.wasmReturn(function.wasmi64BinOp(block1Result, function.consti64(1), binOpKind: .Add))
+            }
+        }
+        let exports = module.loadExports()
+        for val in [0, 1, 2, 100] {
+            let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports,
+                withArgs: [b.loadInt(Int64(val)), b.loadBigInt(42)])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        }
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [])
+        testForOutput(program: jsProg, runner: runner, outputString: "43\n44\n45\n45\n")
+    }
+
     func testUnreachable() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

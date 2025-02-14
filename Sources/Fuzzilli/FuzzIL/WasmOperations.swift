@@ -1172,6 +1172,20 @@ final class WasmBranchIf: WasmOperation {
     }
 }
 
+final class WasmBranchTable: WasmOperation {
+    override var opcode: Opcode { .wasmBranchTable(self) }
+    let labelTypes: [ILType]
+    // The number of cases in the br_table. Note that the number of labels is one higher as each
+    // br_table has a default label.
+    let valueCount: Int
+
+    init(labelTypes: [ILType], valueCount: Int) {
+        self.labelTypes = labelTypes
+        self.valueCount = valueCount
+        super.init(inputTypes: (0...valueCount).map {_ in .label(labelTypes)} + labelTypes + [.wasmi32], requiredContext: [.wasmFunction])
+    }
+}
+
 // TODO: make this comprehensive, currently only works for locals, or assumes every thing it reassigns to is a local.
 // This should be doable in the lifter, where we can see what we reassign to.
 final class WasmReassign: WasmOperation {

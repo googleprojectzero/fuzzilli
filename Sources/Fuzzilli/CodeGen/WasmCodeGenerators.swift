@@ -817,6 +817,31 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmBranchIf(conditionVar, to: label, args: args)
     },
 
+    RecursiveCodeGenerator("WasmBranchTableGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, value in
+        let function = b.currentWasmModule.currentWasmFunction
+        // Choose parameter types for the br_table. If we can find an existing label, just use that
+        // label types as it allows use to reuse existing (and therefore more interesting) blocks.
+        let parameterType = if let label = b.randomVariable(ofType: .anyLabel) {
+            b.type(of: label).wasmLabelType!.parameters.first ?? b.randomWasmBlockOutputType(allowVoid: false)
+        } else {
+            b.randomWasmBlockOutputType(allowVoid: false)
+        }
+        let extraBlockCount = Int.random(in: 1...5)
+        let valueCount = Int.random(in: 0...20)
+        let signature = [] => parameterType
+        (0..<extraBlockCount).forEach { _ in
+            function.wasmBeginBlock(with: signature, args: [])
+        }
+        let labels = (0...valueCount).map {_ in b.randomVariable(ofType: .label([parameterType]))!}
+        let arg = b.randomVariable(ofType: parameterType) ?? function.generateRandomWasmVar(ofType: parameterType)
+        function.wasmBranchTable(on: value, labels: labels, args: [arg])
+        (0..<extraBlockCount).forEach { n in
+            let arg = b.randomVariable(ofType: parameterType) ?? function.generateRandomWasmVar(ofType: parameterType)
+            function.wasmEndBlock(with: signature, args: [arg])
+            b.buildRecursive(block: n + 1, of: extraBlockCount, n: 4)
+        }
+    },
+
     CodeGenerator("ConstSimd128Generator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         function.constSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
