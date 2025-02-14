@@ -1503,6 +1503,11 @@ public class WasmLifter {
         case .wasmBranchIf(let op):
             let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x0D]) + Leb128.unsignedEncode(branchDepth) + Data(op.labelTypes.map {_ in 0x1A})
+        case .wasmBranchTable(let op):
+            let depths = (0...op.valueCount).map {
+                self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input($0)]! - 1
+            }
+            return Data([0x0E]) + Leb128.unsignedEncode(op.valueCount) + depths.map(Leb128.unsignedEncode).joined()
         case .wasmBeginIf(let op):
             return Data([0x04] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginElse(_):

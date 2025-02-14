@@ -1610,6 +1610,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmDefineTag(_),
                  .wasmBranch(_),
                  .wasmBranchIf(_),
+                 .wasmBranchTable(_),
                  .wasmBeginIf(_),
                  .wasmBeginElse(_),
                  .wasmEndIf(_),

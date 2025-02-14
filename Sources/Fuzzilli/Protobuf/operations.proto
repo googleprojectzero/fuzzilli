@@ -1197,6 +1197,11 @@ message WasmBranchIf {
   repeated WasmILType parameters = 1;
 }
 
+message WasmBranchTable {
+  repeated WasmILType parameters = 1;
+  uint32 valueCount = 2;
+}
+
 message WasmReassign {
   WasmILType variableType = 1;
 }

@@ -3171,6 +3171,15 @@ public class ProgramBuilder {
             return b.emit(WasmEndBlock(outputType: signature.outputType), withInputs: [result]).output
         }
 
+        // Convenience function to begin a wasm block. Note that this does not emit an end block.
+        func wasmBeginBlock(with signature: Signature, args: [Variable]) {
+            b.emit(WasmBeginBlock(with: signature), withInputs: args)
+        }
+        // Convenience function to end a wasm block.
+        func wasmEndBlock(with signature: Signature, args: [Variable]) {
+            b.emit(WasmEndBlock(outputType: signature.outputType), withInputs: args)
+        }
+
         // This can branch to label variables only, has a variable input for dataflow purposes.
         public func wasmBranch(to label: Variable, args: [Variable] = []) {
             assert(b.type(of: label).Is(.anyLabel))
@@ -3180,6 +3189,16 @@ public class ProgramBuilder {
         public func wasmBranchIf(_ condition: Variable, to label: Variable, args: [Variable] = []) {
             assert(b.type(of: label).Is(.label(args.map({b.type(of: $0)}))), "label type \(b.type(of: label)) doesn't match argument types \(args.map({b.type(of: $0)}))")
             b.emit(WasmBranchIf(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args + [condition])
+        }
+
+        public func wasmBranchTable(on: Variable, labels: [Variable], args: [Variable]) {
+            let argumentTypes = args.map({b.type(of: $0)})
+            let labelType = ILType.label(argumentTypes)
+            labels.forEach {
+                assert(b.type(of: $0).Is(labelType), "label \($0) (\(b.type(of: $0))) doesn't match argument types \(argumentTypes)")
+            }
+            b.emit(WasmBranchTable(labelTypes: argumentTypes, valueCount: labels.count - 1),
+                withInputs: labels + args + [on])
         }
 
         public func wasmBuildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: (() -> Void)? = nil) {
