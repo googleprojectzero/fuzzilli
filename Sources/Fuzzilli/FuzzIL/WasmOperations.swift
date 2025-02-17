@@ -1604,3 +1604,12 @@ class WasmArrayGet: WasmOperation {
             requiredContext: [.wasmFunction])
     }
 }
+
+class WasmRefNull: WasmOperation {
+    override var opcode: Opcode { .wasmRefNull(self) }
+
+    init(type: ILType) {
+        super.init(inputTypes: type.requiredInputCount() == 1 ? [.wasmRef(.Index)] : [],
+            outputType: type, requiredContext: [.wasmFunction])
+    }
+}

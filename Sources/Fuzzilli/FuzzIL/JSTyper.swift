@@ -255,6 +255,10 @@ public struct JSTyper: Analyzer {
             case .wasmArrayGet(_):
                 let arrayType = getTypeDescription(usage: instr.input(0)) as! WasmArrayTypeDescription
                 set(instr.output, arrayType.elementType)
+            case .wasmRefNull(_):
+                if instr.hasInputs {
+                    attachTypeDescription(to: instr.output, typeDef: instr.input(0))
+                }
             default:
                 break
             }

@@ -310,6 +310,7 @@ message Instruction {
         WasmArrayNewDefault wasmArrayNewDefault = 284;
         WasmArrayLen wasmArrayLen = 285;
         WasmArrayGet wasmArrayGet = 286;
+        WasmRefNull wasmRefNull = 287;
     }
 }
 
