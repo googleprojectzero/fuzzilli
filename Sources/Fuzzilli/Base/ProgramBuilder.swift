@@ -3387,6 +3387,11 @@ public class ProgramBuilder {
             let arrayDesc = b.jsTyper.getTypeDescription(usage: array) as! WasmArrayTypeDescription
             return b.emit(WasmArrayGet(elementType: arrayDesc.elementType), withInputs: [array, index]).output
         }
+
+        @discardableResult
+        public func wasmRefNull(_ type: ILType, typeDef: Variable? = nil) -> Variable {
+            return b.emit(WasmRefNull(type: type), withInputs: typeDef != nil ? [typeDef!] : []).output
+        }
     }
 
     public class WasmModule {

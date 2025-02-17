@@ -390,6 +390,15 @@ public class WasmLifter {
         return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!
     }
 
+    private func encodeHeapType(_ type: ILType, defaultType: ILType? = nil) -> Data {
+        if type.Is(.wasmGenericRef) {
+            let typeDesc = type.wasmReferenceType!.description!
+            return Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+        }
+        // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
+        return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!
+    }
+
     private func buildTypeEntry(for desc: WasmTypeDescription, data: inout Data) {
         if let arrayDesc = desc as? WasmArrayTypeDescription {
             data += [0x5e]
@@ -1652,6 +1661,8 @@ public class WasmLifter {
             let typeDesc = typer.getTypeDescription(usage: wasmInstruction.input(0))
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
             return Data([Prefix.GC.rawValue, 0x0B]) + arrayIndex
+        case .wasmRefNull(_):
+            return Data([0xD0]) + encodeHeapType(typer.type(of: wasmInstruction.output))
 
         default:
              fatalError("unreachable")

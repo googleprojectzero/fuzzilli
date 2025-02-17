@@ -1367,6 +1367,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmArrayGet = Fuzzilli_Protobuf_WasmArrayGet.with {
                     $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
                 }
+            case .wasmRefNull(let op):
+                $0.wasmRefNull = Fuzzilli_Protobuf_WasmRefNull.with {
+                    $0.type = ILTypeToWasmTypeEnum(op.outputType)
+                }
             }
         }
 
@@ -2205,6 +2209,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmArrayLen()
         case .wasmArrayGet(let p):
             op = WasmArrayGet(elementType: WasmTypeEnumToILType(p.elementType))
+        case .wasmRefNull(let p):
+            op = WasmRefNull(type: WasmTypeEnumToILType(p.type))
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

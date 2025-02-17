@@ -1910,6 +1910,50 @@ class WasmGCTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
+
+    func testRefNull() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let arrayType = b.wasmDefineTypeGroup {[b.wasmDefineArrayType(elementType: .wasmi32)]}[0]
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmExternRef) { function, args in
+                function.wasmReturn(function.wasmRefNull(.wasmExternRef))
+            }
+            wasmModule.addWasmFunction(with: [] => .wasmFuncRef) { function, args in
+                function.wasmReturn(function.wasmRefNull(.wasmFuncRef))
+            }
+            // TODO(mliedtke): Simplify this once Fuzzilli supports index types in function signatures.
+            wasmModule.addWasmFunction(with: [] => .nothing) { function, args in
+                let refNull = function.wasmRefNull(.wasmRef(.Index), typeDef: arrayType)
+                function.wasmArrayGet(array: refNull, index: function.consti32(0))
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        for i in 0..<2 {
+            let wasmOut = b.callMethod(module.getExportedMethod(at: i), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [wasmOut])
+        }
+
+        b.buildTryCatchFinally {
+            b.callMethod(module.getExportedMethod(at: 2), on: exports, withArgs: [])
+        } catchBody: { exception in
+            // Check that it is a WebAssembly.RuntimeError (because the concrete error messages are
+            // implementation-defined.)
+            let wasmRuntimeError =
+                b.getProperty("RuntimeError", of: b.createNamedVariable(forBuiltin: "WebAssembly"))
+            b.callFunction(outputFunc, withArgs: [b.testInstanceOf(exception, wasmRuntimeError)])
+        }
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "null\nnull\ntrue\n")
+    }
 }
 
 class WasmNumericalTests: XCTestCase {

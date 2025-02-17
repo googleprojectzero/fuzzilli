@@ -2329,6 +2329,14 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmArrayGet(newValue)}
   }
 
+  public var wasmRefNull: Fuzzilli_Protobuf_WasmRefNull {
+    get {
+      if case .wasmRefNull(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmRefNull()
+    }
+    set {operation = .wasmRefNull(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable, Sendable {
@@ -2617,6 +2625,7 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmArrayNewDefault(Fuzzilli_Protobuf_WasmArrayNewDefault)
     case wasmArrayLen(Fuzzilli_Protobuf_WasmArrayLen)
     case wasmArrayGet(Fuzzilli_Protobuf_WasmArrayGet)
+    case wasmRefNull(Fuzzilli_Protobuf_WasmRefNull)
 
   }
 
@@ -2952,6 +2961,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     284: .same(proto: "wasmArrayNewDefault"),
     285: .same(proto: "wasmArrayLen"),
     286: .same(proto: "wasmArrayGet"),
+    287: .same(proto: "wasmRefNull"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6661,6 +6671,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmArrayGet(v)
         }
       }()
+      case 287: try {
+        var v: Fuzzilli_Protobuf_WasmRefNull?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmRefNull(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmRefNull(v)
+        }
+      }()
       default: break
       }
     }
@@ -7814,6 +7837,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .wasmArrayGet?: try {
       guard case .wasmArrayGet(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 286)
+    }()
+    case .wasmRefNull?: try {
+      guard case .wasmRefNull(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 287)
     }()
     case nil: break
     }

@@ -1118,6 +1118,10 @@ public class FuzzILLifter: Lifter {
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("\(output()) <- WasmArrayGet [\(inputs)]")
 
+        case .wasmRefNull(let op):
+            let inputStr = op.outputType.requiredInputCount() == 1 ? " \(input(0))" : ""
+            w.emit("\(output()) <- WasmRefNull \(op.outputType)\(inputStr)")
+
         case .wasmBeginTypeGroup(_):
             w.emit("WasmBeginTypeGroup")
             w.increaseIndentionLevel()
