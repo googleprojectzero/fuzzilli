@@ -3403,7 +3403,7 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmArrayGet(array: Variable, index: Variable) -> Variable {
-            let arrayDesc = b.jsTyper.getTypeDescription(usage: array) as! WasmArrayTypeDescription
+            let arrayDesc = b.jsTyper.getTypeDescription(of: array) as! WasmArrayTypeDescription
             return b.emit(WasmArrayGet(elementType: arrayDesc.elementType), withInputs: [array, index]).output
         }
 
