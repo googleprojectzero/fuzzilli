@@ -144,10 +144,6 @@ public struct JSTyper: Analyzer {
         }
     }
 
-    func getTypeDescription(of: Variable) -> WasmTypeDescription {
-        return type(of: of).wasmTypeDefinition!.description!
-    }
-
     func getTypeGroup(_ index: Int) -> [Variable] {
         return typeGroups[index]
     }
@@ -185,8 +181,12 @@ public struct JSTyper: Analyzer {
     mutating func attachTypeDescription(to: Variable, typeDef: WasmTypeDescription) {
         type(of: to).wasmReferenceType!.description = typeDef
     }
-    func getTypeDescription(usage: Variable) -> WasmTypeDescription {
-        return type(of: usage).wasmReferenceType!.description!
+
+    // Returns the type description for the provided variable which has to be either a type
+    // definition or an instance (wasm reference) of the wasm type.
+    func getTypeDescription(of variable: Variable) -> WasmTypeDescription {
+        let varType = type(of: variable)
+        return varType.wasmTypeDefinition?.description ?? varType.wasmReferenceType!.description!
     }
 
     /// Analyze the given instruction, thus updating type information.
@@ -253,7 +253,7 @@ public struct JSTyper: Analyzer {
                  .wasmArrayNewDefault(_):
                 attachTypeDescription(to: instr.output, typeDef: instr.input(0))
             case .wasmArrayGet(_):
-                let arrayType = getTypeDescription(usage: instr.input(0)) as! WasmArrayTypeDescription
+                let arrayType = getTypeDescription(of: instr.input(0)) as! WasmArrayTypeDescription
                 set(instr.output, arrayType.elementType)
             case .wasmRefNull(_):
                 if instr.hasInputs {
