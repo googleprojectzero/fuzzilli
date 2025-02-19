@@ -649,6 +649,11 @@ public class OperationMutator: BaseInstructionMutator {
             parts.append(b.randomString())
             inputs.append(b.randomJsVariable())
             newOp = CreateTemplateString(parts: parts)
+        case .wasmEndTypeGroup(_):
+            // TODO(mliedtke): Figure out how to mutate type groups. (Ideally, similar to how code
+            // generators handle this, the wasmEndTypeGroup should just always expose all types
+            // defined in their scope.)
+            return instr
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }
