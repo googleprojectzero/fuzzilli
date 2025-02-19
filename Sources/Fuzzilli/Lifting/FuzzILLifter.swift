@@ -812,8 +812,8 @@ public class FuzzILLifter: Lifter {
             let entries = op.definedEntryIndices.enumerated().map { index, entry in
                 "\(entry) : \(input(index))"
             }.joined(separator: ", ")
-            let isTable64Str = op.tableType.isTable64 ? ", table64" : ""
-            w.emit("\(output()) <- WasmDefineTable \(op.tableType.elementType)\(isTable64Str) (\(op.tableType.limits.min), \(String(describing: op.tableType.limits.max))), [\(entries)]")
+            let isTable64Str = op.isTable64 ? ", table64" : ""
+            w.emit("\(output()) <- WasmDefineTable \(op.elementType)\(isTable64Str), (\(op.limits.min), \(String(describing: op.limits.max))), [\(entries)]")
 
         case .wasmDefineMemory(let op):
             assert(op.wasmMemory.isWasmMemoryType)
@@ -966,6 +966,14 @@ public class FuzzILLifter: Lifter {
                 w.emit("WasmJsCall(\(op.functionSignature)) \(instr.input(0)) [\(liftCallArguments(arguments[...]))]")
             } else {
                 w.emit("\(output()) <- WasmJsCall(\(op.functionSignature)) \(instr.input(0)) [\(liftCallArguments(arguments[...]))]")
+            }
+
+        case .wasmCallIndirect(let op):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            if (op.signature.outputType.Is(.nothing)) {
+                w.emit("WasmCallIndirect(\(op.signature)) \(inputs)")
+            } else {
+                w.emit("\(output()) <- WasmCallIndirect(\(op.signature)) \(inputs)")
             }
 
         case .wasmBeginBlock(let op):

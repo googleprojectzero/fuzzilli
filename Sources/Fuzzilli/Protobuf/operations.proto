@@ -869,7 +869,8 @@ enum WasmILType {
   FUNCREF = 5;
   SIMD128 = 6;
   INDEXREF = 7;
-  NOTHING = 8;
+  FUNCTIONDEF = 8;
+  NOTHING = 9;
 }
 
 message BeginWasmFunction {
@@ -878,6 +879,8 @@ message BeginWasmFunction {
 }
 
 message EndWasmFunction {
+  repeated WasmILType parameters = 1;
+  WasmILType returnType = 2;
 }
 
 message WasmJsCall {
@@ -1091,6 +1094,11 @@ message WasmTableSet {
   int64 minSize = 2;
   optional int64 maxSize = 3;
   bool isTable64 = 4;
+}
+
+message WasmCallIndirect {
+  repeated WasmILType params = 1;
+  WasmILType return = 2;
 }
 
 enum WasmMemoryLoadType {

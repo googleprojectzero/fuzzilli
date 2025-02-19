@@ -349,6 +349,9 @@ extension Instruction: ProtobufConvertible {
                 // This is used as sentinel for function signatures that don't have a return value
                 return Fuzzilli_Protobuf_WasmILType.nothing
             }
+            if (underlyingWasmType.Is(.wasmFunctionDef())) {
+                return .functiondef
+            }
             // In case of Wasm globals, the underlying valuetype is stored in the Wasm extension.
             if underlyingWasmType.isWasmGlobalType {
                 let wasmGlobalType = underlyingWasmType.wasmGlobalType!
@@ -1159,13 +1162,13 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmDefineTable(let op):
                 $0.wasmDefineTable = Fuzzilli_Protobuf_WasmDefineTable.with {
-                    $0.elementType = ILTypeToWasmTypeEnum(op.tableType.elementType)
-                    $0.minSize = Int64(op.tableType.limits.min)
-                    if let maxSize = op.tableType.limits.max {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
+                    $0.minSize = Int64(op.limits.min)
+                    if let maxSize = op.limits.max {
                         $0.maxSize = Int64(maxSize)
                     }
                     $0.definedEntryIndices = op.definedEntryIndices.map { Int64($0) }
-                    $0.isTable64 = op.tableType.isTable64
+                    $0.isTable64 = op.isTable64
                 }
             case .wasmDefineMemory(let op):
                 assert(op.wasmMemory.isWasmMemoryType)
@@ -1204,6 +1207,11 @@ extension Instruction: ProtobufConvertible {
                     }
                     $0.isTable64 = op.tableType.isTable64
                 }
+            case .wasmCallIndirect(let op):
+                $0.wasmCallIndirect = Fuzzilli_Protobuf_WasmCallIndirect.with {
+                    $0.params = convertParametersToWasmTypeEnums(op.signature.parameters)
+                    $0.return = ILTypeToWasmTypeEnum(op.signature.outputType)
+                }
             case .wasmMemoryLoad(let op):
                 $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with {
                     $0.loadType = convertWasmMemoryLoadType(op.loadType);
@@ -1221,8 +1229,11 @@ extension Instruction: ProtobufConvertible {
                     $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
                     $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
-            case .endWasmFunction(_):
-                $0.endWasmFunction = Fuzzilli_Protobuf_EndWasmFunction()
+            case .endWasmFunction(let op):
+                $0.endWasmFunction = Fuzzilli_Protobuf_EndWasmFunction.with {
+                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
+                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                }
             case .wasmBeginBlock(let op):
                 $0.wasmBeginBlock = Fuzzilli_Protobuf_WasmBeginBlock.with {
                     $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
@@ -1424,6 +1435,8 @@ extension Instruction: ProtobufConvertible {
                 return .wasmSimd128
             case .indexref:
                 return .wasmRef(.Index)
+            case .functiondef:
+                return .wasmFunctionDef()
             case .nothing:
                 return .nothing
             case .UNRECOGNIZED(let value):
@@ -2082,19 +2095,21 @@ extension Instruction: ProtobufConvertible {
         case .wasmTableGet(let p):
             op = WasmTableGet(tableType: .wasmTable(wasmTableType:
                 WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
-                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64)))
+                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [:])))
         case .wasmTableSet(let p):
             op = WasmTableSet(tableType: .wasmTable(wasmTableType:
                 WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
-                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64)))
+                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [:])))
+        case .wasmCallIndirect(let p):
+            op = WasmCallIndirect(params: p.params.map { WasmTypeEnumToILType($0)}, outputType: WasmTypeEnumToILType(p.return))
         case .wasmMemoryLoad(let p):
             op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .wasmMemoryStore(let p):
             op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .beginWasmFunction(let p):
             op = BeginWasmFunction(parameterTypes: p.parameters.map { WasmTypeEnumToILType($0) }, returnType: WasmTypeEnumToILType(p.returnType))
-        case .endWasmFunction(_):
-            op = EndWasmFunction()
+        case .endWasmFunction(let p):
+            op = EndWasmFunction(parameterTypes: p.parameters.map { WasmTypeEnumToILType($0) }, returnType: WasmTypeEnumToILType(p.returnType))
         case .wasmBeginBlock(let p):
             let parameters: [Parameter] = p.parameters.map({ param in
                 Parameter.plain(WasmTypeEnumToILType(param))

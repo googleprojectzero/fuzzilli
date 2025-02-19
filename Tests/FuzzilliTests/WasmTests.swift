@@ -400,8 +400,7 @@ class WasmFoundationTests: XCTestCase {
     }
 
     func importedTableTestCase(isTable64: Bool) throws {
-        let runner = isTable64 ? try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--experimental-wasm-memory64"])
-                                : try GetJavaScriptExecutorOrSkipTest()
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -410,7 +409,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let javaScriptTable = b.createWasmTable(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64)
-        assert(b.type(of: javaScriptTable) == .wasmTable(wasmTableType: WasmTableType(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64)))
+        assert(b.type(of: javaScriptTable) == .wasmTable(wasmTableType: WasmTableType(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64, knownEntries: [:])))
 
         let object = b.createObject(with: ["a": b.loadInt(41), "b": b.loadInt(42)])
 
@@ -454,8 +453,7 @@ class WasmFoundationTests: XCTestCase {
     }
 
     func defineTable(isTable64: Bool) throws {
-        let runner = isTable64 ? try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--experimental-wasm-memory64"])
-                                : try GetJavaScriptExecutorOrSkipTest()
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -471,7 +469,7 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, params in
                 function.wasmReturn(function.wasmi32BinOp(params[0], function.consti32(1), binOpKind: .Add))
             }
-            wasmModule.addTable(elementType: .wasmFuncRef, minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction], isTable64: isTable64)
+            wasmModule.addTable(elementType: .wasmFunctionDef(), minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction], isTable64: isTable64)
         }
 
         let exports = module.loadExports()
@@ -502,11 +500,53 @@ class WasmFoundationTests: XCTestCase {
         try defineTable(isTable64: true)
     }
 
+    func testCallIndirect() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let jsFunction = b.buildPlainFunction(with: .parameters(.bigint)) { params in
+            b.doReturn(b.binary(params[0], b.loadBigInt(42), with: .Add))
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, params in
+                function.wasmReturn(function.wasmi64BinOp(params[0], function.consti64(1), binOpKind: .Add))
+            }
+            let table = wasmModule.addTable(elementType: .wasmFunctionDef(), minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction], isTable64: false)
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => .wasmi64) { fn, params in
+                fn.wasmReturn(fn.wasmCallIndirect(signature: [.wasmi64] => .wasmi64, table: table, functionArgs: [params[1]], tableIndex: params[0])!)
+            }
+        }
+
+        let exports = module.loadExports()
+
+        let wasmFunction = b.getProperty(module.getExportedMethod(at: 1), of: exports)
+
+        let result0 = b.callFunction(wasmFunction, withArgs: [b.loadInt(0), b.loadBigInt(10)])
+        // TODO(manoskouk): Enable once we have correct JS signatures.
+        // let result1 = b.callFunction(wasmFunction, withArgs: [b.loadInt(1), b.loadBigInt(10)])
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result0)])
+        // TODO(manoskouk): Enable once we have correct JS signatures.
+        // b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result1)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: "11\n")
+    }
+
     // Test every memory testcase for both memory32 and memory64.
 
     func importedMemoryTestCase(isMemory64: Bool) throws {
-        let runner = isMemory64 ? try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--experimental-wasm-memory64"])
-                                : try GetJavaScriptExecutorOrSkipTest()
+        let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
