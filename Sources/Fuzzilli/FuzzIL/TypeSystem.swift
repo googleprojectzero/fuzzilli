@@ -199,6 +199,10 @@ public struct ILType: Hashable {
         return .object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"], withWasmType: wasmTableType)
     }
 
+    public static func wasmFunctionDef(_ signature: Signature? = nil) -> ILType {
+        return ILType(definiteType: .wasmFunctionDef, ext: TypeExtension(properties: Set(), methods: Set(), signature: signature))
+    }
+
     //
     // Wasm Types
     //
@@ -467,6 +471,14 @@ public struct ILType: Hashable {
         return wasmTypeDefinition != nil
     }
 
+    public var isWasmFunctionDef: Bool {
+        return self.definiteType == .wasmFunctionDef
+    }
+
+    public var wasmFunctionDefSignature: Signature? {
+        assert(self.definiteType == .wasmFunctionDef)
+        return ext?.signature
+    }
 
     public var properties: Set<String> {
         return ext?.properties ?? Set()
@@ -902,6 +914,12 @@ extension ILType: CustomStringConvertible {
                 case .Index:
                     return ".ref(Index)"
             }
+        case .wasmFunctionDef:
+            if let signature = wasmFunctionDefSignature {
+                return ".wasmFunction(\(signature.format(abbreviate: abbreviate)))"
+            } else {
+                return ".wasmFunction()"
+            }
         default:
             break
         }
@@ -964,12 +982,13 @@ struct BaseType: OptionSet, Hashable {
     static let exceptionLabel = BaseType(rawValue: 1 << 18)
     // This is a reference to a table, which can be passed around to table instructions
     // The lifter will resolve this to the proper index when lifting.
-    static let wasmSimd128    = BaseType(rawValue: 1 << 19)
+    static let wasmSimd128     = BaseType(rawValue: 1 << 19)
+    static let wasmFunctionDef = BaseType(rawValue: 1 << 20)
 
     // Wasm-gc types
     // TODO(mliedtke): wasmExternRef and wasmFuncRef need to be integrated into this.
-    static let wasmRef = BaseType(rawValue: 1 << 20)
-    static let wasmTypeDef = BaseType(rawValue: 1 << 21)
+    static let wasmRef = BaseType(rawValue: 1 << 21)
+    static let wasmTypeDef = BaseType(rawValue: 1 << 22)
 
     static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 
@@ -1189,23 +1208,26 @@ public class WasmTableType: WasmTypeExtension {
     let elementType: ILType
     let limits: Limits
     let isTable64: Bool
+    let knownEntries: [Int:ILType]
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmTableType else { return false }
-        return self.elementType == other.elementType && self.limits == other.limits && self.isTable64 == other.isTable64
+        return self.elementType == other.elementType && self.limits == other.limits && self.isTable64 == other.isTable64 && self.knownEntries == other.knownEntries
     }
 
     override public func hash(into hasher: inout Hasher) {
         hasher.combine(elementType)
         hasher.combine(limits)
         hasher.combine(isTable64)
+        hasher.combine(knownEntries)
     }
 
-    init(elementType: ILType, limits: Limits, isTable64: Bool) {
+    init(elementType: ILType, limits: Limits, isTable64: Bool, knownEntries: [Int:ILType]) {
         // TODO(manoskouk): Assert table type is reference type.
         self.elementType = elementType
         self.limits = limits
         self.isTable64 = isTable64
+        self.knownEntries = knownEntries
     }
 }
 

@@ -3119,6 +3119,18 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func wasmCallIndirect(signature: Signature, table: Variable, functionArgs: [Variable], tableIndex: Variable) -> Variable? {
+            let instr = b.emit(WasmCallIndirect(signature: signature), withInputs: [table] + functionArgs + [tableIndex])
+            if (signature.outputType.Is(.nothing)) {
+                assert(!instr.hasOutputs)
+                return nil
+            } else {
+                assert(instr.hasOutputs)
+                return instr.output
+            }
+        }
+
+        @discardableResult
         public func wasmJsCall(function: Variable, withArgs args: [Variable], withWasmSignature signature: Signature) -> Variable? {
             let instr = b.emit(WasmJsCall(signature: signature), withInputs: [function] + args)
             if (signature.outputType.Is(.nothing)) {
@@ -3469,7 +3481,7 @@ public class ProgramBuilder {
             let functionBuilder = WasmFunction(forBuilder: b, withSignature: signature)
             let instr = b.emit(BeginWasmFunction(signature: signature))
             body(functionBuilder, Array(instr.innerOutputs))
-            return b.emit(EndWasmFunction()).output
+            return b.emit(EndWasmFunction(signature: signature)).output
         }
 
         @discardableResult

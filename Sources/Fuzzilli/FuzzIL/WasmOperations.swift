@@ -702,23 +702,28 @@ final class WasmDefineGlobal: WasmOperation {
 final class WasmDefineTable: WasmOperation {
     override var opcode: Opcode { .wasmDefineTable(self) }
 
-    let tableType: WasmTableType
+    let elementType: ILType
+    let limits: Limits
     let definedEntryIndices: [Int]
+    let isTable64: Bool
 
     init(elementType: ILType, limits: Limits, definedEntryIndices: [Int], isTable64: Bool) {
-        self.tableType = WasmTableType(elementType: elementType, limits: limits, isTable64: isTable64)
+        self.elementType = elementType
+        self.limits = limits
+        self.isTable64 = isTable64
         self.definedEntryIndices = definedEntryIndices
 
         // TODO(manoskouk): Find a way to define non-function tables with initializers.
-        assert(elementType == .wasmFuncRef || definedEntryIndices.isEmpty)
-        let inputTypes = if elementType == .wasmFuncRef {
-            Array(repeating: .wasmFuncRef | .function(), count: definedEntryIndices.count)
+        assert(elementType == .wasmFunctionDef() || definedEntryIndices.isEmpty)
+        let inputTypes = if elementType == .wasmFunctionDef(){
+            Array(repeating: .wasmFunctionDef() | .function(), count: definedEntryIndices.count)
         } else {
             [ILType]()
         }
 
         super.init(inputTypes: inputTypes,
-                   outputType: .wasmTable(wasmTableType: WasmTableType(elementType: tableType.elementType, limits: tableType.limits, isTable64: isTable64)),
+                   // Unused since the typer special-cases WasmDefineTable. This is because we cannot know `knownEntries` at this point.
+                   outputType: .wasmTable(wasmTableType: WasmTableType(elementType: elementType, limits: limits, isTable64: isTable64, knownEntries: [:])),
                    attributes: [.isMutable],
                    requiredContext: [.wasm])
     }
@@ -803,6 +808,24 @@ final class WasmTableSet: WasmOperation {
         let elementType = self.tableType.elementType
         let offsetType = self.tableType.isTable64 ? ILType.wasmi64 : ILType.wasmi32
         super.init(inputTypes: [tableType, offsetType, elementType], requiredContext: [.wasmFunction])
+    }
+}
+
+final class WasmCallIndirect: WasmOperation {
+    override var opcode: Opcode { .wasmCallIndirect(self) }
+
+    let signature: Signature
+
+    init(signature: Signature) {
+        self.signature = signature
+        let functionArgs = signature.parameters.convertPlainToILTypes()
+        let params = [ILType.wasmTable] + functionArgs + [ILType.wasmi32]
+        super.init(inputTypes: params, outputType: signature.outputType, requiredContext: [.wasmFunction])
+    }
+
+    convenience init(params: [ILType], outputType: ILType) {
+        let signature = Signature(expects: params.map { .plain($0) }, returns: outputType)
+        self.init(signature: signature)
     }
 }
 
@@ -1224,10 +1247,15 @@ final class BeginWasmFunction: WasmOperation {
 
 final class EndWasmFunction: WasmOperation {
     override var opcode: Opcode { .endWasmFunction(self) }
-    init() {
-        super.init(outputType: .wasmFuncRef, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
+    let signature: Signature
+    init(signature: Signature) {
+        self.signature = signature
+        super.init(outputType: .wasmFunctionDef(signature), attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
     }
-
+    convenience init(parameterTypes: [ILType], returnType: ILType) {
+        let signature = Signature(expects: parameterTypes.map { .plain($0) }, returns: returnType)
+        self.init(signature: signature)
+    }
 }
 
 /// This class is used to indicate nops in the wasm world, this makes handling of minimization much easier.

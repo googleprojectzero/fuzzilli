@@ -616,14 +616,17 @@ public class WasmLifter {
 
         for instruction in self.tables {
             let op = instruction.op as! WasmDefineTable
-            let table = op.tableType
-            temp += encodeType(table.elementType)
+            let elementType = op.elementType
+            let minSize = op.limits.min
+            let maxSize = op.limits.max
+            let isTable64 = op.isTable64
+            temp += elementType.Is(.wasmFunctionDef()) ? Data([0x70]) : encodeType(elementType)
 
-            let limits_byte: UInt8 = (table.isTable64 ? 4 : 0) | (table.limits.max != nil ? 1 : 0)
+            let limits_byte: UInt8 = (isTable64 ? 4 : 0) | (maxSize != nil ? 1 : 0)
             temp += Data([limits_byte])
 
-            temp += Data(Leb128.unsignedEncode(table.limits.min))
-            if let maxSize = table.limits.max {
+            temp += Data(Leb128.unsignedEncode(minSize))
+            if let maxSize {
                 temp += Data(Leb128.unsignedEncode(maxSize))
             }
         }
@@ -666,7 +669,7 @@ public class WasmLifter {
             let tableIndex = try self.resolveIdx(ofType: .table, for: instruction.output)
             temp += Leb128.unsignedEncode(tableIndex)
             // Starting index. Assumes all entries are continuous.
-            temp += table.tableType.isTable64 ? [0x42] : [0x41]
+            temp += table.isTable64 ? [0x42] : [0x41]
             temp += Leb128.unsignedEncode(definedEntryIndices[0])
             temp += [0x0b]  // end
             // elemkind
@@ -960,6 +963,9 @@ public class WasmLifter {
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
             // Needs typer analysis
             return true
+        case .wasmCallIndirect(let op):
+            registerSignature(op.signature)
+            return true
         case .wasmNop(_):
             // Just analyze the instruction but do nothing else here.
             // This lets the typer know that we can skip this instruction without breaking any analysis.
@@ -1026,7 +1032,7 @@ public class WasmLifter {
             // Special inputs that aren't locals (e.g. memories, functions, tags, ...)
             let isLocallyDefined = inputType.isWasmTagType && tags.contains(input)
                 || inputType.isWasmTableType && tables.contains(where: {$0.output == input})
-                || inputType.Is(.wasmFuncRef) && functions.contains(where: {$0.outputVariable == input})
+                || inputType.Is(.wasmFunctionDef()) && functions.contains(where: {$0.outputVariable == input})
                 || inputType.isWasmGlobalType && globals.contains(where: {$0.output == input})
                 || inputType.isWasmMemoryType && memories.contains(where: {$0.output == input})
                 || inputType.Is(.wasmTypeDef())
@@ -1130,11 +1136,10 @@ public class WasmLifter {
 
             case .wasmDefineTable(let tableDef):
                 self.tables.append(instr)
-                if tableDef.tableType.elementType == .wasmFuncRef {
+                if tableDef.elementType == .wasmFunctionDef() {
                     for definedEntry in instr.inputs {
                         if typer.type(of: definedEntry).Is(.function()) && !self.imports.contains(where: { $0.0 == definedEntry }) {
                             // Ensure deterministic lifting.
-
                             let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(typer.type(of: definedEntry).signature ?? Signature.forUnknownFunction)
                             self.imports.append((definedEntry, wasmSignature))
                         }
@@ -1157,7 +1162,14 @@ public class WasmLifter {
                         self.imports.append((table, nil))
                     }
                 }
-
+            case .wasmCallIndirect(_):
+                let table = instr.input(0)
+                if !self.tables.contains(where: {$0.output == table}) {
+                    // TODO: check if the ordering here is also somehow important?
+                    if !self.imports.map({$0.0}).contains(table) {
+                        self.imports.append((table, nil))
+                    }
+                }
             case .wasmJsCall(let op):
                 self.imports.append((instr.input(0), op.functionSignature))
 
@@ -1447,6 +1459,10 @@ public class WasmLifter {
         case .wasmTableSet(_):
             let tableRef = wasmInstruction.input(0)
             return Data([0x26]) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
+        case .wasmCallIndirect(let op):
+            let tableRef = wasmInstruction.input(0)
+            let sigIndex = try getSignatureIndex(op.signature)
+            return Data([0x11]) + Leb128.unsignedEncode(sigIndex) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
         case .wasmMemoryLoad(let op):
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
             return Data([op.loadType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))

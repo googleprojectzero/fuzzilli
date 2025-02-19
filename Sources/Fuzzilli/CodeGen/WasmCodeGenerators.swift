@@ -268,16 +268,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // TODO(manoskouk): Generalize these.
         let minSize = 10
         let maxSize: Int? = nil
-        let elementType = ILType.wasmFuncRef
+        let elementType = ILType.wasmFunctionDef()
 
         var definedEntryIndices: [Int] = []
         var definedEntryValues: [Variable] = []
 
-        let entryType = elementType == .wasmFuncRef ? .wasmFuncRef | .function() : .object()
+        let entryType = elementType == .wasmFunctionDef() ? .wasmFunctionDef() | .function() : .object()
 
         // Currently, only generate entries for funcref tables.
         // TODO(manoskouk): Generalize this.
-        if (elementType == .wasmFuncRef) {
+        if (elementType == .wasmFunctionDef()) {
             let entryValue = b.randomVariable(ofType: entryType)
 
             if entryValue != nil {
@@ -291,6 +291,24 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
 
         module.addTable(elementType: elementType, minSize: minSize, maxSize: maxSize, definedEntryIndices: definedEntryIndices, definedEntryValues: definedEntryValues, isTable64: probability(0.5))
+    },
+
+    CodeGenerator("WasmCallIndirectGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmTable"))) { b, table in
+        let tableType = b.type(of: table).wasmTableType!
+        if tableType.elementType != .wasmFunctionDef() { return }
+        if tableType.knownEntries.isEmpty { return }
+        let (index, entry) = tableType.knownEntries.randomElement()!
+        guard entry.isWasmFunctionDef else { return }
+        let signature = entry.wasmFunctionDefSignature!
+
+        let function = b.currentWasmModule.currentWasmFunction
+        let indexVar = function.consti32(Int32(index))
+
+        let functionArgs = b.randomWasmArguments(forWasmSignature: signature)
+
+        guard let functionArgs else { return }
+
+        function.wasmCallIndirect(signature: signature, table: table, functionArgs: functionArgs, tableIndex: indexVar)
     },
 
     CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, global in
