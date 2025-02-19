@@ -277,6 +277,7 @@ enum Opcode {
     case wasmTableGet(WasmTableGet)
     case wasmTableSet(WasmTableSet)
     case wasmCallIndirect(WasmCallIndirect)
+    case wasmCallDirect(WasmCallDirect)
     case wasmMemoryLoad(WasmMemoryLoad)
     case wasmMemoryStore(WasmMemoryStore)
     case beginWasmFunction(BeginWasmFunction)

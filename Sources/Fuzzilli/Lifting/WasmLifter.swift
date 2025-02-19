@@ -1463,6 +1463,9 @@ public class WasmLifter {
             let tableRef = wasmInstruction.input(0)
             let sigIndex = try getSignatureIndex(op.signature)
             return Data([0x11]) + Leb128.unsignedEncode(sigIndex) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
+        case .wasmCallDirect(_):
+            let functionRef = wasmInstruction.input(0)
+            return Data([0x10]) + Leb128.unsignedEncode(try resolveIdx(ofType: .function, for: functionRef))
         case .wasmMemoryLoad(let op):
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
             return Data([op.loadType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))

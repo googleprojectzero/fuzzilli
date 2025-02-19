@@ -311,6 +311,15 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmCallIndirect(signature: signature, table: table, functionArgs: functionArgs, tableIndex: indexVar)
     },
 
+    // TODO(manoskouk): Find a way to generate recursive calls.
+    CodeGenerator("WasmCallDirectGenerator", inContext: .wasmFunction, inputs: .required(.wasmFunctionDef())) { b, functionVar in
+        let signature = b.type(of: functionVar).wasmFunctionDefSignature!
+        let functionArgs = b.randomWasmArguments(forWasmSignature: signature)
+        guard let functionArgs else { return }
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmCallDirect(signature: signature, function: functionVar, functionArgs: functionArgs)
+    },
+
     CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, global in
         let function = b.currentWasmModule.currentWasmFunction
 

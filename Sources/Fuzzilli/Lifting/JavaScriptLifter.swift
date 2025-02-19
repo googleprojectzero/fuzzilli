@@ -1592,6 +1592,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmTableGet(_),
                  .wasmTableSet(_),
                  .wasmCallIndirect(_),
+                 .wasmCallDirect(_),
                  .wasmMemoryLoad(_),
                  .wasmMemoryStore(_),
                  .beginWasmFunction(_),

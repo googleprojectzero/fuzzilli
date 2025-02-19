@@ -829,6 +829,24 @@ final class WasmCallIndirect: WasmOperation {
     }
 }
 
+final class WasmCallDirect: WasmOperation {
+    override var opcode: Opcode { .wasmCallDirect(self) }
+
+    let signature: Signature
+
+    init(signature: Signature) {
+        self.signature = signature
+        let functionArgs = signature.parameters.convertPlainToILTypes()
+        let params = [ILType.wasmFunctionDef(signature)] + functionArgs
+        super.init(inputTypes: params, outputType: signature.outputType, requiredContext: [.wasmFunction])
+    }
+
+    convenience init(params: [ILType], outputType: ILType) {
+        let signature = Signature(expects: params.map { .plain($0) }, returns: outputType)
+        self.init(signature: signature)
+    }
+}
+
 // WasmMemory operations
 //
 // The format of memory instructions is

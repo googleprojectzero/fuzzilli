@@ -284,6 +284,7 @@ public let codeGeneratorWeights = [
     "WasmBranchTableGenerator":                 6,
     "WasmJsCallGenerator":                      30,
     "WasmCallIndirectGenerator":                5,
+    "WasmCallDirectGenerator":                  10,
 
     // Simd Generators
     "ConstSimd128Generator":                    5,

@@ -1212,6 +1212,14 @@ extension Instruction: ProtobufConvertible {
                     $0.params = convertParametersToWasmTypeEnums(op.signature.parameters)
                     $0.return = ILTypeToWasmTypeEnum(op.signature.outputType)
                 }
+            case .wasmCallDirect(let op):
+                $0.wasmCallDirect = Fuzzilli_Protobuf_WasmCallDirect.with {
+                    $0.params = op.signature.parameters.map { param in
+                        guard case .plain(let p) = param else { fatalError("incompatible wasm signature")}
+                        return ILTypeToWasmTypeEnum(p)
+                    }
+                    $0.return = ILTypeToWasmTypeEnum(op.signature.outputType)
+                }
             case .wasmMemoryLoad(let op):
                 $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with {
                     $0.loadType = convertWasmMemoryLoadType(op.loadType);
@@ -2102,6 +2110,8 @@ extension Instruction: ProtobufConvertible {
                               limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [:])))
         case .wasmCallIndirect(let p):
             op = WasmCallIndirect(params: p.params.map { WasmTypeEnumToILType($0)}, outputType: WasmTypeEnumToILType(p.return))
+        case .wasmCallDirect(let p):
+            op = WasmCallDirect(params: p.params.map { WasmTypeEnumToILType($0)}, outputType: WasmTypeEnumToILType(p.return))
         case .wasmMemoryLoad(let p):
             op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .wasmMemoryStore(let p):
