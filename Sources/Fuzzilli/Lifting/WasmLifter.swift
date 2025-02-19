@@ -232,7 +232,7 @@ public class WasmLifter {
             for (idx, argVar) in arguments.dropFirst().enumerated() {
                 self.localsInfo.append((argVar, signature.parameterTypes[idx]))
                 // Emit the expressions for the parameters such that we can accesss them if we need them.
-                self.lifter!.writer.addExpr(for: argVar, bytecode: Data([0x20, UInt8(self.localsInfo.count - 1)]))
+                self.lifter!.writer.addExpr(for: argVar, bytecode: Data([0x20]) + Leb128.unsignedEncode(self.localsInfo.count - 1))
             }
         }
 
@@ -245,7 +245,7 @@ public class WasmLifter {
             self.localsInfo.append((variable, lifter!.typer.type(of: variable)))
             assert(lifter!.typer.type(of: variable).Is(.wasmPrimitive))
             // Do a local.set on the stack slot
-            self.code += Data([0x21, UInt8(localsInfo.count - 1)])
+            self.code += Data([0x21]) + Leb128.unsignedEncode(localsInfo.count - 1)
         }
 
         func isLocal(_ variable: Variable) -> Bool {
@@ -261,7 +261,7 @@ public class WasmLifter {
             // We expect to do this for innerOutputs.
             assert(isLocal(variable) && getStackSlot(for: variable) != nil)
             // This emits a local.get for the function argument.
-            self.code += Data([0x20, UInt8(getStackSlot(for: variable)!)])
+            self.code += Data([0x20]) + Leb128.unsignedEncode(getStackSlot(for: variable)!)
         }
     }
 
@@ -1083,7 +1083,7 @@ public class WasmLifter {
                 // Also spill the instruction
                 currentFunction!.spillLocal(forVariable: output)
                 // Add the corresponding stack load as an expression, this adds the number of arguments, as output vars always live after the function arguments.
-                self.writer.addExpr(for: output, bytecode: Data([0x20, UInt8(currentFunction!.localsInfo.count - 1)]))
+                self.writer.addExpr(for: output, bytecode: Data([0x20]) + Leb128.unsignedEncode(currentFunction!.localsInfo.count - 1))
             }
         }
 
