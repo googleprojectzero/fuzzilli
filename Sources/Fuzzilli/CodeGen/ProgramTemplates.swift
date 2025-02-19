@@ -93,19 +93,33 @@ public let ProgramTemplates = [
         b.buildPrefix()
         b.build(n: 20)
 
-        let f = b.buildAsyncFunction(with: b.randomParameters()) { _ in
-            b.build(n: 10)
-        }
+        var f: Variable? = nil
 
-        let signature = b.type(of: f).signature ?? Signature.forUnknownFunction
+        withEqualProbability({
+            f = b.buildAsyncFunction(with: b.randomParameters()) { _ in
+                b.build(n: Int.random(in: 5...20))
+            }
+        }, {
+            f = b.buildPlainFunction(with: b.randomParameters()) { _ in
+                b.build(n: Int.random(in: 5...20))
+            }
+        })
+
+        let signature = b.type(of: f!).signature ?? Signature.forUnknownFunction
         // As we do not yet know what types we have in the Wasm module when we try to call this, let Fuzzilli know that it could potentially use all Wasm types here.
         let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
 
         var wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(signature, availableTypes: allWasmTypes)
-        let wrapped = b.wrapSuspending(function: f)
+        let wrapped = b.wrapSuspending(function: f!)
 
         let m = b.buildWasmModule { mod in
             mod.addWasmFunction(with: [] => []) { fbuilder, _  in
+                // This will create a bunch of locals, which should create large (>4KB) frames.
+                if probability(0.02) {
+                    for _ in 0..<1000 {
+                        fbuilder.consti64(b.randomInt())
+                    }
+                }
                 b.build(n: 20)
                 let args = b.randomWasmArguments(forWasmSignature: wasmSignature)
                 // Best effort call...
@@ -113,12 +127,22 @@ public let ProgramTemplates = [
                 if let args {
                     fbuilder.wasmJsCall(function: wrapped, withArgs: args, withWasmSignature: wasmSignature)
                 }
+                b.build(n: 4)
+            }
+            if probability(0.2) {
+                b.build(n: 20)
             }
         }
 
-        let exportedMethod = b.wrapPromising(function: b.getProperty(m.getExportedMethod(at: 0), of: m.loadExports()))
+        var exportedMethod = b.getProperty(m.getExportedMethod(at: 0), of: m.loadExports())
 
-        b.callFunction(exportedMethod)
+        if probability(0.9) {
+            exportedMethod = b.wrapPromising(function: exportedMethod)
+        }
+
+        b.build(n: 10)
+
+        b.callFunction(exportedMethod, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
 
         b.build(n: 5)
     },

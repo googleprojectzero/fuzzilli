@@ -613,6 +613,20 @@ let v8Profile = Profile(
             args.append("--precise-object-pinning")
         }
 
+        // Temporarily enable the three flags below with high probability to
+        // stress-test JSPI.
+        // Lower the probabilities once we have enough coverage.
+        if (probability(0.5)) {
+            let stackSwitchingSize = Int.random(in: 1...300)
+            args.append("--wasm-stack-switching-stack-size=\(stackSwitchingSize)")
+        }
+        if (probability(0.5)) {
+            args.append("--experimental-wasm-growable-stacks")
+        }
+        if (probability(0.5)) {
+            args.append("--stress-wasm-stack-switching")
+        }
+
         //
         // Sometimes enable additional verification/stressing logic (which may be fairly expensive).
         //
