@@ -62,7 +62,9 @@ public class InputMutator: BaseInstructionMutator {
         let replacement: Variable?
 
         // In wasm we need strict typing, so there is no notion of loose or aware.
-        if b.context.contains(.wasm) || b.context.contains(.wasmFunction) {
+        if b.context.contains(.wasm) ||
+            b.context.contains(.wasmFunction) ||
+            b.context.contains(.wasmTypeGroup) {
             let type = b.type(of: inouts[selectedInput])
             replacement = b.randomVariable(ofType: type)
         } else {
