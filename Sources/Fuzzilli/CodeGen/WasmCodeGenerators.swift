@@ -41,7 +41,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let minPages = Int.random(in: 0..<10)
         var maxPages: Int? = nil
         if probability(0.5) {
-            maxPages = Int.random(in: minPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
+            maxPages = Int.random(in: minPages...WasmConstants.specMaxWasmMem32Pages)
         }
         b.createWasmMemory(minPages: minPages, maxPages: maxPages, isShared: probability(0.5))
     },
@@ -218,8 +218,8 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         if probability(0.5) {
             maxPages = nil
         } else {
-            maxPages = Int.random(in: minPages...(isMemory64 ? WasmOperation.WasmConstants.specMaxWasmMem64Pages
-                                                             : WasmOperation.WasmConstants.specMaxWasmMem32Pages))
+            maxPages = Int.random(in: minPages...(isMemory64 ? WasmConstants.specMaxWasmMem64Pages
+                                                             : WasmConstants.specMaxWasmMem32Pages))
         }
         module.addMemory(minPages: minPages, maxPages: maxPages, isShared: false, isMemory64: isMemory64)
     },

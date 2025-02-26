@@ -248,12 +248,6 @@ class MinimizationHelper {
         // We must preserve outputs here to keep variable number contiguous.
         return Instruction(Nop(numOutputs: instr.numOutputs + instr.numInnerOutputs), inouts: instr.allOutputs, flags: .empty)
     }
-
-    func wasmNop(for instr: Instruction) -> Instruction {
-        assert(instr.op is WasmOperation)
-        let op = instr.op as! WasmOperation
-        return Instruction(WasmNop(outputType: op.outputType, innerOutputTypes: op.innerOutputTypes), inouts: instr.allOutputs, flags: .empty)
-    }
 }
 
 protocol Reducer {

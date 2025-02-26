@@ -923,7 +923,7 @@ public class WasmLifter {
     /// This function updates the internal state of the lifter before actually emitting code to the wasm module. This should be invoked before we try to get the corresponding bytes for the Instruction
     private func updateLifterState(wasmInstruction instr: Instruction) -> Bool {
         // Make sure that we actually have a Wasm operation here.
-        assert(instr.op is WasmOperation)
+        assert(instr.op is WasmOperationBase)
 
         switch instr.op.opcode {
         case .wasmBeginBlock(let op):
@@ -1193,9 +1193,11 @@ public class WasmLifter {
                 importTagIfNeeded(tag: instr.input(0), parameters: op.parameters)
 
             default:
-                assert((instr.op as! WasmOperation).inputTypes.allSatisfy { type in
-                    !type.Is(.object())
-                }, "\(instr.op) has an input that is .object() it should probably be handled here.")
+                // TODO(mliedtke): Migrate this mechanism to WasmOperationBase.
+                if let typedOperation = instr.op as? WasmTypedOperation {
+                    assert(typedOperation.inputTypes.allSatisfy {!$0.Is(.object())},
+                        "\(instr.op) has an input that is .object() it should probably be handled here.")
+                }
                 continue
             }
         }
@@ -1307,7 +1309,7 @@ public class WasmLifter {
     /// Example: LoadGlobal with an input variable will resolve the input variable to a concrete global index.
     private func lift(_ wasmInstruction: Instruction) throws -> Data {
         // Make sure that we actually have a Wasm operation here.
-        assert(wasmInstruction.op is WasmOperation)
+        assert(wasmInstruction.op is WasmOperationBase)
 
         switch wasmInstruction.op.opcode {
         case .consti64(let op):

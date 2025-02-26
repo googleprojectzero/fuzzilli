@@ -1851,7 +1851,9 @@ public class ProgramBuilder {
         }
 
         // For WasmOperations, we can assert here that the input types are correct.
-        if let op = op as? WasmOperation {
+        // TODO(mliedtke): We'd probably want to move input type verification to the JSTyper as
+        // well.
+        if let op = op as? WasmTypedOperation {
             for (i, input) in inputs.enumerated() {
                 if !type(of:input).Is(op.inputTypes[i]) {
                     // TODO: try to make sure that mutations don't change the assumptions while ProgramBuilding.
@@ -3542,7 +3544,7 @@ public class ProgramBuilder {
 
     func generateMemoryIndexes(forMemory memory: Variable) -> (Variable, Int64) {
         let memoryTypeInfo = self.type(of: memory).wasmMemoryType!
-        let memSize = Int64(memoryTypeInfo.limits.min * WasmOperation.WasmConstants.specWasmMemPageSize)
+        let memSize = Int64(memoryTypeInfo.limits.min * WasmConstants.specWasmMemPageSize)
         let function = self.currentWasmModule.currentWasmFunction
 
         // Generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.

@@ -128,7 +128,7 @@ struct VariableAnalyzer: Analyzer {
             let variablesInClosedScope = scopes.pop()
             visibleVariables.removeLast(variablesInClosedScope)
 
-            if instr.op is WasmOperation {
+            if instr.op is WasmOperationBase {
                 assert(wasmBranchDepth > 0)
                 wasmBranchDepth -= 1
             }
@@ -141,7 +141,7 @@ struct VariableAnalyzer: Analyzer {
         // This code has to be somewhat careful since e.g. BeginElse both ends and begins a variable scope.
         if instr.isBlockStart {
             scopes.push(0)
-            if instr.op is WasmOperation {
+            if instr.op is WasmOperationBase {
                 wasmBranchDepth += 1
             }
         }
@@ -180,13 +180,13 @@ struct ContextAnalyzer: Analyzer {
 
                 newContext.formUnion(contextStack.secondToTop)
             }
-            
+
             // If we are in a loop, we don't want to propagate the switch context and vice versa. Otherwise we couldn't determine which break operation to emit.
             // TODO Make this generic for similar logic cases as well. E.g. by using a instr.op.contextClosed list.
             if (instr.op.contextOpened.contains(.switchBlock) || instr.op.contextOpened.contains(.switchCase)) {
                 newContext.remove(.loop)
             } else if (instr.op.contextOpened.contains(.loop)) {
-                newContext.remove(.switchBlock) 
+                newContext.remove(.switchBlock)
                 newContext.remove(.switchCase)
             }
             contextStack.push(newContext)

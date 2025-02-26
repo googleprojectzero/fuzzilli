@@ -197,7 +197,7 @@ public struct JSTyper: Analyzer {
         // This typer is currently "Outside" of the wasm module, we just type
         // the instructions here such that we can set the type of the module at
         // the end. Figure out how we can set the correct type at the end?
-        if instr.op is WasmOperation {
+        if instr.op is WasmTypedOperation {
             // TODO(mliedtke): Prior to wasm-gc types it was very convenient to just specify the
             // output type in the WasmOperation. This doesn't scale very well with wasm-gc where
             // the actual output type very much depends on the inputs of an operation (e.g.
@@ -207,14 +207,14 @@ public struct JSTyper: Analyzer {
                 if instr.numOutputs > 1 {
                     fatalError("More than one output for a wasm instruction!")
                 }
-                setType(of: instr.output, to: (instr.op as! WasmOperation).outputType)
+                setType(of: instr.output, to: (instr.op as! WasmTypedOperation).outputType)
             }
 
             switch instr.op.opcode {
             case .beginWasmFunction(let op):
                 activeWasmModuleDefinition?.activeFunctionSignature = op.signature
                 // Type all the innerOutputs
-                for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmOperation).innerOutputTypes) {
+                for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmTypedOperation).innerOutputTypes) {
                     setType(of: innerOutput, to: paramType)
                 }
             case .endWasmFunction(_):
@@ -230,7 +230,7 @@ public struct JSTyper: Analyzer {
                  .wasmBeginCatchAll(_),
                  .wasmBeginTryDelegate(_):
                 // Type all the innerOutputs
-                for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmOperation).innerOutputTypes) {
+                for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmTypedOperation).innerOutputTypes) {
                     setType(of: innerOutput, to: paramType)
                 }
             case .wasmDefineGlobal(_):
@@ -262,6 +262,20 @@ public struct JSTyper: Analyzer {
                 if instr.hasInputs {
                     attachTypeDescription(to: instr.output, typeDef: instr.input(0))
                 }
+            default:
+                break
+            }
+        } else if (instr.op is WasmOperationBase) {
+            // TODO(mliedtke): Migrate the WasmTypedOperation implementations from above.
+            switch instr.op.opcode {
+            case .consti64(_):
+                setType(of: instr.output, to: .wasmi64)
+            case .consti32(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .constf64(_):
+                setType(of: instr.output, to: .wasmf64)
+            case .constf32(_):
+                setType(of: instr.output, to: .wasmf32)
             default:
                 break
             }
@@ -392,7 +406,7 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processTypeChangesBeforeScopeChanges(_ instr: Instruction) {
-        if instr.op is WasmOperation {
+        if instr.op is WasmOperationBase {
             return
         }
         switch instr.op.opcode {
@@ -455,7 +469,7 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processScopeChanges(_ instr: Instruction) {
-        if instr.op is WasmOperation {
+        if instr.op is WasmOperationBase {
             return
         }
         switch instr.op.opcode {
@@ -624,7 +638,7 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processTypeChangesAfterScopeChanges(_ instr: Instruction) {
-        if instr.op is WasmOperation {
+        if instr.op is WasmOperationBase {
             return
         }
         // Helper function to process parameters
