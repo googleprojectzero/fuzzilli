@@ -113,11 +113,6 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         b.wasmDefineTypeGroup { b.buildRecursive() }
     },
 
-    // TODO(mliedtke): Also add code generators for self and forward references. Figure out if we
-    // can just have independent code generators for WasmDefineForwardOrSelfReference and
-    // WasmResolveForwardReference or if this creates issues in combination with e.g. the
-    // CodeGenMutator which could result in having two resolve operations for a single forward
-    // reference?
     CodeGenerator("WasmArrayTypeGenerator", inContext: .wasmTypeGroup) { b in
         let mutability = probability(0.75)
         if let elementType = b.randomVariable(ofType: .wasmTypeDef()), probability(0.25) {
@@ -144,6 +139,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
 
         b.wasmDefineStructType(fields: fields, indexTypes: indexTypes)
+    },
+
+    CodeGenerator("WasmSelfReferenceGenerator", inContext: .wasmTypeGroup) { b in
+        b.wasmDefineForwardOrSelfReference()
+    },
+
+    RecursiveCodeGenerator("WasmForwardReferenceGenerator", inContext: .wasmTypeGroup) { b in
+        b.wasmDefineAndResolveForwardReference {b.buildRecursive()}
     },
 
     CodeGenerator("WasmArrayNewGenerator", inContext: .wasmFunction, inputs: .required(.wasmTypeDef())) { b, arrayType in

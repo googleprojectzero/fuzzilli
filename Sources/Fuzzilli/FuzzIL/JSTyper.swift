@@ -1807,12 +1807,7 @@ public struct JSTyper: Analyzer {
             }
             // Invalidate the type of the forward reference. A ForwardOrSelfReference operation
             // should not be used any more after being resolved.
-            // TODO(mliedtke): Replace this with a simple set and remove the assert that prevents
-            // using .nothing? Check this logic especially with respect to code generation and
-            // mutation: What happens if we insert a `ResolveForwardReference` via a mutator and
-            // there already is a `ResolveForwardReference` defined at a later point in the IL?
-            // set(instr.input(0), .nothing)
-            state.updateType(of: instr.input(0), to: .nothing)
+            set(instr.input(0), .wasmResolvedForwardReference)
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
