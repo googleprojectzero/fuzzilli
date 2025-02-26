@@ -241,7 +241,7 @@ public class OperationMutator: BaseInstructionMutator {
         case .createWasmMemory(let op):
             // TODO(evih): Implement shared memories.
             let newMinPages = Int.random(in: 0..<10)
-            let newMaxPages = probability(0.5) ? nil : Int.random(in: newMinPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
+            let newMaxPages = probability(0.5) ? nil : Int.random(in: newMinPages...WasmConstants.specMaxWasmMem32Pages)
             newOp = CreateWasmMemory(limits: Limits(min: newMinPages, max: newMaxPages), isMemory64: op.memType.isMemory64)
         case .createWasmTable(let op):
             let newMinSize = Int.random(in: 0..<10)
@@ -339,8 +339,8 @@ public class OperationMutator: BaseInstructionMutator {
             let isMemory64 = op.wasmMemory.wasmMemoryType!.isMemory64
             // Making the memory empty will make all loads and stores OOB, so do it rarely.
             let newMinPages = probability(0.005) ? 0 : Int.random(in: 1..<10)
-            let newMaxPages = probability(0.5) ? nil : Int.random(in: isMemory64 ? newMinPages...WasmOperation.WasmConstants.specMaxWasmMem64Pages
-                                                                                 : newMinPages...WasmOperation.WasmConstants.specMaxWasmMem32Pages)
+            let newMaxPages = probability(0.5) ? nil : Int.random(in: isMemory64 ? newMinPages...WasmConstants.specMaxWasmMem64Pages
+                                                                                 : newMinPages...WasmConstants.specMaxWasmMem32Pages)
             newOp = WasmDefineMemory(limits: Limits(min: newMinPages, max: newMaxPages), isMemory64: isMemory64)
         case .wasmMemoryLoad(let op):
             let newLoadType = chooseUniform(from: WasmMemoryLoadType.allCases.filter({$0.numberType() == op.loadType.numberType()}))

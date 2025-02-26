@@ -57,15 +57,21 @@ struct DataFlowSimplifier: Reducer {
 
         // Filter out Wasm instructions where the types would be invalid if we replaced them.
         candidates = candidates.filter({
-            if let op = helper.code[$0].op as? WasmOperation {
+            if let op = helper.code[$0].op as? WasmTypedOperation {
                 // See if we have matching input Types
                 let outputType = op.outputType
                 // Once we support multiple outputs for Wasm we need to update this.
                 assert(helper.code[$0].allOutputs.count == 1)
                 // Find all indices of inputs that are the same type as the output
-                let filteredOutputs = op.inputTypes.enumerated().filter({$0.element.Is(outputType)})
+                let filteredOutputs = op.inputTypes.enumerated().filter {$0.element.Is(outputType)}
                 // If we have outputs, we can actually try to replace this.
                 return !filteredOutputs.isEmpty
+            } else if helper.code[$0].op is WasmOperationBase {
+                // TODO(mliedtke): Implement this using the JSTyper if needed. If we had the typer
+                // available, we could query if the output type of the operation is the same as the
+                // type of any of its inputs to replace it then (and we wouldn't need the
+                // op.inputTypes at all for that.)
+                return false
             } else {
                 return true
             }
@@ -82,12 +88,12 @@ struct DataFlowSimplifier: Reducer {
                     var replacement: Variable? = nil
 
                     // if the candidate is a Wasm operation we need to preserve types.
-                    if let op = instr.op as? WasmOperation {
+                    if let op = instr.op as? WasmTypedOperation {
                         let outputType = op.outputType
                         // Once we support multiple outputs for Wasm we need to update this.
                         assert(instr.allOutputs.count == 1)
                         // Find all indices of inputs that are the same type as the output
-                        let filteredOutputs = op.inputTypes.enumerated().filter({$0.element.Is(outputType)})
+                        let filteredOutputs = op.inputTypes.enumerated().filter {$0.element.Is(outputType)}
                         if !filteredOutputs.isEmpty {
                             // Now pick a random index and choose that input as a replacement.
                             replacement = instr.inputs[chooseUniform(from: filteredOutputs.map { $0.offset })]
@@ -112,7 +118,7 @@ struct DataFlowSimplifier: Reducer {
                         newCode.append(instr)
                     }
                 } else {
-                    // Keep this instruction but potentially change the inputs.
+                    // Keep this instruction but update the inputs if they got replaced.
                     let newInouts = instr.inouts.map({ replacements[$0] ?? $0 })
                     let newInstr = Instruction(instr.op, inouts: newInouts, flags: instr.flags)
                     newCode.append(newInstr)

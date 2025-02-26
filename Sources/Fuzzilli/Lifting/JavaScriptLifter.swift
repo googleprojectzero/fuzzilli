@@ -173,7 +173,7 @@ public class JavaScriptLifter: Lifter {
             }
 
             // Pass Wasm instructions to the WasmLifter
-            if (instr.op as? WasmOperation) != nil {
+            if instr.op is WasmOperationBase {
                 // Forward all the Wasm related instructions to the WasmLifter,
                 // they will be emitted once we see the end of the module.
                 wasmInstructions.append(instr)

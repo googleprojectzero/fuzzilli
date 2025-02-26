@@ -85,7 +85,7 @@ public final class Program {
 
     public var containsWasm: Bool {
         for instr in code {
-            if instr.op is WasmOperation {
+            if instr.op is WasmOperationBase {
                 return true
             }
         }
