@@ -4060,9 +4060,9 @@ public struct Fuzzilli_Protobuf_WasmBeginBlock: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: [Fuzzilli_Protobuf_WasmILType] = []
+  public var parameterTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
-  public var returnType: Fuzzilli_Protobuf_WasmILType = .consti32
+  public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -4074,7 +4074,7 @@ public struct Fuzzilli_Protobuf_WasmEndBlock: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var returnType: Fuzzilli_Protobuf_WasmILType = .consti32
+  public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -12025,8 +12025,8 @@ extension Fuzzilli_Protobuf_WasmMemoryStore: SwiftProtobuf.Message, SwiftProtobu
 extension Fuzzilli_Protobuf_WasmBeginBlock: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmBeginBlock"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "parameters"),
-    2: .same(proto: "returnType"),
+    1: .same(proto: "parameterTypes"),
+    2: .same(proto: "outputTypes"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -12035,26 +12035,26 @@ extension Fuzzilli_Protobuf_WasmBeginBlock: SwiftProtobuf.Message, SwiftProtobuf
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedEnumField(value: &self.parameters) }()
-      case 2: try { try decoder.decodeSingularEnumField(value: &self.returnType) }()
+      case 1: try { try decoder.decodeRepeatedEnumField(value: &self.parameterTypes) }()
+      case 2: try { try decoder.decodeRepeatedEnumField(value: &self.outputTypes) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.parameters.isEmpty {
-      try visitor.visitPackedEnumField(value: self.parameters, fieldNumber: 1)
+    if !self.parameterTypes.isEmpty {
+      try visitor.visitPackedEnumField(value: self.parameterTypes, fieldNumber: 1)
     }
-    if self.returnType != .consti32 {
-      try visitor.visitSingularEnumField(value: self.returnType, fieldNumber: 2)
+    if !self.outputTypes.isEmpty {
+      try visitor.visitPackedEnumField(value: self.outputTypes, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmBeginBlock, rhs: Fuzzilli_Protobuf_WasmBeginBlock) -> Bool {
-    if lhs.parameters != rhs.parameters {return false}
-    if lhs.returnType != rhs.returnType {return false}
+    if lhs.parameterTypes != rhs.parameterTypes {return false}
+    if lhs.outputTypes != rhs.outputTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12063,7 +12063,7 @@ extension Fuzzilli_Protobuf_WasmBeginBlock: SwiftProtobuf.Message, SwiftProtobuf
 extension Fuzzilli_Protobuf_WasmEndBlock: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmEndBlock"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "returnType"),
+    1: .same(proto: "outputTypes"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -12072,21 +12072,21 @@ extension Fuzzilli_Protobuf_WasmEndBlock: SwiftProtobuf.Message, SwiftProtobuf._
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularEnumField(value: &self.returnType) }()
+      case 1: try { try decoder.decodeRepeatedEnumField(value: &self.outputTypes) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.returnType != .consti32 {
-      try visitor.visitSingularEnumField(value: self.returnType, fieldNumber: 1)
+    if !self.outputTypes.isEmpty {
+      try visitor.visitPackedEnumField(value: self.outputTypes, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmEndBlock, rhs: Fuzzilli_Protobuf_WasmEndBlock) -> Bool {
-    if lhs.returnType != rhs.returnType {return false}
+    if lhs.outputTypes != rhs.outputTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

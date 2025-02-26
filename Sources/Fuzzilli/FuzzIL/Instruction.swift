@@ -1244,12 +1244,12 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmBeginBlock(let op):
                 $0.wasmBeginBlock = Fuzzilli_Protobuf_WasmBeginBlock.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmEndBlock(let op):
                 $0.wasmEndBlock = Fuzzilli_Protobuf_WasmEndBlock.with {
-                    $0.returnType = ILTypeToWasmTypeEnum(op.outputType)
+                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBeginLoop(let op):
                 $0.wasmBeginLoop = Fuzzilli_Protobuf_WasmBeginLoop.with {
@@ -2121,12 +2121,11 @@ extension Instruction: ProtobufConvertible {
         case .endWasmFunction(let p):
             op = EndWasmFunction(parameterTypes: p.parameters.map { WasmTypeEnumToILType($0) }, returnType: WasmTypeEnumToILType(p.returnType))
         case .wasmBeginBlock(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginBlock(with: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginBlock(with: parameters => outputs)
         case .wasmEndBlock(let p):
-            op = WasmEndBlock(outputType: WasmTypeEnumToILType(p.returnType))
+            op = WasmEndBlock(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginLoop(let p):
             let parameters: [Parameter] = p.parameters.map({ param in
                 Parameter.plain(WasmTypeEnumToILType(param))

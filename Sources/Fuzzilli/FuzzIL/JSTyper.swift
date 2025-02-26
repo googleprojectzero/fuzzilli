@@ -221,8 +221,7 @@ public struct JSTyper: Analyzer {
                 let signature = activeWasmModuleDefinition!.activeFunctionSignature!
                 activeWasmModuleDefinition!.activeFunctionSignature = nil
                 activeWasmModuleDefinition!.methodSignatures.append((instr.output, signature))
-            case .wasmBeginBlock(_),
-                 .wasmBeginLoop(_),
+            case .wasmBeginLoop(_),
                  .wasmBeginIf(_),
                  .wasmBeginElse(_),
                  .wasmBeginTry(_),
@@ -276,6 +275,15 @@ public struct JSTyper: Analyzer {
                 setType(of: instr.output, to: .wasmf64)
             case .constf32(_):
                 setType(of: instr.output, to: .wasmf32)
+            case .wasmBeginBlock(let op):
+                setType(of: instr.innerOutputs.first!, to: .label(op.signature.outputTypes))
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+            case .wasmEndBlock(let op):
+                for (output, outputType) in zip(instr.outputs, op.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
             default:
                 break
             }

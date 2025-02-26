@@ -887,10 +887,10 @@ class WasmFoundationTests: XCTestCase {
                 // Test if we can break from this block
                 // We should expect to have executed the first wasmReassign which sets marker to 11
                 let marker = function.consti64(10)
-                function.wasmBuildBlock(with: [] => .nothing, args: []) { label, args in
+                function.wasmBuildBlock(with: [] => [], args: []) { label, args in
                     let a = function.consti64(11)
                     function.wasmReassign(variable: marker, to: a)
-                    function.wasmBuildBlock(with: [] => .nothing, args: []) { _, _ in
+                    function.wasmBuildBlock(with: [] => [], args: []) { _, _ in
                         // TODO: write codegenerators that use this somehow.
                         // Break to the outer block, this verifies that we can break out of nested block
                         function.wasmBranch(to: label)
@@ -1300,7 +1300,7 @@ class WasmFoundationTests: XCTestCase {
         let tag = b.createWasmTag(parameterTypes: [])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                function.wasmBuildBlock(with: [] => .nothing, args: []) { blockLabel, _ in
+                function.wasmBuildBlock(with: [] => [], args: []) { blockLabel, _ in
                     function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { tryLabel, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [])
                     } catchAllBody: { label in
@@ -1677,7 +1677,7 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => .wasmf64) { function, _ in
                 let argI32 = function.consti32(12345)
                 let argF64 = function.constf64(543.21)
-                function.wasmBuildBlock(with: [.wasmi32, .wasmf64] => .nothing, args: [argI32, argF64]) { blockLabel, args in
+                function.wasmBuildBlock(with: [.wasmi32, .wasmf64] => [], args: [argI32, argF64]) { blockLabel, args in
                     assert(args.count == 2)
                     let result = function.wasmf64BinOp(function.converti32Tof64(args[0], isSigned: true), args[1], binOpKind: .Add)
                     function.wasmReturn(result)
@@ -1694,7 +1694,7 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "12888.21\n")
     }
 
-    func testBlockWithResult() throws {
+    func testBlockWithResults() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1702,10 +1702,12 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                let blockResult = function.wasmBuildBlockWithResult(with: [.wasmi32] => .wasmi64, args: [function.consti32(12345)]) { blockLabel, args in
-                    return function.extendi32Toi64(args[0], isSigned: true)
+                let blockResult = function.wasmBuildBlockWithResults(with: [.wasmi32] => [.wasmi64, .wasmi32], args: [function.consti32(1234)]) { blockLabel, args in
+                    return [function.extendi32Toi64(args[0], isSigned: true), args[0]]
                 }
-                function.wasmReturn(blockResult)
+                let sum = function.wasmi64BinOp(blockResult[0],
+                    function.extendi32Toi64(blockResult[1], isSigned: true), binOpKind: .Add)
+                function.wasmReturn(sum)
             }
         }
         let exports = module.loadExports()
@@ -1714,7 +1716,7 @@ class WasmFoundationTests: XCTestCase {
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
-        testForOutput(program: jsProg, runner: runner, outputString: "12345\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "2468\n")
     }
 
     func testBranchWithParameter() throws {
@@ -1725,14 +1727,15 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
-                let blockResult = function.wasmBuildBlockWithResult(with: [.wasmi32] => .wasmi32, args: args) { blockLabel, blockArgs in
+                let blockResult = function.wasmBuildBlockWithResults(with: [.wasmi32] => [.wasmi32, .wasmi64], args: args) { blockLabel, blockArgs in
                     // TODO(mliedtke): A branch to the function end should also be allowed but
                     // unfortunately a function doesn't have a label in FuzzIL, yet.
-                    function.wasmBranchIf(blockArgs[0], to: blockLabel, args: [function.wasmi32BinOp(blockArgs[0], args[0], binOpKind: .Add)])
-                    function.wasmBranch(to: blockLabel, args: [function.consti32(12345)])
-                    return function.consti32(-1)
+                    function.wasmBranchIf(blockArgs[0], to: blockLabel, args: [function.wasmi32BinOp(blockArgs[0], args[0], binOpKind: .Add), function.consti64(1)])
+                    function.wasmBranch(to: blockLabel, args: [function.consti32(12345), function.consti64(54321)])
+                    return [function.consti32(-1), function.consti64(0)]
                 }
-                function.wasmReturn(blockResult)
+                let sum = function.wasmi32BinOp(blockResult[0], function.wrapi64Toi32(blockResult[1]), binOpKind: .Add)
+                function.wasmReturn(sum)
             }
         }
         let exports = module.loadExports()
@@ -1743,7 +1746,7 @@ class WasmFoundationTests: XCTestCase {
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
-        testForOutput(program: jsProg, runner: runner, outputString: "84\n12345\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "85\n66666\n")
     }
 
     func testBranchTableVoid() throws {
@@ -1754,8 +1757,8 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
-                function.wasmBuildBlock(with: [] => .nothing, args: []) { label1, _ in
-                    function.wasmBuildBlock(with: [] => .nothing, args: []) { label2, _ in
+                function.wasmBuildBlock(with: [] => [], args: []) { label1, _ in
+                    function.wasmBuildBlock(with: [] => [], args: []) { label2, _ in
                         function.wasmBranchTable(on: args[0], labels: [label1, label2], args: [])
                     }
                     function.wasmReturn(function.consti32(2))
@@ -1787,19 +1790,19 @@ class WasmFoundationTests: XCTestCase {
                 // Fuzzilli doesn't have support for handling stack-polymorphic cases after
                 // non-returning instructions like br_table or return.
                 let dummy = function.consti64(-1)
-                let block1Result = function.wasmBuildBlockWithResult(with: [] => .wasmi64, args: []) { label1, _ in
-                    let block2Result = function.wasmBuildBlockWithResult(with: [] => .wasmi64, args: []) { label2, _ in
-                        let block3Result = function.wasmBuildBlockWithResult(with: [] => .wasmi64, args: []) { label3, _ in
+                let block1Result = function.wasmBuildBlockWithResults(with: [] => [.wasmi64], args: []) { label1, _ in
+                    let block2Result = function.wasmBuildBlockWithResults(with: [] => [.wasmi64], args: []) { label2, _ in
+                        let block3Result = function.wasmBuildBlockWithResults(with: [] => [.wasmi64], args: []) { label3, _ in
                             function.wasmBranchTable(on: args[0], labels: [label1, label2, label3], args: [args[1]])
-                            return dummy
+                            return [dummy]
                         }
-                        function.wasmReturn(function.wasmi64BinOp(block3Result, function.consti64(3), binOpKind: .Add))
-                        return dummy
+                        function.wasmReturn(function.wasmi64BinOp(block3Result[0], function.consti64(3), binOpKind: .Add))
+                        return [dummy]
                     }
-                    function.wasmReturn(function.wasmi64BinOp(block2Result, function.consti64(2), binOpKind: .Add))
-                    return dummy
+                    function.wasmReturn(function.wasmi64BinOp(block2Result[0], function.consti64(2), binOpKind: .Add))
+                    return [dummy]
                 }
-                function.wasmReturn(function.wasmi64BinOp(block1Result, function.consti64(1), binOpKind: .Add))
+                function.wasmReturn(function.wasmi64BinOp(block1Result[0], function.consti64(1), binOpKind: .Add))
             }
         }
         let exports = module.loadExports()
