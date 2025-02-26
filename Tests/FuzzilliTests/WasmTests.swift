@@ -4165,12 +4165,6 @@ class WasmGCTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "12\n")
-
-        // TODO(mliedtke): Remove once we have proper serialization tests.
-        let proto = prog.asProtobuf()
-        let copy = try! Program(from: proto)
-        let jsProgFromProto = fuzzer.lifter.lift(copy, withOptions: [.includeComments])
-        testForOutput(program: jsProgFromProto, runner: runner, outputString: "12\n")
     }
 
     func testForwardReferenceType() throws {
@@ -4207,12 +4201,6 @@ class WasmGCTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
-
-        // TODO(mliedtke): Remove once we have proper serialization tests.
-        let proto = prog.asProtobuf()
-        let copy = try! Program(from: proto)
-        let jsProgFromProto = fuzzer.lifter.lift(copy, withOptions: [.includeComments])
-        testForOutput(program: jsProgFromProto, runner: runner, outputString: "42\n")
     }
 
     func testDependentTypeGroups() throws {
