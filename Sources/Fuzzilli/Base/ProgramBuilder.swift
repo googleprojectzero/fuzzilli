@@ -3191,30 +3191,29 @@ public class ProgramBuilder {
 
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         // TODO(cffsmith): I think the best way to handle these types of blocks is to treat them like inline functions that have a signature. E.g. they behave like a definition and call of a wasmfunction. The output should be the output of the signature.
-        public func wasmBuildBlock(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> ()) {
-            assert(signature.parameters.count == args.count)
-            assert(signature.outputType == .nothing)
+        public func wasmBuildBlock(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> ()) {
+            assert(signature.parameterTypes.count == args.count)
+            assert(signature.outputTypes.count == 0)
             let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            b.emit(WasmEndBlock(outputType: signature.outputType))
+            b.emit(WasmEndBlock(outputTypes: []))
         }
 
         @discardableResult
-        public func wasmBuildBlockWithResult(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Variable) -> Variable {
-            assert(signature.parameters.count == args.count)
-            assert(signature.outputType != .nothing)
+        public func wasmBuildBlockWithResults(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            assert(signature.parameterTypes.count == args.count)
             let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args)
-            let result = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return b.emit(WasmEndBlock(outputType: signature.outputType), withInputs: [result]).output
+            let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return Array(b.emit(WasmEndBlock(outputTypes: signature.outputTypes), withInputs: results).outputs)
         }
 
         // Convenience function to begin a wasm block. Note that this does not emit an end block.
-        func wasmBeginBlock(with signature: Signature, args: [Variable]) {
+        func wasmBeginBlock(with signature: WasmSignature, args: [Variable]) {
             b.emit(WasmBeginBlock(with: signature), withInputs: args)
         }
         // Convenience function to end a wasm block.
-        func wasmEndBlock(with signature: Signature, args: [Variable]) {
-            b.emit(WasmEndBlock(outputType: signature.outputType), withInputs: args)
+        func wasmEndBlock(outputTypes: [ILType], args: [Variable]) {
+            b.emit(WasmEndBlock(outputTypes: outputTypes), withInputs: args)
         }
 
         // This can branch to label variables only, has a variable input for dataflow purposes.
@@ -3604,6 +3603,10 @@ public class ProgramBuilder {
         // TODO(mliedtke): The selection of types is in sync with ProgramBuilder::randomWasmSignature(). This should allow more types.
         let possibleTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64]
         return chooseUniform(from: allowVoid ? possibleTypes + [.nothing] : possibleTypes)
+    }
+
+    public func randomWasmBlockOutputTypes(upTo n: Int) -> [ILType] {
+        (0..<Int.random(in: 0...n)).map {_ in chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64])}
     }
 
     public func randomWasmBlockArguments(upTo n: Int) -> [Variable] {

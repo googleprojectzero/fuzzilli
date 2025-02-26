@@ -996,24 +996,25 @@ final class WasmSelect: WasmTypedOperation {
     }
 }
 
-final class WasmBeginBlock: WasmTypedOperation {
+final class WasmBeginBlock: WasmOperationBase {
     override var opcode: Opcode { .wasmBeginBlock(self) }
 
-    let signature: Signature
+    let signature: WasmSignature
 
-    init(with signature: Signature) {
+    init(with signature: WasmSignature) {
         self.signature = signature
-        let parameterTypes = signature.parameters.convertPlainToILTypes()
-        let labelTypes = signature.outputType != .nothing ? [signature.outputType] : []
-        super.init(inputTypes: parameterTypes, outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
-final class WasmEndBlock: WasmTypedOperation {
+final class WasmEndBlock: WasmOperationBase {
     override var opcode: Opcode { .wasmEndBlock(self) }
 
-    init(outputType: ILType) {
-        super.init(inputTypes: outputType != .nothing ? [outputType] : [], outputType: outputType, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction, .wasmBlock])
+    let outputTypes: [ILType]
+
+    init(outputTypes: [ILType]) {
+        self.outputTypes = outputTypes
+        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction, .wasmBlock])
     }
 }
 

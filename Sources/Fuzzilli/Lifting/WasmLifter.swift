@@ -128,6 +128,7 @@ public class WasmLifter {
     private var tables: [Instruction] = []
 
     // The tags associated with this module.
+    // TODO(mliedtke): Switch this to VariableMap<[ILType]> to be in sync with the WasmSignature.
     private var tags: VariableMap<ParameterList> = VariableMap()
 
     private var typeGroups: Set<Int> = []
@@ -140,8 +141,8 @@ public class WasmLifter {
     private var functionIdxBase = 0
 
     // The signature index space.
-    private var signatures : [Signature] = []
-    private var signatureIndexMap : [Signature: Int] = [:]
+    private var signatures : [WasmSignature] = []
+    private var signatureIndexMap : [WasmSignature: Int] = [:]
 
     // This should only be set once we have preprocessed all imported globals, so that we know where internally defined globals start
     private var baseDefinedGlobals: Int? = nil
@@ -448,20 +449,13 @@ public class WasmLifter {
 
         for signature in self.signatures {
             temp += [0x60]
-            temp += Leb128.unsignedEncode(signature.parameters.count)
-            for paramType in signature.parameters {
-                switch paramType {
-                case .plain(let paramType):
-                    temp += encodeType(paramType)
-                default:
-                    fatalError("unreachable")
-                }
+            temp += Leb128.unsignedEncode(signature.parameterTypes.count)
+            for paramType in signature.parameterTypes {
+                temp += encodeType(paramType)
             }
-            if signature.outputType != .nothing {
-                temp += Leb128.unsignedEncode(1) // num output types
-                temp += encodeType(signature.outputType, defaultType: .wasmExternRef)
-            } else {
-                temp += [0x00] // num output types
+            temp += Leb128.unsignedEncode(signature.outputTypes.count)
+            for outputType in signature.outputTypes {
+                temp += encodeType(outputType, defaultType: .wasmExternRef)
             }
         }
 
@@ -477,7 +471,7 @@ public class WasmLifter {
         self.bytecode.append(temp)
     }
 
-    private func registerSignature(_ signature: Signature) {
+    private func registerSignature(_ signature: WasmSignature) {
         assert(signatures.count == signatureIndexMap.count)
         if signatureIndexMap[signature] != nil {
             return
@@ -488,7 +482,12 @@ public class WasmLifter {
         assert(signatures.count == signatureIndexMap.count)
     }
 
-    private func getSignatureIndex(_ signature: Signature) throws -> Int {
+    // TODO(mliedtke): Remove the overload once everything switched to using WasmSignatures.
+    private func registerSignature(_ signature: Signature) {
+        registerSignature(WasmSignature(from: signature))
+    }
+
+    private func getSignatureIndex(_ signature: WasmSignature) throws -> Int {
         if let idx = signatureIndexMap[signature] {
             return idx
         }
@@ -525,7 +524,7 @@ public class WasmLifter {
                 if verbose {
                     print(functionIdxBase)
                 }
-                temp += [0x0] + Leb128.unsignedEncode(try getSignatureIndex(signature!))
+                temp += [0x0] + Leb128.unsignedEncode(try getSignatureIndex(WasmSignature(from: signature!)))
 
                 // Update the index space, these indices have to be set before the exports are set
                 functionIdxBase += 1
@@ -571,7 +570,7 @@ public class WasmLifter {
                 continue
             }
             if type.Is(.object(ofGroup: "WasmTag")) {
-                temp += [0x4, 0x0] + Leb128.unsignedEncode(try getSignatureIndex(signature!))
+                temp += [0x4, 0x0] + Leb128.unsignedEncode(try getSignatureIndex(WasmSignature(from: signature!)))
                 continue
             }
 
@@ -597,7 +596,7 @@ public class WasmLifter {
         var temp = Leb128.unsignedEncode(self.functions.count)
 
         for info in self.functions {
-            temp.append(Leb128.unsignedEncode(try getSignatureIndex(info.signature)))
+            temp.append(Leb128.unsignedEncode(try getSignatureIndex(WasmSignature(from: info.signature))))
         }
 
         // Append the length of the section and the section contents itself.
@@ -836,7 +835,7 @@ public class WasmLifter {
         section += Leb128.unsignedEncode(self.tags.reduce(0, {res, _ in res + 1}))
         for tag in self.tags {
             section.append(0)
-            section.append(Leb128.unsignedEncode(try getSignatureIndex(tag.1 => .nothing)))
+            section.append(Leb128.unsignedEncode(try getSignatureIndex(WasmSignature(from: tag.1 => .nothing))))
         }
 
         self.bytecode.append(Leb128.unsignedEncode(section.count))
@@ -1055,13 +1054,15 @@ public class WasmLifter {
             return
         }
 
-        // If we have an output, make sure we store it on the stack as this is a "complex" instruction, i.e. has inputs and outputs
+        // If we have an output, make sure we store it on the stack as this is a "complex" instruction, i.e. has inputs and outputs.
         if instr.numOutputs > 0 {
-            assert(!typer.type(of: instr.output).Is(.anyLabel))
-            // Also spill the instruction
-            currentFunction!.spillLocal(forVariable: instr.output)
-            // Add the corresponding stack load as an expression, this adds the number of arguments, as output vars always live after the function arguments.
-            self.writer.addExpr(for: instr.output, bytecode: Data([0x20, UInt8(currentFunction!.localsInfo.count - 1)]))
+            assert(instr.outputs.allSatisfy {!typer.type(of: $0).Is(.anyLabel)})
+            for output in instr.outputs.reversed() {
+                // Also spill the instruction
+                currentFunction!.spillLocal(forVariable: output)
+                // Add the corresponding stack load as an expression, this adds the number of arguments, as output vars always live after the function arguments.
+                self.writer.addExpr(for: output, bytecode: Data([0x20, UInt8(currentFunction!.localsInfo.count - 1)]))
+            }
         }
 
         // TODO(mliedtke): Could we make the spilling automatic based on types, so that all wasm
@@ -1480,7 +1481,7 @@ public class WasmLifter {
             return Data([0x26]) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
         case .wasmCallIndirect(let op):
             let tableRef = wasmInstruction.input(0)
-            let sigIndex = try getSignatureIndex(op.signature)
+            let sigIndex = try getSignatureIndex(WasmSignature(from: op.signature))
             return Data([0x11]) + Leb128.unsignedEncode(sigIndex) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
         case .wasmCallDirect(_):
             let functionRef = wasmInstruction.input(0)
@@ -1508,11 +1509,11 @@ public class WasmLifter {
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
             return Data([0x02] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginLoop(let op):
-            return Data([0x03] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x03] + Leb128.unsignedEncode(signatureIndexMap[WasmSignature(from: op.signature)]!))
         case .wasmBeginTry(let op):
-            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[WasmSignature(from: op.signature)]!))
         case .wasmBeginTryDelegate(let op):
-            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[WasmSignature(from: op.signature)]!))
         case .wasmBeginCatchAll(_):
             return Data([0x19])
         case .wasmBeginCatch(_):
@@ -1547,7 +1548,7 @@ public class WasmLifter {
             }
             return Data([0x0E]) + Leb128.unsignedEncode(op.valueCount) + depths.map(Leb128.unsignedEncode).joined()
         case .wasmBeginIf(let op):
-            return Data([0x04] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x04] + Leb128.unsignedEncode(signatureIndexMap[WasmSignature(from: op.signature)]!))
         case .wasmBeginElse(_):
             // 0x05 is the else block instruction.
             return Data([0x05])

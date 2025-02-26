@@ -1503,6 +1503,31 @@ public struct Signature: Hashable, CustomStringConvertible {
     }
 }
 
+public struct WasmSignature: Hashable, CustomStringConvertible {
+    let parameterTypes: [ILType]
+    let outputTypes: [ILType]
+
+    init(expects parameters: [ILType], returns returnTypes: [ILType]) {
+        self.parameterTypes = parameters
+        self.outputTypes = returnTypes
+    }
+
+    init(from signature: Signature) {
+        self.parameterTypes = signature.parameters.convertPlainToILTypes()
+        self.outputTypes = signature.outputType != .nothing ? [signature.outputType] : []
+    }
+
+    func format(abbreviate: Bool) -> String {
+        let inputs = parameterTypes.map({ $0.format(abbreviate: abbreviate) }).joined(separator: ", ")
+        let outputs = outputTypes.map({ $0.format(abbreviate: abbreviate) }).joined(separator: ", ")
+        return "[\(inputs)] => [\(outputs)]"
+    }
+
+    public var description: String {
+        return format(abbreviate: false)
+    }
+}
+
 /// The convenience postfix operator ... is used to construct rest parameters.
 postfix operator ...
 public postfix func ... (t: ILType) -> Parameter {
@@ -1514,6 +1539,10 @@ public postfix func ... (t: ILType) -> Parameter {
 infix operator =>: AdditionPrecedence
 public func => (parameters: [Parameter], returnType: ILType) -> Signature {
     return Signature(expects: ParameterList(parameters), returns: returnType)
+}
+
+func => (parameters: [ILType], returnTypes: [ILType]) -> WasmSignature {
+    return WasmSignature(expects: parameters, returns: returnTypes)
 }
 
 // TODO(mliedtke): We'll probbaly need some base class for array, struct and function definitions

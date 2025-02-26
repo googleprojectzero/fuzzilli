@@ -1148,12 +1148,12 @@ message WasmMemoryStore {
 }
 
 message WasmBeginBlock {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmEndBlock {
-  WasmILType returnType = 1;
+  repeated WasmILType outputTypes = 1;
 }
 
 message WasmBeginLoop {

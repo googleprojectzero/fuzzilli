@@ -627,7 +627,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     RecursiveCodeGenerator("WasmBlockGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
-        function.wasmBuildBlock(with: [] => .nothing, args: []) { label, args in
+        function.wasmBuildBlock(with: [] => [], args: []) { label, args in
             b.buildRecursive()
         }
     },
@@ -636,17 +636,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
         let args = b.randomWasmBlockArguments(upTo: 5)
-        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
-        let outputType = b.randomWasmBlockOutputType()
-        if outputType != .nothing {
-            function.wasmBuildBlockWithResult(with: parameters => outputType, args: args) { label, args in
-                b.buildRecursive()
-                return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
-            }
-        } else {
-            function.wasmBuildBlock(with: parameters => outputType, args: args) { label, args in
-                b.buildRecursive()
-            }
+        let parameters = args.map {b.type(of: $0)}
+        let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
+        function.wasmBuildBlockWithResults(with: parameters => outputTypes, args: args) { label, args in
+            b.buildRecursive()
+            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
         }
     },
 
@@ -852,7 +846,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
         let extraBlockCount = Int.random(in: 1...5)
         let valueCount = Int.random(in: 0...20)
-        let signature = [] => parameterType
+        let signature = [] => [parameterType]
         (0..<extraBlockCount).forEach { _ in
             function.wasmBeginBlock(with: signature, args: [])
         }
@@ -861,7 +855,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmBranchTable(on: value, labels: labels, args: [arg])
         (0..<extraBlockCount).forEach { n in
             let arg = b.randomVariable(ofType: parameterType) ?? function.generateRandomWasmVar(ofType: parameterType)
-            function.wasmEndBlock(with: signature, args: [arg])
+            function.wasmEndBlock(outputTypes: signature.outputTypes, args: [arg])
             b.buildRecursive(block: n + 1, of: extraBlockCount, n: 4)
         }
     },
