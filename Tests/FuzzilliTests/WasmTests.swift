@@ -782,6 +782,57 @@ class WasmFoundationTests: XCTestCase {
         try allMemoryStoreTypesExecution(isMemory64: true)
     }
 
+    func multiMemory(isMemory64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let memory0: Variable = b.createWasmMemory(minPages: 10, maxPages: 20, isMemory64: isMemory64)
+        assert(b.type(of: memory0) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: isMemory64))
+
+        let module = b.buildWasmModule { wasmModule in
+            let memory1 = wasmModule.addMemory(minPages: 2, isMemory64: isMemory64)
+            let memory2 = wasmModule.addMemory(minPages: 2, isMemory64: isMemory64)
+            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                let offset = isMemory64 ? function.consti64(Int64(42)) : function.consti32(Int32(42))
+                function.wasmMemoryStore(memory: memory0, dynamicOffset: offset, value: function.constf32(1.0), storeType: .F32StoreMem, staticOffset: 0)
+                function.wasmMemoryStore(memory: memory1, dynamicOffset: offset, value: function.constf64(2.0), storeType: .F64StoreMem, staticOffset: 0)
+                function.wasmMemoryStore(memory: memory2, dynamicOffset: offset, value: function.consti32(3), storeType: .I32StoreMem, staticOffset: 0)
+                let load0 = function.wasmMemoryLoad(memory: memory0, dynamicOffset: offset, loadType: .F32LoadMem, staticOffset: 0)
+                let load1 = function.wasmMemoryLoad(memory: memory1, dynamicOffset: offset, loadType: .F64LoadMem, staticOffset: 0)
+                let load2 = function.wasmMemoryLoad(memory: memory2, dynamicOffset: offset, loadType: .I32LoadMem, staticOffset: 0)
+
+                let trunc0 = function.truncatef32Toi32(load0, isSigned: true)
+                let trunc1 = function.truncatef64Toi32(load1, isSigned: true)
+
+                let sum = function.wasmi32BinOp(
+                    function.wasmi32BinOp(trunc0, trunc1, binOpKind: .Add),
+                    load2, binOpKind: .Add)
+                function.wasmReturn(sum)
+            }
+        }
+
+        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+        b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res0)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "6\n")
+    }
+
+    func testMultiMemory32() throws {
+        try multiMemory(isMemory64: false)
+    }
+
+    func testMultiMemory64() throws {
+        try multiMemory(isMemory64: true)
+    }
+
     func wasmSimdLoad(isMemory64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

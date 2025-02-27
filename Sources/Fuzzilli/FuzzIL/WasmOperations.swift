@@ -740,7 +740,7 @@ final class WasmDefineMemory: WasmOperation {
 
     init(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) {
         self.wasmMemory = .wasmMemory(limits: limits, isShared: isShared, isMemory64: isMemory64)
-        super.init(outputType: self.wasmMemory, attributes: [.isMutable, .isSingular], requiredContext: [.wasm])
+        super.init(outputType: self.wasmMemory, attributes: [.isMutable], requiredContext: [.wasm])
     }
 }
 

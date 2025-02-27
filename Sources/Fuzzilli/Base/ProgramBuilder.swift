@@ -3445,8 +3445,6 @@ public class ProgramBuilder {
             return functions.last!
         }
 
-        // TODO(evih): Allow multi-memories.
-        public var memory: Variable?
         private var moduleVariable: Variable?
         /// This stores the type information for the `exports` property of the Wasm module.
         private var exportsTypeInfo: ILType? = nil
