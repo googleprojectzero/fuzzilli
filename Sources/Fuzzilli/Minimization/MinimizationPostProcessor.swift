@@ -46,29 +46,29 @@ struct MinimizationPostProcessor {
                      .endObjectLiteralMethod,
                      .endObjectLiteralGetter:
                     // Insert return statements at the end of functions, but only if there is not one already.
-                    if lastInstr.op is Return || !b.hasVisibleVariables { break }
+                    if lastInstr.op is Return || !b.hasVisibleJsVariables { break }
                     addedInstruction = Instruction(Return(hasReturnValue: true), inputs: [b.randomJsVariable()])
                 case .callFunction(let op):
                     // (Sometimes) insert random arguments, but only if there are none currently.
-                    if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }
+                    if instr.hasAnyVariadicInputs || !b.hasVisibleJsVariables || probability(0.5) { break }
                     let args = b.randomArguments(forCalling: instr.input(0))
                     guard args.count > 0 else { break }
                     replacementInstruction = Instruction(CallFunction(numArguments: args.count, isGuarded: op.isGuarded), output: instr.output, inputs: [instr.input(0)] + args)
                 case .callMethod(let op):
                     // (Sometimes) insert random arguments, but only if there are none currently.
-                    if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }
+                    if instr.hasAnyVariadicInputs || !b.hasVisibleJsVariables || probability(0.5) { break }
                     let args = b.randomArguments(forCallingMethod: op.methodName, on: instr.input(0))
                     guard args.count > 0 else { break }
                     replacementInstruction = Instruction(CallMethod(methodName: op.methodName, numArguments: args.count, isGuarded: op.isGuarded), output: instr.output, inputs: [instr.input(0)] + args)
                 case .construct(let op):
                     // (Sometimes) insert random arguments, but only if there are none currently.
-                    if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }
+                    if instr.hasAnyVariadicInputs || !b.hasVisibleJsVariables || probability(0.5) { break }
                     let args = b.randomArguments(forCalling: instr.input(0))
                     guard args.count > 0 else { break }
                     replacementInstruction = Instruction(Construct(numArguments: args.count, isGuarded: op.isGuarded), output: instr.output, inputs: [instr.input(0)] + args)
                 case .createArray:
                     // Add initial values, but only if there are none currently.
-                    if instr.hasAnyVariadicInputs || !b.hasVisibleVariables { break }
+                    if instr.hasAnyVariadicInputs || !b.hasVisibleJsVariables { break }
                     let initialValues = Array<Variable>(repeating: b.randomJsVariable(), count: Int.random(in: 1...5))
                     replacementInstruction = Instruction(CreateArray(numInitialValues: initialValues.count), output: instr.output, inputs: initialValues)
                 default:
