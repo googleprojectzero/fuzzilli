@@ -301,6 +301,18 @@ public struct JSTyper: Analyzer {
                 for (output, outputType) in zip(instr.outputs, op.outputTypes) {
                     setType(of: output, to: outputType)
                 }
+            case .wasmBeginLoop(let op):
+                // Note that different to all other blocks the loop's label parameters are the input types
+                // of the block, not the result types (because a branch to a loop label jumps to the
+                // beginning of the loop block instead of the end.)
+                setType(of: instr.innerOutputs.first!, to: .label(op.signature.parameterTypes))
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+            case .wasmEndLoop(let op):
+                for (output, outputType) in zip(instr.outputs, op.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
             default:
                 break
             }

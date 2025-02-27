@@ -1509,7 +1509,7 @@ public class WasmLifter {
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
             return Data([0x02] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginLoop(let op):
-            return Data([0x03] + Leb128.unsignedEncode(signatureIndexMap[WasmSignature(from: op.signature)]!))
+            return Data([0x03] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginTry(let op):
             return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[WasmSignature(from: op.signature)]!))
         case .wasmBeginTryDelegate(let op):
