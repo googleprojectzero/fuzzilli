@@ -1157,12 +1157,12 @@ message WasmEndBlock {
 }
 
 message WasmBeginLoop {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmEndLoop {
-  WasmILType returnType = 1;
+  repeated WasmILType outputTypes = 1;
 }
 
 message WasmBeginTry {

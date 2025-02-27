@@ -1009,7 +1009,8 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             if op.numOutputs > 0 {
-                w.emit("\(output()) <- WasmEndLoop \(inputs)")
+                let outputs = instr.outputs.map(lift).joined(separator: ", ")
+                w.emit("\(outputs) <- WasmEndLoop \(inputs)")
             } else {
                 w.emit("WasmEndLoop \(inputs)")
             }

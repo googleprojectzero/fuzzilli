@@ -3265,17 +3265,17 @@ public class ProgramBuilder {
         }
 
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
-        public func wasmBuildLoop(with signature: Signature, body: (Variable, [Variable]) -> Void) {
+        public func wasmBuildLoop(with signature: WasmSignature, body: (Variable, [Variable]) -> Void) {
             let instr = b.emit(WasmBeginLoop(with: signature))
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndLoop())
         }
 
         @discardableResult
-        public func wasmBuildLoop(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Variable) -> Variable {
+        public func wasmBuildLoop(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
             let instr = b.emit(WasmBeginLoop(with: signature), withInputs: args)
-            let fallthroughResult = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return b.emit(WasmEndLoop(outputType: signature.outputType), withInputs: [fallthroughResult]).output
+            let fallthroughResults = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return Array(b.emit(WasmEndLoop(outputTypes: signature.outputTypes), withInputs: fallthroughResults).outputs)
         }
 
         public func wasmBuildLegacyTry(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Void, catchAllBody: ((Variable) -> Void)? = nil) {

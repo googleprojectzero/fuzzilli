@@ -648,7 +648,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         let loopCtr = function.consti32(10)
 
-        function.wasmBuildLoop(with: [] => .nothing) { label, args in
+        function.wasmBuildLoop(with: [] => []) { label, args in
             let result = function.wasmi32BinOp(loopCtr, function.consti32(1), binOpKind: .Sub)
             function.wasmReassign(variable: loopCtr, to: result)
 
@@ -668,18 +668,18 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let randomArgs = b.randomWasmBlockArguments(upTo: 5)
         let randomArgTypes = randomArgs.map{b.type(of: $0)}
         let args = [function.consti32(0)] + randomArgs
-        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
-        let outputType = b.randomWasmBlockOutputType(allowVoid: false)
+        let parameters = args.map(b.type)
+        let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
         // Note that due to the do-while style implementation, the actual iteration count is at least 1.
         let iterationCount = Int32.random(in: 0...16)
 
-        function.wasmBuildLoop(with: parameters => outputType, args: args) { label, loopArgs in
+        function.wasmBuildLoop(with: parameters => outputTypes, args: args) { label, loopArgs in
             b.buildRecursive()
             let loopCtr = function.wasmi32BinOp(args[0], function.consti32(1), binOpKind: .Add)
             let condition = function.wasmi32CompareOp(loopCtr, function.consti32(iterationCount), using: .Lt_s)
             let backedgeArgs = [loopCtr] + randomArgTypes.map{b.randomVariable(ofType: $0)!}
             function.wasmBranchIf(condition, to: label, args: backedgeArgs)
-            return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
         }
     },
 

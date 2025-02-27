@@ -286,7 +286,7 @@ class WasmFoundationTests: XCTestCase {
 
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
                 let ctr = function.consti32(10)
-                function.wasmBuildLoop(with: [] => .nothing) { label, args in
+                function.wasmBuildLoop(with: [] => []) { label, args in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     let result = function.wasmi32BinOp(ctr, function.consti32(1), binOpKind: .Sub)
                     function.wasmReassign(variable: ctr, to: result)
@@ -905,7 +905,7 @@ class WasmFoundationTests: XCTestCase {
                 let max = function.consti32(10)
                 let one = function.consti32(1)
 
-                function.wasmBuildLoop(with: [] => .nothing) { label, args in
+                function.wasmBuildLoop(with: [] => []) { label, args in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     let result = function.wasmi32BinOp(ctr, one, binOpKind: .Add)
                     let varUpdate = function.wasmi64BinOp(variable, function.consti64(2), binOpKind: .Add)
@@ -943,14 +943,17 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => .wasmi32) { function, args in
-                let loopResult = function.wasmBuildLoop(with: [.wasmi32, .wasmi32] => .wasmi32, args: args) { loopLabel, loopArgs in
+                let loopResult = function.wasmBuildLoop(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32], args: args) { loopLabel, loopArgs in
                     let incFirst = function.wasmi32BinOp(loopArgs[0], function.consti32(1), binOpKind: .Add)
                     let incSecond = function.wasmi32BinOp(loopArgs[1], function.consti32(2), binOpKind: .Add)
                     let condition = function.wasmi32CompareOp(incFirst, incSecond, using: .Gt_s)
                     function.wasmBranchIf(condition, to: loopLabel, args: [incFirst, incSecond])
-                    return incFirst
+                    return [incFirst, incSecond]
                 }
-                function.wasmReturn(loopResult)
+                function.wasmBuildIfElse(function.wasmi32CompareOp(loopResult[1], function.consti32(20), using: .Ne)) {
+                    function.wasmUnreachable()
+                }
+                function.wasmReturn(loopResult[0])
             }
         }
         let exports = module.loadExports()

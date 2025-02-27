@@ -1057,27 +1057,23 @@ final class WasmEndIf: WasmOperationBase {
     }
 }
 
-final class WasmBeginLoop: WasmTypedOperation {
+final class WasmBeginLoop: WasmOperationBase {
     override var opcode: Opcode { .wasmBeginLoop(self) }
+    let signature: WasmSignature
 
-    let signature: Signature
-
-    init(with signature: Signature) {
+    init(with signature: WasmSignature) {
         self.signature = signature
-        let parameterTypes = signature.parameters.convertPlainToILTypes()
-        // Note that different to all other blocks the loop's label parameters are the input types
-        // of the block, not the result types (because a branch to a loop label jumps to the
-        // beginning of the loop block instead of the end.)
-        super.init(inputTypes: parameterTypes, outputType: .nothing, innerOutputTypes: [.label(parameterTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
+        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
-final class WasmEndLoop: WasmTypedOperation {
+final class WasmEndLoop: WasmOperationBase {
     override var opcode: Opcode { .wasmEndLoop(self) }
+    let outputTypes: [ILType]
 
-    init(outputType: ILType = .nothing) {
-        let inputTypes = outputType != .nothing ? [outputType] : []
-        super.init(inputTypes: inputTypes, outputType: outputType, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
+    init(outputTypes: [ILType] = []) {
+        self.outputTypes = outputTypes
+        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
