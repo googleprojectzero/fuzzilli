@@ -1011,7 +1011,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => .wasmi64) { function, args in
                 let inputs = [args[1], function.consti64(3)]
-                function.wasmBuildIfElse(args[0], signature: [.wasmi64, .wasmi64] => .nothing, args: inputs) { label, ifArgs in
+                function.wasmBuildIfElse(args[0], signature: [.wasmi64, .wasmi64] => [], args: inputs) { label, ifArgs in
                     function.wasmReturn(ifArgs[0])
                 } elseBody: {label, ifArgs in
                     function.wasmReturn(function.wasmi64BinOp(ifArgs[0], ifArgs[1], binOpKind: .Shl))
@@ -1040,7 +1040,7 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => .wasmi32) { function, args in
-                function.wasmBuildIfElse(args[0], signature: [.wasmi32] => .nothing, args: [args[1]]) { ifLabel, ifArgs in
+                function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: [args[1]]) { ifLabel, ifArgs in
                     function.wasmBranchIf(ifArgs[0], to: ifLabel)
                     function.wasmReturn(function.consti32(100))
                 } elseBody: {elseLabel, ifArgs in
@@ -1077,12 +1077,13 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
-                let blockResult = function.wasmBuildIfElseWithResult(args[0], signature: [] => .wasmi64, args: []) {label, args in
-                    return function.consti64(123)
+                let blockResult = function.wasmBuildIfElseWithResult(args[0], signature: [] => [.wasmi64, .wasmi64], args: []) {label, args in
+                    return [function.consti64(123), function.consti64(10)]
                 } elseBody: {label, args in
-                    return function.consti64(321)
+                    return [function.consti64(321), function.consti64(10)]
                 }
-                function.wasmReturn(blockResult)
+                let sum = function.wasmi64BinOp(blockResult[0], blockResult[1], binOpKind: .Add)
+                function.wasmReturn(sum)
             }
         }
         let exports = module.loadExports()
@@ -1093,7 +1094,7 @@ class WasmFoundationTests: XCTestCase {
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
-        testForOutput(program: jsProg, runner: runner, outputString: "123\n321\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "133\n331\n")
     }
 
     func testTryVoid() throws {

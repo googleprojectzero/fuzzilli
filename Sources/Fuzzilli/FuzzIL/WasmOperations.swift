@@ -1018,44 +1018,42 @@ final class WasmEndBlock: WasmOperationBase {
     }
 }
 
-final class WasmBeginIf: WasmTypedOperation {
+final class WasmBeginIf: WasmOperationBase {
     override var opcode: Opcode { .wasmBeginIf(self) }
-    let signature: Signature
+    let signature: WasmSignature
 
-    init(with signature: Signature = [] => .nothing) {
+    init(with signature: WasmSignature = [] => []) {
         self.signature = signature
-        let parameterTypes = signature.parameters.convertPlainToILTypes()
-        let labelTypes = signature.outputType != .nothing ? [signature.outputType] : []
         // TODO(mliedtke): Why does this set .isNotInputMutable? Try to remove it and see if the WasmLifter failure rate is affected.
 
         // Note that the condition is the last input! This is due to how lifting works for the wasm
         // value stack and that the condition is the first value to be removed from the stack, so
         // it needs to be the last one pushed to it.
-        super.init(inputTypes: parameterTypes + [.wasmi32], outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext, .isNotInputMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        // Inner outputs: 1 label (used for branch instructions) plus all the parameters.
+        super.init(numInputs: signature.parameterTypes.count + 1, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext, .isNotInputMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
-final class WasmBeginElse: WasmTypedOperation {
+final class WasmBeginElse: WasmOperationBase {
     override var opcode: Opcode { .wasmBeginElse(self) }
-    let signature: Signature
+    let signature: WasmSignature
 
-    init(with signature: Signature = [] => .nothing) {
+    init(with signature: WasmSignature = [] => []) {
         self.signature = signature
-        let parameterTypes = signature.parameters.convertPlainToILTypes()
-        let labelTypes = signature.outputType != .nothing ? [signature.outputType] : []
         // The WasmBeginElse acts both as a block end for the true case and as a block start for the
         // false case. As such, its input types are the results from the true block and its inner
         // output types are the same as for the corresponding WasmBeginIf.
-        super.init(inputTypes: labelTypes, outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(numInputs: signature.outputTypes.count, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
-final class WasmEndIf: WasmTypedOperation {
+final class WasmEndIf: WasmOperationBase {
     override var opcode: Opcode { .wasmEndIf(self) }
+    let outputTypes: [ILType]
 
-    init(outputType: ILType = .nothing) {
-        let inputTypes = outputType != .nothing ? [outputType] : []
-        super.init(inputTypes: inputTypes, outputType: outputType, attributes: [.isBlockEnd], requiredContext: [.wasmBlock, .wasmFunction])
+    init(outputTypes: [ILType] = []) {
+        self.outputTypes = outputTypes
+        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd], requiredContext: [.wasmBlock, .wasmFunction])
     }
 }
 

@@ -1548,7 +1548,7 @@ public class WasmLifter {
             }
             return Data([0x0E]) + Leb128.unsignedEncode(op.valueCount) + depths.map(Leb128.unsignedEncode).joined()
         case .wasmBeginIf(let op):
-            return Data([0x04] + Leb128.unsignedEncode(signatureIndexMap[WasmSignature(from: op.signature)]!))
+            return Data([0x04] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginElse(_):
             // 0x05 is the else block instruction.
             return Data([0x05])
