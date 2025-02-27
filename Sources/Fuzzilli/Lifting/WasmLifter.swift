@@ -149,6 +149,9 @@ public class WasmLifter {
     // This should only be set once we have preprocessed all imported tables, so that we know where internally defined tables start
     private var baseDefinedTables: Int? = nil
 
+    // This should only be set once we have preprocessed all imported memories, so that we know where internally defined memories start
+    private var baseDefinedMemories: Int? = nil
+
     // This tracks in which order we have seen globals, this can probably be unified with the .globals and .imports properties, as they should match in their keys.
     private var globalOrder: [Variable] = []
 
@@ -1092,7 +1095,6 @@ public class WasmLifter {
         }
         assert(typer.type(of: memory).wasmMemoryType!.isMemory64 == isMemory64)
         if !self.memories.contains(where: {$0.output == memory}) {
-            // TODO(cffsmith) this needs to be changed once we support multimemory as we probably also need to fix the ordering.
             if !self.imports.map({$0.0}).contains(memory) {
                 self.imports.append((memory, nil))
             }
@@ -1145,7 +1147,7 @@ public class WasmLifter {
                         }
                     }
                 }
-            case .wasmDefineMemory:
+            case .wasmDefineMemory(_):
                 self.memories.append(instr)
             case .wasmMemoryLoad(let op):
                 try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
@@ -1202,6 +1204,8 @@ public class WasmLifter {
         self.baseDefinedGlobals = self.imports.filter({typer.type(of: $0.0).Is(.object(ofGroup: "WasmGlobal")) }).count
         // The number of internally defined tables indices come after the imports.
         self.baseDefinedTables = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTable")) }).count
+        // The number of internally defined memories indices come after the imports.
+        self.baseDefinedMemories = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmMemory")) }).count
 
         // Eagerly map all types in typegroups to module-specific indices. (We can't do this when
         // building the type section as the instructions get lowered before we emit the type
@@ -1221,6 +1225,7 @@ public class WasmLifter {
     public enum IndexType {
         case global
         case table
+        case memory
         case tag
         case function
     }
@@ -1238,6 +1243,9 @@ public class WasmLifter {
         case .table:
             groupType = "WasmTable"
             base = self.baseDefinedTables!
+        case .memory:
+            groupType = "WasmMemory"
+            base = self.baseDefinedMemories!
         case .tag:
             groupType = "WasmTag"
             base = self.imports.filter({
@@ -1250,6 +1258,7 @@ public class WasmLifter {
         let predicate: ((Variable) -> Bool) = switch type {
         case .global,
                 .table,
+                .memory,
                 .tag:
             { variable in
                 self.typer.type(of: variable).Is(.object(ofGroup: groupType!))
@@ -1274,6 +1283,8 @@ public class WasmLifter {
             self.tags.map({$0}).firstIndex(where: {$0.0 == input})
         case .table:
             self.tables.firstIndex(where: {$0.output == input})
+        case .memory:
+            self.memories.firstIndex(where: {$0.output == input})
         case .function:
             self.functions.firstIndex { $0.outputVariable == input }
         }
@@ -1283,6 +1294,12 @@ public class WasmLifter {
         }
 
         throw WasmLifter.CompileError.failedIndexLookUp
+    }
+
+    private func alignmentAndMemoryBytes(_ memory: Variable) throws -> Data {
+        // The memory immediate is either {align = 0, staticOffset} for memory 0, or {align = 0x40, memoryIdx, staticOffset}. Use signed encoding for potential bad (i.e. negative) offsets.
+        let memoryIdx = try resolveIdx(ofType: .memory, for: memory)
+        return memoryIdx == 0 ? Data([0]) : (Data([0x40]) + Leb128.unsignedEncode(memoryIdx))
     }
 
     /// Returns the Bytes that correspond to this instruction.
@@ -1467,11 +1484,11 @@ public class WasmLifter {
             let functionRef = wasmInstruction.input(0)
             return Data([0x10]) + Leb128.unsignedEncode(try resolveIdx(ofType: .function, for: functionRef))
         case .wasmMemoryLoad(let op):
-            // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
-            return Data([op.loadType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
+            return Data([op.loadType.rawValue]) + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
         case .wasmMemoryStore(let op):
-            // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
-            return Data([op.storeType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
+            return Data([op.storeType.rawValue]) + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
         case .wasmJsCall(let op):
             // We filter first, such that we get the index of functions only.
             if let index = imports.filter({
@@ -1670,7 +1687,8 @@ public class WasmLifter {
             return Data([0xFD]) + Leb128.unsignedEncode(0x1D) + Leb128.unsignedEncode(op.lane)
          case .wasmSimdLoad(let op):
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
-            return Data([0xFD, op.kind.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
+            return Data([0xFD, op.kind.rawValue]) + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
         case .wasmArrayNewFixed(let op):
             let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
