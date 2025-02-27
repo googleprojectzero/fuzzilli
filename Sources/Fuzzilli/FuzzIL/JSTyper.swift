@@ -284,6 +284,23 @@ public struct JSTyper: Analyzer {
                 for (output, outputType) in zip(instr.outputs, op.outputTypes) {
                     setType(of: output, to: outputType)
                 }
+            case .wasmBeginIf(let op):
+                setType(of: instr.innerOutputs.first!, to: .label(op.signature.outputTypes))
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+            case .wasmBeginElse(let op):
+                setType(of: instr.innerOutputs.first!, to: .label(op.signature.outputTypes))
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+                for (output, outputType) in zip(instr.outputs, op.signature.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
+            case .wasmEndIf(let op):
+                for (output, outputType) in zip(instr.outputs, op.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
             default:
                 break
             }

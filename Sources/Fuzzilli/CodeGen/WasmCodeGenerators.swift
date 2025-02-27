@@ -758,22 +758,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
         let args = b.randomWasmBlockArguments(upTo: 5)
-        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
-        let outputType = b.randomWasmBlockOutputType()
-        if outputType != .nothing {
-            function.wasmBuildIfElseWithResult(conditionVar, signature: parameters => outputType, args: args) { label, args in
-                b.buildRecursive(block: 1, of: 2, n: 4)
-                return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
-            } elseBody: { label, args in
-                b.buildRecursive(block: 2, of: 2, n: 4)
-                return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
-            }
-        } else {
-            function.wasmBuildIfElse(conditionVar, signature: parameters => outputType, args: args) { label, args in
-                b.buildRecursive(block: 1, of: 2, n: 4)
-            } elseBody: { label, args in
-                b.buildRecursive(block: 2, of: 2, n: 4)
-            }
+        let parameters = args.map(b.type)
+        let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
+        function.wasmBuildIfElseWithResult(conditionVar, signature: parameters => outputTypes, args: args) { label, args in
+            b.buildRecursive(block: 1, of: 2, n: 4)
+            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+        } elseBody: { label, args in
+            b.buildRecursive(block: 2, of: 2, n: 4)
+            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
         }
     },
 

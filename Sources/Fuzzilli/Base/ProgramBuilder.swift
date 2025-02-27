@@ -3247,7 +3247,7 @@ public class ProgramBuilder {
             b.emit(WasmEndIf())
         }
 
-        public func wasmBuildIfElse(_ condition: Variable, signature: Signature, args: [Variable], ifBody: (Variable, [Variable]) -> Void, elseBody: (Variable, [Variable]) -> Void) {
+        public func wasmBuildIfElse(_ condition: Variable, signature: WasmSignature, args: [Variable], ifBody: (Variable, [Variable]) -> Void, elseBody: (Variable, [Variable]) -> Void) {
             let beginBlock = b.emit(WasmBeginIf(with: signature), withInputs: args + [condition])
             ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
             let elseBlock = b.emit(WasmBeginElse(with: signature))
@@ -3256,12 +3256,12 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmBuildIfElseWithResult(_ condition: Variable, signature: Signature, args: [Variable], ifBody: (Variable, [Variable]) -> Variable, elseBody: (Variable, [Variable]) -> Variable) -> Variable{
+        public func wasmBuildIfElseWithResult(_ condition: Variable, signature: WasmSignature, args: [Variable], ifBody: (Variable, [Variable]) -> [Variable], elseBody: (Variable, [Variable]) -> [Variable]) -> [Variable] {
             let beginBlock = b.emit(WasmBeginIf(with: signature), withInputs: args + [condition])
-            let trueResult = ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
-            let elseBlock = b.emit(WasmBeginElse(with: signature), withInputs: [trueResult])
-            let falseResult = elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
-            return b.emit(WasmEndIf(outputType: signature.outputType), withInputs: [falseResult]).output
+            let trueResults = ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
+            let elseBlock = b.emit(WasmBeginElse(with: signature), withInputs: trueResults)
+            let falseResults = elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
+            return Array(b.emit(WasmEndIf(outputTypes: signature.outputTypes), withInputs: falseResults).outputs)
         }
 
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
