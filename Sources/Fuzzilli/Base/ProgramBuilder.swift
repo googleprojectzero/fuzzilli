@@ -3330,12 +3330,22 @@ public class ProgramBuilder {
             b.emit(WasmRethrow(), withInputs: [exceptionLabel])
         }
 
-        public func wasmBuildLegacyTryDelegate(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Void, delegate: Variable) {
-            assert(signature.parameters.count == args.count)
+        public func wasmBuildLegacyTryDelegate(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> Void, delegate: Variable) {
+            assert(signature.parameterTypes.count == args.count)
+            assert(signature.outputTypes.isEmpty)
             let instr = b.emit(WasmBeginTryDelegate(with: signature), withInputs: args)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndTryDelegate(), withInputs: [delegate])
         }
+
+        @discardableResult
+        public func wasmBuildLegacyTryDelegateWithResult(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable], delegate: Variable) -> [Variable] {
+            assert(signature.parameterTypes.count == args.count)
+            let instr = b.emit(WasmBeginTryDelegate(with: signature), withInputs: args)
+            let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return Array(b.emit(WasmEndTryDelegate(outputTypes: signature.outputTypes), withInputs: [delegate] + results).outputs)
+        }
+
 
         public func generateRandomWasmVar(ofType type: ILType) -> Variable {
             // TODO: add externref and nullrefs

@@ -1512,7 +1512,7 @@ public class WasmLifter {
         case .wasmBeginTry(let op):
             return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginTryDelegate(let op):
-            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[WasmSignature(from: op.signature)]!))
+            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginCatchAll(_):
             return Data([0x19])
         case .wasmBeginCatch(_):

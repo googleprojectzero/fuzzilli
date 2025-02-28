@@ -744,9 +744,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
         let args = b.randomWasmBlockArguments(upTo: 5)
-        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
-        function.wasmBuildLegacyTryDelegate(with: parameters => .nothing, args: args, body: { _, _ in
+        let outputTypes = b.randomWasmBlockOutputTypes(upTo: 3)
+        let parameters = args.map(b.type)
+        function.wasmBuildLegacyTryDelegateWithResult(with: parameters => outputTypes, args: args, body: { _, _ in
             b.buildRecursive()
+            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
         }, delegate: label)
     },
 

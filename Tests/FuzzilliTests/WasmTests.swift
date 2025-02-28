@@ -1540,7 +1540,7 @@ class WasmFoundationTests: XCTestCase {
                     // if the exception was thrown by the block whose label is passed into it.
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { unusedLabel, _ in
                         let val = function.consti32(42)
-                        function.wasmBuildLegacyTryDelegate(with: [.wasmi32] => .nothing, args: [val], body: {label, args in
+                        function.wasmBuildLegacyTryDelegate(with: [.wasmi32] => [], args: [val], body: {label, args in
                             function.WasmBuildThrow(tag: tag, inputs: args)
                         }, delegate: tryLabel)
                         function.wasmUnreachable()
@@ -1562,6 +1562,34 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
+    func testTryDelegateWithResults() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                function.wasmBuildBlock(with: [] => [], args: []) { label, _ in
+                    let val = function.consti32(42)
+                    let result = function.wasmBuildLegacyTryDelegateWithResult(with: [.wasmi32] => [.wasmi32, .wasmi32], args: [val], body: {tryLabel, args in
+                        return [args[0], function.consti32(10)]
+                    }, delegate: label)
+                    function.wasmReturn(function.wasmi32BinOp(result[0], result[1], binOpKind: .Add))
+                }
+                function.wasmUnreachable()
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "52\n")
     }
 
     func testTryCatchRethrow() throws {
