@@ -1144,27 +1144,26 @@ final class WasmEndTry: WasmOperationBase {
 }
 
 /// A special try block that does not have any catch / catch_all handlers but ends with a delegate to handle the exception.
-final class WasmBeginTryDelegate: WasmTypedOperation {
+final class WasmBeginTryDelegate: WasmOperationBase {
     override var opcode: Opcode { .wasmBeginTryDelegate(self) }
+    let signature: WasmSignature
 
-    let signature: Signature
-
-    init(with signature: Signature) {
+    init(with signature: WasmSignature) {
         self.signature = signature
-        let parameterTypes = signature.parameters.convertPlainToILTypes()
-        let labelTypes = signature.outputType != .nothing ? [signature.outputType] : []
-        super.init(inputTypes: parameterTypes, outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [])
+        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [])
     }
 }
 
 /// Delegates any exception thrown inside WasmBeginTryDelegate and this end to another block defined by the label.
 /// This can be a "proper" try block (in which case its catch blocks apply) or any other block like a loop or an if.
-final class WasmEndTryDelegate: WasmTypedOperation {
+final class WasmEndTryDelegate: WasmOperationBase {
     override var opcode: Opcode { .wasmEndTryDelegate(self) }
+    let outputTypes: [ILType]
 
-    init() {
-        // Note that the actual block signature doesn't matter as the try-delegate "rethrows" the exception at that block level.
-        super.init(inputTypes: [.anyLabel], attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
+    init(outputTypes: [ILType] = []) {
+        self.outputTypes = outputTypes
+        // Inputs: 1 label to delegate an exception to plus all the outputs of the try block.
+        super.init(numInputs: 1 + outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 

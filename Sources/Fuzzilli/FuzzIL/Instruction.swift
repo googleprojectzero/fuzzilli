@@ -1303,11 +1303,13 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmBeginTryDelegate(let op):
                 $0.wasmBeginTryDelegate = Fuzzilli_Protobuf_WasmBeginTryDelegate.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
-            case .wasmEndTryDelegate(_):
-                $0.wasmEndTryDelegate = Fuzzilli_Protobuf_WasmEndTryDelegate()
+            case .wasmEndTryDelegate(let op):
+                $0.wasmEndTryDelegate = Fuzzilli_Protobuf_WasmEndTryDelegate.with {
+                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
             case .wasmThrow(let op):
                 $0.wasmThrow = Fuzzilli_Protobuf_WasmThrow.with {
                     $0.parameterTypes = op.parameterTypes.map(ILTypeToWasmTypeEnum)
@@ -2183,12 +2185,11 @@ extension Instruction: ProtobufConvertible {
         case .wasmEndTry(let p):
             op = WasmEndTry(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginTryDelegate(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginTryDelegate(with: parameters => WasmTypeEnumToILType(p.returnType))
-        case .wasmEndTryDelegate(_):
-            op = WasmEndTryDelegate()
+            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginTryDelegate(with: parameters => outputs)
+        case .wasmEndTryDelegate(let p):
+            op = WasmEndTryDelegate(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmThrow(let p):
             op = WasmThrow(parameterTypes: p.parameterTypes.map(WasmTypeEnumToILType))
         case .wasmRethrow(_):

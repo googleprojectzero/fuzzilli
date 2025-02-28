@@ -336,8 +336,19 @@ public struct JSTyper: Analyzer {
                 for (output, outputType) in zip(instr.outputs, op.outputTypes) {
                     setType(of: output, to: outputType)
                 }
+            case .wasmBeginTryDelegate(let op):
+                setType(of: instr.innerOutputs.first!, to: .label(op.signature.outputTypes))
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+            case .wasmEndTryDelegate(let op):
+                for (output, outputType) in zip(instr.outputs, op.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
             default:
-                break
+                if instr.numInnerOutputs + instr.numOutputs != 0 {
+                    fatalError("Missing typing of outputs for \(instr.op.opcode)")
+                }
             }
         }
 
