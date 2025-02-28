@@ -755,13 +755,13 @@ final class WasmDefineMemory: WasmTypedOperation {
 
 final class WasmDefineTag: WasmTypedOperation {
     override var opcode: Opcode { .wasmDefineTag(self) }
-    public let parameters: ParameterList
+    public let parameterTypes: [ILType]
 
-    init(parameters: ParameterList) {
-        self.parameters = parameters
+    init(parameterTypes: [ILType]) {
+        self.parameterTypes = parameterTypes
         // Note that tags in wasm are nominal (differently to types) meaning that two tags with the same input are not
         // the same, therefore this operation is not considered to be .pure.
-        super.init(outputType: .object(ofGroup: "WasmTag", withWasmType: WasmTagType(parameters)), attributes: [], requiredContext: [.wasm])
+        super.init(outputType: .object(ofGroup: "WasmTag", withWasmType: WasmTagType(parameterTypes)), attributes: [], requiredContext: [.wasm])
     }
 }
 
@@ -1077,34 +1077,26 @@ final class WasmEndLoop: WasmOperationBase {
     }
 }
 
-final class WasmBeginTry: WasmTypedOperation {
+final class WasmBeginTry: WasmOperationBase {
     override var opcode: Opcode { .wasmBeginTry(self) }
+    let signature: WasmSignature
 
-    let signature: Signature
-
-    init(with signature: Signature) {
+    init(with signature: WasmSignature) {
         self.signature = signature
-        let parameterTypes = signature.parameters.convertPlainToILTypes()
-        let labelTypes = signature.outputType != .nothing ? [signature.outputType] : []
-        super.init(inputTypes: parameterTypes, outputType: .nothing, innerOutputTypes: [.label(labelTypes)] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
-final class WasmBeginCatchAll : WasmTypedOperation {
+final class WasmBeginCatchAll : WasmOperationBase {
     override var opcode: Opcode { .wasmBeginCatchAll(self) }
+    let inputTypes: [ILType]
 
-    let signature: Signature
+    init(inputTypes: [ILType]) {
+        self.inputTypes = inputTypes
 
-    // TODO(mliedtke): We don't really have a full signature, only returns and it needs to stay in
-    // sync with the `WasmBeginTry` return types.
-    init(with signature: Signature) {
-        self.signature = signature
-
-        let inputTypes = signature.outputType != .nothing ? [signature.outputType] : []
         super.init(
-            inputTypes: inputTypes,
-            outputType: .nothing,
-            innerOutputTypes: [.label(inputTypes)],
+            numInputs: inputTypes.count,
+            numInnerOutputs: 1, // the label
             attributes: [
                 .isBlockEnd,
                 .isBlockStart,
@@ -1116,15 +1108,12 @@ final class WasmBeginCatchAll : WasmTypedOperation {
     }
 }
 
-final class WasmBeginCatch : WasmTypedOperation {
+final class WasmBeginCatch : WasmOperationBase {
     override var opcode: Opcode { .wasmBeginCatch(self) }
+    let signature: WasmSignature
 
-    let signature: Signature
-
-    init(with signature: Signature) {
+    init(with signature: WasmSignature) {
         self.signature = signature
-        let labelTypes: [ILType] = signature.outputType != .nothing ? [signature.outputType] : []
-        let inputTypes: [ILType] = [.object(ofGroup: "WasmTag")] + labelTypes
         // TODO: In an ideal world, the catch would only have one label that is used both for
         // branching as well as for rethrowing the exception. However, rethrows may only use labels
         // from catch blocks and branches may use any label but need to be very precise on the type
@@ -1132,8 +1121,9 @@ final class WasmBeginCatch : WasmTypedOperation {
         // the usage. For now, we just emit a label for branching and the ".exceptionLabel" for
         // rethrows.
         super.init(
-            inputTypes: inputTypes,
-            innerOutputTypes: [.label(labelTypes), .exceptionLabel] + signature.parameters.convertPlainToILTypes(),
+            numInputs: 1 + signature.outputTypes.count,
+            // Inner outputs are the branch label, the exception label and the tag parameters.
+            numInnerOutputs: 2 + signature.parameterTypes.count,
             attributes: [
                 .isBlockEnd,
                 .isBlockStart,
@@ -1143,12 +1133,13 @@ final class WasmBeginCatch : WasmTypedOperation {
     }
 }
 
-final class WasmEndTry: WasmTypedOperation {
+final class WasmEndTry: WasmOperationBase {
     override var opcode: Opcode { .wasmEndTry(self) }
+    let outputTypes: [ILType]
 
-    init(outputType: ILType = .nothing) {
-        let inputTypes = outputType != .nothing ? [outputType] : []
-        super.init(inputTypes: inputTypes, outputType: outputType, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
+    init(outputTypes: [ILType] = []) {
+        self.outputTypes = outputTypes
+        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1177,14 +1168,14 @@ final class WasmEndTryDelegate: WasmTypedOperation {
     }
 }
 
-final class WasmThrow: WasmTypedOperation {
+final class WasmThrow: WasmOperationBase {
     override var opcode: Opcode { .wasmThrow(self) }
-    public let parameters: ParameterList
+    public let parameterTypes: [ILType]
 
-    init(parameters: ParameterList) {
-        self.parameters = parameters
-        let inputTypes = [ILType.object(ofGroup: "WasmTag")] + parameters.convertPlainToILTypes()
-        super.init(inputTypes: inputTypes, attributes: [.isJump], requiredContext: [.wasmFunction])
+    init(parameterTypes: [ILType]) {
+        self.parameterTypes = parameterTypes
+        // Inputs: the tag to be thrown plus the arguments for each parameter type of the tag.
+        super.init(numInputs: 1 + parameterTypes.count, attributes: [.isJump], requiredContext: [.wasmFunction])
     }
 }
 

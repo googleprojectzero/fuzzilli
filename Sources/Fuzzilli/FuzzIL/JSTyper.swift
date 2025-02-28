@@ -316,6 +316,26 @@ public struct JSTyper: Analyzer {
                 for (output, outputType) in zip(instr.outputs, op.outputTypes) {
                     setType(of: output, to: outputType)
                 }
+            case .wasmBeginTry(let op):
+                setType(of: instr.innerOutputs.first!, to: .label(op.signature.outputTypes))
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+            case .wasmBeginCatchAll(let op):
+                setType(of: instr.innerOutputs.first!, to: .label(op.inputTypes))
+            case .wasmBeginCatch(let op):
+                setType(of: instr.innerOutput(0), to: .label(op.signature.outputTypes))
+                setType(of: instr.innerOutput(1), to: .exceptionLabel)
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(2), op.signature.parameterTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+                for (output, outputType) in zip(instr.outputs, op.signature.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
+            case .wasmEndTry(let op):
+                for (output, outputType) in zip(instr.outputs, op.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
             default:
                 break
             }
@@ -1135,10 +1155,10 @@ public struct JSTyper: Analyzer {
             set(instr.output, .wasmTable(wasmTableType: WasmTableType(elementType: op.tableType.elementType, limits: op.tableType.limits, isTable64: op.tableType.isTable64, knownEntries: [:])))
 
         case .createWasmJSTag(_):
-            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType(ParameterList([.wasmExternRef]), isJSTag: true)))
+            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef], isJSTag: true)))
 
         case .createWasmTag(let op):
-            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameters)))
+            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameterTypes)))
 
         case .wrapSuspending(_):
             // This operation takes a function but produces an object that can be called from WebAssembly.

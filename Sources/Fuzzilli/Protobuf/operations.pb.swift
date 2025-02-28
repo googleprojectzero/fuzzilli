@@ -3180,7 +3180,7 @@ public struct Fuzzilli_Protobuf_CreateWasmTag: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: [Fuzzilli_Protobuf_WasmILType] = []
+  public var parameterTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -4292,22 +4292,13 @@ public struct Fuzzilli_Protobuf_WasmBeginTry: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: [Fuzzilli_Protobuf_WasmILType] = []
+  public var parameterTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
-  public var returnType: Fuzzilli_Protobuf_WasmILType {
-    get {return _returnType ?? Fuzzilli_Protobuf_WasmILType()}
-    set {_returnType = newValue}
-  }
-  /// Returns true if `returnType` has been explicitly set.
-  public var hasReturnType: Bool {return self._returnType != nil}
-  /// Clears the value of `returnType`. Subsequent reads from it will return its default value.
-  public mutating func clearReturnType() {self._returnType = nil}
+  public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _returnType: Fuzzilli_Protobuf_WasmILType? = nil
 }
 
 public struct Fuzzilli_Protobuf_WasmBeginCatchAll: Sendable {
@@ -4315,20 +4306,11 @@ public struct Fuzzilli_Protobuf_WasmBeginCatchAll: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var returnType: Fuzzilli_Protobuf_WasmILType {
-    get {return _returnType ?? Fuzzilli_Protobuf_WasmILType()}
-    set {_returnType = newValue}
-  }
-  /// Returns true if `returnType` has been explicitly set.
-  public var hasReturnType: Bool {return self._returnType != nil}
-  /// Clears the value of `returnType`. Subsequent reads from it will return its default value.
-  public mutating func clearReturnType() {self._returnType = nil}
+  public var inputTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _returnType: Fuzzilli_Protobuf_WasmILType? = nil
 }
 
 public struct Fuzzilli_Protobuf_WasmBeginCatch: Sendable {
@@ -4336,22 +4318,13 @@ public struct Fuzzilli_Protobuf_WasmBeginCatch: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: [Fuzzilli_Protobuf_WasmILType] = []
+  public var parameterTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
-  public var returnType: Fuzzilli_Protobuf_WasmILType {
-    get {return _returnType ?? Fuzzilli_Protobuf_WasmILType()}
-    set {_returnType = newValue}
-  }
-  /// Returns true if `returnType` has been explicitly set.
-  public var hasReturnType: Bool {return self._returnType != nil}
-  /// Clears the value of `returnType`. Subsequent reads from it will return its default value.
-  public mutating func clearReturnType() {self._returnType = nil}
+  public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _returnType: Fuzzilli_Protobuf_WasmILType? = nil
 }
 
 public struct Fuzzilli_Protobuf_WasmEndTry: Sendable {
@@ -4359,20 +4332,11 @@ public struct Fuzzilli_Protobuf_WasmEndTry: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var returnType: Fuzzilli_Protobuf_WasmILType {
-    get {return _returnType ?? Fuzzilli_Protobuf_WasmILType()}
-    set {_returnType = newValue}
-  }
-  /// Returns true if `returnType` has been explicitly set.
-  public var hasReturnType: Bool {return self._returnType != nil}
-  /// Clears the value of `returnType`. Subsequent reads from it will return its default value.
-  public mutating func clearReturnType() {self._returnType = nil}
+  public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _returnType: Fuzzilli_Protobuf_WasmILType? = nil
 }
 
 public struct Fuzzilli_Protobuf_WasmBeginTryDelegate: Sendable {
@@ -4413,7 +4377,7 @@ public struct Fuzzilli_Protobuf_WasmThrow: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: [Fuzzilli_Protobuf_WasmILType] = []
+  public var parameterTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -4435,7 +4399,7 @@ public struct Fuzzilli_Protobuf_WasmDefineTag: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: [Fuzzilli_Protobuf_WasmILType] = []
+  public var parameterTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -10205,7 +10169,7 @@ extension Fuzzilli_Protobuf_CreateWasmJSTag: SwiftProtobuf.Message, SwiftProtobu
 extension Fuzzilli_Protobuf_CreateWasmTag: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateWasmTag"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "parameters"),
+    1: .same(proto: "parameterTypes"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -10214,21 +10178,21 @@ extension Fuzzilli_Protobuf_CreateWasmTag: SwiftProtobuf.Message, SwiftProtobuf.
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameters) }()
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.parameters.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.parameters, fieldNumber: 1)
+    if !self.parameterTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.parameterTypes, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_CreateWasmTag, rhs: Fuzzilli_Protobuf_CreateWasmTag) -> Bool {
-    if lhs.parameters != rhs.parameters {return false}
+    if lhs.parameterTypes != rhs.parameterTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12612,8 +12576,8 @@ extension Fuzzilli_Protobuf_WasmEndLoop: SwiftProtobuf.Message, SwiftProtobuf._M
 extension Fuzzilli_Protobuf_WasmBeginTry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmBeginTry"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "parameters"),
-    2: .same(proto: "returnType"),
+    1: .same(proto: "parameterTypes"),
+    2: .same(proto: "outputTypes"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -12622,30 +12586,26 @@ extension Fuzzilli_Protobuf_WasmBeginTry: SwiftProtobuf.Message, SwiftProtobuf._
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameters) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._returnType) }()
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.outputTypes) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.parameters.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.parameters, fieldNumber: 1)
+    if !self.parameterTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.parameterTypes, fieldNumber: 1)
     }
-    try { if let v = self._returnType {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
+    if !self.outputTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.outputTypes, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmBeginTry, rhs: Fuzzilli_Protobuf_WasmBeginTry) -> Bool {
-    if lhs.parameters != rhs.parameters {return false}
-    if lhs._returnType != rhs._returnType {return false}
+    if lhs.parameterTypes != rhs.parameterTypes {return false}
+    if lhs.outputTypes != rhs.outputTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12654,7 +12614,7 @@ extension Fuzzilli_Protobuf_WasmBeginTry: SwiftProtobuf.Message, SwiftProtobuf._
 extension Fuzzilli_Protobuf_WasmBeginCatchAll: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmBeginCatchAll"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    2: .same(proto: "returnType"),
+    1: .same(proto: "inputTypes"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -12663,25 +12623,21 @@ extension Fuzzilli_Protobuf_WasmBeginCatchAll: SwiftProtobuf.Message, SwiftProto
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._returnType) }()
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.inputTypes) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._returnType {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
+    if !self.inputTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.inputTypes, fieldNumber: 1)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmBeginCatchAll, rhs: Fuzzilli_Protobuf_WasmBeginCatchAll) -> Bool {
-    if lhs._returnType != rhs._returnType {return false}
+    if lhs.inputTypes != rhs.inputTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12690,8 +12646,8 @@ extension Fuzzilli_Protobuf_WasmBeginCatchAll: SwiftProtobuf.Message, SwiftProto
 extension Fuzzilli_Protobuf_WasmBeginCatch: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmBeginCatch"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "parameters"),
-    2: .same(proto: "returnType"),
+    1: .same(proto: "parameterTypes"),
+    2: .same(proto: "outputTypes"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -12700,30 +12656,26 @@ extension Fuzzilli_Protobuf_WasmBeginCatch: SwiftProtobuf.Message, SwiftProtobuf
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameters) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._returnType) }()
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.outputTypes) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.parameters.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.parameters, fieldNumber: 1)
+    if !self.parameterTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.parameterTypes, fieldNumber: 1)
     }
-    try { if let v = self._returnType {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
+    if !self.outputTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.outputTypes, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmBeginCatch, rhs: Fuzzilli_Protobuf_WasmBeginCatch) -> Bool {
-    if lhs.parameters != rhs.parameters {return false}
-    if lhs._returnType != rhs._returnType {return false}
+    if lhs.parameterTypes != rhs.parameterTypes {return false}
+    if lhs.outputTypes != rhs.outputTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12732,7 +12684,7 @@ extension Fuzzilli_Protobuf_WasmBeginCatch: SwiftProtobuf.Message, SwiftProtobuf
 extension Fuzzilli_Protobuf_WasmEndTry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmEndTry"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "returnType"),
+    1: .same(proto: "outputTypes"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -12741,25 +12693,21 @@ extension Fuzzilli_Protobuf_WasmEndTry: SwiftProtobuf.Message, SwiftProtobuf._Me
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._returnType) }()
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.outputTypes) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._returnType {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
+    if !self.outputTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.outputTypes, fieldNumber: 1)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmEndTry, rhs: Fuzzilli_Protobuf_WasmEndTry) -> Bool {
-    if lhs._returnType != rhs._returnType {return false}
+    if lhs.outputTypes != rhs.outputTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12829,7 +12777,7 @@ extension Fuzzilli_Protobuf_WasmEndTryDelegate: SwiftProtobuf.Message, SwiftProt
 extension Fuzzilli_Protobuf_WasmThrow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmThrow"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "parameters"),
+    1: .same(proto: "parameterTypes"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -12838,21 +12786,21 @@ extension Fuzzilli_Protobuf_WasmThrow: SwiftProtobuf.Message, SwiftProtobuf._Mes
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameters) }()
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.parameters.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.parameters, fieldNumber: 1)
+    if !self.parameterTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.parameterTypes, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmThrow, rhs: Fuzzilli_Protobuf_WasmThrow) -> Bool {
-    if lhs.parameters != rhs.parameters {return false}
+    if lhs.parameterTypes != rhs.parameterTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12880,7 +12828,7 @@ extension Fuzzilli_Protobuf_WasmRethrow: SwiftProtobuf.Message, SwiftProtobuf._M
 extension Fuzzilli_Protobuf_WasmDefineTag: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmDefineTag"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "parameters"),
+    1: .same(proto: "parameterTypes"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -12889,21 +12837,21 @@ extension Fuzzilli_Protobuf_WasmDefineTag: SwiftProtobuf.Message, SwiftProtobuf.
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameters) }()
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.parameters.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.parameters, fieldNumber: 1)
+    if !self.parameterTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.parameterTypes, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmDefineTag, rhs: Fuzzilli_Protobuf_WasmDefineTag) -> Bool {
-    if lhs.parameters != rhs.parameters {return false}
+    if lhs.parameterTypes != rhs.parameterTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

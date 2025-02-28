@@ -1520,7 +1520,7 @@ public class JavaScriptLifter: Lifter {
             case .createWasmTag(let op):
                 let V = w.declare(instr.output)
                 let LET = w.varKeyword
-                let types = op.parameters.map {type in
+                let types = op.parameterTypes.map {type in
                     switch(type) {
                         case .wasmExternRef:
                             return "\"externref\""

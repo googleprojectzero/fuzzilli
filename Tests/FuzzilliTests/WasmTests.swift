@@ -299,7 +299,7 @@ class WasmFoundationTests: XCTestCase {
 
             let tag = wasmModule.addTag(parameterTypes: [.wasmi32, .wasmi32])
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { _, _ in
+                function.wasmBuildLegacyTry(with: [] => [], args: []) { _, _ in
                     function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123), function.consti32(456)])
                     function.WasmBuildLegacyCatch(tag: tag) { _, _, e in
                         // The exception values are e[0] = 123 and e[1] = 456.
@@ -1111,7 +1111,7 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     function.wasmReturn(function.consti64(42))
                 }
@@ -1144,7 +1144,7 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     // Manually set the availableTypes here for testing.
                     let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
@@ -1187,7 +1187,7 @@ class WasmFoundationTests: XCTestCase {
         b.buildIfElse(supportsJSTag) {
             let module = b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         XCTAssert(b.type(of: label).Is(.anyLabel))
                         let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
                         function.wasmJsCall(function: functionA, withArgs: [], withWasmSignature: wasmSignature)
@@ -1224,8 +1224,8 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        let throwTag = b.createWasmTag(parameterTypes: [Parameter.wasmi64, Parameter.wasmi32])
-        let otherTag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
+        let throwTag = b.createWasmTag(parameterTypes: [.wasmi64, .wasmi32])
+        let otherTag = b.createWasmTag(parameterTypes: [.wasmi32])
         let module = b.buildWasmModule { wasmModule in
             /* Pseudo-code:
                 function () -> i64 {
@@ -1242,7 +1242,7 @@ class WasmFoundationTests: XCTestCase {
                 }
             */
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     function.WasmBuildThrow(tag: throwTag, inputs: [function.consti64(123), function.consti32(234)])
                     function.wasmUnreachable()
@@ -1277,7 +1277,7 @@ class WasmFoundationTests: XCTestCase {
         let tag = b.createWasmTag(parameterTypes: [])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { tryLabel, _ in
+                function.wasmBuildLegacyTry(with: [] => [], args: []) { tryLabel, _ in
                     function.WasmBuildThrow(tag: tag, inputs: [])
                     function.WasmBuildLegacyCatch(tag: tag) { catchLabel, exceptionLabel, args in
                         function.wasmBranch(to: catchLabel)
@@ -1305,7 +1305,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
                 function.wasmBuildBlock(with: [] => [], args: []) { blockLabel, _ in
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { tryLabel, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { tryLabel, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [])
                     } catchAllBody: { label in
                         function.wasmBranch(to: blockLabel)
@@ -1335,7 +1335,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        let parameterTypes = [Parameter.wasmi32]
+        let parameterTypes = [ILType.wasmi32]
         let importedTag = b.createWasmTag(parameterTypes: parameterTypes)
         let module = b.buildWasmModule { wasmModule in
             let definedTag = wasmModule.addTag(parameterTypes: parameterTypes)
@@ -1360,7 +1360,7 @@ class WasmFoundationTests: XCTestCase {
                 }
             */
             wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, param in
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                     function.wasmBuildIfElse(param[0]) {
                         function.WasmBuildThrow(tag: definedTag, inputs: [param[0]])
                     } elseBody: {
@@ -1405,12 +1405,12 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        let tag = b.createWasmTag(parameterTypes: [Parameter.wasmi64, Parameter.wasmi32])
+        let tag = b.createWasmTag(parameterTypes: [.wasmi64, .wasmi32])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                 let argI32 = function.consti32(123)
                 let argI64 = function.consti64(321)
-                function.wasmBuildLegacyTry(with: [.wasmi64, .wasmi32] => .nothing, args: [argI64, argI32]) { label, args in
+                function.wasmBuildLegacyTry(with: [.wasmi64, .wasmi32] => [], args: [argI64, argI32]) { label, args in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     XCTAssert(b.type(of: args[0]).Is(.wasmi64))
                     XCTAssert(b.type(of: args[1]).Is(.wasmi32))
@@ -1447,7 +1447,8 @@ class WasmFoundationTests: XCTestCase {
         let tagi32Other = b.createWasmTag(parameterTypes: [.wasmi32])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
-                let result = function.wasmBuildLegacyTryWithResult(with: [.wasmi32] => .wasmi32, args: args, body: { label, args in
+                let contant42 = function.consti64(42)
+                let result = function.wasmBuildLegacyTryWithResult(with: [.wasmi32] => [.wasmi32, .wasmi64], args: args, body: { label, args in
                     function.wasmBuildIfElse(function.wasmi32EqualZero(args[0])) {
                         function.WasmBuildThrow(tag: tagVoid, inputs: [])
                     }
@@ -1457,20 +1458,23 @@ class WasmFoundationTests: XCTestCase {
                     function.wasmBuildIfElse(function.wasmi32CompareOp(args[0], function.consti32(2), using: .Eq)) {
                         function.WasmBuildThrow(tag: tagi32Other, inputs: [function.consti32(200)])
                     }
-                    return args[0]
+                    return [args[0], contant42]
                 }, catchClauses: [
                     (tagi32, {label, exception, args in
-                        return args[0]
+                        return [args[0], contant42]
                     }),
                     (tagi32Other, {label, exception, args in
                         let value = function.wasmi32BinOp(args[0], function.consti32(2), binOpKind: .Add)
-                        function.wasmBranch(to: label, args: [value])
-                        return function.consti32(-1)
+                        function.wasmBranch(to: label, args: [value, contant42])
+                        return [function.consti32(-1), function.consti64(-1)]
                     }),
                 ], catchAllBody: { _ in
-                    return function.consti32(900)
+                    return [function.consti32(900), contant42]
                 })
-                function.wasmReturn(result)
+                function.wasmBuildIfElse(function.wasmi64CompareOp(result[1], contant42, using: .Ne)) {
+                    function.wasmUnreachable()
+                }
+                function.wasmReturn(result[0])
             }
         }
         let exports = module.loadExports()
@@ -1509,7 +1513,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        let tag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
+        let tag = b.createWasmTag(parameterTypes: [.wasmi32])
         let module = b.buildWasmModule { wasmModule in
 
             /* Pseudo-code:
@@ -1531,10 +1535,10 @@ class WasmFoundationTests: XCTestCase {
                 }
             */
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { tryLabel, _ in
+                function.wasmBuildLegacyTry(with: [] => [], args: []) { tryLabel, _ in
                     // Even though we have a try-catch_all, the delegate "skips" this catch block. The delegate acts as
                     // if the exception was thrown by the block whose label is passed into it.
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { unusedLabel, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { unusedLabel, _ in
                         let val = function.consti32(42)
                         function.wasmBuildLegacyTryDelegate(with: [.wasmi32] => .nothing, args: [val], body: {label, args in
                             function.WasmBuildThrow(tag: tag, inputs: args)
@@ -1568,7 +1572,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        let tag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
+        let tag = b.createWasmTag(parameterTypes: [.wasmi32])
         let module = b.buildWasmModule { wasmModule in
 
             /* Pseudo-code:
@@ -1587,8 +1591,8 @@ class WasmFoundationTests: XCTestCase {
                 }
             */
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123)])
                         function.wasmUnreachable()
                         function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
@@ -1619,7 +1623,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        let tag = b.createWasmTag(parameterTypes: [Parameter.wasmi32])
+        let tag = b.createWasmTag(parameterTypes: [.wasmi32])
         let module = b.buildWasmModule { wasmModule in
             /* Pseudo-code:
                 function () -> i32 {
@@ -1639,11 +1643,11 @@ class WasmFoundationTests: XCTestCase {
                 }
             */
             wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123)])
                         function.WasmBuildLegacyCatch(tag: tag) { label, outerException, args in
-                            function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                            function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                                 function.WasmBuildThrow(tag: tag, inputs: [function.consti32(456)])
                                 function.wasmUnreachable()
                                 function.WasmBuildLegacyCatch(tag: tag) { label, innerException, args in

@@ -116,7 +116,7 @@ public class WasmLifter {
 
     // This contains imports, i.e. WasmJsCall arguments, tables, globals and memories that are not defined in this module. We need to track them here so that we can properly wire up the imports when lifting this module.
     // The Signature is only valid if the Variable is the argument to a WasmJsCall instruction, it is the Signature contained in the instruction. This Signature that is in the instruction is a loose approximation of the JS Signature, it depends on available Wasm types at the time when it was generated.
-    private var imports: [(Variable, Signature?)] = []
+    private var imports: [(Variable, WasmSignature?)] = []
 
     // This tracks instructions that define globals in this module. We track the instruction as all the information, as well as the actual value for initialization is stored in the Operation instead of the Variable.
     private var globals: [Instruction] = []
@@ -128,8 +128,7 @@ public class WasmLifter {
     private var tables: [Instruction] = []
 
     // The tags associated with this module.
-    // TODO(mliedtke): Switch this to VariableMap<[ILType]> to be in sync with the WasmSignature.
-    private var tags: VariableMap<ParameterList> = VariableMap()
+    private var tags: VariableMap<[ILType]> = VariableMap()
 
     private var typeGroups: Set<Int> = []
     private var freeTypes: Set<Variable> = []
@@ -425,7 +424,7 @@ public class WasmLifter {
             }
         }
         for tag in self.tags {
-            registerSignature(tag.1 => .nothing)
+            registerSignature(tag.1 => [])
         }
         for function in self.functions {
             registerSignature(function.signature)
@@ -523,7 +522,7 @@ public class WasmLifter {
                 if verbose {
                     print(functionIdxBase)
                 }
-                temp += [0x0] + Leb128.unsignedEncode(try getSignatureIndex(WasmSignature(from: signature!)))
+                temp += [0x0] + Leb128.unsignedEncode(try getSignatureIndex(signature!))
 
                 // Update the index space, these indices have to be set before the exports are set
                 functionIdxBase += 1
@@ -569,7 +568,7 @@ public class WasmLifter {
                 continue
             }
             if type.Is(.object(ofGroup: "WasmTag")) {
-                temp += [0x4, 0x0] + Leb128.unsignedEncode(try getSignatureIndex(WasmSignature(from: signature!)))
+                temp += [0x4, 0x0] + Leb128.unsignedEncode(try getSignatureIndex(signature!))
                 continue
             }
 
@@ -834,7 +833,7 @@ public class WasmLifter {
         section += Leb128.unsignedEncode(self.tags.reduce(0, {res, _ in res + 1}))
         for tag in self.tags {
             section.append(0)
-            section.append(Leb128.unsignedEncode(try getSignatureIndex(WasmSignature(from: tag.1 => .nothing))))
+            section.append(Leb128.unsignedEncode(try getSignatureIndex(tag.1 => [])))
         }
 
         self.bytecode.append(Leb128.unsignedEncode(section.count))
@@ -1081,9 +1080,9 @@ public class WasmLifter {
         }
     }
 
-    private func importTagIfNeeded(tag: Variable, parameters: ParameterList) {
+    private func importTagIfNeeded(tag: Variable, parameterTypes: [ILType]) {
         if (!self.tags.contains(tag) && self.imports.firstIndex(where: {variable, _ in variable == tag}) == nil) {
-            self.imports.append((tag, parameters => .nothing))
+            self.imports.append((tag, parameterTypes => []))
         }
     }
 
@@ -1143,7 +1142,7 @@ public class WasmLifter {
                         if typer.type(of: definedEntry).Is(.function()) && !self.imports.contains(where: { $0.0 == definedEntry }) {
                             // Ensure deterministic lifting.
                             let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(typer.type(of: definedEntry).signature ?? Signature.forUnknownFunction)
-                            self.imports.append((definedEntry, wasmSignature))
+                            self.imports.append((definedEntry, WasmSignature(from: wasmSignature)))
                         }
                     }
                 }
@@ -1173,24 +1172,24 @@ public class WasmLifter {
                     }
                 }
             case .wasmJsCall(let op):
-                self.imports.append((instr.input(0), op.functionSignature))
+                self.imports.append((instr.input(0), WasmSignature(from: op.functionSignature)))
 
             case .wasmDefineTag(let op):
-                self.tags[instr.output] = op.parameters
+                self.tags[instr.output] = op.parameterTypes
 
             case .wasmBeginCatch(let op):
                 if !typer.type(of: instr.input(0)).isWasmTagType {
                     throw WasmLifter.CompileError.missingTypeInformation
                 }
-                assert(typer.type(of: instr.input(0)).wasmTagType!.parameters == op.signature.parameters)
-                importTagIfNeeded(tag: instr.input(0), parameters: op.signature.parameters)
+                assert(typer.type(of: instr.input(0)).wasmTagType!.parameters == op.signature.parameterTypes)
+                importTagIfNeeded(tag: instr.input(0), parameterTypes: op.signature.parameterTypes)
 
             case .wasmThrow(let op):
                 if !typer.type(of: instr.input(0)).isWasmTagType {
                     throw WasmLifter.CompileError.missingTypeInformation
                 }
-                assert(typer.type(of: instr.input(0)).wasmTagType!.parameters == op.parameters)
-                importTagIfNeeded(tag: instr.input(0), parameters: op.parameters)
+                assert(typer.type(of: instr.input(0)).wasmTagType!.parameters == op.parameterTypes)
+                importTagIfNeeded(tag: instr.input(0), parameterTypes: op.parameterTypes)
 
             default:
                 // TODO(mliedtke): Migrate this mechanism to WasmOperationBase.
@@ -1493,11 +1492,12 @@ public class WasmLifter {
             return Data([op.storeType.rawValue]) + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
         case .wasmJsCall(let op):
             // We filter first, such that we get the index of functions only.
+            let wasmSignature = WasmSignature(from: op.functionSignature)
             if let index = imports.filter({
                 // TODO, switch query?
                 typer.type(of: $0.0).Is(.function()) || typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))
             }).firstIndex(where: {
-                wasmInstruction.input(0) == $0.0 && op.functionSignature == $0.1
+                wasmInstruction.input(0) == $0.0 && wasmSignature == $0.1
             }) {
                 return Data([0x10]) + Leb128.unsignedEncode(index)
             } else {
@@ -1510,7 +1510,7 @@ public class WasmLifter {
         case .wasmBeginLoop(let op):
             return Data([0x03] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginTry(let op):
-            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[WasmSignature(from: op.signature)]!))
+            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
         case .wasmBeginTryDelegate(let op):
             return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[WasmSignature(from: op.signature)]!))
         case .wasmBeginCatchAll(_):

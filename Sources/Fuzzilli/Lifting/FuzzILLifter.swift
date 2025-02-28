@@ -783,7 +783,7 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- CreateWasmJSTag")
 
         case .createWasmTag(let op):
-            w.emit("\(output()) <- CreateWasmTag \(op.parameters)")
+            w.emit("\(output()) <- CreateWasmTag \(op.parameterTypes)")
 
         case .wrapPromising(_):
             w.emit("\(output()) <- WrapPromising \(input(0))")
@@ -824,7 +824,7 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- WasmDefineMemory [\(mem.limits.min),\(maxPagesStr)],\(isMem64Str)\(sharedStr)")
 
         case .wasmDefineTag(let op):
-            w.emit("\(output()) <- WasmDefineTag \(op.parameters)")
+            w.emit("\(output()) <- WasmDefineTag \(op.parameterTypes)")
 
         case .wasmLoadGlobal(_):
             w.emit("\(output()) <- WasmLoadGlobal \(input(0))")
@@ -1026,6 +1026,7 @@ public class FuzzILLifter: Lifter {
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("WasmBeginCatchAll [\(inputs)] -> L:\(instr.innerOutput(0))")
             w.increaseIndentionLevel()
+
         case .wasmBeginCatch(_):
             assert(instr.numOutputs == 0)
             w.decreaseIndentionLevel()
@@ -1034,9 +1035,13 @@ public class FuzzILLifter: Lifter {
 
         case .wasmEndTry(let op):
             w.decreaseIndentionLevel()
-            let outputPrefix = op.numOutputs > 0 ? "\(output()) <- " : ""
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            w.emit("\(outputPrefix)WasmEndTry [\(inputs)]")
+            if op.numOutputs > 0 {
+                let outputs = instr.outputs.map(lift).joined(separator: ", ")
+                w.emit("\(outputs) <- WasmEndTry [\(inputs)]")
+            } else {
+                w.emit("WasmEndTry [\(inputs)]")
+            }
 
         case .wasmThrow(_):
             w.emit("WasmThrow \(instr.inputs.map(lift).joined(separator: ", "))")

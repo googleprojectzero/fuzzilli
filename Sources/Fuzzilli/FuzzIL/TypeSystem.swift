@@ -1085,7 +1085,7 @@ public class WasmGlobalType: WasmTypeExtension {
 }
 
 public class WasmTagType: WasmTypeExtension {
-    public let parameters: ParameterList
+    public let parameters: [ILType]
     /// Flag whether the tag is the WebAssembly.JSTag.
     public let isJSTag: Bool
 
@@ -1099,7 +1099,7 @@ public class WasmTagType: WasmTypeExtension {
         hasher.combine(isJSTag)
     }
 
-    init(_ parameters: ParameterList, isJSTag: Bool = false) {
+    init(_ parameters: [ILType], isJSTag: Bool = false) {
         self.parameters = parameters
         self.isJSTag = isJSTag
     }

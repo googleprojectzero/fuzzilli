@@ -2870,8 +2870,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func createWasmTag(parameterTypes: ParameterList) -> Variable {
-        return emit(CreateWasmTag(parameters: parameterTypes)).output
+    public func createWasmTag(parameterTypes: [ILType]) -> Variable {
+        return emit(CreateWasmTag(parameterTypes: parameterTypes)).output
     }
 
     @discardableResult
@@ -3278,12 +3278,12 @@ public class ProgramBuilder {
             return Array(b.emit(WasmEndLoop(outputTypes: signature.outputTypes), withInputs: fallthroughResults).outputs)
         }
 
-        public func wasmBuildLegacyTry(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Void, catchAllBody: ((Variable) -> Void)? = nil) {
-            assert(signature.parameters.count == args.count)
+        public func wasmBuildLegacyTry(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> Void, catchAllBody: ((Variable) -> Void)? = nil) {
+            assert(signature.parameterTypes.count == args.count)
             let instr = b.emit(WasmBeginTry(with: signature), withInputs: args)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             if let catchAllBody = catchAllBody {
-                let instr = b.emit(WasmBeginCatchAll(with: signature))
+                let instr = b.emit(WasmBeginCatchAll(inputTypes: signature.outputTypes))
                 catchAllBody(instr.innerOutput(0))
             }
             b.emit(WasmEndTry())
@@ -3293,37 +3293,36 @@ public class ProgramBuilder {
         // The lambda's inputs are the block label, the exception label (for rethrowing) and the
         // tag arguments.
         @discardableResult
-        public func wasmBuildLegacyTryWithResult(with signature: Signature, args: [Variable],
-                body: (Variable, [Variable]) -> Variable,
-                catchClauses: [(tag: Variable, body: (Variable, Variable, [Variable]) -> Variable)],
-                catchAllBody: ((Variable) -> Variable)? = nil) -> Variable {
-            assert(signature.parameters.count == args.count)
-            assert(signature.outputType != .nothing)
+        public func wasmBuildLegacyTryWithResult(with signature: WasmSignature, args: [Variable],
+                body: (Variable, [Variable]) -> [Variable],
+                catchClauses: [(tag: Variable, body: (Variable, Variable, [Variable]) -> [Variable])],
+                catchAllBody: ((Variable) -> [Variable])? = nil) -> [Variable] {
+            assert(signature.parameterTypes.count == args.count)
             let instr = b.emit(WasmBeginTry(with: signature), withInputs: args)
             var result = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             for (tag, generator) in catchClauses {
-                let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => signature.outputType), withInputs: [tag, result])
+                let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => signature.outputTypes), withInputs: [tag] + result)
                 result = generator(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
             }
             if let catchAllBody = catchAllBody {
-                let instr = b.emit(WasmBeginCatchAll(with: signature), withInputs: [result])
+                let instr = b.emit(WasmBeginCatchAll(inputTypes: signature.outputTypes), withInputs: result)
                 result = catchAllBody(instr.innerOutput(0))
             }
-            return b.emit(WasmEndTry(outputType: signature.outputType), withInputs: [result]).output
+            return Array(b.emit(WasmEndTry(outputTypes: signature.outputTypes), withInputs: result).outputs)
         }
 
         // Build a legacy catch block without a result type. Note that this may only be placed into
         // try blocks that also don't have a result type. (Use wasmBuildLegacyTryWithResult to
         // create a catch block with a result value.)
         public func WasmBuildLegacyCatch(tag: Variable, body: ((Variable, Variable, [Variable]) -> Void)) {
-            let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => .nothing), withInputs: [tag])
+            let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => []), withInputs: [tag])
             body(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
         }
 
         public func WasmBuildThrow(tag: Variable, inputs: [Variable]) {
             let tagType = b.type(of: tag).wasmType as! WasmTagType
             assert(tagType.parameters.count == inputs.count)
-            b.emit(WasmThrow(parameters: tagType.parameters), withInputs: [tag] + inputs)
+            b.emit(WasmThrow(parameterTypes: tagType.parameters), withInputs: [tag] + inputs)
         }
 
         public func wasmBuildRethrow(_ exceptionLabel: Variable) {
@@ -3529,8 +3528,8 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func addTag(parameterTypes: ParameterList) -> Variable {
-            return b.emit(WasmDefineTag(parameters: parameterTypes)).output
+        public func addTag(parameterTypes: [ILType]) -> Variable {
+            return b.emit(WasmDefineTag(parameterTypes: parameterTypes)).output
         }
 
         private func getModuleVariable() -> Variable {
@@ -3578,15 +3577,10 @@ public class ProgramBuilder {
         })
     }
 
-    public func randomTagParameters() -> ParameterList {
-        let numParams = Int.random(in: 0...10)
-        var params = ParameterList()
-        for _ in 0..<numParams {
-            // TODO(mliedtke): We should support externref and other types here. The list of types should be
-            // shared with function signature generation etc.
-            params.append(chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]))
-        }
-        return params
+    public func randomTagParameters() -> [ILType] {
+        // TODO(mliedtke): We should support externref and other types here. The list of types should be
+        // shared with function signature generation etc.
+        return (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64])}
     }
 
     public func randomWasmSignature() -> Signature {

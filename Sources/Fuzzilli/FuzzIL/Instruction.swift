@@ -1052,7 +1052,7 @@ extension Instruction: ProtobufConvertible {
                 $0.createWasmJstag = Fuzzilli_Protobuf_CreateWasmJSTag()
             case .createWasmTag(let op):
                 $0.createWasmTag = Fuzzilli_Protobuf_CreateWasmTag.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
+                    $0.parameterTypes = op.parameterTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wrapPromising(_):
                 $0.wrapPromising = Fuzzilli_Protobuf_WrapPromising()
@@ -1285,21 +1285,21 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmBeginTry(let op):
                 $0.wasmBeginTry = Fuzzilli_Protobuf_WasmBeginTry.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBeginCatchAll(let op):
                 $0.wasmBeginCatchAll = Fuzzilli_Protobuf_WasmBeginCatchAll.with {
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.inputTypes = op.inputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBeginCatch(let op):
                 $0.wasmBeginCatch = Fuzzilli_Protobuf_WasmBeginCatch.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmEndTry(let op):
                 $0.wasmEndTry = Fuzzilli_Protobuf_WasmEndTry.with {
-                    $0.returnType = ILTypeToWasmTypeEnum(op.outputType)
+                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBeginTryDelegate(let op):
                 $0.wasmBeginTryDelegate = Fuzzilli_Protobuf_WasmBeginTryDelegate.with {
@@ -1310,13 +1310,13 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmEndTryDelegate = Fuzzilli_Protobuf_WasmEndTryDelegate()
             case .wasmThrow(let op):
                 $0.wasmThrow = Fuzzilli_Protobuf_WasmThrow.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
+                    $0.parameterTypes = op.parameterTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmRethrow(_):
                 $0.wasmRethrow = Fuzzilli_Protobuf_WasmRethrow()
             case .wasmDefineTag(let op):
                 $0.wasmDefineTag = Fuzzilli_Protobuf_WasmDefineTag.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
+                    $0.parameterTypes = op.parameterTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBranch(let op):
                 $0.wasmBranch = Fuzzilli_Protobuf_WasmBranch.with {
@@ -2009,7 +2009,7 @@ extension Instruction: ProtobufConvertible {
         case .createWasmJstag(_):
             op = CreateWasmJSTag()
         case .createWasmTag(let p):
-            op = CreateWasmTag(parameters: p.parameters.map { Parameter.plain(WasmTypeEnumToILType($0)) })
+            op = CreateWasmTag(parameterTypes: p.parameterTypes.map(WasmTypeEnumToILType))
         case .wrapPromising(_):
             op = WrapPromising()
         case .wrapSuspending(_):
@@ -2171,19 +2171,17 @@ extension Instruction: ProtobufConvertible {
         case .wasmEndLoop(let p):
             op = WasmEndLoop(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginTry(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginTry(with: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginTry(with: parameters => outputs)
         case .wasmBeginCatchAll(let p):
-            op = WasmBeginCatchAll(with: [] => WasmTypeEnumToILType(p.returnType))
+            op = WasmBeginCatchAll(inputTypes: p.inputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginCatch(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginCatch(with: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginCatch(with: parameters => outputs)
         case .wasmEndTry(let p):
-            op = WasmEndTry(outputType: WasmTypeEnumToILType(p.returnType))
+            op = WasmEndTry(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginTryDelegate(let p):
             let parameters: [Parameter] = p.parameters.map({ param in
                 Parameter.plain(WasmTypeEnumToILType(param))
@@ -2192,15 +2190,11 @@ extension Instruction: ProtobufConvertible {
         case .wasmEndTryDelegate(_):
             op = WasmEndTryDelegate()
         case .wasmThrow(let p):
-            op = WasmThrow(parameters: p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            }))
+            op = WasmThrow(parameterTypes: p.parameterTypes.map(WasmTypeEnumToILType))
         case .wasmRethrow(_):
             op = WasmRethrow()
         case .wasmDefineTag(let p):
-            op = WasmDefineTag(parameters: p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            }))
+            op = WasmDefineTag(parameterTypes: p.parameterTypes.map(WasmTypeEnumToILType))
         case .wasmBranch(let p):
             op = WasmBranch(labelTypes: p.parameters.map(WasmTypeEnumToILType))
         case .wasmBranchIf(let p):
