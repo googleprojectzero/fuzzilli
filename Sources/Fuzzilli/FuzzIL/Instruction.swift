@@ -1283,6 +1283,15 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmEndLoop = Fuzzilli_Protobuf_WasmEndLoop.with {
                     $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
+            case .wasmBeginTryTable(let op):
+                $0.wasmBeginTryTable = Fuzzilli_Protobuf_WasmBeginTryTable.with {
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
+            case .wasmEndTryTable(let op):
+                $0.wasmEndTryTable = Fuzzilli_Protobuf_WasmEndTryTable.with {
+                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
             case .wasmBeginTry(let op):
                 $0.wasmBeginTry = Fuzzilli_Protobuf_WasmBeginTry.with {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
@@ -2172,6 +2181,12 @@ extension Instruction: ProtobufConvertible {
             op = WasmBeginLoop(with: parameters => outputs)
         case .wasmEndLoop(let p):
             op = WasmEndLoop(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
+        case .wasmBeginTryTable(let p):
+            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginTryTable(with: parameters => outputs)
+        case .wasmEndTryTable(let p):
+            op = WasmEndTryTable(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginTry(let p):
             let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)

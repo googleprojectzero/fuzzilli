@@ -1015,6 +1015,21 @@ public class FuzzILLifter: Lifter {
                 w.emit("WasmEndLoop \(inputs)")
             }
 
+        case .wasmBeginTryTable(let op):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("WasmBeginTryTable (\(op.signature)) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
+            w.increaseIndentionLevel()
+
+        case .wasmEndTryTable(let op):
+            w.decreaseIndentionLevel()
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            if op.numOutputs > 0 {
+                let outputs = instr.outputs.map(lift).joined(separator: ", ")
+                w.emit("\(outputs) <- WasmEndTryTable \(inputs)")
+            } else {
+                w.emit("WasmEndTryTable \(inputs)")
+            }
+
         case .wasmBeginTry(let op):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("WasmBeginTry (\(op.signature)) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")

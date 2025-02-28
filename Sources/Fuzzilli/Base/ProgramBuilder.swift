@@ -3278,6 +3278,14 @@ public class ProgramBuilder {
             return Array(b.emit(WasmEndLoop(outputTypes: signature.outputTypes), withInputs: fallthroughResults).outputs)
         }
 
+        @discardableResult
+        public func wasmBuildTryTable(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            assert(signature.parameterTypes.count == args.count)
+            let instr = b.emit(WasmBeginTryTable(with: signature), withInputs: args)
+            let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return Array(b.emit(WasmEndTryTable(outputTypes: signature.outputTypes), withInputs: results).outputs)
+        }
+
         public func wasmBuildLegacyTry(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> Void, catchAllBody: ((Variable) -> Void)? = nil) {
             assert(signature.parameterTypes.count == args.count)
             let instr = b.emit(WasmBeginTry(with: signature), withInputs: args)

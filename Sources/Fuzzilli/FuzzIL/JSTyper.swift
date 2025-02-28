@@ -315,6 +315,10 @@ public struct JSTyper: Analyzer {
                 }
             case .wasmEndLoop(let op):
                 wasmTypeEndBlock(instr, op.outputTypes)
+            case .wasmBeginTryTable(let op):
+                wasmTypeBeginBlock(instr, op.signature)
+            case .wasmEndTryTable(let op):
+                wasmTypeEndBlock(instr, op.outputTypes)
             case .wasmBeginTry(let op):
                 wasmTypeBeginBlock(instr, op.signature)
             case .wasmBeginCatchAll(let op):

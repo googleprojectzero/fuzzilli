@@ -532,6 +532,7 @@ let v8Profile = Profile(
             "--wasm-fast-api",
             "--expose-fast-api",
             "--experimental-wasm-memory64",
+            "--experimental-wasm-exnref",
         ]
 
         guard randomize else { return args }
