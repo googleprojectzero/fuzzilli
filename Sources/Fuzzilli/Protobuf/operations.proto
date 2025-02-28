@@ -824,7 +824,7 @@ message CreateWasmJSTag {
 }
 
 message CreateWasmTag {
-    repeated WasmILType parameters = 1;
+    repeated WasmILType parameterTypes = 1;
 }
 
 message WrapSuspending {
@@ -1182,21 +1182,21 @@ message WasmEndLoop {
 }
 
 message WasmBeginTry {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmBeginCatchAll {
-  WasmILType returnType = 2;
+  repeated WasmILType inputTypes = 1;
 }
 
 message WasmBeginCatch {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmEndTry {
-  WasmILType returnType = 1;
+  repeated WasmILType outputTypes = 1;
 }
 
 message WasmBeginTryDelegate {
@@ -1208,14 +1208,14 @@ message WasmEndTryDelegate {
 }
 
 message WasmThrow {
-  repeated WasmILType parameters = 1;
+  repeated WasmILType parameterTypes = 1;
 }
 
 message WasmRethrow {
 }
 
 message WasmDefineTag {
-  repeated WasmILType parameters = 1;
+  repeated WasmILType parameterTypes = 1;
 }
 
 message WasmBranch {

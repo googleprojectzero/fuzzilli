@@ -2514,10 +2514,10 @@ class CreateWasmJSTag: JsOperation {
 
 class CreateWasmTag: JsOperation {
     override var opcode: Opcode { .createWasmTag(self) }
-    public let parameters: ParameterList
+    public let parameterTypes: [ILType]
 
-    init(parameters: ParameterList) {
-        self.parameters = parameters
+    init(parameterTypes: [ILType]) {
+        self.parameterTypes = parameterTypes
         // Note that tags in wasm are nominal (differently to types) meaning that two tags with the same input are not
         // the same, therefore this operation is not considered to be .pure.
         super.init(numOutputs: 1, attributes: [], requiredContext: [.javascript])

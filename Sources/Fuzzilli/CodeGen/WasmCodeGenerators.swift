@@ -84,7 +84,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             blockIndex += 1
             m.addWasmFunction(with: b.randomWasmSignature()) { function, _ in
                 b.buildPrefix()
-                function.wasmBuildLegacyTry(with: [] => .nothing, args: [], body: {label, _ in
+                function.wasmBuildLegacyTry(with: [] => [], args: [], body: {label, _ in
                     b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
                     blockIndex += 1
                     for _ in 0..<catchCount {
@@ -704,10 +704,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
         let args = b.randomWasmBlockArguments(upTo: 5)
-        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
+        let parameters = args.map(b.type)
         let tags = (0..<Int.random(in: 0...5)).map {_ in b.findVariable { b.type(of: $0).isWasmTagType }}.filter {$0 != nil}.map {$0!}
         let recursiveCallCount = 2 + tags.count
-        function.wasmBuildLegacyTry(with: parameters => .nothing, args: args) { label, args in
+        function.wasmBuildLegacyTry(with: parameters => [], args: args) { label, args in
             b.buildRecursive(block: 1, of: recursiveCallCount, n: 4)
             for (i, tag) in tags.enumerated() {
                 function.WasmBuildLegacyCatch(tag: tag) { _, _, _ in
@@ -723,21 +723,20 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
         let args = b.randomWasmBlockArguments(upTo: 5)
-        let parameters = args.map {arg in Parameter.plain(b.type(of: arg))}
+        let parameters = args.map(b.type)
         let tags = (0..<Int.random(in: 0...5)).map {_ in b.findVariable { b.type(of: $0).isWasmTagType }}.filter {$0 != nil}.map {$0!}
-        // Disallowing void here to simplify the logic. The WasmLegacyTryCatchGenerator generates try-catch blocks without a result type.
-        let outputType = b.randomWasmBlockOutputType(allowVoid: false)
-        let signature = parameters => outputType
+        let outputTypes = b.randomWasmBlockOutputTypes(upTo: 3)
+        let signature = parameters => outputTypes
         let recursiveCallCount = 2 + tags.count
         function.wasmBuildLegacyTryWithResult(with: signature, args: args, body: { label, args in
             b.buildRecursive(block: 1, of: recursiveCallCount, n: 4)
-            return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
         }, catchClauses: tags.enumerated().map {i, tag in (tag, {_, _, _ in
-                b.buildRecursive(block: 2 + i, of: recursiveCallCount, n: 4)
-                return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+            b.buildRecursive(block: 2 + i, of: recursiveCallCount, n: 4)
+            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
         })}, catchAllBody: { label in
             b.buildRecursive(block: 2 + tags.count, of: recursiveCallCount, n: 4)
-            return b.randomVariable(ofType: outputType) ?? function.generateRandomWasmVar(ofType: outputType)
+            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
         })
     },
 
@@ -803,19 +802,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             // A JSTag cannot be thrown from Wasm.
             return
         }
-        var args : [Variable] = []
-        for param in wasmTagType.parameters {
-            switch(param) {
-                case .plain(let t):
-                    if let randVar = b.randomVariable(ofType: t) {
-                        args.append(randVar)
-                    } else {
-                        args.append(function.generateRandomWasmVar(ofType: t))
-                    }
-                default:
-                    fatalError("Unexpected non-plain type in tag")
-            }
-        }
+        var args = wasmTagType.parameters.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
         function.WasmBuildThrow(tag: tag, inputs: args)
     },
 

@@ -1433,7 +1433,7 @@ class MinimizerTests: XCTestCase {
             return b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                     evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         let val = function.consti64(42)
                         evaluator.nextInstructionIsImportant(in: b)
                         function.wasmReturn(val)
@@ -1448,7 +1448,7 @@ class MinimizerTests: XCTestCase {
         } minified: { b in
             return b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         function.wasmReturn(function.consti64(42))
                     }
                     function.wasmUnreachable()
@@ -1465,7 +1465,7 @@ class MinimizerTests: XCTestCase {
                 let irrelevantTag = wasmModule.addTag(parameterTypes: [])
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
                     evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         evaluator.nextInstructionIsImportant(in: b)
                         function.WasmBuildThrow(tag: tag, inputs: [])
                         evaluator.nextInstructionIsImportant(in: b)
@@ -1486,7 +1486,7 @@ class MinimizerTests: XCTestCase {
             return b.buildWasmModule { wasmModule in
                 let tag = wasmModule.addTag(parameterTypes: [])
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [])
                         function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
                             function.wasmReturn(function.consti64(42))
@@ -1504,7 +1504,7 @@ class MinimizerTests: XCTestCase {
             return b.buildWasmModule { wasmModule in
                 let tag = wasmModule.addTag(parameterTypes: [])
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         let val = function.consti64(42)
                             evaluator.nextInstructionIsImportant(in: b)
                             function.wasmReturn(val)
@@ -1531,7 +1531,7 @@ class MinimizerTests: XCTestCase {
             return b.buildWasmModule { wasmModule in
                 let tag = wasmModule.addTag(parameterTypes: [])
                 wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                             function.wasmReturn(function.consti64(123))
                         function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
                             function.wasmUnreachable()
