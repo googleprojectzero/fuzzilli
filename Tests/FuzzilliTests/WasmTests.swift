@@ -1854,6 +1854,35 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "43\n44\n44\n142\n")
     }
 
+    func testTryTableNoCatch() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--experimental-wasm-exnref"])
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
+                let blockResult = function.wasmBuildTryTable(with: [.wasmi32, .wasmi64] => [.wasmi64, .wasmi32], args: [args[0], function.consti64(1234)]) { tryLabel, tryArgs in
+                    let isZero = function.wasmi32CompareOp(tryArgs[0], function.consti32(0), using: .Eq)
+                    function.wasmBranchIf(isZero, to: tryLabel, args: [function.consti64(10), function.consti32(20)])
+                    return [tryArgs[1], tryArgs[0]]
+                }
+                let sum = function.wasmi64BinOp(blockResult[0],
+                    function.extendi32Toi64(blockResult[1], isSigned: true), binOpKind: .Add)
+                function.wasmReturn(sum)
+            }
+        }
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        let wasmOut1 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut1)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "30\n1235\n")
+    }
+
     func testUnreachable() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

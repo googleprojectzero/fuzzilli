@@ -937,6 +937,11 @@ public class WasmLifter {
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
             // Needs typer analysis
             return true
+        case .wasmBeginTryTable(let op):
+            registerSignature(op.signature)
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
+            // Needs typer analysis
+            return true
         case .wasmBeginTry(let op):
             registerSignature(op.signature)
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
@@ -1062,19 +1067,13 @@ public class WasmLifter {
             }
         }
 
-        // TODO(mliedtke): Could we make the spilling automatic based on types, so that all wasm
-        // blocks automatically spill all their inner outputs that are stack values.
-        if instr.op is WasmBeginBlock || instr.op is WasmBeginTry
-            || instr.op is WasmBeginTryDelegate || instr.op is WasmBeginIf || instr.op is WasmBeginElse
-            || instr.op is WasmBeginLoop {
+        if instr.op.attributes.contains(.isBlockStart) {
             // As the parameters are pushed "in order" to the stack, they need to be popped in reverse order.
-            for innerOutput in instr.innerOutputs(1...).reversed() {
-                currentFunction!.spillLocal(forVariable: innerOutput)
-            }
-        }
-        if instr.op is WasmBeginCatch {
-            for innerOutput in instr.innerOutputs(2...).reversed() {
-                currentFunction!.spillLocal(forVariable: innerOutput)
+            for innerOutput in instr.innerOutputs.reversed() {
+                let t = typer.type(of: innerOutput)
+                if !t.Is(.anyLabel) && !t.Is(.exceptionLabel) {
+                    currentFunction!.spillLocal(forVariable: innerOutput)
+                }
             }
         }
     }
@@ -1508,6 +1507,9 @@ public class WasmLifter {
             return Data([0x02] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginLoop(let op):
             return Data([0x03] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
+        case .wasmBeginTryTable(let op):
+            let catchCount = 0 // TODO(mliedtke): For now this is just a dummy block.
+            return [0x1F] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!) + Leb128.unsignedEncode(catchCount)
         case .wasmBeginTry(let op):
             return Data([0x06] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginTryDelegate(let op):
@@ -1518,6 +1520,7 @@ public class WasmLifter {
             return Data([0x07] + Leb128.unsignedEncode(try resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
         case .wasmEndLoop(_),
                 .wasmEndIf(_),
+                .wasmEndTryTable(_),
                 .wasmEndTry(_),
                 .wasmEndBlock(_):
             // Basically the same as EndBlock, just an explicit instruction.

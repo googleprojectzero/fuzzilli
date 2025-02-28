@@ -1181,6 +1181,15 @@ message WasmEndLoop {
   repeated WasmILType outputTypes = 1;
 }
 
+message WasmBeginTryTable {
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
+}
+
+message WasmEndTryTable {
+  repeated WasmILType outputTypes = 1;
+}
+
 message WasmBeginTry {
   repeated WasmILType parameterTypes = 1;
   repeated WasmILType outputTypes = 2;

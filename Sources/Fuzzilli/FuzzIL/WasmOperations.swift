@@ -1077,6 +1077,28 @@ final class WasmEndLoop: WasmOperationBase {
     }
 }
 
+// A try_table is a mix between a `br_table` (just with target blocks associated with different tags)
+// and the legacy `try` block.
+final class WasmBeginTryTable: WasmOperationBase {
+    override var opcode: Opcode { .wasmBeginTryTable(self) }
+    let signature: WasmSignature
+
+    init(with signature: WasmSignature) {
+        self.signature = signature
+        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+    }
+}
+
+final class WasmEndTryTable: WasmOperationBase {
+    override var opcode: Opcode { .wasmEndTryTable(self) }
+    let outputTypes: [ILType]
+
+    init(outputTypes: [ILType]) {
+        self.outputTypes = outputTypes
+        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction, .wasmBlock])
+    }
+}
+
 final class WasmBeginTry: WasmOperationBase {
     override var opcode: Opcode { .wasmBeginTry(self) }
     let signature: WasmSignature

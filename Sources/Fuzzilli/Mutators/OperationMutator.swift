@@ -546,6 +546,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmEndBlock(_),
              .wasmBeginLoop(_),
              .wasmEndLoop(_),
+             .wasmBeginTryTable(_),
+             .wasmEndTryTable(_),
              .wasmBeginTry(_),
              .wasmBeginCatchAll(_),
              .wasmBeginCatch(_),
