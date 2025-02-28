@@ -1862,7 +1862,7 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
-                let blockResult = function.wasmBuildTryTable(with: [.wasmi32, .wasmi64] => [.wasmi64, .wasmi32], args: [args[0], function.consti64(1234)]) { tryLabel, tryArgs in
+                let blockResult = function.wasmBuildTryTable(with: [.wasmi32, .wasmi64] => [.wasmi64, .wasmi32], args: [args[0], function.consti64(1234)], catches: []) { tryLabel, tryArgs in
                     let isZero = function.wasmi32CompareOp(tryArgs[0], function.consti32(0), using: .Eq)
                     function.wasmBranchIf(isZero, to: tryLabel, args: [function.consti64(10), function.consti32(20)])
                     return [tryArgs[1], tryArgs[0]]
@@ -1881,6 +1881,85 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "30\n1235\n")
+    }
+
+    func testTryTable() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let tagVoid = b.createWasmTag(parameterTypes: [])
+        let tagi32 = b.createWasmTag(parameterTypes: [.wasmi32])
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                function.wasmBuildBlock(with: [] => [], args: []) { catchAllNoRefLabel, _ in
+                    let catchNoRefI32 = function.wasmBuildBlockWithResults(with: [] => [.wasmi32], args: []) { catchNoRefLabel, _ in
+                        function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchNoRefLabel, catchAllNoRefLabel], catches: [.NoRef, .AllNoRef]) { _, _ in
+                            function.wasmBuildIfElse(function.wasmi32EqualZero(args[0])) {
+                                function.WasmBuildThrow(tag: tagVoid, inputs: [])
+                            } elseBody: {
+                                function.WasmBuildThrow(tag: tagi32, inputs: [args[0]])
+                            }
+                            return []
+                        }
+                        return [function.consti32(-1)]
+                    }
+                    function.wasmReturn(catchNoRefI32[0])
+                }
+                function.wasmReturn(function.consti32(100))
+            }
+        }
+
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        let wasmOut1 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(123)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut1)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "100\n123\n")
+    }
+
+    func testTryTableRef() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let tagVoid = b.createWasmTag(parameterTypes: [])
+        let tagi32 = b.createWasmTag(parameterTypes: [.wasmi32])
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                function.wasmBuildBlockWithResults(with: [] => [.wasmExnRef], args: []) { catchAllRefLabel, _ in
+                    let catchRefI32 = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchRefLabel, _ in
+                        function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchRefLabel, catchAllRefLabel], catches: [.Ref, .AllRef]) { _, _ in
+                            function.wasmBuildIfElse(function.wasmi32EqualZero(args[0])) {
+                                function.WasmBuildThrow(tag: tagVoid, inputs: [])
+                            } elseBody: {
+                                function.WasmBuildThrow(tag: tagi32, inputs: [args[0]])
+                            }
+                            return []
+                        }
+                        return [function.consti32(-1), function.wasmRefNull(.wasmExnRef)]
+                    }
+                    function.wasmReturn(catchRefI32[0])
+                    return [function.wasmRefNull(.wasmExnRef)]
+                }
+                function.wasmReturn(function.consti32(100))
+            }
+        }
+
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        let wasmOut1 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(123)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut1)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "100\n123\n")
     }
 
     func testUnreachable() throws {

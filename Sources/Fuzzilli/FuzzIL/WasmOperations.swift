@@ -1080,12 +1080,23 @@ final class WasmEndLoop: WasmOperationBase {
 // A try_table is a mix between a `br_table` (just with target blocks associated with different tags)
 // and the legacy `try` block.
 final class WasmBeginTryTable: WasmOperationBase {
+    enum CatchKind : UInt8 {
+        case NoRef = 0x0
+        case Ref = 0x1
+        case AllNoRef = 0x2
+        case AllRef = 0x3
+    }
+
     override var opcode: Opcode { .wasmBeginTryTable(self) }
     let signature: WasmSignature
+    let catches: [CatchKind]
 
-    init(with signature: WasmSignature) {
+    init(with signature: WasmSignature, catches: [CatchKind]) {
         self.signature = signature
-        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        self.catches = catches
+        let inputTagCount = catches.count {$0 == .Ref || $0 == .NoRef}
+        let inputLabelCount = catches.count
+        super.init(numInputs: signature.parameterTypes.count + inputLabelCount + inputTagCount , numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 

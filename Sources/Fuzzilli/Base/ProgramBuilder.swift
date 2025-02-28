@@ -3279,9 +3279,10 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmBuildTryTable(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
-            assert(signature.parameterTypes.count == args.count)
-            let instr = b.emit(WasmBeginTryTable(with: signature), withInputs: args)
+        func wasmBuildTryTable(with signature: WasmSignature, args: [Variable], catches: [WasmBeginTryTable.CatchKind], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            // TODO(mliedtke): Also verify the input types for the catches as these are not very intuitive!
+            assert(zip(signature.parameterTypes, args).allSatisfy {b.type(of: $1).Is($0)})
+            let instr = b.emit(WasmBeginTryTable(with: signature, catches: catches), withInputs: args)
             let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             return Array(b.emit(WasmEndTryTable(outputTypes: signature.outputTypes), withInputs: results).outputs)
         }
