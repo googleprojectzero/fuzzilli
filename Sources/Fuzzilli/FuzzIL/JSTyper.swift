@@ -192,6 +192,21 @@ public struct JSTyper: Analyzer {
         return varType.wasmTypeDefinition?.description ?? varType.wasmReferenceType!.description!
     }
 
+    // Helper function to type a "regular" wasm begin block (block, if, try).
+    mutating func wasmTypeBeginBlock(_ instr: Instruction, _ signature: WasmSignature) {
+        setType(of: instr.innerOutputs.first!, to: .label(signature.outputTypes))
+        for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), signature.parameterTypes) {
+            setType(of: innerOutput, to: paramType)
+        }
+    }
+
+    // Helper function to type a "regular" wasm end block.
+    mutating func wasmTypeEndBlock(_ instr: Instruction, _ outputTypes: [ILType]) {
+        for (output, outputType) in zip(instr.outputs, outputTypes) {
+            setType(of: output, to: outputType)
+        }
+    }
+
     /// Analyze the given instruction, thus updating type information.
     public mutating func analyze(_ instr: Instruction) {
         assert(instr.index == indexOfLastInstruction + 1)
@@ -279,31 +294,17 @@ public struct JSTyper: Analyzer {
             case .constf32(_):
                 setType(of: instr.output, to: .wasmf32)
             case .wasmBeginBlock(let op):
-                setType(of: instr.innerOutputs.first!, to: .label(op.signature.outputTypes))
-                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
-                    setType(of: innerOutput, to: paramType)
-                }
+                wasmTypeBeginBlock(instr, op.signature)
             case .wasmEndBlock(let op):
-                for (output, outputType) in zip(instr.outputs, op.outputTypes) {
-                    setType(of: output, to: outputType)
-                }
+                wasmTypeEndBlock(instr, op.outputTypes)
             case .wasmBeginIf(let op):
-                setType(of: instr.innerOutputs.first!, to: .label(op.signature.outputTypes))
-                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
-                    setType(of: innerOutput, to: paramType)
-                }
+                wasmTypeBeginBlock(instr, op.signature)
             case .wasmBeginElse(let op):
-                setType(of: instr.innerOutputs.first!, to: .label(op.signature.outputTypes))
-                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
-                    setType(of: innerOutput, to: paramType)
-                }
-                for (output, outputType) in zip(instr.outputs, op.signature.outputTypes) {
-                    setType(of: output, to: outputType)
-                }
+                // The else block is both end and begin block.
+                wasmTypeEndBlock(instr, op.signature.outputTypes)
+                wasmTypeBeginBlock(instr, op.signature)
             case .wasmEndIf(let op):
-                for (output, outputType) in zip(instr.outputs, op.outputTypes) {
-                    setType(of: output, to: outputType)
-                }
+                wasmTypeEndBlock(instr, op.outputTypes)
             case .wasmBeginLoop(let op):
                 // Note that different to all other blocks the loop's label parameters are the input types
                 // of the block, not the result types (because a branch to a loop label jumps to the
@@ -313,14 +314,9 @@ public struct JSTyper: Analyzer {
                     setType(of: innerOutput, to: paramType)
                 }
             case .wasmEndLoop(let op):
-                for (output, outputType) in zip(instr.outputs, op.outputTypes) {
-                    setType(of: output, to: outputType)
-                }
+                wasmTypeEndBlock(instr, op.outputTypes)
             case .wasmBeginTry(let op):
-                setType(of: instr.innerOutputs.first!, to: .label(op.signature.outputTypes))
-                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
-                    setType(of: innerOutput, to: paramType)
-                }
+                wasmTypeBeginBlock(instr, op.signature)
             case .wasmBeginCatchAll(let op):
                 setType(of: instr.innerOutputs.first!, to: .label(op.inputTypes))
             case .wasmBeginCatch(let op):
@@ -333,18 +329,11 @@ public struct JSTyper: Analyzer {
                     setType(of: output, to: outputType)
                 }
             case .wasmEndTry(let op):
-                for (output, outputType) in zip(instr.outputs, op.outputTypes) {
-                    setType(of: output, to: outputType)
-                }
+                wasmTypeEndBlock(instr, op.outputTypes)
             case .wasmBeginTryDelegate(let op):
-                setType(of: instr.innerOutputs.first!, to: .label(op.signature.outputTypes))
-                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
-                    setType(of: innerOutput, to: paramType)
-                }
+                wasmTypeBeginBlock(instr, op.signature)
             case .wasmEndTryDelegate(let op):
-                for (output, outputType) in zip(instr.outputs, op.outputTypes) {
-                    setType(of: output, to: outputType)
-                }
+                wasmTypeEndBlock(instr, op.outputTypes)
             default:
                 if instr.numInnerOutputs + instr.numOutputs != 0 {
                     fatalError("Missing typing of outputs for \(instr.op.opcode)")

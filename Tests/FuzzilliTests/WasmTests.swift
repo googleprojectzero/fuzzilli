@@ -1825,18 +1825,19 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => .wasmi64) { function, args in
                 // Fuzzilli doesn't have support for handling stack-polymorphic cases after
                 // non-returning instructions like br_table or return.
-                let dummy = function.consti64(-1)
-                let block1Result = function.wasmBuildBlockWithResults(with: [] => [.wasmi64], args: []) { label1, _ in
-                    let block2Result = function.wasmBuildBlockWithResults(with: [] => [.wasmi64], args: []) { label2, _ in
-                        let block3Result = function.wasmBuildBlockWithResults(with: [] => [.wasmi64], args: []) { label3, _ in
-                            function.wasmBranchTable(on: args[0], labels: [label1, label2, label3], args: [args[1]])
-                            return [dummy]
+                let dummy = [function.consti64(-1), function.consti64(-1)]
+                let block1Result = function.wasmBuildBlockWithResults(with: [] => [.wasmi64, .wasmi64], args: []) { label1, _ in
+                    let block2Result = function.wasmBuildBlockWithResults(with: [] => [.wasmi64, .wasmi64], args: []) { label2, _ in
+                        let block3Result = function.wasmBuildBlockWithResults(with: [] => [.wasmi64, .wasmi64], args: []) { label3, _ in
+                            function.wasmBranchTable(on: args[0], labels: [label1, label2, label3],
+                                args: [args[1], function.extendi32Toi64(args[0], isSigned: false)])
+                            return dummy
                         }
-                        function.wasmReturn(function.wasmi64BinOp(block3Result[0], function.consti64(3), binOpKind: .Add))
-                        return [dummy]
+                        function.wasmReturn(function.wasmi64BinOp(block3Result[0], block3Result[1], binOpKind: .Add))
+                        return dummy
                     }
                     function.wasmReturn(function.wasmi64BinOp(block2Result[0], function.consti64(2), binOpKind: .Add))
-                    return [dummy]
+                    return dummy
                 }
                 function.wasmReturn(function.wasmi64BinOp(block1Result[0], function.consti64(1), binOpKind: .Add))
             }
@@ -1850,7 +1851,7 @@ class WasmFoundationTests: XCTestCase {
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [])
-        testForOutput(program: jsProg, runner: runner, outputString: "43\n44\n45\n45\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "43\n44\n44\n142\n")
     }
 
     func testUnreachable() throws {

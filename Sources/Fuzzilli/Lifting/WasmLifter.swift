@@ -427,7 +427,7 @@ public class WasmLifter {
             registerSignature(tag.1 => [])
         }
         for function in self.functions {
-            registerSignature(function.signature)
+            registerSignature(WasmSignature(from: function.signature))
         }
 
         let typeCount = self.signatures.count + typeGroups.count
@@ -480,17 +480,16 @@ public class WasmLifter {
         assert(signatures.count == signatureIndexMap.count)
     }
 
-    // TODO(mliedtke): Remove the overload once everything switched to using WasmSignatures.
-    private func registerSignature(_ signature: Signature) {
-        registerSignature(WasmSignature(from: signature))
-    }
-
     private func getSignatureIndex(_ signature: WasmSignature) throws -> Int {
         if let idx = signatureIndexMap[signature] {
             return idx
         }
 
         throw WasmLifter.CompileError.failedSignatureLookUp
+    }
+
+    private func getSignatureIndexStrict(_ signature: WasmSignature) -> Int {
+        return signatureIndexMap[signature]!
     }
 
     private func buildImportSection() throws {
@@ -964,7 +963,7 @@ public class WasmLifter {
             // Needs typer analysis
             return true
         case .wasmCallIndirect(let op):
-            registerSignature(op.signature)
+            registerSignature(WasmSignature(from: op.signature))
             return true
         case .wasmNop(_):
             // Just analyze the instruction but do nothing else here.
@@ -1506,13 +1505,13 @@ public class WasmLifter {
         case .wasmBeginBlock(let op):
             // A Block can "produce" (push) an item on the value stack, just like a function. Similarly, a block can also have parameters.
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
-            return Data([0x02] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x02] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginLoop(let op):
-            return Data([0x03] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x03] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginTry(let op):
-            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x06] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginTryDelegate(let op):
-            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x06] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginCatchAll(_):
             return Data([0x19])
         case .wasmBeginCatch(_):
@@ -1547,7 +1546,7 @@ public class WasmLifter {
             }
             return Data([0x0E]) + Leb128.unsignedEncode(op.valueCount) + depths.map(Leb128.unsignedEncode).joined()
         case .wasmBeginIf(let op):
-            return Data([0x04] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x04] + Leb128.unsignedEncode(try getSignatureIndex(op.signature)))
         case .wasmBeginElse(_):
             // 0x05 is the else block instruction.
             return Data([0x05])
