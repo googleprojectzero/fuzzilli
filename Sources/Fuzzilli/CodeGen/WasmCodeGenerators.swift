@@ -837,23 +837,23 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         // Choose parameter types for the br_table. If we can find an existing label, just use that
         // label types as it allows use to reuse existing (and therefore more interesting) blocks.
-        let parameterType = if let label = b.randomVariable(ofType: .anyLabel) {
-            b.type(of: label).wasmLabelType!.parameters.first ?? b.randomWasmBlockOutputType(allowVoid: false)
+        let parameterTypes = if let label = b.randomVariable(ofType: .anyLabel) {
+            b.type(of: label).wasmLabelType!.parameters
         } else {
-            b.randomWasmBlockOutputType(allowVoid: false)
+            b.randomWasmBlockOutputTypes(upTo: 3)
         }
         let extraBlockCount = Int.random(in: 1...5)
         let valueCount = Int.random(in: 0...20)
-        let signature = [] => [parameterType]
+        let signature = [] => parameterTypes
         (0..<extraBlockCount).forEach { _ in
             function.wasmBeginBlock(with: signature, args: [])
         }
-        let labels = (0...valueCount).map {_ in b.randomVariable(ofType: .label([parameterType]))!}
-        let arg = b.randomVariable(ofType: parameterType) ?? function.generateRandomWasmVar(ofType: parameterType)
-        function.wasmBranchTable(on: value, labels: labels, args: [arg])
+        let labels = (0...valueCount).map {_ in b.randomVariable(ofType: .label(parameterTypes))!}
+        let args = parameterTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+        function.wasmBranchTable(on: value, labels: labels, args: args)
         (0..<extraBlockCount).forEach { n in
-            let arg = b.randomVariable(ofType: parameterType) ?? function.generateRandomWasmVar(ofType: parameterType)
-            function.wasmEndBlock(outputTypes: signature.outputTypes, args: [arg])
+            let results = parameterTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            function.wasmEndBlock(outputTypes: signature.outputTypes, args: results)
             b.buildRecursive(block: n + 1, of: extraBlockCount, n: 4)
         }
     },

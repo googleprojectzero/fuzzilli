@@ -3608,13 +3608,8 @@ public class ProgramBuilder {
         return params => returnType
     }
 
-    public func randomWasmBlockOutputType(allowVoid: Bool = true) -> ILType {
-        // TODO(mliedtke): The selection of types is in sync with ProgramBuilder::randomWasmSignature(). This should allow more types.
-        let possibleTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64]
-        return chooseUniform(from: allowVoid ? possibleTypes + [.nothing] : possibleTypes)
-    }
-
     public func randomWasmBlockOutputTypes(upTo n: Int) -> [ILType] {
+        // TODO(mliedtke): The selection of types is in sync with ProgramBuilder::randomWasmSignature(). This should allow more types.
         (0..<Int.random(in: 0...n)).map {_ in chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64])}
     }
 
