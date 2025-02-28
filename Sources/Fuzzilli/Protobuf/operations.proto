@@ -1182,9 +1182,17 @@ message WasmEndLoop {
   repeated WasmILType outputTypes = 1;
 }
 
+enum WasmCatchKind {
+  NO_REF = 0;
+  REF = 1;
+  ALL_NO_REF = 2;
+  ALL_REF = 3;
+}
+
 message WasmBeginTryTable {
   repeated WasmILType parameterTypes = 1;
   repeated WasmILType outputTypes = 2;
+  repeated WasmCatchKind catches = 3;
 }
 
 message WasmEndTryTable {

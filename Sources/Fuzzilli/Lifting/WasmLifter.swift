@@ -1207,6 +1207,13 @@ public class WasmLifter {
                 assert(typer.type(of: instr.input(0)).wasmTagType!.parameters == op.parameterTypes)
                 importTagIfNeeded(tag: instr.input(0), parameterTypes: op.parameterTypes)
 
+            case .wasmBeginTryTable(_):
+                instr.inputs.forEach { input in
+                    if let tagType = typer.type(of: input).wasmTagType {
+                        importTagIfNeeded(tag: input, parameterTypes: tagType.parameters)
+                    }
+                }
+
             default:
                 // TODO(mliedtke): Migrate this mechanism to WasmOperationBase.
                 if let typedOperation = instr.op as? WasmTypedOperation {
@@ -1526,8 +1533,25 @@ public class WasmLifter {
         case .wasmBeginLoop(let op):
             return Data([0x03] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginTryTable(let op):
-            let catchCount = 0 // TODO(mliedtke): For now this is just a dummy block.
-            return [0x1F] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!) + Leb128.unsignedEncode(catchCount)
+            var inputIndex = op.signature.parameterTypes.count
+            let catchTable: Data = try op.catches.map {
+                    switch $0 {
+                    case .Ref, .NoRef:
+                        let tag = try resolveIdx(ofType: .tag, for: wasmInstruction.input(inputIndex))
+                        let depth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(inputIndex+1)]! - 2
+                        let result = Data([$0.rawValue]) + Leb128.unsignedEncode(tag) + Leb128.unsignedEncode(depth)
+                        inputIndex += 2
+                        return result
+                    case .AllRef, .AllNoRef:
+                        let depth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(inputIndex)]! - 2
+                        inputIndex += 1
+                        return Data([$0.rawValue]) + Leb128.unsignedEncode(depth)
+                    }
+                }.reduce(Data(), +)
+            return [0x1F]
+                + Leb128.unsignedEncode(signatureIndexMap[op.signature]!)
+                + Leb128.unsignedEncode(op.catches.count)
+                + catchTable
         case .wasmBeginTry(let op):
             return Data([0x06] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginTryDelegate(let op):

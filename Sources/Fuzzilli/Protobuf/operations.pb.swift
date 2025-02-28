@@ -791,6 +791,48 @@ public enum Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf.Enum, Swift.Cas
 
 }
 
+public enum Fuzzilli_Protobuf_WasmCatchKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case noRef // = 0
+  case ref // = 1
+  case allNoRef // = 2
+  case allRef // = 3
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .noRef
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .noRef
+    case 1: self = .ref
+    case 2: self = .allNoRef
+    case 3: self = .allRef
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .noRef: return 0
+    case .ref: return 1
+    case .allNoRef: return 2
+    case .allRef: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmCatchKind] = [
+    .noRef,
+    .ref,
+    .allNoRef,
+    .allRef,
+  ]
+
+}
+
 public enum Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case loads128 // = 0
@@ -4300,6 +4342,8 @@ public struct Fuzzilli_Protobuf_WasmBeginTryTable: Sendable {
 
   public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
+  public var catches: [Fuzzilli_Protobuf_WasmCatchKind] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5024,6 +5068,15 @@ extension Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf._ProtoNameProvidi
     6: .same(proto: "I64_STOREMEM_8"),
     7: .same(proto: "I64_STOREMEM_16"),
     8: .same(proto: "I64_STOREMEM_32"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmCatchKind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "NO_REF"),
+    1: .same(proto: "REF"),
+    2: .same(proto: "ALL_NO_REF"),
+    3: .same(proto: "ALL_REF"),
   ]
 }
 
@@ -12602,6 +12655,7 @@ extension Fuzzilli_Protobuf_WasmBeginTryTable: SwiftProtobuf.Message, SwiftProto
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "parameterTypes"),
     2: .same(proto: "outputTypes"),
+    3: .same(proto: "catches"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -12612,6 +12666,7 @@ extension Fuzzilli_Protobuf_WasmBeginTryTable: SwiftProtobuf.Message, SwiftProto
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.outputTypes) }()
+      case 3: try { try decoder.decodeRepeatedEnumField(value: &self.catches) }()
       default: break
       }
     }
@@ -12624,12 +12679,16 @@ extension Fuzzilli_Protobuf_WasmBeginTryTable: SwiftProtobuf.Message, SwiftProto
     if !self.outputTypes.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.outputTypes, fieldNumber: 2)
     }
+    if !self.catches.isEmpty {
+      try visitor.visitPackedEnumField(value: self.catches, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmBeginTryTable, rhs: Fuzzilli_Protobuf_WasmBeginTryTable) -> Bool {
     if lhs.parameterTypes != rhs.parameterTypes {return false}
     if lhs.outputTypes != rhs.outputTypes {return false}
+    if lhs.catches != rhs.catches {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

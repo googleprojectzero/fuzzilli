@@ -861,6 +861,51 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("WasmTryTableGenerator", inContext: .wasmFunction) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+        let tags = (0..<Int.random(in: 0...3)).map {_ in
+            let tag = b.randomVariable(ofType: .object(ofGroup: "WasmTag"))
+            // nil will map to a catch all. Note that this means that we can generate multiple
+            // catch all targets.
+            return tag == nil || b.type(of: tag!).wasmTagType!.isJSTag || probability(0.1) ? nil : tag
+        }
+        let withExnRef = tags.map {_ in Bool.random()}
+
+        let outputTypesList = zip(tags, withExnRef).map { tag, withExnRef in
+            var outputTypes: [ILType] = if let tag = tag {
+                b.type(of: tag).wasmTagType!.parameters
+            } else {
+                []
+            }
+            if withExnRef {
+                outputTypes.append(.wasmExnRef)
+            }
+            function.wasmBeginBlock(with: [] => outputTypes, args: [])
+            return outputTypes
+        }
+        // Look up the labels. In most cases these will be exactly the ones produced by the blocks
+        // above but also any other matching existing block could be used. (Similar, tags with the
+        // same parameter types could also be mapped to the same block.)
+        let labels = outputTypesList.map {outputTypes in b.randomVariable(ofType: .label(outputTypes))!}
+        let catches = zip(tags, withExnRef).map { tag, withExnRef -> WasmBeginTryTable.CatchKind in
+            tag == nil ? (withExnRef ? .AllRef : .AllNoRef) : (withExnRef ? .Ref : .NoRef)
+        }
+
+        var tryArgs = b.randomWasmBlockArguments(upTo: 5)
+        let tryParameters = tryArgs.map {b.type(of: $0)}
+        let tryOutputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
+        tryArgs += zip(tags, labels).map {tag, label in tag == nil ? [label] : [tag!, label]}.joined()
+        function.wasmBuildTryTable(with: tryParameters => tryOutputTypes, args: tryArgs, catches: catches) { _, _ in
+            b.buildRecursive(block: 1, of: tags.count + 1, n: 4)
+            return tryOutputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+        }
+        outputTypesList.reversed().enumerated().forEach { n, outputTypes in
+            let results = outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            function.wasmEndBlock(outputTypes: outputTypes, args: results)
+            b.buildRecursive(block: n + 2, of: tags.count + 1, n: 4)
+        }
+    },
+
     CodeGenerator("ConstSimd128Generator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         function.constSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })

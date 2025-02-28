@@ -519,6 +519,19 @@ extension Instruction: ProtobufConvertible {
             }
         }
 
+        func convertWasmCatch(catchKind: WasmBeginTryTable.CatchKind) -> Fuzzilli_Protobuf_WasmCatchKind {
+            switch catchKind {
+            case .NoRef:
+                return .noRef
+            case .Ref:
+                return .ref
+            case .AllNoRef:
+                return .allNoRef
+            case .AllRef:
+                return .allRef
+            }
+        }
+
         let result = ProtobufType.with {
             $0.inouts = inouts.map({ UInt32($0.number) })
 
@@ -1300,6 +1313,7 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmBeginTryTable = Fuzzilli_Protobuf_WasmBeginTryTable.with {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
                     $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.catches = op.catches.map(convertWasmCatch)
                 }
             case .wasmEndTryTable(let op):
                 $0.wasmEndTryTable = Fuzzilli_Protobuf_WasmEndTryTable.with {
@@ -1623,6 +1637,21 @@ extension Instruction: ProtobufConvertible {
                 return .imported(WasmTypeEnumToILType(ilType))
             case .none:
                 fatalError("unreachable")
+            }
+        }
+
+        func convertProtoWasmCatchKind(_ catchKind: Fuzzilli_Protobuf_WasmCatchKind) -> WasmBeginTryTable.CatchKind {
+            switch catchKind {
+                case .noRef:
+                    return .NoRef
+                case .ref:
+                    return .Ref
+                case .allNoRef:
+                    return .AllNoRef
+                case .allRef:
+                    return .AllRef
+                case .UNRECOGNIZED(let i):
+                    fatalError("Invalid WasmCatchKind \(i)")
             }
         }
 
@@ -2199,7 +2228,8 @@ extension Instruction: ProtobufConvertible {
         case .wasmBeginTryTable(let p):
             let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
-            op = WasmBeginTryTable(with: parameters => outputs)
+            let catches = p.catches.map(convertProtoWasmCatchKind)
+            op = WasmBeginTryTable(with: parameters => outputs, catches: catches)
         case .wasmEndTryTable(let p):
             op = WasmEndTryTable(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginTry(let p):
