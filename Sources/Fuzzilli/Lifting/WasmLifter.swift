@@ -49,8 +49,6 @@ private let ILTypeMapping: [ILType: Data] = [
     .wasmi64 : Data([0x7e]),
     .wasmf32 : Data([0x7D]),
     .wasmf64 : Data([0x7C]),
-    .wasmExternRef: Data([0x6f]),
-    .wasmFuncRef: Data([0x70]),
     .wasmSimd128: Data([0x7B]),
 
     .bigint  : Data([0x7e]), // Maps to .wasmi64
@@ -381,22 +379,42 @@ public class WasmLifter {
         self.bytecode += [0x1, 0x0, 0x0, 0x0]
     }
 
+    private func encodeAbstractHeapType(_ heapType: WasmAbstractHeapType) -> Data {
+        switch (heapType) {
+            case .WasmExtern:
+                return Data([0x6f])
+            case .WasmFunc:
+                return Data([0x70])
+            case .WasmExn:
+                return Data([0x69])
+        }
+    }
+
     private func encodeType(_ type: ILType, defaultType: ILType? = nil) -> Data {
-        if type.Is(.wasmGenericRef) {
-            let isNullable = type.wasmReferenceType!.nullability
+        if let refType = type.wasmReferenceType {
+            let isNullable = refType.nullability
             let nullabilityByte: UInt8 = isNullable ? 0x63 : 0x64
-            let typeDesc = type.wasmReferenceType!.description!
-            return Data([nullabilityByte])
-                + Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+
+            switch refType.kind {
+            case .Index(let description):
+                return Data([nullabilityByte])
+                    + Leb128.unsignedEncode(typeDescToIndex[description!]!)
+            case .Abstract(let heapType):
+                return Data([nullabilityByte]) + encodeAbstractHeapType(heapType)
+            }
         }
         // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
         return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!
     }
 
     private func encodeHeapType(_ type: ILType, defaultType: ILType? = nil) -> Data {
-        if type.Is(.wasmGenericRef) {
-            let typeDesc = type.wasmReferenceType!.description!
-            return Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+        if let refType = type.wasmReferenceType {
+            switch refType.kind {
+            case .Index(let description):
+                return Leb128.unsignedEncode(typeDescToIndex[description!]!)
+            case .Abstract(let heapType):
+                return encodeAbstractHeapType(heapType)
+            }
         }
         // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
         return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!

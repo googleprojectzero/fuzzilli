@@ -381,11 +381,24 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmExternRef:
                 return Fuzzilli_Protobuf_WasmILType.with {
-                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.externref
+                    $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
+                        $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.externref
+                        $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                    }
                 }
             case .wasmFuncRef:
                 return Fuzzilli_Protobuf_WasmILType.with {
-                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.funcref
+                    $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
+                        $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.funcref
+                        $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                    }
+                }
+            case .wasmExnRef:
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
+                        $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.exnref
+                        $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                    }
                 }
             case .wasmSimd128:
                 return Fuzzilli_Protobuf_WasmILType.with {
@@ -1476,10 +1489,6 @@ extension Instruction: ProtobufConvertible {
                     return .wasmi32
                 case .consti64:
                     return .wasmi64
-                case .externref:
-                    return .wasmExternRef
-                case .funcref:
-                    return .wasmFuncRef
                 case .simd128:
                     return .wasmSimd128
                 case .functiondef:
@@ -1492,7 +1501,13 @@ extension Instruction: ProtobufConvertible {
             case .refType(_):
                 switch wasmType.refType.kind {
                 case .index:
-                    return .wasmRef(.Index, nullability: wasmType.refType.nullability)
+                    return .wasmRef(.Index(), nullability: wasmType.refType.nullability)
+                case .externref:
+                    return .wasmExternRef
+                case .funcref:
+                    return .wasmFuncRef
+                case .exnref:
+                    return .wasmExnRef
                 case .UNRECOGNIZED(let value):
                     fatalError("Unrecognized wasm reference type \(value)")
                 }

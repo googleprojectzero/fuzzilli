@@ -211,8 +211,9 @@ public struct ILType: Hashable {
     public static let wasmi64 = ILType(definiteType: .wasmi64)
     public static let wasmf32 = ILType(definiteType: .wasmf32)
     public static let wasmf64 = ILType(definiteType: .wasmf64)
-    public static let wasmExternRef = ILType(definiteType: .wasmExternRef)
-    public static let wasmFuncRef = ILType(definiteType: .wasmFuncRef)
+    public static let wasmExternRef = ILType.wasmRef(.Abstract(.WasmExtern), nullability: true)
+    public static let wasmFuncRef = ILType.wasmRef(.Abstract(.WasmFunc), nullability: true)
+    public static let wasmExnRef = ILType.wasmRef(.Abstract(.WasmExn), nullability: true)
     public static let wasmSimd128 = ILType(definiteType: .wasmSimd128)
     public static let wasmGenericRef = ILType(definiteType: .wasmRef)
 
@@ -228,10 +229,10 @@ public struct ILType: Hashable {
     }
 
     // TODO(mliedtke): Add wasmRefNull() and extend the WasmReferenceType with a null bool.
-    static func wasmRef(_ kind: WasmReferenceType.Kind, nullability: Bool, description: WasmTypeDescription? = nil) -> ILType {
+    static func wasmRef(_ kind: WasmReferenceType.Kind, nullability: Bool) -> ILType {
         return ILType(definiteType: .wasmRef, ext: TypeExtension(
             properties: [], methods: [], signature: nil,
-            wasmExt: WasmReferenceType(kind, nullability: nullability, description: description)))
+            wasmExt: WasmReferenceType(kind, nullability: nullability)))
     }
 
     // The union of all primitive wasm types
@@ -239,7 +240,7 @@ public struct ILType: Hashable {
 
     public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
 
-    public static let anyNonNullableRef = wasmRef(.Index, nullability: false)
+    public static let anyNonNullableRef = wasmRef(.Index(), nullability: false)
 
     //
     // Type testing
@@ -518,7 +519,13 @@ public struct ILType: Hashable {
     // to "refine" the type. This value is 1 for indexed wasm-gc reference
     // types, zero otherwise.
     public func requiredInputCount() -> Int {
-        return Int(wasmReferenceType?.kind == .Index ? 1 : 0)
+        if let ref = wasmReferenceType {
+            switch ref.kind {
+                case .Index: return 1
+                case .Abstract: return 0
+            }
+        }
+        return 0
     }
 
 
@@ -905,20 +912,18 @@ extension ILType: CustomStringConvertible {
             return ".wasmf32"
         case .wasmf64:
             return ".wasmf64"
-        case .wasmExternRef:
-            return ".wasmExternRef"
-        case .wasmFuncRef:
-            return ".wasmFuncRef"
         case .wasmSimd128:
             return ".wasmSimd128"
         case .label:
             return ".label"
         case .wasmRef:
-            switch self.wasmReferenceType!.kind {
-                case .Abstract:
-                    fatalError("unimplemented")
+            let refType = self.wasmReferenceType!
+            let nullPrefix = refType.nullability ? "null " : ""
+            switch refType.kind {
+                case .Abstract(let heapType):
+                    return ".wasmRef(.Abstract(\(nullPrefix)\(heapType)))"
                 case .Index:
-                    return ".ref(Index)"
+                    return ".wasmRef(\(nullPrefix)Index)"
             }
         case .wasmFunctionDef:
             if let signature = wasmFunctionDefSignature {
@@ -977,24 +982,22 @@ struct BaseType: OptionSet, Hashable {
     static let wasmi64     = BaseType(rawValue: 1 << 12)
     static let wasmf32     = BaseType(rawValue: 1 << 13)
     static let wasmf64     = BaseType(rawValue: 1 << 14)
-    static let wasmExternRef = BaseType(rawValue: 1 << 15)
-    static let wasmFuncRef = BaseType(rawValue: 1 << 16)
 
     // These are wasm internal types, these are never lifted as such and are only used to glue together dataflow in wasm.
-    static let label       = BaseType(rawValue: 1 << 17)
+    static let label       = BaseType(rawValue: 1 << 15)
     // Any catch block exposes such a label now to rethrow the exception caught by that catch.
     // Note that in wasm the label is actually the try block's label but as rethrows are only possible inside a catch
     // block, semantically having a label on the catch makes more sense.
-    static let exceptionLabel = BaseType(rawValue: 1 << 18)
+    static let exceptionLabel = BaseType(rawValue: 1 << 16)
     // This is a reference to a table, which can be passed around to table instructions
     // The lifter will resolve this to the proper index when lifting.
-    static let wasmSimd128     = BaseType(rawValue: 1 << 19)
-    static let wasmFunctionDef = BaseType(rawValue: 1 << 20)
+    static let wasmSimd128     = BaseType(rawValue: 1 << 17)
+    static let wasmFunctionDef = BaseType(rawValue: 1 << 18)
 
     // Wasm-gc types
     // TODO(mliedtke): wasmExternRef and wasmFuncRef need to be integrated into this.
-    static let wasmRef = BaseType(rawValue: 1 << 21)
-    static let wasmTypeDef = BaseType(rawValue: 1 << 22)
+    static let wasmRef = BaseType(rawValue: 1 << 19)
+    static let wasmTypeDef = BaseType(rawValue: 1 << 20)
 
     static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 
@@ -1148,39 +1151,61 @@ public class WasmTypeDefinition: WasmTypeExtension {
 
     func getReferenceTypeTo(nullability: Bool) -> ILType {
         assert(description != nil)
-        return .wasmRef(.Index, nullability: nullability, description: description)
+        return .wasmRef(.Index(description), nullability: nullability)
     }
 }
 
-public class WasmReferenceType: WasmTypeExtension {
-    enum Kind {
-        case Index    // user-defined types
-        case Abstract // abstract language types like extern, func, any, none
-    }
-    let kind: Kind
-    let nullability: Bool
-    var description : WasmTypeDescription?
+enum WasmAbstractHeapType {
+    case WasmExtern
+    case WasmFunc
+    case WasmExn
+}
 
-    init(_ kind: Kind, nullability: Bool, description: WasmTypeDescription? = nil) {
+public class WasmReferenceType: WasmTypeExtension {
+    enum Kind : Hashable {
+        case Index(WasmTypeDescription? = nil)    // user-defined types
+        case Abstract(WasmAbstractHeapType)
+
+        func subsumes(_ other: Kind) -> Bool {
+            switch self {
+                case .Index(let desc):
+                    switch other {
+                        case .Index(let otherDesc):
+                            return desc == nil || desc == otherDesc
+                        case .Abstract(_):
+                            return false
+                    }
+                case .Abstract(let heapType):
+                    switch other {
+                        case .Index(_):
+                            return false
+                        case .Abstract(let otherHeapType):
+                            return heapType == otherHeapType
+                    }
+            }
+        }
+    }
+    var kind: Kind
+    let nullability: Bool
+
+    init(_ kind: Kind, nullability: Bool) {
         self.kind = kind
         self.nullability = nullability
-        self.description = description
     }
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmReferenceType else { return false }
-        return kind == other.kind && self.nullability == other.nullability && description == other.description
+        return kind == other.kind && self.nullability == other.nullability
     }
 
     override func subsumes(_ other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmReferenceType else { return false }
-        return (self.kind == other.kind && (self.description == other.description || self.description == nil) && (self.nullability || !other.nullability))
+        return self.kind.subsumes(other.kind) && (self.nullability || !other.nullability)
     }
 
     override public func hash(into hasher: inout Hasher) {
         hasher.combine(kind)
         hasher.combine(nullability)
-        hasher.combine(description)
     }
 }
 

@@ -3356,7 +3356,6 @@ public class ProgramBuilder {
 
 
         public func generateRandomWasmVar(ofType type: ILType) -> Variable {
-            // TODO: add externref and nullrefs
             switch type {
             case .wasmi32:
                 return self.consti32(Int32(truncatingIfNeeded: b.randomInt()))
@@ -3368,6 +3367,12 @@ public class ProgramBuilder {
                 return self.constf64(b.randomFloat())
             case .wasmSimd128:
                 return self.constSimd128(value: (0 ..< 16).map{ _ in UInt8.random(in: UInt8.min ... UInt8.max) })
+            case .wasmExternRef,
+                 .wasmExnRef,
+                 .wasmFuncRef:
+                // TODO(cffsmith): Can we improve this once we have better support for ad hoc code
+                // generation in other contexts?
+                return self.wasmRefNull(type)
             default:
                 fatalError("unimplemented")
             }
@@ -3617,8 +3622,8 @@ public class ProgramBuilder {
     }
 
     public func randomWasmBlockOutputTypes(upTo n: Int) -> [ILType] {
-        // TODO(mliedtke): The selection of types is in sync with ProgramBuilder::randomWasmSignature(). This should allow more types.
-        (0..<Int.random(in: 0...n)).map {_ in chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64])}
+        // TODO(mliedtke): This should allow more types.
+        (0..<Int.random(in: 0...n)).map {_ in chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmExternRef, .wasmFuncRef, .wasmExnRef])}
     }
 
     public func randomWasmBlockArguments(upTo n: Int) -> [Variable] {
