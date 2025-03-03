@@ -1645,7 +1645,7 @@ class WasmArrayNewFixed: WasmTypedOperation {
         // inputs. (This requires some integration for .wasmRef(Index) to ensure it isn't just an
         // index type but a matching one!)
         super.init(inputTypes: [.wasmTypeDef()] + (0..<size).map {_ in elementType},
-            outputType: .wasmRef(.Index, nullability: false), requiredContext: [.wasmFunction])
+            outputType: .wasmRef(.Index(), nullability: false), requiredContext: [.wasmFunction])
     }
 }
 
@@ -1654,7 +1654,7 @@ class WasmArrayNewDefault: WasmTypedOperation {
 
     init() {
         super.init(inputTypes: [.wasmTypeDef(), .wasmi32],
-            outputType: .wasmRef(.Index, nullability: false), requiredContext: [.wasmFunction])
+            outputType: .wasmRef(.Index(), nullability: false), requiredContext: [.wasmFunction])
     }
 }
 
@@ -1665,7 +1665,7 @@ class WasmArrayLen: WasmTypedOperation {
         // TODO(mliedtke): Once we have struct types, we'll need to adapt these input types to
         // be limited to array types (similar in other operations like array.get and operations
         // expecting an array type definiiton like array.new_fixed.)
-        super.init(inputTypes: [.wasmRef(.Index, nullability: true)], outputType: .wasmi32,
+        super.init(inputTypes: [.wasmRef(.Index(), nullability: true)], outputType: .wasmi32,
             requiredContext: [.wasmFunction])
     }
 }
@@ -1676,7 +1676,7 @@ class WasmArrayGet: WasmTypedOperation {
 
     init(elementType: ILType) {
         self.elementType = elementType
-        super.init(inputTypes: [.wasmRef(.Index, nullability: true), .wasmi32], outputType: elementType,
+        super.init(inputTypes: [.wasmRef(.Index(), nullability: true), .wasmi32], outputType: elementType,
             requiredContext: [.wasmFunction])
     }
 }
@@ -1687,7 +1687,7 @@ class WasmArraySet: WasmTypedOperation {
 
     init(elementType: ILType) {
         self.elementType = elementType
-        super.init(inputTypes: [.wasmRef(.Index, nullability: true), .wasmi32, elementType], outputType: .nothing,
+        super.init(inputTypes: [.wasmRef(.Index(), nullability: true), .wasmi32, elementType], outputType: .nothing,
                    requiredContext: [.wasmFunction])
     }
 }
@@ -1696,7 +1696,7 @@ class WasmRefNull: WasmTypedOperation {
     override var opcode: Opcode { .wasmRefNull(self) }
 
     init(type: ILType) {
-        super.init(inputTypes: type.requiredInputCount() == 1 ? [.wasmRef(.Index, nullability: true)] : [],
+        super.init(inputTypes: type.requiredInputCount() == 1 ? [.wasmRef(.Index(), nullability: true)] : [],
             outputType: type, requiredContext: [.wasmFunction])
     }
 }

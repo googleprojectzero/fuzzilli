@@ -555,8 +555,6 @@ public enum Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf.Enum, Swift.CaseItera
   case consti64 // = 1
   case constf32 // = 2
   case constf64 // = 3
-  case externref // = 4
-  case funcref // = 5
   case simd128 // = 6
 
   /// Fuzzilli-specific types
@@ -574,8 +572,6 @@ public enum Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf.Enum, Swift.CaseItera
     case 1: self = .consti64
     case 2: self = .constf32
     case 3: self = .constf64
-    case 4: self = .externref
-    case 5: self = .funcref
     case 6: self = .simd128
     case 7: self = .functiondef
     case 8: self = .nothing
@@ -589,8 +585,6 @@ public enum Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf.Enum, Swift.CaseItera
     case .consti64: return 1
     case .constf32: return 2
     case .constf64: return 3
-    case .externref: return 4
-    case .funcref: return 5
     case .simd128: return 6
     case .functiondef: return 7
     case .nothing: return 8
@@ -604,8 +598,6 @@ public enum Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf.Enum, Swift.CaseItera
     .consti64,
     .constf32,
     .constf64,
-    .externref,
-    .funcref,
     .simd128,
     .functiondef,
     .nothing,
@@ -616,6 +608,9 @@ public enum Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf.Enum, Swift.CaseItera
 public enum Fuzzilli_Protobuf_WasmReferenceTypeKind: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case index // = 0
+  case externref // = 1
+  case funcref // = 2
+  case exnref // = 3
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -625,6 +620,9 @@ public enum Fuzzilli_Protobuf_WasmReferenceTypeKind: SwiftProtobuf.Enum, Swift.C
   public init?(rawValue: Int) {
     switch rawValue {
     case 0: self = .index
+    case 1: self = .externref
+    case 2: self = .funcref
+    case 3: self = .exnref
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -632,6 +630,9 @@ public enum Fuzzilli_Protobuf_WasmReferenceTypeKind: SwiftProtobuf.Enum, Swift.C
   public var rawValue: Int {
     switch self {
     case .index: return 0
+    case .externref: return 1
+    case .funcref: return 2
+    case .exnref: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -639,6 +640,9 @@ public enum Fuzzilli_Protobuf_WasmReferenceTypeKind: SwiftProtobuf.Enum, Swift.C
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   public static let allCases: [Fuzzilli_Protobuf_WasmReferenceTypeKind] = [
     .index,
+    .externref,
+    .funcref,
+    .exnref,
   ]
 
 }
@@ -4975,8 +4979,6 @@ extension Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf._ProtoNameProviding {
     1: .same(proto: "CONSTi64"),
     2: .same(proto: "CONSTf32"),
     3: .same(proto: "CONSTf64"),
-    4: .same(proto: "EXTERNREF"),
-    5: .same(proto: "FUNCREF"),
     6: .same(proto: "SIMD128"),
     7: .same(proto: "FUNCTIONDEF"),
     8: .same(proto: "NOTHING"),
@@ -4986,6 +4988,9 @@ extension Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf._ProtoNameProviding {
 extension Fuzzilli_Protobuf_WasmReferenceTypeKind: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "INDEX"),
+    1: .same(proto: "EXTERNREF"),
+    2: .same(proto: "FUNCREF"),
+    3: .same(proto: "EXNREF"),
   ]
 }
 

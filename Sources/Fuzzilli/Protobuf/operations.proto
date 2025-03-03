@@ -865,8 +865,6 @@ enum WasmValueType {
   CONSTi64 = 1;
   CONSTf32 = 2;
   CONSTf64 = 3;
-  EXTERNREF = 4;
-  FUNCREF = 5;
   SIMD128 = 6;
   // Fuzzilli-specific types
   FUNCTIONDEF = 7;  // Stands for the type of a funcref table with function indices.
@@ -875,6 +873,9 @@ enum WasmValueType {
 
 enum WasmReferenceTypeKind {
   INDEX = 0;
+  EXTERNREF = 1;
+  FUNCREF = 2;
+  EXNREF = 3;
 }
 
 message WasmReferenceType {

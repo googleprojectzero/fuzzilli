@@ -121,7 +121,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         if let elementType = b.randomVariable(ofType: .wasmTypeDef()), probability(0.25) {
             // Excluding non-nullable references from referring to a self-reference ensures we do not end up with cycles of non-nullable references.
             let nullability = b.type(of: elementType).wasmTypeDefinition!.description == .selfReference || probability(0.5)
-            b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: nullability), mutability: mutability, indexType: elementType)
+            b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: nullability), mutability: mutability, indexType: elementType)
         } else {
             b.wasmDefineArrayType(elementType: chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]), mutability: mutability)
         }
@@ -155,8 +155,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmArrayGet(array: array, index: index)
     },
 
-    CodeGenerator("WasmArraySetGenerator", inContext: .wasmFunction, inputs: .required(.wasmRef(.Index, nullability: true))) { b, array in
-        let arrayType = b.type(of: array).wasmReferenceType!.description! as! WasmArrayTypeDescription
+    CodeGenerator("WasmArraySetGenerator", inContext: .wasmFunction, inputs: .required(.wasmRef(.Index(), nullability: true))) { b, array in
+        guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind else {
+            fatalError("array.set input not an array")
+        }
+        let arrayType = desc! as! WasmArrayTypeDescription
         guard arrayType.mutability else { return }
         guard let element = b.randomVariable(ofType: arrayType.elementType) else { return }
         let function = b.currentWasmModule.currentWasmFunction
@@ -168,7 +171,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator("WasmRefNullGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         if let typeDef = (b.findVariable{b.type(of: $0).Is(.wasmTypeDef())}), probability(0.5) {
-            function.wasmRefNull(.wasmRef(.Index, nullability: true), typeDef: typeDef)
+            function.wasmRefNull(.wasmRef(.Index(), nullability: true), typeDef: typeDef)
         } else {
             // TODO(mliedtke): Extend this list once we migrated the abstract heap types to fit
             // with the wasm-gc types and added the missing ones (like anyref, eqref, ...)

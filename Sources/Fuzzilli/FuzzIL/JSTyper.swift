@@ -179,17 +179,20 @@ public struct JSTyper: Analyzer {
     }
 
     mutating func attachTypeDescription(to: Variable, typeDef: Variable) {
-        type(of: to).wasmReferenceType!.description = getTypeDescription(of: typeDef)
+        type(of: to).wasmReferenceType!.kind = .Index(getTypeDescription(of: typeDef))
     }
     mutating func attachTypeDescription(to: Variable, typeDef: WasmTypeDescription) {
-        type(of: to).wasmReferenceType!.description = typeDef
+        type(of: to).wasmReferenceType!.kind = .Index(typeDef)
     }
 
     // Returns the type description for the provided variable which has to be either a type
     // definition or an instance (wasm reference) of the wasm type.
     func getTypeDescription(of variable: Variable) -> WasmTypeDescription {
         let varType = type(of: variable)
-        return varType.wasmTypeDefinition?.description ?? varType.wasmReferenceType!.description!
+        if case .Index(let desc) = varType.wasmReferenceType?.kind {
+                    return desc!
+        }
+        return varType.wasmTypeDefinition!.description!
     }
 
     // Helper function to type a "regular" wasm begin block (block, if, try).
