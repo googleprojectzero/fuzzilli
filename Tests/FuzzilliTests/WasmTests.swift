@@ -2028,6 +2028,41 @@ class WasmFoundationTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "321\n123\nHello\nWorld\n")
     }
+
+    // This test covers a bug where imported functions were not accounted for correctly when
+    // lifting a direct call to a non-imported wasm function.
+    func testCallDirectJSCall() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+        let printMessage = b.buildPlainFunction(with: .parameters(.integer)) { args in
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: b.loadString("This should never be called!"))])
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            let callee = wasmModule.addWasmFunction(with: [.wasmi32] => .nothing) { function, args in
+                function.wasmReturn()
+            }
+            // Outer function that is supposed to call callee.
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                // This direct call accidentally got wrongly lifted to calling the imported js function (printMessage).
+                function.wasmCallDirect(signature: [.wasmi32] => .nothing, function: callee, functionArgs: args)
+                function.wasmReturn(function.consti32(42))
+                // This call is unreachable and only exists here to trigger the import of the printMessage function.
+                function.wasmJsCall(function: printMessage, withArgs: [args[0]], withWasmSignature: [.wasmi32] => .nothing)
+            }
+        }
+
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [b.loadInt(42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
 }
 
 class WasmGCTests: XCTestCase {

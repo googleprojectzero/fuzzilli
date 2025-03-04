@@ -1276,7 +1276,12 @@ public class WasmLifter {
                 self.typer.type(of: $0.0).Is(.object(ofGroup: groupType!))
             }).count
         case .function:
-            base = self.functionIdxBase
+            // TODO(mliedtke): This repeats non-trivial conditions of the importAnalysis to split
+            // different imports into their categories. Consider reintroducing the separate
+            // categories to make index calculation easier.
+            base = self.imports.filter {
+                self.typer.type(of: $0.0).Is(.function()) || self.typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))
+            }.count
         }
 
         let predicate: ((Variable) -> Bool) = switch type {
