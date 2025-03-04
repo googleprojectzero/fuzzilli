@@ -1581,6 +1581,8 @@ public class WasmLifter {
             return Data([0x18]) + Leb128.unsignedEncode(branchDepth)
         case .wasmThrow(_):
             return Data([0x08] + Leb128.unsignedEncode(try resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
+        case .wasmThrowRef(_):
+            return Data([0x0a])
         case .wasmRethrow(_):
             let blockDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x09] + Leb128.unsignedEncode(blockDepth))

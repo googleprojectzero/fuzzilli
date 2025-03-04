@@ -811,9 +811,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.WasmBuildThrow(tag: tag, inputs: args)
     },
 
-    CodeGenerator("WasmRethrowGenerator", inContext: .wasmFunction, inputs: .required(.exceptionLabel)) { b, exception in
+    CodeGenerator("WasmLegacyRethrowGenerator", inContext: .wasmFunction, inputs: .required(.exceptionLabel)) { b, exception in
         let function = b.currentWasmModule.currentWasmFunction
-        function.wasmBuildRethrow(exception)
+        function.wasmBuildLegacyRethrow(exception)
+    },
+
+    CodeGenerator("WasmThrowRefGenerator", inContext: .wasmFunction, inputs: .required(.wasmExnRef)) { b, exception in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmBuildThrowRef(exception: exception)
     },
 
     CodeGenerator("WasmDefineTagGenerator", inContext: .wasm) {b in

@@ -1230,6 +1230,9 @@ message WasmThrow {
   repeated WasmILType parameterTypes = 1;
 }
 
+message WasmThrowRef {
+}
+
 message WasmRethrow {
 }
 

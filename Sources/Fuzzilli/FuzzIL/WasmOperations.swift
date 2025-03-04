@@ -1211,6 +1211,16 @@ final class WasmThrow: WasmOperationBase {
     }
 }
 
+final class WasmThrowRef: WasmOperationBase {
+    override var opcode: Opcode { .wasmThrowRef(self) }
+
+    init() {
+        super.init(numInputs: 1, attributes: [.isJump], requiredContext: [.wasmFunction])
+    }
+}
+
+// The rethrow instruction of the legacy exception-handling proposal. This operation is replaced
+// with the throw_ref instruction in the updated proposal.
 final class WasmRethrow: WasmTypedOperation {
     override var opcode: Opcode { .wasmRethrow(self) }
 
