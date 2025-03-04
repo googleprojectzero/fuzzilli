@@ -1350,6 +1350,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmThrow = Fuzzilli_Protobuf_WasmThrow.with {
                     $0.parameterTypes = op.parameterTypes.map(ILTypeToWasmTypeEnum)
                 }
+            case .wasmThrowRef(_):
+                $0.wasmThrowRef = Fuzzilli_Protobuf_WasmThrowRef()
             case .wasmRethrow(_):
                 $0.wasmRethrow = Fuzzilli_Protobuf_WasmRethrow()
             case .wasmDefineTag(let op):
@@ -2252,6 +2254,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmEndTryDelegate(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmThrow(let p):
             op = WasmThrow(parameterTypes: p.parameterTypes.map(WasmTypeEnumToILType))
+        case .wasmThrowRef(_):
+            op = WasmThrowRef()
         case .wasmRethrow(_):
             op = WasmRethrow()
         case .wasmDefineTag(let p):

@@ -385,9 +385,6 @@ public class OperationMutator: BaseInstructionMutator {
         case .createWasmTag(let op):
             // TODO(mliedtke): We could mutate the types / counts of params.
             newOp = op
-        case .wasmRethrow(let op):
-            // TODO(mliedtke): Pick another input exception to rethrow if available.
-            newOp = op
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
              .loadUndefined(_),
@@ -564,6 +561,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmUnreachable(_),
              .wasmSelect(_),
              .wasmDefineTag(_),
+             .wasmThrowRef(_),
+             .wasmRethrow(_),
              .wasmBeginTypeGroup(_),
              .wasmEndTypeGroup(_),
              .wasmDefineArrayType(_),

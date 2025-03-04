@@ -1624,7 +1624,7 @@ class WasmFoundationTests: XCTestCase {
                         function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123)])
                         function.wasmUnreachable()
                         function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
-                            function.wasmBuildRethrow(exception)
+                            function.wasmBuildLegacyRethrow(exception)
                         }
                     }
                     function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
@@ -1682,7 +1682,7 @@ class WasmFoundationTests: XCTestCase {
                                     // There are two "active" exceptions:
                                     // outerException: [123: i32]
                                     // innerException: [456: i32]
-                                    function.wasmBuildRethrow(outerException)
+                                    function.wasmBuildLegacyRethrow(outerException)
                                 }
                             }
                         }
@@ -1960,6 +1960,55 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "100\n123\n")
+    }
+
+    func testThrowRef() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+        let printInteger = b.buildPlainFunction(with: .parameters(.integer)) { args in
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: args[0])])
+        }
+
+        let tagi32 = b.createWasmTag(parameterTypes: [.wasmi32])
+        let module = b.buildWasmModule { wasmModule in
+            // Inner function that throws, catches and then rethrows the value.
+            let callee = wasmModule.addWasmFunction(with: [.wasmi32] => .nothing) { function, args in
+                let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchRefLabel, _ in
+                    function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchRefLabel], catches: [.Ref]) { _, _ in
+                        function.WasmBuildThrow(tag: tagi32, inputs: [args[0]])
+                        return []
+                    }
+                    return [function.consti32(0), function.wasmRefNull(.wasmExnRef)]
+                }
+                // Print the caught i32 value.
+                function.wasmJsCall(function: printInteger, withArgs: [caughtValues[0]], withWasmSignature: [.wasmi32] => .nothing)
+                // To rethrow the exception, perform a throw_ref with the exnref.
+                function.wasmBuildThrowRef(exception: caughtValues[1])
+            }
+
+            // Outer function that calls the inner function and catches the rethrown exception.
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32], args: []) { catchLabel, _ in
+                    function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchLabel], catches: [.NoRef]) { _, _ in
+                        function.wasmCallDirect(signature: [.wasmi32] => .nothing, function: callee, functionArgs: args)
+                        return []
+                    }
+                    return [function.consti32(-1)]
+                }
+                function.wasmReturn(caughtValues[0])
+            }
+        }
+
+        let exports = module.loadExports()
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [b.loadInt(42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n42\n")
     }
 
     func testUnreachable() throws {

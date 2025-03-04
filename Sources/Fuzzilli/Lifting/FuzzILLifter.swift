@@ -1073,6 +1073,9 @@ public class FuzzILLifter: Lifter {
         case .wasmThrow(_):
             w.emit("WasmThrow \(instr.inputs.map(lift).joined(separator: ", "))")
 
+        case .wasmThrowRef(_):
+            w.emit("WasmThrowRef \(instr.input(0))")
+
         case .wasmRethrow(_):
             w.emit("WasmRethrow \(instr.input(0))")
 

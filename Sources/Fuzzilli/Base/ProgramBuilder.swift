@@ -3334,7 +3334,12 @@ public class ProgramBuilder {
             b.emit(WasmThrow(parameterTypes: tagType.parameters), withInputs: [tag] + inputs)
         }
 
-        public func wasmBuildRethrow(_ exceptionLabel: Variable) {
+        public func wasmBuildThrowRef(exception: Variable) {
+            assert(b.type(of: exception).Is(.wasmExnRef))
+            b.emit(WasmThrowRef(), withInputs: [exception])
+        }
+
+        public func wasmBuildLegacyRethrow(_ exceptionLabel: Variable) {
             assert(b.type(of: exceptionLabel).Is(.exceptionLabel))
             b.emit(WasmRethrow(), withInputs: [exceptionLabel])
         }
