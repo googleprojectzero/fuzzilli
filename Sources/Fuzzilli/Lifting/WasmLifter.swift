@@ -407,7 +407,7 @@ public class WasmLifter {
         if let arrayDesc = desc as? WasmArrayTypeDescription {
             data += [0x5e]
             data += encodeType(arrayDesc.elementType)
-            data += [1] // TODO(mliedtke): Also support immutable arrays.
+            data += [arrayDesc.mutability ? 1 : 0]
         } else {
             fatalError("Unsupported WasmTypeDescription!")
         }
@@ -1705,6 +1705,10 @@ public class WasmLifter {
             let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
             return Data([Prefix.GC.rawValue, 0x0B]) + arrayIndex
+        case .wasmArraySet(_):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            return Data([Prefix.GC.rawValue, 0x0E]) + arrayIndex
         case .wasmRefNull(_):
             return Data([0xD0]) + encodeHeapType(typer.type(of: wasmInstruction.output))
 

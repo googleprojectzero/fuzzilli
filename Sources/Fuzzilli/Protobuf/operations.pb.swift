@@ -4734,6 +4734,8 @@ public struct Fuzzilli_Protobuf_WasmDefineArrayType: Sendable {
   /// Clears the value of `elementType`. Subsequent reads from it will return its default value.
   public mutating func clearElementType() {self._elementType = nil}
 
+  public var mutability: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -4803,6 +4805,27 @@ public struct Fuzzilli_Protobuf_WasmArrayLen: Sendable {
 }
 
 public struct Fuzzilli_Protobuf_WasmArrayGet: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var elementType: Fuzzilli_Protobuf_WasmILType {
+    get {return _elementType ?? Fuzzilli_Protobuf_WasmILType()}
+    set {_elementType = newValue}
+  }
+  /// Returns true if `elementType` has been explicitly set.
+  public var hasElementType: Bool {return self._elementType != nil}
+  /// Clears the value of `elementType`. Subsequent reads from it will return its default value.
+  public mutating func clearElementType() {self._elementType = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _elementType: Fuzzilli_Protobuf_WasmILType? = nil
+}
+
+public struct Fuzzilli_Protobuf_WasmArraySet: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -13552,6 +13575,7 @@ extension Fuzzilli_Protobuf_WasmDefineArrayType: SwiftProtobuf.Message, SwiftPro
   public static let protoMessageName: String = _protobuf_package + ".WasmDefineArrayType"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "elementType"),
+    2: .same(proto: "mutability"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -13561,6 +13585,7 @@ extension Fuzzilli_Protobuf_WasmDefineArrayType: SwiftProtobuf.Message, SwiftPro
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._elementType) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.mutability) }()
       default: break
       }
     }
@@ -13574,11 +13599,15 @@ extension Fuzzilli_Protobuf_WasmDefineArrayType: SwiftProtobuf.Message, SwiftPro
     try { if let v = self._elementType {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    if self.mutability != false {
+      try visitor.visitSingularBoolField(value: self.mutability, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmDefineArrayType, rhs: Fuzzilli_Protobuf_WasmDefineArrayType) -> Bool {
     if lhs._elementType != rhs._elementType {return false}
+    if lhs.mutability != rhs.mutability {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -13726,6 +13755,42 @@ extension Fuzzilli_Protobuf_WasmArrayGet: SwiftProtobuf.Message, SwiftProtobuf._
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmArrayGet, rhs: Fuzzilli_Protobuf_WasmArrayGet) -> Bool {
+    if lhs._elementType != rhs._elementType {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmArraySet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmArraySet"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "elementType"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._elementType) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._elementType {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmArraySet, rhs: Fuzzilli_Protobuf_WasmArraySet) -> Bool {
     if lhs._elementType != rhs._elementType {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

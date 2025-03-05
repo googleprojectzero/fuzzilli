@@ -1142,6 +1142,10 @@ public class FuzzILLifter: Lifter {
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("\(output()) <- WasmArrayGet [\(inputs)]")
 
+        case .wasmArraySet(_):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("WasmArraySet [\(inputs)]")
+
         case .wasmRefNull(let op):
             let inputStr = op.outputType.requiredInputCount() == 1 ? " \(input(0))" : ""
             w.emit("\(output()) <- WasmRefNull \(op.outputType)\(inputStr)")
@@ -1158,7 +1162,7 @@ public class FuzzILLifter: Lifter {
 
         case .wasmDefineArrayType(let op):
             let typeInput = op.elementType.requiredInputCount() == 1 ? " \(input(0))" : ""
-            w.emit("\(output()) <- WasmDefineArrayType \(op.elementType)\(typeInput)")
+            w.emit("\(output()) <- WasmDefineArrayType \(op.elementType) mutability=\(op.mutability)\(typeInput)")
 
         case .wasmDefineForwardOrSelfReference(_):
             w.emit("\(output()) <- WasmDefineForwardOrSelfReference")

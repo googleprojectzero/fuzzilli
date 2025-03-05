@@ -3443,6 +3443,11 @@ public class ProgramBuilder {
             return b.emit(WasmArrayGet(elementType: arrayDesc.elementType), withInputs: [array, index]).output
         }
 
+        public func wasmArraySet(array: Variable, index: Variable, element: Variable) {
+            let arrayDesc = b.jsTyper.getTypeDescription(of: array) as! WasmArrayTypeDescription
+            b.emit(WasmArraySet(elementType: arrayDesc.elementType), withInputs: [array, index, element])
+        }
+
         @discardableResult
         public func wasmRefNull(_ type: ILType, typeDef: Variable? = nil) -> Variable {
             return b.emit(WasmRefNull(type: type), withInputs: typeDef != nil ? [typeDef!] : []).output
@@ -3646,9 +3651,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    func wasmDefineArrayType(elementType: ILType, indexType: Variable? = nil) -> Variable {
+    func wasmDefineArrayType(elementType: ILType, mutability: Bool, indexType: Variable? = nil) -> Variable {
         let inputs = indexType != nil ? [indexType!] : []
-        return emit(WasmDefineArrayType(elementType: elementType), withInputs: inputs).output
+        return emit(WasmDefineArrayType(elementType: elementType, mutability: mutability), withInputs: inputs).output
     }
 
     @discardableResult

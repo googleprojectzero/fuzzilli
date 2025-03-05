@@ -1669,6 +1669,17 @@ class WasmArrayGet: WasmTypedOperation {
     }
 }
 
+class WasmArraySet: WasmTypedOperation {
+    override var opcode: Opcode { .wasmArraySet(self) }
+    let elementType: ILType
+
+    init(elementType: ILType) {
+        self.elementType = elementType
+        super.init(inputTypes: [.wasmRef(.Index, nullability: true), .wasmi32, elementType], outputType: .nothing,
+                   requiredContext: [.wasmFunction])
+    }
+}
+
 class WasmRefNull: WasmTypedOperation {
     override var opcode: Opcode { .wasmRefNull(self) }
 

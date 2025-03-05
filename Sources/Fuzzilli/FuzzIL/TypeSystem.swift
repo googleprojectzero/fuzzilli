@@ -1574,9 +1574,11 @@ class WasmTypeDescription: Hashable {
 
 class WasmArrayTypeDescription : WasmTypeDescription {
     var elementType: ILType
+    let mutability: Bool
 
-    init(elementType: ILType, typeGroupIndex: Int) {
+    init(elementType: ILType, mutability: Bool, typeGroupIndex: Int) {
         self.elementType = elementType
+        self.mutability = mutability
         super.init(typeGroupIndex: typeGroupIndex)
     }
 }
