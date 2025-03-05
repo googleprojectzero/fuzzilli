@@ -860,7 +860,7 @@ message WasmReturn {
 }
 
 // We only serialize the wasm types as the rest would be overkill and are not needed.
-enum WasmILType {
+enum WasmValueType {
   CONSTi32 = 0;
   CONSTi64 = 1;
   CONSTf32 = 2;
@@ -868,9 +868,25 @@ enum WasmILType {
   EXTERNREF = 4;
   FUNCREF = 5;
   SIMD128 = 6;
-  INDEXREF = 7;
-  FUNCTIONDEF = 8;
-  NOTHING = 9;
+  // Fuzzilli-specific types
+  FUNCTIONDEF = 7;  // Stands for the type of a funcref table with function indices.
+  NOTHING = 8;
+}
+
+enum WasmReferenceTypeKind {
+  INDEX = 0;
+}
+
+message WasmReferenceType {
+  WasmReferenceTypeKind kind = 1;
+  bool nullability = 2;
+}
+
+message WasmILType {
+  oneof Type {
+    WasmValueType valueType = 1;
+    WasmReferenceType refType = 2;
+  }
 }
 
 message BeginWasmFunction {

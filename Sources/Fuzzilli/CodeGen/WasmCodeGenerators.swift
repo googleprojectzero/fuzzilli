@@ -118,7 +118,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     // reference?
     CodeGenerator("WasmArrayTypeGenerator", inContext: .wasmTypeGroup) { b in
         if let elementType = b.randomVariable(ofType: .wasmTypeDef()), probability(0.25) {
-            b.wasmDefineArrayType(elementType: .wasmRef(.Index), indexType: elementType)
+            // Excluding non-nullable references from referring to a self-reference ensures we do not end up with cycles of non-nullable references.
+            let nullability = b.type(of: elementType).wasmTypeDefinition!.description == .selfReference || probability(0.5)
+            b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: nullability), indexType: elementType)
         } else {
             b.wasmDefineArrayType(elementType: chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]))
         }
@@ -127,21 +129,25 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator("WasmArrayNewGenerator", inContext: .wasmFunction, inputs: .required(.wasmTypeDef())) { b, arrayType in
         if let typeDesc = b.type(of: arrayType).wasmTypeDefinition?.description as? WasmArrayTypeDescription {
             let function = b.currentWasmModule.currentWasmFunction
-            if probability(0.5) && (b.findVariable{b.type(of: $0).Is(typeDesc.elementType)}) != nil {
+            let hasElement = b.findVariable{b.type(of: $0).Is(typeDesc.elementType)} != nil
+            let isDefaultable = typeDesc.elementType.isWasmDefaultable
+            if hasElement && (!isDefaultable || probability(0.5))  {
                 let elements = (0..<Int.random(in: 0...10)).map {_ in b.findVariable {b.type(of: $0).Is(typeDesc.elementType)}!}
                 function.wasmArrayNewFixed(arrayType: arrayType, elements: elements)
-            } else {
+            } else if isDefaultable {
                 function.wasmArrayNewDefault(arrayType: arrayType, size: function.consti32(Int32(b.randomSize(upTo: 0x1000))))
             }
         }
     },
 
-    CodeGenerator("WasmArrayLengthGenerator", inContext: .wasmFunction, inputs: .required(.wasmRef(.Index))) { b, array in
+    // We use false nullability so we do not invoke null traps.
+    CodeGenerator("WasmArrayLengthGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableRef)) { b, array in
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmArrayLen(array)
     },
 
-    CodeGenerator("WasmArrayGetGenerator", inContext: .wasmFunction, inputs: .required(.wasmRef(.Index))) { b, array in
+    // We use false nullability so we do not invoke null traps.
+    CodeGenerator("WasmArrayGetGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableRef)) { b, array in
         let function = b.currentWasmModule.currentWasmFunction
         // TODO(mliedtke): Track array length and use other indices as well.
         let index = function.consti32(0)
@@ -151,7 +157,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator("WasmRefNullGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         if let typeDef = (b.findVariable{b.type(of: $0).Is(.wasmTypeDef())}), probability(0.5) {
-            function.wasmRefNull(.wasmRef(.Index), typeDef: typeDef)
+            function.wasmRefNull(.wasmRef(.Index, nullability: true), typeDef: typeDef)
         } else {
             // TODO(mliedtke): Extend this list once we migrated the abstract heap types to fit
             // with the wasm-gc types and added the missing ones (like anyref, eqref, ...)
