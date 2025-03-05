@@ -228,16 +228,18 @@ public struct ILType: Hashable {
     }
 
     // TODO(mliedtke): Add wasmRefNull() and extend the WasmReferenceType with a null bool.
-    static func wasmRef(_ kind: WasmReferenceType.Kind, description: WasmTypeDescription? = nil) -> ILType {
+    static func wasmRef(_ kind: WasmReferenceType.Kind, nullability: Bool, description: WasmTypeDescription? = nil) -> ILType {
         return ILType(definiteType: .wasmRef, ext: TypeExtension(
             properties: [], methods: [], signature: nil,
-            wasmExt: WasmReferenceType(kind, description: description)))
+            wasmExt: WasmReferenceType(kind, nullability: nullability, description: description)))
     }
 
     // The union of all primitive wasm types
     public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef | .wasmSimd128 | .wasmGenericRef
 
     public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
+
+    public static let anyNonNullableRef = wasmRef(.Index, nullability: false)
 
     //
     // Type testing
@@ -478,6 +480,10 @@ public struct ILType: Hashable {
     public var wasmFunctionDefSignature: Signature? {
         assert(self.definiteType == .wasmFunctionDef)
         return ext?.signature
+    }
+
+    public var isWasmDefaultable: Bool {
+        return Is(.wasmPrimitive) && !(isWasmReferenceType && !wasmReferenceType!.nullability)
     }
 
     public var properties: Set<String> {
@@ -1140,9 +1146,9 @@ public class WasmTypeDefinition: WasmTypeExtension {
         hasher.combine(description)
     }
 
-    func getReferenceTypeTo() -> ILType {
+    func getReferenceTypeTo(nullability: Bool) -> ILType {
         assert(description != nil)
-        return .wasmRef(.Index, description: description)
+        return .wasmRef(.Index, nullability: nullability, description: description)
     }
 }
 
@@ -1152,27 +1158,29 @@ public class WasmReferenceType: WasmTypeExtension {
         case Abstract // abstract language types like extern, func, any, none
     }
     let kind: Kind
-
-    // TODO(mliedtke): We ignore it intentionally in the isEqual and hash for now but that's a very
-    // unsound design, we should instead fix the TypeSystem rules for subsumption etc.
+    let nullability: Bool
     var description : WasmTypeDescription?
 
-    init(_ kind: Kind, description: WasmTypeDescription? = nil) {
+    init(_ kind: Kind, nullability: Bool, description: WasmTypeDescription? = nil) {
         self.kind = kind
+        self.nullability = nullability
         self.description = description
     }
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmReferenceType else { return false }
-        return kind == other.kind && description == other.description
+        return kind == other.kind && self.nullability == other.nullability && description == other.description
     }
 
     override func subsumes(_ other: WasmTypeExtension) -> Bool {
-        self == other || self.description == nil
+        guard let other = other as? WasmReferenceType else { return false }
+        return (self.kind == other.kind && (self.description == other.description || self.description == nil) && (self.nullability || !other.nullability))
     }
 
     override public func hash(into hasher: inout Hasher) {
         hasher.combine(kind)
+        hasher.combine(nullability)
+        hasher.combine(description)
     }
 }
 

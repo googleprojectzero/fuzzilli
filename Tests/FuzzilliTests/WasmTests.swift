@@ -1898,7 +1898,7 @@ class WasmGCTests: XCTestCase {
 
         let typeGroup = b.wasmDefineTypeGroup {
             let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32)
-            let arrayOfArrays = b.wasmDefineArrayType(elementType: .wasmRef(.Index), indexType: arrayi32)
+            let arrayOfArrays = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: false), indexType: arrayi32)
             return [arrayi32, arrayOfArrays]
         }
 
@@ -1999,7 +1999,7 @@ class WasmGCTests: XCTestCase {
 
         let arrayType = b.wasmDefineTypeGroup {
             let selfReference = b.wasmDefineForwardOrSelfReference()
-            let arrayOfSelf = b.wasmDefineArrayType(elementType: .wasmRef(.Index), indexType: selfReference)
+            let arrayOfSelf = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: true), indexType: selfReference)
             return [arrayOfSelf]
         }[0]
 
@@ -2041,7 +2041,7 @@ class WasmGCTests: XCTestCase {
 
         let typeGroup = b.wasmDefineTypeGroup {
             let forwardReference = b.wasmDefineForwardOrSelfReference()
-            let arrayOfArrayi32 = b.wasmDefineArrayType(elementType: .wasmRef(.Index), indexType: forwardReference)
+            let arrayOfArrayi32 = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: true), indexType: forwardReference)
             let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32)
             b.wasmResolveForwardReference(forwardReference, to: arrayi32)
             return [arrayOfArrayi32, arrayi32]
@@ -2085,7 +2085,7 @@ class WasmGCTests: XCTestCase {
             return [b.wasmDefineArrayType(elementType: .wasmi32)]
         }
         let typeGroupB = b.wasmDefineTypeGroup {
-            let typeWithDependency = b.wasmDefineArrayType(elementType: .wasmRef(.Index), indexType: typeGroupA[0])
+            let typeWithDependency = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: true), indexType: typeGroupA[0])
             let arrayi64 = b.wasmDefineArrayType(elementType: .wasmi64)
             return [arrayi64, typeWithDependency]
         }
@@ -2127,7 +2127,7 @@ class WasmGCTests: XCTestCase {
             }
             // TODO(mliedtke): Simplify this once Fuzzilli supports index types in function signatures.
             wasmModule.addWasmFunction(with: [] => .nothing) { function, args in
-                let refNull = function.wasmRefNull(.wasmRef(.Index), typeDef: arrayType)
+                let refNull = function.wasmRefNull(.wasmRef(.Index, nullability: true), typeDef: arrayType)
                 function.wasmArrayGet(array: refNull, index: function.consti32(0))
             }
         }

@@ -102,6 +102,7 @@ public struct JSTyper: Analyzer {
     mutating func addArrayType(def: Variable, elementType: ILType, elementRef: Variable? = nil) {
         let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
         if let elementRef = elementRef {
+            let elementNullability = elementType.wasmReferenceType!.nullability
             let elementDesc = type(of: elementRef).wasmTypeDefinition!.description!
             if elementDesc == .selfReference {
                 // Register a "resolver" callback that does one of the two:
@@ -116,11 +117,11 @@ public struct JSTyper: Analyzer {
                 // current type group (case 1).
                 selfReferences[elementRef, default: []].append({typer, replacement in
                     (typer.type(of: def).wasmTypeDefinition!.description as! WasmArrayTypeDescription).elementType
-                        = typer.type(of: replacement ?? def).wasmTypeDefinition!.getReferenceTypeTo()
+                        = typer.type(of: replacement ?? def).wasmTypeDefinition!.getReferenceTypeTo(nullability: elementNullability)
                 })
             }
             type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
-                elementType: type(of: elementRef).wasmTypeDefinition!.getReferenceTypeTo(),
+                elementType: type(of: elementRef).wasmTypeDefinition!.getReferenceTypeTo(nullability: elementNullability),
                 typeGroupIndex: tgIndex)
             // If the element type originates from another recursive type group, add a dependency.
             if elementDesc.typeGroupIndex != -1 && elementDesc.typeGroupIndex != tgIndex {

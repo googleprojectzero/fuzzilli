@@ -347,10 +347,14 @@ extension Instruction: ProtobufConvertible {
             var underlyingWasmType = wasmType
             if underlyingWasmType == .nothing {
                 // This is used as sentinel for function signatures that don't have a return value
-                return Fuzzilli_Protobuf_WasmILType.nothing
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.nothing
+                }
             }
             if (underlyingWasmType.Is(.wasmFunctionDef())) {
-                return .functiondef
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.functiondef
+                }
             }
             // In case of Wasm globals, the underlying valuetype is stored in the Wasm extension.
             if underlyingWasmType.isWasmGlobalType {
@@ -360,22 +364,41 @@ extension Instruction: ProtobufConvertible {
 
             switch underlyingWasmType {
             case .wasmi32:
-                return .consti32
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.consti32
+                }
             case .wasmi64:
-                return .consti64
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.consti64
+                }
             case .wasmf32:
-                return .constf32
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.constf32
+                }
             case .wasmf64:
-                return .constf64
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.constf64
+                }
             case .wasmExternRef:
-                return .externref
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.externref
+                }
             case .wasmFuncRef:
-                return .funcref
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.funcref
+                }
             case .wasmSimd128:
-                return .simd128
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.simd128
+                }
             default:
                 if (underlyingWasmType <= .wasmGenericRef) {
-                    return .indexref
+                    return Fuzzilli_Protobuf_WasmILType.with {
+                        $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
+                            $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.index
+                            $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                        }
+                    }
                 }
                 fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a Protobuf_WasmILType! for instruction \(self)")
             }
@@ -1426,29 +1449,39 @@ extension Instruction: ProtobufConvertible {
 
         // Converts to the Wasm world global type
         func WasmTypeEnumToILType(_ wasmType: Fuzzilli_Protobuf_WasmILType) -> ILType {
-            switch wasmType {
-            case .constf32:
-                return .wasmf32
-            case .constf64:
-                return .wasmf64
-            case .consti32:
-                return .wasmi32
-            case .consti64:
-                return .wasmi64
-            case .externref:
-                return .wasmExternRef
-            case .funcref:
-                return .wasmFuncRef
-            case .simd128:
-                return .wasmSimd128
-            case .indexref:
-                return .wasmRef(.Index)
-            case .functiondef:
-                return .wasmFunctionDef()
-            case .nothing:
-                return .nothing
-            case .UNRECOGNIZED(let value):
-                fatalError("Unrecognized WasmILType enum value \(value)")
+            switch wasmType.type {
+            case .valueType(_):
+                switch wasmType.valueType {
+                case .constf32:
+                    return .wasmf32
+                case .constf64:
+                    return .wasmf64
+                case .consti32:
+                    return .wasmi32
+                case .consti64:
+                    return .wasmi64
+                case .externref:
+                    return .wasmExternRef
+                case .funcref:
+                    return .wasmFuncRef
+                case .simd128:
+                    return .wasmSimd128
+                case .functiondef:
+                    return .wasmFunctionDef()
+                case .nothing:
+                    return .nothing
+                case .UNRECOGNIZED(let value):
+                    fatalError("Unrecognized wasm value type \(value)")
+                }
+            case .refType(_):
+                switch wasmType.refType.kind {
+                case .index:
+                    return .wasmRef(.Index, nullability: wasmType.refType.nullability)
+                case .UNRECOGNIZED(let value):
+                    fatalError("Unrecognized wasm reference type \(value)")
+                }
+            case .none:
+                fatalError("Absent wasm type")
             }
         }
 

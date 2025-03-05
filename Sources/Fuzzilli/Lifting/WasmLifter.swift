@@ -384,7 +384,7 @@ public class WasmLifter {
 
     private func encodeType(_ type: ILType, defaultType: ILType? = nil) -> Data {
         if type.Is(.wasmGenericRef) {
-            let isNullable = true // TODO(mliedtke): Allow non-nullable reference types.
+            let isNullable = type.wasmReferenceType!.nullability
             let nullabilityByte: UInt8 = isNullable ? 0x63 : 0x64
             let typeDesc = type.wasmReferenceType!.description!
             return Data([nullabilityByte])
@@ -415,7 +415,6 @@ public class WasmLifter {
 
     private func buildTypeSection() {
         self.bytecode += [WasmSection.type.rawValue]
-
 
         var temp = Data()
 
