@@ -117,12 +117,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     // CodeGenMutator which could result in having two resolve operations for a single forward
     // reference?
     CodeGenerator("WasmArrayTypeGenerator", inContext: .wasmTypeGroup) { b in
+        let mutability = probability(0.75)
         if let elementType = b.randomVariable(ofType: .wasmTypeDef()), probability(0.25) {
             // Excluding non-nullable references from referring to a self-reference ensures we do not end up with cycles of non-nullable references.
             let nullability = b.type(of: elementType).wasmTypeDefinition!.description == .selfReference || probability(0.5)
-            b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: nullability), indexType: elementType)
+            b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: nullability), mutability: mutability, indexType: elementType)
         } else {
-            b.wasmDefineArrayType(elementType: chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]))
+            b.wasmDefineArrayType(elementType: chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]), mutability: mutability)
         }
     },
 
@@ -152,6 +153,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // TODO(mliedtke): Track array length and use other indices as well.
         let index = function.consti32(0)
         function.wasmArrayGet(array: array, index: index)
+    },
+
+    CodeGenerator("WasmArraySetGenerator", inContext: .wasmFunction, inputs: .required(.wasmRef(.Index, nullability: true))) { b, array in
+        let arrayType = b.type(of: array).wasmReferenceType!.description! as! WasmArrayTypeDescription
+        guard arrayType.mutability else { return }
+        guard let element = b.randomVariable(ofType: arrayType.elementType) else { return }
+        let function = b.currentWasmModule.currentWasmFunction
+        // TODO(mliedtke): Track array length and use other indices as well.
+        let index = function.consti32(0)
+        function.wasmArraySet(array: array, index: index, element: element)
     },
 
     CodeGenerator("WasmRefNullGenerator", inContext: .wasmFunction) { b in

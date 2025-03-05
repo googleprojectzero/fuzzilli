@@ -1397,6 +1397,7 @@ extension Instruction: ProtobufConvertible {
             case .wasmDefineArrayType(let op):
                 $0.wasmDefineArrayType = Fuzzilli_Protobuf_WasmDefineArrayType.with {
                     $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
+                    $0.mutability = op.mutability
                 }
             case .wasmDefineForwardOrSelfReference(_):
                 $0.wasmDefineForwardOrSelfReference = Fuzzilli_Protobuf_WasmDefineForwardOrSelfReference()
@@ -1412,6 +1413,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmArrayLen = Fuzzilli_Protobuf_WasmArrayLen()
             case .wasmArrayGet(let op):
                 $0.wasmArrayGet = Fuzzilli_Protobuf_WasmArrayGet.with {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
+                }
+            case .wasmArraySet(let op):
+                $0.wasmArraySet = Fuzzilli_Protobuf_WasmArraySet.with {
                     $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
                 }
             case .wasmRefNull(let op):
@@ -2256,7 +2261,7 @@ extension Instruction: ProtobufConvertible {
             assert(inouts.count % 2 == 0)
             op = WasmEndTypeGroup(typesCount: inouts.count / 2)
         case .wasmDefineArrayType(let p):
-            op = WasmDefineArrayType(elementType: WasmTypeEnumToILType(p.elementType))
+            op = WasmDefineArrayType(elementType: WasmTypeEnumToILType(p.elementType), mutability: p.mutability)
         case .wasmDefineForwardOrSelfReference(_):
             op = WasmDefineForwardOrSelfReference()
         case .wasmResolveForwardReference(_):
@@ -2270,6 +2275,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmArrayLen()
         case .wasmArrayGet(let p):
             op = WasmArrayGet(elementType: WasmTypeEnumToILType(p.elementType))
+        case .wasmArraySet(let p):
+            op = WasmArraySet(elementType: WasmTypeEnumToILType(p.elementType))
         case .wasmRefNull(let p):
             op = WasmRefNull(type: WasmTypeEnumToILType(p.type))
         }

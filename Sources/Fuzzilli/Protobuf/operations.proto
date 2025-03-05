@@ -1323,6 +1323,7 @@ message WasmEndTypeGroup {
 
 message WasmDefineArrayType {
     WasmILType elementType = 1;
+    bool mutability = 2;
 }
 
 message WasmDefineForwardOrSelfReference {
@@ -1342,6 +1343,10 @@ message WasmArrayLen {
 }
 
 message WasmArrayGet {
+    WasmILType elementType = 1;
+}
+
+message WasmArraySet {
     WasmILType elementType = 1;
 }
 

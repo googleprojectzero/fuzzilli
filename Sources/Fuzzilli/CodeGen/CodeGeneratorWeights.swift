@@ -308,5 +308,6 @@ public let codeGeneratorWeights = [
     "WasmArrayNewGenerator":                    5,
     "WasmArrayLengthGenerator":                 5,
     "WasmArrayGetGenerator":                    5,
+    "WasmArraySetGenerator":                    5,
     "WasmRefNullGenerator":                     5,
 ]

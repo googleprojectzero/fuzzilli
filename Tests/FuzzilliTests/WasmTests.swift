@@ -1897,8 +1897,8 @@ class WasmGCTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let typeGroup = b.wasmDefineTypeGroup {
-            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32)
-            let arrayOfArrays = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: false), indexType: arrayi32)
+            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+            let arrayOfArrays = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: false), mutability: true, indexType: arrayi32)
             return [arrayi32, arrayOfArrays]
         }
 
@@ -1911,6 +1911,7 @@ class WasmGCTests: XCTestCase {
                 ])
                 let arrayOfArrays = function.wasmArrayNewFixed(arrayType: typeGroup[1], elements: [array])
                 let innerArray = function.wasmArrayGet(array: arrayOfArrays, index: function.consti32(0))
+                function.wasmArraySet(array: innerArray, index: function.consti32(1), element: function.consti32(100))
                 function.wasmReturn(function.wasmArrayGet(array: innerArray, index: function.consti32(1)))
             }
         }
@@ -1922,7 +1923,7 @@ class WasmGCTests: XCTestCase {
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
-        testForOutput(program: jsProg, runner: runner, outputString: "43\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "100\n")
     }
 
     func testArrayNewDefault() throws {
@@ -1932,8 +1933,8 @@ class WasmGCTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let typeGroup = b.wasmDefineTypeGroup {
-            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32)
-            let arrayf64 = b.wasmDefineArrayType(elementType: .wasmf64)
+            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+            let arrayf64 = b.wasmDefineArrayType(elementType: .wasmf64, mutability: false)
             return [arrayi32, arrayf64]
         }
 
@@ -1966,7 +1967,7 @@ class WasmGCTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let arrayType = b.wasmDefineTypeGroup {
-            return [b.wasmDefineArrayType(elementType: .wasmi32)]
+            return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: false)]
         }[0]
 
         let module = b.buildWasmModule { wasmModule in
@@ -1999,7 +2000,7 @@ class WasmGCTests: XCTestCase {
 
         let arrayType = b.wasmDefineTypeGroup {
             let selfReference = b.wasmDefineForwardOrSelfReference()
-            let arrayOfSelf = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: true), indexType: selfReference)
+            let arrayOfSelf = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: true), mutability: false, indexType: selfReference)
             return [arrayOfSelf]
         }[0]
 
@@ -2041,8 +2042,8 @@ class WasmGCTests: XCTestCase {
 
         let typeGroup = b.wasmDefineTypeGroup {
             let forwardReference = b.wasmDefineForwardOrSelfReference()
-            let arrayOfArrayi32 = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: true), indexType: forwardReference)
-            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32)
+            let arrayOfArrayi32 = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: true), mutability: false, indexType: forwardReference)
+            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
             b.wasmResolveForwardReference(forwardReference, to: arrayi32)
             return [arrayOfArrayi32, arrayi32]
         }
@@ -2082,11 +2083,11 @@ class WasmGCTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let typeGroupA = b.wasmDefineTypeGroup {
-            return [b.wasmDefineArrayType(elementType: .wasmi32)]
+            return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
         }
         let typeGroupB = b.wasmDefineTypeGroup {
-            let typeWithDependency = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: true), indexType: typeGroupA[0])
-            let arrayi64 = b.wasmDefineArrayType(elementType: .wasmi64)
+            let typeWithDependency = b.wasmDefineArrayType(elementType: .wasmRef(.Index, nullability: true), mutability: false, indexType: typeGroupA[0])
+            let arrayi64 = b.wasmDefineArrayType(elementType: .wasmi64, mutability: true)
             return [arrayi64, typeWithDependency]
         }
 
@@ -2116,7 +2117,7 @@ class WasmGCTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
-        let arrayType = b.wasmDefineTypeGroup {[b.wasmDefineArrayType(elementType: .wasmi32)]}[0]
+        let arrayType = b.wasmDefineTypeGroup {[b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]}[0]
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => .wasmExternRef) { function, args in

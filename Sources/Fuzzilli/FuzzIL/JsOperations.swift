@@ -2550,9 +2550,11 @@ class WasmEndTypeGroup: WasmTypeOperation {
 class WasmDefineArrayType: WasmTypeOperation {
     override var opcode: Opcode { .wasmDefineArrayType(self) }
     let elementType : ILType
+    let mutability: Bool
 
-    init(elementType: ILType) {
+    init(elementType: ILType, mutability: Bool) {
         self.elementType = elementType
+        self.mutability = mutability
         super.init(numInputs: elementType.requiredInputCount(), numOutputs: 1, requiredContext: [.wasmTypeGroup])
     }
 }

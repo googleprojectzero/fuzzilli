@@ -99,7 +99,7 @@ public struct JSTyper: Analyzer {
     // Not currently used, but could be used for example to validate the analysis by adding these as comments to programs.
     private var typeChanges = [(Variable, ILType)]()
 
-    mutating func addArrayType(def: Variable, elementType: ILType, elementRef: Variable? = nil) {
+    mutating func addArrayType(def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil) {
         let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
         if let elementRef = elementRef {
             let elementNullability = elementType.wasmReferenceType!.nullability
@@ -122,6 +122,7 @@ public struct JSTyper: Analyzer {
             }
             type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
                 elementType: type(of: elementRef).wasmTypeDefinition!.getReferenceTypeTo(nullability: elementNullability),
+                mutability: mutability,
                 typeGroupIndex: tgIndex)
             // If the element type originates from another recursive type group, add a dependency.
             if elementDesc.typeGroupIndex != -1 && elementDesc.typeGroupIndex != tgIndex {
@@ -138,6 +139,7 @@ public struct JSTyper: Analyzer {
         } else {
             type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
                 elementType: elementType,
+                mutability: mutability,
                 typeGroupIndex: tgIndex)
         }
         if isWithinTypeGroup {
@@ -1174,7 +1176,7 @@ public struct JSTyper: Analyzer {
             // return the full type and pass that on to the set operation.
             set(instr.output, .wasmTypeDef())
             let elementRef = op.elementType.requiredInputCount() == 1 ? instr.input(0) : nil
-            addArrayType(def: instr.output, elementType: op.elementType, elementRef: elementRef)
+            addArrayType(def: instr.output, elementType: op.elementType, mutability: op.mutability, elementRef: elementRef)
 
         case .wasmDefineForwardOrSelfReference(_):
             set(instr.output, .wasmSelfReference())
