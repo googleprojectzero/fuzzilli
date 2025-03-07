@@ -247,11 +247,11 @@ public class Statistics: Module {
 extension Fuzzilli_Protobuf_Statistics {
     /// The ratio of valid samples to produced samples over the entire runtime of the fuzzer.
     public var overallCorrectnessRate: Double {
-        return Double(validSamples) / Double(totalSamples)
+        return totalSamples != 0 ? Double(validSamples) / Double(totalSamples) : 0
     }
 
     /// The ratio of timed-out samples to produced samples over the entire runtime of the fuzzer.
     public var overallTimeoutRate: Double {
-        return Double(timedOutSamples) / Double(totalSamples)
+        return totalSamples != 0 ? Double(timedOutSamples) / Double(totalSamples) : 0
     }
 }
