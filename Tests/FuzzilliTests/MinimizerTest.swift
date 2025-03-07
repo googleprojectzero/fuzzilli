@@ -1613,6 +1613,127 @@ class MinimizerTests: XCTestCase {
 
     }
 
+    func testWasmTypeGroupUnusedType() throws {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        do {
+            let typeGroup = b.wasmDefineTypeGroup {
+                return [
+                    b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
+                    b.wasmDefineArrayType(elementType: .wasmi64, mutability: true),
+                ]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                    let constOne = function.consti32(1)
+                    let constZero = function.consti32(0)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let array = function.wasmArrayNewDefault(arrayType: typeGroup[0], size: constOne)
+                    // Not important array, this should make the second type unused and then being
+                    // removed from the type group.
+                    let _ = function.wasmArrayNewDefault(arrayType: typeGroup[1], size: constOne)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let element = function.wasmArrayGet(array: array, index: constZero)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmReturn(element)
+                }
+            }
+        }
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        do {
+            let typeGroup = b.wasmDefineTypeGroup {
+                return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                    let constOne = function.consti32(1)
+                    let constZero = function.consti32(0)
+                    let array = function.wasmArrayNewDefault(arrayType: typeGroup[0], size: constOne)
+                    let element = function.wasmArrayGet(array: array, index: constZero)
+                    function.wasmReturn(element)
+                }
+            }
+        }
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram,
+            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n" +
+            "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+
+    }
+
+    func testWasmTypeGroupNestedTypesAndTypeGroupDependencies() throws {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        do {
+            let typeGroupA = b.wasmDefineTypeGroup {
+                return [
+                    // Not used at all.
+                    b.wasmDefineArrayType(elementType: .wasmf64, mutability: true),
+                    // Used by typeGroupB in type that is used in important instruction.
+                    b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
+                    // Used by typeGroupB for a type that is not used in an important instruction.
+                    b.wasmDefineArrayType(elementType: .wasmi64, mutability: true),
+                ]
+            }
+            let typeGroupB = b.wasmDefineTypeGroup {
+                return [
+                    // Only used by an unimportant instruction.
+                    b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: false), mutability: false, indexType: typeGroupA[2]),
+                    // Needed for an important instruction, shall not be removed.
+                    b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: true), mutability: true, indexType: typeGroupA[1]),
+                ]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .nothing) { function, _ in
+                    let constOne = function.consti32(1)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmArrayNewDefault(arrayType: typeGroupB[1], size: constOne)
+                    function.wasmArrayNewDefault(arrayType: typeGroupB[0], size: constOne)
+                }
+            }
+        }
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        do {
+            let typeGroupA = b.wasmDefineTypeGroup {
+                return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+            }
+            let typeGroupB = b.wasmDefineTypeGroup {
+                return [b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: true), mutability: true, indexType: typeGroupA[0])]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => .nothing) { function, _ in
+                    let constOne = function.consti32(1)
+                    function.wasmArrayNewDefault(arrayType: typeGroupB[0], size: constOne)
+                }
+            }
+        }
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram,
+            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n" +
+            "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+
+    }
+
     // A mock evaluator that can be configured to treat selected instructions as important, causing them to not be minimized away.
     class EvaluatorForMinimizationTests: ProgramEvaluator {
         /// An abstract instruction used to identify the instructions that are important and should be kept.
