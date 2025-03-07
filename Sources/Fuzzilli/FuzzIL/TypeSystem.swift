@@ -994,7 +994,6 @@ struct BaseType: OptionSet, Hashable {
     static let wasmFunctionDef = BaseType(rawValue: 1 << 18)
 
     // Wasm-gc types
-    // TODO(mliedtke): wasmExternRef and wasmFuncRef need to be integrated into this.
     static let wasmRef = BaseType(rawValue: 1 << 19)
     static let wasmTypeDef = BaseType(rawValue: 1 << 20)
 
