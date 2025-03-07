@@ -228,7 +228,6 @@ public struct ILType: Hashable {
         return type
     }
 
-    // TODO(mliedtke): Add wasmRefNull() and extend the WasmReferenceType with a null bool.
     static func wasmRef(_ kind: WasmReferenceType.Kind, nullability: Bool) -> ILType {
         return ILType(definiteType: .wasmRef, ext: TypeExtension(
             properties: [], methods: [], signature: nil,
