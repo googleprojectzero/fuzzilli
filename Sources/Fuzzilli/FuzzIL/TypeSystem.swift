@@ -199,8 +199,9 @@ public struct ILType: Hashable {
         return .object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"], withWasmType: wasmTableType)
     }
 
-    public static func wasmFunctionDef(_ signature: Signature? = nil) -> ILType {
-        return ILType(definiteType: .wasmFunctionDef, ext: TypeExtension(properties: Set(), methods: Set(), signature: signature))
+    public static func wasmFunctionDef(_ signature: WasmSignature? = nil) -> ILType {
+        return ILType(definiteType: .wasmFunctionDef,
+            ext: TypeExtension(properties: Set(), methods: Set(), signature: nil, wasmExt: WasmFunctionDefinition(signature)))
     }
 
     //
@@ -477,9 +478,9 @@ public struct ILType: Hashable {
         return self.definiteType == .wasmFunctionDef
     }
 
-    public var wasmFunctionDefSignature: Signature? {
+    public var wasmFunctionDefSignature: WasmSignature? {
         assert(self.definiteType == .wasmFunctionDef)
-        return ext?.signature
+        return (wasmType as! WasmFunctionDefinition).signature
     }
 
     public var isWasmDefaultable: Bool {
@@ -1064,8 +1065,29 @@ public class WasmTypeExtension: Hashable {
     }
 }
 
-public class WasmGlobalType: WasmTypeExtension {
+public class WasmFunctionDefinition: WasmTypeExtension {
+    let signature: WasmSignature?
 
+    override func isEqual(to other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmFunctionDefinition else { return false }
+        return self.signature == other.signature
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine(signature)
+    }
+
+    override func subsumes(_ other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmFunctionDefinition else { return false }
+        return signature == nil || signature == other.signature
+    }
+
+    init(_ signature: WasmSignature?) {
+        self.signature = signature
+    }
+}
+
+public class WasmGlobalType: WasmTypeExtension {
     let valueType: ILType
     let isMutable: Bool
 

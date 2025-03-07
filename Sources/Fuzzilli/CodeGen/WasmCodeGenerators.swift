@@ -617,10 +617,12 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator("WasmReturnGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
 
-        if function.signature.outputType.Is(.nothing) {
+        if function.signature.outputTypes.count == 0 {
             function.wasmReturn()
         } else {
-            let returnVariable = function.findOrGenerateWasmVar(ofType: function.signature.outputType)
+            // TODO(mliedtke): Support multiple return values.
+            assert(function.signature.outputTypes.count == 1)
+            let returnVariable = function.findOrGenerateWasmVar(ofType: function.signature.outputTypes[0])
             function.wasmReturn(returnVariable)
         }
     },

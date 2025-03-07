@@ -891,18 +891,18 @@ message WasmILType {
 }
 
 message BeginWasmFunction {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message EndWasmFunction {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmJsCall {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message Wasmi32CompareOp {
@@ -1114,13 +1114,13 @@ message WasmTableSet {
 }
 
 message WasmCallIndirect {
-  repeated WasmILType params = 1;
-  WasmILType return = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmCallDirect {
-  repeated WasmILType params = 1;
-  WasmILType return = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 enum WasmMemoryLoadType {

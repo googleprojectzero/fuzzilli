@@ -60,7 +60,7 @@ class LiveTests: XCTestCase {
 
             b.buildWasmModule() { module in
                 module.addMemory(minPages: 2, maxPages: probability(0.5) ? nil : 5, isMemory64: probability(0.5))
-                module.addWasmFunction(with: [] => .nothing) { function, args in
+                module.addWasmFunction(with: [] => []) { function, args in
                     b.buildPrefix()
                     b.build(n: 40)
                 }
@@ -96,7 +96,7 @@ class LiveTests: XCTestCase {
 
             let m = b.buildWasmModule() { module in
                 module.addMemory(minPages: 2, maxPages: probability(0.5) ? nil : 5, isMemory64: probability(0.5))
-                module.addWasmFunction(with: [] => .nothing) { function, args in
+                module.addWasmFunction(with: [] => []) { function, args in
                     b.buildPrefix()
                     b.build(n: 40)
                 }

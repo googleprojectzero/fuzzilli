@@ -959,10 +959,10 @@ public class FuzzILLifter: Lifter {
 
         case .wasmJsCall(let op):
             var arguments: [Variable] = []
-            for i in 0..<op.functionSignature.parameters.count {
+            for i in 0..<op.functionSignature.parameterTypes.count {
                 arguments.append(instr.input(i + 1))
             }
-            if op.functionSignature.outputType.Is(.nothing) {
+            if op.functionSignature.outputTypes.isEmpty {
                 w.emit("WasmJsCall(\(op.functionSignature)) \(instr.input(0)) [\(liftCallArguments(arguments[...]))]")
             } else {
                 w.emit("\(output()) <- WasmJsCall(\(op.functionSignature)) \(instr.input(0)) [\(liftCallArguments(arguments[...]))]")
@@ -970,7 +970,7 @@ public class FuzzILLifter: Lifter {
 
         case .wasmCallIndirect(let op):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            if (op.signature.outputType.Is(.nothing)) {
+            if op.signature.outputTypes.isEmpty {
                 w.emit("WasmCallIndirect(\(op.signature)) \(inputs)")
             } else {
                 w.emit("\(output()) <- WasmCallIndirect(\(op.signature)) \(inputs)")
@@ -978,7 +978,7 @@ public class FuzzILLifter: Lifter {
 
         case .wasmCallDirect(let op):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            if (op.signature.outputType.Is(.nothing)) {
+            if op.signature.outputTypes.isEmpty {
                 w.emit("WasmCallDirect(\(op.signature)) \(inputs)")
             } else {
                 w.emit("\(output()) <- WasmCallDirect(\(op.signature)) \(inputs)")

@@ -1431,7 +1431,7 @@ class MinimizerTests: XCTestCase {
     func testWasmCatchAllMinimization() throws {
         try runWasmMinimization { evaluator, b in
             return b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                     evaluator.nextInstructionIsImportant(in: b)
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         let val = function.consti64(42)
@@ -1447,7 +1447,7 @@ class MinimizerTests: XCTestCase {
 
         } minified: { b in
             return b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         function.wasmReturn(function.consti64(42))
                     }
@@ -1463,7 +1463,7 @@ class MinimizerTests: XCTestCase {
             return b.buildWasmModule { wasmModule in
                 let tag = wasmModule.addTag(parameterTypes: [])
                 let irrelevantTag = wasmModule.addTag(parameterTypes: [])
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                     evaluator.nextInstructionIsImportant(in: b)
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         evaluator.nextInstructionIsImportant(in: b)
@@ -1485,7 +1485,7 @@ class MinimizerTests: XCTestCase {
         } minified: { b in
             return b.buildWasmModule { wasmModule in
                 let tag = wasmModule.addTag(parameterTypes: [])
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [])
                         function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
@@ -1503,7 +1503,7 @@ class MinimizerTests: XCTestCase {
         try runWasmMinimization { evaluator, b in
             return b.buildWasmModule { wasmModule in
                 let tag = wasmModule.addTag(parameterTypes: [])
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         let val = function.consti64(42)
                             evaluator.nextInstructionIsImportant(in: b)
@@ -1518,7 +1518,7 @@ class MinimizerTests: XCTestCase {
 
         } minified: { b in
             return b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                         function.wasmReturn(function.consti64(42))
                 }
             }
@@ -1530,7 +1530,7 @@ class MinimizerTests: XCTestCase {
         try runWasmMinimization { evaluator, b in
             return b.buildWasmModule { wasmModule in
                 let tag = wasmModule.addTag(parameterTypes: [])
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                             function.wasmReturn(function.consti64(123))
                         function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
@@ -1545,7 +1545,7 @@ class MinimizerTests: XCTestCase {
 
         } minified: { b in
             return b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                         function.wasmReturn(function.consti64(42))
                 }
             }
@@ -1560,7 +1560,7 @@ class MinimizerTests: XCTestCase {
         // Build input program to be minimized.
         do {
             let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                     evaluator.nextInstructionIsImportant(in: b)
                     let val = function.consti64(42)
                     // We would expect this to be removed by the DataflowSimplifier
@@ -1568,7 +1568,7 @@ class MinimizerTests: XCTestCase {
                     evaluator.nextInstructionIsImportant(in: b)
                     function.wasmReturn(absVal)
                 }
-                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                     evaluator.nextInstructionIsImportant(in: b)
                     let valA = function.consti64(42)
                     let valB = function.consti64(43)
@@ -1589,10 +1589,10 @@ class MinimizerTests: XCTestCase {
         // Build expected output program.
         do {
             let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                     function.wasmReturn(function.consti64(42))
                 }
-                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                     let valA = function.consti64(42)
                     let valB = function.consti64(43)
                     let testVal = function.wasmi64CompareOp(valA, valB, using: .Eq)
@@ -1628,7 +1628,7 @@ class MinimizerTests: XCTestCase {
             }
 
             b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                     let constOne = function.consti32(1)
                     let constZero = function.consti32(0)
                     evaluator.nextInstructionIsImportant(in: b)
@@ -1652,7 +1652,7 @@ class MinimizerTests: XCTestCase {
             }
 
             b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                     let constOne = function.consti32(1)
                     let constZero = function.consti32(0)
                     let array = function.wasmArrayNewDefault(arrayType: typeGroup[0], size: constOne)
@@ -1698,7 +1698,7 @@ class MinimizerTests: XCTestCase {
             }
 
             b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .nothing) { function, _ in
+                wasmModule.addWasmFunction(with: [] => []) { function, _ in
                     let constOne = function.consti32(1)
                     evaluator.nextInstructionIsImportant(in: b)
                     function.wasmArrayNewDefault(arrayType: typeGroupB[1], size: constOne)
@@ -1718,7 +1718,7 @@ class MinimizerTests: XCTestCase {
             }
 
             b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .nothing) { function, _ in
+                wasmModule.addWasmFunction(with: [] => []) { function, _ in
                     let constOne = function.consti32(1)
                     function.wasmArrayNewDefault(arrayType: typeGroupB[0], size: constOne)
                 }
