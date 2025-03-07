@@ -473,7 +473,7 @@ public class ProgramBuilder {
         // Find all types of which we currently have at least a few visible variables that we could later use as arguments.
         // TODO: improve this code by using some kind of cache? That could then also be used for randomVariable(ofType:) etc.
         var availableVariablesByType = [ILType: Int]()
-        for v in visibleVariables {
+        for v in visibleVariables where type(of: v).Is(.anything) {
             let t = type(of: v)
             // TODO: should we also add this values to the buckets for supertypes (without this becoming O(n^2))?
             // TODO: alternatively just check for some common union types, e.g. .number, .primitive, as long as these can be used meaningfully?
