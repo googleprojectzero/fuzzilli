@@ -591,7 +591,7 @@ let v8Profile = Profile(
         }
 
         if probability(0.1) && !args.contains("--no-turboshaft") {
-            args.append("--turboshaft-from-maglev")
+            args.append("--turbolev")
         }
 
         if probability(0.1) && !args.contains("--no-turboshaft") {
