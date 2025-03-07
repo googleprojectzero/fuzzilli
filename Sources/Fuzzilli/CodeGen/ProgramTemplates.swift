@@ -105,7 +105,7 @@ public let ProgramTemplates = [
         let wrapped = b.wrapSuspending(function: f)
 
         let m = b.buildWasmModule { mod in
-            mod.addWasmFunction(with: [] => .nothing) { fbuilder, _  in
+            mod.addWasmFunction(with: [] => []) { fbuilder, _  in
                 b.build(n: 20)
                 let args = b.randomWasmArguments(forWasmSignature: wasmSignature)
                 // Best effort call...
@@ -140,7 +140,7 @@ public let ProgramTemplates = [
         let module = b.buildWasmModule { wasmModule in
             // Wasm function that throws a tag, catches a tag (the same or a different one) to
             // rethrow it again (or another exnref if present).
-            wasmModule.addWasmFunction(with: [] => .nothing) { function, args in
+            wasmModule.addWasmFunction(with: [] => []) { function, args in
                 b.build(n: 10)
                 let caughtValues = function.wasmBuildBlockWithResults(with: [] => catchBlockOutputTypes, args: []) { catchRefLabel, _ in
                     // TODO(mliedtke): We should probably allow mutations of try_tables to make

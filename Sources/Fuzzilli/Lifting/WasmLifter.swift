@@ -212,7 +212,7 @@ public class WasmLifter {
 
     // Holds various information for the functions in a wasm module.
     private class FunctionInfo {
-        var signature: Signature
+        var signature: WasmSignature
         var code: Data
         var outputVariable: Variable? = nil
         // Locals that we spill to, this maps from the ordering to the stack.
@@ -226,23 +226,18 @@ public class WasmLifter {
         public var labelBranchDepthMapping: VariableMap<Int> = VariableMap()
 
         // Expects the withArguments array to contain the variables of the innerOutputs, they should map directly to the local indices.
-        init(_ signature: Signature, _ code: Data, for lifter: WasmLifter, withArguments arguments: [Variable]) {
+        init(_ signature: WasmSignature, _ code: Data, for lifter: WasmLifter, withArguments arguments: [Variable]) {
             // Infer the first few locals from this signature.
             self.signature = signature
             self.code = code
             self.localsInfo = [(Variable, ILType)]()
             self.lifter = lifter
-            assert(signature.parameters.count == arguments.count)
+            assert(signature.parameterTypes.count == arguments.count)
             // Populate the localsInfo with the parameter types
             for (idx, argVar) in arguments.enumerated() {
-                switch signature.parameters[idx] {
-                case .plain(let argType):
-                    self.localsInfo.append((argVar, argType))
-                    // Emit the expressions for the parameters such that we can accesss them if we need them.
-                    self.lifter!.writer.addExpr(for: argVar, bytecode: Data([0x20, UInt8(self.localsInfo.count - 1)]))
-                default:
-                    fatalError("Cannot have a non-plain argument as a function parameter")
-                }
+                self.localsInfo.append((argVar, signature.parameterTypes[idx]))
+                // Emit the expressions for the parameters such that we can accesss them if we need them.
+                self.lifter!.writer.addExpr(for: argVar, bytecode: Data([0x20, UInt8(self.localsInfo.count - 1)]))
             }
         }
 
@@ -443,7 +438,7 @@ public class WasmLifter {
             registerSignature(tag.1 => [])
         }
         for function in self.functions {
-            registerSignature(WasmSignature(from: function.signature))
+            registerSignature(function.signature)
         }
 
         let typeCount = self.signatures.count + typeGroups.count
@@ -609,7 +604,7 @@ public class WasmLifter {
         var temp = Leb128.unsignedEncode(self.functions.count)
 
         for info in self.functions {
-            temp.append(Leb128.unsignedEncode(try getSignatureIndex(WasmSignature(from: info.signature))))
+            temp.append(Leb128.unsignedEncode(try getSignatureIndex(info.signature)))
         }
 
         // Append the length of the section and the section contents itself.
@@ -729,8 +724,8 @@ public class WasmLifter {
             var funcTemp = Data()
             // TODO: this should be encapsulated more nicely. There should be an interface that gets the locals without the parameters. As this is currently mainly used to get the slots info.
             // Encode number of locals
-            funcTemp += Leb128.unsignedEncode(functionInfo.localsInfo.count - functionInfo.signature.parameters.count)
-            for (_, type) in functionInfo.localsInfo[functionInfo.signature.parameters.count...] {
+            funcTemp += Leb128.unsignedEncode(functionInfo.localsInfo.count - functionInfo.signature.parameterTypes.count)
+            for (_, type) in functionInfo.localsInfo[functionInfo.signature.parameterTypes.count...] {
                 // Encode the locals
                 funcTemp += Leb128.unsignedEncode(1)
                 funcTemp += encodeType(type)
@@ -984,7 +979,7 @@ public class WasmLifter {
             // Needs typer analysis
             return true
         case .wasmCallIndirect(let op):
-            registerSignature(WasmSignature(from: op.signature))
+            registerSignature(op.signature)
             return true
         case .wasmNop(_):
             // Just analyze the instruction but do nothing else here.
@@ -1186,7 +1181,7 @@ public class WasmLifter {
                     }
                 }
             case .wasmJsCall(let op):
-                self.imports.append((instr.input(0), WasmSignature(from: op.functionSignature)))
+                self.imports.append((instr.input(0), op.functionSignature))
 
             case .wasmDefineTag(let op):
                 self.tags[instr.output] = op.parameterTypes
@@ -1505,7 +1500,7 @@ public class WasmLifter {
             return Data([0x26]) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
         case .wasmCallIndirect(let op):
             let tableRef = wasmInstruction.input(0)
-            let sigIndex = try getSignatureIndex(WasmSignature(from: op.signature))
+            let sigIndex = try getSignatureIndex(op.signature)
             return Data([0x11]) + Leb128.unsignedEncode(sigIndex) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
         case .wasmCallDirect(_):
             let functionRef = wasmInstruction.input(0)
@@ -1518,7 +1513,7 @@ public class WasmLifter {
             return Data([op.storeType.rawValue]) + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
         case .wasmJsCall(let op):
             // We filter first, such that we get the index of functions only.
-            let wasmSignature = WasmSignature(from: op.functionSignature)
+            let wasmSignature = op.functionSignature
             if let index = imports.filter({
                 // TODO, switch query?
                 typer.type(of: $0.0).Is(.function()) || typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))

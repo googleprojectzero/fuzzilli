@@ -822,37 +822,28 @@ final class WasmTableSet: WasmTypedOperation {
 
 final class WasmCallIndirect: WasmTypedOperation {
     override var opcode: Opcode { .wasmCallIndirect(self) }
+    let signature: WasmSignature
 
-    let signature: Signature
-
-    init(signature: Signature) {
+    init(signature: WasmSignature) {
         self.signature = signature
-        let functionArgs = signature.parameters.convertPlainToILTypes()
-        let params = [ILType.wasmTable] + functionArgs + [ILType.wasmi32]
-        super.init(inputTypes: params, outputType: signature.outputType, requiredContext: [.wasmFunction])
-    }
-
-    convenience init(params: [ILType], outputType: ILType) {
-        let signature = Signature(expects: params.map { .plain($0) }, returns: outputType)
-        self.init(signature: signature)
+        let params = [ILType.wasmTable] + signature.parameterTypes + [ILType.wasmi32]
+        assert(signature.outputTypes.count < 2, "multi-return call_indirect is not supported")
+        let outputType: ILType = signature.outputTypes.isEmpty ? .nothing : signature.outputTypes[0]
+        super.init(inputTypes: params, outputType: outputType, requiredContext: [.wasmFunction])
     }
 }
 
 final class WasmCallDirect: WasmTypedOperation {
     override var opcode: Opcode { .wasmCallDirect(self) }
 
-    let signature: Signature
+    let signature: WasmSignature
 
-    init(signature: Signature) {
+    init(signature: WasmSignature) {
         self.signature = signature
-        let functionArgs = signature.parameters.convertPlainToILTypes()
-        let params = [ILType.wasmFunctionDef(signature)] + functionArgs
-        super.init(inputTypes: params, outputType: signature.outputType, requiredContext: [.wasmFunction])
-    }
-
-    convenience init(params: [ILType], outputType: ILType) {
-        let signature = Signature(expects: params.map { .plain($0) }, returns: outputType)
-        self.init(signature: signature)
+        let params = [ILType.wasmFunctionDef(signature)] + signature.parameterTypes
+        assert(signature.outputTypes.count < 2, "multi-return js calls are not supported")
+        let outputType: ILType = signature.outputTypes.isEmpty ? .nothing : signature.outputTypes[0]
+        super.init(inputTypes: params, outputType: outputType, requiredContext: [.wasmFunction])
     }
 }
 
@@ -975,11 +966,13 @@ final class WasmMemoryStore: WasmTypedOperation {
 final class WasmJsCall: WasmTypedOperation {
     override var opcode: Opcode { .wasmJsCall(self) }
 
-    let functionSignature: Signature
+    let functionSignature: WasmSignature
 
-    init(signature: Signature) {
+    init(signature: WasmSignature) {
         self.functionSignature = signature
-        super.init(inputTypes: [.function() | .object(ofGroup: "WebAssembly.SuspendableObject")] + signature.parameters.convertPlainToILTypes(), outputType: functionSignature.outputType, requiredContext: [.wasmFunction])
+        assert(signature.outputTypes.count < 2, "multi-return js calls are not supported")
+        let outputType: ILType = signature.outputTypes.isEmpty ? .nothing : signature.outputTypes[0]
+        super.init(inputTypes: [.function() | .object(ofGroup: "WebAssembly.SuspendableObject")] + signature.parameterTypes, outputType: outputType, requiredContext: [.wasmFunction])
     }
 }
 
@@ -1283,33 +1276,24 @@ final class WasmReassign: WasmTypedOperation {
 // They should all require at least .wasm.
 //
 
-final class BeginWasmFunction: WasmTypedOperation {
+final class BeginWasmFunction: WasmOperationBase {
     override var opcode: Opcode { .beginWasmFunction(self) }
-    public let signature: Signature
+    public let signature: WasmSignature
 
-    init(signature: Signature) {
+    init(signature: WasmSignature) {
         self.signature = signature
-        let parameterTypes = signature.parameters.convertPlainToILTypes()
-        super.init(innerOutputTypes: parameterTypes, attributes: [.isBlockStart], requiredContext: [.wasm], contextOpened: [.wasmFunction])
-    }
-
-    // Easy initializer for Protobuf deserialization
-    init(parameterTypes: [ILType], returnType: ILType) {
-        self.signature = Signature(expects: parameterTypes.map { .plain($0) }, returns: returnType)
-        super.init(innerOutputTypes: parameterTypes, attributes: [.isBlockStart], requiredContext: [.wasm], contextOpened: [.wasmFunction])
+        // TODO(mliedtke): A function should also create a label for branch instructions.
+        super.init(numInnerOutputs: signature.parameterTypes.count, attributes: [.isBlockStart], requiredContext: [.wasm], contextOpened: [.wasmFunction])
     }
 }
 
-final class EndWasmFunction: WasmTypedOperation {
+final class EndWasmFunction: WasmOperationBase {
     override var opcode: Opcode { .endWasmFunction(self) }
-    let signature: Signature
-    init(signature: Signature) {
+    let signature: WasmSignature
+
+    init(signature: WasmSignature) {
         self.signature = signature
-        super.init(outputType: .wasmFunctionDef(signature), attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
-    }
-    convenience init(parameterTypes: [ILType], returnType: ILType) {
-        let signature = Signature(expects: parameterTypes.map { .plain($0) }, returns: returnType)
-        self.init(signature: signature)
+        super.init(numOutputs: 1, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
     }
 }
 

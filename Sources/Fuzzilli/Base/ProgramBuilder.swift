@@ -934,7 +934,7 @@ public class ProgramBuilder {
     /// I.e. .object might be converted to .wasmf32 or .wasmExternRef.
     /// Use this function to generate arguments for a WasmJsCall operation and attach the converted signature to
     /// the WasmJsCall instruction.
-    public func randomWasmArguments(forCallingJsFunction function: Variable) -> (Signature, [Variable])? {
+    public func randomWasmArguments(forCallingJsFunction function: Variable) -> (WasmSignature, [Variable])? {
         let signature = type(of: function).signature ?? Signature.forUnknownFunction
 
         var visibleTypes = [ILType: Int]()
@@ -969,12 +969,9 @@ public class ProgramBuilder {
         return (newSignature, variables)
     }
 
-    public func randomWasmArguments(forWasmSignature signature: Signature) -> [Variable]? {
-        // This is a bit useless, as all types here are already .plain types, we basically only want to unwrap the plains here.
-        let parameterTypes = ProgramBuilder.prepareArgumentTypes(forParameters: signature.parameters)
-
+    public func randomWasmArguments(forWasmSignature signature: WasmSignature) -> [Variable]? {
         var variables = [Variable]()
-        for parameterType in parameterTypes {
+        for parameterType in signature.parameterTypes {
             if let v = randomVariable(ofType: parameterType) {
                 variables.append(v)
             } else {
@@ -987,10 +984,10 @@ public class ProgramBuilder {
 
     // We simplify the signature by first converting it into types, approximating this signature by getting the corresponding Wasm world types.
     // Then we convert that back into a signature with only .plain types and attach that to the WasmJsCall instruction.
-    public static func convertJsSignatureToWasmSignature(_ signature: Signature, availableTypes types: WeightedList<ILType>) -> Signature {
+    public static func convertJsSignatureToWasmSignature(_ signature: Signature, availableTypes types: WeightedList<ILType>) -> WasmSignature {
         let parameterTypes = prepareArgumentTypes(forParameters: signature.parameters).map { approximateWasmTypeFromJsType($0, availableTypes: types) }
         let outputType = mapJsToWasmType(signature.outputType)
-        return Signature(expects: parameterTypes.map { .plain($0) }, returns: outputType)
+        return WasmSignature(expects: parameterTypes, returns: [outputType])
     }
 
     public static func convertJsSignatureToWasmSignatureDeterministic(_ signature: Signature) -> Signature {
@@ -1091,11 +1088,6 @@ public class ProgramBuilder {
 
     public func type(ofProperty property: String, on v: Variable) -> ILType {
         return jsTyper.inferPropertyType(of: property, on: v)
-    }
-
-    public func wasmSignature(ofFunction function: Variable) -> Signature? {
-        assert(context.inWasm)
-        return jsTyper.wasmSignature(ofFunction: function)
     }
 
     public func methodSignatures(of methodName: String, on object: Variable) -> [Signature] {
@@ -2886,11 +2878,16 @@ public class ProgramBuilder {
 
     public class WasmFunction {
         private let b: ProgramBuilder
-        let signature: Signature
+        let signature: WasmSignature
+        let jsSignature: Signature
 
-        public init(forBuilder b: ProgramBuilder, withSignature signature: Signature) {
+        public init(forBuilder b: ProgramBuilder, withSignature signature: WasmSignature) {
             self.b = b
             self.signature = signature
+            let returnType = signature.outputTypes.count == 0 ? .nothing
+                    : signature.outputTypes.count == 1 ? signature.outputTypes[0]
+                    : .jsArray;
+            self.jsSignature = signature.parameterTypes.map(Parameter.plain) => returnType
         }
 
         // Wasm Instructions
@@ -3132,9 +3129,9 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmCallIndirect(signature: Signature, table: Variable, functionArgs: [Variable], tableIndex: Variable) -> Variable? {
+        public func wasmCallIndirect(signature: WasmSignature, table: Variable, functionArgs: [Variable], tableIndex: Variable) -> Variable? {
             let instr = b.emit(WasmCallIndirect(signature: signature), withInputs: [table] + functionArgs + [tableIndex])
-            if (signature.outputType.Is(.nothing)) {
+            if signature.outputTypes.isEmpty {
                 assert(!instr.hasOutputs)
                 return nil
             } else {
@@ -3144,9 +3141,9 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmCallDirect(signature: Signature, function: Variable, functionArgs: [Variable]) -> Variable? {
+        public func wasmCallDirect(signature: WasmSignature, function: Variable, functionArgs: [Variable]) -> Variable? {
             let instr = b.emit(WasmCallDirect(signature: signature), withInputs: [function] + functionArgs)
-            if (signature.outputType.Is(.nothing)) {
+            if signature.outputTypes.isEmpty {
                 assert(!instr.hasOutputs)
                 return nil
             } else {
@@ -3156,9 +3153,9 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmJsCall(function: Variable, withArgs args: [Variable], withWasmSignature signature: Signature) -> Variable? {
+        public func wasmJsCall(function: Variable, withArgs args: [Variable], withWasmSignature signature: WasmSignature) -> Variable? {
             let instr = b.emit(WasmJsCall(signature: signature), withInputs: [function] + args)
-            if (signature.outputType.Is(.nothing)) {
+            if signature.outputTypes.isEmpty {
                 assert(!instr.hasOutputs)
                 return nil
             } else {
@@ -3532,7 +3529,7 @@ public class ProgramBuilder {
 
         public func getExportedMethods() -> [(String, Signature)] {
             assert(methods.count == functions.count)
-            return (0..<methods.count).map { (methods[$0], functions[$0].signature) }
+            return (0..<methods.count).map { (methods[$0], functions[$0].jsSignature) }
         }
 
         public func setModuleVariable(variable: Variable) {
@@ -3560,7 +3557,7 @@ public class ProgramBuilder {
 
         // TODO: distinguish between exported and non-exported functions
         @discardableResult
-        public func addWasmFunction(with signature: Signature, _ body: (WasmFunction, [Variable]) -> ()) -> Variable {
+        public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, [Variable]) -> ()) -> Variable {
             let functionBuilder = WasmFunction(forBuilder: b, withSignature: signature)
             let instr = b.emit(BeginWasmFunction(signature: signature))
             body(functionBuilder, Array(instr.innerOutputs))
@@ -3640,19 +3637,12 @@ public class ProgramBuilder {
             [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExnRef, .wasmExternRef, .wasmSimd128])}
     }
 
-    public func randomWasmSignature() -> Signature {
+    public func randomWasmSignature() -> WasmSignature {
         // TODO: generalize this to support more types.
         let returnType: ILType = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
-        let numParams = Int.random(in: 0...10)
-        var params = ParameterList()
-        for _ in 0..<numParams {
-            // TODO currently we don't emit .wasmi64 here as we don't yet have
-            // the correct signatures on the JavaScript side (i.e. for the
-            // exported function) and would therefore generate a lot of "Cannot
-            // convert XYZ to a BigInt" exceptions.
-            params.append(chooseUniform(from: [.wasmi32, .wasmf32, .wasmf64]))
-        }
-        return params => returnType
+        let params: [ILType] = (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from: [.wasmi32, .wasmf32, .wasmf64])}
+        // TODO(mliedtke): Allow multi-returns!
+        return params => (returnType == .nothing ? [] : [returnType])
     }
 
     public func randomWasmBlockOutputTypes(upTo n: Int) -> [ILType] {

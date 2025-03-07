@@ -1237,7 +1237,7 @@ class JSTyperTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         b.buildWasmModule { m in
-            m.addWasmFunction(with: [] => .nothing) { f, _ in
+            m.addWasmFunction(with: [] => []) { f, _ in
                 let ci32 = f.consti32(1337)
                 let ci64 = f.consti64(1338)
                 let cf32 = f.constf32(13.37)

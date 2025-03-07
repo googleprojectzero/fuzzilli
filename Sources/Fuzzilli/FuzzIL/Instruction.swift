@@ -1101,8 +1101,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmReturn = Fuzzilli_Protobuf_WasmReturn.with { $0.returnType = ILTypeToWasmTypeEnum(op.returnType) }
             case .wasmJsCall(let op):
                 $0.wasmJsCall = Fuzzilli_Protobuf_WasmJsCall.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.functionSignature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.functionSignature.outputType)
+                    $0.parameterTypes = op.functionSignature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.functionSignature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmi32CompareOp(let op):
                 $0.wasmi32CompareOp = Fuzzilli_Protobuf_Wasmi32CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.rawValue) }
@@ -1258,16 +1258,13 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmCallIndirect(let op):
                 $0.wasmCallIndirect = Fuzzilli_Protobuf_WasmCallIndirect.with {
-                    $0.params = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.return = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmCallDirect(let op):
                 $0.wasmCallDirect = Fuzzilli_Protobuf_WasmCallDirect.with {
-                    $0.params = op.signature.parameters.map { param in
-                        guard case .plain(let p) = param else { fatalError("incompatible wasm signature")}
-                        return ILTypeToWasmTypeEnum(p)
-                    }
-                    $0.return = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmMemoryLoad(let op):
                 $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with {
@@ -1283,13 +1280,13 @@ extension Instruction: ProtobufConvertible {
                 }
             case .beginWasmFunction(let op):
                 $0.beginWasmFunction = Fuzzilli_Protobuf_BeginWasmFunction.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .endWasmFunction(let op):
                 $0.endWasmFunction = Fuzzilli_Protobuf_EndWasmFunction.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBeginBlock(let op):
                 $0.wasmBeginBlock = Fuzzilli_Protobuf_WasmBeginBlock.with {
@@ -2092,10 +2089,9 @@ extension Instruction: ProtobufConvertible {
         case .wasmReturn(let p):
             op = WasmReturn(returnType: WasmTypeEnumToILType(p.returnType))
         case .wasmJsCall(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmJsCall(signature: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmJsCall(signature: parameters => outputs)
 
         // Wasm Numerical Operations
         case .wasmi32CompareOp(let p):
@@ -2204,51 +2200,59 @@ extension Instruction: ProtobufConvertible {
                 WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
                               limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [:])))
         case .wasmCallIndirect(let p):
-            op = WasmCallIndirect(params: p.params.map { WasmTypeEnumToILType($0)}, outputType: WasmTypeEnumToILType(p.return))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmCallIndirect(signature: parameters => outputs)
         case .wasmCallDirect(let p):
-            op = WasmCallDirect(params: p.params.map { WasmTypeEnumToILType($0)}, outputType: WasmTypeEnumToILType(p.return))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmCallDirect(signature: parameters => outputs)
         case .wasmMemoryLoad(let p):
             op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .wasmMemoryStore(let p):
             op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .beginWasmFunction(let p):
-            op = BeginWasmFunction(parameterTypes: p.parameters.map { WasmTypeEnumToILType($0) }, returnType: WasmTypeEnumToILType(p.returnType))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = BeginWasmFunction(signature: parameters => outputs)
         case .endWasmFunction(let p):
-            op = EndWasmFunction(parameterTypes: p.parameters.map { WasmTypeEnumToILType($0) }, returnType: WasmTypeEnumToILType(p.returnType))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = EndWasmFunction(signature: parameters => outputs)
         case .wasmBeginBlock(let p):
-            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             op = WasmBeginBlock(with: parameters => outputs)
         case .wasmEndBlock(let p):
             op = WasmEndBlock(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginLoop(let p):
-            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             op = WasmBeginLoop(with: parameters => outputs)
         case .wasmEndLoop(let p):
             op = WasmEndLoop(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginTryTable(let p):
-            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             let catches = p.catches.map(convertProtoWasmCatchKind)
             op = WasmBeginTryTable(with: parameters => outputs, catches: catches)
         case .wasmEndTryTable(let p):
             op = WasmEndTryTable(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginTry(let p):
-            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             op = WasmBeginTry(with: parameters => outputs)
         case .wasmBeginCatchAll(let p):
             op = WasmBeginCatchAll(inputTypes: p.inputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginCatch(let p):
-            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             op = WasmBeginCatch(with: parameters => outputs)
         case .wasmEndTry(let p):
             op = WasmEndTry(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginTryDelegate(let p):
-            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             op = WasmBeginTryDelegate(with: parameters => outputs)
         case .wasmEndTryDelegate(let p):
             op = WasmEndTryDelegate(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
@@ -2267,12 +2271,12 @@ extension Instruction: ProtobufConvertible {
         case .wasmBranchTable(let p):
             op = WasmBranchTable(labelTypes: p.parameters.map(WasmTypeEnumToILType), valueCount: Int(p.valueCount))
         case .wasmBeginIf(let p):
-            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             op = WasmBeginIf(with: parameters => outputs)
         case .wasmBeginElse(let p):
-            let parameters: [ILType] = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs: [ILType] = p.outputTypes.map(WasmTypeEnumToILType)
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             op = WasmBeginElse(with: parameters => outputs)
         case .wasmEndIf(let p):
             op = WasmEndIf(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))

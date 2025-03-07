@@ -43,7 +43,6 @@ public struct JSTyper: Analyzer {
     public var activeWasmModuleDefinition: WasmModuleDefinition? = nil
 
     public struct WasmModuleDefinition {
-        var activeFunctionSignature: Signature? = nil
         // The invariant here is that we never reassign these variables, therefore these signatures are "set in stone" and they are always valid for the lifetime of the module.
         // The signatures are immutable and they are never changed.
         // TODO(cffsmith): Add something in `Code.check()` that makes sure that this is actually upheld for programs.
@@ -232,16 +231,6 @@ public struct JSTyper: Analyzer {
             }
 
             switch instr.op.opcode {
-            case .beginWasmFunction(let op):
-                activeWasmModuleDefinition?.activeFunctionSignature = op.signature
-                // Type all the innerOutputs
-                for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmTypedOperation).innerOutputTypes) {
-                    setType(of: innerOutput, to: paramType)
-                }
-            case .endWasmFunction(_):
-                let signature = activeWasmModuleDefinition!.activeFunctionSignature!
-                activeWasmModuleDefinition!.activeFunctionSignature = nil
-                activeWasmModuleDefinition!.methodSignatures.append((instr.output, signature))
             case .wasmBeginLoop(_),
                  .wasmBeginIf(_),
                  .wasmBeginElse(_),
@@ -296,6 +285,18 @@ public struct JSTyper: Analyzer {
                 setType(of: instr.output, to: .wasmf64)
             case .constf32(_):
                 setType(of: instr.output, to: .wasmf32)
+            case .beginWasmFunction(let op):
+                for (innerOutput, paramType) in zip(instr.innerOutputs, op.signature.parameterTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+            case .endWasmFunction(let op):
+                // TODO(mliedtke): Remove duplication with ProgramBuilder.WasmFunction.
+                let returnType = op.signature.outputTypes.count == 0 ? .nothing
+                    : op.signature.outputTypes.count == 1 ? op.signature.outputTypes[0]
+                    : .jsArray;
+                let jsSignature = op.signature.parameterTypes.map(Parameter.plain) => returnType
+                setType(of: instr.output, to: .wasmFunctionDef(op.signature))
+                activeWasmModuleDefinition!.methodSignatures.append((instr.output, jsSignature))
             case .wasmBeginBlock(let op):
                 wasmTypeBeginBlock(instr, op.signature)
             case .wasmEndBlock(let op):
@@ -519,20 +520,6 @@ public struct JSTyper: Analyzer {
             // Only instructions starting a block with output variables should be handled here.
             assert(instr.numOutputs == 0 || !instr.isBlockStart)
         }
-    }
-
-    /// Returns a known function Signature iff it is an internally defined function
-    public func wasmSignature(ofFunction variable: Variable) -> Signature? {
-        precondition(activeWasmModuleDefinition != nil, "We don't have an active WasmModule! Only call this from within .wasm context.")
-
-        let module = activeWasmModuleDefinition!
-
-        // If we have not seen this variable as an output of a function definition we don't have a signature.
-        guard module.methodSignatures.contains(where: { $0.variable == variable }) else {
-            return nil
-        }
-
-        return module.methodSignatures.filter({ $0.variable == variable })[0].signature
     }
 
     private mutating func processScopeChanges(_ instr: Instruction) {

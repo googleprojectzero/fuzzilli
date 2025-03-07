@@ -38,8 +38,8 @@ func testForErrorOutput(program: String, runner: JavaScriptExecutor, errorMessag
 
 class WasmSignatureConversionTests: XCTestCase {
     func testJsSignatureConversion() {
-        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmFuncRef, 1), (.wasmExternRef, 1)])), [.wasmi32] => .wasmi32)
-        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmf32, 1), (.wasmFuncRef, 1), (.wasmExternRef, 1)])), [.wasmf32] => .wasmi32)
+        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmFuncRef, 1), (.wasmExternRef, 1)])), [.wasmi32] => [.wasmi32])
+        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmf32, 1), (.wasmFuncRef, 1), (.wasmExternRef, 1)])), [.wasmf32] => [.wasmi32])
     }
 }
 
@@ -54,18 +54,18 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: Signature(expects: [], returns: ILType.wasmi32)) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 let constVar = function.consti32(1338)
                 function.wasmReturn(constVar)
             }
 
-            wasmModule.addWasmFunction(with: Signature(expects: ParameterList([.wasmi64]), returns: .wasmi64)) { function, arg in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, arg in
                 let var64 = function.consti64(41)
                 let added = function.wasmi64BinOp(var64, arg[0], binOpKind: WasmIntegerBinaryOpKind.Add)
                 function.wasmReturn(added)
             }
 
-            wasmModule.addWasmFunction(with: Signature(expects: ParameterList([.wasmi64, .wasmi64]), returns: .wasmi64)) { function, arg in
+            wasmModule.addWasmFunction(with: [.wasmi64, .wasmi64] => [.wasmi64]) { function, arg in
                 let subbed = function.wasmi64BinOp(arg[0], arg[1], binOpKind: WasmIntegerBinaryOpKind.Sub)
                 function.wasmReturn(subbed)
             }
@@ -110,12 +110,12 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             // Imports are always before internal globals, this breaks the logic if we add a global and then import a global.
-            wasmModule.addWasmFunction(with: [] => .nothing) { fun, _  in
+            wasmModule.addWasmFunction(with: [] => []) { fun, _  in
                 // This load forces an import
                 fun.wasmLoadGlobal(globalVariable: wasmGlobalf32)
             }
             wasmModule.addGlobal(wasmGlobal: .wasmi64(4141), isMutable: true)
-            wasmModule.addWasmFunction(with: [] => .nothing) { fun, _  in
+            wasmModule.addWasmFunction(with: [] => []) { fun, _  in
                 // This load forces an import
                 fun.wasmLoadGlobal(globalVariable: wasmGlobali32)
             }
@@ -172,28 +172,28 @@ class WasmFoundationTests: XCTestCase {
         assert(b.type(of: functionB).signature == [.integer] => .number)
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, args in
                 // Manually set the availableTypes here for testing
                 let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([(.wasmi64, 1)]))
-                assert(wasmSignature == [.wasmi64] => .wasmi64)
+                assert(wasmSignature == [.wasmi64] => [.wasmi64])
                 let varA = function.wasmJsCall(function: functionA, withArgs: [args[0]], withWasmSignature: wasmSignature)!
                 function.wasmReturn(varA)
             }
 
-            wasmModule.addWasmFunction(with: [] => .wasmf32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmf32]) { function, _ in
                 // Manually set the availableTypes here for testing
                 let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionB).signature!, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
-                assert(wasmSignature.parameters.count == 1)
-                assert(wasmSignature.parameters[0] == .wasmi32 || wasmSignature.parameters[0] == .wasmf32)
-                assert(wasmSignature.outputType == .wasmi32 || wasmSignature.outputType == .wasmf32)
-                let varA = wasmSignature.parameters[0] == .wasmi32 ? function.consti32(1337) : function.constf32(1337)
+                assert(wasmSignature.parameterTypes.count == 1)
+                assert(wasmSignature.parameterTypes[0] == .wasmi32 || wasmSignature.parameterTypes[0] == .wasmf32)
+                assert(wasmSignature.outputTypes == [.wasmi32] || wasmSignature.outputTypes == [.wasmf32])
+                let varA = wasmSignature.parameterTypes[0] == .wasmi32 ? function.consti32(1337) : function.constf32(1337)
                 let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: wasmSignature)!
                 function.wasmReturn(varRet)
             }
 
-            wasmModule.addWasmFunction(with: [] => .wasmf32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmf32]) { function, _ in
                 let varA = function.constf32(1337.1)
-                let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: [.wasmf32] => .wasmf32)!
+                let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: [.wasmf32] => [.wasmf32])!
                 function.wasmReturn(varRet)
             }
         }
@@ -230,12 +230,12 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: Signature(expects: ParameterList([]), returns: .wasmi32)) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 let varA = function.consti32(42)
                 function.wasmReturn(varA)
             }
 
-            wasmModule.addWasmFunction(with: Signature(expects: ParameterList([.wasmi64]), returns: .wasmi64)) { function, arg in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, arg in
                 let varA = function.consti64(41)
                 let added = function.wasmi64BinOp(varA, arg[0], binOpKind: .Add)
                 function.wasmReturn(added)
@@ -271,20 +271,20 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, params in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, params in
                 let varA = function.consti64(1338)
                 // reassign params[0] = varA
                 function.wasmReassign(variable: params[0], to: varA)
                 function.wasmReturn(params[0])
             }
 
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, params in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, params in
                 // reassign params[0] = params[0]
                 function.wasmReassign(variable: params[0], to: params[0])
                 function.wasmReturn(params[0])
             }
 
-            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 let ctr = function.consti32(10)
                 function.wasmBuildLoop(with: [] => []) { label, args in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
@@ -298,7 +298,7 @@ class WasmFoundationTests: XCTestCase {
             }
 
             let tag = wasmModule.addTag(parameterTypes: [.wasmi32, .wasmi32])
-            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => [], args: []) { _, _ in
                     function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123), function.consti32(456)])
                     function.WasmBuildLegacyCatch(tag: tag) { _, _, e in
@@ -349,13 +349,13 @@ class WasmFoundationTests: XCTestCase {
 
 
             // Function 0
-            wasmModule.addWasmFunction(with: [] => .nothing) { function, _ in
+            wasmModule.addWasmFunction(with: [] => []) { function, _ in
                 // This forces an import of the wasmGlobali64
                 function.wasmLoadGlobal(globalVariable: wasmGlobali64)
             }
 
             // Function 1
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                 let varA = function.consti64(1338)
                 let varB = function.consti64(4242)
                 function.wasmStoreGlobal(globalVariable: global, to: varB)
@@ -365,7 +365,7 @@ class WasmFoundationTests: XCTestCase {
             }
 
             // Function 2
-            wasmModule.addWasmFunction(with: [] => .wasmf64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmf64]) { function, _ in
                 let globalValue = function.wasmLoadGlobal(globalVariable: wasmGlobali64)
                 let result = function.reinterpreti64Asf64(globalValue)
                 function.wasmReturn(result)
@@ -419,7 +419,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             let tableRef = wasmModule.addTable(elementType: .wasmExternRef, minSize: 2, isTable64: isTable64)
 
-            wasmModule.addWasmFunction(with: [] => .wasmExternRef) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, _ in
                 let offset = isTable64 ? function.consti64(0) : function.consti32(0)
                 var ref = function.wasmTableGet(tableRef: tableRef, idx: offset)
                 let offset1 = isTable64 ? function.consti64(1) : function.consti32(1)
@@ -466,7 +466,7 @@ class WasmFoundationTests: XCTestCase {
         }
 
         let module = b.buildWasmModule { wasmModule in
-            let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, params in
+            let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, params in
                 function.wasmReturn(function.wasmi32BinOp(params[0], function.consti32(1), binOpKind: .Add))
             }
             wasmModule.addTable(elementType: .wasmFunctionDef(), minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction], isTable64: isTable64)
@@ -514,12 +514,12 @@ class WasmFoundationTests: XCTestCase {
         }
 
         let module = b.buildWasmModule { wasmModule in
-            let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, params in
+            let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, params in
                 function.wasmReturn(function.wasmi64BinOp(params[0], function.consti64(1), binOpKind: .Add))
             }
             let table = wasmModule.addTable(elementType: .wasmFunctionDef(), minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction], isTable64: false)
-            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => .wasmi64) { fn, params in
-                fn.wasmReturn(fn.wasmCallIndirect(signature: [.wasmi64] => .wasmi64, table: table, functionArgs: [params[1]], tableIndex: params[0])!)
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { fn, params in
+                fn.wasmReturn(fn.wasmCallIndirect(signature: [.wasmi64] => [.wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])!)
             }
         }
 
@@ -553,12 +553,12 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            let callee = wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => .wasmi32) { function, params in
+            let callee = wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => [.wasmi32]) { function, params in
                 function.wasmReturn(function.wasmi32BinOp(params[0], params[1], binOpKind: .Sub))
             }
 
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, params in
-                let callResult = function.wasmCallDirect(signature: [.wasmi32, .wasmi32] => .wasmi32, function: callee, functionArgs: [params[0], function.consti32(1)])!
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, params in
+                let callResult = function.wasmCallDirect(signature: [.wasmi32, .wasmi32] => [.wasmi32], function: callee, functionArgs: [params[0], function.consti32(1)])!
                 function.wasmReturn(callResult)
             }
         }
@@ -592,7 +592,7 @@ class WasmFoundationTests: XCTestCase {
         assert(b.type(of: wasmMemory) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: isMemory64))
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                 let value = function.consti32(1337)
                 let offset = isMemory64 ? function.consti64(10) : function.consti32(10)
                 function.wasmMemoryStore(memory: wasmMemory, dynamicOffset: offset, value: value, storeType: .I32StoreMem, staticOffset: 0)
@@ -646,7 +646,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: isMemory64)
 
-            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 let value = function.consti64(1337)
                 let storeOffset = isMemory64 ? function.consti64(8) : function.consti32(8)
                 function.wasmMemoryStore(memory: memory, dynamicOffset: storeOffset, value: value, storeType: .I64StoreMem, staticOffset: 2)
@@ -683,7 +683,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: true)
 
-            wasmModule.addWasmFunction(with: [] => .nothing) { function, _ in
+            wasmModule.addWasmFunction(with: [] => []) { function, _ in
                 let value = function.consti64(1337)
                 let storeOffset = function.consti64(1 << 32)
                 function.wasmMemoryStore(memory: memory, dynamicOffset: storeOffset, value: value, storeType: .I64StoreMem, staticOffset: 2)
@@ -713,7 +713,7 @@ class WasmFoundationTests: XCTestCase {
 
             // Create a Wasm function for every memory load type.
             for loadType in WasmMemoryLoadType.allCases {
-                wasmModule.addWasmFunction(with: [] => loadType.numberType()) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [loadType.numberType()]) { function, _ in
                     let loadOffset = isMemory64 ? function.consti64(9) : function.consti32(9)
                     let val = function.wasmMemoryLoad(memory: memory, dynamicOffset: loadOffset, loadType: loadType, staticOffset: 0)
                     function.wasmReturn(val)
@@ -752,7 +752,7 @@ class WasmFoundationTests: XCTestCase {
             let memory = wasmModule.addMemory(minPages: 2, isMemory64: isMemory64)
             // Create a Wasm function for every memory load type.
             for storeType in WasmMemoryStoreType.allCases {
-                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                     let storeOffset = isMemory64 ? function.consti64(13) : function.consti32(13)
                     let value = switch storeType.numberType() {
                         case .wasmi32: function.consti32(8)
@@ -798,7 +798,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             let memory1 = wasmModule.addMemory(minPages: 2, isMemory64: isMemory64)
             let memory2 = wasmModule.addMemory(minPages: 2, isMemory64: isMemory64)
-            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 let offset = isMemory64 ? function.consti64(Int64(42)) : function.consti32(Int32(42))
                 function.wasmMemoryStore(memory: memory0, dynamicOffset: offset, value: function.constf32(1.0), storeType: .F32StoreMem, staticOffset: 0)
                 function.wasmMemoryStore(memory: memory1, dynamicOffset: offset, value: function.constf64(2.0), storeType: .F64StoreMem, staticOffset: 0)
@@ -842,7 +842,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: isMemory64)
 
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                 let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
                 function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
                 value: function.consti64(3), storeType: .I64StoreMem, staticOffset: 0)
@@ -883,7 +883,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                 // Test if we can break from this block
                 // We should expect to have executed the first wasmReassign which sets marker to 11
                 let marker = function.consti64(10)
@@ -942,7 +942,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => [.wasmi32]) { function, args in
                 let loopResult = function.wasmBuildLoop(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32], args: args) { loopLabel, loopArgs in
                     let incFirst = function.wasmi32BinOp(loopArgs[0], function.consti32(1), binOpKind: .Add)
                     let incSecond = function.wasmi32BinOp(loopArgs[1], function.consti32(2), binOpKind: .Add)
@@ -974,7 +974,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let variable = args[0]
                 let condVariable = function.consti32(10);
                 let result = function.consti32(0);
@@ -1012,7 +1012,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { function, args in
                 let inputs = [args[1], function.consti64(3)]
                 function.wasmBuildIfElse(args[0], signature: [.wasmi64, .wasmi64] => [], args: inputs) { label, ifArgs in
                     function.wasmReturn(ifArgs[0])
@@ -1042,7 +1042,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => [.wasmi32]) { function, args in
                 function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: [args[1]]) { ifLabel, ifArgs in
                     function.wasmBranchIf(ifArgs[0], to: ifLabel)
                     function.wasmReturn(function.consti32(100))
@@ -1079,7 +1079,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi64]) { function, args in
                 let blockResult = function.wasmBuildIfElseWithResult(args[0], signature: [] => [.wasmi64, .wasmi64], args: []) {label, args in
                     return [function.consti64(123), function.consti64(10)]
                 } elseBody: {label, args in
@@ -1110,7 +1110,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     function.wasmReturn(function.consti64(42))
@@ -1143,7 +1143,7 @@ class WasmFoundationTests: XCTestCase {
         }
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     // Manually set the availableTypes here for testing.
@@ -1186,7 +1186,7 @@ class WasmFoundationTests: XCTestCase {
         let supportsJSTag = b.compare(jstag, with: b.loadUndefined(), using: .strictNotEqual)
         b.buildIfElse(supportsJSTag) {
             let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         XCTAssert(b.type(of: label).Is(.anyLabel))
                         let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([]))
@@ -1241,7 +1241,7 @@ class WasmFoundationTests: XCTestCase {
                     }
                 }
             */
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     function.WasmBuildThrow(tag: throwTag, inputs: [function.consti64(123), function.consti32(234)])
@@ -1276,7 +1276,7 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let tag = b.createWasmTag(parameterTypes: [])
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => [], args: []) { tryLabel, _ in
                     function.WasmBuildThrow(tag: tag, inputs: [])
                     function.WasmBuildLegacyCatch(tag: tag) { catchLabel, exceptionLabel, args in
@@ -1303,7 +1303,7 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let tag = b.createWasmTag(parameterTypes: [])
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 function.wasmBuildBlock(with: [] => [], args: []) { blockLabel, _ in
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { tryLabel, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [])
@@ -1359,7 +1359,7 @@ class WasmFoundationTests: XCTestCase {
                     unreachable();
                 }
             */
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, param in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, param in
                 function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                     function.wasmBuildIfElse(param[0]) {
                         function.WasmBuildThrow(tag: definedTag, inputs: [param[0]])
@@ -1407,7 +1407,7 @@ class WasmFoundationTests: XCTestCase {
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let tag = b.createWasmTag(parameterTypes: [.wasmi64, .wasmi32])
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                 let argI32 = function.consti32(123)
                 let argI64 = function.consti64(321)
                 function.wasmBuildLegacyTry(with: [.wasmi64, .wasmi32] => [], args: [argI64, argI32]) { label, args in
@@ -1446,7 +1446,7 @@ class WasmFoundationTests: XCTestCase {
         let tagi32 = b.createWasmTag(parameterTypes: [.wasmi32])
         let tagi32Other = b.createWasmTag(parameterTypes: [.wasmi32])
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let contant42 = function.consti64(42)
                 let result = function.wasmBuildLegacyTryWithResult(with: [.wasmi32] => [.wasmi32, .wasmi64], args: args, body: { label, args in
                     function.wasmBuildIfElse(function.wasmi32EqualZero(args[0])) {
@@ -1534,7 +1534,7 @@ class WasmFoundationTests: XCTestCase {
                     unreachable();
                 }
             */
-            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => [], args: []) { tryLabel, _ in
                     // Even though we have a try-catch_all, the delegate "skips" this catch block. The delegate acts as
                     // if the exception was thrown by the block whose label is passed into it.
@@ -1572,7 +1572,7 @@ class WasmFoundationTests: XCTestCase {
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 function.wasmBuildBlock(with: [] => [], args: []) { label, _ in
                     let val = function.consti32(42)
                     let result = function.wasmBuildLegacyTryDelegateWithResult(with: [.wasmi32] => [.wasmi32, .wasmi32], args: [val], body: {tryLabel, args in
@@ -1618,7 +1618,7 @@ class WasmFoundationTests: XCTestCase {
                     unreachable();
                 }
             */
-            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123)])
@@ -1670,7 +1670,7 @@ class WasmFoundationTests: XCTestCase {
                     }
                 }
             */
-            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                     function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
                         function.WasmBuildThrow(tag: tag, inputs: [function.consti32(123)])
@@ -1710,7 +1710,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmf64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmf64]) { function, _ in
                 let argI32 = function.consti32(12345)
                 let argF64 = function.constf64(543.21)
                 function.wasmBuildBlock(with: [.wasmi32, .wasmf64] => [], args: [argI32, argF64]) { blockLabel, args in
@@ -1737,7 +1737,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                 let blockResult = function.wasmBuildBlockWithResults(with: [.wasmi32] => [.wasmi64, .wasmi32], args: [function.consti32(1234)]) { blockLabel, args in
                     return [function.extendi32Toi64(args[0], isSigned: true), args[0]]
                 }
@@ -1762,7 +1762,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let blockResult = function.wasmBuildBlockWithResults(with: [.wasmi32] => [.wasmi32, .wasmi64], args: args) { blockLabel, blockArgs in
                     // TODO(mliedtke): A branch to the function end should also be allowed but
                     // unfortunately a function doesn't have a label in FuzzIL, yet.
@@ -1792,7 +1792,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 function.wasmBuildBlock(with: [] => [], args: []) { label1, _ in
                     function.wasmBuildBlock(with: [] => [], args: []) { label2, _ in
                         function.wasmBranchTable(on: args[0], labels: [label1, label2], args: [])
@@ -1822,7 +1822,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { function, args in
                 // Fuzzilli doesn't have support for handling stack-polymorphic cases after
                 // non-returning instructions like br_table or return.
                 let dummy = [function.consti64(-1), function.consti64(-1)]
@@ -1861,7 +1861,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi64]) { function, args in
                 let blockResult = function.wasmBuildTryTable(with: [.wasmi32, .wasmi64] => [.wasmi64, .wasmi32], args: [args[0], function.consti64(1234)], catches: []) { tryLabel, tryArgs in
                     let isZero = function.wasmi32CompareOp(tryArgs[0], function.consti32(0), using: .Eq)
                     function.wasmBranchIf(isZero, to: tryLabel, args: [function.consti64(10), function.consti32(20)])
@@ -1892,7 +1892,7 @@ class WasmFoundationTests: XCTestCase {
         let tagVoid = b.createWasmTag(parameterTypes: [])
         let tagi32 = b.createWasmTag(parameterTypes: [.wasmi32])
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 function.wasmBuildBlock(with: [] => [], args: []) { catchAllNoRefLabel, _ in
                     let catchNoRefI32 = function.wasmBuildBlockWithResults(with: [] => [.wasmi32], args: []) { catchNoRefLabel, _ in
                         function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchNoRefLabel, catchAllNoRefLabel], catches: [.NoRef, .AllNoRef]) { _, _ in
@@ -1931,7 +1931,7 @@ class WasmFoundationTests: XCTestCase {
         let tagVoid = b.createWasmTag(parameterTypes: [])
         let tagi32 = b.createWasmTag(parameterTypes: [.wasmi32])
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 function.wasmBuildBlockWithResults(with: [] => [.wasmExnRef], args: []) { catchAllRefLabel, _ in
                     let catchRefI32 = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchRefLabel, _ in
                         function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchRefLabel, catchAllRefLabel], catches: [.Ref, .AllRef]) { _, _ in
@@ -1976,7 +1976,7 @@ class WasmFoundationTests: XCTestCase {
         let tagi32 = b.createWasmTag(parameterTypes: [.wasmi32])
         let module = b.buildWasmModule { wasmModule in
             // Inner function that throws, catches and then rethrows the value.
-            let callee = wasmModule.addWasmFunction(with: [.wasmi32] => .nothing) { function, args in
+            let callee = wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, args in
                 let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchRefLabel, _ in
                     function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchRefLabel], catches: [.Ref]) { _, _ in
                         function.WasmBuildThrow(tag: tagi32, inputs: [args[0]])
@@ -1985,16 +1985,16 @@ class WasmFoundationTests: XCTestCase {
                     return [function.consti32(0), function.wasmRefNull(.wasmExnRef)]
                 }
                 // Print the caught i32 value.
-                function.wasmJsCall(function: printInteger, withArgs: [caughtValues[0]], withWasmSignature: [.wasmi32] => .nothing)
+                function.wasmJsCall(function: printInteger, withArgs: [caughtValues[0]], withWasmSignature: [.wasmi32] => [])
                 // To rethrow the exception, perform a throw_ref with the exnref.
                 function.wasmBuildThrowRef(exception: caughtValues[1])
             }
 
             // Outer function that calls the inner function and catches the rethrown exception.
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32], args: []) { catchLabel, _ in
                     function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchLabel], catches: [.NoRef]) { _, _ in
-                        function.wasmCallDirect(signature: [.wasmi32] => .nothing, function: callee, functionArgs: args)
+                        function.wasmCallDirect(signature: [.wasmi32] => [], function: callee, functionArgs: args)
                         return []
                     }
                     return [function.consti32(-1)]
@@ -2021,7 +2021,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
                 function.wasmUnreachable()
             }
         }
@@ -2048,12 +2048,12 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi64]) { function, args in
                 function.wasmReturn(function.wasmSelect(type: .wasmi64, on: args[0],
                     trueValue: function.consti64(123), falseValue: function.consti64(321)))
             }
 
-            wasmModule.addWasmFunction(with: [.wasmi32, .wasmExternRef, .wasmExternRef] => .wasmExternRef) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmExternRef, .wasmExternRef] => [.wasmExternRef]) { function, args in
                 function.wasmReturn(function.wasmSelect(type: .wasmExternRef, on: args[0], trueValue: args[1], falseValue: args[2]))
             }
         }
@@ -2092,16 +2092,16 @@ class WasmFoundationTests: XCTestCase {
         }
 
         let module = b.buildWasmModule { wasmModule in
-            let callee = wasmModule.addWasmFunction(with: [.wasmi32] => .nothing) { function, args in
+            let callee = wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, args in
                 function.wasmReturn()
             }
             // Outer function that is supposed to call callee.
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 // This direct call accidentally got wrongly lifted to calling the imported js function (printMessage).
-                function.wasmCallDirect(signature: [.wasmi32] => .nothing, function: callee, functionArgs: args)
+                function.wasmCallDirect(signature: [.wasmi32] => [], function: callee, functionArgs: args)
                 function.wasmReturn(function.consti32(42))
                 // This call is unreachable and only exists here to trigger the import of the printMessage function.
-                function.wasmJsCall(function: printMessage, withArgs: [args[0]], withWasmSignature: [.wasmi32] => .nothing)
+                function.wasmJsCall(function: printMessage, withArgs: [args[0]], withWasmSignature: [.wasmi32] => [])
             }
         }
 
@@ -2128,7 +2128,7 @@ class WasmGCTests: XCTestCase {
         }
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let array = function.wasmArrayNewFixed(arrayType: typeGroup[0], elements: [
                     function.consti32(42),
                     function.consti32(43),
@@ -2164,7 +2164,7 @@ class WasmGCTests: XCTestCase {
         }
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let array1 = function.wasmArrayNewDefault(arrayType: typeGroup[0], size: function.consti32(3))
                 let array2 = function.wasmArrayNewDefault(arrayType: typeGroup[1], size: function.consti32(2))
                 let sum = function.wasmi32BinOp(
@@ -2196,7 +2196,7 @@ class WasmGCTests: XCTestCase {
         }[0]
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let arraySize3 = function.wasmArrayNewDefault(arrayType: arrayType, size: function.consti32(3))
                 let arraySize7 = function.wasmArrayNewDefault(arrayType: arrayType, size: function.consti32(7))
                 let result = function.wasmi32BinOp(
@@ -2230,7 +2230,7 @@ class WasmGCTests: XCTestCase {
         }[0]
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 // We can arbitrarily nest these self-referencing arrays.
                 let array1 = function.wasmArrayNewDefault(arrayType: arrayType, size: function.consti32(12))
                 let array2 = function.wasmArrayNewFixed(arrayType: arrayType, elements: [array1])
@@ -2274,7 +2274,7 @@ class WasmGCTests: XCTestCase {
         }
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let arrayi32 = function.wasmArrayNewFixed(arrayType: typeGroup[1], elements: [function.consti32(42)])
                 let arrayOfArrayi32 = function.wasmArrayNewFixed(arrayType: typeGroup[0], elements: [arrayi32])
                 let zero = function.consti32(0)
@@ -2319,7 +2319,7 @@ class WasmGCTests: XCTestCase {
         // Note that even though the module doesn't use typeGroupA nor any type dependent on
         // typeGroupA, it still needs to import both typegroups.
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, args in
                 let arrayi64 = function.wasmArrayNewFixed(arrayType: typeGroupB[0], elements: [function.consti64(42)])
                 let result = function.wasmArrayGet(array: arrayi64, index: function.consti32(0))
                 function.wasmReturn(result)
@@ -2345,14 +2345,14 @@ class WasmGCTests: XCTestCase {
         let arrayType = b.wasmDefineTypeGroup {[b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]}[0]
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => .wasmExternRef) { function, args in
+            wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, args in
                 function.wasmReturn(function.wasmRefNull(.wasmExternRef))
             }
-            wasmModule.addWasmFunction(with: [] => .wasmFuncRef) { function, args in
+            wasmModule.addWasmFunction(with: [] => [.wasmFuncRef]) { function, args in
                 function.wasmReturn(function.wasmRefNull(.wasmFuncRef))
             }
             // TODO(mliedtke): Simplify this once Fuzzilli supports index types in function signatures.
-            wasmModule.addWasmFunction(with: [] => .nothing) { function, args in
+            wasmModule.addWasmFunction(with: [] => []) { function, args in
                 let refNull = function.wasmRefNull(.wasmRef(.Index(), nullability: true), typeDef: arrayType)
                 function.wasmArrayGet(array: refNull, index: function.consti32(0))
             }
@@ -2395,7 +2395,7 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for binOp in WasmIntegerBinaryOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmi64, .wasmi64] => .wasmi64) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmi64, .wasmi64] => [.wasmi64]) { function, args in
                     let result = function.wasmi64BinOp(args[0], args[1], binOpKind: binOp)
                     function.wasmReturn(result)
                 }
@@ -2492,7 +2492,7 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for binOp in WasmIntegerBinaryOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => .wasmi32) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => [.wasmi32]) { function, args in
                     let result = function.wasmi32BinOp(args[0], args[1], binOpKind: binOp)
                     function.wasmReturn(result)
                 }
@@ -2589,7 +2589,7 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for binOp in WasmFloatBinaryOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmf64, .wasmf64] => .wasmf64) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmf64, .wasmf64] => [.wasmf64]) { function, args in
                     let result = function.wasmf64BinOp(args[0], args[1], binOpKind: binOp)
                     function.wasmReturn(result)
                 }
@@ -2654,7 +2654,7 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for binOp in WasmFloatBinaryOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmf32, .wasmf32] => .wasmf32) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmf32, .wasmf32] => [.wasmf32]) { function, args in
                     let result = function.wasmf32BinOp(args[0], args[1], binOpKind: binOp)
                     function.wasmReturn(result)
                 }
@@ -2720,7 +2720,7 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for unOp in WasmIntegerUnaryOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, args in
                     let result = function.wasmi64UnOp(args[0], unOpKind: unOp)
                     function.wasmReturn(result)
                 }
@@ -2768,7 +2768,7 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for unOp in WasmIntegerUnaryOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                     let result = function.wasmi32UnOp(args[0], unOpKind: unOp)
                     function.wasmReturn(result)
                 }
@@ -2817,7 +2817,7 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for unOp in WasmFloatUnaryOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmf64] => .wasmf64) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmf64]) { function, args in
                     let result = function.wasmf64UnOp(args[0], unOpKind: unOp)
                     function.wasmReturn(result)
                 }
@@ -2881,7 +2881,7 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for unOp in WasmFloatUnaryOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmf32] => .wasmf32) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmf32]) { function, args in
                     let result = function.wasmf32UnOp(args[0], unOpKind: unOp)
                     function.wasmReturn(result)
                 }
@@ -2946,13 +2946,13 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for compOp in WasmIntegerCompareOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmi64, .wasmi64] => .wasmi32) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmi64, .wasmi64] => [.wasmi32]) { function, args in
                     let result = function.wasmi64CompareOp(args[0], args[1], using: compOp)
                     function.wasmReturn(result)
                 }
             }
 
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi32]) { function, args in
                 let result = function.wasmi64EqualZero(args[0])
                 function.wasmReturn(result)
             }
@@ -3039,13 +3039,13 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for compOp in WasmIntegerCompareOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => .wasmi32) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => [.wasmi32]) { function, args in
                     let result = function.wasmi32CompareOp(args[0], args[1], using: compOp)
                     function.wasmReturn(result)
                 }
             }
 
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let result = function.wasmi32EqualZero(args[0])
                 function.wasmReturn(result)
             }
@@ -3133,7 +3133,7 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for compOp in WasmFloatCompareOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmf64, .wasmf64] => .wasmi32) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmf64, .wasmf64] => [.wasmi32]) { function, args in
                     let result = function.wasmf64CompareOp(args[0], args[1], using: compOp)
                     function.wasmReturn(result)
                 }
@@ -3193,7 +3193,7 @@ class WasmNumericalTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             for compOp in WasmFloatCompareOpKind.allCases {
                 // Instantiate a function for each operator
-                wasmModule.addWasmFunction(with: [.wasmf32, .wasmf32] => .wasmi32) { function, args in
+                wasmModule.addWasmFunction(with: [.wasmf32, .wasmf32] => [.wasmi32]) { function, args in
                     let result = function.wasmf32CompareOp(args[0], args[1], using: compOp)
                     function.wasmReturn(result)
                 }
@@ -3251,7 +3251,7 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi32]) { function, args in
                 let result = function.wrapi64Toi32(args[0])
                 function.wasmReturn(result)
             }
@@ -3286,19 +3286,19 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmi32]) { function, args in
                 let result = function.truncatef32Toi32(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmi32]) { function, args in
                 let result = function.truncatef32Toi32(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmi32]) { function, args in
                 let result = function.truncatef64Toi32(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmi32]) { function, args in
                 let result = function.truncatef64Toi32(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
@@ -3348,11 +3348,11 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi64]) { function, args in
                 let result = function.extendi32Toi64(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi64]) { function, args in
                 let result = function.extendi32Toi64(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
@@ -3391,19 +3391,19 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmi64]) { function, args in
                 let result = function.truncatef32Toi64(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmi64]) { function, args in
                 let result = function.truncatef32Toi64(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmi64]) { function, args in
                 let result = function.truncatef64Toi64(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmi64]) { function, args in
                 let result = function.truncatef64Toi64(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
@@ -3453,19 +3453,19 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmf32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmf32]) { function, args in
                 let result = function.converti32Tof32(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmf32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmf32]) { function, args in
                 let result = function.converti32Tof32(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmf32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmf32]) { function, args in
                 let result = function.converti64Tof32(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmf32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmf32]) { function, args in
                 let result = function.converti64Tof32(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
@@ -3511,11 +3511,11 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmf64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmf64]) { function, args in
                 let result = function.promotef32Tof64(args[0])
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmf32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmf32]) { function, args in
                 let result = function.demotef64Tof32(args[0])
                 function.wasmReturn(result)
             }
@@ -3552,19 +3552,19 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmf64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmf64]) { function, args in
                 let result = function.converti32Tof64(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmf64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmf64]) { function, args in
                 let result = function.converti32Tof64(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmf64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmf64]) { function, args in
                 let result = function.converti64Tof64(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmf64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmf64]) { function, args in
                 let result = function.converti64Tof64(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
@@ -3610,19 +3610,19 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmi32]) { function, args in
                 let result = function.reinterpretf32Asi32(args[0])
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmi64]) { function, args in
                 let result = function.reinterpretf64Asi64(args[0])
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmf32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmf32]) { function, args in
                 let result = function.reinterpreti32Asf32(args[0])
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmf64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmf64]) { function, args in
                 let result = function.reinterpreti64Asf64(args[0])
                 function.wasmReturn(result)
             }
@@ -3663,23 +3663,23 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let result = function.signExtend8Intoi32(args[0])
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let result = function.signExtend16Intoi32(args[0])
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, args in
                 let result = function.signExtend8Intoi64(args[0])
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, args in
                 let result = function.signExtend16Intoi64(args[0])
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, args in
                 let result = function.signExtend32Intoi64(args[0])
                 function.wasmReturn(result)
             }
@@ -3731,19 +3731,19 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmi32]) { function, args in
                 let result = function.truncateSatf32Toi32(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmi32]) { function, args in
                 let result = function.truncateSatf32Toi32(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmi32]) { function, args in
                 let result = function.truncateSatf64Toi32(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi32) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmi32]) { function, args in
                 let result = function.truncateSatf64Toi32(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
@@ -3789,19 +3789,19 @@ class WasmNumericalTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmi64]) { function, args in
                 let result = function.truncateSatf32Toi64(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf32] => [.wasmi64]) { function, args in
                 let result = function.truncateSatf32Toi64(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmi64]) { function, args in
                 let result = function.truncateSatf64Toi64(args[0], isSigned: true)
                 function.wasmReturn(result)
             }
-            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi64) { function, args in
+            wasmModule.addWasmFunction(with: [.wasmf64] => [.wasmi64]) { function, args in
                 let result = function.truncateSatf64Toi64(args[0], isSigned: false)
                 function.wasmReturn(result)
             }
@@ -3852,7 +3852,7 @@ class WasmSpliceTests: XCTestCase {
         }
 
         b.buildWasmModule { module in
-            module.addWasmFunction(with: [] => .nothing) { function, args in
+            module.addWasmFunction(with: [] => []) { function, args in
                 let argument = function.consti32(1337)
                 let signature = ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
                 splicePoint = b.indexOfNextInstruction()
@@ -3863,7 +3863,7 @@ class WasmSpliceTests: XCTestCase {
         let original = b.finalize()
 
         b.buildWasmModule { module in
-            module.addWasmFunction(with: [] => .nothing) { function, _ in
+            module.addWasmFunction(with: [] => []) { function, _ in
                 let _ = function.constf32(42.42)
                 b.splice(from: original, at: splicePoint, mergeDataFlow: true)
             }
@@ -3872,7 +3872,7 @@ class WasmSpliceTests: XCTestCase {
         let actual = b.finalize()
 
         b.buildWasmModule { module in
-            module.addWasmFunction(with: [] => .nothing) { function, _ in
+            module.addWasmFunction(with: [] => []) { function, _ in
                 let _ = function.constf32(42.42)
             }
         }
@@ -3893,7 +3893,7 @@ class WasmSpliceTests: XCTestCase {
         }
 
         b.buildWasmModule { module in
-            module.addWasmFunction(with: [] => .nothing) { function, args in
+            module.addWasmFunction(with: [] => []) { function, args in
                 let argument = function.consti32(1337)
                 let signature = ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
                 splicePoint = b.indexOfNextInstruction()
@@ -3908,7 +3908,7 @@ class WasmSpliceTests: XCTestCase {
         }
 
         b.buildWasmModule { module in
-            module.addWasmFunction(with: [] => .nothing) { function, _ in
+            module.addWasmFunction(with: [] => []) { function, _ in
                 let _ = function.constf64(42.42)
                 b.splice(from: original, at: splicePoint, mergeDataFlow: true)
             }
@@ -3921,7 +3921,7 @@ class WasmSpliceTests: XCTestCase {
         }
 
         b.buildWasmModule { module in
-            module.addWasmFunction(with: [] => .nothing) { function, _ in
+            module.addWasmFunction(with: [] => []) { function, _ in
                 let _ = function.constf64(42.42)
                 let argument = function.consti32(1337)
                 let signature = ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
@@ -3960,8 +3960,8 @@ class WasmJSPITests: XCTestCase {
 
         // Now lets build the module
         let module = b.buildWasmModule { m in
-            m.addWasmFunction(with: [.wasmExternRef] => .wasmi32) { f, args in
-                let ret = f.wasmJsCall(function: importFunction, withArgs: args, withWasmSignature: [.wasmExternRef] => .wasmi32)
+            m.addWasmFunction(with: [.wasmExternRef] => [.wasmi32]) { f, args in
+                let ret = f.wasmJsCall(function: importFunction, withArgs: args, withWasmSignature: [.wasmExternRef] => [.wasmi32])
                 f.wasmReturn(ret!)
             }
         }
