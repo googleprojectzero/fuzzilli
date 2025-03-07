@@ -1536,6 +1536,12 @@ public class JavaScriptLifter: Lifter {
                             return "\"i32\""
                         case .wasmi64:
                             return "\"i64\""
+                        case .wasmSimd128:
+                            return "\"v128\""
+                        case .wasmFuncRef:
+                            return "\"funcref\""
+                        case .wasmExnRef:
+                            return "\"exnref\""
                         default:
                             fatalError("Unhandled wasm type \(type)")
                     }

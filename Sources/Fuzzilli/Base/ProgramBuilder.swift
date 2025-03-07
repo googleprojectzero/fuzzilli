@@ -3631,9 +3631,9 @@ public class ProgramBuilder {
     }
 
     public func randomTagParameters() -> [ILType] {
-        // TODO(mliedtke): We should support externref and other types here. The list of types should be
-        // shared with function signature generation etc.
-        return (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64])}
+        // TODO(mliedtke): The list of types should be shared with function signature generation etc.
+        return (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from:
+            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExnRef, .wasmExternRef, .wasmSimd128])}
     }
 
     public func randomWasmSignature() -> Signature {
@@ -3653,7 +3653,8 @@ public class ProgramBuilder {
 
     public func randomWasmBlockOutputTypes(upTo n: Int) -> [ILType] {
         // TODO(mliedtke): This should allow more types.
-        (0..<Int.random(in: 0...n)).map {_ in chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmExternRef, .wasmFuncRef, .wasmExnRef])}
+        (0..<Int.random(in: 0...n)).map {_ in chooseUniform(from:
+            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmExternRef, .wasmFuncRef, .wasmExnRef, .wasmSimd128])}
     }
 
     public func randomWasmBlockArguments(upTo n: Int) -> [Variable] {
