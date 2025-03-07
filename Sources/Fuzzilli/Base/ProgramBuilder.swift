@@ -3408,6 +3408,10 @@ public class ProgramBuilder {
             }
         }
 
+        public func findOrGenerateWasmVar(ofType type: ILType) -> Variable {
+            b.randomVariable(ofType: type) ?? generateRandomWasmVar(ofType: type)
+        }
+
         public func wasmUnreachable() {
             b.emit(WasmUnreachable())
         }

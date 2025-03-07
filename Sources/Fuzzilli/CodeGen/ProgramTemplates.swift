@@ -123,6 +123,56 @@ public let ProgramTemplates = [
         b.build(n: 5)
     },
 
+    ProgramTemplate("ThrowInWasmCatchInJS") { b in
+        b.buildPrefix()
+        b.build(n: 10)
+
+        // A few tags (wasm exception kinds) to be used later on.
+        let wasmTags = (0...Int.random(in: 0..<5)).map { _ in
+            b.createWasmTag(parameterTypes: b.randomTagParameters())
+        }
+        let tags = [b.createWasmJSTag()] + wasmTags
+        let tagToThrow = chooseUniform(from: wasmTags)
+        let throwParamTypes = b.type(of: tagToThrow).wasmTagType!.parameters
+        let tagToCatchForRethrow = chooseUniform(from: tags)
+        let catchBlockOutputTypes = b.type(of: tagToCatchForRethrow).wasmTagType!.parameters + [.wasmExnRef]
+
+        let module = b.buildWasmModule { wasmModule in
+            // Wasm function that throws a tag, catches a tag (the same or a different one) to
+            // rethrow it again (or another exnref if present).
+            wasmModule.addWasmFunction(with: [] => .nothing) { function, args in
+                b.build(n: 10)
+                let caughtValues = function.wasmBuildBlockWithResults(with: [] => catchBlockOutputTypes, args: []) { catchRefLabel, _ in
+                    // TODO(mliedtke): We should probably allow mutations of try_tables to make
+                    // these cases more generic. This would probably require being able to wrap
+                    // things in a new block (so we can insert a target destination for a new catch
+                    // with a matching signature) or to at least create a new tag for an existing
+                    // block target. Either way, this is non-trivial.
+                    function.wasmBuildTryTable(with: [] => [], args: [tagToCatchForRethrow, catchRefLabel], catches: [.Ref]) { _, _ in
+                        b.build(n: 10)
+                        function.WasmBuildThrow(tag: tagToThrow, inputs: throwParamTypes.map(function.findOrGenerateWasmVar))
+                        return []
+                    }
+                    return catchBlockOutputTypes.map(function.findOrGenerateWasmVar)
+                }
+                b.build(n: 10)
+                function.wasmBuildThrowRef(exception: b.randomVariable(ofType: .wasmExnRef)!)
+            }
+        }
+
+        let exports = module.loadExports()
+        b.buildTryCatchFinally {
+            b.build(n: 10)
+            // Call the exported wasm function.
+            b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(42)])
+            b.build(n: 5)
+        } catchBody: { exception in
+            // Do something, potentially using the `exception` thrown by wasm.
+            b.build(n: 20)
+        }
+        b.build(n: 5)
+    },
+
     ProgramTemplate("JIT1Function") { b in
         let smallCodeBlockSize = 5
         let numIterations = 100
