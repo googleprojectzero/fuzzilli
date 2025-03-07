@@ -175,7 +175,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         } else {
             // TODO(mliedtke): Extend this list once we migrated the abstract heap types to fit
             // with the wasm-gc types and added the missing ones (like anyref, eqref, ...)
-            function.wasmRefNull(chooseUniform(from: [.wasmFuncRef, .wasmExternRef]))
+            function.wasmRefNull(chooseUniform(from: [.wasmFuncRef, .wasmExternRef, .wasmExnRef]))
         }
     },
 
@@ -620,8 +620,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         if function.signature.outputType.Is(.nothing) {
             function.wasmReturn()
         } else {
-            let returnVariable = b.randomVariable(ofType: function.signature.outputType) ?? function.generateRandomWasmVar(ofType: function.signature.outputType)
-
+            let returnVariable = function.findOrGenerateWasmVar(ofType: function.signature.outputType)
             function.wasmReturn(returnVariable)
         }
     },
@@ -638,7 +637,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let module = b.currentWasmModule
         let function = module.currentWasmFunction
 
-        let reassignmentVariable = b.randomVariable(ofType: b.type(of: v)) ?? function.generateRandomWasmVar(ofType: b.type(of: v))
+        let reassignmentVariable = function.findOrGenerateWasmVar(ofType: b.type(of: v))
 
         assert(b.type(of: reassignmentVariable).Is(.wasmPrimitive))
 
@@ -660,7 +659,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
         function.wasmBuildBlockWithResults(with: parameters => outputTypes, args: args) { label, args in
             b.buildRecursive()
-            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            return outputTypes.map(function.findOrGenerateWasmVar)
         }
     },
 
@@ -699,7 +698,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             let condition = function.wasmi32CompareOp(loopCtr, function.consti32(iterationCount), using: .Lt_s)
             let backedgeArgs = [loopCtr] + randomArgTypes.map{b.randomVariable(ofType: $0)!}
             function.wasmBranchIf(condition, to: label, args: backedgeArgs)
-            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            return outputTypes.map(function.findOrGenerateWasmVar)
         }
     },
 
@@ -733,13 +732,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let recursiveCallCount = 2 + tags.count
         function.wasmBuildLegacyTryWithResult(with: signature, args: args, body: { label, args in
             b.buildRecursive(block: 1, of: recursiveCallCount, n: 4)
-            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            return outputTypes.map(function.findOrGenerateWasmVar)
         }, catchClauses: tags.enumerated().map {i, tag in (tag, {_, _, _ in
             b.buildRecursive(block: 2 + i, of: recursiveCallCount, n: 4)
-            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            return outputTypes.map(function.findOrGenerateWasmVar)
         })}, catchAllBody: { label in
             b.buildRecursive(block: 2 + tags.count, of: recursiveCallCount, n: 4)
-            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            return outputTypes.map(function.findOrGenerateWasmVar)
         })
     },
 
@@ -751,7 +750,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let parameters = args.map(b.type)
         function.wasmBuildLegacyTryDelegateWithResult(with: parameters => outputTypes, args: args, body: { _, _ in
             b.buildRecursive()
-            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            return outputTypes.map(function.findOrGenerateWasmVar)
         }, delegate: label)
     },
 
@@ -783,10 +782,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
         function.wasmBuildIfElseWithResult(conditionVar, signature: parameters => outputTypes, args: args) { label, args in
             b.buildRecursive(block: 1, of: 2, n: 4)
-            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            return outputTypes.map(function.findOrGenerateWasmVar)
         } elseBody: { label, args in
             b.buildRecursive(block: 2, of: 2, n: 4)
-            return outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            return outputTypes.map(function.findOrGenerateWasmVar)
         }
     },
 
@@ -807,7 +806,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             // A JSTag cannot be thrown from Wasm.
             return
         }
-        var args = wasmTagType.parameters.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+        var args = wasmTagType.parameters.map(function.findOrGenerateWasmVar)
         function.WasmBuildThrow(tag: tag, inputs: args)
     },
 
@@ -827,17 +826,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("WasmBranchGenerator", inContext: .wasmFunction, inputs: .required(.anyLabel)) { b, label in
         let function = b.currentWasmModule.currentWasmFunction
-        let args = b.type(of: label).wasmLabelType!.parameters.map {
-            b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)
-        }
+        let args = b.type(of: label).wasmLabelType!.parameters.map(function.findOrGenerateWasmVar)
         function.wasmBranch(to: label, args: args)
     },
 
     CodeGenerator("WasmBranchIfGenerator", inContext: .wasmFunction, inputs: .required(.anyLabel, .wasmi32)) { b, label, conditionVar in
         let function = b.currentWasmModule.currentWasmFunction
-        let args = b.type(of: label).wasmLabelType!.parameters.map {
-            b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)
-        }
+        let args = b.type(of: label).wasmLabelType!.parameters.map(function.findOrGenerateWasmVar)
         function.wasmBranchIf(conditionVar, to: label, args: args)
     },
 
@@ -857,10 +852,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             function.wasmBeginBlock(with: signature, args: [])
         }
         let labels = (0...valueCount).map {_ in b.randomVariable(ofType: .label(parameterTypes))!}
-        let args = parameterTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+        let args = parameterTypes.map(function.findOrGenerateWasmVar)
         function.wasmBranchTable(on: value, labels: labels, args: args)
         (0..<extraBlockCount).forEach { n in
-            let results = parameterTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            let results = parameterTypes.map(function.findOrGenerateWasmVar)
             function.wasmEndBlock(outputTypes: signature.outputTypes, args: results)
             b.buildRecursive(block: n + 1, of: extraBlockCount, n: 4)
         }
@@ -902,10 +897,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         tryArgs += zip(tags, labels).map {tag, label in tag == nil ? [label] : [tag!, label]}.joined()
         function.wasmBuildTryTable(with: tryParameters => tryOutputTypes, args: tryArgs, catches: catches) { _, _ in
             b.buildRecursive(block: 1, of: tags.count + 1, n: 4)
-            return tryOutputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            return tryOutputTypes.map(function.findOrGenerateWasmVar)
         }
         outputTypesList.reversed().enumerated().forEach { n, outputTypes in
-            let results = outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)}
+            let results = outputTypes.map(function.findOrGenerateWasmVar)
             function.wasmEndBlock(outputTypes: outputTypes, args: results)
             b.buildRecursive(block: n + 2, of: tags.count + 1, n: 4)
         }
