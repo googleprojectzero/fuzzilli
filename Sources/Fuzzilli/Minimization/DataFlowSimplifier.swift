@@ -57,6 +57,13 @@ struct DataFlowSimplifier: Reducer {
 
         // Filter out Wasm instructions where the types would be invalid if we replaced them.
         candidates = candidates.filter({
+            if helper.code[$0].op is WasmTypeOperation {
+                // If a WasmDefineArrayType consumes another WasmDefineArrayType as an input, it
+                // should not be replaced. This would cause issues of types being exported by
+                // multiple type groups and in general always alters the ILType in a typically
+                // incorrect way.
+                return false
+            }
             if let op = helper.code[$0].op as? WasmTypedOperation {
                 // See if we have matching input Types
                 let outputType = op.outputType

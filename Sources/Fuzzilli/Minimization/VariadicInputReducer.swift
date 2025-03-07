@@ -72,9 +72,9 @@ struct VariadicInputReducer: Reducer {
                 case .createTemplateString(let op):
                     newOp = CreateTemplateString(parts: op.parts.dropLast())
                 case .wasmEndTypeGroup(_):
-                    // TODO(mliedtke): We should support reduction of type groups. Ideally,
-                    // starting with the `EndTypeGroup` we should remove all types that are unused
-                    // (and relabel) the used ones.
+                    // Reduction of unused outputs (and therefore reduction of the corresponding
+                    // inputs) is done by the WasmTypeGroupReducer (as it requires further tracking
+                    // e.g. of output usages.)
                     break loop
                 default:
                     fatalError("Unknown variadic operation \(instr.op)")

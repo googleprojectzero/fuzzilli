@@ -17,9 +17,9 @@
 /// In particular, it does the following:
 ///  - Insert return statements at the end of every plain function with a random value
 ///  - Add a random number of arguments for function/method/constructor calls that have no arguments
-///  - Add random initial values to array literatls if they don't have any
+///  - Add random initial values to array literals if they don't have any
 ///
-/// Like other reducers, changes are only performed if they do not alter the programs relevant behaviour.
+/// Like other reducers, changes are only performed if they do not alter the program's relevant behavior.
 struct MinimizationPostProcessor {
     @discardableResult
     func process(with helper: MinimizationHelper) -> Bool {
