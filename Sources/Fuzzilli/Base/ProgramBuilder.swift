@@ -3280,8 +3280,32 @@ public class ProgramBuilder {
 
         @discardableResult
         func wasmBuildTryTable(with signature: WasmSignature, args: [Variable], catches: [WasmBeginTryTable.CatchKind], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
-            // TODO(mliedtke): Also verify the input types for the catches as these are not very intuitive!
             assert(zip(signature.parameterTypes, args).allSatisfy {b.type(of: $1).Is($0)})
+            #if DEBUG
+                var argIndex = signature.parameterTypes.count
+                for catchKind in catches {
+                    switch catchKind {
+                    case .Ref:
+                        assert(b.type(of: args[argIndex]).Is(.object(ofGroup: "WasmTag")))
+                        let labelType = b.type(of: args[argIndex + 1])
+                        assert(labelType.Is(.anyLabel))
+                        assert(labelType.wasmLabelType!.parameters.last!.Is(.wasmExnRef))
+                        argIndex += 2
+                    case .NoRef:
+                        assert(b.type(of: args[argIndex]).Is(.object(ofGroup: "WasmTag")))
+                        assert(b.type(of: args[argIndex + 1]).Is(.anyLabel))
+                        argIndex += 2
+                    case .AllRef:
+                        let labelType = b.type(of: args[argIndex])
+                        assert(labelType.Is(.anyLabel))
+                        assert(labelType.wasmLabelType!.parameters.last!.Is(.wasmExnRef))
+                        argIndex += 1
+                    case .AllNoRef:
+                        assert(b.type(of: args[argIndex]).Is(.anyLabel))
+                        argIndex += 1
+                    }
+                }
+            #endif
             let instr = b.emit(WasmBeginTryTable(with: signature, catches: catches), withInputs: args)
             let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             return Array(b.emit(WasmEndTryTable(outputTypes: signature.outputTypes), withInputs: results).outputs)
