@@ -953,7 +953,8 @@ public class FuzzILLifter: Lifter {
 
         case .wasmReturn(let op):
             if op.numInputs > 0 {
-                w.emit("WasmReturn \(input(0))")
+                let inputs = instr.inputs.map(lift).joined(separator: ", ")
+                w.emit("WasmReturn \(inputs)")
             } else {
                 w.emit("WasmReturn")
             }
@@ -974,7 +975,8 @@ public class FuzzILLifter: Lifter {
             if op.signature.outputTypes.isEmpty {
                 w.emit("WasmCallIndirect(\(op.signature)) \(inputs)")
             } else {
-                w.emit("\(output()) <- WasmCallIndirect(\(op.signature)) \(inputs)")
+                let outputs = instr.outputs.map(lift).joined(separator: ", ")
+                w.emit("\(outputs) <- WasmCallIndirect(\(op.signature)) \(inputs)")
             }
 
         case .wasmCallDirect(let op):
@@ -982,7 +984,8 @@ public class FuzzILLifter: Lifter {
             if op.signature.outputTypes.isEmpty {
                 w.emit("WasmCallDirect(\(op.signature)) \(inputs)")
             } else {
-                w.emit("\(output()) <- WasmCallDirect(\(op.signature)) \(inputs)")
+                let outputs = instr.outputs.map(lift).joined(separator: ", ")
+                w.emit("\(outputs) <- WasmCallDirect(\(op.signature)) \(inputs)")
             }
 
         case .wasmBeginBlock(let op):

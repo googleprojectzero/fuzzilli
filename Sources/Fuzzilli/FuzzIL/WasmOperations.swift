@@ -92,18 +92,13 @@ final class Constf64: WasmOperationBase {
 // Control Instructions
 //
 
-final class WasmReturn: WasmTypedOperation {
+final class WasmReturn: WasmOperationBase {
     override var opcode: Opcode { .wasmReturn(self) }
+    let returnTypes: [ILType]
 
-    let returnType: ILType
-
-    init(returnType: ILType) {
-        self.returnType = returnType
-        if returnType.Is(.nothing) {
-            super.init(inputTypes: [], attributes: [.isJump], requiredContext: [.wasmFunction])
-        } else {
-            super.init(inputTypes: [returnType], attributes: [.isJump], requiredContext: [.wasmFunction])
-        }
+    init(returnTypes: [ILType]) {
+        self.returnTypes = returnTypes
+        super.init(numInputs: returnTypes.count, attributes: [.isJump], requiredContext: [.wasmFunction])
     }
 }
 
@@ -820,30 +815,23 @@ final class WasmTableSet: WasmTypedOperation {
     }
 }
 
-final class WasmCallIndirect: WasmTypedOperation {
+final class WasmCallIndirect: WasmOperationBase {
     override var opcode: Opcode { .wasmCallIndirect(self) }
     let signature: WasmSignature
 
     init(signature: WasmSignature) {
         self.signature = signature
-        let params = [ILType.wasmTable] + signature.parameterTypes + [ILType.wasmi32]
-        assert(signature.outputTypes.count < 2, "multi-return call_indirect is not supported")
-        let outputType: ILType = signature.outputTypes.isEmpty ? .nothing : signature.outputTypes[0]
-        super.init(inputTypes: params, outputType: outputType, requiredContext: [.wasmFunction])
+        super.init(numInputs: 2 + signature.parameterTypes.count, numOutputs: signature.outputTypes.count, requiredContext: [.wasmFunction])
     }
 }
 
-final class WasmCallDirect: WasmTypedOperation {
+final class WasmCallDirect: WasmOperationBase {
     override var opcode: Opcode { .wasmCallDirect(self) }
-
     let signature: WasmSignature
 
     init(signature: WasmSignature) {
         self.signature = signature
-        let params = [ILType.wasmFunctionDef(signature)] + signature.parameterTypes
-        assert(signature.outputTypes.count < 2, "multi-return js calls are not supported")
-        let outputType: ILType = signature.outputTypes.isEmpty ? .nothing : signature.outputTypes[0]
-        super.init(inputTypes: params, outputType: outputType, requiredContext: [.wasmFunction])
+        super.init(numInputs: 1 + signature.parameterTypes.count, numOutputs: signature.outputTypes.count, requiredContext: [.wasmFunction])
     }
 }
 

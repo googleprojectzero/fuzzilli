@@ -82,7 +82,8 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             // Build some other wasm module stuff (tables, memories, gobals, ...)
             b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
             blockIndex += 1
-            m.addWasmFunction(with: b.randomWasmSignature()) { function, _ in
+            let functionSignature = b.randomWasmSignature()
+            m.addWasmFunction(with: functionSignature) { function, functionLabel, args in
                 b.buildPrefix()
                 function.wasmBuildLegacyTry(with: [] => [], args: [], body: {label, _ in
                     b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
@@ -97,6 +98,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                     b.buildRecursive(block: blockIndex, of: blockCount, n: 4)
                     blockIndex += 1
                 } : nil)
+                return functionSignature.outputTypes.map(function.findOrGenerateWasmVar)
             }
         }
         assert(blockIndex == blockCount + 1)
@@ -608,23 +610,17 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     RecursiveCodeGenerator("WasmFunctionGenerator", inContext: .wasm) { b in
         let module = b.currentWasmModule
-        module.addWasmFunction(with: b.randomWasmSignature()) { _, _ in
+        let functionSignature = b.randomWasmSignature()
+        module.addWasmFunction(with: functionSignature) { function, label, args in
             b.buildPrefix()
             b.buildRecursive()
+            return functionSignature.outputTypes.map(function.findOrGenerateWasmVar)
         }
     },
 
     CodeGenerator("WasmReturnGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
-
-        if function.signature.outputTypes.count == 0 {
-            function.wasmReturn()
-        } else {
-            // TODO(mliedtke): Support multiple return values.
-            assert(function.signature.outputTypes.count == 1)
-            let returnVariable = function.findOrGenerateWasmVar(ofType: function.signature.outputTypes[0])
-            function.wasmReturn(returnVariable)
-        }
+        function.wasmReturn(function.signature.outputTypes.map(function.findOrGenerateWasmVar))
     },
 
     CodeGenerator("WasmJsCallGenerator", inContext: .wasmFunction, inputs: .required(.function())) { b, callable in

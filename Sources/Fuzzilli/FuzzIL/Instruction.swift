@@ -330,19 +330,6 @@ extension Instruction: ProtobufConvertible {
             }
         }
 
-        func convertParametersToWasmTypeEnums(_ parameters: ParameterList) -> [Fuzzilli_Protobuf_WasmILType] {
-            var plainParams: [ILType] = []
-            for param in parameters {
-                switch param {
-                case .plain(let p):
-                    plainParams.append(p)
-                default:
-                    fatalError("Only plain parameters are expected.")
-                }
-            }
-            return plainParams.map { ILTypeToWasmTypeEnum($0) }
-        }
-
         func ILTypeToWasmTypeEnum(_ wasmType: ILType) -> Fuzzilli_Protobuf_WasmILType {
             var underlyingWasmType = wasmType
             if underlyingWasmType == .nothing {
@@ -1098,7 +1085,9 @@ extension Instruction: ProtobufConvertible {
             case .constf32(let op):
                 $0.constf32 = Fuzzilli_Protobuf_Constf32.with { $0.value = op.value }
             case .wasmReturn(let op):
-                $0.wasmReturn = Fuzzilli_Protobuf_WasmReturn.with { $0.returnType = ILTypeToWasmTypeEnum(op.returnType) }
+                $0.wasmReturn = Fuzzilli_Protobuf_WasmReturn.with {
+                    $0.returnTypes = op.returnTypes.map(ILTypeToWasmTypeEnum)
+                }
             case .wasmJsCall(let op):
                 $0.wasmJsCall = Fuzzilli_Protobuf_WasmJsCall.with {
                     $0.parameterTypes = op.functionSignature.parameterTypes.map(ILTypeToWasmTypeEnum)
@@ -2087,7 +2076,7 @@ extension Instruction: ProtobufConvertible {
         case .constf64(let p):
             op = Constf64(value: Float64(p.value))
         case .wasmReturn(let p):
-            op = WasmReturn(returnType: WasmTypeEnumToILType(p.returnType))
+            op = WasmReturn(returnTypes: p.returnTypes.map(WasmTypeEnumToILType))
         case .wasmJsCall(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)

@@ -120,6 +120,47 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 
+    func testFunctionMultiReturn() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            // Test branch if and fall-through.
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32, .wasmi64, .wasmf32]) { function, label, args in
+                function.wasmBranchIf(args[0], to: label, args: [function.consti32(1), function.consti64(2), function.constf32(3)])
+                return [function.consti32(4), function.consti64(5), function.constf32(6)]
+            }
+            // Test explicit return.
+            wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi64, .wasmf32]) { function, label, args in
+                function.wasmReturn([function.consti32(7), function.consti64(8), function.constf32(9)])
+                return [function.consti32(-1), function.consti64(-1), function.constf32(-1)]
+            }
+            // Test unconditional branch.
+            wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi64, .wasmf32]) { function, label, args in
+                function.wasmBranch(to: label, args: [function.consti32(10), function.consti64(11), function.constf32(12)])
+                return [function.consti32(-1), function.consti64(-1), function.constf32(-1)]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        [
+            b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1)]),
+            b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)]),
+            b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: []),
+            b.callMethod(module.getExportedMethod(at: 2), on: exports, withArgs: []),
+        ].forEach {b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: $0)])}
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "1,2,3\n4,5,6\n7,8,9\n10,11,12\n")
+    }
+
     func testExportNaming() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
@@ -542,12 +583,13 @@ class WasmFoundationTests: XCTestCase {
         }
 
         let module = b.buildWasmModule { wasmModule in
-            let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, params in
-                function.wasmReturn(function.wasmi64BinOp(params[0], function.consti64(1), binOpKind: .Add))
+            let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64, .wasmi64]) { function, label, params in
+                return [params[0], function.consti64(1)]
             }
             let table = wasmModule.addTable(elementType: .wasmFunctionDef(), minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction], isTable64: false)
-            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { fn, params in
-                fn.wasmReturn(fn.wasmCallIndirect(signature: [.wasmi64] => [.wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])!)
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { fn, label, params in
+                let results = fn.wasmCallIndirect(signature: [.wasmi64] => [.wasmi64, .wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])
+                return [fn.wasmi64BinOp(results[0], results[1], binOpKind: .Add)]
             }
         }
 
@@ -581,18 +623,24 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            let callee = wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => [.wasmi32]) { function, params in
-                function.wasmReturn(function.wasmi32BinOp(params[0], params[1], binOpKind: .Sub))
+            let callee = wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => [.wasmi32]) { function, label, params in
+                return [function.wasmi32BinOp(params[0], params[1], binOpKind: .Sub)]
             }
 
-            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, params in
-                let callResult = function.wasmCallDirect(signature: [.wasmi32, .wasmi32] => [.wasmi32], function: callee, functionArgs: [params[0], function.consti32(1)])!
-                function.wasmReturn(callResult)
+            let calleeMultiResult = wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32]) { function, label, params in
+                return [function.consti32(100), function.consti32(200)]
+            }
+
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, params in
+                let callResult = function.wasmCallDirect(signature: [.wasmi32, .wasmi32] => [.wasmi32], function: callee, functionArgs: [params[0], function.consti32(1)])
+                let multiResult = function.wasmCallDirect(signature: [] => [.wasmi32, .wasmi32], function: calleeMultiResult, functionArgs: [])
+                let sum1 = function.wasmi32BinOp(multiResult[0], multiResult[1], binOpKind: .Add)
+                return [function.wasmi32BinOp(sum1, callResult[0], binOpKind: .Add)]
             }
         }
 
         let exports = module.loadExports()
-        let wasmFunction = b.getProperty(module.getExportedMethod(at: 1), of: exports)
+        let wasmFunction = b.getProperty(module.getExportedMethod(at: 2), of: exports)
         let result = b.callFunction(wasmFunction, withArgs: [b.loadInt(42)])
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
@@ -601,7 +649,7 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
 
-        testForOutput(program: jsProg, runner: runner, outputString: "41\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "341\n")
     }
 
     // Test every memory testcase for both memory32 and memory64.
