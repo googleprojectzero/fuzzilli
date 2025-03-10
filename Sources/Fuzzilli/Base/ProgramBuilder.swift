@@ -3129,27 +3129,13 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmCallIndirect(signature: WasmSignature, table: Variable, functionArgs: [Variable], tableIndex: Variable) -> Variable? {
-            let instr = b.emit(WasmCallIndirect(signature: signature), withInputs: [table] + functionArgs + [tableIndex])
-            if signature.outputTypes.isEmpty {
-                assert(!instr.hasOutputs)
-                return nil
-            } else {
-                assert(instr.hasOutputs)
-                return instr.output
-            }
+        public func wasmCallIndirect(signature: WasmSignature, table: Variable, functionArgs: [Variable], tableIndex: Variable) -> [Variable] {
+            return Array(b.emit(WasmCallIndirect(signature: signature), withInputs: [table] + functionArgs + [tableIndex]).outputs)
         }
 
         @discardableResult
-        public func wasmCallDirect(signature: WasmSignature, function: Variable, functionArgs: [Variable]) -> Variable? {
-            let instr = b.emit(WasmCallDirect(signature: signature), withInputs: [function] + functionArgs)
-            if signature.outputTypes.isEmpty {
-                assert(!instr.hasOutputs)
-                return nil
-            } else {
-                assert(instr.hasOutputs)
-                return instr.output
-            }
+        public func wasmCallDirect(signature: WasmSignature, function: Variable, functionArgs: [Variable]) -> [Variable] {
+            return Array(b.emit(WasmCallDirect(signature: signature), withInputs: [function] + functionArgs).outputs)
         }
 
         @discardableResult
@@ -3418,13 +3404,17 @@ public class ProgramBuilder {
             return b.emit(WasmSelect(type: type), withInputs: [trueValue, falseValue, condition]).output
         }
 
+        public func wasmReturn(_ values: [Variable]) {
+            b.emit(WasmReturn(returnTypes: values.map(b.type)), withInputs: values)
+        }
+
         public func wasmReturn(_ returnVariable: Variable) {
             let returnType = b.type(of: returnVariable)
-            b.emit(WasmReturn(returnType: returnType), withInputs: [returnVariable])
+            b.emit(WasmReturn(returnTypes: [returnType]), withInputs: [returnVariable])
         }
 
         public func wasmReturn() {
-            b.emit(WasmReturn(returnType: .nothing), withInputs: [])
+            b.emit(WasmReturn(returnTypes: []), withInputs: [])
         }
 
         @discardableResult
@@ -3651,10 +3641,9 @@ public class ProgramBuilder {
 
     public func randomWasmSignature() -> WasmSignature {
         // TODO: generalize this to support more types.
-        let returnType: ILType = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
+        let returnTypes: [ILType] = (0..<Int.random(in: 0...3)).map {_ in chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64])}
         let params: [ILType] = (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from: [.wasmi32, .wasmf32, .wasmf64])}
-        // TODO(mliedtke): Allow multi-returns!
-        return params => (returnType == .nothing ? [] : [returnType])
+        return params => returnTypes
     }
 
     public func randomWasmBlockOutputTypes(upTo n: Int) -> [ILType] {

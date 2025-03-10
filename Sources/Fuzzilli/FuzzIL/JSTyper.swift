@@ -340,6 +340,14 @@ public struct JSTyper: Analyzer {
                 wasmTypeBeginBlock(instr, op.signature)
             case .wasmEndTryDelegate(let op):
                 wasmTypeEndBlock(instr, op.outputTypes)
+            case .wasmCallDirect(let op):
+                for (output, outputType) in zip(instr.outputs, op.signature.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
+            case .wasmCallIndirect(let op):
+                for (output, outputType) in zip(instr.outputs, op.signature.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
             default:
                 if instr.numInnerOutputs + instr.numOutputs != 0 {
                     fatalError("Missing typing of outputs for \(instr.op.opcode)")
