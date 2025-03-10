@@ -55,6 +55,11 @@ public class JavaScriptExecutor {
         self.executablePath = path!
     }
 
+    public init(withExecutablePath executablePath: String, arguments: [String]) {
+        self.executablePath = executablePath
+        self.arguments = arguments
+    }
+
     /// Executes the JavaScript script using the configured engine and returns the stdout.
     public func executeScript(_ script: String, withTimeout timeout: TimeInterval? = nil) throws -> Result {
         return try execute(executablePath, withInput: prefix + script.data(using: .utf8)!, withArguments: self.arguments, timeout: timeout)

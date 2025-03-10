@@ -943,6 +943,19 @@ public class Fuzzer {
             logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
         }
 
+        // Wrap the executor in a JavaScriptTestRunner
+        // If we can execute it standalone, it could inform us if any flags that were passed are incorrect, stale or conflicting.
+        let executor = JavaScriptExecutor(withExecutablePath: runner.processArguments[0], arguments: Array(runner.processArguments[1...]))
+        do {
+            let output = try executor.executeScript("", withTimeout: 300).output
+            if output.lengthOfBytes(using: .utf8) > 0 {
+                logger.warning("Runner has non-empty output for empty program! This might indicate that some flags are wrong.")
+                logger.warning("Output:\n\(output)" )
+            }
+        } catch {
+            logger.warning("Could not run shell in standalone mode to check flags.")
+        }
+
         logger.info("Startup tests finished successfully")
     }
 
