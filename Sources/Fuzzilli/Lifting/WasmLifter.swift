@@ -989,8 +989,7 @@ public class WasmLifter {
             // TODO: Make sure that the stack is matching the output of the function signature, at least depth wise
             // Make sure that we exit the current function, this is necessary such that the variableAnalyzer can be reset too, it is local to a function definition and we should only pass .wasmFunction context instructions to the variableAnalyzer.
             currentFunction!.outputVariable = instr.output
-            currentFunction = nil
-            break
+            return true
         case .wasmDefineGlobal(_):
             assert(self.globals.contains(where: { $0.output == instr.output }))
         case .wasmDefineTable(_):
@@ -1059,7 +1058,8 @@ public class WasmLifter {
 
     private func emitStackSpillsIfNecessary(forInstruction instr: Instruction) {
         // Don't emit spills for reassigns. This is specially handled in the `lift` function for reassigns.
-        if instr.op is WasmReassign {
+        // Similarly, the end of a function doesn't spill anything.
+        if instr.op is WasmReassign || instr.op is EndWasmFunction {
             return
         }
 
@@ -1328,6 +1328,9 @@ public class WasmLifter {
         assert(wasmInstruction.op is WasmOperationBase)
 
         switch wasmInstruction.op.opcode {
+        case .endWasmFunction(_):
+            currentFunction = nil
+            return Data([])
         case .consti64(let op):
             return Data([0x42]) + Leb128.signedEncode(Int(op.value))
         case .consti32(let op):
