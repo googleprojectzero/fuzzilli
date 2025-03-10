@@ -286,9 +286,7 @@ public struct JSTyper: Analyzer {
             case .constf32(_):
                 setType(of: instr.output, to: .wasmf32)
             case .beginWasmFunction(let op):
-                for (innerOutput, paramType) in zip(instr.innerOutputs, op.signature.parameterTypes) {
-                    setType(of: innerOutput, to: paramType)
-                }
+                wasmTypeBeginBlock(instr, op.signature)
             case .endWasmFunction(let op):
                 // TODO(mliedtke): Remove duplication with ProgramBuilder.WasmFunction.
                 let returnType = op.signature.outputTypes.count == 0 ? .nothing
