@@ -104,7 +104,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
                 function.wasmBranchIf(args[0], to: label, args: args)
-                function.wasmUnreachable()
+                return [function.consti32(-1)]
             }
         }
 

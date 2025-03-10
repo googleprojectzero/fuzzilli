@@ -3562,15 +3562,18 @@ public class ProgramBuilder {
             let instr = b.emit(BeginWasmFunction(signature: signature))
             // Ignore the label in this overload.
             body(functionBuilder, Array(instr.innerOutputs.dropFirst()))
-            return b.emit(EndWasmFunction(signature: signature)).output
+            // TODO(mliedtke): Ideally we'd replace all overloads of this function to the new one
+            // expecting explicit return values.
+            let results = signature.outputTypes.map {b.randomVariable(ofType: $0) ?? functionBuilder.generateRandomWasmVar(ofType: $0)}
+            return b.emit(EndWasmFunction(signature: signature), withInputs: results).output
         }
 
         @discardableResult
-        public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, Variable, [Variable]) -> ()) -> Variable {
+        public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, Variable, [Variable]) -> [Variable]) -> Variable {
             let functionBuilder = WasmFunction(forBuilder: b, withSignature: signature)
             let instr = b.emit(BeginWasmFunction(signature: signature))
-            body(functionBuilder, instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return b.emit(EndWasmFunction(signature: signature)).output
+            let results = body(functionBuilder, instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return b.emit(EndWasmFunction(signature: signature), withInputs: results).output
         }
 
         @discardableResult

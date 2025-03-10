@@ -1292,7 +1292,7 @@ final class EndWasmFunction: WasmOperationBase {
 
     init(signature: WasmSignature) {
         self.signature = signature
-        super.init(numOutputs: 1, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
+        super.init(numInputs: signature.outputTypes.count, numOutputs: 1, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
     }
 }
 
