@@ -1282,8 +1282,7 @@ final class BeginWasmFunction: WasmOperationBase {
 
     init(signature: WasmSignature) {
         self.signature = signature
-        // TODO(mliedtke): A function should also create a label for branch instructions.
-        super.init(numInnerOutputs: signature.parameterTypes.count, attributes: [.isBlockStart], requiredContext: [.wasm], contextOpened: [.wasmFunction])
+        super.init(numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart], requiredContext: [.wasm], contextOpened: [.wasmFunction])
     }
 }
 

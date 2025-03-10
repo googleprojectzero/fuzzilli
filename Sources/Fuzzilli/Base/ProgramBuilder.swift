@@ -3560,7 +3560,16 @@ public class ProgramBuilder {
         public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, [Variable]) -> ()) -> Variable {
             let functionBuilder = WasmFunction(forBuilder: b, withSignature: signature)
             let instr = b.emit(BeginWasmFunction(signature: signature))
-            body(functionBuilder, Array(instr.innerOutputs))
+            // Ignore the label in this overload.
+            body(functionBuilder, Array(instr.innerOutputs.dropFirst()))
+            return b.emit(EndWasmFunction(signature: signature)).output
+        }
+
+        @discardableResult
+        public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, Variable, [Variable]) -> ()) -> Variable {
+            let functionBuilder = WasmFunction(forBuilder: b, withSignature: signature)
+            let instr = b.emit(BeginWasmFunction(signature: signature))
+            body(functionBuilder, instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             return b.emit(EndWasmFunction(signature: signature)).output
         }
 

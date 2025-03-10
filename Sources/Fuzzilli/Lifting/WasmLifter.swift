@@ -201,11 +201,6 @@ public class WasmLifter {
     private func updateVariableAnalysis(forInstruction wasmInstruction: Instruction) {
         // Only analyze an instruction if we are inside a function definition.
         if let currentFunction = currentFunction {
-            // We don't need to analyze the Begin instruction which opened this one.
-            // TODO: can this be done more neatly? i.e. re-order analyis and emitting the instruction?
-            if wasmInstruction.op is BeginWasmFunction {
-                return
-            }
             currentFunction.variableAnalyzer.analyze(wasmInstruction)
         }
     }
@@ -232,9 +227,9 @@ public class WasmLifter {
             self.code = code
             self.localsInfo = [(Variable, ILType)]()
             self.lifter = lifter
-            assert(signature.parameterTypes.count == arguments.count)
-            // Populate the localsInfo with the parameter types
-            for (idx, argVar) in arguments.enumerated() {
+            assert(signature.parameterTypes.count + 1 == arguments.count)
+            // Populate the localsInfo with the parameter types.
+            for (idx, argVar) in arguments.dropFirst().enumerated() {
                 self.localsInfo.append((argVar, signature.parameterTypes[idx]))
                 // Emit the expressions for the parameters such that we can accesss them if we need them.
                 self.lifter!.writer.addExpr(for: argVar, bytecode: Data([0x20, UInt8(self.localsInfo.count - 1)]))
@@ -989,6 +984,7 @@ public class WasmLifter {
             functions.append(FunctionInfo(op.signature, Data(), for: self, withArguments: Array(instr.innerOutputs)))
             // Set the current active function as we are *actively* in it.
             currentFunction = functions.last
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
         case .endWasmFunction(_):
             // TODO: Make sure that the stack is matching the output of the function signature, at least depth wise
             // Make sure that we exit the current function, this is necessary such that the variableAnalyzer can be reset too, it is local to a function definition and we should only pass .wasmFunction context instructions to the variableAnalyzer.
