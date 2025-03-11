@@ -1558,22 +1558,22 @@ class MinimizerTests: XCTestCase {
         // Build input program to be minimized.
         do {
             let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, label, args in
                     evaluator.nextInstructionIsImportant(in: b)
                     let val = function.consti64(42)
                     // We would expect this to be removed by the DataflowSimplifier
                     let absVal = function.wasmi64UnOp(val, unOpKind: .Clz)
                     evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmReturn(absVal)
+                    return [absVal]
                 }
-                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
                     evaluator.nextInstructionIsImportant(in: b)
                     let valA = function.consti64(42)
                     let valB = function.consti64(43)
                     // We cannot remove this with the DataflowSimplifier as the input types don't match the output type.
                     let testVal = function.wasmi64CompareOp(valA, valB, using: .Eq)
                     evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmReturn(testVal)
+                    return [testVal]
                 }
             }
 
@@ -1587,14 +1587,14 @@ class MinimizerTests: XCTestCase {
         // Build expected output program.
         do {
             let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
-                    function.wasmReturn(function.consti64(42))
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, label, args in
+                    return [function.consti64(42)]
                 }
-                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
                     let valA = function.consti64(42)
                     let valB = function.consti64(43)
                     let testVal = function.wasmi64CompareOp(valA, valB, using: .Eq)
-                    function.wasmReturn(testVal)
+                    return [testVal]
                 }
             }
 

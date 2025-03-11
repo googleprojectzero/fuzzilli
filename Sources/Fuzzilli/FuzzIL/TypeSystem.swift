@@ -931,6 +931,13 @@ extension ILType: CustomStringConvertible {
             } else {
                 return ".wasmFunction()"
             }
+        case .wasmTypeDef:
+            if let desc = self.wasmTypeDefinition?.description {
+                if desc is WasmArrayTypeDescription {
+                    return ".wasmTypeDef(Array)"
+                }
+            }
+            return ".wasmTypeDef(nil)"
         default:
             break
         }
