@@ -531,7 +531,6 @@ let v8Profile = Profile(
             "--wasm-staging",
             "--wasm-fast-api",
             "--expose-fast-api",
-            "--experimental-wasm-memory64",
             "--experimental-wasm-exnref",
         ]
 
@@ -580,10 +579,6 @@ let v8Profile = Profile(
 
         if probability(0.25) && !args.contains("--no-maglev") {
             args.append("--maglev-future")
-        }
-
-        if probability(0.25) && !args.contains("--no-turboshaft") {
-            args.append("--turboshaft-future")
         }
 
         if probability(0.1) && !args.contains("--no-turboshaft") {
