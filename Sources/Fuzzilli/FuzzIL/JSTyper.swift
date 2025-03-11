@@ -326,6 +326,26 @@ public struct JSTyper: Analyzer {
                 setType(of: instr.output, to: .wasmf64)
             case .constf32(_):
                 setType(of: instr.output, to: .wasmf32)
+            case .wasmi32CompareOp(_),
+                 .wasmi64CompareOp(_),
+                 .wasmf32CompareOp(_),
+                 .wasmf64CompareOp(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .wasmi32EqualZero(_),
+                 .wasmi64EqualZero(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .wasmi32BinOp(_),
+                 .wasmi32UnOp(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .wasmi64BinOp(_),
+                 .wasmi64UnOp(_):
+                setType(of: instr.output, to: .wasmi64)
+            case .wasmf32BinOp(_),
+                 .wasmf32UnOp(_):
+                setType(of: instr.output, to: .wasmf32)
+            case .wasmf64BinOp(_),
+                 .wasmf64UnOp(_):
+                setType(of: instr.output, to: .wasmf64)
             case .beginWasmFunction(let op):
                 wasmTypeBeginBlock(instr, op.signature)
             case .endWasmFunction(let op):

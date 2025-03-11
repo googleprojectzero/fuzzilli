@@ -140,26 +140,23 @@ extension WasmIntegerCompareOpKind: CustomStringConvertible {
     }
 }
 
-final class Wasmi32CompareOp: WasmTypedOperation {
+final class Wasmi32CompareOp: WasmOperationBase {
     override var opcode: Opcode { .wasmi32CompareOp(self) }
-
     let compareOpKind: WasmIntegerCompareOpKind
-
 
     init(compareOpKind: WasmIntegerCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [.wasmi32, .wasmi32], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class Wasmi64CompareOp: WasmTypedOperation {
+final class Wasmi64CompareOp: WasmOperationBase {
     override var opcode: Opcode { .wasmi64CompareOp(self) }
-
     let compareOpKind: WasmIntegerCompareOpKind
 
     init(compareOpKind: WasmIntegerCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [.wasmi64, .wasmi64], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -189,41 +186,39 @@ extension WasmFloatCompareOpKind: CustomStringConvertible {
     }
 }
 
-final class Wasmf32CompareOp: WasmTypedOperation {
+final class Wasmf32CompareOp: WasmOperationBase {
     override var opcode: Opcode { .wasmf32CompareOp(self) }
-
     let compareOpKind: WasmFloatCompareOpKind
 
     init(compareOpKind: WasmFloatCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [.wasmf32, .wasmf32], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class Wasmf64CompareOp: WasmTypedOperation {
+final class Wasmf64CompareOp: WasmOperationBase {
     override var opcode: Opcode { .wasmf64CompareOp(self) }
-
     let compareOpKind: WasmFloatCompareOpKind
 
     init(compareOpKind: WasmFloatCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [.wasmf64, .wasmf64], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class Wasmi32EqualZero: WasmTypedOperation {
+final class Wasmi32EqualZero: WasmOperationBase {
     override var opcode: Opcode { .wasmi32EqualZero(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }
 
-final class Wasmi64EqualZero: WasmTypedOperation {
+final class Wasmi64EqualZero: WasmOperationBase {
     override var opcode: Opcode { .wasmi64EqualZero(self) }
 
     init() {
-        super.init(inputTypes: [.wasmi64], outputType: .wasmi32, requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }
 
@@ -259,48 +254,43 @@ public enum WasmIntegerBinaryOpKind: UInt8, CaseIterable {
     case Rotr = 14
 }
 
-final class Wasmi32BinOp: WasmTypedOperation {
+final class Wasmi32BinOp: WasmOperationBase {
     override var opcode: Opcode { .wasmi32BinOp(self) }
-
     let binOpKind: WasmIntegerBinaryOpKind
 
     init(binOpKind: WasmIntegerBinaryOpKind) {
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmi32, .wasmi32], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class Wasmi64BinOp: WasmTypedOperation {
+final class Wasmi64BinOp: WasmOperationBase {
     override var opcode: Opcode { .wasmi64BinOp(self) }
-
     let binOpKind: WasmIntegerBinaryOpKind
 
     init(binOpKind: WasmIntegerBinaryOpKind) {
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmi64, .wasmi64], outputType: .wasmi64, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class Wasmi32UnOp: WasmTypedOperation {
+final class Wasmi32UnOp: WasmOperationBase {
     override var opcode: Opcode { .wasmi32UnOp(self) }
-
     let unOpKind: WasmIntegerUnaryOpKind
 
     init(unOpKind: WasmIntegerUnaryOpKind) {
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-
-final class Wasmi64UnOp: WasmTypedOperation {
+final class Wasmi64UnOp: WasmOperationBase {
     override var opcode: Opcode { .wasmi64UnOp(self) }
-
     let unOpKind: WasmIntegerUnaryOpKind
 
     init(unOpKind: WasmIntegerUnaryOpKind) {
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -332,47 +322,43 @@ public enum WasmFloatBinaryOpKind: UInt8, CaseIterable {
     case Copysign = 6
 }
 
-final class Wasmf32BinOp: WasmTypedOperation {
+final class Wasmf32BinOp: WasmOperationBase {
     override var opcode: Opcode { .wasmf32BinOp(self) }
-
     let binOpKind: WasmFloatBinaryOpKind
 
     init(binOpKind: WasmFloatBinaryOpKind) {
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmf32, .wasmf32], outputType: .wasmf32, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class Wasmf64BinOp: WasmTypedOperation {
+final class Wasmf64BinOp: WasmOperationBase {
     override var opcode: Opcode { .wasmf64BinOp(self) }
-
     let binOpKind: WasmFloatBinaryOpKind
 
     init(binOpKind: WasmFloatBinaryOpKind) {
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmf64, .wasmf64], outputType: .wasmf64, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class Wasmf32UnOp: WasmTypedOperation {
+final class Wasmf32UnOp: WasmOperationBase {
     override var opcode: Opcode { .wasmf32UnOp(self)}
-
     let unOpKind: WasmFloatUnaryOpKind
 
     init(unOpKind: WasmFloatUnaryOpKind) {
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmf32], outputType: .wasmf32, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class Wasmf64UnOp: WasmTypedOperation {
+final class Wasmf64UnOp: WasmOperationBase {
     override var opcode: Opcode { .wasmf64UnOp(self)}
-
     let unOpKind: WasmFloatUnaryOpKind
 
     init(unOpKind: WasmFloatUnaryOpKind) {
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmf64], outputType: .wasmf64, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1724,7 +1710,7 @@ class WasmRefNull: WasmTypedOperation {
     override var opcode: Opcode { .wasmRefNull(self) }
 
     init(type: ILType) {
-        super.init(inputTypes: type.requiredInputCount() == 1 ? [.wasmRef(.Index(), nullability: true)] : [],
+        super.init(inputTypes: type.requiredInputCount() == 1 ? [.wasmTypeDef()] : [],
             outputType: type, requiredContext: [.wasmFunction])
     }
 }

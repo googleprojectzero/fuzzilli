@@ -32,9 +32,13 @@
 struct DataFlowSimplifier: Reducer {
     func reduce(with helper: MinimizationHelper) {
         // Compute all candidates: intermediate operations in a data flow chain.
+        // Using a MockEnvironment here for simplicity. The typing is only needed for wasm
+        // operations, so we don't need a full environment.
+        var typer = JSTyper(for: MockEnvironment(builtins: [:]))
         var candidates = [Int]()
         var uses = VariableMap<Int>()
         for instr in helper.code {
+            typer.analyze(instr)
             for input in instr.inputs {
                 uses[input]? += 1
             }
@@ -57,28 +61,29 @@ struct DataFlowSimplifier: Reducer {
 
         // Filter out Wasm instructions where the types would be invalid if we replaced them.
         candidates = candidates.filter({
-            if helper.code[$0].op is WasmTypeOperation {
+            let operation = helper.code[$0].op
+            if operation is WasmTypeOperation {
                 // If a WasmDefineArrayType consumes another WasmDefineArrayType as an input, it
                 // should not be replaced. This would cause issues of types being exported by
                 // multiple type groups and in general always alters the ILType in a typically
                 // incorrect way.
                 return false
             }
-            if let op = helper.code[$0].op as? WasmTypedOperation {
+            if let op = operation as? WasmTypedOperation {
                 // See if we have matching input Types
                 let outputType = op.outputType
                 // Once we support multiple outputs for Wasm we need to update this.
                 assert(helper.code[$0].allOutputs.count == 1)
                 // Find all indices of inputs that are the same type as the output
-                let filteredOutputs = op.inputTypes.enumerated().filter {$0.element.Is(outputType)}
+                let filteredOutputs = op.inputTypes.filter {$0.Is(outputType)}
                 // If we have outputs, we can actually try to replace this.
                 return !filteredOutputs.isEmpty
-            } else if helper.code[$0].op is WasmOperationBase {
-                // TODO(mliedtke): Implement this using the JSTyper if needed. If we had the typer
-                // available, we could query if the output type of the operation is the same as the
-                // type of any of its inputs to replace it then (and we wouldn't need the
-                // op.inputTypes at all for that.)
-                return false
+            } else if operation is WasmOperationBase {
+                guard operation.numOutputs == 1 else { return false }
+                let outputType = typer.type(of: helper.code[$0].output)
+                let filteredOutputs = helper.code[$0].inputs.map(typer.type).filter {$0.Is(outputType)}
+                // If we have outputs, we can actually try to replace this.
+                return !filteredOutputs.isEmpty
             } else {
                 return true
             }
@@ -101,6 +106,13 @@ struct DataFlowSimplifier: Reducer {
                         assert(instr.allOutputs.count == 1)
                         // Find all indices of inputs that are the same type as the output
                         let filteredOutputs = op.inputTypes.enumerated().filter {$0.element.Is(outputType)}
+                        if !filteredOutputs.isEmpty {
+                            // Now pick a random index and choose that input as a replacement.
+                            replacement = instr.inputs[chooseUniform(from: filteredOutputs.map { $0.offset })]
+                        }
+                    } else if instr.op is WasmOperationBase {
+                        let outputType = typer.type(of: instr.output)
+                        let filteredOutputs = instr.inputs.map(typer.type).enumerated().filter {$0.element.Is(outputType)}
                         if !filteredOutputs.isEmpty {
                             // Now pick a random index and choose that input as a replacement.
                             replacement = instr.inputs[chooseUniform(from: filteredOutputs.map { $0.offset })]

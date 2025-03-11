@@ -1832,8 +1832,23 @@ public class ProgramBuilder {
     // Each class implementing the Operation protocol will have a constructor here.
     //
 
+    private func handleInputTypeFailure(_ message: String) {
+        logger.warning(message)
+        if fuzzer.config.enableDiagnostics {
+            do {
+                let program = Program(with: self.code)
+                let pb = try program.asProtobuf().serializedData()
+                fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "WasmProgramBuildingEmissionFail", content: pb))
+            } catch {
+                logger.warning("Could not dump program to disk!")
+            }
+        }
+        // Fail on debug builds.
+        assert(false, message)
+    }
+
     @discardableResult
-    private func emit(_ op: Operation, withInputs inputs: [Variable] = []) -> Instruction {
+    private func emit(_ op: Operation, withInputs inputs: [Variable] = [], types: [ILType]? = nil) -> Instruction {
         var inouts = inputs
         for _ in 0..<op.numOutputs {
             inouts.append(nextVariable())
@@ -1843,23 +1858,17 @@ public class ProgramBuilder {
         }
 
         // For WasmOperations, we can assert here that the input types are correct.
-        // TODO(mliedtke): We'd probably want to move input type verification to the JSTyper as
-        // well.
-        if let op = op as? WasmTypedOperation {
-            for (i, input) in inputs.enumerated() {
-                if !type(of:input).Is(op.inputTypes[i]) {
-                    // TODO: try to make sure that mutations don't change the assumptions while ProgramBuilding.
-                    logger.warning("Input types don't match expected types. Check if the types in your instruction definition are correct or if you are passing the wrong type to this instruction!")
-                    logger.warning("Mutations might have also changed this, in which case lifting will likely fail.")
-                    if fuzzer.config.enableDiagnostics {
-                        do {
-                            let program = Program(with: self.code)
-                            let pb = try program.asProtobuf().serializedData()
-                            fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "WasmProgramBuildingEmissionFail", content: pb))
-                        } catch {
-                            logger.warning("Could not dump program to disk!")
-                        }
-                    }
+        let expectedTypes = types ?? (op as? WasmTypedOperation)?.inputTypes
+        if let expectedTypes {
+            // TODO: try to make sure that mutations don't change the assumptions while ProgramBuilding.
+            if inputs.count != expectedTypes.count {
+                handleInputTypeFailure("expected \(expectedTypes.count) inputs, actual \(inputs.count)")
+            }
+            zip(inputs, expectedTypes).enumerated().forEach { n, pair in
+                let (input, type) = pair
+                let actualType = self.type(of: input)
+                if !actualType.Is(type) {
+                    handleInputTypeFailure("Invalid input \(n + 1) \(input) with type \(actualType), expected \(type)")
                 }
             }
         }
@@ -2913,72 +2922,72 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmi64BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmIntegerBinaryOpKind) -> Variable {
-            return b.emit(Wasmi64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs], types: [.wasmi64, .wasmi64]).output
         }
 
         @discardableResult
         public func wasmi32BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmIntegerBinaryOpKind) -> Variable {
-            return b.emit(Wasmi32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs], types: [.wasmi32, .wasmi32]).output
         }
 
         @discardableResult
         public func wasmf32BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmFloatBinaryOpKind) -> Variable {
-            return b.emit(Wasmf32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs], types: [.wasmf32, .wasmf32]).output
         }
 
         @discardableResult
         public func wasmf64BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmFloatBinaryOpKind) -> Variable {
-            return b.emit(Wasmf64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs], types: [.wasmf64, .wasmf64]).output
         }
 
         @discardableResult
         public func wasmi32UnOp(_ input: Variable, unOpKind: WasmIntegerUnaryOpKind) -> Variable {
-            return b.emit(Wasmi32UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmi32UnOp(unOpKind: unOpKind), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func wasmi64UnOp(_ input: Variable, unOpKind: WasmIntegerUnaryOpKind) -> Variable {
-            return b.emit(Wasmi64UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmi64UnOp(unOpKind: unOpKind), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func wasmf32UnOp(_ input: Variable, unOpKind: WasmFloatUnaryOpKind) -> Variable {
-            return b.emit(Wasmf32UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmf32UnOp(unOpKind: unOpKind), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func wasmf64UnOp(_ input: Variable, unOpKind: WasmFloatUnaryOpKind) -> Variable {
-            return b.emit(Wasmf64UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmf64UnOp(unOpKind: unOpKind), withInputs: [input],types: [.wasmf64]).output
         }
 
         @discardableResult
         public func wasmi32EqualZero(_ input: Variable) -> Variable {
-            return b.emit(Wasmi32EqualZero(), withInputs: [input]).output
+            return b.emit(Wasmi32EqualZero(), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func wasmi64EqualZero(_ input: Variable) -> Variable {
-            return b.emit(Wasmi64EqualZero(), withInputs: [input]).output
+            return b.emit(Wasmi64EqualZero(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func wasmi32CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmIntegerCompareOpKind) -> Variable {
-            return b.emit(Wasmi32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs], types: [.wasmi32, .wasmi32]).output
         }
 
         @discardableResult
         public func wasmi64CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmIntegerCompareOpKind) -> Variable {
-            return b.emit(Wasmi64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs], types: [.wasmi64, .wasmi64]).output
         }
 
         @discardableResult
         public func wasmf64CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmFloatCompareOpKind) -> Variable {
-            return b.emit(Wasmf64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs], types: [.wasmf64, .wasmf64]).output
         }
 
         @discardableResult
         public func wasmf32CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmFloatCompareOpKind) -> Variable {
-            return b.emit(Wasmf32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs], types: [.wasmf32, .wasmf32]).output
         }
 
         @discardableResult
@@ -3130,12 +3139,18 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmCallIndirect(signature: WasmSignature, table: Variable, functionArgs: [Variable], tableIndex: Variable) -> [Variable] {
-            return Array(b.emit(WasmCallIndirect(signature: signature), withInputs: [table] + functionArgs + [tableIndex]).outputs)
+            return Array(b.emit(WasmCallIndirect(signature: signature),
+                withInputs: [table] + functionArgs + [tableIndex],
+                types: [.wasmTable] + signature.parameterTypes + [.wasmi32]
+            ).outputs)
         }
 
         @discardableResult
         public func wasmCallDirect(signature: WasmSignature, function: Variable, functionArgs: [Variable]) -> [Variable] {
-            return Array(b.emit(WasmCallDirect(signature: signature), withInputs: [function] + functionArgs).outputs)
+            return Array(b.emit(WasmCallDirect(signature: signature),
+                withInputs: [function] + functionArgs,
+                types: [.wasmFunctionDef(signature)] + signature.parameterTypes
+            ).outputs)
         }
 
         @discardableResult
@@ -3175,38 +3190,37 @@ public class ProgramBuilder {
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         // TODO(cffsmith): I think the best way to handle these types of blocks is to treat them like inline functions that have a signature. E.g. they behave like a definition and call of a wasmfunction. The output should be the output of the signature.
         public func wasmBuildBlock(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> ()) {
-            assert(signature.parameterTypes.count == args.count)
             assert(signature.outputTypes.count == 0)
-            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args)
+            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args, types: signature.parameterTypes)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndBlock(outputTypes: []))
         }
 
         @discardableResult
         public func wasmBuildBlockWithResults(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
-            assert(signature.parameterTypes.count == args.count)
-            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args)
+            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args, types: signature.parameterTypes)
             let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return Array(b.emit(WasmEndBlock(outputTypes: signature.outputTypes), withInputs: results).outputs)
+            return Array(b.emit(WasmEndBlock(outputTypes: signature.outputTypes), withInputs: results, types: signature.outputTypes).outputs)
         }
 
         // Convenience function to begin a wasm block. Note that this does not emit an end block.
         func wasmBeginBlock(with signature: WasmSignature, args: [Variable]) {
-            b.emit(WasmBeginBlock(with: signature), withInputs: args)
+            b.emit(WasmBeginBlock(with: signature), withInputs: args, types: signature.parameterTypes)
         }
         // Convenience function to end a wasm block.
         func wasmEndBlock(outputTypes: [ILType], args: [Variable]) {
-            b.emit(WasmEndBlock(outputTypes: outputTypes), withInputs: args)
+            b.emit(WasmEndBlock(outputTypes: outputTypes), withInputs: args, types: outputTypes)
         }
 
         // This can branch to label variables only, has a variable input for dataflow purposes.
         public func wasmBranch(to label: Variable, args: [Variable] = []) {
-            assert(b.type(of: label).Is(.anyLabel))
+            assert(b.type(of: label).Is(.label(args.map({b.type(of: $0)}))), "label type \(b.type(of: label)) doesn't match argument types \(args.map({b.type(of: $0)}))")
             b.emit(WasmBranch(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args)
         }
 
         public func wasmBranchIf(_ condition: Variable, to label: Variable, args: [Variable] = []) {
             assert(b.type(of: label).Is(.label(args.map({b.type(of: $0)}))), "label type \(b.type(of: label)) doesn't match argument types \(args.map({b.type(of: $0)}))")
+            assert(b.type(of: condition).Is(.wasmi32))
             b.emit(WasmBranchIf(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args + [condition])
         }
 
@@ -3231,7 +3245,9 @@ public class ProgramBuilder {
         }
 
         public func wasmBuildIfElse(_ condition: Variable, signature: WasmSignature, args: [Variable], ifBody: (Variable, [Variable]) -> Void, elseBody: (Variable, [Variable]) -> Void) {
-            let beginBlock = b.emit(WasmBeginIf(with: signature), withInputs: args + [condition])
+            let beginBlock = b.emit(WasmBeginIf(with: signature),
+                withInputs: args + [condition],
+                types: signature.parameterTypes + [.wasmi32])
             ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
             let elseBlock = b.emit(WasmBeginElse(with: signature))
             elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
@@ -3240,11 +3256,11 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmBuildIfElseWithResult(_ condition: Variable, signature: WasmSignature, args: [Variable], ifBody: (Variable, [Variable]) -> [Variable], elseBody: (Variable, [Variable]) -> [Variable]) -> [Variable] {
-            let beginBlock = b.emit(WasmBeginIf(with: signature), withInputs: args + [condition])
+            let beginBlock = b.emit(WasmBeginIf(with: signature), withInputs: args + [condition], types: signature.parameterTypes + [.wasmi32])
             let trueResults = ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
-            let elseBlock = b.emit(WasmBeginElse(with: signature), withInputs: trueResults)
+            let elseBlock = b.emit(WasmBeginElse(with: signature), withInputs: trueResults, types: signature.outputTypes)
             let falseResults = elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
-            return Array(b.emit(WasmEndIf(outputTypes: signature.outputTypes), withInputs: falseResults).outputs)
+            return Array(b.emit(WasmEndIf(outputTypes: signature.outputTypes), withInputs: falseResults, types: signature.outputTypes).outputs)
         }
 
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
@@ -3256,9 +3272,9 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmBuildLoop(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
-            let instr = b.emit(WasmBeginLoop(with: signature), withInputs: args)
+            let instr = b.emit(WasmBeginLoop(with: signature), withInputs: args, types: signature.parameterTypes)
             let fallthroughResults = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return Array(b.emit(WasmEndLoop(outputTypes: signature.outputTypes), withInputs: fallthroughResults).outputs)
+            return Array(b.emit(WasmEndLoop(outputTypes: signature.outputTypes), withInputs: fallthroughResults, types: signature.outputTypes).outputs)
         }
 
         @discardableResult
@@ -3295,8 +3311,7 @@ public class ProgramBuilder {
         }
 
         public func wasmBuildLegacyTry(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> Void, catchAllBody: ((Variable) -> Void)? = nil) {
-            assert(signature.parameterTypes.count == args.count)
-            let instr = b.emit(WasmBeginTry(with: signature), withInputs: args)
+            let instr = b.emit(WasmBeginTry(with: signature), withInputs: args, types: signature.parameterTypes)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             if let catchAllBody = catchAllBody {
                 let instr = b.emit(WasmBeginCatchAll(inputTypes: signature.outputTypes))
@@ -3313,60 +3328,58 @@ public class ProgramBuilder {
                 body: (Variable, [Variable]) -> [Variable],
                 catchClauses: [(tag: Variable, body: (Variable, Variable, [Variable]) -> [Variable])],
                 catchAllBody: ((Variable) -> [Variable])? = nil) -> [Variable] {
-            assert(signature.parameterTypes.count == args.count)
-            let instr = b.emit(WasmBeginTry(with: signature), withInputs: args)
+            let instr = b.emit(WasmBeginTry(with: signature), withInputs: args, types: signature.parameterTypes)
             var result = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             for (tag, generator) in catchClauses {
-                let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => signature.outputTypes), withInputs: [tag] + result)
+                let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => signature.outputTypes),
+                    withInputs: [tag] + result,
+                    types: [.object(ofGroup: "WasmTag")] + signature.outputTypes)
                 result = generator(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
             }
             if let catchAllBody = catchAllBody {
-                let instr = b.emit(WasmBeginCatchAll(inputTypes: signature.outputTypes), withInputs: result)
+                let instr = b.emit(WasmBeginCatchAll(inputTypes: signature.outputTypes), withInputs: result, types: signature.outputTypes)
                 result = catchAllBody(instr.innerOutput(0))
             }
-            return Array(b.emit(WasmEndTry(outputTypes: signature.outputTypes), withInputs: result).outputs)
+            return Array(b.emit(WasmEndTry(outputTypes: signature.outputTypes), withInputs: result, types: signature.outputTypes).outputs)
         }
 
         // Build a legacy catch block without a result type. Note that this may only be placed into
         // try blocks that also don't have a result type. (Use wasmBuildLegacyTryWithResult to
         // create a catch block with a result value.)
         public func WasmBuildLegacyCatch(tag: Variable, body: ((Variable, Variable, [Variable]) -> Void)) {
-            let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => []), withInputs: [tag])
+            let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => []), withInputs: [tag], types: [.object(ofGroup: "WasmTag")])
             body(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
         }
 
         public func WasmBuildThrow(tag: Variable, inputs: [Variable]) {
             let tagType = b.type(of: tag).wasmType as! WasmTagType
-            assert(tagType.parameters.count == inputs.count)
-            b.emit(WasmThrow(parameterTypes: tagType.parameters), withInputs: [tag] + inputs)
+            b.emit(WasmThrow(parameterTypes: tagType.parameters), withInputs: [tag] + inputs, types: [.object(ofGroup: "WasmTag")] + tagType.parameters)
         }
 
         public func wasmBuildThrowRef(exception: Variable) {
-            assert(b.type(of: exception).Is(.wasmExnRef))
-            b.emit(WasmThrowRef(), withInputs: [exception])
+            b.emit(WasmThrowRef(), withInputs: [exception], types: [.wasmExnRef])
         }
 
         public func wasmBuildLegacyRethrow(_ exceptionLabel: Variable) {
-            assert(b.type(of: exceptionLabel).Is(.exceptionLabel))
-            b.emit(WasmRethrow(), withInputs: [exceptionLabel])
+            b.emit(WasmRethrow(), withInputs: [exceptionLabel], types: [.exceptionLabel])
         }
 
         public func wasmBuildLegacyTryDelegate(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> Void, delegate: Variable) {
-            assert(signature.parameterTypes.count == args.count)
             assert(signature.outputTypes.isEmpty)
-            let instr = b.emit(WasmBeginTryDelegate(with: signature), withInputs: args)
+            let instr = b.emit(WasmBeginTryDelegate(with: signature), withInputs: args, types: signature.parameterTypes)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndTryDelegate(), withInputs: [delegate])
         }
 
         @discardableResult
         public func wasmBuildLegacyTryDelegateWithResult(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable], delegate: Variable) -> [Variable] {
-            assert(signature.parameterTypes.count == args.count)
-            let instr = b.emit(WasmBeginTryDelegate(with: signature), withInputs: args)
+            let instr = b.emit(WasmBeginTryDelegate(with: signature), withInputs: args, types: signature.parameterTypes)
             let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return Array(b.emit(WasmEndTryDelegate(outputTypes: signature.outputTypes), withInputs: [delegate] + results).outputs)
+            return Array(b.emit(WasmEndTryDelegate(outputTypes: signature.outputTypes),
+                withInputs: [delegate] + results,
+                types: [.anyLabel] + signature.outputTypes
+            ).outputs)
         }
-
 
         public func generateRandomWasmVar(ofType type: ILType) -> Variable {
             switch type {
@@ -3405,15 +3418,16 @@ public class ProgramBuilder {
         }
 
         public func wasmReturn(_ values: [Variable]) {
-            b.emit(WasmReturn(returnTypes: values.map(b.type)), withInputs: values)
+            b.emit(WasmReturn(returnTypes: values.map(b.type)), withInputs: values, types: signature.outputTypes)
         }
 
         public func wasmReturn(_ returnVariable: Variable) {
             let returnType = b.type(of: returnVariable)
-            b.emit(WasmReturn(returnTypes: [returnType]), withInputs: [returnVariable])
+            b.emit(WasmReturn(returnTypes: [returnType]), withInputs: [returnVariable], types: signature.outputTypes)
         }
 
         public func wasmReturn() {
+            assert(signature.outputTypes.isEmpty)
             b.emit(WasmReturn(returnTypes: []), withInputs: [])
         }
 
