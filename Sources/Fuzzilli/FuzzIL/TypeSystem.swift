@@ -240,7 +240,7 @@ public struct ILType: Hashable {
 
     public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
 
-    public static let anyNonNullableRef = wasmRef(.Index(), nullability: false)
+    public static let anyNonNullableIndexRef = wasmRef(.Index(), nullability: false)
 
     //
     // Type testing
@@ -1617,13 +1617,32 @@ class WasmTypeDescription: Hashable {
     }
 }
 
-class WasmArrayTypeDescription : WasmTypeDescription {
+class WasmArrayTypeDescription: WasmTypeDescription {
     var elementType: ILType
     let mutability: Bool
 
     init(elementType: ILType, mutability: Bool, typeGroupIndex: Int) {
         self.elementType = elementType
         self.mutability = mutability
+        super.init(typeGroupIndex: typeGroupIndex)
+    }
+}
+
+class WasmStructTypeDescription: WasmTypeDescription {
+    class Field {
+        var type: ILType
+        let mutability: Bool
+
+        init(type: ILType, mutability: Bool) {
+            self.type = type
+            self.mutability = mutability
+        }
+    }
+
+    let fields: [Field]
+
+    init(fields: [Field], typeGroupIndex: Int) {
+        self.fields = fields
         super.init(typeGroupIndex: typeGroupIndex)
     }
 }

@@ -310,14 +310,15 @@ message Instruction {
         WasmBeginTypeGroup wasmBeginTypeGroup = 284;
         WasmEndTypeGroup wasmEndTypeGroup = 285;
         WasmDefineArrayType wasmDefineArrayType = 286;
-        WasmDefineForwardOrSelfReference wasmDefineForwardOrSelfReference = 287;
-        WasmResolveForwardReference wasmResolveForwardReference = 288;
-        WasmArrayNewFixed wasmArrayNewFixed = 289;
-        WasmArrayNewDefault wasmArrayNewDefault = 290;
-        WasmArrayLen wasmArrayLen = 291;
-        WasmArrayGet wasmArrayGet = 292;
-        WasmArraySet wasmArraySet = 293;
-        WasmRefNull wasmRefNull = 294;
+        WasmDefineStructType wasmDefineStructType = 287;
+        WasmDefineForwardOrSelfReference wasmDefineForwardOrSelfReference = 288;
+        WasmResolveForwardReference wasmResolveForwardReference = 289;
+        WasmArrayNewFixed wasmArrayNewFixed = 290;
+        WasmArrayNewDefault wasmArrayNewDefault = 291;
+        WasmArrayLen wasmArrayLen = 292;
+        WasmArrayGet wasmArrayGet = 293;
+        WasmArraySet wasmArraySet = 294;
+        WasmRefNull wasmRefNull = 295;
     }
 }
 

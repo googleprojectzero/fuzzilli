@@ -1209,6 +1209,11 @@ public class FuzzILLifter: Lifter {
             let typeInput = op.elementType.requiredInputCount() == 1 ? " \(input(0))" : ""
             w.emit("\(output()) <- WasmDefineArrayType \(op.elementType) mutability=\(op.mutability)\(typeInput)")
 
+        case .wasmDefineStructType(let op):
+            let fields = op.fields.map { "\($0.type) mutability=\($0.mutability)"}.joined(separator: ", ")
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- WasmDefineStructType(\(fields)) [\(inputs)]")
+
         case .wasmDefineForwardOrSelfReference(_):
             w.emit("\(output()) <- WasmDefineForwardOrSelfReference")
 

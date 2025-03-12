@@ -98,6 +98,21 @@ public struct JSTyper: Analyzer {
     // Not currently used, but could be used for example to validate the analysis by adding these as comments to programs.
     private var typeChanges = [(Variable, ILType)]()
 
+    mutating func registerTypeGroupDependency(from: Int, to: Int) {
+        // If the element type originates from another recursive type group, add a dependency.
+        if to != -1 && to != from {
+            // Dependencies to other type groups can only refer to previous type groups.
+            // This is implicitly guaranteed by the FuzzIL as later type groups' types aren't
+            // visible yet.
+            assert(to < from)
+            if typeGroupDependencies[from, default: []].insert(to).inserted {
+                // For simplicity also duplicate all dependencies, so that each set contains
+                // all dependent groups including transitive dependencies.
+                typeGroupDependencies[from]!.formUnion(typeGroupDependencies[to] ?? [])
+            }
+        }
+    }
+
     mutating func addArrayType(def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil) {
         let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
         if let elementRef = elementRef {
@@ -123,18 +138,8 @@ public struct JSTyper: Analyzer {
                 elementType: type(of: elementRef).wasmTypeDefinition!.getReferenceTypeTo(nullability: elementNullability),
                 mutability: mutability,
                 typeGroupIndex: tgIndex)
-            // If the element type originates from another recursive type group, add a dependency.
-            if elementDesc.typeGroupIndex != -1 && elementDesc.typeGroupIndex != tgIndex {
-                // Dependencies to other type groups can only refer to previous type groups.
-                // This is implicitly guaranteed by the FuzzIL as later type groups' types aren't
-                // visible yet.
-                assert(elementDesc.typeGroupIndex < tgIndex)
-                if typeGroupDependencies[tgIndex, default: []].insert(elementDesc.typeGroupIndex).inserted {
-                    // For simplicity also duplicate all dependencies, so that each set contains
-                    // all dependent groups including transitive dependencies.
-                    typeGroupDependencies[tgIndex]!.formUnion(typeGroupDependencies[elementDesc.typeGroupIndex] ?? [])
-                }
-            }
+
+            registerTypeGroupDependency(from: tgIndex, to: elementDesc.typeGroupIndex)
         } else {
             type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
                 elementType: elementType,
@@ -142,6 +147,38 @@ public struct JSTyper: Analyzer {
                 typeGroupIndex: tgIndex)
         }
         if isWithinTypeGroup {
+            typeGroups[typeGroups.count - 1].append(def)
+        }
+    }
+
+    mutating func addStructType(def: Variable, fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)]) {
+        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+        let resolvedFields = fieldsWithRefs.enumerated().map { (fieldIndex, fieldWithInput) in
+            let (field, fieldTypeRef) = fieldWithInput
+            if let fieldTypeRef {
+                let fieldNullability = field.type.wasmReferenceType!.nullability
+                let fieldTypeDesc = type(of: fieldTypeRef).wasmTypeDefinition!.description!
+                if fieldTypeDesc == .selfReference {
+                    // Register a resolver callback. See `addArrayType` for details.
+                    selfReferences[fieldTypeRef, default: []].append({typer, replacement in
+                        (typer.type(of: def).wasmTypeDefinition!.description! as! WasmStructTypeDescription).fields[fieldIndex].type =
+                            typer.type(of: replacement ?? def).wasmTypeDefinition!.getReferenceTypeTo(nullability: fieldNullability)
+                    })
+                }
+
+                registerTypeGroupDependency(from: tgIndex, to: fieldTypeDesc.typeGroupIndex)
+
+                return WasmStructTypeDescription.Field(
+                    type: type(of: fieldTypeRef).wasmTypeDefinition!.getReferenceTypeTo(nullability: fieldNullability),
+                    mutability: field.mutability)
+            } else {
+                return field
+            }
+        }
+
+        type(of: def).wasmTypeDefinition!.description = WasmStructTypeDescription(
+            fields: resolvedFields, typeGroupIndex: tgIndex)
+        if (isWithinTypeGroup) {
             typeGroups[typeGroups.count - 1].append(def)
         }
     }
@@ -1197,6 +1234,21 @@ public struct JSTyper: Analyzer {
             set(instr.output, .wasmTypeDef())
             let elementRef = op.elementType.requiredInputCount() == 1 ? instr.input(0) : nil
             addArrayType(def: instr.output, elementType: op.elementType, mutability: op.mutability, elementRef: elementRef)
+
+        case .wasmDefineStructType(let op):
+            set(instr.output, .wasmTypeDef())
+            var inputIndex = 0
+            let fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)] = op.fields.map { field in
+                if field.type.requiredInputCount() == 0 {
+                    return (field, nil)
+                } else {
+                    let ret = (field, instr.input(inputIndex))
+                    inputIndex += 1
+                    return ret
+                }
+            }
+            assert(inputIndex == instr.inputs.count)
+            addStructType(def: instr.output, fieldsWithRefs: fieldsWithRefs)
 
         case .wasmDefineForwardOrSelfReference(_):
             set(instr.output, .wasmSelfReference())

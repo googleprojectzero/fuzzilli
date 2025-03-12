@@ -566,6 +566,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmBeginTypeGroup(_),
              .wasmEndTypeGroup(_),
              .wasmDefineArrayType(_),
+             .wasmDefineStructType(_),
              .wasmDefineForwardOrSelfReference(_),
              .wasmResolveForwardReference(_),
              .wasmArrayNewFixed(_),

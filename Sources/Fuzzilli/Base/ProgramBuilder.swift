@@ -3695,6 +3695,11 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    func wasmDefineStructType(fields: [WasmStructTypeDescription.Field], indexTypes: [Variable]) -> Variable {
+        return emit(WasmDefineStructType(fields: fields), withInputs: indexTypes).output
+    }
+
+    @discardableResult
     func wasmDefineForwardOrSelfReference() -> Variable {
         return emit(WasmDefineForwardOrSelfReference()).output
     }

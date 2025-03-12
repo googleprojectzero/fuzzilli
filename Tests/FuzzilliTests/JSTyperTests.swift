@@ -1254,4 +1254,35 @@ class JSTyperTests: XCTestCase {
             }
         }
     }
+
+    func testWasmStructTypeDefinition() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let structType = b.wasmDefineTypeGroup {
+            let structType = b.wasmDefineStructType(
+                fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true),
+                         WasmStructTypeDescription.Field(type: .wasmi64, mutability: true)],
+                indexTypes: [])
+            let structType2 = b.wasmDefineStructType(
+                fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true),
+                         WasmStructTypeDescription.Field(type: .wasmi64, mutability: true)],
+                indexTypes: [])
+            XCTAssert(b.type(of: structType).Is(.wasmTypeDef()))
+            // Despite having identical structure, the two struct types are not comparable.
+            XCTAssertFalse(b.type(of: structType).Is(b.type(of: structType2)))
+            XCTAssertFalse(b.type(of: structType2).Is(b.type(of: structType)))
+            let desc = b.type(of: structType).wasmTypeDefinition!.description! as! WasmStructTypeDescription
+            XCTAssert(desc.fields.count == 2)
+            XCTAssert(desc.fields[0].type == .wasmi32)
+            XCTAssert(desc.fields[1].type == .wasmi64)
+            return [structType, structType2]
+        }[0]
+
+        XCTAssert(b.type(of: structType).Is(.wasmTypeDef()))
+        let desc = b.type(of: structType).wasmTypeDefinition!.description! as! WasmStructTypeDescription
+        XCTAssert(desc.fields.count == 2)
+        XCTAssert(desc.fields[0].type == .wasmi32)
+        XCTAssert(desc.fields[1].type == .wasmi64)
+    }
 }

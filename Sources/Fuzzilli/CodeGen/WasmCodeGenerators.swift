@@ -125,8 +125,25 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             let nullability = b.type(of: elementType).wasmTypeDefinition!.description == .selfReference || probability(0.5)
             b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: nullability), mutability: mutability, indexType: elementType)
         } else {
-            b.wasmDefineArrayType(elementType: chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]), mutability: mutability)
+            b.wasmDefineArrayType(elementType: chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128]), mutability: mutability)
         }
+    },
+
+    CodeGenerator("WasmStructTypeGenerator", inContext: .wasmTypeGroup) { b in
+        var indexTypes: [Variable] = []
+        let fields = (0..<Int.random(in: 0...10)).map { _ in
+            var type: ILType
+            if let elementType = b.randomVariable(ofType: .wasmTypeDef()), probability(0.25) {
+                let nullability = b.type(of: elementType).wasmTypeDefinition!.description == .selfReference || probability(0.5)
+                indexTypes.append(elementType)
+                type = .wasmRef(.Index(), nullability: nullability)
+            } else {
+                type = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128])
+            }
+            return WasmStructTypeDescription.Field(type: type, mutability: probability(0.75))
+        }
+
+        b.wasmDefineStructType(fields: fields, indexTypes: indexTypes)
     },
 
     CodeGenerator("WasmArrayNewGenerator", inContext: .wasmFunction, inputs: .required(.wasmTypeDef())) { b, arrayType in
@@ -144,24 +161,34 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     // We use false nullability so we do not invoke null traps.
-    CodeGenerator("WasmArrayLengthGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableRef)) { b, array in
+    // TODO(manoskouk): Express that only array types are .required (same with the two generators below).
+    CodeGenerator("WasmArrayLengthGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableIndexRef)) { b, array in
+        guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind else {
+            fatalError("unreachable: array.len input not an Index")
+        }
+        if !(desc is WasmArrayTypeDescription) { return }
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmArrayLen(array)
     },
 
     // We use false nullability so we do not invoke null traps.
-    CodeGenerator("WasmArrayGetGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableRef)) { b, array in
+    CodeGenerator("WasmArrayGetGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableIndexRef)) { b, array in
+        guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind else {
+            fatalError("unreachable: array.get input not an Index")
+        }
+        if !(desc is WasmArrayTypeDescription) { return }
         let function = b.currentWasmModule.currentWasmFunction
         // TODO(mliedtke): Track array length and use other indices as well.
         let index = function.consti32(0)
         function.wasmArrayGet(array: array, index: index)
     },
 
-    CodeGenerator("WasmArraySetGenerator", inContext: .wasmFunction, inputs: .required(.wasmRef(.Index(), nullability: true))) { b, array in
+    // We use false nullability so we do not invoke null traps.
+    CodeGenerator("WasmArraySetGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableIndexRef)) { b, array in
         guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind else {
-            fatalError("array.set input not an array")
+            fatalError("unreachable: array.set input not an Index")
         }
-        let arrayType = desc! as! WasmArrayTypeDescription
+        guard let arrayType = desc! as? WasmArrayTypeDescription else { return }
         guard arrayType.mutability else { return }
         guard let element = b.randomVariable(ofType: arrayType.elementType) else { return }
         let function = b.currentWasmModule.currentWasmFunction

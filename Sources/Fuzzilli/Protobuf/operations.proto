@@ -1348,6 +1348,15 @@ message WasmDefineArrayType {
     bool mutability = 2;
 }
 
+message WasmStructField {
+    WasmILType type = 1;
+    bool mutability = 2;
+}
+
+message WasmDefineStructType {
+    repeated WasmStructField fields = 1;
+}
+
 message WasmDefineForwardOrSelfReference {
 }
 
