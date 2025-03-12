@@ -322,6 +322,7 @@ enum Opcode {
     case wasmBeginTypeGroup(WasmBeginTypeGroup)
     case wasmEndTypeGroup(WasmEndTypeGroup)
     case wasmDefineArrayType(WasmDefineArrayType)
+    case wasmDefineStructType(WasmDefineStructType)
     case wasmDefineForwardOrSelfReference(WasmDefineForwardOrSelfReference)
     case wasmResolveForwardReference(WasmResolveForwardReference)
 

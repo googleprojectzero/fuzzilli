@@ -2559,6 +2559,20 @@ class WasmDefineArrayType: WasmTypeOperation {
     }
 }
 
+class WasmDefineStructType: WasmTypeOperation {
+    override var opcode: Opcode { .wasmDefineStructType(self) }
+
+    typealias Field = WasmStructTypeDescription.Field
+
+    let fields: [Field]
+
+    init(fields: [Field]) {
+        self.fields = fields
+        let numInputs = fields.map { $0.type.requiredInputCount() }.reduce(0) { $0 + $1 }
+        super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmTypeGroup])
+    }
+}
+
 class WasmDefineForwardOrSelfReference: WasmTypeOperation {
     override var opcode: Opcode { .wasmDefineForwardOrSelfReference(self) }
 

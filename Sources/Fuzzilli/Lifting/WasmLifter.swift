@@ -413,6 +413,13 @@ public class WasmLifter {
             data += [0x5e]
             data += encodeType(arrayDesc.elementType)
             data += [arrayDesc.mutability ? 1 : 0]
+        } else if let structDesc = desc as? WasmStructTypeDescription {
+            data += [0x5f]
+            data += Leb128.unsignedEncode(structDesc.fields.count)
+            for field in structDesc.fields {
+                data += encodeType(field.type)
+                data += [field.mutability ? 1 : 0]
+            }
         } else {
             fatalError("Unsupported WasmTypeDescription!")
         }

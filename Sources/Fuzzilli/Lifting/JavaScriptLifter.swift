@@ -1644,6 +1644,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmBeginTypeGroup(_),
                  .wasmEndTypeGroup(_),
                  .wasmDefineArrayType(_),
+                 .wasmDefineStructType(_),
                  .wasmDefineForwardOrSelfReference(_),
                  .wasmResolveForwardReference(_),
                  .wasmArrayNewFixed(_),
