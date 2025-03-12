@@ -225,9 +225,9 @@ public class JavaScriptLifter: Lifter {
             // We also have some lightweight checking logic to ensure that the input expressions are retrieved in the correct order.
             // This does not guarantee that they will also _evaluate_ in that order at runtime, but it's probably a decent approximation.
             guard let inputs = w.retrieve(expressionsFor: instr.inputs) else {
-                logger.error("Missing one or more expressions for inputs \(instr.inputs) of \(instr)")
-                logger.error("Program is \(FuzzILLifter().lift(program, withOptions: .includeComments))")
-                fatalError("Dying now.")
+                fatalError("Missing one or more expressions for inputs \(instr.inputs) of \(instr).\n" +
+                           "Program is \(FuzzILLifter().lift(program, withOptions: .includeComments))\n" +
+                           "Dying now.")
             }
             var nextExpressionToFetch = 0
             func input(_ i: Int) -> Expression {
