@@ -606,7 +606,11 @@ let v8Profile = Profile(
         }
 
         if probability(0.1) {
-            args.append("--stress-scavenger-pinning-objects-random")
+            args.append("--stress-scavenger-conservative-object-pinning-random")
+        }
+
+        if probability(0.1) {
+            args.append("--precise-object-pinning")
         }
 
         //
