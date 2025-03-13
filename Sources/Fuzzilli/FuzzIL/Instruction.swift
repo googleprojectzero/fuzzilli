@@ -1375,10 +1375,8 @@ extension Instruction: ProtobufConvertible {
                 fatalError("Should never be serialized")
             case .wasmUnreachable(_):
                 $0.wasmUnreachable = Fuzzilli_Protobuf_WasmUnreachable()
-            case .wasmSelect(let op):
-                $0.wasmSelect = Fuzzilli_Protobuf_WasmSelect.with {
-                    $0.type = ILTypeToWasmTypeEnum(op.type)
-                }
+            case .wasmSelect(_):
+                $0.wasmSelect = Fuzzilli_Protobuf_WasmSelect()
             case .constSimd128(let op):
                 $0.constSimd128 = Fuzzilli_Protobuf_ConstSimd128.with { $0.value = op.value.map{ UInt32($0) } }
             case .wasmSimd128IntegerUnOp(let op):
@@ -2294,8 +2292,8 @@ extension Instruction: ProtobufConvertible {
             fatalError("Should never be deserialized!")
         case .wasmUnreachable(_):
             op = WasmUnreachable()
-        case .wasmSelect(let p):
-            op = WasmSelect(type: WasmTypeEnumToILType(p.type))
+        case .wasmSelect(_):
+            op = WasmSelect()
         case .constSimd128(let p):
             op = ConstSimd128(value: p.value.map{ UInt8($0) })
         case .wasmSimd128IntegerUnOp(let p):

@@ -1122,7 +1122,7 @@ public class WasmLifter {
             // operations at all but instead always decide based on the ILType?
             for input in instr.inputs {
                 let inputType = typer.type(of: input)
-                if inputType.Is(.wasmTypeDef()) {
+                if inputType.Is(.wasmTypeDef()) || inputType.Is(.wasmRef(.Index(), nullability: true)) {
                     let typeDesc = typer.getTypeDescription(of: input)
                     if typeDesc.typeGroupIndex != -1 {
                         // Add typegroups and their dependencies.
@@ -1633,8 +1633,8 @@ public class WasmLifter {
             return Data([0x01])
         case .wasmUnreachable(_):
             return Data([0x00])
-        case .wasmSelect(let op):
-            return Data([0x1c, 0x01]) + encodeType(op.type)
+        case .wasmSelect(_):
+            return Data([0x1c, 0x01]) + encodeType(typer.type(of: wasmInstruction.input(0)))
         case .constSimd128(let op):
             return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(12) + Data(op.value)
         case .wasmSimd128IntegerUnOp(let op):
