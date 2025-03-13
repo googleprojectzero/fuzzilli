@@ -3413,8 +3413,9 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmSelect(type: ILType, on condition: Variable, trueValue: Variable, falseValue: Variable) -> Variable {
-            return b.emit(WasmSelect(type: type), withInputs: [trueValue, falseValue, condition]).output
+        public func wasmSelect(on condition: Variable, trueValue: Variable, falseValue: Variable) -> Variable {
+            let lhsType = b.type(of: trueValue)
+            return b.emit(WasmSelect(), withInputs: [trueValue, falseValue, condition], types: [lhsType, lhsType, .wasmi32]).output
         }
 
         public func wasmReturn(_ values: [Variable]) {

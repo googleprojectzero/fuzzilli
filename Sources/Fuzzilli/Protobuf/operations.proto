@@ -1278,7 +1278,6 @@ message WasmUnreachable {
 }
 
 message WasmSelect {
-    WasmILType type = 1;
 }
 
 message ConstSimd128 {

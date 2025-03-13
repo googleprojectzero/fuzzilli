@@ -1143,8 +1143,8 @@ public class FuzzILLifter: Lifter {
         case .wasmUnreachable:
             w.emit("WasmUnreachable")
 
-        case .wasmSelect(let op):
-            w.emit("\(output()) <- WasmSelect[\(op.type)] \(input(2)) ? \(input(0)) : \(input(1))")
+        case .wasmSelect(_):
+            w.emit("\(output()) <- WasmSelect \(input(2)) ? \(input(0)) : \(input(1))")
 
         case .constSimd128(let op):
             w.emit("\(output()) <- ConstSimd128 \(op.value)")

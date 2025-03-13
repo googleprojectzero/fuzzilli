@@ -356,6 +356,8 @@ public struct JSTyper: Analyzer {
                 let jsSignature = op.signature.parameterTypes.map(Parameter.plain) => returnType
                 setType(of: instr.output, to: .wasmFunctionDef(op.signature))
                 activeWasmModuleDefinition!.methodSignatures.append((instr.output, jsSignature))
+            case .wasmSelect(_):
+                setType(of: instr.output, to: type(of: instr.input(0)))
             case .wasmBeginBlock(let op):
                 wasmTypeBeginBlock(instr, op.signature)
             case .wasmEndBlock(let op):

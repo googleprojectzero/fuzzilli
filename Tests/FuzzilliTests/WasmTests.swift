@@ -2125,12 +2125,12 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi64]) { function, args in
-                function.wasmReturn(function.wasmSelect(type: .wasmi64, on: args[0],
+                function.wasmReturn(function.wasmSelect(on: args[0],
                     trueValue: function.consti64(123), falseValue: function.consti64(321)))
             }
 
             wasmModule.addWasmFunction(with: [.wasmi32, .wasmExternRef, .wasmExternRef] => [.wasmExternRef]) { function, args in
-                function.wasmReturn(function.wasmSelect(type: .wasmExternRef, on: args[0], trueValue: args[1], falseValue: args[2]))
+                function.wasmReturn(function.wasmSelect(on: args[0], trueValue: args[1], falseValue: args[2]))
             }
         }
 
@@ -2152,6 +2152,37 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "321\n123\nHello\nWorld\n")
+    }
+
+    func testSelectIndexType() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let arrayi32 = b.wasmDefineTypeGroup {
+            [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+        }[0]
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                let arrayA = function.wasmArrayNewFixed(arrayType: arrayi32, elements: [function.consti32(123)])
+                let arrayB = function.wasmArrayNewFixed(arrayType: arrayi32, elements: [function.consti32(-321)])
+                let array = function.wasmSelect(on: args[0], trueValue: arrayA, falseValue: arrayB)
+                return [function.wasmArrayGet(array: array, index: function.consti32(0))]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut1 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut1)])
+        let wasmOut2 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut2)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "-321\n123\n")
     }
 
     // This test covers a bug where imported functions were not accounted for correctly when
