@@ -499,8 +499,10 @@ extension Instruction: ProtobufConvertible {
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.valuef64(val)
             case .refFunc(let val):
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.funcref(Int64(val))
-            case .refNull:
-                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(0)
+            case .externref:
+                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.externref)
+            case .exnref:
+                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.exnref)
             case .imported(let ilType):
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.imported(ILTypeToWasmTypeEnum(ilType))
             }
@@ -1625,8 +1627,15 @@ extension Instruction: ProtobufConvertible {
 
         func convertWasmGlobal(_ proto: Fuzzilli_Protobuf_WasmGlobal) -> WasmGlobal {
             switch proto.wasmGlobal {
-            case .nullref(_):
-                return .refNull
+            case .nullref(let val):
+                switch val {
+                case .externref:
+                    return .externref
+                case .exnref:
+                    return .exnref
+                default:
+                    fatalError("Unrecognized global wasm reference type \(val)")
+                }
             case .funcref(let val):
                 return .refFunc(Int(val))
             case .valuei64(let val):

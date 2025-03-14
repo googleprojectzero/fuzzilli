@@ -225,7 +225,7 @@ public class OperationMutator: BaseInstructionMutator {
             // The type has to match for wasm, we cannot just switch types here as the rest of the wasm code will become invalid.
             // TODO: add nullref and funcref as types here.
             let wasmGlobal: WasmGlobal
-            switch op.value.toType() {
+            switch op.value {
             case .wasmf32:
                 wasmGlobal = .wasmf32(Float32(b.randomFloat()))
             case .wasmf64:
@@ -234,8 +234,13 @@ public class OperationMutator: BaseInstructionMutator {
                 wasmGlobal = .wasmi32(Int32(truncatingIfNeeded: b.randomInt()))
             case .wasmi64:
                 wasmGlobal = .wasmi64(b.randomInt())
-            default:
-                fatalError("unexpected/unimplemented Value Type!")
+            case .externref,
+                 .exnref:
+                return instr
+            case .refFunc,
+                 .imported:
+                // TODO(cffsmith): Support these enum values or drop them from the WasmGlobal.
+                fatalError("unimplemented")
             }
             newOp = CreateWasmGlobal(value: wasmGlobal, isMutable: probability(0.5))
         case .createWasmMemory(let op):

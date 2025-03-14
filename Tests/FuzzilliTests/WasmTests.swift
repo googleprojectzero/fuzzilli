@@ -478,6 +478,142 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1338\n4242\n6.61e-321\n")
     }
 
+    func testGlobalExnRef() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--experimental-wasm-exnref"])
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let tagi32 = b.createWasmTag(parameterTypes: [.wasmi32])
+        let module = b.buildWasmModule { wasmModule in
+            // Note that globals of exnref can only be defined in wasm, not in JS.
+            let global = wasmModule.addGlobal(wasmGlobal: .exnref, isMutable: true)
+            assert(b.type(of: global) == .object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: ILType.wasmExnRef, isMutable: true)))
+
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                let value = function.wasmLoadGlobal(globalVariable: global)
+                return [function.wasmRefIsNull(value)]
+            }
+
+            // Throw an exception, catch it and store it in the global.
+            wasmModule.addWasmFunction(with: [] => []) { function, args in
+                let exnref = function.wasmBuildBlockWithResults(with: [] => [.wasmExnRef], args: []) { catchLabel, _ in
+                    function.wasmBuildTryTable(with: [] => [], args: [catchLabel], catches: [.AllRef]) { _, _ in
+                        function.WasmBuildThrow(tag: tagi32, inputs: [function.consti32(42)])
+                        return []
+                    }
+                    return [function.wasmRefNull(type: .wasmExnRef)]
+                }[0]
+                function.wasmStoreGlobal(globalVariable: global, to: exnref)
+            }
+
+            // Rethrow the exception stored in the global, catch it and extract the integer.
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchLabel, _ in
+                    function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchLabel], catches: [.Ref]) { _, _ in
+                        function.wasmBuildThrowRef(exception: function.wasmLoadGlobal(globalVariable: global))
+                        return []
+                    }
+                    return [function.consti32(-1), function.wasmRefNull(type: .wasmExnRef)]
+                }
+                return [caughtValues[0]]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        // The initial value is null --> prints "1".
+        let out1 = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [out1])
+        // Store an exnref in the global.
+        b.callMethod(module.getExportedMethod(at: 1), on: exports)
+        // The value is non-null --> prints "0".
+        let out2 = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+        b.callFunction(outputFunc, withArgs: [out2])
+        // Read the integer value stored in the exception stored in the global.
+        let out3 = b.callMethod(module.getExportedMethod(at: 2), on: exports)
+        b.callFunction(outputFunc, withArgs: [out3])
+        // The global is also exported to JS but we can't get the exnref value.
+        let global = b.getProperty("wg0", of: exports)
+        b.buildTryCatchFinally {
+            b.getProperty("value", of: global)
+            b.callFunction(outputFunc, withArgs: [b.loadString("Not reached")])
+        } catchBody: { e in
+            b.callFunction(outputFunc, withArgs: [b.loadString("exception")])
+        }
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: "1\n0\n42\nexception\n")
+    }
+
+    func testGlobalExternRef() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            let global = wasmModule.addGlobal(wasmGlobal: .externref, isMutable: true)
+            assert(b.type(of: global) == .object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
+
+            wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, label, args in
+                [function.wasmLoadGlobal(globalVariable: global)]
+            }
+
+            wasmModule.addWasmFunction(with: [.wasmExternRef] => []) { function, label, args in
+                function.wasmStoreGlobal(globalVariable: global, to: args[0])
+                return []
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let loadGlobal = module.getExportedMethod(at: 0)
+        let storeGlobal = module.getExportedMethod(at: 1)
+        // The initial value is "null".
+        b.callFunction(outputFunc, withArgs: [b.callMethod(loadGlobal, on: exports)])
+        // Store a string in the global.
+        b.callMethod(storeGlobal, on: exports, withArgs: [b.loadString("Hello!")])
+        // The value is now "Hello!".
+        b.callFunction(outputFunc, withArgs: [b.callMethod(loadGlobal, on: exports)])
+        // The same value is returned from JS when accessing it via the .value property.
+        let global = b.getProperty("wg0", of: exports)
+        b.callFunction(outputFunc, withArgs: [b.getProperty("value", of: global)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: "null\nHello!\nHello!\n")
+    }
+
+    func testGlobalExternRefFromJS() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let global: Variable = b.createWasmGlobal(value: .externref, isMutable: true)
+        assert(b.type(of: global) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        // The initial value is "undefined" (because we didn't provide an explicit initialization).
+        b.callFunction(outputFunc, withArgs: [b.getProperty("value", of: global)])
+        // Store a string in the global.
+        b.setProperty("value", of: global, to: b.loadString("Hello!"))
+        // The value is now "Hello!".
+        b.callFunction(outputFunc, withArgs: [b.getProperty("value", of: global)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: "undefined\nHello!\n")
+    }
+
     func importedTableTestCase(isTable64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
