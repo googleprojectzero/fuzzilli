@@ -660,7 +660,6 @@ let v8Profile = Profile(
 
             // Maglev related flags
             args.append(probability(0.5) ? "--maglev-inline-api-calls" : "--no-maglev-inline-api-calls")
-            if probability(0.5) { args.append("--maglev-extend-properties-backing-store") }
 
             // Compiler related flags
             args.append(probability(0.5) ? "--always-turbofan" : "--no-always-turbofan")
