@@ -299,11 +299,15 @@ public struct JSTyper: Analyzer {
                     activeWasmModuleDefinition!.globals.append(instr.input(0))
                 }
             case .wasmArrayNewFixed(_),
-                 .wasmArrayNewDefault(_):
+                 .wasmArrayNewDefault(_),
+                 .wasmStructNewDefault(_):
                 attachTypeDescription(to: instr.output, typeDef: instr.input(0))
             case .wasmArrayGet(_):
                 let arrayType = getTypeDescription(of: instr.input(0)) as! WasmArrayTypeDescription
                 set(instr.output, arrayType.elementType)
+            case .wasmStructGet(let op):
+                let structType = getTypeDescription(of: instr.input(0)) as! WasmStructTypeDescription
+                set(instr.output, structType.fields[op.fieldIndex].type)
             case .wasmRefNull(_):
                 if instr.hasInputs {
                     attachTypeDescription(to: instr.output, typeDef: instr.input(0))

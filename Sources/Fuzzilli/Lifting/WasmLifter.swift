@@ -1750,7 +1750,7 @@ public class WasmLifter {
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
             return Data([Prefix.GC.rawValue, 0x07]) + arrayIndex
         case .wasmArrayLen(_):
-            return Data([Prefix.GC.rawValue, 0x0f])
+            return Data([Prefix.GC.rawValue, 0x0F])
         case .wasmArrayGet(_):
             let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
@@ -1759,6 +1759,20 @@ public class WasmLifter {
             let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
             return Data([Prefix.GC.rawValue, 0x0E]) + arrayIndex
+        case .wasmStructNewDefault(_):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let structIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            return Data([Prefix.GC.rawValue, 0x01]) + structIndex
+        case .wasmStructGet(let op):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let structIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            let fieldIndex = Leb128.unsignedEncode(op.fieldIndex)
+            return Data([Prefix.GC.rawValue, 0x02]) + structIndex + fieldIndex
+        case .wasmStructSet(let op):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let structIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            let fieldIndex = Leb128.unsignedEncode(op.fieldIndex)
+            return Data([Prefix.GC.rawValue, 0x05]) + structIndex + fieldIndex
         case .wasmRefNull(_):
             return Data([0xD0]) + encodeHeapType(typer.type(of: wasmInstruction.output))
 

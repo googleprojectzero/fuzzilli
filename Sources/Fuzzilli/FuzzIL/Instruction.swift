@@ -1454,6 +1454,18 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmArraySet = Fuzzilli_Protobuf_WasmArraySet.with {
                     $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
                 }
+            case .wasmStructNewDefault(_):
+                $0.wasmStructNewDefault = Fuzzilli_Protobuf_WasmStructNewDefault()
+            case .wasmStructGet(let op):
+                $0.wasmStructGet = Fuzzilli_Protobuf_WasmStructGet.with {
+                    $0.fieldIndex = Int32(op.fieldIndex)
+                    $0.fieldType = ILTypeToWasmTypeEnum(op.fieldType)
+                }
+            case .wasmStructSet(let op):
+                $0.wasmStructSet = Fuzzilli_Protobuf_WasmStructSet.with {
+                    $0.fieldIndex = Int32(op.fieldIndex)
+                    $0.fieldType = ILTypeToWasmTypeEnum(op.fieldType)
+                }
             case .wasmRefNull(let op):
                 $0.wasmRefNull = Fuzzilli_Protobuf_WasmRefNull.with {
                     $0.type = ILTypeToWasmTypeEnum(op.outputType)
@@ -2342,6 +2354,12 @@ extension Instruction: ProtobufConvertible {
             op = WasmArrayGet(elementType: WasmTypeEnumToILType(p.elementType))
         case .wasmArraySet(let p):
             op = WasmArraySet(elementType: WasmTypeEnumToILType(p.elementType))
+        case .wasmStructNewDefault(_):
+            op = WasmStructNewDefault()
+        case .wasmStructGet(let p):
+            op = WasmStructGet(fieldIndex: Int(p.fieldIndex), fieldType: WasmTypeEnumToILType(p.fieldType))
+        case .wasmStructSet(let p):
+            op = WasmStructSet(fieldIndex: Int(p.fieldIndex), fieldType: WasmTypeEnumToILType(p.fieldType))
         case .wasmRefNull(let p):
             op = WasmRefNull(type: WasmTypeEnumToILType(p.type))
         }
