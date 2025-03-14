@@ -322,6 +322,7 @@ message Instruction {
         WasmStructGet wasmStructGet = 296;
         WasmStructSet wasmStructSet = 297;
         WasmRefNull wasmRefNull = 298;
+        WasmRefIsNull wasmRefIsNull = 299;
     }
 }
 

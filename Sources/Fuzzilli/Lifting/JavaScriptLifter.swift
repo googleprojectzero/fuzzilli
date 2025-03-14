@@ -1655,7 +1655,8 @@ public class JavaScriptLifter: Lifter {
                  .wasmStructNewDefault(_),
                  .wasmStructGet(_),
                  .wasmStructSet(_),
-                 .wasmRefNull(_):
+                 .wasmRefNull(_),
+                 .wasmRefIsNull(_):
                  fatalError("unreachable")
             }
 

@@ -335,4 +335,5 @@ enum Opcode {
     case wasmStructGet(WasmStructGet)
     case wasmStructSet(WasmStructSet)
     case wasmRefNull(WasmRefNull)
+    case wasmRefIsNull(WasmRefIsNull)
 }

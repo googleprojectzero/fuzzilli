@@ -577,7 +577,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmStructNewDefault(_),
              .wasmStructGet(_),
              .wasmStructSet(_),
-             .wasmRefNull(_):
+             .wasmRefNull(_),
+             .wasmRefIsNull(_):
              assert(!instr.isOperationMutable)
              fatalError("Unexpected Operation")
         }

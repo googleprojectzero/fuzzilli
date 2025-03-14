@@ -1781,6 +1781,8 @@ public class WasmLifter {
             return Data([Prefix.GC.rawValue, 0x05]) + structIndex + fieldIndex
         case .wasmRefNull(_):
             return try Data([0xD0]) + encodeHeapType(typer.type(of: wasmInstruction.output))
+        case .wasmRefIsNull(_):
+            return Data([0xD1])
 
         default:
              fatalError("unreachable")

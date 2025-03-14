@@ -1462,6 +1462,8 @@ extension Instruction: ProtobufConvertible {
                         $0.type = ILTypeToWasmTypeEnum(op.type!)
                     }
                 }
+            case .wasmRefIsNull(_):
+                $0.wasmRefIsNull = Fuzzilli_Protobuf_WasmRefIsNull()
             }
         }
 
@@ -2353,6 +2355,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmStructSet(fieldIndex: Int(p.fieldIndex))
         case .wasmRefNull(let p):
             op = p.hasType ? WasmRefNull(type: WasmTypeEnumToILType(p.type)) : WasmRefNull(type: nil)
+        case .wasmRefIsNull(_):
+            op = WasmRefIsNull()
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

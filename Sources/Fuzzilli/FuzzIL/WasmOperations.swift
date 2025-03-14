@@ -1696,3 +1696,11 @@ class WasmRefNull: WasmOperationBase {
         super.init(numInputs: type == nil ? 1 : 0, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }
+
+class WasmRefIsNull: WasmOperationBase {
+    override var opcode: Opcode { .wasmRefIsNull(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}

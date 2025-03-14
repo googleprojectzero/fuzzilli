@@ -2494,33 +2494,26 @@ class WasmGCTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => [.wasmFuncRef]) { function, args in
                 function.wasmReturn(function.wasmRefNull(type: .wasmFuncRef))
             }
-            // TODO(mliedtke): Simplify this once Fuzzilli supports index types in function signatures.
-            wasmModule.addWasmFunction(with: [] => []) { function, args in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, args in
                 let refNull = function.wasmRefNull(typeDef: arrayType)
-                function.wasmArrayGet(array: refNull, index: function.consti32(0))
+                function.wasmRefIsNull(refNull)
+            }
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, args in
+                let array = function.wasmArrayNewFixed(arrayType: arrayType, elements: [])
+                function.wasmRefIsNull(array)
             }
         }
 
         let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        for i in 0..<2 {
+        for i in 0..<4 {
             let wasmOut = b.callMethod(module.getExportedMethod(at: i), on: exports, withArgs: [])
             b.callFunction(outputFunc, withArgs: [wasmOut])
         }
 
-        b.buildTryCatchFinally {
-            b.callMethod(module.getExportedMethod(at: 2), on: exports, withArgs: [])
-        } catchBody: { exception in
-            // Check that it is a WebAssembly.RuntimeError (because the concrete error messages are
-            // implementation-defined.)
-            let wasmRuntimeError =
-                b.getProperty("RuntimeError", of: b.createNamedVariable(forBuiltin: "WebAssembly"))
-            b.callFunction(outputFunc, withArgs: [b.testInstanceOf(exception, wasmRuntimeError)])
-        }
-
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
-        testForOutput(program: jsProg, runner: runner, outputString: "null\nnull\ntrue\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "null\nnull\n1\n0\n")
     }
 }
 

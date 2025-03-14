@@ -1204,6 +1204,9 @@ public class FuzzILLifter: Lifter {
             let typeStr = op.type == nil ? "\(input(0))" : "\(op.type!)"
             w.emit("\(output()) <- WasmRefNull \(typeStr)")
 
+        case .wasmRefIsNull(_):
+            w.emit("\(output()) <- WasmRefIsNull \(input(0))")
+
         case .wasmBeginTypeGroup(_):
             w.emit("WasmBeginTypeGroup")
             w.increaseIndentionLevel()
