@@ -415,6 +415,8 @@ public struct JSTyper: Analyzer {
                 } else {
                     setType(of: instr.output, to: op.type!)
                 }
+            case .wasmRefIsNull(_):
+                setType(of: instr.output, to: .wasmi32)
             default:
                 if instr.numInnerOutputs + instr.numOutputs != 0 {
                     fatalError("Missing typing of outputs for \(instr.op.opcode)")

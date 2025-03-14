@@ -3531,6 +3531,11 @@ public class ProgramBuilder {
         public func wasmRefNull(typeDef: Variable) -> Variable {
             return b.emit(WasmRefNull(type: nil), withInputs: [typeDef]).output
         }
+
+        @discardableResult
+        public func wasmRefIsNull(_ ref: Variable) -> Variable {
+            return b.emit(WasmRefIsNull(), withInputs: [ref], types: [.wasmGenericRef]).output
+        }
     }
 
     public class WasmModule {

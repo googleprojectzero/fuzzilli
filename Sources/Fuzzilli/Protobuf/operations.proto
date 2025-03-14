@@ -1391,3 +1391,6 @@ message WasmStructSet {
 message WasmRefNull {
     optional WasmILType type = 1;
 }
+
+message WasmRefIsNull {
+}

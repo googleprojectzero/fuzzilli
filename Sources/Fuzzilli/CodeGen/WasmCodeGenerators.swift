@@ -238,6 +238,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("WasmRefIsNullGenerator", inContext: .wasmFunction, inputs: .required(.wasmGenericRef)) { b, ref in
+        b.currentWasmModule.currentWasmFunction.wasmRefIsNull(ref)
+    },
+
     // Primitive Value Generators
 
     ValueGenerator("WasmLoadi32Generator", inContext: .wasmFunction) { b, n in
