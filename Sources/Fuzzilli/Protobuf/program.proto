@@ -318,7 +318,10 @@ message Instruction {
         WasmArrayLen wasmArrayLen = 292;
         WasmArrayGet wasmArrayGet = 293;
         WasmArraySet wasmArraySet = 294;
-        WasmRefNull wasmRefNull = 295;
+        WasmStructNewDefault wasmStructNewDefault = 295;
+        WasmStructGet wasmStructGet = 296;
+        WasmStructSet wasmStructSet = 297;
+        WasmRefNull wasmRefNull = 298;
     }
 }
 

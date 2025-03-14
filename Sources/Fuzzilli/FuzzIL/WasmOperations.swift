@@ -1684,6 +1684,42 @@ class WasmArraySet: WasmTypedOperation {
     }
 }
 
+class WasmStructNewDefault: WasmTypedOperation {
+    override var opcode: Opcode { .wasmStructNewDefault(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmTypeDef()],
+                   outputType: .wasmRef(.Index(), nullability: false),
+                   requiredContext: [.wasmFunction])
+    }
+}
+
+class WasmStructGet: WasmTypedOperation {
+    override var opcode: Opcode { .wasmStructGet(self) }
+    let fieldIndex: Int
+    let fieldType: ILType
+
+    init(fieldIndex: Int, fieldType: ILType) {
+        self.fieldIndex = fieldIndex
+        self.fieldType = fieldType
+        super.init(inputTypes: [.wasmRef(.Index(), nullability: true)], outputType: fieldType,
+            requiredContext: [.wasmFunction])
+    }
+}
+
+class WasmStructSet: WasmTypedOperation {
+    override var opcode: Opcode { .wasmStructSet(self) }
+    let fieldIndex: Int
+    let fieldType: ILType
+
+    init(fieldIndex: Int, fieldType: ILType) {
+        self.fieldIndex = fieldIndex
+        self.fieldType = fieldType
+        super.init(inputTypes: [.wasmRef(.Index(), nullability: true), fieldType], outputType: .nothing,
+                   requiredContext: [.wasmFunction])
+    }
+}
+
 class WasmRefNull: WasmTypedOperation {
     override var opcode: Opcode { .wasmRefNull(self) }
 

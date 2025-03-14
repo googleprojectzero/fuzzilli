@@ -2293,6 +2293,42 @@ class WasmGCTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "21\n")
     }
 
+    func testStruct() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let types = b.wasmDefineTypeGroup {
+            let structOfi32 = b.wasmDefineStructType(fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)], indexTypes: [])
+            let structOfStruct = b.wasmDefineStructType(fields: [WasmStructTypeDescription.Field(type: .wasmRef(.Index(), nullability: true), mutability: true)], indexTypes: [structOfi32])
+            return [structOfi32, structOfStruct]
+        }
+        let structOfi32 = types[0]
+        let structOfStruct = types[1]
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
+                let innerStruct = function.wasmStructNewDefault(structType: structOfi32)
+                function.wasmStructSet(theStruct: innerStruct, fieldIndex: 0, value: args[0])
+                let outerStruct = function.wasmStructNewDefault(structType: structOfStruct)
+                function.wasmStructSet(theStruct: outerStruct, fieldIndex: 0, value: innerStruct)
+                let retrievedInnerStruct = function.wasmStructGet(theStruct: outerStruct, fieldIndex: 0)
+                let retrievedValue = function.wasmStructGet(theStruct: retrievedInnerStruct, fieldIndex: 0)
+                function.wasmReturn(retrievedValue)
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
     func testSelfReferenceType() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

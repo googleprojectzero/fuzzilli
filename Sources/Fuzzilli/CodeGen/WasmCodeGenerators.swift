@@ -161,7 +161,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     // We use false nullability so we do not invoke null traps.
-    // TODO(manoskouk): Express that only array types are .required (same with the two generators below).
+    // TODO(manoskouk): Express that only array types are .required (same with all relevant array and struct generators below).
     CodeGenerator("WasmArrayLengthGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableIndexRef)) { b, array in
         guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind else {
             fatalError("unreachable: array.len input not an Index")
@@ -195,6 +195,36 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // TODO(mliedtke): Track array length and use other indices as well.
         let index = function.consti32(0)
         function.wasmArraySet(array: array, index: index, element: element)
+    },
+
+    CodeGenerator("WasmStructNewDefaultGenerator", inContext: .wasmFunction, inputs: .required(.wasmTypeDef())) { b, structType in
+        guard let typeDesc = b.type(of: structType).wasmTypeDefinition?.description as? WasmStructTypeDescription else { return }
+        let function = b.currentWasmModule.currentWasmFunction
+        guard (typeDesc.fields.allSatisfy { $0.type.isWasmDefaultable }) else { return }
+        function.wasmStructNewDefault(structType: structType)
+    },
+
+    CodeGenerator("WasmStructGetGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableIndexRef)) { b, theStruct in
+        guard case .Index(let desc) = b.type(of: theStruct).wasmReferenceType!.kind else {
+            fatalError("unreachable: struct.get input not an Index")
+        }
+        guard let structType = desc! as? WasmStructTypeDescription else { return }
+        guard let fieldIndex = (0..<structType.fields.count).randomElement() else { return }
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmStructGet(theStruct: theStruct, fieldIndex: fieldIndex)
+    },
+
+    CodeGenerator("WasmStructSetGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableIndexRef)) { b, theStruct in
+        guard case .Index(let desc) = b.type(of: theStruct).wasmReferenceType!.kind else {
+            fatalError("unreachable: struct.set input not an Index")
+        }
+        guard let structType = desc! as? WasmStructTypeDescription else { return }
+        guard let fieldWithIndex = structType.fields.enumerated().filter({ (offset, field) in
+            field.mutability
+        }).randomElement() else { return }
+        guard let newValue = b.randomVariable(ofType: fieldWithIndex.element.type) else { return }
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmStructSet(theStruct: theStruct, fieldIndex: fieldWithIndex.offset, value: newValue)
     },
 
     CodeGenerator("WasmRefNullGenerator", inContext: .wasmFunction) { b in

@@ -3492,6 +3492,26 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func wasmStructNewDefault(structType: Variable) -> Variable {
+            return b.emit(WasmStructNewDefault(), withInputs: [structType]).output
+        }
+
+        @discardableResult
+        public func wasmStructGet(theStruct: Variable, fieldIndex: Int) -> Variable {
+            // TODO(manoskouk): Consider moving some of this functionality to the ProgramBuilder.
+            let structDesc = b.jsTyper.getTypeDescription(of: theStruct) as! WasmStructTypeDescription
+            let fieldType = structDesc.fields[fieldIndex].type
+            return b.emit(WasmStructGet(fieldIndex: fieldIndex, fieldType: fieldType), withInputs: [theStruct]).output
+        }
+
+        public func wasmStructSet(theStruct: Variable, fieldIndex: Int, value: Variable) {
+            let structDesc = b.jsTyper.getTypeDescription(of: theStruct) as! WasmStructTypeDescription
+            let fieldType = structDesc.fields[fieldIndex].type
+            assert(structDesc.fields[fieldIndex].mutability)
+            b.emit(WasmStructSet(fieldIndex: fieldIndex, fieldType: fieldType), withInputs: [theStruct, value])
+        }
+
+        @discardableResult
         public func wasmRefNull(_ type: ILType, typeDef: Variable? = nil) -> Variable {
             return b.emit(WasmRefNull(type: type), withInputs: typeDef != nil ? [typeDef!] : []).output
         }

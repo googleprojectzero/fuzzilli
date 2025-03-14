@@ -2393,6 +2393,30 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmArraySet(newValue)}
   }
 
+  public var wasmStructNewDefault: Fuzzilli_Protobuf_WasmStructNewDefault {
+    get {
+      if case .wasmStructNewDefault(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmStructNewDefault()
+    }
+    set {operation = .wasmStructNewDefault(newValue)}
+  }
+
+  public var wasmStructGet: Fuzzilli_Protobuf_WasmStructGet {
+    get {
+      if case .wasmStructGet(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmStructGet()
+    }
+    set {operation = .wasmStructGet(newValue)}
+  }
+
+  public var wasmStructSet: Fuzzilli_Protobuf_WasmStructSet {
+    get {
+      if case .wasmStructSet(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmStructSet()
+    }
+    set {operation = .wasmStructSet(newValue)}
+  }
+
   public var wasmRefNull: Fuzzilli_Protobuf_WasmRefNull {
     get {
       if case .wasmRefNull(let v)? = operation {return v}
@@ -2697,6 +2721,9 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmArrayLen(Fuzzilli_Protobuf_WasmArrayLen)
     case wasmArrayGet(Fuzzilli_Protobuf_WasmArrayGet)
     case wasmArraySet(Fuzzilli_Protobuf_WasmArraySet)
+    case wasmStructNewDefault(Fuzzilli_Protobuf_WasmStructNewDefault)
+    case wasmStructGet(Fuzzilli_Protobuf_WasmStructGet)
+    case wasmStructSet(Fuzzilli_Protobuf_WasmStructSet)
     case wasmRefNull(Fuzzilli_Protobuf_WasmRefNull)
 
   }
@@ -3041,7 +3068,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     292: .same(proto: "wasmArrayLen"),
     293: .same(proto: "wasmArrayGet"),
     294: .same(proto: "wasmArraySet"),
-    295: .same(proto: "wasmRefNull"),
+    295: .same(proto: "wasmStructNewDefault"),
+    296: .same(proto: "wasmStructGet"),
+    297: .same(proto: "wasmStructSet"),
+    298: .same(proto: "wasmRefNull"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6856,6 +6886,45 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 295: try {
+        var v: Fuzzilli_Protobuf_WasmStructNewDefault?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmStructNewDefault(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmStructNewDefault(v)
+        }
+      }()
+      case 296: try {
+        var v: Fuzzilli_Protobuf_WasmStructGet?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmStructGet(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmStructGet(v)
+        }
+      }()
+      case 297: try {
+        var v: Fuzzilli_Protobuf_WasmStructSet?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmStructSet(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmStructSet(v)
+        }
+      }()
+      case 298: try {
         var v: Fuzzilli_Protobuf_WasmRefNull?
         var hadOneofValue = false
         if let current = self.operation {
@@ -8054,9 +8123,21 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .wasmArraySet(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 294)
     }()
+    case .wasmStructNewDefault?: try {
+      guard case .wasmStructNewDefault(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 295)
+    }()
+    case .wasmStructGet?: try {
+      guard case .wasmStructGet(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 296)
+    }()
+    case .wasmStructSet?: try {
+      guard case .wasmStructSet(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 297)
+    }()
     case .wasmRefNull?: try {
       guard case .wasmRefNull(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 295)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 298)
     }()
     case nil: break
     }

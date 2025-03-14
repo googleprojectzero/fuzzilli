@@ -331,5 +331,8 @@ enum Opcode {
     case wasmArrayLen(WasmArrayLen)
     case wasmArrayGet(WasmArrayGet)
     case wasmArraySet(WasmArraySet)
+    case wasmStructNewDefault(WasmStructNewDefault)
+    case wasmStructGet(WasmStructGet)
+    case wasmStructSet(WasmStructSet)
     case wasmRefNull(WasmRefNull)
 }
