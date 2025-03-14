@@ -3908,10 +3908,10 @@ public struct Fuzzilli_Protobuf_WasmGlobal: Sendable {
     set {wasmGlobal = .valuef64(newValue)}
   }
 
-  public var nullref: Int64 {
+  public var nullref: Fuzzilli_Protobuf_WasmReferenceTypeKind {
     get {
       if case .nullref(let v)? = wasmGlobal {return v}
-      return 0
+      return .index
     }
     set {wasmGlobal = .nullref(newValue)}
   }
@@ -3939,7 +3939,7 @@ public struct Fuzzilli_Protobuf_WasmGlobal: Sendable {
     case valuei64(Int64)
     case valuef32(Float)
     case valuef64(Double)
-    case nullref(Int64)
+    case nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind)
     case funcref(Int64)
     case imported(Fuzzilli_Protobuf_WasmILType)
 
@@ -11866,8 +11866,8 @@ extension Fuzzilli_Protobuf_WasmGlobal: SwiftProtobuf.Message, SwiftProtobuf._Me
         }
       }()
       case 6: try {
-        var v: Int64?
-        try decoder.decodeSingularInt64Field(value: &v)
+        var v: Fuzzilli_Protobuf_WasmReferenceTypeKind?
+        try decoder.decodeSingularEnumField(value: &v)
         if let v = v {
           if self.wasmGlobal != nil {try decoder.handleConflictingOneOf()}
           self.wasmGlobal = .nullref(v)
@@ -11926,7 +11926,7 @@ extension Fuzzilli_Protobuf_WasmGlobal: SwiftProtobuf.Message, SwiftProtobuf._Me
     }()
     case .nullref?: try {
       guard case .nullref(let v)? = self.wasmGlobal else { preconditionFailure() }
-      try visitor.visitSingularInt64Field(value: v, fieldNumber: 6)
+      try visitor.visitSingularEnumField(value: v, fieldNumber: 6)
     }()
     case .funcref?: try {
       guard case .funcref(let v)? = self.wasmGlobal else { preconditionFailure() }

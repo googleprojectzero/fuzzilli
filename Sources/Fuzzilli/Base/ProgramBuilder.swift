@@ -3695,16 +3695,14 @@ public class ProgramBuilder {
     }
 
     public func randomWasmGlobal() -> WasmGlobal {
-        // TODO: Add simd128, extern ref and nullrefs.
-        withEqualProbability({
-            return .wasmf32(Float32(self.randomFloat()))
-        }, {
-            return .wasmf64(self.randomFloat())
-        }, {
-            return .wasmi32(Int32(truncatingIfNeeded: self.randomInt()))
-        }, {
-            return .wasmi64(self.randomInt())
-        })
+        // TODO: Add simd128 and nullrefs.
+        withEqualProbability(
+            {.wasmf32(Float32(self.randomFloat()))},
+            {.wasmf64(self.randomFloat())},
+            {.wasmi32(Int32(truncatingIfNeeded: self.randomInt()))},
+            {.wasmi64(self.randomInt())},
+            {.externref},
+            {.exnref})
     }
 
     public func randomTagParameters() -> [ILType] {

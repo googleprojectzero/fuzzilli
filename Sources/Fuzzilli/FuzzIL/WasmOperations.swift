@@ -615,7 +615,8 @@ public enum WasmGlobal {
     case wasmf32(Float32)
     case wasmf64(Float64)
     // Empty reference
-    case refNull
+    case externref
+    case exnref
     // function reference
     case refFunc(Int)
 
@@ -633,8 +634,10 @@ public enum WasmGlobal {
             return .wasmf32
         case .wasmf64:
             return .wasmf64
-        case .refNull:
+        case .externref:
             return .wasmExternRef
+        case .exnref:
+            return .wasmExnRef
         case .imported(let type):
             assert(type.wasmGlobalType != nil)
             return type.wasmGlobalType!.valueType
@@ -653,6 +656,8 @@ public enum WasmGlobal {
             return "f32"
         case .wasmf64(_):
             return "f64"
+        case .externref:
+            return "externref"
         default:
             fatalError("Unimplemented / unhandled")
         }
@@ -668,6 +673,8 @@ public enum WasmGlobal {
             return "\(val)"
         case .wasmf64(let val):
             return "\(val)"
+        case .externref:
+            return ""
         default:
             fatalError("Unimplemented / unhandled")
         }

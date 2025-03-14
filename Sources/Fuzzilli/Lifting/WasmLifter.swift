@@ -785,8 +785,13 @@ public class WasmLifter {
                 temporaryInstruction = Instruction(Consti32(value: val), output: Variable())
             case .wasmi64(let val):
                 temporaryInstruction = Instruction(Consti64(value: val), output: Variable())
-            case .refNull,
-                 .refFunc(_),
+            case .externref:
+                temp += try! Data([0xD0]) + encodeHeapType(.wasmExternRef) + Data([0x0B])
+                continue
+            case .exnref:
+                temp += try! Data([0xD0]) + encodeHeapType(.wasmExnRef) + Data([0x0B])
+                continue
+            case .refFunc(_),
                  .imported(_):
                 fatalError("unreachable")
             }
