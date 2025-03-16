@@ -829,7 +829,7 @@ public class ProgramBuilder {
     }
 
     /// Returns a random variable satisfying the given constraints or nil if none is found.
-    func findVariable(satisfying filter: ((Variable) -> Bool) = { _ in true }) -> Variable? {
+    public func findVariable(satisfying filter: ((Variable) -> Bool) = { _ in true }) -> Variable? {
         assert(hasVisibleVariables)
 
         // TODO: we should implement some kind of fast lookup data structure to speed up the lookup of variables by type.
