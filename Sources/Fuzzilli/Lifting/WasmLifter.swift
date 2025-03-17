@@ -1603,7 +1603,9 @@ public class WasmLifter {
             }
             return Data([0x0E]) + Leb128.unsignedEncode(op.valueCount) + depths.map(Leb128.unsignedEncode).joined()
         case .wasmBeginIf(let op):
-            return Data([0x04] + Leb128.unsignedEncode(try getSignatureIndex(op.signature)))
+            let beginIf = Data([0x04] + Leb128.unsignedEncode(try getSignatureIndex(op.signature)))
+            // Invert the condition with an `i32.eqz` (resulting in 0 becoming 1 and everything else becoming 0).
+            return op.inverted ? Data([0x45]) + beginIf : beginIf
         case .wasmBeginElse(_):
             // 0x05 is the else block instruction.
             return Data([0x05])

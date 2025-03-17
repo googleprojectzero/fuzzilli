@@ -1361,6 +1361,7 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmBeginIf = Fuzzilli_Protobuf_WasmBeginIf.with {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
                     $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.inverted = op.inverted
                 }
             case .wasmBeginElse(let op):
                 $0.wasmBeginElse = Fuzzilli_Protobuf_WasmBeginElse.with {
@@ -2277,7 +2278,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmBeginIf(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)
-            op = WasmBeginIf(with: parameters => outputs)
+            op = WasmBeginIf(with: parameters => outputs, inverted: p.inverted)
         case .wasmBeginElse(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)

@@ -1113,7 +1113,7 @@ public class FuzzILLifter: Lifter {
 
         case .wasmBeginIf(let op):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            w.emit("WasmBeginIf (\(op.signature)) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
+            w.emit("WasmBeginIf \(op.inverted ? "inverted " : "")(\(op.signature)) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
             w.increaseIndentionLevel()
 
         case .wasmBeginElse(_):

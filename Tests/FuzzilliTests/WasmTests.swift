@@ -1100,7 +1100,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { function, args in
                 let inputs = [args[1], function.consti64(3)]
-                function.wasmBuildIfElse(args[0], signature: [.wasmi64, .wasmi64] => [], args: inputs) { label, ifArgs in
+                function.wasmBuildIfElse(args[0], signature: [.wasmi64, .wasmi64] => [], args: inputs, inverted: false) { label, ifArgs in
                     function.wasmReturn(ifArgs[0])
                 } elseBody: {label, ifArgs in
                     function.wasmReturn(function.wasmi64BinOp(ifArgs[0], ifArgs[1], binOpKind: .Shl))
@@ -1129,7 +1129,7 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => [.wasmi32]) { function, args in
-                function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: [args[1]]) { ifLabel, ifArgs in
+                function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: [args[1]], inverted: false) { ifLabel, ifArgs in
                     function.wasmBranchIf(ifArgs[0], to: ifLabel)
                     function.wasmReturn(function.consti32(100))
                 } elseBody: {elseLabel, ifArgs in

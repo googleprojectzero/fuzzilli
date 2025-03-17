@@ -227,7 +227,7 @@ public class OperationMutator: BaseInstructionMutator {
             let wasmGlobal: WasmGlobal
             switch op.value.toType() {
             case .wasmf32:
-                wasmGlobal =  .wasmf32(Float32(b.randomFloat()))
+                wasmGlobal = .wasmf32(Float32(b.randomFloat()))
             case .wasmf64:
                 wasmGlobal = .wasmf64(b.randomFloat())
             case .wasmi32:

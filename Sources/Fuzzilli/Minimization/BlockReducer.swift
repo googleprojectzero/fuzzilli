@@ -91,7 +91,6 @@ struct BlockReducer: Reducer {
                  .beginWasmModule,
                  .wasmBeginBlock,
                  .wasmBeginLoop,
-                 .wasmBeginIf,
                  .wasmBeginTryDelegate,
                  .wasmBeginTryTable:
                 reduceGenericBlockGroup(group, with: helper)
@@ -102,6 +101,9 @@ struct BlockReducer: Reducer {
                 break
             case .wasmBeginTry:
                 reduceWasmTryCatch(group, with: helper)
+
+            case .wasmBeginIf:
+                reduceWasmIfElse(group, with: helper)
 
             case .wasmBeginTypeGroup:
                 // Try to remove the full type group if it is unused.
@@ -392,6 +394,42 @@ struct BlockReducer: Reducer {
             // the next catch (or the overall end of the try).
             let allInstructions = block.allInstructions
             helper.tryNopping(Array(allInstructions[0..<allInstructions.endIndex-1]))
+        }
+    }
+
+    private func reduceWasmIfElse(_ group: BlockGroup, with helper: MinimizationHelper) {
+        assert(helper.code[group.head].op is WasmBeginIf)
+        assert(helper.code[group.tail].op is WasmEndIf)
+
+        // First try to remove the entire if-else block but keep its content.
+        if helper.tryNopping(group.blockInstructionIndices) {
+            // Success!
+            return
+        }
+
+        let ifBlock = group.block(0)
+        let beginIf = helper.code[ifBlock.head].op as! WasmBeginIf
+        // Now try to turn if-else into just if.
+        if group.numBlocks == 2 && beginIf.signature.outputTypes.isEmpty {
+            // First try to remove the else block.
+            let elseBlock = group.block(1)
+            let rangeToNop = Array(elseBlock.head ..< elseBlock.tail)
+            if helper.tryNopping(rangeToNop) {
+                // Success!
+                return
+            }
+
+            // Then try to remove the if block. This requires inverting the condition of the if.
+            let invertedIf = WasmBeginIf(with: beginIf.signature, inverted: !beginIf.inverted)
+            var replacements = [(Int, Instruction)]()
+            replacements.append((ifBlock.head, Instruction(invertedIf, inouts: helper.code[ifBlock.head].inouts, flags: .empty)))
+            // The rest of the if body is nopped ...
+            for instr in helper.code.body(of: ifBlock) {
+                replacements.append((instr.index, helper.nop(for: instr)))
+            }
+            // ... as well as the BeginElse.
+            replacements.append((elseBlock.head, Instruction(Nop())))
+            helper.tryReplacements(replacements, renumberVariables: true)
         }
     }
 

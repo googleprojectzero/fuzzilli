@@ -4497,6 +4497,8 @@ public struct Fuzzilli_Protobuf_WasmBeginIf: Sendable {
 
   public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
+  public var inverted: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -13148,6 +13150,7 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "parameterTypes"),
     2: .same(proto: "outputTypes"),
+    3: .same(proto: "inverted"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -13158,6 +13161,7 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.outputTypes) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.inverted) }()
       default: break
       }
     }
@@ -13170,12 +13174,16 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
     if !self.outputTypes.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.outputTypes, fieldNumber: 2)
     }
+    if self.inverted != false {
+      try visitor.visitSingularBoolField(value: self.inverted, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmBeginIf, rhs: Fuzzilli_Protobuf_WasmBeginIf) -> Bool {
     if lhs.parameterTypes != rhs.parameterTypes {return false}
     if lhs.outputTypes != rhs.outputTypes {return false}
+    if lhs.inverted != rhs.inverted {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
