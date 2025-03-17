@@ -986,9 +986,11 @@ final class WasmEndBlock: WasmOperationBase {
 final class WasmBeginIf: WasmOperationBase {
     override var opcode: Opcode { .wasmBeginIf(self) }
     let signature: WasmSignature
+    let inverted: Bool
 
-    init(with signature: WasmSignature = [] => []) {
+    init(with signature: WasmSignature = [] => [], inverted: Bool = false) {
         self.signature = signature
+        self.inverted = inverted
         // TODO(mliedtke): Why does this set .isNotInputMutable? Try to remove it and see if the WasmLifter failure rate is affected.
 
         // Note that the condition is the last input! This is due to how lifting works for the wasm

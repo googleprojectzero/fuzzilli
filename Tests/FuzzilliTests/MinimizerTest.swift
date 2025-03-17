@@ -1550,6 +1550,92 @@ class MinimizerTests: XCTestCase {
         }
     }
 
+    func testWasmIfElseMinimizationVoidRemoveIfElseKeepContents() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, label, args in
+                    function.wasmBuildIfElse(args[0]) {
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.consti64(43)
+                    } elseBody: {
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.consti64(42)
+                    }
+                    return []
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, label, args in
+                    function.consti64(43)
+                    function.consti64(42)
+                    return []
+                }
+            }
+        }
+    }
+
+    func testWasmIfElseMinimizationVoidRemoveElse() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmBuildIfElse(args[0]) {
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let sum = function.wasmi32BinOp(args[0], args[0], binOpKind: .Add)
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.wasmReturn(sum)
+                    } elseBody: {
+                        function.wasmUnreachable()
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    function.wasmBuildIfElse(args[0]) {
+                        let sum = function.wasmi32BinOp(args[0], args[0], binOpKind: .Add)
+                        function.wasmReturn(sum)
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+        }
+    }
+
+    func testWasmIfElseMinimizationVoidRemoveIfKeepElse() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    evaluator.operationIsImportant(WasmBeginIf.self)
+                    function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: false) { _, _ in
+                        function.wasmUnreachable()
+                    } elseBody: { _, _ in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let sum = function.wasmi32BinOp(args[0], args[0], binOpKind: .Add)
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.wasmReturn(sum)
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: true) { _, _ in
+                        let sum = function.wasmi32BinOp(args[0], args[0], binOpKind: .Add)
+                        function.wasmReturn(sum)
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+        }
+    }
+
     func testWasmDataflowMinimization() throws {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)

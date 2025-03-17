@@ -1260,6 +1260,7 @@ message WasmReassign {
 message WasmBeginIf {
   repeated WasmILType parameterTypes = 1;
   repeated WasmILType outputTypes = 2;
+  bool inverted = 3;
 }
 
 message WasmBeginElse {

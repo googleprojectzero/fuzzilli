@@ -3274,20 +3274,22 @@ public class ProgramBuilder {
         public func wasmBuildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: (() -> Void)? = nil) {
             b.emit(WasmBeginIf(), withInputs: [condition])
             ifBody()
-            if let elseBody = elseBody {
+            if let elseBody {
                 b.emit(WasmBeginElse())
                 elseBody()
             }
             b.emit(WasmEndIf())
         }
 
-        public func wasmBuildIfElse(_ condition: Variable, signature: WasmSignature, args: [Variable], ifBody: (Variable, [Variable]) -> Void, elseBody: (Variable, [Variable]) -> Void) {
-            let beginBlock = b.emit(WasmBeginIf(with: signature),
+        public func wasmBuildIfElse(_ condition: Variable, signature: WasmSignature, args: [Variable], inverted: Bool, ifBody: (Variable, [Variable]) -> Void, elseBody: ((Variable, [Variable]) -> Void)? = nil) {
+            let beginBlock = b.emit(WasmBeginIf(with: signature, inverted: inverted),
                 withInputs: args + [condition],
                 types: signature.parameterTypes + [.wasmi32])
             ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
-            let elseBlock = b.emit(WasmBeginElse(with: signature))
-            elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
+            if let elseBody {
+                let elseBlock = b.emit(WasmBeginElse(with: signature))
+                elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
+            }
             b.emit(WasmEndIf())
         }
 
