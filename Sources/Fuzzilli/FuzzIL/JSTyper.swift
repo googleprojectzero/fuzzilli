@@ -115,6 +115,7 @@ public struct JSTyper: Analyzer {
 
     mutating func addArrayType(def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil) {
         let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+        let resolvedElementType: ILType
         if let elementRef = elementRef {
             let elementNullability = elementType.wasmReferenceType!.nullability
             let elementDesc = type(of: elementRef).wasmTypeDefinition!.description!
@@ -134,18 +135,15 @@ public struct JSTyper: Analyzer {
                         = typer.type(of: replacement ?? def).wasmTypeDefinition!.getReferenceTypeTo(nullability: elementNullability)
                 })
             }
-            type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
-                elementType: type(of: elementRef).wasmTypeDefinition!.getReferenceTypeTo(nullability: elementNullability),
-                mutability: mutability,
-                typeGroupIndex: tgIndex)
-
+            resolvedElementType = type(of: elementRef).wasmTypeDefinition!.getReferenceTypeTo(nullability: elementNullability)
             registerTypeGroupDependency(from: tgIndex, to: elementDesc.typeGroupIndex)
         } else {
-            type(of: def).wasmTypeDefinition!.description = WasmArrayTypeDescription(
-                elementType: elementType,
-                mutability: mutability,
-                typeGroupIndex: tgIndex)
+            resolvedElementType = elementType
         }
+        set(def, .wasmTypeDef(description: WasmArrayTypeDescription(
+            elementType: resolvedElementType,
+            mutability: mutability,
+            typeGroupIndex: tgIndex)))
         if isWithinTypeGroup {
             typeGroups[typeGroups.count - 1].append(def)
         }
@@ -176,8 +174,8 @@ public struct JSTyper: Analyzer {
             }
         }
 
-        type(of: def).wasmTypeDefinition!.description = WasmStructTypeDescription(
-            fields: resolvedFields, typeGroupIndex: tgIndex)
+        set(def, .wasmTypeDef(description: WasmStructTypeDescription(
+            fields: resolvedFields, typeGroupIndex: tgIndex)))
         if (isWithinTypeGroup) {
             typeGroups[typeGroups.count - 1].append(def)
         }
@@ -1260,15 +1258,10 @@ public struct JSTyper: Analyzer {
             finishTypeGroup()
 
         case .wasmDefineArrayType(let op):
-            // TODO(mliedtke): Instead of first typing it as generic .wasmTypeDef() and then
-            // refining that type in addArrayType, it might be nicer to just let addArrayType
-            // return the full type and pass that on to the set operation.
-            set(instr.output, .wasmTypeDef())
             let elementRef = op.elementType.requiredInputCount() == 1 ? instr.input(0) : nil
             addArrayType(def: instr.output, elementType: op.elementType, mutability: op.mutability, elementRef: elementRef)
 
         case .wasmDefineStructType(let op):
-            set(instr.output, .wasmTypeDef())
             var inputIndex = 0
             let fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)] = op.fields.map { field in
                 if field.type.requiredInputCount() == 0 {

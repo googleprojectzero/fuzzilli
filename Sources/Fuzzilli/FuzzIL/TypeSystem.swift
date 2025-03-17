@@ -218,9 +218,11 @@ public struct ILType: Hashable {
     public static let wasmSimd128 = ILType(definiteType: .wasmSimd128)
     public static let wasmGenericRef = ILType(definiteType: .wasmRef)
 
-    static func wasmTypeDef() -> ILType{
+    static func wasmTypeDef(description: WasmTypeDescription? = nil) -> ILType {
+        let typeDef = WasmTypeDefinition()
+        typeDef.description = description
         return ILType(definiteType: .wasmTypeDef, ext: TypeExtension(
-            properties: [], methods: [], signature: nil, wasmExt: WasmTypeDefinition()))
+            properties: [], methods: [], signature: nil, wasmExt: typeDef))
     }
 
     static func wasmSelfReference() -> ILType {
