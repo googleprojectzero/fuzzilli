@@ -3398,7 +3398,7 @@ public class ProgramBuilder {
                  .wasmFuncRef:
                 // TODO(cffsmith): Can we improve this once we have better support for ad hoc code
                 // generation in other contexts?
-                return self.wasmRefNull(type)
+                return self.wasmRefNull(type: type)
             default:
                 fatalError("unimplemented")
             }
@@ -3482,7 +3482,7 @@ public class ProgramBuilder {
         public func wasmArrayNewFixed(arrayType: Variable, elements: [Variable]) -> Variable {
             let arrayDesc = b.jsTyper.getTypeDescription(of: arrayType) as! WasmArrayTypeDescription
             assert(elements.allSatisfy {b.jsTyper.type(of: $0).Is(arrayDesc.elementType)})
-            return b.emit(WasmArrayNewFixed(size: elements.count, elementType: arrayDesc.elementType), withInputs: [arrayType] + elements).output
+            return b.emit(WasmArrayNewFixed(size: elements.count), withInputs: [arrayType] + elements).output
         }
 
         @discardableResult
@@ -3497,13 +3497,13 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmArrayGet(array: Variable, index: Variable) -> Variable {
-            let arrayDesc = b.jsTyper.getTypeDescription(of: array) as! WasmArrayTypeDescription
-            return b.emit(WasmArrayGet(elementType: arrayDesc.elementType), withInputs: [array, index]).output
+            return b.emit(WasmArrayGet(), withInputs: [array, index]).output
         }
 
         public func wasmArraySet(array: Variable, index: Variable, element: Variable) {
             let arrayDesc = b.jsTyper.getTypeDescription(of: array) as! WasmArrayTypeDescription
-            b.emit(WasmArraySet(elementType: arrayDesc.elementType), withInputs: [array, index, element])
+            assert(arrayDesc.mutability)
+            b.emit(WasmArraySet(), withInputs: [array, index, element])
         }
 
         @discardableResult
@@ -3513,22 +3513,23 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmStructGet(theStruct: Variable, fieldIndex: Int) -> Variable {
-            // TODO(manoskouk): Consider moving some of this functionality to the ProgramBuilder.
-            let structDesc = b.jsTyper.getTypeDescription(of: theStruct) as! WasmStructTypeDescription
-            let fieldType = structDesc.fields[fieldIndex].type
-            return b.emit(WasmStructGet(fieldIndex: fieldIndex, fieldType: fieldType), withInputs: [theStruct]).output
+            return b.emit(WasmStructGet(fieldIndex: fieldIndex), withInputs: [theStruct]).output
         }
 
         public func wasmStructSet(theStruct: Variable, fieldIndex: Int, value: Variable) {
             let structDesc = b.jsTyper.getTypeDescription(of: theStruct) as! WasmStructTypeDescription
-            let fieldType = structDesc.fields[fieldIndex].type
             assert(structDesc.fields[fieldIndex].mutability)
-            b.emit(WasmStructSet(fieldIndex: fieldIndex, fieldType: fieldType), withInputs: [theStruct, value])
+            b.emit(WasmStructSet(fieldIndex: fieldIndex), withInputs: [theStruct, value])
         }
 
         @discardableResult
-        public func wasmRefNull(_ type: ILType, typeDef: Variable? = nil) -> Variable {
-            return b.emit(WasmRefNull(type: type), withInputs: typeDef != nil ? [typeDef!] : []).output
+        public func wasmRefNull(type: ILType) -> Variable {
+            return b.emit(WasmRefNull(type: type)).output
+        }
+
+        @discardableResult
+        public func wasmRefNull(typeDef: Variable) -> Variable {
+            return b.emit(WasmRefNull(type: nil), withInputs: [typeDef]).output
         }
     }
 

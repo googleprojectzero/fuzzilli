@@ -1201,8 +1201,8 @@ public class FuzzILLifter: Lifter {
             w.emit("WasmStructSet [\(input(0))].\(op.fieldIndex) = [\(input(1))]")
 
         case .wasmRefNull(let op):
-            let inputStr = op.outputType.requiredInputCount() == 1 ? " \(input(0))" : ""
-            w.emit("\(output()) <- WasmRefNull \(op.outputType)\(inputStr)")
+            let typeStr = op.type == nil ? "\(input(0))" : "\(op.type!)"
+            w.emit("\(output()) <- WasmRefNull \(typeStr)")
 
         case .wasmBeginTypeGroup(_):
             w.emit("WasmBeginTypeGroup")

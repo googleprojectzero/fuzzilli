@@ -922,7 +922,7 @@ extension ILType: CustomStringConvertible {
             switch refType.kind {
                 case .Abstract(let heapType):
                     return ".wasmRef(.Abstract(\(nullPrefix)\(heapType)))"
-                case .Index:
+                case .Index(_):
                     return ".wasmRef(\(nullPrefix)Index)"
             }
         case .wasmFunctionDef:

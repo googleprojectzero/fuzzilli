@@ -2018,10 +2018,10 @@ class WasmFoundationTests: XCTestCase {
                             }
                             return []
                         }
-                        return [function.consti32(-1), function.wasmRefNull(.wasmExnRef)]
+                        return [function.consti32(-1), function.wasmRefNull(type: .wasmExnRef)]
                     }
                     function.wasmReturn(catchRefI32[0])
-                    return [function.wasmRefNull(.wasmExnRef)]
+                    return [function.wasmRefNull(type: .wasmExnRef)]
                 }
                 function.wasmReturn(function.consti32(100))
             }
@@ -2058,7 +2058,7 @@ class WasmFoundationTests: XCTestCase {
                         function.WasmBuildThrow(tag: tagi32, inputs: [args[0]])
                         return []
                     }
-                    return [function.consti32(0), function.wasmRefNull(.wasmExnRef)]
+                    return [function.consti32(0), function.wasmRefNull(type: .wasmExnRef)]
                 }
                 // Print the caught i32 value.
                 function.wasmJsCall(function: printInteger, withArgs: [caughtValues[0]], withWasmSignature: [.wasmi32] => [])
@@ -2489,14 +2489,14 @@ class WasmGCTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, args in
-                function.wasmReturn(function.wasmRefNull(.wasmExternRef))
+                function.wasmReturn(function.wasmRefNull(type: .wasmExternRef))
             }
             wasmModule.addWasmFunction(with: [] => [.wasmFuncRef]) { function, args in
-                function.wasmReturn(function.wasmRefNull(.wasmFuncRef))
+                function.wasmReturn(function.wasmRefNull(type: .wasmFuncRef))
             }
             // TODO(mliedtke): Simplify this once Fuzzilli supports index types in function signatures.
             wasmModule.addWasmFunction(with: [] => []) { function, args in
-                let refNull = function.wasmRefNull(.wasmRef(.Index(), nullability: true), typeDef: arrayType)
+                let refNull = function.wasmRefNull(typeDef: arrayType)
                 function.wasmArrayGet(array: refNull, index: function.consti32(0))
             }
         }
