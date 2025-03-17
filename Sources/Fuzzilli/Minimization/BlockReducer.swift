@@ -103,7 +103,10 @@ struct BlockReducer: Reducer {
                 reduceWasmTryCatch(group, with: helper)
 
             case .wasmBeginIf:
-                reduceWasmIfElse(group, with: helper)
+                let rewroteProgram = reduceWasmIfElse(group, with: helper)
+                if rewroteProgram {
+                    return
+                }
 
             case .wasmBeginTypeGroup:
                 // Try to remove the full type group if it is unused.
@@ -397,14 +400,23 @@ struct BlockReducer: Reducer {
         }
     }
 
-    private func reduceWasmIfElse(_ group: BlockGroup, with helper: MinimizationHelper) {
+    // Returns true if the label created by this block is used within the block.
+    private func wasmBlockUsesLabel(_ group: Block, with helper: MinimizationHelper) -> Bool {
+        let label = helper.code[group.head].innerOutputs.first!
+        return ((group.head + 1)..<group.tail).contains {helper.code[$0].inputs.contains(label)}
+    }
+
+    // Reduce a wasm if-else construct. In some cases this reduction fully rewrites the program
+    // invalidating pre-computed BlockGroups. If that happens, the function returns true indicating
+    // that following reductions need to rerun the Blockgroups analysis.
+    private func reduceWasmIfElse(_ group: BlockGroup, with helper: MinimizationHelper) -> Bool {
         assert(helper.code[group.head].op is WasmBeginIf)
         assert(helper.code[group.tail].op is WasmEndIf)
 
         // First try to remove the entire if-else block but keep its content.
         if helper.tryNopping(group.blockInstructionIndices) {
             // Success!
-            return
+            return false
         }
 
         let ifBlock = group.block(0)
@@ -416,7 +428,7 @@ struct BlockReducer: Reducer {
             let rangeToNop = Array(elseBlock.head ..< elseBlock.tail)
             if helper.tryNopping(rangeToNop) {
                 // Success!
-                return
+                return false
             }
 
             // Then try to remove the if block. This requires inverting the condition of the if.
@@ -432,8 +444,71 @@ struct BlockReducer: Reducer {
             }
             // ... as well as the BeginElse.
             replacements.append((elseBlock.head, Instruction(Nop())))
-            helper.tryReplacements(replacements, renumberVariables: true)
+            if helper.tryReplacements(replacements, renumberVariables: true) {
+                // Success!
+                return false
+            }
         }
+        // If we have outputs or the innerOutputs of the WasmBeginIf / WasmBeginElse are used,
+        // a more "sophisticated" reduction is needed.
+        if group.numBlocks == 2 && (!beginIf.signature.parameterTypes.isEmpty || !beginIf.signature.outputTypes.isEmpty) {
+            let elseBlock = group.block(1)
+            let beginIfInstr = helper.code[ifBlock.head]
+
+            // Check whether any of the block labels is used. In that case, we can't eliminate the
+            // if-else.
+            if wasmBlockUsesLabel(ifBlock, with: helper) || wasmBlockUsesLabel(elseBlock, with: helper) {
+                return false
+            }
+
+            do { // First try to replace the if-else with the if body.
+                // "Shortcut" bypassing the WasmBeginIf by directly using its inputs.
+                var varReplacements = Dictionary(
+                    uniqueKeysWithValues: zip(beginIfInstr.innerOutputs.dropFirst(), beginIfInstr.inputs))
+                // Replace all usages of the WasmEndIf outputs with the results of the if true
+                // block which are the inputs into the WasmBeginElse block.
+                varReplacements.merge(
+                    zip(helper.code[elseBlock.tail].outputs, helper.code[elseBlock.head].inputs.map {varReplacements[$0] ?? $0}),
+                    uniquingKeysWith: {_, _ in fatalError("duplicate variables")})
+                var newCode = Code()
+                for (i, instr) in helper.code.enumerated() {
+                    if i == ifBlock.head || (i >= elseBlock.head && i <= elseBlock.tail) {
+                        continue // Skip the WasmBeginIf and the else block.
+                    }
+                    let newInouts = instr.inouts.map {varReplacements[$0] ?? $0}
+                    newCode.append(Instruction(instr.op, inouts: newInouts, flags: .empty))
+                }
+                newCode.renumberVariables()
+                if helper.testAndCommit(newCode) {
+                    // Success!
+                    return true
+                }
+            }
+            do { // Try to replace the if-else with the else body.
+                let beginElseInstr = helper.code[elseBlock.head]
+                // "Shortcut" bypassing the WasmBeginElse by directly using the inputs into the
+                // WasmBeginIf.
+                var varReplacements = Dictionary(
+                    uniqueKeysWithValues: zip(beginElseInstr.innerOutputs.dropFirst(), beginIfInstr.inputs))
+                // Replace all usages of the WasmEndIf outputs with the results of the else block
+                // which are the inputs into the WasmEndIf block.
+                varReplacements.merge(zip(helper.code[elseBlock.tail].outputs, helper.code[elseBlock.tail].inputs.map {varReplacements[$0] ?? $0}), uniquingKeysWith: {_, _ in fatalError("duplicate variables")})
+                var newCode = Code()
+                for (i, instr) in helper.code.enumerated() {
+                    if i == elseBlock.tail || (i >= ifBlock.head && i <= ifBlock.tail) {
+                        continue // Skip the WasmBeginIf and the if true block.
+                    }
+                    let newInouts = instr.inouts.map { varReplacements[$0] ?? $0 }
+                    newCode.append(Instruction(instr.op, inouts: newInouts, flags: .empty))
+                }
+                newCode.renumberVariables()
+                if helper.testAndCommit(newCode) {
+                    // Success!
+                    return true
+                }
+            }
+        }
+        return false
     }
 
     private func reduceFunctionOrConstructor(_ function: BlockGroup, with helper: MinimizationHelper) {
