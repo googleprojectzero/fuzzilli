@@ -328,10 +328,10 @@ public class WasmLifter {
         // Build the header section which includes the Wasm version first
         self.buildHeader()
 
-        self.buildTypeSection()
+        try self.buildTypeSection()
         try self.buildImportSection()
         try self.buildFunctionSection()
-        self.buildTableSection()
+        try self.buildTableSection()
         self.buildMemorySection()
         try self.buildTagSection()
         try self.buildGlobalSection()
@@ -343,7 +343,7 @@ public class WasmLifter {
         try self.buildElementSection()
 
         // The actual bytecode of the functions.
-        self.buildCodeSection(self.instructionBuffer)
+        try self.buildCodeSection(self.instructionBuffer)
 
         // Write the bytecode as file to the given path for debugging purposes.
         if let path = path {
@@ -378,15 +378,21 @@ public class WasmLifter {
         }
     }
 
-    private func encodeType(_ type: ILType, defaultType: ILType? = nil) -> Data {
+    private func encodeWasmGCType(_ description: WasmTypeDescription?) throws -> Data {
+        guard let description else {
+            throw WasmLifter.CompileError.missingTypeInformation
+        }
+        return Leb128.unsignedEncode(typeDescToIndex[description]!)
+    }
+
+    private func encodeType(_ type: ILType, defaultType: ILType? = nil) throws -> Data {
         if let refType = type.wasmReferenceType {
             let isNullable = refType.nullability
             let nullabilityByte: UInt8 = isNullable ? 0x63 : 0x64
 
             switch refType.kind {
             case .Index(let description):
-                return Data([nullabilityByte])
-                    + Leb128.unsignedEncode(typeDescToIndex[description!]!)
+                return try Data([nullabilityByte]) + encodeWasmGCType(description)
             case .Abstract(let heapType):
                 return Data([nullabilityByte]) + encodeAbstractHeapType(heapType)
             }
@@ -395,11 +401,11 @@ public class WasmLifter {
         return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!
     }
 
-    private func encodeHeapType(_ type: ILType, defaultType: ILType? = nil) -> Data {
+    private func encodeHeapType(_ type: ILType, defaultType: ILType? = nil)  throws -> Data {
         if let refType = type.wasmReferenceType {
             switch refType.kind {
             case .Index(let description):
-                return Leb128.unsignedEncode(typeDescToIndex[description!]!)
+                return try encodeWasmGCType(description)
             case .Abstract(let heapType):
                 return encodeAbstractHeapType(heapType)
             }
@@ -408,16 +414,16 @@ public class WasmLifter {
         return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!
     }
 
-    private func buildTypeEntry(for desc: WasmTypeDescription, data: inout Data) {
+    private func buildTypeEntry(for desc: WasmTypeDescription, data: inout Data) throws {
         if let arrayDesc = desc as? WasmArrayTypeDescription {
             data += [0x5e]
-            data += encodeType(arrayDesc.elementType)
+            data += try encodeType(arrayDesc.elementType)
             data += [arrayDesc.mutability ? 1 : 0]
         } else if let structDesc = desc as? WasmStructTypeDescription {
             data += [0x5f]
             data += Leb128.unsignedEncode(structDesc.fields.count)
             for field in structDesc.fields {
-                data += encodeType(field.type)
+                data += try encodeType(field.type)
                 data += [field.mutability ? 1 : 0]
             }
         } else {
@@ -425,7 +431,7 @@ public class WasmLifter {
         }
     }
 
-    private func buildTypeSection() {
+    private func buildTypeSection() throws {
         self.bytecode += [WasmSection.type.rawValue]
 
         var temp = Data()
@@ -453,7 +459,7 @@ public class WasmLifter {
             temp += [0x4e]
             temp += Leb128.unsignedEncode(typeGroup.count)
             for typeDef in typeGroup {
-                buildTypeEntry(for: typer.getTypeDescription(of: typeDef), data: &temp)
+                try buildTypeEntry(for: typer.getTypeDescription(of: typeDef), data: &temp)
             }
         }
         // TODO(mliedtke): Also add "free types" which aren't in any explicit type group.
@@ -462,11 +468,11 @@ public class WasmLifter {
             temp += [0x60]
             temp += Leb128.unsignedEncode(signature.parameterTypes.count)
             for paramType in signature.parameterTypes {
-                temp += encodeType(paramType)
+                temp += try encodeType(paramType)
             }
             temp += Leb128.unsignedEncode(signature.outputTypes.count)
             for outputType in signature.outputTypes {
-                temp += encodeType(outputType, defaultType: .wasmExternRef)
+                temp += try encodeType(outputType, defaultType: .wasmExternRef)
             }
         }
 
@@ -560,7 +566,7 @@ public class WasmLifter {
 
                 let table = type.wasmTableType!
                 assert(table.elementType == ILType.wasmExternRef)
-                temp += encodeType(table.elementType)
+                temp += try encodeType(table.elementType)
 
                 let limits_byte: UInt8 = (table.isTable64 ? 4 : 0) | (table.limits.max != nil ? 1 : 0)
                 temp += Data([limits_byte])
@@ -575,7 +581,7 @@ public class WasmLifter {
                 let valueType = type.wasmGlobalType!.valueType
                 let mutability = type.wasmGlobalType!.isMutable
                 temp += [0x3]
-                temp += encodeType(valueType)
+                temp += try encodeType(valueType)
                 temp += mutability ? [0x1] : [0x0]
                 continue
             }
@@ -621,7 +627,7 @@ public class WasmLifter {
         }
     }
 
-    private func buildTableSection() {
+    private func buildTableSection() throws {
         self.bytecode += [WasmSection.table.rawValue]
 
         var temp = Leb128.unsignedEncode(self.tables.count)
@@ -632,7 +638,7 @@ public class WasmLifter {
             let minSize = op.limits.min
             let maxSize = op.limits.max
             let isTable64 = op.isTable64
-            temp += elementType.Is(.wasmFunctionDef()) ? Data([0x70]) : encodeType(elementType)
+            temp += try elementType.Is(.wasmFunctionDef()) ? Data([0x70]) : encodeType(elementType)
 
             let limits_byte: UInt8 = (isTable64 ? 4 : 0) | (maxSize != nil ? 1 : 0)
             temp += Data([limits_byte])
@@ -706,7 +712,7 @@ public class WasmLifter {
         }
     }
 
-    private func buildCodeSection(_ instructions: Code) {
+    private func buildCodeSection(_ instructions: Code) throws {
         self.bytecode += [WasmSection.code.rawValue]
 
         // Build the contents of the section
@@ -730,7 +736,7 @@ public class WasmLifter {
             for (_, type) in functionInfo.localsInfo[functionInfo.signature.parameterTypes.count...] {
                 // Encode the locals
                 funcTemp += Leb128.unsignedEncode(1)
-                funcTemp += encodeType(type)
+                funcTemp += try encodeType(type)
             }
             // append the actual code and the end marker
             funcTemp += functionInfo.code
@@ -765,7 +771,7 @@ public class WasmLifter {
             let definition = instruction.op as! WasmDefineGlobal
             let global = definition.wasmGlobal
 
-            temp += encodeType(global.toType())
+            temp += try encodeType(global.toType())
             temp += Data([definition.isMutable ? 0x1 : 0x0])
             // This has to be a constant expression: https://webassembly.github.io/spec/core/valid/instructions.html#constant-expressions
             var temporaryInstruction: Instruction? = nil
@@ -1634,7 +1640,7 @@ public class WasmLifter {
         case .wasmUnreachable(_):
             return Data([0x00])
         case .wasmSelect(_):
-            return Data([0x1c, 0x01]) + encodeType(typer.type(of: wasmInstruction.input(0)))
+            return try Data([0x1c, 0x01]) + encodeType(typer.type(of: wasmInstruction.input(0)))
         case .constSimd128(let op):
             return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(12) + Data(op.value)
         case .wasmSimd128IntegerUnOp(let op):
@@ -1774,7 +1780,7 @@ public class WasmLifter {
             let fieldIndex = Leb128.unsignedEncode(op.fieldIndex)
             return Data([Prefix.GC.rawValue, 0x05]) + structIndex + fieldIndex
         case .wasmRefNull(_):
-            return Data([0xD0]) + encodeHeapType(typer.type(of: wasmInstruction.output))
+            return try Data([0xD0]) + encodeHeapType(typer.type(of: wasmInstruction.output))
 
         default:
              fatalError("unreachable")
