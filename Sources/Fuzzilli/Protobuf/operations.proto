@@ -1363,7 +1363,6 @@ message WasmResolveForwardReference {
 }
 
 message WasmArrayNewFixed {
-    WasmILType elementType = 1;
 }
 
 message WasmArrayNewDefault {
@@ -1373,11 +1372,9 @@ message WasmArrayLen {
 }
 
 message WasmArrayGet {
-    WasmILType elementType = 1;
 }
 
 message WasmArraySet {
-    WasmILType elementType = 1;
 }
 
 message WasmStructNewDefault {
@@ -1385,14 +1382,12 @@ message WasmStructNewDefault {
 
 message WasmStructGet {
     int32 fieldIndex = 1;
-    WasmILType fieldType = 2;
 }
 
 message WasmStructSet {
     int32 fieldIndex = 1;
-    WasmILType fieldType = 2;
 }
 
 message WasmRefNull {
-    WasmILType type = 1;
+    optional WasmILType type = 1;
 }

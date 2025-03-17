@@ -214,11 +214,8 @@ public struct JSTyper: Analyzer {
         isWithinTypeGroup = false
     }
 
-    mutating func attachTypeDescription(to: Variable, typeDef: Variable) {
-        type(of: to).wasmReferenceType!.kind = .Index(getTypeDescription(of: typeDef))
-    }
-    mutating func attachTypeDescription(to: Variable, typeDef: WasmTypeDescription) {
-        type(of: to).wasmReferenceType!.kind = .Index(typeDef)
+    mutating func setReferenceType(of: Variable, typeDef: Variable, nullability: Bool) {
+        setType(of: of, to: type(of: typeDef).wasmTypeDefinition!.getReferenceTypeTo(nullability: nullability))
     }
 
     // Returns the type description for the provided variable which has to be either a type
@@ -226,7 +223,7 @@ public struct JSTyper: Analyzer {
     func getTypeDescription(of variable: Variable) -> WasmTypeDescription {
         let varType = type(of: variable)
         if case .Index(let desc) = varType.wasmReferenceType?.kind {
-                    return desc!
+            return desc!
         }
         return varType.wasmTypeDefinition!.description!
     }
@@ -297,20 +294,6 @@ public struct JSTyper: Analyzer {
             case .wasmStoreGlobal(_):
                 if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
                     activeWasmModuleDefinition!.globals.append(instr.input(0))
-                }
-            case .wasmArrayNewFixed(_),
-                 .wasmArrayNewDefault(_),
-                 .wasmStructNewDefault(_):
-                attachTypeDescription(to: instr.output, typeDef: instr.input(0))
-            case .wasmArrayGet(_):
-                let arrayType = getTypeDescription(of: instr.input(0)) as! WasmArrayTypeDescription
-                set(instr.output, arrayType.elementType)
-            case .wasmStructGet(let op):
-                let structType = getTypeDescription(of: instr.input(0)) as! WasmStructTypeDescription
-                set(instr.output, structType.fields[op.fieldIndex].type)
-            case .wasmRefNull(_):
-                if instr.hasInputs {
-                    attachTypeDescription(to: instr.output, typeDef: instr.input(0))
                 }
             default:
                 break
@@ -410,6 +393,29 @@ public struct JSTyper: Analyzer {
             case .wasmCallIndirect(let op):
                 for (output, outputType) in zip(instr.outputs, op.signature.outputTypes) {
                     setType(of: output, to: outputType)
+                }
+            case .wasmArrayNewFixed(_),
+                 .wasmArrayNewDefault(_):
+                setReferenceType(of: instr.output, typeDef: instr.input(0), nullability: false)
+            case .wasmArrayLen(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .wasmArrayGet(_):
+                let typeDesc = getTypeDescription(of: instr.input(0)) as! WasmArrayTypeDescription
+                setType(of: instr.output, to: typeDesc.elementType)
+            case .wasmArraySet(_):
+                break
+            case .wasmStructNewDefault(_):
+                setReferenceType(of: instr.output, typeDef: instr.input(0), nullability: false)
+            case .wasmStructGet(let op):
+                let typeDesc = getTypeDescription(of: instr.input(0)) as! WasmStructTypeDescription
+                setType(of: instr.output, to: typeDesc.fields[op.fieldIndex].type)
+            case .wasmStructSet(_):
+                break;
+            case .wasmRefNull(let op):
+                if instr.hasInputs {
+                    setReferenceType(of: instr.output, typeDef: instr.input(0), nullability: true)
+                } else {
+                    setType(of: instr.output, to: op.type!)
                 }
             default:
                 if instr.numInnerOutputs + instr.numOutputs != 0 {

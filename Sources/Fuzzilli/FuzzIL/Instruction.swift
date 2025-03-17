@@ -1436,37 +1436,31 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmDefineForwardOrSelfReference = Fuzzilli_Protobuf_WasmDefineForwardOrSelfReference()
             case .wasmResolveForwardReference(_):
                 $0.wasmResolveForwardReference = Fuzzilli_Protobuf_WasmResolveForwardReference()
-            case .wasmArrayNewFixed(let op):
-                $0.wasmArrayNewFixed = Fuzzilli_Protobuf_WasmArrayNewFixed.with {
-                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
-                }
+            case .wasmArrayNewFixed(_):
+                $0.wasmArrayNewFixed = Fuzzilli_Protobuf_WasmArrayNewFixed()
             case .wasmArrayNewDefault(_):
                 $0.wasmArrayNewDefault = Fuzzilli_Protobuf_WasmArrayNewDefault()
             case .wasmArrayLen(_):
                 $0.wasmArrayLen = Fuzzilli_Protobuf_WasmArrayLen()
-            case .wasmArrayGet(let op):
-                $0.wasmArrayGet = Fuzzilli_Protobuf_WasmArrayGet.with {
-                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
-                }
-            case .wasmArraySet(let op):
-                $0.wasmArraySet = Fuzzilli_Protobuf_WasmArraySet.with {
-                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
-                }
+            case .wasmArrayGet(_):
+                $0.wasmArrayGet = Fuzzilli_Protobuf_WasmArrayGet()
+            case .wasmArraySet(_):
+                $0.wasmArraySet = Fuzzilli_Protobuf_WasmArraySet()
             case .wasmStructNewDefault(_):
                 $0.wasmStructNewDefault = Fuzzilli_Protobuf_WasmStructNewDefault()
             case .wasmStructGet(let op):
                 $0.wasmStructGet = Fuzzilli_Protobuf_WasmStructGet.with {
                     $0.fieldIndex = Int32(op.fieldIndex)
-                    $0.fieldType = ILTypeToWasmTypeEnum(op.fieldType)
                 }
             case .wasmStructSet(let op):
                 $0.wasmStructSet = Fuzzilli_Protobuf_WasmStructSet.with {
                     $0.fieldIndex = Int32(op.fieldIndex)
-                    $0.fieldType = ILTypeToWasmTypeEnum(op.fieldType)
                 }
             case .wasmRefNull(let op):
                 $0.wasmRefNull = Fuzzilli_Protobuf_WasmRefNull.with {
-                    $0.type = ILTypeToWasmTypeEnum(op.outputType)
+                    if op.type != nil {
+                        $0.type = ILTypeToWasmTypeEnum(op.type!)
+                    }
                 }
             }
         }
@@ -2341,25 +2335,24 @@ extension Instruction: ProtobufConvertible {
             op = WasmDefineForwardOrSelfReference()
         case .wasmResolveForwardReference(_):
             op = WasmResolveForwardReference()
-        case .wasmArrayNewFixed(let p):
-            op = WasmArrayNewFixed(size: inouts.count - 2,
-                elementType: WasmTypeEnumToILType(p.elementType))
+        case .wasmArrayNewFixed(_):
+            op = WasmArrayNewFixed(size: inouts.count - 2)
         case .wasmArrayNewDefault(_):
             op = WasmArrayNewDefault()
         case .wasmArrayLen(_):
             op = WasmArrayLen()
-        case .wasmArrayGet(let p):
-            op = WasmArrayGet(elementType: WasmTypeEnumToILType(p.elementType))
-        case .wasmArraySet(let p):
-            op = WasmArraySet(elementType: WasmTypeEnumToILType(p.elementType))
+        case .wasmArrayGet(_):
+            op = WasmArrayGet()
+        case .wasmArraySet(_):
+            op = WasmArraySet()
         case .wasmStructNewDefault(_):
             op = WasmStructNewDefault()
         case .wasmStructGet(let p):
-            op = WasmStructGet(fieldIndex: Int(p.fieldIndex), fieldType: WasmTypeEnumToILType(p.fieldType))
+            op = WasmStructGet(fieldIndex: Int(p.fieldIndex))
         case .wasmStructSet(let p):
-            op = WasmStructSet(fieldIndex: Int(p.fieldIndex), fieldType: WasmTypeEnumToILType(p.fieldType))
+            op = WasmStructSet(fieldIndex: Int(p.fieldIndex))
         case .wasmRefNull(let p):
-            op = WasmRefNull(type: WasmTypeEnumToILType(p.type))
+            op = p.hasType ? WasmRefNull(type: WasmTypeEnumToILType(p.type)) : WasmRefNull(type: nil)
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

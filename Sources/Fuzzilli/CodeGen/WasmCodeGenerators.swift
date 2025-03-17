@@ -230,11 +230,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator("WasmRefNullGenerator", inContext: .wasmFunction) { b in
         let function = b.currentWasmModule.currentWasmFunction
         if let typeDef = (b.findVariable{b.type(of: $0).Is(.wasmTypeDef())}), probability(0.5) {
-            function.wasmRefNull(.wasmRef(.Index(), nullability: true), typeDef: typeDef)
+            function.wasmRefNull(typeDef: typeDef)
         } else {
             // TODO(mliedtke): Extend this list once we migrated the abstract heap types to fit
             // with the wasm-gc types and added the missing ones (like anyref, eqref, ...)
-            function.wasmRefNull(chooseUniform(from: [.wasmFuncRef, .wasmExternRef, .wasmExnRef]))
+            function.wasmRefNull(type: chooseUniform(from: [.wasmFuncRef, .wasmExternRef, .wasmExnRef]))
         }
     },
 
