@@ -650,12 +650,12 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 /// A struct to encapsulate property and method type information for a group of related objects.
 public struct ObjectGroup {
     public let name: String
-    public let properties: [String: ILType]
-    public let methods: [String: [Signature]]
+    public var properties: [String: ILType]
+    public var methods: [String: [Signature]]
     public let parent: String?
 
     /// The type of instances of this group.
-    public let instanceType: ILType
+    public var instanceType: ILType
 
     public init(name: String, instanceType: ILType, properties: [String: ILType], overloads: [String: [Signature]], parent: String? = nil) {
         self.name = name
