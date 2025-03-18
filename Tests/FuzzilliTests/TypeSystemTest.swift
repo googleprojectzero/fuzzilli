@@ -453,9 +453,9 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(fooObj.adding(property: "baz"), fooBazObj)
         XCTAssertEqual(bazObj.adding(property: "foo"), fooBazObj)
 
-        XCTAssertEqual(fooBarObj.removing(property: "baz"), fooBarObj)
-        XCTAssertEqual(fooBarObj.removing(property: "foo"), barObj)
-        XCTAssertEqual(barObj.removing(property: "bar"), object)
+        XCTAssertEqual(fooBarObj.removing(propertyOrMethod: "baz"), fooBarObj)
+        XCTAssertEqual(fooBarObj.removing(propertyOrMethod: "foo"), barObj)
+        XCTAssertEqual(barObj.removing(propertyOrMethod: "bar"), object)
     }
 
     func testMethodTypeTransitions() {

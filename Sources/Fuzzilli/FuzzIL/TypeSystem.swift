@@ -749,14 +749,18 @@ public struct ILType: Hashable {
         self = self.adding(property: property)
     }
 
-    /// Returns a new ObjectType that represents this type without the removed property.
-    public func removing(property: String) -> ILType {
+    /// Returns a new ObjectType that represents this type without the removed property or method.
+    public func removing(propertyOrMethod name: String) -> ILType {
         guard Is(.object()) else {
             return self
         }
+
+        // Deleting a property in JavaScript will remove it from either one, whereever it is present.
         var newProperties = properties
-        newProperties.remove(property)
-        let newExt = TypeExtension(group: group, properties: newProperties, methods: methods, signature: signature, wasmExt: wasmType)
+        newProperties.remove(name)
+        var newMethods = methods
+        newMethods.remove(name)
+        let newExt = TypeExtension(group: group, properties: newProperties, methods: newMethods, signature: signature, wasmExt: wasmType)
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 

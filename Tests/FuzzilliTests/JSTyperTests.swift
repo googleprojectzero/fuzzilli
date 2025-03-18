@@ -1285,4 +1285,21 @@ class JSTyperTests: XCTestCase {
         XCTAssert(desc.fields[0].type == .wasmi32)
         XCTAssert(desc.fields[1].type == .wasmi64)
     }
+
+    func testTypingOfDeletedMethods() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let object = b.buildObjectLiteral { o in
+            o.addMethod("foo", with: .parameters(n: 0)) { _ in
+                b.doReturn(b.loadString("foo"))
+            }
+        }
+
+        XCTAssertEqual(b.type(of: object), .object(withMethods: ["foo"]))
+
+        b.deleteProperty("foo", of: object)
+
+        XCTAssertEqual(b.type(of: object), .object(withMethods: []))
+    }
 }

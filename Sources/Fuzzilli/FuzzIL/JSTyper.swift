@@ -1009,7 +1009,7 @@ public struct JSTyper: Analyzer {
             set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
 
         case .deleteProperty(let op):
-            set(instr.input(0), type(ofInput: 0).removing(property: op.propertyName))
+            set(instr.input(0), type(ofInput: 0).removing(propertyOrMethod: op.propertyName))
             set(instr.output, .boolean)
 
             // TODO: An additional analyzer is required to determine the runtime value of the input variable
