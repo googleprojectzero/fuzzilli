@@ -1625,6 +1625,13 @@ class MinimizerTests: XCTestCase {
                 ]
             }
 
+            // This unused type group should also get removed.
+            b.wasmDefineTypeGroup {
+                return [
+                    b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                ]
+            }
+
             b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
                     let constOne = function.consti32(1)
