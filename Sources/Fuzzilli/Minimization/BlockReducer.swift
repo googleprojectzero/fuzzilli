@@ -89,11 +89,16 @@ struct BlockReducer: Reducer {
             case .beginBlockStatement,
                  .beginWasmFunction,
                  .beginWasmModule,
-                 .wasmBeginBlock,
-                 .wasmBeginLoop,
                  .wasmBeginTryDelegate,
                  .wasmBeginTryTable:
                 reduceGenericBlockGroup(group, with: helper)
+
+            case .wasmBeginBlock,
+                 .wasmBeginLoop:
+                let rewroteProgram = reduceGenericWasmBlockGroup(group, with: helper)
+                if rewroteProgram {
+                    return
+                }
 
             case .wasmBeginCatchAll,
                  .wasmBeginCatch:
@@ -299,6 +304,48 @@ struct BlockReducer: Reducer {
         // the only option is to remove the entire block, including its content.
         candidates = group.instructionIndices
         helper.tryNopping(candidates)
+    }
+
+    // Reduce a wasm block. In some cases this reduction fully rewrites the program
+    // invalidating pre-computed BlockGroups. If that happens, the function returns true indicating
+    // that following reductions need to rerun the Blockgroups analysis.
+    private func reduceGenericWasmBlockGroup(_ group: BlockGroup, with helper: MinimizationHelper) -> Bool {
+        // Try to remove just the block.
+        var candidates = group.blockInstructionIndices
+        if helper.tryNopping(candidates) {
+            // Success!
+            return false
+        }
+
+        // Try to remove the entire block including its content.
+        candidates = group.instructionIndices
+        if helper.tryNopping(candidates) {
+            // Success!
+            return false
+        }
+
+        // Try to remove just the block and "shortcut" all inputs and outputs of the block.
+        // Check whether block label is used as we can't replace it.
+        if wasmBlockUsesLabel(group.block(0), with: helper) {
+            return false
+        }
+
+        let beginInstr = helper.code[group.head]
+        let endInstr = helper.code[group.tail]
+        var varReplacements = Dictionary(
+            uniqueKeysWithValues: zip(beginInstr.innerOutputs.dropFirst(), beginInstr.inputs))
+        varReplacements.merge(zip(endInstr.outputs, endInstr.inputs.map {varReplacements[$0] ?? $0}),
+            uniquingKeysWith: {_, _ in fatalError("duplicate variables")})
+        var newCode = Code()
+        for (i, instr) in helper.code.enumerated() {
+            if i == group.head || i == group.tail {
+                continue // Skip the block begin and end.
+            }
+            let newInouts = instr.inouts.map({ varReplacements[$0] ?? $0 })
+            newCode.append(Instruction(instr.op, inouts: newInouts, flags: .empty))
+        }
+        newCode.renumberVariables()
+        return helper.testAndCommit(newCode)
     }
 
     // Try to reduce a BeginSwitch/EndSwitch Block.

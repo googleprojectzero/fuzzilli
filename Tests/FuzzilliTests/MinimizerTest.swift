@@ -1804,6 +1804,84 @@ class MinimizerTests: XCTestCase {
         }
     }
 
+    func testWasmBlockMinimization() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildBlockWithResults(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32], args: [args[0], function.consti32(10)]) { label, blockArgs in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let sum = function.wasmi32BinOp(blockArgs[0], blockArgs[1], binOpKind: .Add)
+                        return [sum, blockArgs[1]]
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [function.wasmi32BinOp(results[0], results[1], binOpKind: .Mul)]
+                }
+            }
+
+        } minified: { b in
+             b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                let const10 = function.consti32(10)
+                    let sum = function.wasmi32BinOp(args[0], const10, binOpKind: .Add)
+                    return [function.wasmi32BinOp(sum, const10, binOpKind: .Mul)]
+                }
+            }
+        }
+    }
+
+    // Don't minimize the block fi the label is used by an important instruction.
+    func testWasmBlockMinimizationLabelUsed() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildBlockWithResults(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32], args: [args[0], function.consti32(10)]) { label, blockArgs in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.wasmBranch(to: label, args: blockArgs)
+                        return blockArgs
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [function.wasmi32BinOp(results[0], results[1], binOpKind: .Mul)]
+                }
+            }
+
+        } minified: { b in
+             b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildBlockWithResults(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32], args: [args[0], function.consti32(10)]) { label, blockArgs in
+                        function.wasmBranch(to: label, args: blockArgs)
+                        return blockArgs
+                    }
+                    return [function.wasmi32BinOp(results[0], results[1], binOpKind: .Mul)]
+                }
+            }
+        }
+    }
+
+    func testWasmLoopMinimization() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildLoop(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32], args: [args[0], function.consti32(10)]) { label, blockArgs in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let sum = function.wasmi32BinOp(blockArgs[0], blockArgs[1], binOpKind: .Add)
+                        return [sum, blockArgs[1]]
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [function.wasmi32BinOp(results[0], results[1], binOpKind: .Mul)]
+                }
+            }
+
+        } minified: { b in
+             b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                let const10 = function.consti32(10)
+                    let sum = function.wasmi32BinOp(args[0], const10, binOpKind: .Add)
+                    return [function.wasmi32BinOp(sum, const10, binOpKind: .Mul)]
+                }
+            }
+        }
+    }
+
     func testWasmDataflowMinimization() throws {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
