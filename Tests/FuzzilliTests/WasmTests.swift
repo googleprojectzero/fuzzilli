@@ -41,6 +41,16 @@ class WasmSignatureConversionTests: XCTestCase {
         XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmFuncRef, 1), (.wasmExternRef, 1)])), [.wasmi32] => [.wasmi32])
         XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmf32, 1), (.wasmFuncRef, 1), (.wasmExternRef, 1)])), [.wasmf32] => [.wasmi32])
     }
+
+    func testWasmSignatureConversion() {
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmi32, .wasmi64] => [.wasmf32]), [.integer, .bigint] => .float)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmi32, .wasmExnRef] => [.wasmf64]), [.integer, .anything] => .float)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmExternRef, .wasmFuncRef] => [.wasmf64, .wasmf64]), [.anything, .function()] => .jsArray)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmRef(.Index(), nullability: false), .wasmFuncRef] => [.wasmf64, .wasmf64]), [.anything, .function()] => .jsArray)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmRef(.Abstract(.WasmExtern), nullability: false), .wasmFuncRef] => [.wasmf64, .wasmf64]), [.anything, .function()] => .jsArray)
+        // TODO(cffsmith): Change this once we know how we want to represent .wasmSimd128 types in JS.
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmSimd128] => [.wasmSimd128]), [.anything] => .anything)
+    }
 }
 
 class WasmFoundationTests: XCTestCase {
@@ -172,10 +182,10 @@ class WasmFoundationTests: XCTestCase {
 
         // This test tests whether re-exported imports and module defined globals are re-ordered from the typer.
         let wasmGlobali32: Variable = b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
-        assert(b.type(of: wasmGlobali32) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)))
+        XCTAssert(b.type(of: wasmGlobali32) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)))
 
         let wasmGlobalf32: Variable = b.createWasmGlobal(value: .wasmf32(42.0), isMutable: false)
-        assert(b.type(of: wasmGlobalf32) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmf32, isMutable: false)))
+        XCTAssert(b.type(of: wasmGlobalf32) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmf32, isMutable: false)))
 
         let module = b.buildWasmModule { wasmModule in
             // Imports are always before internal globals, this breaks the logic if we add a global and then import a global.
@@ -194,7 +204,7 @@ class WasmFoundationTests: XCTestCase {
 
         let exports = module.loadExports()
 
-        assert(b.type(of: exports) == .object(withProperties: nameOfExportedGlobals, withMethods: ["w1", "w0"]))
+        XCTAssert(b.type(of: exports) == .object(ofGroup: "_fuzz_WasmExports0", withProperties: ["wg2", "wg0", "wg1"], withMethods: ["w1", "w0"]))
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
@@ -230,7 +240,7 @@ class WasmFoundationTests: XCTestCase {
             b.doReturn(added)
         }
 
-        assert(b.type(of: functionA).signature == [.bigint] => .bigint)
+        XCTAssert(b.type(of: functionA).signature == [.bigint] => .bigint)
 
         let functionB = b.buildArrowFunction(with: .parameters(.integer)) { args in
             let varB = b.loadInt(2)
@@ -238,13 +248,13 @@ class WasmFoundationTests: XCTestCase {
             b.doReturn(subbed)
         }
         // We are unable to determine that .integer - .integer == .integer here as INT_MAX + 1 => float
-        assert(b.type(of: functionB).signature == [.integer] => .number)
+        XCTAssert(b.type(of: functionB).signature == [.integer] => .number)
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, args in
                 // Manually set the availableTypes here for testing
                 let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([(.wasmi64, 1)]))
-                assert(wasmSignature == [.wasmi64] => [.wasmi64])
+                XCTAssert(wasmSignature == [.wasmi64] => [.wasmi64])
                 let varA = function.wasmJsCall(function: functionA, withArgs: [args[0]], withWasmSignature: wasmSignature)!
                 function.wasmReturn(varA)
             }
@@ -252,9 +262,9 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => [.wasmf32]) { function, _ in
                 // Manually set the availableTypes here for testing
                 let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionB).signature!, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
-                assert(wasmSignature.parameterTypes.count == 1)
-                assert(wasmSignature.parameterTypes[0] == .wasmi32 || wasmSignature.parameterTypes[0] == .wasmf32)
-                assert(wasmSignature.outputTypes == [.wasmi32] || wasmSignature.outputTypes == [.wasmf32])
+                XCTAssert(wasmSignature.parameterTypes.count == 1)
+                XCTAssert(wasmSignature.parameterTypes[0] == .wasmi32 || wasmSignature.parameterTypes[0] == .wasmf32)
+                XCTAssert(wasmSignature.outputTypes == [.wasmi32] || wasmSignature.outputTypes == [.wasmf32])
                 let varA = wasmSignature.parameterTypes[0] == .wasmi32 ? function.consti32(1337) : function.constf32(1337)
                 let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: wasmSignature)!
                 function.wasmReturn(varRet)
@@ -411,7 +421,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let wasmGlobali64: Variable = b.createWasmGlobal(value: .wasmi64(1337), isMutable: true)
-        assert(b.type(of: wasmGlobali64) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmi64, isMutable: true)))
+        XCTAssert(b.type(of: wasmGlobali64) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmi64, isMutable: true)))
 
         let module = b.buildWasmModule { wasmModule in
             let global = wasmModule.addGlobal(wasmGlobal: .wasmi64(1339), isMutable: true)
@@ -449,7 +459,7 @@ class WasmFoundationTests: XCTestCase {
         let nameOfExportedGlobals = [WasmLifter.nameOfGlobal(0), WasmLifter.nameOfGlobal(1)]
         let nameOfExportedFunctions = [WasmLifter.nameOfFunction(0), WasmLifter.nameOfFunction(1), WasmLifter.nameOfFunction(2)]
 
-        assert(b.type(of: exports) == .object(withProperties: nameOfExportedGlobals, withMethods: nameOfExportedFunctions))
+        XCTAssert(b.type(of: exports) == .object(ofGroup: "_fuzz_WasmExports0", withProperties: nameOfExportedGlobals, withMethods: nameOfExportedFunctions))
 
 
         let value = b.getProperty("value", of: wasmGlobali64)
@@ -665,7 +675,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let wasmMemory: Variable = b.createWasmMemory(minPages: 10, maxPages: 20, isMemory64: isMemory64)
-        assert(b.type(of: wasmMemory) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: isMemory64))
+        XCTAssert(b.type(of: wasmMemory) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: isMemory64))
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
@@ -678,7 +688,7 @@ class WasmFoundationTests: XCTestCase {
         }
 
         let viewBuiltin = b.createNamedVariable(forBuiltin: "DataView")
-        assert(b.type(of: b.getProperty("buffer", of: wasmMemory)) == (.jsArrayBuffer | .jsSharedArrayBuffer))
+        XCTAssert(b.type(of: b.getProperty("buffer", of: wasmMemory)) == (.jsArrayBuffer | .jsSharedArrayBuffer))
         let view = b.construct(viewBuiltin, withArgs: [b.getProperty("buffer", of: wasmMemory)])
 
         // Read the value of the memory.
@@ -4124,5 +4134,63 @@ class WasmJSPITests: XCTestCase {
         let jsProgram = fuzzer.lifter.lift(program, withOptions: .includeComments)
 
         testForOutput(program: jsProgram, runner: runner, outputString: outputString)
+    }
+
+    func testImportingExports() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let wasmGlobali64: Variable = b.createWasmGlobal(value: .wasmi64(1337), isMutable: true)
+        XCTAssert(b.type(of: wasmGlobali64) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmi64, isMutable: true)))
+
+        let module = b.buildWasmModule { wasmModule in
+            // Function 0, modifies the imported global.
+            wasmModule.addWasmFunction(with: [] => []) { function, _ in
+                let varA = function.consti64(1338)
+                function.wasmStoreGlobal(globalVariable: wasmGlobali64, to: varA)
+            }
+        }
+
+        let exports = module.loadExports()
+
+        let nameOfExportedGlobals = ["wg0"]
+        let wg0 = b.getProperty(nameOfExportedGlobals[0], of: exports)
+        XCTAssertEqual(b.type(of: wg0).wasmGlobalType!.valueType, .wasmi64)
+
+        let module2 = b.buildWasmModule { wasmModule in
+            // Function 0
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, label, _ in
+                // This forces an import of the wasmGlobali64
+                return [function.wasmLoadGlobal(globalVariable: wg0)]
+            }
+        }
+
+        let exports2 = module2.loadExports()
+        let global2 = b.getProperty(nameOfExportedGlobals[0], of: exports2)
+        XCTAssertEqual(b.type(of: global2).wasmGlobalType!.valueType, .wasmi64)
+
+        // This just returns the global
+        let out = b.callMethod(module2.getExportedMethod(at: 0), on: exports2)
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let _ = b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out)])
+
+        // Change the global through the first module
+        b.callMethod(module.getExportedMethod(at: 0), on: exports)
+
+        // This just returns the global again.
+        let out2 = b.callMethod(module2.getExportedMethod(at: 0), on: exports2)
+        let _ = b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out2)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: "1337\n1338\n")
     }
 }

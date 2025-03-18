@@ -40,37 +40,238 @@ public struct JSTyper: Analyzer {
     // Tracks the active function definitions and contains the instruction that started the function.
     private var activeFunctionDefinitions = Stack<Instruction>()
 
-    public var activeWasmModuleDefinition: WasmModuleDefinition? = nil
+    /// This tracks program local object groups of various types (WasmModules, JS Classes and Object literals).
+    private var dynamicObjectGroupManager = ObjectGroupManager()
 
-    public struct WasmModuleDefinition {
-        // The invariant here is that we never reassign these variables, therefore these signatures are "set in stone" and they are always valid for the lifetime of the module.
-        // The signatures are immutable and they are never changed.
-        // TODO(cffsmith): Add something in `Code.check()` that makes sure that this is actually upheld for programs.
-        var methodSignatures: [(variable: Variable, signature: Signature)] = [(Variable, Signature)]()
+    public class ObjectGroupManager {
+        /// The finalized object groups that we can query through the Typer.
+        var finalizedObjectGroups = [ObjectGroup]()
 
-        // Stores the globals this module accesses, this is just used below, where we get the correct exports type.
-        var globals: [Variable] = []
+        var seenWasmGlobals: [Variable]? = nil
+        var seenWasmTables: [Variable]? = nil
 
-        var tables: [Variable] = []
-
-        public func getExportsType() -> ILType {
-            return .object(withProperties: self.globals.enumerated().map { "wg\($0.0)"} + self.tables.enumerated().map { "wt\($0.0)" }, withMethods: self.methodSignatures.enumerated().map { "w\($0.0)" })
+        /// These are the different types of program local object groups this typer can track.
+        /// TODO(cffsmith): We could also track WasmGlobals here.
+        public enum ObjectGroupType: CaseIterable {
+            case wasmModule
+            case wasmExports
+            case objectLiteral
+            case jsClass
         }
-    }
 
-    // Stack of active object literals. Each entry contains the current type of the object created by the literal.
-    // This must be a stack as object literals can be nested (e.g. an object literal inside the method of another one).
-    private var activeObjectLiterals = Stack<ILType>()
+        public var top: ObjectGroup {
+            return activeObjectGroups.top
+        }
 
-    // Stack of active class definitions. As class definitions can be nested, this has to be a stack.
-    private var activeClassDefinitions = Stack<ClassDefinition>()
-    struct ClassDefinition {
-        let output: Variable
-        var constructorParameters: ParameterList = []
-        let superType: ILType
-        let superConstructorType: ILType
-        var instanceType: ILType
-        var classType: ILType
+        private var numObjectGroups: Int {
+            return finalizedObjectGroups.count + activeObjectGroups.count
+        }
+
+        public var numActiveClasses: Int {
+            return activeClasses.count
+        }
+
+        public var isEmpty: Bool {
+            return numObjectGroups == 0
+        }
+
+        /// This stack has different object group types
+        var activeObjectGroups = Stack<ObjectGroup>()
+
+        public struct ClassDefinition {
+            var output: Variable
+            // Tracks the objectGroup describing the class, i.e. signatures and types of static properties / methods.
+            var objectGroup: ObjectGroup
+            var constructorParameters: ParameterList = []
+            let superType: ILType
+            let superConstructorType: ILType
+        }
+
+        // Stack of active class definitions. As class definitions can be nested, this has to be a stack.
+        var activeClasses = Stack<ClassDefinition>()
+
+        public func getGroup(withName name: String) -> ObjectGroup? {
+            if let group = activeObjectGroups.elementsStartingAtTop().first(where: {group in group.name == name}) {
+                return group
+            } else if let cls = activeClasses.elementsStartingAtTop().first(where: {cls in cls.objectGroup.name == name}) {
+                return cls.objectGroup
+            } else {
+                return self.finalizedObjectGroups.first(where: {group in group.name == name})
+            }
+        }
+
+        /// Finalizes the most recently opened ObjectGroup of this type.
+        private func finalize(type: ObjectGroupType) -> ILType {
+            let group = activeObjectGroups.pop()
+            // Make sure that we don't already have such a named group in our finalizedObjectGroups
+            assert(!finalizedObjectGroups.contains(where: { group.name == $0.name }))
+            finalizedObjectGroups.append(group)
+            let instanceType = group.instanceType
+            return instanceType
+        }
+
+        public func finalizeClass() -> (ILType, ClassDefinition) {
+            let instanceType = finalize(type: .jsClass)
+            let classDefinition = activeClasses.pop()
+            // This is the ObjectGroup tracking the constructor.
+            let group = classDefinition.objectGroup
+            // Make sure that we don't already have such a named group in our finalizedObjectGroups
+            assert(!finalizedObjectGroups.contains(where: { group.name == $0.name }))
+            finalizedObjectGroups.append(group)
+            return (instanceType, classDefinition)
+        }
+
+        public func finalizeObjectLiteral() -> ILType {
+            finalize(type: .objectLiteral)
+        }
+
+        public func finalizeWasmModule() -> ILType {
+            // Get the instance type of the exports
+            let exportsInstanceType = finalize(type: .wasmExports)
+
+            addProperty(propertyName: "exports")
+            updatePropertyType(propertyName: "exports", type: exportsInstanceType)
+
+            seenWasmGlobals = nil
+            seenWasmTables = nil
+            return finalize(type: .wasmModule)
+        }
+
+        public func createNewWasmModule() {
+            let instanceName = "_fuzz_WasmModule\(numObjectGroups)"
+            seenWasmGlobals = []
+            seenWasmTables = []
+
+            let instanceType = ILType.object(ofGroup: instanceName, withProperties: ["exports"], withMethods: [])
+
+            let instanceNameExports = "_fuzz_WasmExports\(numObjectGroups)"
+            let instanceTypeExports = ILType.object(ofGroup: instanceNameExports, withProperties: [], withMethods: [])
+
+            // This ObjectGroup tracking the Module itself is basically finished as it only has the `.exports` property
+            // which we track, the rest is tracked on the ObjectGroup tracking the `.exports` field of this Module.
+            // The ObjectGroup tracking the `.exports` field will be further modified to track exported functions and other properties.
+            let objectGroupModule = ObjectGroup(name: instanceName, instanceType: instanceType, properties: ["exports": instanceTypeExports], methods: [:])
+            activeObjectGroups.push(objectGroupModule)
+
+            let objectGroupModuleExports = ObjectGroup(name: instanceNameExports, instanceType: instanceTypeExports, properties: [:], methods: [:])
+            activeObjectGroups.push(objectGroupModuleExports)
+        }
+
+        func createNewObjectLiteral() {
+            let instanceName = "_fuzz_Object\(numObjectGroups)"
+            let instanceType: ILType = .object(ofGroup: instanceName, withProperties: [], withMethods: [])
+
+            // This is the dynamic object group.
+            let objectGroup = ObjectGroup(name: instanceName, instanceType: instanceType, properties: [:], methods: [:])
+            activeObjectGroups.push(objectGroup)
+        }
+
+        func createNewClass(withSuperType superType: ILType, propertyMap: [String: ILType], methodMap: [String: [Signature]], superConstructorType: ILType, forOutput output: Variable) {
+
+            let numGroups = numObjectGroups
+            let instanceName = "_fuzz_Class\(numGroups)"
+
+            // This type and the object group will be updated dynamically
+            let instanceType: ILType = .object(ofGroup: instanceName, withProperties: Array(superType.properties), withMethods: Array(superType.methods))
+
+            // This is the wip object group.
+            let objectGroup = ObjectGroup(name: instanceName, instanceType: instanceType, properties: propertyMap, overloads: methodMap)
+            activeObjectGroups.push(objectGroup)
+
+            let classInstanceName = "_fuzz_Constructor\(numGroups)"
+            let classObjectGroup = ObjectGroup(name: classInstanceName, instanceType: .object(ofGroup: classInstanceName), properties: [:], overloads: [:])
+
+            let classDefinition = ClassDefinition(output: output, objectGroup: classObjectGroup, superType: superType, superConstructorType: superConstructorType)
+            activeClasses.push(classDefinition)
+        }
+
+        public func setConstructorParameters(parameters: ParameterList) {
+            activeClasses.top.constructorParameters = parameters
+        }
+
+        public func addClassStaticProperty(propertyName: String) {
+            let classType = activeClasses.top.objectGroup.instanceType
+            let newType = ILType.object(ofGroup: classType.group, withProperties: [propertyName]) + classType
+            assert(newType != .nothing)
+            activeClasses.top.objectGroup.properties[propertyName] = .anything
+            activeClasses.top.objectGroup.instanceType = newType
+        }
+
+        public func updateClassStaticPropertyType(propertyName: String, type: ILType) {
+            assert(activeClasses.top.objectGroup.instanceType.properties.contains(propertyName))
+            assert(activeClasses.top.objectGroup.properties.contains(where: {k, v in k == propertyName}))
+            activeClasses.top.objectGroup.properties[propertyName] = type
+        }
+
+        public func addClassStaticMethod(methodName: String) {
+            let classType = activeClasses.top.objectGroup.instanceType
+            let newType = ILType.object(ofGroup: classType.group, withMethods: [methodName]) + classType
+            assert(newType != .nothing)
+            activeClasses.top.objectGroup.instanceType = newType
+
+            activeClasses.top.objectGroup.methods[methodName] = activeClasses.top.objectGroup.methods[methodName] ?? [] + [Signature.forUnknownFunction]
+            activeClasses.top.objectGroup.instanceType = newType
+        }
+
+        public func updateClassStaticMethodSignature(methodName: String, signature: Signature) {
+            assert(activeClasses.top.objectGroup.instanceType.methods.contains(methodName))
+            activeClasses.top.objectGroup.methods[methodName]!.append(signature)
+        }
+
+        public func addWasmExportedFunction(withSignature signature: Signature) {
+            let methodName = "w\(activeObjectGroups.top.methods.count)"
+            addMethod(methodName: methodName, of: .wasmExports)
+            updateMethodSignature(methodName: methodName, signature: signature)
+        }
+
+        public func addWasmGlobal(withType type: ILType, forVariable variable: Variable) {
+            // Add this property only if we have not seen it before
+            if !seenWasmGlobals!.contains(variable) {
+                let propertyName = "wg\(seenWasmGlobals!.count)"
+                seenWasmGlobals!.append(variable)
+                addProperty(propertyName: propertyName, withType: type)
+            }
+        }
+
+        public func addWasmTable(withType type: ILType, forVariable variable: Variable) {
+            // Add this property only if we have not seen it before
+            if !seenWasmTables!.contains(variable) {
+                let propertyName = "wt\(seenWasmTables!.count)"
+                seenWasmTables!.append(variable)
+                addProperty(propertyName: propertyName, withType: type)
+            }
+        }
+
+        public func addMethod(methodName: String, of groupType: ObjectGroupType) {
+            let topGroup = activeObjectGroups.top
+            let newType = ILType.object(ofGroup: topGroup.name, withMethods: [methodName]) + topGroup.instanceType
+            assert(newType != .nothing)
+            activeObjectGroups.top.instanceType = newType
+            activeObjectGroups.top.methods[methodName] = []
+        }
+
+        public func updateMethodSignature(methodName: String, signature: Signature) {
+            assert(activeObjectGroups.top.instanceType.methods.contains(methodName))
+            activeObjectGroups.top.methods[methodName]!.append(signature)
+        }
+
+        public func addProperty(propertyName: String, withType type: ILType) {
+            addProperty(propertyName: propertyName)
+            updatePropertyType(propertyName: propertyName, type: type)
+        }
+
+        public func addProperty(propertyName: String) {
+            let topGroup = activeObjectGroups.top
+            let newType = ILType.object(ofGroup: topGroup.name, withProperties: [propertyName]) + topGroup.instanceType
+            assert(newType != .nothing)
+            activeObjectGroups.top.instanceType = newType
+        }
+
+        public func updatePropertyType(propertyName: String, type: ILType) {
+            let topGroup = activeObjectGroups.top
+            assert(topGroup.instanceType.properties.contains(propertyName))
+            activeObjectGroups.top.properties[propertyName] = type
+        }
     }
 
     // A stack for active for loops containing the types of the loop variables.
@@ -89,9 +290,9 @@ public struct JSTyper: Analyzer {
         signatures.removeAll()
         typeGroups.removeAll()
         isWithinTypeGroup = false
+        dynamicObjectGroupManager = ObjectGroupManager()
         assert(activeFunctionDefinitions.isEmpty)
-        assert(activeObjectLiterals.isEmpty)
-        assert(activeClassDefinitions.isEmpty)
+        assert(dynamicObjectGroupManager.isEmpty)
     }
 
     // Array for collecting type changes during instruction execution.
@@ -263,36 +464,22 @@ public struct JSTyper: Analyzer {
             }
 
             switch instr.op.opcode {
-            case .wasmBeginLoop(_),
-                 .wasmBeginIf(_),
-                 .wasmBeginElse(_),
-                 .wasmBeginTry(_),
-                 .wasmBeginCatch(_),
-                 .wasmBeginCatchAll(_),
-                 .wasmBeginTryDelegate(_):
-                // Type all the innerOutputs
-                for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmTypedOperation).innerOutputTypes) {
-                    setType(of: innerOutput, to: paramType)
-                }
-            case .wasmDefineGlobal(_):
-                activeWasmModuleDefinition!.globals.append(instr.output)
+            case .wasmDefineGlobal(let op):
+                dynamicObjectGroupManager.addWasmGlobal(withType: .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable)), forVariable: instr.output)
             case .wasmDefineTable(let op):
-                activeWasmModuleDefinition!.tables.append(instr.output)
                 let typedEntries = Dictionary(uniqueKeysWithValues: zip(op.definedEntryIndices, instr.inputs.map { type(of: $0)}))
                 let tableType = WasmTableType(elementType: op.elementType, limits: op.limits, isTable64: op.isTable64, knownEntries: typedEntries)
                 setType(of: instr.output, to: .wasmTable(wasmTableType: tableType))
-            case .wasmLoadGlobal(_):
-                if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
-                    activeWasmModuleDefinition!.globals.append(instr.input(0))
-                }
+                // TODO(Cffsmith): add this to the exports?
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.output), forVariable: instr.output)
+            case .wasmLoadGlobal(let op):
+                assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)
+                dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forVariable: instr.input(0))
             case .wasmTableGet(_), .wasmTableSet(_):
-                if !activeWasmModuleDefinition!.tables.contains(instr.input(0)) {
-                    activeWasmModuleDefinition!.tables.append(instr.input(0))
-                }
-            case .wasmStoreGlobal(_):
-                if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
-                    activeWasmModuleDefinition!.globals.append(instr.input(0))
-                }
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forVariable: instr.input(0))
+            case .wasmStoreGlobal(let op):
+                assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)
+                dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forVariable: instr.input(0))
             default:
                 break
             }
@@ -330,13 +517,8 @@ public struct JSTyper: Analyzer {
             case .beginWasmFunction(let op):
                 wasmTypeBeginBlock(instr, op.signature)
             case .endWasmFunction(let op):
-                // TODO(mliedtke): Remove duplication with ProgramBuilder.WasmFunction.
-                let returnType = op.signature.outputTypes.count == 0 ? .nothing
-                    : op.signature.outputTypes.count == 1 ? op.signature.outputTypes[0]
-                    : .jsArray;
-                let jsSignature = op.signature.parameterTypes.map(Parameter.plain) => returnType
+                dynamicObjectGroupManager.addWasmExportedFunction(withSignature: ProgramBuilder.convertWasmSignatureToJsSignature(op.signature))
                 setType(of: instr.output, to: .wasmFunctionDef(op.signature))
-                activeWasmModuleDefinition!.methodSignatures.append((instr.output, jsSignature))
             case .wasmSelect(_):
                 setType(of: instr.output, to: type(of: instr.input(0)))
             case .wasmBeginBlock(let op):
@@ -435,13 +617,10 @@ public struct JSTyper: Analyzer {
 
         switch instr.op.opcode {
         case .beginWasmModule(_):
-            assert(activeWasmModuleDefinition == nil, "We already have an active WasmModuleDefinition")
-            activeWasmModuleDefinition = WasmModuleDefinition()
+            dynamicObjectGroupManager.createNewWasmModule()
         case .endWasmModule(_):
-            // TODO(cffsmith): use more precise type information.
-            // Type this as an object for now with the `exports` property.
-            setType(of: instr.output, to: .object(withProperties: ["exports"]))
-            activeWasmModuleDefinition = nil
+            let instanceType = dynamicObjectGroupManager.finalizeWasmModule()
+            setType(of: instr.output, to: instanceType)
         default:
             break
         }
@@ -460,8 +639,8 @@ public struct JSTyper: Analyzer {
     /// Returns the type of the 'super' binding at the current position
     public func currentSuperType() -> ILType {
         // Access to |super| is also allowed in e.g. object methods, but there we can't know the super type.
-        if activeClassDefinitions.count > 0 {
-            return activeClassDefinitions.top.superType
+        if dynamicObjectGroupManager.numActiveClasses > 0 {
+            return dynamicObjectGroupManager.activeClasses.top.superType
         } else {
             return .anything
         }
@@ -470,11 +649,11 @@ public struct JSTyper: Analyzer {
     /// Returns the type of the 'super' binding at the current position
     public func currentSuperConstructorType() -> ILType {
         // Access to |super| is also allowed in e.g. object methods, but there we can't know the super type.
-        if activeClassDefinitions.count > 0 {
+        if dynamicObjectGroupManager.numActiveClasses > 0 {
             // If the superConstructorType is .nothing it means that the current class does not extend anything.
             // In that case, accessing the super constructor type is considered a bug.
-            assert(activeClassDefinitions.top.superConstructorType != .nothing)
-            return activeClassDefinitions.top.superConstructorType
+            assert(dynamicObjectGroupManager.activeClasses.top.superConstructorType != .nothing)
+            return dynamicObjectGroupManager.activeClasses.top.superConstructorType
         } else {
             return .anything
         }
@@ -488,6 +667,18 @@ public struct JSTyper: Analyzer {
     }
 
     public func inferMethodSignatures(of methodName: String, on objType: ILType) -> [Signature] {
+        // Do lookup on our local type information first.
+        if let groupName = objType.group {
+            if let group = dynamicObjectGroupManager.getGroup(withName: groupName) {
+                if let signatures = group.methods[methodName], !signatures.isEmpty, objType.methods.contains(methodName) {
+                    return signatures
+                } else {
+                    // This means the objectGroup doesn't have the function but we did see the objectGroup.
+                    return [Signature.forUnknownFunction]
+                }
+            }
+        }
+
         return environment.signatures(ofMethod: methodName, on: objType)
     }
 
@@ -498,6 +689,18 @@ public struct JSTyper: Analyzer {
 
     /// Attempts to infer the type of the given property on the given object type.
     public func inferPropertyType(of propertyName: String, on objType: ILType) -> ILType {
+        // Do lookup on our local type information first.
+        if let groupName = objType.group {
+            if let group = dynamicObjectGroupManager.getGroup(withName: groupName) {
+                // Check if we have it in the group and on the actual passed in ILType as it might've been deleted.
+                if let type = group.properties[propertyName], objType.properties.contains(propertyName) {
+                    return type
+                } else {
+                    // This means the objectGroup doesn't have the property but we did see the objectGroup.
+                    return .anything
+                }
+            }
+        }
         return environment.type(ofProperty: propertyName, on: objType)
     }
 
@@ -584,13 +787,19 @@ public struct JSTyper: Analyzer {
                     superType = constructorReturnType
                 }
             }
-            let classDefiniton = ClassDefinition(output: instr.output, superType: superType, superConstructorType: superConstructorType, instanceType: superType, classType: environment.emptyObjectType)
-            activeClassDefinitions.push(classDefiniton)
+            let propertySuperTypeMap = Dictionary(uniqueKeysWithValues: superType.properties.map { name in
+                (name, inferPropertyType(of: name, on: superType))
+            })
+            let methodSuperTypeMap = Dictionary(uniqueKeysWithValues: superType.methods.map { name in
+                (name, inferMethodSignatures(of: name, on: superType))
+            })
+
+            dynamicObjectGroupManager.createNewClass(withSuperType: superType, propertyMap: propertySuperTypeMap, methodMap: methodSuperTypeMap, superConstructorType: superConstructorType, forOutput: instr.output)
+
             set(instr.output, .anything)         // Treat the class variable as unknown until we have fully analyzed the class definition
         case .endClassDefinition:
-            let cls = activeClassDefinitions.pop()
-            // Can now compute the full type of the class variable
-            set(cls.output, cls.classType + .constructor(cls.constructorParameters => cls.instanceType))
+            let (instanceType, classDefinition) = dynamicObjectGroupManager.finalizeClass()
+            set(classDefinition.output, classDefinition.objectGroup.instanceType + .constructor(classDefinition.constructorParameters => instanceType))
         default:
             // Only instructions starting a block with output variables should be handled here.
             assert(instr.numOutputs == 0 || !instr.isBlockStart)
@@ -747,6 +956,51 @@ public struct JSTyper: Analyzer {
                     }
                 }
             }
+
+            // TODO(cffsmith): this is probably the wrong place to do this.
+            // Update the dynamic object group to correctly reflect the signature of objects of this type.
+            switch instr.op.opcode {
+            case .endClassInstanceMethod(_):
+                assert(begin.op is BeginClassInstanceMethod)
+                let beginOp = begin.op as! BeginClassInstanceMethod
+                dynamicObjectGroupManager.updateMethodSignature(methodName: beginOp.methodName, signature: inferSubroutineParameterList(of: beginOp, at: begin.index) => returnValueType)
+            case .endClassInstanceGetter(_):
+                assert(begin.op is BeginClassInstanceGetter)
+                let beginOp = begin.op as! BeginClassInstanceGetter
+                dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endClassInstanceSetter(_):
+                assert(begin.op is BeginClassInstanceSetter)
+                let beginOp = begin.op as! BeginClassInstanceSetter
+                dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endClassStaticGetter(_):
+                assert(begin.op is BeginClassStaticGetter)
+                let beginOp = begin.op as! BeginClassStaticGetter
+                dynamicObjectGroupManager.updateClassStaticPropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endClassStaticMethod(_):
+                assert(begin.op is BeginClassStaticMethod)
+                let beginOp = begin.op as! BeginClassStaticMethod
+                dynamicObjectGroupManager.updateClassStaticMethodSignature(methodName: beginOp.methodName, signature: inferSubroutineParameterList(of: beginOp, at: begin.index) => returnValueType)
+            case .endClassStaticSetter(_):
+                assert(begin.op is BeginClassStaticSetter)
+                let beginOp = begin.op as! BeginClassStaticSetter
+                dynamicObjectGroupManager.updateClassStaticPropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endObjectLiteralMethod(_):
+                assert(begin.op is BeginObjectLiteralMethod)
+                let beginOp = begin.op as! BeginObjectLiteralMethod
+                dynamicObjectGroupManager.updateMethodSignature(methodName: beginOp.methodName, signature: inferSubroutineParameterList(of: beginOp, at: begin.index) => returnValueType)
+            case .endObjectLiteralGetter(_):
+                assert(begin.op is BeginObjectLiteralGetter)
+                let beginOp = begin.op as! BeginObjectLiteralGetter
+                dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endObjectLiteralSetter(_):
+                assert(begin.op is BeginObjectLiteralSetter)
+                let beginOp = begin.op as! BeginObjectLiteralSetter
+                dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            default:
+                break
+            }
+
+
         case .beginTry,
              .beginCatch,
              .beginFinally,
@@ -882,10 +1136,10 @@ public struct JSTyper: Analyzer {
             set(instr.output, environment.regExpType)
 
         case .beginObjectLiteral:
-            activeObjectLiterals.push(environment.emptyObjectType)
+            dynamicObjectGroupManager.createNewObjectLiteral()
 
         case .objectLiteralAddProperty(let op):
-            activeObjectLiterals.top.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName, withType: type(ofInput: 0))
 
         case .objectLiteralAddElement,
              .objectLiteralAddComputedProperty,
@@ -895,96 +1149,97 @@ public struct JSTyper: Analyzer {
 
         case .beginObjectLiteralMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeObjectLiterals.top)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeObjectLiterals.top.add(method: op.methodName)
+            dynamicObjectGroupManager.addMethod(methodName: op.methodName, of: .objectLiteral)
 
         case .beginObjectLiteralComputedMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeObjectLiterals.top)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .beginObjectLiteralGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeObjectLiterals.top)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             assert(instr.numInnerOutputs == 1)
-            activeObjectLiterals.top.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
 
         case .beginObjectLiteralSetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeObjectLiterals.top)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             assert(instr.numInnerOutputs == 2)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeObjectLiterals.top.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
 
         case .endObjectLiteral:
-            let objectType = activeObjectLiterals.pop()
-            set(instr.output, objectType)
+            let instanceType = dynamicObjectGroupManager.finalizeObjectLiteral()
+            set(instr.output, instanceType)
 
         case .beginClassConstructor(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             let parameters = inferSubroutineParameterList(of: op, at: instr.index)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: parameters)
-            activeClassDefinitions.top.constructorParameters = parameters
+            dynamicObjectGroupManager.setConstructorParameters(parameters: parameters)
 
         case .classAddInstanceProperty(let op):
-            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
+            dynamicObjectGroupManager.updatePropertyType(propertyName: op.propertyName, type: op.hasValue ? type(ofInput: 0) : .anything)
 
         case .beginClassInstanceMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeClassDefinitions.top.instanceType.add(method: op.methodName)
+            dynamicObjectGroupManager.addMethod(methodName: op.methodName, of: .jsClass)
 
         case .beginClassInstanceGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             assert(instr.numInnerOutputs == 1)
-            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
 
         case .beginClassInstanceSetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             assert(instr.numInnerOutputs == 2)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
 
         case .classAddStaticProperty(let op):
-            activeClassDefinitions.top.classType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
 
         case .beginClassStaticInitializer:
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             assert(instr.numInnerOutputs == 1)
 
         case .beginClassStaticMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeClassDefinitions.top.classType.add(method: op.methodName)
+            dynamicObjectGroupManager.addClassStaticMethod(methodName: op.methodName)
 
         case .beginClassStaticGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             assert(instr.numInnerOutputs == 1)
-            activeClassDefinitions.top.classType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
 
         case .beginClassStaticSetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             assert(instr.numInnerOutputs == 2)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeClassDefinitions.top.classType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
 
         case .beginClassPrivateInstanceMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .beginClassPrivateStaticMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .createArray,

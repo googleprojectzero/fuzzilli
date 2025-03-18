@@ -36,9 +36,7 @@ public let ProgramTemplates = [
 
         let exports = m.loadExports()
 
-        for (methodName, signature) in m.getExportedMethods() {
-            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
-        }
+        b.build(n: 20)
     },
 
     ProgramTemplate("WasmCodegen100") { b in
@@ -50,9 +48,7 @@ public let ProgramTemplates = [
 
         let exports = m.loadExports()
 
-        for (methodName, signature) in m.getExportedMethods() {
-            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
-        }
+        b.build(n: 20)
     },
 
     ProgramTemplate("MixedJsAndWasm1") { b in
@@ -65,9 +61,7 @@ public let ProgramTemplates = [
 
         let exports = m.loadExports()
 
-        for (methodName, signature) in m.getExportedMethods() {
-            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
-        }
+        b.build(n: 20)
     },
 
     ProgramTemplate("MixedJsAndWasm2") { b in
@@ -84,9 +78,7 @@ public let ProgramTemplates = [
 
         let exports = m.loadExports()
 
-        for (methodName, signature) in m.getExportedMethods() {
-            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
-        }
+        b.build(n: 20)
     },
 
     ProgramTemplate("JSPI") { b in

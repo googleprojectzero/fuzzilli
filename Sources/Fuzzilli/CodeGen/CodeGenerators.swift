@@ -148,9 +148,9 @@ public let CodeGenerators: [CodeGenerator] = [
 
             let o = b.buildObjectLiteral() { obj in
                 b.buildRecursive()
-                // TODO: it would be nice if our type inference could figure out getters/setters as well.
-                objType = .object(withProperties: obj.properties, withMethods: obj.methods)
             }
+
+            objType = b.type(of: o)
 
             b.doReturn(o)
         }

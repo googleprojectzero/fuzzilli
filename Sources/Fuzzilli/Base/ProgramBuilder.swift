@@ -990,10 +990,19 @@ public class ProgramBuilder {
         return WasmSignature(expects: parameterTypes, returns: [outputType])
     }
 
+    public static func convertWasmSignatureToJsSignature(_ signature: WasmSignature) -> Signature {
+        let parameterTypes = signature.parameterTypes.map(mapWasmToJsType)
+        // If we return multiple values it will just be an Array in JavaScript.
+        let returnType = signature.outputTypes.count == 0 ? ILType.undefined
+        : signature.outputTypes.count == 1 ? mapWasmToJsType(signature.outputTypes[0])
+        : .jsArray
+        return Signature(expects: parameterTypes.map(Parameter.plain), returns: returnType)
+    }
+
     public static func convertJsSignatureToWasmSignatureDeterministic(_ signature: Signature) -> Signature {
         let parameterTypes = prepareArgumentTypesDeterministic(forParameters: signature.parameters).map { mapJsToWasmType($0) }
         let outputType = mapJsToWasmType(signature.outputType)
-        return Signature(expects: parameterTypes.map { .plain($0) }, returns: outputType)
+        return Signature(expects: parameterTypes.map(Parameter.plain), returns: outputType)
     }
 
     /// Find random arguments for a function call and spread some of them.
@@ -1059,9 +1068,40 @@ public class ProgramBuilder {
         }
     }
 
-    // Helper that converts JS Types to a deterministic known Wasm counterparts.
+    // Helper that converts a JS type to its deterministic known Wasm counterpart.
     private static func mapJsToWasmType(_ type: ILType) -> ILType {
         return matchingWasmTypes(jsType: type)[0]
+    }
+
+    // Helper that converts a Wasm type to its deterministic known JS counterparts.
+    private static func mapWasmToJsType(_ type: ILType) -> ILType {
+        if type.Is(.wasmi32) {
+            return .integer
+        } else if type.Is(.wasmf32) {
+            return .float
+        } else if type.Is(.wasmf64) {
+            return .float
+        } else if type.Is(.wasmi64) {
+            return .bigint
+        } else if type.Is(.wasmSimd128) {
+            // We should not see these in JS per spec but we might export them, as such type them as .anything for now.
+            // Consider passing the .wasmSimd128 through somehow, such that it's unlikely that it gets called?
+            // https://github.com/WebAssembly/simd/blob/main/proposals/simd/SIMD.md#javascript-api-and-simd-values
+            return .anything
+        } else if type.Is(.nothing) {
+            return .undefined
+        } else if type.Is(.wasmFuncRef) {
+            // TODO(cffsmith): refine this type with the signature if we can.
+            return .function()
+        } else if type.Is(.wasmExternRef) {
+            return .anything
+        } else if type.Is(.wasmExnRef) {
+            return .anything
+        } else if type.Is(.wasmGenericRef) {
+            return .anything
+        } else {
+            fatalError("Unexpected type encountered: \(type).")
+        }
     }
 
     // Helper function to convert JS Types to an arbitrary matching Wasm type or picks from the other available types-
@@ -2893,10 +2933,7 @@ public class ProgramBuilder {
         public init(forBuilder b: ProgramBuilder, withSignature signature: WasmSignature) {
             self.b = b
             self.signature = signature
-            let returnType = signature.outputTypes.count == 0 ? .nothing
-                    : signature.outputTypes.count == 1 ? signature.outputTypes[0]
-                    : .jsArray;
-            self.jsSignature = signature.parameterTypes.map(Parameter.plain) => returnType
+            self.jsSignature = convertWasmSignatureToJsSignature(signature)
         }
 
         // Wasm Instructions
@@ -3547,12 +3584,6 @@ public class ProgramBuilder {
         }
 
         private var moduleVariable: Variable?
-        /// This stores the type information for the `exports` property of the Wasm module.
-        private var exportsTypeInfo: ILType? = nil
-
-        public func setExportsTypeInfo(typeInfo: ILType) {
-            self.exportsTypeInfo = typeInfo
-        }
 
         public func getExportedMethod(at index: Int) -> String {
             return methods[index]
@@ -3581,8 +3612,8 @@ public class ProgramBuilder {
         @discardableResult
         public func loadExports() -> Variable {
             let exports = self.b.getProperty("exports", of: self.getModuleVariable())
-            b.setType(ofVariable: exports, to: self.exportsTypeInfo!)
-
+            // We check against any WasmExports instance here, according to our subsumption rules this is ok, regardless of the number.
+            assert(b.type(of: exports).Is(.object(ofGroup: "_fuzz_WasmExports0")))
             return exports
         }
 
@@ -3899,9 +3930,6 @@ public class ProgramBuilder {
             activeWasmModule = WasmModule(in: self)
         case .endWasmModule:
             activeWasmModule!.setModuleVariable(variable: instr.output)
-            // We store the type information that we collect about this module separately in the module.
-            // This allows us to `setType` the correct type when we want to load the `exports` property of the WasmModule
-            activeWasmModule!.setExportsTypeInfo(typeInfo: self.jsTyper.activeWasmModuleDefinition!.getExportsType())
             activeWasmModule = nil
         case .endWasmFunction:
             activeWasmModule!.methods.append("w\(activeWasmModule!.methods.count)")

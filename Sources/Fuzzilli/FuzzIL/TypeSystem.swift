@@ -352,7 +352,11 @@ public struct ILType: Hashable {
         // The groups must either be identical or our group must be nil, in
         // which case we subsume all objects regardless of their group if
         // the properties and methods match (see below).
-        guard group == nil || group == other.group else {
+        // Alternatively, if the groups match by prefix for specific custom
+        // tracked ObjectGroups, they also subsume such that we can interchange
+        // them in JS for efficient fuzzing, i.e. object0 and object1 can be
+        // considered to have the same group, we then proceed with the other checks for subsumption.
+        guard group == nil || group == other.group || groupsMatchByPrefix(group, other.group) else {
             return false
         }
 
@@ -377,6 +381,35 @@ public struct ILType: Hashable {
         }
 
         return true
+    }
+
+    // This helps with the custom object groups.
+    // This basically says that even though objects might have program local object groups, they can still subsume, if they belong to the same "subclass" indicated by having the same prefix (with a different number as a suffix).
+    // These should match the custom object group types in JSTyper.swift
+    public func groupsMatchByPrefix(_ groupLhs: String?, _ groupRhs: String?) -> Bool {
+        guard let lhs = groupLhs else {
+            return false
+        }
+        guard let rhs = groupRhs else {
+            return false
+        }
+
+        // If you add a new custom object group, please check the logic below.
+        // Make sure that the groups themselves are not prefixes.
+        assert(JSTyper.ObjectGroupManager.ObjectGroupType.allCases == [.wasmModule, .wasmExports, .objectLiteral, .jsClass])
+
+        let objectGroupTypes = ["_fuzz_Object", "_fuzz_WasmModule", "_fuzz_WasmExports", "_fuzz_Class", "_fuzz_Constructor"]
+
+        for groupType in objectGroupTypes {
+            if rhs.hasPrefix(groupType) && lhs.hasPrefix(groupType) {
+                // Check that they differ only in a number at the end.
+                assert(rhs.range(of: "\(groupType)\\d+", options: .regularExpression, range: nil, locale: nil) != nil &&
+                       lhs.range(of: "\(groupType)\\d+", options: .regularExpression, range: nil, locale: nil) != nil)
+                return true
+            }
+        }
+
+        return false
     }
 
     public static func >=(lhs: ILType, rhs: ILType) -> Bool {
@@ -409,7 +442,16 @@ public struct ILType: Hashable {
     }
 
     public var group: String? {
-        return ext?.group
+        get {
+            return ext?.group
+        }
+        set(newGroup) {
+            if let ext = ext {
+                ext.group = newGroup
+            } else {
+                ext = TypeExtension(group: newGroup, properties: Set<String>(), methods: Set<String>(), signature: nil)
+            }
+        }
     }
 
     public var hasWasmTypeInfo: Bool {
@@ -810,7 +852,7 @@ public struct ILType: Hashable {
     private let possibleType: BaseType
 
     /// The type extensions contains properties, methods, function signatures, etc.
-    private let ext: TypeExtension?
+    private var ext: TypeExtension?
 
     /// Types must be constructed through one of the public constructors.
     private init(definiteType: BaseType, possibleType: BaseType? = nil, ext: TypeExtension? = nil) {
@@ -1024,7 +1066,7 @@ class TypeExtension: Hashable {
     // The group name. Basically each group is its own sub type of the object type.
     // (For now), there is no subtyping for group: if two objects have a different
     // group then there is no subsumption relationship between them.
-    let group: String?
+    var group: String?
 
     // The function signature. Will only be != nil if isFunction or isConstructor is true.
     let signature: Signature?

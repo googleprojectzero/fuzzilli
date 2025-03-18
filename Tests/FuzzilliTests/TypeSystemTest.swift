@@ -972,6 +972,33 @@ class TypeSystemTests: XCTestCase {
         XCTAssert(Signature.forUnknownFunction <= [.integer, .string] => .anything)
     }
 
+    func testCustomGroupsSubsumption() {
+        // This is ok, see also the comment in TypeSystem.subsumes.
+        // Essentially, we have these ObjectGroups such that we can ask them about their types for more informed CodeGeneration.
+        // Previously we would just say that all objects are the same anyways.
+        // Now we want them to be interchangeable, e.g. for splicing in JS.
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Object0").Is(.object(ofGroup: "_fuzz_Object1")))
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_WasmExports0").Is(.object(ofGroup: "_fuzz_WasmExports1")))
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_WasmModule0").Is(.object(ofGroup: "_fuzz_WasmModule1")))
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Class1").Is(.object(ofGroup: "_fuzz_Class0")))
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Constructor1").Is(.object(ofGroup: "_fuzz_Constructor0")))
+
+        XCTAssertFalse(ILType.object(ofGroup: "_fuzz_Constructor1").Is(.object(ofGroup: "_fuzz_Class0")))
+        XCTAssertFalse(ILType.object(ofGroup: "_fuzz_Class1").Is(.object(ofGroup: "_fuzz_Constructor1")))
+
+
+        // Negative tests to make sure they don't subsume if they don't subsume based on properties / methods..
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Object1", withMethods: ["a"]).Is(.object(ofGroup: "_fuzz_Object0")))
+        XCTAssertFalse(ILType.object(ofGroup: "_fuzz_Object1").Is(.object(ofGroup: "_fuzz_Object0", withMethods: ["a"])))
+
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Class1", withProperties: ["a"]).Is(.object(ofGroup: "_fuzz_Class0")))
+        XCTAssertFalse(ILType.object(ofGroup: "_fuzz_Class1").Is(.object(ofGroup: "_fuzz_Class0", withProperties: ["a"])))
+
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Object1", withProperties: ["a", "b"]).Is(.object(ofGroup: "_fuzz_Object0", withProperties: ["a"])))
+        XCTAssertFalse(ILType.object(ofGroup: "_fuzz_Object1", withProperties: ["b"]).Is(.object(ofGroup: "_fuzz_Object0", withProperties: ["a"])))
+
+    }
+
     func testTypeDescriptions() {
         // Test primitive types
         XCTAssertEqual(ILType.undefined.description, ".undefined")

@@ -61,10 +61,6 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
 
         let exports = m.loadExports()
-
-        for (methodName, signature) in m.getExportedMethods() {
-            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
-        }
     },
 
     RecursiveCodeGenerator("WasmTypeAndModuleGenerator", inContext: .javascript) { b in
@@ -82,10 +78,6 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
 
         let exports = m.loadExports()
-
-        for (methodName, signature) in m.getExportedMethods() {
-            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
-        }
     },
 
     RecursiveCodeGenerator("WasmLegacyTryCatchComplexGenerator", inContext: .javascript) { b in
@@ -125,9 +117,6 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         assert(blockIndex == blockCount + 1)
 
         let exports = m.loadExports()
-        for (methodName, signature) in m.getExportedMethods() {
-            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
-        }
     },
 
     RecursiveCodeGenerator("WasmRecursiveTypeGroupGenerator", inContext: .javascript) { b in
@@ -311,7 +300,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     // Memory Generators
 
-    // TODO(evih): Implement shared memories and memory64.
+    // TODO: support shared memories.
     CodeGenerator("WasmDefineMemoryGenerator", inContext: .wasm) { b in
         let module = b.currentWasmModule
 
