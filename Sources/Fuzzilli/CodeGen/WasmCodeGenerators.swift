@@ -67,6 +67,27 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("WasmTypeAndModuleGenerator", inContext: .javascript) { b in
+        // TODO(cffsmith): We might want to lower this once we can CodeGen into a TypeGroup.
+        let numRandomTypes = Int.random(in: 0...5)
+
+        for i in 1..<(numRandomTypes + 1) {
+            b.wasmDefineTypeGroup {
+                b.buildRecursive(block: i, of: numRandomTypes + 1)
+            }
+        }
+
+        let m = b.buildWasmModule { m in
+            b.buildRecursive(block: numRandomTypes + 1, of: numRandomTypes + 1)
+        }
+
+        let exports = m.loadExports()
+
+        for (methodName, signature) in m.getExportedMethods() {
+            b.callMethod(methodName, on: exports, withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        }
+    },
+
     RecursiveCodeGenerator("WasmLegacyTryCatchComplexGenerator", inContext: .javascript) { b in
         let emitCatchAll = Int.random(in: 0...1)
         let catchCount = Int.random(in: 0...3)
