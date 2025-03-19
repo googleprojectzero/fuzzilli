@@ -357,12 +357,8 @@ public class OperationMutator: BaseInstructionMutator {
             let newStoreType = chooseUniform(from: WasmMemoryStoreType.allCases.filter({$0.numberType() == op.storeType.numberType()}))
             let newStaticOffset = b.randomInt()
             newOp = WasmMemoryStore(storeType: newStoreType, staticOffset: newStaticOffset, isMemory64: op.isMemory64)
-        case .wasmThrow(let op):
-            // TODO(mliedtke): Allow mutation of the inputs.
-            newOp = op
-        case .constSimd128(let op):
-            // TODO: ?
-            newOp = op
+        case .constSimd128(_):
+            newOp = ConstSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
         case .wasmSimd128IntegerUnOp(let op):
             // TODO: ?
             newOp = op
@@ -378,20 +374,14 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmSimd128Compare(let op):
             // TODO: ?
             newOp = op
-        case .wasmI64x2Splat(let op):
-            // TODO: ?
-            newOp = op
-        case .wasmI64x2ExtractLane(let op):
-            // TODO: ?
-            newOp = op
+        case .wasmI64x2ExtractLane(_):
+            newOp = WasmI64x2ExtractLane(lane: Int.random(in: 0...1))
         case .wasmSimdLoad(let op):
-            // TODO: ?
-            newOp = op
-        case .createWasmJSTag(let op):
-            newOp = op
-        case .createWasmTag(let op):
-            // TODO(mliedtke): We could mutate the types / counts of params.
-            newOp = op
+            let kind = chooseUniform(from: WasmSimdLoad.Kind.allCases)
+            let staticOffset = probability(0.8)
+                ? Int64.random(in: -256...256)
+                : Int64.random(in: Int64.min...Int64.max) // most likely out of bounds
+            newOp = WasmSimdLoad(kind: kind, staticOffset: staticOffset, isMemory64: op.isMemory64)
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
              .loadUndefined(_),
@@ -568,8 +558,12 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmUnreachable(_),
              .wasmSelect(_),
              .wasmDefineTag(_),
+             .createWasmTag(_),
+             .createWasmJSTag(_),
+             .wasmThrow(_),
              .wasmThrowRef(_),
              .wasmRethrow(_),
+             .wasmI64x2Splat(_),
              .wasmBeginTypeGroup(_),
              .wasmEndTypeGroup(_),
              .wasmDefineArrayType(_),

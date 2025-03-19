@@ -1552,7 +1552,7 @@ final class WasmSimd128FloatBinOp: WasmOperationBase {
 final class WasmI64x2Splat: WasmOperationBase {
     override var opcode: Opcode { .wasmI64x2Splat(self) }
     init() {
-        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.wasmFunction])
     }
 }
 

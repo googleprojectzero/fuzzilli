@@ -1051,7 +1051,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("WasmI64x2ExtractLaneGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
         let function = b.currentWasmModule.currentWasmFunction
-        function.wasmI64x2ExtractLane(input, 0)
+        function.wasmI64x2ExtractLane(input, Int.random(in: 0...1))
     },
 
     CodeGenerator("WasmSimdLoadGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
