@@ -3484,43 +3484,52 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmSimd128IntegerUnOp(_ input: Variable, _ shape: WasmSimd128Shape, _ integerUnOpKind: WasmSimd128IntegerUnOpKind) -> Variable {
-            return b.emit(WasmSimd128IntegerUnOp(shape: shape, unOpKind: integerUnOpKind), withInputs: [input]).output
+            return b.emit(WasmSimd128IntegerUnOp(shape: shape, unOpKind: integerUnOpKind), withInputs: [input], types: [.wasmSimd128]).output
         }
 
         @discardableResult
         public func wasmSimd128IntegerBinOp(_ left: Variable, _ right: Variable, _ shape: WasmSimd128Shape, _ integerBinOpKind: WasmSimd128IntegerBinOpKind) -> Variable {
-            return b.emit(WasmSimd128IntegerBinOp(shape: shape, binOpKind: integerBinOpKind), withInputs: [left, right]).output
+            // Shifts take an i32 as an rhs input, the others take a regular .wasmSimd128 input.
+            let rhsInputType: ILType = switch integerBinOpKind {
+            case .shl, .shr_s, .shr_u:
+                .wasmi32
+            default:
+                .wasmSimd128
+            }
+            return b.emit(WasmSimd128IntegerBinOp(shape: shape, binOpKind: integerBinOpKind), withInputs: [left, right], types: [.wasmSimd128, rhsInputType]).output
         }
 
         @discardableResult
         public func wasmSimd128FloatUnOp(_ input: Variable, _ shape: WasmSimd128Shape, _ floatUnOpKind: WasmSimd128FloatUnOpKind) -> Variable {
-            return b.emit(WasmSimd128FloatUnOp(shape: shape, unOpKind: floatUnOpKind), withInputs: [input]).output
+            return b.emit(WasmSimd128FloatUnOp(shape: shape, unOpKind: floatUnOpKind), withInputs: [input], types: [.wasmSimd128]).output
         }
 
         @discardableResult
         public func wasmSimd128FloatBinOp(_ left: Variable, _ right: Variable, _ shape: WasmSimd128Shape, _ floatBinOpKind: WasmSimd128FloatBinOpKind) -> Variable {
-            return b.emit(WasmSimd128FloatBinOp(shape: shape, binOpKind: floatBinOpKind), withInputs: [left, right]).output
+            return b.emit(WasmSimd128FloatBinOp(shape: shape, binOpKind: floatBinOpKind), withInputs: [left, right], types: [.wasmSimd128, .wasmSimd128]).output
         }
 
         @discardableResult
         public func wasmSimd128Compare(_ lhs: Variable, _ rhs: Variable, _ shape: WasmSimd128Shape, _ compareOpKind: WasmSimd128CompareOpKind) -> Variable {
-            return b.emit(WasmSimd128Compare(shape: shape, compareOpKind: compareOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(WasmSimd128Compare(shape: shape, compareOpKind: compareOpKind), withInputs: [lhs, rhs], types: [.wasmSimd128, .wasmSimd128]).output
         }
 
         @discardableResult
         public func wasmI64x2Splat(_ input: Variable) -> Variable {
-            return b.emit(WasmI64x2Splat(), withInputs: [input]).output
+            return b.emit(WasmI64x2Splat(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func wasmI64x2ExtractLane(_ input: Variable, _ lane: Int) -> Variable {
-            return b.emit(WasmI64x2ExtractLane(lane: lane), withInputs: [input]).output
+            return b.emit(WasmI64x2ExtractLane(lane: lane), withInputs: [input], types: [.wasmSimd128]).output
         }
 
         @discardableResult
         func wasmSimdLoad(kind: WasmSimdLoad.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: Int64) -> Variable {
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
-            return b.emit(WasmSimdLoad(kind: kind, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset]).output
+            let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
+            return b.emit(WasmSimdLoad(kind: kind, staticOffset: staticOffset, isMemory64: isMemory64),
+                withInputs: [memory, dynamicOffset], types: [.object(ofGroup: "WasmMemory"), dynamicOffsetType]).output
         }
 
         @discardableResult

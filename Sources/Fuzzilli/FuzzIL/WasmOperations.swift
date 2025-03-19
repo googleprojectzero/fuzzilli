@@ -1292,13 +1292,13 @@ final class WasmUnreachable: WasmTypedOperation {
     }
 }
 
-final class ConstSimd128: WasmTypedOperation {
+final class ConstSimd128: WasmOperationBase {
     override var opcode: Opcode { .constSimd128(self) }
     let value: [UInt8]
 
     init(value: [UInt8]) {
         self.value = value;
-        super.init(outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1350,7 +1350,7 @@ public enum WasmSimd128Shape: UInt8, CaseIterable {
     }
 }
 
-final class WasmSimd128Compare: WasmTypedOperation {
+final class WasmSimd128Compare: WasmOperationBase {
     override var opcode: Opcode { .wasmSimd128Compare(self) }
     let shape: WasmSimd128Shape
     let compareOpKind: WasmSimd128CompareOpKind
@@ -1358,7 +1358,7 @@ final class WasmSimd128Compare: WasmTypedOperation {
     init(shape: WasmSimd128Shape, compareOpKind: WasmSimd128CompareOpKind) {
         self.shape = shape
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1402,7 +1402,7 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
     }
 }
 
-final class WasmSimd128IntegerUnOp: WasmTypedOperation {
+final class WasmSimd128IntegerUnOp: WasmOperationBase {
     override var opcode: Opcode { .wasmSimd128IntegerUnOp(self) }
     let shape: WasmSimd128Shape
     let unOpKind: WasmSimd128IntegerUnOpKind
@@ -1411,17 +1411,7 @@ final class WasmSimd128IntegerUnOp: WasmTypedOperation {
         assert(unOpKind.isValidForShape(shape: shape))
         self.shape = shape
         self.unOpKind = unOpKind
-
-        var outputType: ILType = .wasmSimd128
-        switch unOpKind {
-        case .all_true, .bitmask:
-            // Tests and bitmasks produce a boolean i32 result
-            outputType = .wasmi32
-        default:
-            break
-        }
-
-        super.init(inputTypes: [.wasmSimd128], outputType: outputType, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1487,7 +1477,7 @@ public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
     }
 }
 
-final class WasmSimd128IntegerBinOp: WasmTypedOperation {
+final class WasmSimd128IntegerBinOp: WasmOperationBase {
     override var opcode: Opcode { .wasmSimd128IntegerBinOp(self) }
     let shape: WasmSimd128Shape
     let binOpKind: WasmSimd128IntegerBinOpKind
@@ -1495,16 +1485,8 @@ final class WasmSimd128IntegerBinOp: WasmTypedOperation {
     init(shape: WasmSimd128Shape, binOpKind: WasmSimd128IntegerBinOpKind) {
         assert(binOpKind.isValidForShape(shape: shape))
         self.shape = shape
-        // Shifts take an i32 as an rhs input, the others take a regular .wasmSimd128 input.
-        let rhsInputType: ILType = switch binOpKind {
-        case .shl, .shr_s, .shr_u:
-            .wasmi32
-        default:
-            .wasmSimd128
-        }
-
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmSimd128, rhsInputType], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1522,7 +1504,7 @@ public enum WasmSimd128FloatUnOpKind: Int, CaseIterable {
     }
 }
 
-final class WasmSimd128FloatUnOp: WasmTypedOperation {
+final class WasmSimd128FloatUnOp: WasmOperationBase {
     override var opcode: Opcode { .wasmSimd128FloatUnOp(self) }
     let shape: WasmSimd128Shape
     let unOpKind: WasmSimd128FloatUnOpKind
@@ -1531,7 +1513,7 @@ final class WasmSimd128FloatUnOp: WasmTypedOperation {
         assert(unOpKind.isValidForShape(shape: shape))
         self.shape = shape
         self.unOpKind = unOpKind
-        super.init(inputTypes: [.wasmSimd128], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1553,7 +1535,7 @@ public enum WasmSimd128FloatBinOpKind: Int, CaseIterable {
     }
 }
 
-final class WasmSimd128FloatBinOp: WasmTypedOperation {
+final class WasmSimd128FloatBinOp: WasmOperationBase {
     override var opcode: Opcode { .wasmSimd128FloatBinOp(self) }
     let shape: WasmSimd128Shape
     let binOpKind: WasmSimd128FloatBinOpKind
@@ -1562,30 +1544,30 @@ final class WasmSimd128FloatBinOp: WasmTypedOperation {
         assert(binOpKind.isValidForShape(shape: shape))
         self.shape = shape
         self.binOpKind = binOpKind
-        super.init(inputTypes: [.wasmSimd128, .wasmSimd128], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
 // TODO: Generalize to other shapes.
-final class WasmI64x2Splat: WasmTypedOperation {
+final class WasmI64x2Splat: WasmOperationBase {
     override var opcode: Opcode { .wasmI64x2Splat(self) }
     init() {
-        super.init(inputTypes: [.wasmi64], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
 // TODO: Generalize to other shapes.
-final class WasmI64x2ExtractLane: WasmTypedOperation {
+final class WasmI64x2ExtractLane: WasmOperationBase {
   override var opcode: Opcode { .wasmI64x2ExtractLane(self) }
   let lane: Int
 
   init(lane: Int) {
     self.lane = lane;
-    super.init(inputTypes: [.wasmSimd128 ], outputType: .wasmi64, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
   }
 }
 
-final class WasmSimdLoad: WasmTypedOperation {
+final class WasmSimdLoad: WasmOperationBase {
     enum Kind: UInt8, CaseIterable {
         // TODO(mliedtke): Test all the other variants!
         case LoadS128    = 0x00
@@ -1611,8 +1593,7 @@ final class WasmSimdLoad: WasmTypedOperation {
         self.kind = kind
         self.staticOffset = staticOffset
         self.isMemory64 = isMemory64
-        let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
-        super.init(inputTypes: [.object(ofGroup: "WasmMemory"), dynamicOffsetType], outputType: .wasmSimd128, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 

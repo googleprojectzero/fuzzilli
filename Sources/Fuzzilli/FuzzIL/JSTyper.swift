@@ -514,6 +514,26 @@ public struct JSTyper: Analyzer {
             case .wasmf64BinOp(_),
                  .wasmf64UnOp(_):
                 setType(of: instr.output, to: .wasmf64)
+            case .constSimd128(_),
+                 .wasmSimd128Compare(_),
+                 .wasmSimd128IntegerBinOp(_),
+                 .wasmSimd128FloatUnOp(_),
+                 .wasmSimd128FloatBinOp(_),
+                 .wasmI64x2Splat(_),
+                 .wasmSimdLoad(_):
+                setType(of: instr.output, to: .wasmSimd128)
+            case .wasmSimd128IntegerUnOp(let op):
+                var outputType: ILType = .wasmSimd128
+                switch op.unOpKind {
+                case .all_true, .bitmask:
+                    // Tests and bitmasks produce a boolean i32 result
+                    outputType = .wasmi32
+                default:
+                    break
+                }
+                setType(of: instr.output, to: outputType)
+            case .wasmI64x2ExtractLane(_):
+                setType(of: instr.output, to: .wasmi64)
             case .beginWasmFunction(let op):
                 wasmTypeBeginBlock(instr, op.signature)
             case .endWasmFunction(let op):
