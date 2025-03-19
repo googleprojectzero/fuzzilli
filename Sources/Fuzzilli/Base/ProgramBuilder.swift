@@ -1455,7 +1455,13 @@ public class ProgramBuilder {
         // Simple optimization: avoid splicing data-flow "roots", i.e. simple instructions that don't have any inputs, as this will
         // most of the time result in fairly uninteresting splices that for example just copy a literal from another program.
         // The exception to this are special instructions that exist outside of JavaScript context, for example instructions that add fields to classes.
-        let rootCandidates = candidates.filter({ !program.code[$0].isSimple || program.code[$0].numInputs > 0 || !program.code[$0].op.requiredContext.contains(.javascript) })
+        // Also skip the WasmReturn operation as its inputs depend on the result types of the function. Splicing will alomst certainly result in wrongly typed inputs.
+        let rootCandidates = candidates.filter {
+            (!program.code[$0].isSimple
+                || program.code[$0].numInputs > 0
+                || !program.code[$0].op.requiredContext.contains(.javascript)
+            ) && !(program.code[$0].op is WasmReturn)
+        }
         guard !rootCandidates.isEmpty else { return false }
         let rootIndex = specifiedIndex ?? chooseUniform(from: rootCandidates)
         guard rootCandidates.contains(rootIndex) else { return false }
