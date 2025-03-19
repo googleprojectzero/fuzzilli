@@ -1581,12 +1581,12 @@ class MinimizerTests: XCTestCase {
             b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
                     evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmBuildIfElse(args[0]) {
+                    function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: false) { label, ifArgs in
                         evaluator.nextInstructionIsImportant(in: b)
-                        let sum = function.wasmi32BinOp(args[0], args[0], binOpKind: .Add)
+                        let sum = function.wasmi32BinOp(args[0], ifArgs[0], binOpKind: .Add)
                         evaluator.nextInstructionIsImportant(in: b)
                         function.wasmReturn(sum)
-                    } elseBody: {
+                    } elseBody: { label, elseArgs in
                         function.wasmUnreachable()
                     }
                     return [function.consti32(-1)]
@@ -1596,8 +1596,8 @@ class MinimizerTests: XCTestCase {
         } minified: { b in
             b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
-                    function.wasmBuildIfElse(args[0]) {
-                        let sum = function.wasmi32BinOp(args[0], args[0], binOpKind: .Add)
+                    function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: false) { label, ifArgs in
+                        let sum = function.wasmi32BinOp(args[0], ifArgs[0], binOpKind: .Add)
                         function.wasmReturn(sum)
                     }
                     return [function.consti32(-1)]
@@ -1613,9 +1613,9 @@ class MinimizerTests: XCTestCase {
                     evaluator.operationIsImportant(WasmBeginIf.self)
                     function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: false) { _, _ in
                         function.wasmUnreachable()
-                    } elseBody: { _, _ in
+                    } elseBody: { label, elseArgs in
                         evaluator.nextInstructionIsImportant(in: b)
-                        let sum = function.wasmi32BinOp(args[0], args[0], binOpKind: .Add)
+                        let sum = function.wasmi32BinOp(args[0], elseArgs[0], binOpKind: .Add)
                         evaluator.nextInstructionIsImportant(in: b)
                         function.wasmReturn(sum)
                     }
@@ -1626,8 +1626,8 @@ class MinimizerTests: XCTestCase {
         } minified: { b in
             b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
-                    function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: true) { _, _ in
-                        let sum = function.wasmi32BinOp(args[0], args[0], binOpKind: .Add)
+                    function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: true) { label, ifArgs in
+                        let sum = function.wasmi32BinOp(args[0], ifArgs[0], binOpKind: .Add)
                         function.wasmReturn(sum)
                     }
                     return [function.consti32(-1)]
