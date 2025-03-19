@@ -422,7 +422,10 @@ struct BlockReducer: Reducer {
             // Then try to remove the if block. This requires inverting the condition of the if.
             let invertedIf = WasmBeginIf(with: beginIf.signature, inverted: !beginIf.inverted)
             var replacements = [(Int, Instruction)]()
-            replacements.append((ifBlock.head, Instruction(invertedIf, inouts: helper.code[ifBlock.head].inouts, flags: .empty)))
+            // The new WasmBeginIf will take the original inputs but produces the inner outputs
+            // of the original WasmBeginElse block, so that users of them are rewired correctly.
+            let inouts = helper.code[ifBlock.head].inputs + helper.code[elseBlock.head].allOutputs
+            replacements.append((ifBlock.head, Instruction(invertedIf, inouts: inouts, flags: .empty)))
             // The rest of the if body is nopped ...
             for instr in helper.code.body(of: ifBlock) {
                 replacements.append((instr.index, helper.nop(for: instr)))
