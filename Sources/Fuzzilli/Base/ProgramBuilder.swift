@@ -3749,15 +3749,16 @@ public class ProgramBuilder {
         return Array(emit(WasmEndTypeGroup(typesCount: types.count), withInputs: types).outputs)
     }
 
-    func wasmDefineTypeGroup(recursiveGenerator: () -> ()) {
+    @discardableResult
+    func wasmDefineTypeGroup(recursiveGenerator: () -> ()) -> [Variable] {
         emit(WasmBeginTypeGroup())
         recursiveGenerator()
         // Make all type definitions visible.
-        let types = scopes.elementsStartingAtTop().joined().filter {
+        let types = scopes.top.filter {
             let t = type(of: $0)
             return t.Is(.wasmTypeDef()) && t.wasmTypeDefinition?.description != .selfReference
         }
-        emit(WasmEndTypeGroup(typesCount: types.count), withInputs: types)
+        return Array(emit(WasmEndTypeGroup(typesCount: types.count), withInputs: types).outputs)
     }
 
     @discardableResult
@@ -3782,7 +3783,7 @@ public class ProgramBuilder {
     }
 
     /// Returns the next free variable.
-    func nextVariable() -> Variable {
+    public func nextVariable() -> Variable {
         assert(numVariables < Code.maxNumberOfVariables, "Too many variables")
         numVariables += 1
         return Variable(number: numVariables - 1)

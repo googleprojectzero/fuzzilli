@@ -2771,4 +2771,23 @@ class ProgramBuilderTests: XCTestCase {
         let obj = b.findOrGenerateType(type1)
         XCTAssert(b.type(of: obj).Is(type1))
     }
+
+    func testWasmTypeGroupScoping() {
+        let env = JavaScriptEnvironment()
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+
+        let typesA = b.wasmDefineTypeGroup(recursiveGenerator: {
+            b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+        })
+
+        XCTAssertEqual(typesA.count, 1)
+
+        let typesB = b.wasmDefineTypeGroup(recursiveGenerator: {
+            b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+        })
+
+        XCTAssertEqual(typesB.count, 1)
+    }
 }

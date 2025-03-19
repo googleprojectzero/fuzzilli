@@ -331,7 +331,9 @@ public class OperationMutator: BaseInstructionMutator {
                 wasmGlobal = .wasmi32(Int32(truncatingIfNeeded: b.randomInt()))
             case .wasmi64:
                 wasmGlobal = .wasmi64(b.randomInt())
-
+            case .wasmExternRef,
+                    .wasmExnRef:
+                wasmGlobal = op.wasmGlobal
             default:
                 fatalError("unexpected/unimplemented Value Type!")
             }
