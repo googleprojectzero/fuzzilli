@@ -28,6 +28,7 @@ message LogMessage {
 message FuzzerState {
     bytes corpus = 1;
     bytes evaluatorState = 2;
+    bool isWasmEnabled = 3;
 }
 
 message Statistics {
