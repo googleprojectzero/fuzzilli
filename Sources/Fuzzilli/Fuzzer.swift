@@ -376,7 +376,16 @@ public class Fuzzer {
     }
 
     /// Tuple containing the result of importing a program.
-    public typealias ImportResult = (wasImported: Bool, executionOutcome: ExecutionOutcome)
+    public enum ImportResult {
+        case imported
+        case dropped
+        case needsWasm
+        case failed(ExecutionOutcome)
+    }
+
+    private func containsWasm(_ program: Program) -> Bool {
+        program.code.contains { $0.op.requiredContext.contains(.wasm) || $0.op.requiredContext.contains(.wasmTypeGroup)}
+    }
 
     /// Imports a potentially interesting program into this fuzzer.
     ///
@@ -389,7 +398,13 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
 
         if enableDropout && probability(config.dropoutRate) {
-            return ImportResult(wasImported: false, executionOutcome: .succeeded)
+            return .dropped
+        }
+
+        if !config.isWasmEnabled && containsWasm(program) {
+            // TODO(mliedtke): Store the dropped wasm programs to a separate folder
+            // `excluded_wasm_programs` or similar.
+            return .needsWasm
         }
 
         let execution = execute(program, purpose: .programImport)
@@ -419,7 +434,7 @@ public class Fuzzer {
             break
         }
 
-        return ImportResult(wasImported: wasImported, executionOutcome: execution.outcome)
+        return wasImported ? .imported : .failed(execution.outcome)
     }
 
     /// Imports a crashing program into this fuzzer.
@@ -512,10 +527,12 @@ public class Fuzzer {
 
         // Only attempt fixup if the program failed to execute successfully. In particular, ignore timeouts and
         // crashes here, but also take into account that not all successfully executing programs will be imported.
-        if !result.executionOutcome.isFailure() {
-            return (result, 0)
+        switch result {
+            case .dropped, .needsWasm, .imported:
+                return (result, 0)
+            case .failed(_):
+                break
         }
-        assert(!result.wasImported)
 
         let b = makeBuilder()
 
@@ -534,10 +551,13 @@ public class Fuzzer {
         ]
         program = removeCallsTo(filteredFunctions, from: program)
         result = importProgram(program, origin: origin)
-        if !result.executionOutcome.isFailure() {
-            return (result, 1)
+        switch result {
+            case .dropped, .needsWasm, .imported:
+                return (result, 1)
+            case .failed(_):
+                break
         }
-        assert(!result.wasImported)
+
 
         // Second attempt at fixing the program: enable guards (try-catch) for all guardable operations, then
         // remove all guards that aren't needed (because no exception is thrown).
@@ -553,10 +573,12 @@ public class Fuzzer {
             program = result
         }
         result = importProgram(program, origin: origin)
-        if !result.executionOutcome.isFailure() {
-            return (result, 2)
+        switch result {
+            case .dropped, .needsWasm, .imported:
+                return (result, 2)
+            case .failed(_):
+                break
         }
-        assert(!result.wasImported)
 
         // Third and final attempt at fixing up the program: simply wrap the entire program in a try-catch block.
         b.buildTryCatchFinally(tryBody: {
@@ -807,11 +829,15 @@ public class Fuzzer {
                 logger.info("    \(currentCorpusImportJob.numberOfProgramsThatNeededThreeFixupAttempts) succeeded after attempt 3")
                 logger.info("\(currentCorpusImportJob.numberOfProgramsThatFailedDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs failed to execute (even after fixup) and weren't imported")
                 logger.info("\(currentCorpusImportJob.numberOfProgramsThatTimedOutDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs timed out and weren't imported")
+                if !config.isWasmEnabled {
+                    logger.info("\(currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs require Wasm which is disabled")
+                }
 
                 let successRatio = Double(currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport) / Double(currentCorpusImportJob.totalNumberOfProgramsToImport)
                 let failureRatio = 1.0 - successRatio
                 if failureRatio >= 0.25 {
-                    logger.warning("\(String(format: "%.2f", failureRatio * 100))% of imported programs failed to execute successfully and therefore couldn't be imported.")
+                    let reason = config.isWasmEnabled ? "execute successfully" : "execute successfully or require currently disabled wasm"
+                    logger.warning("\(String(format: "%.2f", failureRatio * 100))% of imported programs failed to \(reason) and therefore couldn't be imported.")
                 }
 
                 dispatchEvent(events.CorpusImportComplete)
@@ -977,6 +1003,7 @@ public class Fuzzer {
         private(set) var numberOfProgramsThatNeededOneFixupAttempt = 0
         private(set) var numberOfProgramsThatNeededTwoFixupAttempts = 0
         private(set) var numberOfProgramsThatNeededThreeFixupAttempts = 0
+        private(set) var numberOfProgramsRequiringWasmButDisabled = 0
 
         var numberOfProgramsThatNeededFixup: Int {
             assert(Fuzzer.maxProgramImportFixupAttempts == 3)
@@ -1000,19 +1027,10 @@ public class Fuzzer {
         }
 
         mutating func notifyImportOutcome(_ result: ImportResult, fixupAttempts: Int) {
-            switch result.executionOutcome {
-            case .crashed:
-                assert(!result.wasImported)
-                // This is unexpected so we don't track these
-                break
-            case .failed:
-                assert(!result.wasImported)
-                numberOfProgramsThatFailedDuringImport += 1
-            case .succeeded:
+            switch result {
+            case .imported:
                 numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
-                if result.wasImported {
-                    numberOfProgramsThatWereImport += 1
-                }
+                numberOfProgramsThatWereImport += 1
                 switch fixupAttempts {
                 case 0: break
                 case 1: numberOfProgramsThatNeededOneFixupAttempt += 1
@@ -1020,9 +1038,22 @@ public class Fuzzer {
                 case 3: numberOfProgramsThatNeededThreeFixupAttempts += 1
                 default: fatalError("Unexpected number of fixup rounds: \(fixupAttempts)")
                 }
-            case .timedOut:
-                assert(!result.wasImported)
-                numberOfProgramsThatTimedOutDuringImport += 1
+            case .dropped:
+                // Dropping a program is treated as success.
+                numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
+                break
+            case .needsWasm:
+                numberOfProgramsRequiringWasmButDisabled += 1
+            case .failed(let outcome):
+                switch outcome {
+                case .crashed, .succeeded:
+                    // This is unexpected so we don't track these.
+                    break
+                case .failed:
+                    numberOfProgramsThatFailedDuringImport += 1
+                case .timedOut:
+                    numberOfProgramsThatTimedOutDuringImport += 1
+                }
             }
         }
 

@@ -61,6 +61,10 @@ public struct Configuration {
     /// also appended as a comment in the footer of crashing samples.
     public let tag: String?
 
+    // Whether the fuzzer is running with wasm features or without. If false,
+    // this disables all wasm-related code generators.
+    public let isWasmEnabled: Bool
+
     public init(arguments: [String] = [],
                 timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
@@ -72,7 +76,8 @@ public struct Configuration {
                 enableDiagnostics: Bool = false,
                 enableInspection: Bool = false,
                 staticCorpus: Bool = false,
-                tag: String? = nil) {
+                tag: String? = nil,
+                isWasmEnabled: Bool = false) {
         self.arguments = arguments
         self.timeout = timeout
         self.logLevel = logLevel
@@ -84,6 +89,7 @@ public struct Configuration {
         self.enableInspection = enableDiagnostics || enableInspection
         self.staticCorpus = staticCorpus
         self.tag = tag
+        self.isWasmEnabled = isWasmEnabled
     }
 }
 

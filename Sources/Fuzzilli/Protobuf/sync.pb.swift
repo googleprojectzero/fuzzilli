@@ -63,6 +63,8 @@ public struct Fuzzilli_Protobuf_FuzzerState: @unchecked Sendable {
 
   public var evaluatorState: Data = Data()
 
+  public var isWasmEnabled: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -241,6 +243,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "corpus"),
     2: .same(proto: "evaluatorState"),
+    3: .same(proto: "isWasmEnabled"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -251,6 +254,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularBytesField(value: &self.corpus) }()
       case 2: try { try decoder.decodeSingularBytesField(value: &self.evaluatorState) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.isWasmEnabled) }()
       default: break
       }
     }
@@ -263,12 +267,16 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
     if !self.evaluatorState.isEmpty {
       try visitor.visitSingularBytesField(value: self.evaluatorState, fieldNumber: 2)
     }
+    if self.isWasmEnabled != false {
+      try visitor.visitSingularBoolField(value: self.isWasmEnabled, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_FuzzerState, rhs: Fuzzilli_Protobuf_FuzzerState) -> Bool {
     if lhs.corpus != rhs.corpus {return false}
     if lhs.evaluatorState != rhs.evaluatorState {return false}
+    if lhs.isWasmEnabled != rhs.isWasmEnabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
