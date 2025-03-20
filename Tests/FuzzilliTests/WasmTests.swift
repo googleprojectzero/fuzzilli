@@ -542,11 +542,28 @@ class WasmFoundationTests: XCTestCase {
         } catchBody: { e in
             b.callFunction(outputFunc, withArgs: [b.loadString("exception")])
         }
+        // We can however import it into another wasm program and access its value there.
+        let otherModule = b.buildWasmModule { wasmModule in
+            // Rethrow the exception stored in the global, catch it and extract the integer.
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchLabel, _ in
+                    function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchLabel], catches: [.Ref]) { _, _ in
+                        function.wasmBuildThrowRef(exception: function.wasmLoadGlobal(globalVariable: global))
+                        return []
+                    }
+                    return [function.consti32(-1), function.wasmRefNull(type: .wasmExnRef)]
+                }
+                return [caughtValues[0]]
+            }
+        }
+        let otherExports = otherModule.loadExports()
+        let out4 = b.callMethod(module.getExportedMethod(at: 0), on: otherExports)
+        b.callFunction(outputFunc, withArgs: [out4])
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
 
-        testForOutput(program: jsProg, runner: runner, outputString: "1\n0\n42\nexception\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "1\n0\n42\nexception\n42\n")
     }
 
     func testGlobalExternRef() throws {
