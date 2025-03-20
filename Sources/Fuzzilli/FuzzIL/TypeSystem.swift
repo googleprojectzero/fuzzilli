@@ -975,9 +975,9 @@ extension ILType: CustomStringConvertible {
             }
         case .wasmFunctionDef:
             if let signature = wasmFunctionDefSignature {
-                return ".wasmFunction(\(signature.format(abbreviate: abbreviate)))"
+                return ".wasmFunctionDef(\(signature.format(abbreviate: abbreviate)))"
             } else {
-                return ".wasmFunction()"
+                return ".wasmFunctionDef()"
             }
         case .wasmTypeDef:
             if let desc = self.wasmTypeDefinition?.description {
@@ -1313,10 +1313,15 @@ public class WasmMemoryType: WasmTypeExtension {
 }
 
 public class WasmTableType: WasmTypeExtension {
+    public struct IndexInTableAndWasmSignature: Hashable {
+        let indexInTable: Int
+        let signature: WasmSignature
+    }
+
     let elementType: ILType
     let limits: Limits
     let isTable64: Bool
-    let knownEntries: [Int:ILType]
+    let knownEntries: [IndexInTableAndWasmSignature]
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmTableType else { return false }
@@ -1330,7 +1335,7 @@ public class WasmTableType: WasmTypeExtension {
         hasher.combine(knownEntries)
     }
 
-    init(elementType: ILType, limits: Limits, isTable64: Bool, knownEntries: [Int:ILType]) {
+    init(elementType: ILType, limits: Limits, isTable64: Bool, knownEntries: [IndexInTableAndWasmSignature]) {
         // TODO(manoskouk): Assert table type is reference type.
         self.elementType = elementType
         self.limits = limits

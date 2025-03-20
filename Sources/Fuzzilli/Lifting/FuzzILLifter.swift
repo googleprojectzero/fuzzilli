@@ -810,7 +810,7 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- WasmDefineGlobal \(op.wasmGlobal)")
 
         case .wasmDefineTable(let op):
-            let entries = op.definedEntryIndices.enumerated().map { index, entry in
+            let entries = op.definedEntries.enumerated().map { index, entry in
                 "\(entry) : \(input(index))"
             }.joined(separator: ", ")
             let isTable64Str = op.isTable64 ? ", table64" : ""

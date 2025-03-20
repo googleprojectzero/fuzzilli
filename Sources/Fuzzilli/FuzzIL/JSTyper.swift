@@ -466,11 +466,7 @@ public struct JSTyper: Analyzer {
             switch instr.op.opcode {
             case .wasmDefineGlobal(let op):
                 dynamicObjectGroupManager.addWasmGlobal(withType: .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable)), forVariable: instr.output)
-            case .wasmDefineTable(let op):
-                let typedEntries = Dictionary(uniqueKeysWithValues: zip(op.definedEntryIndices, instr.inputs.map { type(of: $0)}))
-                let tableType = WasmTableType(elementType: op.elementType, limits: op.limits, isTable64: op.isTable64, knownEntries: typedEntries)
-                setType(of: instr.output, to: .wasmTable(wasmTableType: tableType))
-                // TODO(Cffsmith): add this to the exports?
+            case .wasmDefineTable(_):
                 dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.output), forVariable: instr.output)
             case .wasmLoadGlobal(let op):
                 assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)
@@ -1496,7 +1492,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, .wasmMemory(limits: op.memType.limits, isShared: op.memType.isShared, isMemory64: op.memType.isMemory64))
 
         case .createWasmTable(let op):
-            set(instr.output, .wasmTable(wasmTableType: WasmTableType(elementType: op.tableType.elementType, limits: op.tableType.limits, isTable64: op.tableType.isTable64, knownEntries: [:])))
+            set(instr.output, .wasmTable(wasmTableType: WasmTableType(elementType: op.tableType.elementType, limits: op.tableType.limits, isTable64: op.tableType.isTable64, knownEntries: [])))
 
         case .createWasmJSTag(_):
             set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef], isJSTag: true)))

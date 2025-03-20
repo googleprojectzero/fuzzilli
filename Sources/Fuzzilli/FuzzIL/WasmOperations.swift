@@ -701,26 +701,25 @@ final class WasmDefineTable: WasmTypedOperation {
 
     let elementType: ILType
     let limits: Limits
-    let definedEntryIndices: [Int]
+    let definedEntries: [WasmTableType.IndexInTableAndWasmSignature]
     let isTable64: Bool
 
-    init(elementType: ILType, limits: Limits, definedEntryIndices: [Int], isTable64: Bool) {
+    init(elementType: ILType, limits: Limits, definedEntries: [WasmTableType.IndexInTableAndWasmSignature], isTable64: Bool) {
         self.elementType = elementType
         self.limits = limits
         self.isTable64 = isTable64
-        self.definedEntryIndices = definedEntryIndices
+        self.definedEntries = definedEntries
 
         // TODO(manoskouk): Find a way to define non-function tables with initializers.
-        assert(elementType == .wasmFunctionDef() || definedEntryIndices.isEmpty)
+        assert(elementType == .wasmFunctionDef() || definedEntries.isEmpty)
         let inputTypes = if elementType == .wasmFunctionDef(){
-            Array(repeating: .wasmFunctionDef() | .function(), count: definedEntryIndices.count)
+            Array(repeating: .wasmFunctionDef() | .function(), count: definedEntries.count)
         } else {
             [ILType]()
         }
 
         super.init(inputTypes: inputTypes,
-                   // Unused since the typer special-cases WasmDefineTable. This is because we cannot know `knownEntries` at this point.
-                   outputType: .wasmTable(wasmTableType: WasmTableType(elementType: elementType, limits: limits, isTable64: isTable64, knownEntries: [:])),
+                   outputType: .wasmTable(wasmTableType: WasmTableType(elementType: elementType, limits: limits, isTable64: isTable64, knownEntries: definedEntries)),
                    attributes: [.isMutable],
                    requiredContext: [.wasm])
     }
