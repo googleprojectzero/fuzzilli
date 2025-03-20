@@ -1078,11 +1078,21 @@ message WasmDefineGlobal {
    WasmGlobal wasmGlobal = 1;
 }
 
+message WasmSignature {
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
+}
+
+message IndexedWasmSignature {
+  int64 index = 1;
+  WasmSignature signature = 2;
+}
+
 message WasmDefineTable {
   WasmILType elementType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
-  repeated int64 definedEntryIndices = 4;
+  repeated IndexedWasmSignature definedEntries = 4;
   bool isTable64 = 5;
 }
 

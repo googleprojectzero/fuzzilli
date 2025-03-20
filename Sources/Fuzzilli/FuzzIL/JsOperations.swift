@@ -2499,7 +2499,7 @@ class CreateWasmTable: JsOperation {
     let tableType: WasmTableType
 
     init(elementType: ILType, limits: Limits, isTable64: Bool) {
-        self.tableType = WasmTableType(elementType: elementType, limits: limits, isTable64: isTable64, knownEntries: [:])
+        self.tableType = WasmTableType(elementType: elementType, limits: limits, isTable64: isTable64, knownEntries: [])
         super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript])
     }
 }

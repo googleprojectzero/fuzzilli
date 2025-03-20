@@ -667,33 +667,35 @@ public class WasmLifter {
     // - one segment per table (assumes entries are continuous)
     // - constant starting index.
     private func buildElementSection() throws {
+        let numDefinedTablesWithEntries = self.tables.count { instruction in
+            !(instruction.op as! WasmDefineTable).definedEntries.isEmpty
+        }
+
+        if numDefinedTablesWithEntries == 0 { return }
+
         self.bytecode += [WasmSection.element.rawValue]
         var temp = Data();
-
-        let numDefinedTablesWithEntries = self.tables.count { instruction in
-            !(instruction.op as! WasmDefineTable).definedEntryIndices.isEmpty
-        }
 
         // Element segment count.
         temp += Leb128.unsignedEncode(numDefinedTablesWithEntries);
 
         for instruction in self.tables {
             let table = instruction.op as! WasmDefineTable
-            let definedEntryIndices = table.definedEntryIndices
-            assert(definedEntryIndices.count == instruction.inputs.count)
-            if definedEntryIndices.isEmpty { continue }
+            let definedEntries = table.definedEntries
+            assert(definedEntries.count == instruction.inputs.count)
+            if definedEntries.isEmpty { continue }
             // Element segment case 2 definition.
             temp += [0x02]
             let tableIndex = try self.resolveIdx(ofType: .table, for: instruction.output)
             temp += Leb128.unsignedEncode(tableIndex)
             // Starting index. Assumes all entries are continuous.
             temp += table.isTable64 ? [0x42] : [0x41]
-            temp += Leb128.unsignedEncode(definedEntryIndices[0])
+            temp += Leb128.unsignedEncode(definedEntries[0].indexInTable)
             temp += [0x0b]  // end
             // elemkind
             temp += [0x00]
             // entry count
-            temp += Leb128.unsignedEncode(definedEntryIndices.count)
+            temp += Leb128.unsignedEncode(definedEntries.count)
             // entries
             for entry in instruction.inputs {
                 let functionId = try resolveIdx(ofType: .function, for: entry)
@@ -1161,11 +1163,12 @@ public class WasmLifter {
             case .wasmDefineTable(let tableDef):
                 self.tables.append(instr)
                 if tableDef.elementType == .wasmFunctionDef() {
-                    for definedEntry in instr.inputs {
-                        if typer.type(of: definedEntry).Is(.function()) && !self.imports.contains(where: { $0.0 == definedEntry }) {
-                            // Ensure deterministic lifting.
-                            let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(typer.type(of: definedEntry).signature ?? Signature.forUnknownFunction)
-                            self.imports.append((definedEntry, WasmSignature(from: wasmSignature)))
+                    for (value, definedEntry) in zip(instr.inputs, tableDef.definedEntries) {
+                        // We need a way to exclude functions defined in this module.
+                        // Since we have not populated the module's functions yet, we exclude .wasmFunctionDef() typed entries.
+                        // TODO(manoskouk): Consider finding something better.
+                        if !self.imports.contains(where: { $0.0 == value }) && !typer.type(of: value).Is(.wasmFunctionDef()) {
+                            self.imports.append((value, definedEntry.signature))
                         }
                     }
                 }

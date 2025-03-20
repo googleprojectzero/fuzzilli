@@ -3661,8 +3661,8 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func addTable(elementType: ILType, minSize: Int, maxSize: Int? = nil, definedEntryIndices: [Int] = [], definedEntryValues: [Variable] = [], isTable64: Bool) -> Variable {
-            return b.emit(WasmDefineTable(elementType: elementType, limits: Limits(min: minSize, max: maxSize), definedEntryIndices: definedEntryIndices, isTable64: isTable64), withInputs: definedEntryValues).output
+        public func addTable(elementType: ILType, minSize: Int, maxSize: Int? = nil, definedEntries: [WasmTableType.IndexInTableAndWasmSignature] = [], definedEntryValues: [Variable] = [], isTable64: Bool) -> Variable {
+            return b.emit(WasmDefineTable(elementType: elementType, limits: Limits(min: minSize, max: maxSize), definedEntries: definedEntries, isTable64: isTable64), withInputs: definedEntryValues).output
         }
 
         // This result can be ignored right now, as we can only define one memory per module

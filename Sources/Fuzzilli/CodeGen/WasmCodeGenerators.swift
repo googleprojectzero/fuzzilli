@@ -357,45 +357,42 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let maxSize: Int? = nil
         let elementType = ILType.wasmFunctionDef()
 
-        var definedEntryIndices: [Int] = []
+        let definedEntryIndices: [Int]
+        var definedEntries: [WasmTableType.IndexInTableAndWasmSignature] = []
         var definedEntryValues: [Variable] = []
 
-        let entryType = elementType == .wasmFunctionDef() ? .wasmFunctionDef() | .function() : .object()
+        let expectedEntryType = elementType == .wasmFunctionDef() ? .wasmFunctionDef() | .function() : .object()
 
         // Currently, only generate entries for funcref tables.
         // TODO(manoskouk): Generalize this.
         if (elementType == .wasmFunctionDef()) {
-            let entryValue = b.randomVariable(ofType: entryType)
-
-            if entryValue != nil {
+            if b.randomVariable(ofType: expectedEntryType) != nil {
                 // There is at least one function in scope. Add some initial entries to the table.
                 // TODO(manoskouk): Generalize this.
                 definedEntryIndices = [0, 1, 2, 3, 4]
-                for _ in definedEntryIndices {
-                    definedEntryValues.append(b.randomVariable(ofType: entryType)!)
+                for index in definedEntryIndices {
+                    let value = b.randomVariable(ofType: expectedEntryType)!
+                    let actualEntryType = b.type(of: value)
+                    definedEntries.append(.init(indexInTable: index, signature: actualEntryType == .wasmFunctionDef() ? actualEntryType.wasmFunctionDefSignature! : WasmSignature(from: ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(actualEntryType.signature ?? Signature.forUnknownFunction))))
+                    definedEntryValues.append(value)
                 }
             }
         }
 
-        module.addTable(elementType: elementType, minSize: minSize, maxSize: maxSize, definedEntryIndices: definedEntryIndices, definedEntryValues: definedEntryValues, isTable64: probability(0.5))
+        module.addTable(elementType: elementType, minSize: minSize, maxSize: maxSize, definedEntries: definedEntries, definedEntryValues: definedEntryValues, isTable64: probability(0.5))
     },
 
     CodeGenerator("WasmCallIndirectGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmTable"))) { b, table in
         let tableType = b.type(of: table).wasmTableType!
         if tableType.elementType != .wasmFunctionDef() { return }
-        if tableType.knownEntries.isEmpty { return }
-        let (index, entry) = tableType.knownEntries.randomElement()!
-        guard entry.isWasmFunctionDef else { return }
-        let signature = entry.wasmFunctionDefSignature!
+        guard let indexedSignature = tableType.knownEntries.randomElement() else { return }
 
         let function = b.currentWasmModule.currentWasmFunction
-        let indexVar = function.consti32(Int32(index))
+        let indexVar = function.consti32(Int32(indexedSignature.indexInTable))
 
-        let functionArgs = b.randomWasmArguments(forWasmSignature: signature)
+        guard let functionArgs = b.randomWasmArguments(forWasmSignature: indexedSignature.signature) else { return }
 
-        guard let functionArgs else { return }
-
-        function.wasmCallIndirect(signature: signature, table: table, functionArgs: functionArgs, tableIndex: indexVar)
+        function.wasmCallIndirect(signature: indexedSignature.signature, table: table, functionArgs: functionArgs, tableIndex: indexVar)
     },
 
     // TODO(manoskouk): Find a way to generate recursive calls.

@@ -521,6 +521,13 @@ extension Instruction: ProtobufConvertible {
             }
         }
 
+        func WasmSignatureToProto(_ signature: WasmSignature) -> Fuzzilli_Protobuf_WasmSignature {
+            return Fuzzilli_Protobuf_WasmSignature.with {
+                $0.parameterTypes = signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                $0.outputTypes = signature.outputTypes.map(ILTypeToWasmTypeEnum)
+            }
+        }
+
         let result = ProtobufType.with {
             $0.inouts = inouts.map({ UInt32($0.number) })
 
@@ -1207,7 +1214,12 @@ extension Instruction: ProtobufConvertible {
                     if let maxSize = op.limits.max {
                         $0.maxSize = Int64(maxSize)
                     }
-                    $0.definedEntryIndices = op.definedEntryIndices.map { Int64($0) }
+                    $0.definedEntries = op.definedEntries.map { entry in
+                        Fuzzilli_Protobuf_IndexedWasmSignature.with {
+                            $0.index = Int64(entry.indexInTable)
+                            $0.signature = WasmSignatureToProto(entry.signature)
+                        }
+                    }
                     $0.isTable64 = op.isTable64
                 }
             case .wasmDefineMemory(let op):
@@ -1670,6 +1682,11 @@ extension Instruction: ProtobufConvertible {
 
         guard let operation = proto.operation else {
             throw FuzzilliError.instructionDecodingError("missing operation for instruction")
+        }
+
+        func WasmSignatureFromProto(_ signature: Fuzzilli_Protobuf_WasmSignature) -> WasmSignature {
+            return WasmSignature(expects: signature.parameterTypes.map(WasmTypeEnumToILType),
+                                 returns: signature.outputTypes.map(WasmTypeEnumToILType))
         }
 
         let op: Operation
@@ -2197,7 +2214,10 @@ extension Instruction: ProtobufConvertible {
         case .wasmDefineTable(let p):
             op = WasmDefineTable(elementType: WasmTypeEnumToILType(p.elementType),
                                  limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil),
-                                 definedEntryIndices: p.definedEntryIndices.map { Int($0) }, isTable64: p.isTable64)
+                                 definedEntries: p.definedEntries.map { entry in
+                                     WasmTableType.IndexInTableAndWasmSignature(indexInTable: Int(entry.index), signature: WasmSignatureFromProto(entry.signature))
+                                 },
+                                 isTable64: p.isTable64)
         case .wasmDefineMemory(let p):
             let maxPages = p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil
             op = WasmDefineMemory(limits: Limits(min: Int(p.wasmMemory.minPages), max: maxPages), isShared: p.wasmMemory.isShared, isMemory64: p.wasmMemory.isMemory64)
@@ -2208,11 +2228,11 @@ extension Instruction: ProtobufConvertible {
         case .wasmTableGet(let p):
             op = WasmTableGet(tableType: .wasmTable(wasmTableType:
                 WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
-                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [:])))
+                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [])))
         case .wasmTableSet(let p):
             op = WasmTableSet(tableType: .wasmTable(wasmTableType:
                 WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
-                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [:])))
+                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [])))
         case .wasmCallIndirect(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)

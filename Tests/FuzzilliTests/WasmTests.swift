@@ -624,7 +624,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let javaScriptTable = b.createWasmTable(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64)
-        assert(b.type(of: javaScriptTable) == .wasmTable(wasmTableType: WasmTableType(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64, knownEntries: [:])))
+        assert(b.type(of: javaScriptTable) == .wasmTable(wasmTableType: WasmTableType(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64, knownEntries: [])))
 
         let object = b.createObject(with: ["a": b.loadInt(41), "b": b.loadInt(42)])
 
@@ -669,7 +669,7 @@ class WasmFoundationTests: XCTestCase {
 
     func defineTable(isTable64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
-        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let liveTestConfig = Configuration(logLevel: .warning, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
         // This ensures that we use the available builtins.
@@ -684,7 +684,11 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, params in
                 function.wasmReturn(function.wasmi32BinOp(params[0], function.consti32(1), binOpKind: .Add))
             }
-            wasmModule.addTable(elementType: .wasmFunctionDef(), minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction], isTable64: isTable64)
+            wasmModule.addTable(elementType: .wasmFunctionDef(),
+                                minSize: 10,
+                                definedEntries: [.init(indexInTable: 0, signature: [.wasmi32] => [.wasmi32]), .init(indexInTable: 1, signature: [] => [.wasmi64])],
+                                definedEntryValues: [wasmFunction, jsFunction],
+                                isTable64: isTable64)
         }
 
         let exports = module.loadExports()
@@ -732,7 +736,11 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64, .wasmi64]) { function, label, params in
                 return [params[0], function.consti64(1)]
             }
-            let table = wasmModule.addTable(elementType: .wasmFunctionDef(), minSize: 10, definedEntryIndices: [0, 1], definedEntryValues: [wasmFunction, jsFunction], isTable64: false)
+            let table = wasmModule.addTable(elementType: .wasmFunctionDef(),
+                                            minSize: 10,
+                                            definedEntries: [.init(indexInTable: 0, signature: [.wasmi64] => [.wasmi64, .wasmi64]), .init(indexInTable: 1, signature: [.wasmi64] => [.wasmi64])],
+                                            definedEntryValues: [wasmFunction, jsFunction],
+                                            isTable64: false)
             wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { fn, label, params in
                 let results = fn.wasmCallIndirect(signature: [.wasmi64] => [.wasmi64, .wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])
                 return [fn.wasmi64BinOp(results[0], results[1], binOpKind: .Add)]
