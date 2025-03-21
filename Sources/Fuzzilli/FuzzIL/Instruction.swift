@@ -1421,8 +1421,10 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmI64x2Splat(_):
                 $0.wasmI64X2Splat = Fuzzilli_Protobuf_WasmI64x2Splat()
-            case .wasmI64x2ExtractLane(_):
-                $0.wasmI64X2ExtractLane = Fuzzilli_Protobuf_WasmI64x2ExtractLane()
+            case .wasmI64x2ExtractLane(let op):
+                $0.wasmI64X2ExtractLane = Fuzzilli_Protobuf_WasmI64x2ExtractLane.with {
+                    $0.lane = UInt32(op.lane)
+                }
             case .wasmSimdLoad(let op):
                 $0.wasmSimdLoad = Fuzzilli_Protobuf_WasmSimdLoad.with {
                     $0.kind = convertWasmSimdLoadKind(op.kind)
@@ -2348,8 +2350,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmSimd128Compare(shape: shape, compareOpKind: compareOpKind)
         case .wasmI64X2Splat(_):
             op = WasmI64x2Splat()
-        case .wasmI64X2ExtractLane(_):
-            op = WasmI64x2ExtractLane(lane: 0)
+        case .wasmI64X2ExtractLane(let p):
+            op = WasmI64x2ExtractLane(lane: Int(p.lane))
         case .wasmSimdLoad(let p):
             op = WasmSimdLoad(kind: convertProtoWasmSimdLoadKind(p.kind), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .wasmBeginTypeGroup(_):
