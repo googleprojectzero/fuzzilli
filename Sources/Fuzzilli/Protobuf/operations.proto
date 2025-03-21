@@ -1324,6 +1324,7 @@ message WasmI64x2Splat {
 }
 
 message WasmI64x2ExtractLane {
+    uint32 lane = 1;
 }
 
 enum WasmSimdLoadKind {
