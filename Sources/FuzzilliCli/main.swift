@@ -512,7 +512,8 @@ let mainConfig = Configuration(arguments: CommandLine.arguments,
                                enableInspection: inspect,
                                staticCorpus: staticCorpus,
                                tag: tag,
-                               isWasmEnabled: enableWasm)
+                               isWasmEnabled: enableWasm,
+                               storagePath: storagePath)
 
 let fuzzer = makeFuzzer(with: mainConfig)
 
@@ -646,7 +647,8 @@ let workerConfig = Configuration(arguments: CommandLine.arguments,
                                  enableInspection: inspect,
                                  staticCorpus: staticCorpus,
                                  tag: tag,
-                                 isWasmEnabled: enableWasm)
+                                 isWasmEnabled: enableWasm,
+                                 storagePath: storagePath)
 
 for _ in 1..<numJobs {
     let worker = makeFuzzer(with: workerConfig)
