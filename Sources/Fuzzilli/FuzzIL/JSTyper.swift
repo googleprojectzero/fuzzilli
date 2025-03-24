@@ -468,13 +468,11 @@ public struct JSTyper: Analyzer {
                 dynamicObjectGroupManager.addWasmGlobal(withType: .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable)), forVariable: instr.output)
             case .wasmDefineTable(_):
                 dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.output), forVariable: instr.output)
-            case .wasmLoadGlobal(let op):
-                assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)
+            case .wasmLoadGlobal(_):
                 dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forVariable: instr.input(0))
             case .wasmTableGet(_), .wasmTableSet(_):
                 dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forVariable: instr.input(0))
-            case .wasmStoreGlobal(let op):
-                assert(type(of: instr.input(0)).wasmGlobalType!.valueType == op.globalType)
+            case .wasmStoreGlobal(_):
                 dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forVariable: instr.input(0))
             default:
                 break
