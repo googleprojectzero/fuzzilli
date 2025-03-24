@@ -684,7 +684,7 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, params in
                 function.wasmReturn(function.wasmi32BinOp(params[0], function.consti32(1), binOpKind: .Add))
             }
-            wasmModule.addTable(elementType: .wasmFunctionDef(),
+            wasmModule.addTable(elementType: .wasmFuncRef,
                                 minSize: 10,
                                 definedEntries: [.init(indexInTable: 0, signature: [.wasmi32] => [.wasmi32]), .init(indexInTable: 1, signature: [] => [.wasmi64])],
                                 definedEntryValues: [wasmFunction, jsFunction],
@@ -736,7 +736,7 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64, .wasmi64]) { function, label, params in
                 return [params[0], function.consti64(1)]
             }
-            let table = wasmModule.addTable(elementType: .wasmFunctionDef(),
+            let table = wasmModule.addTable(elementType: .wasmFuncRef,
                                             minSize: 10,
                                             definedEntries: [.init(indexInTable: 0, signature: [.wasmi64] => [.wasmi64, .wasmi64]), .init(indexInTable: 1, signature: [.wasmi64] => [.wasmi64])],
                                             definedEntryValues: [wasmFunction, jsFunction],
@@ -745,26 +745,99 @@ class WasmFoundationTests: XCTestCase {
                 let results = fn.wasmCallIndirect(signature: [.wasmi64] => [.wasmi64, .wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])
                 return [fn.wasmi64BinOp(results[0], results[1], binOpKind: .Add)]
             }
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { fn, label, params in
+                fn.wasmCallIndirect(signature: [.wasmi64] => [.wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])
+            }
+
         }
 
         let exports = module.loadExports()
 
-        let wasmFunction = b.getProperty(module.getExportedMethod(at: 1), of: exports)
-
-        let result0 = b.callFunction(wasmFunction, withArgs: [b.loadInt(0), b.loadBigInt(10)])
-        // TODO(manoskouk): Enable once we have correct JS signatures.
-        // let result1 = b.callFunction(wasmFunction, withArgs: [b.loadInt(1), b.loadBigInt(10)])
+        let callIndirectSig0 = b.getProperty(module.getExportedMethod(at: 1), of: exports)
+        let result0 = b.callFunction(callIndirectSig0, withArgs: [b.loadInt(0), b.loadBigInt(10)])
+        let callIndirectSig1 = b.getProperty(module.getExportedMethod(at: 2), of: exports)
+        let result1 = b.callFunction(callIndirectSig1, withArgs: [b.loadInt(1), b.loadBigInt(10)])
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result0)])
-        // TODO(manoskouk): Enable once we have correct JS signatures.
-        // b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result1)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result1)])
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
 
-        testForOutput(program: jsProg, runner: runner, outputString: "11\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "11\n52\n")
+    }
+
+    func testCallIndirectMultiModule() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let jsFunction = b.buildPlainFunction(with: .parameters(.bigint)) { params in
+            b.doReturn(b.binary(params[0], b.loadBigInt(42), with: .Add))
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64, .wasmi64]) { function, label, params in
+                return [params[0], function.consti64(1)]
+            }
+            wasmModule.addTable(elementType: .wasmFuncRef,
+                minSize: 10,
+                definedEntries: [.init(indexInTable: 0, signature: [.wasmi64] => [.wasmi64, .wasmi64]), .init(indexInTable: 1, signature: [.wasmi64] => [.wasmi64])],
+                definedEntryValues: [wasmFunction, jsFunction],
+                isTable64: false)
+        }
+
+        let table = b.getProperty("wt0", of: module.loadExports())
+        XCTAssert(b.type(of: table).Is(.wasmTable))
+        XCTAssertEqual(b.type(of: table).wasmTableType!.elementType, .wasmFuncRef)
+        let module2 = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { fn, label, params in
+                let results = fn.wasmCallIndirect(signature: [.wasmi64] => [.wasmi64, .wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])
+                return [fn.wasmi64BinOp(results[0], results[1], binOpKind: .Add)]
+            }
+
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { fn, label, params in
+                fn.wasmCallIndirect(signature: [.wasmi64] => [.wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])
+            }
+
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmFuncRef]) { function, label, params in
+                [function.wasmTableGet(tableRef: table, idx: params[0])]
+            }
+
+            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64, .wasmi64]) { function, label, params in
+                [params[0], params[0]]
+            }
+        }
+
+        let exports = module2.loadExports()
+        let callIndirectSig0 = b.getProperty(module2.getExportedMethod(at: 0), of: exports)
+        let result0 = b.callFunction(callIndirectSig0, withArgs: [b.loadInt(0), b.loadBigInt(10)])
+        let callIndirectSig1 = b.getProperty(module2.getExportedMethod(at: 1), of: exports)
+        let result1 = b.callFunction(callIndirectSig1, withArgs: [b.loadInt(1), b.loadBigInt(10)])
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result1)])
+
+        let exportedTableGet = b.getProperty(module2.getExportedMethod(at: 2), of: exports)
+        let wasmFuncRef = b.callFunction(exportedTableGet, withArgs: [b.loadInt(0)])
+        let resultCallFuncRef = b.callFunction(wasmFuncRef, withArgs: [b.loadBigInt(42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: resultCallFuncRef)])
+
+        // It is also possible to change the slot and perform the call_indirect now pointing to a
+        // different function as long as signatures still match.
+        b.callMethod("set", on: table, withArgs: [b.loadInt(0), b.getProperty(module2.getExportedMethod(at: 3), of: exports)])
+        let resultNew = b.callFunction(callIndirectSig0, withArgs: [b.loadInt(0), b.loadBigInt(42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: resultNew)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "11\n52\n42,1\n84\n")
     }
 
     func testCallDirect() throws {

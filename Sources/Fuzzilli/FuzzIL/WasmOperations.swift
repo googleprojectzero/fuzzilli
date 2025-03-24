@@ -711,8 +711,8 @@ final class WasmDefineTable: WasmTypedOperation {
         self.definedEntries = definedEntries
 
         // TODO(manoskouk): Find a way to define non-function tables with initializers.
-        assert(elementType == .wasmFunctionDef() || definedEntries.isEmpty)
-        let inputTypes = if elementType == .wasmFunctionDef(){
+        assert(elementType == .wasmFuncRef || definedEntries.isEmpty)
+        let inputTypes = if elementType == .wasmFuncRef {
             Array(repeating: .wasmFunctionDef() | .function(), count: definedEntries.count)
         } else {
             [ILType]()
