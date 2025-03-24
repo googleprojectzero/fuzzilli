@@ -65,6 +65,13 @@ public struct Configuration {
     // this disables all wasm-related code generators.
     public let isWasmEnabled: Bool
 
+    // The directory in which the corpus and additional diagnostics files are stored.
+    public let storagePath: String?
+
+    // The subdirectory in {config.storagePath} at which all programs are stored which could not
+    // be imported due to disabled wasm capabilities in the fuzzer.
+    public static let excludedWasmDirectory = "excluded_wasm_programs"
+
     public init(arguments: [String] = [],
                 timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
@@ -77,7 +84,8 @@ public struct Configuration {
                 enableInspection: Bool = false,
                 staticCorpus: Bool = false,
                 tag: String? = nil,
-                isWasmEnabled: Bool = false) {
+                isWasmEnabled: Bool = false,
+                storagePath: String? = nil) {
         self.arguments = arguments
         self.timeout = timeout
         self.logLevel = logLevel
@@ -90,6 +98,7 @@ public struct Configuration {
         self.staticCorpus = staticCorpus
         self.tag = tag
         self.isWasmEnabled = isWasmEnabled
+        self.storagePath = storagePath
     }
 }
 

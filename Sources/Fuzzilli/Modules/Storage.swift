@@ -144,7 +144,7 @@ public class Storage: Module {
         }
     }
 
-    private func storeProgram(_ program: Program, as filename: String, in directory: String) {
+    func storeProgram(_ program: Program, as filename: String, in directory: String) {
         // Always include comments when writing programs to disk
         let options = LiftingOptions.includeComments
 

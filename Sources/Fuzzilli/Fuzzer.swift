@@ -402,8 +402,13 @@ public class Fuzzer {
         }
 
         if !config.isWasmEnabled && containsWasm(program) {
-            // TODO(mliedtke): Store the dropped wasm programs to a separate folder
-            // `excluded_wasm_programs` or similar.
+            if let path = config.storagePath {
+                // Create a folder to store the excluded program if not existent, yet.
+                let dirName = "\(path)/\(Configuration.excludedWasmDirectory)"
+                try! FileManager.default.createDirectory(atPath: dirName, withIntermediateDirectories: true)
+                (modules["Storage"] as! Storage).storeProgram(program,
+                    as: "program_\(program.id).fzil", in: dirName)
+            }
             return .needsWasm
         }
 
@@ -831,6 +836,9 @@ public class Fuzzer {
                 logger.info("\(currentCorpusImportJob.numberOfProgramsThatTimedOutDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs timed out and weren't imported")
                 if !config.isWasmEnabled {
                     logger.info("\(currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs require Wasm which is disabled")
+                    if currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled > 0 && config.storagePath != nil {
+                        logger.info("  These programs have been stored at \(config.storagePath!)/\(Configuration.excludedWasmDirectory)/")
+                    }
                 }
 
                 let successRatio = Double(currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport) / Double(currentCorpusImportJob.totalNumberOfProgramsToImport)
