@@ -565,7 +565,6 @@ public class WasmLifter {
                 temp += Data([0x1])
 
                 let table = type.wasmTableType!
-                assert(table.elementType == ILType.wasmExternRef)
                 temp += try encodeType(table.elementType)
 
                 let limits_byte: UInt8 = (table.isTable64 ? 4 : 0) | (table.limits.max != nil ? 1 : 0)
@@ -638,7 +637,7 @@ public class WasmLifter {
             let minSize = op.limits.min
             let maxSize = op.limits.max
             let isTable64 = op.isTable64
-            temp += try elementType.Is(.wasmFunctionDef()) ? Data([0x70]) : encodeType(elementType)
+            temp += try encodeType(elementType)
 
             let limits_byte: UInt8 = (isTable64 ? 4 : 0) | (maxSize != nil ? 1 : 0)
             temp += Data([limits_byte])
@@ -1162,7 +1161,7 @@ public class WasmLifter {
 
             case .wasmDefineTable(let tableDef):
                 self.tables.append(instr)
-                if tableDef.elementType == .wasmFunctionDef() {
+                if tableDef.elementType == .wasmFuncRef {
                     for (value, definedEntry) in zip(instr.inputs, tableDef.definedEntries) {
                         // We need a way to exclude functions defined in this module.
                         // Since we have not populated the module's functions yet, we exclude .wasmFunctionDef() typed entries.

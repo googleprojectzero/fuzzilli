@@ -355,17 +355,17 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // TODO(manoskouk): Generalize these.
         let minSize = 10
         let maxSize: Int? = nil
-        let elementType = ILType.wasmFunctionDef()
+        let elementType = ILType.wasmFuncRef
 
         let definedEntryIndices: [Int]
         var definedEntries: [WasmTableType.IndexInTableAndWasmSignature] = []
         var definedEntryValues: [Variable] = []
 
-        let expectedEntryType = elementType == .wasmFunctionDef() ? .wasmFunctionDef() | .function() : .object()
+        let expectedEntryType = elementType == .wasmFuncRef ? .wasmFuncRef | .function() : .object()
 
         // Currently, only generate entries for funcref tables.
         // TODO(manoskouk): Generalize this.
-        if (elementType == .wasmFunctionDef()) {
+        if (elementType == .wasmFuncRef) {
             if b.randomVariable(ofType: expectedEntryType) != nil {
                 // There is at least one function in scope. Add some initial entries to the table.
                 // TODO(manoskouk): Generalize this.
@@ -384,7 +384,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("WasmCallIndirectGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmTable"))) { b, table in
         let tableType = b.type(of: table).wasmTableType!
-        if tableType.elementType != .wasmFunctionDef() { return }
+        if !tableType.elementType.Is(.wasmFuncRef) { return }
         guard let indexedSignature = tableType.knownEntries.randomElement() else { return }
 
         let function = b.currentWasmModule.currentWasmFunction
