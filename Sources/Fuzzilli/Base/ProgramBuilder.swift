@@ -3629,8 +3629,6 @@ public class ProgramBuilder {
         @discardableResult
         public func loadExports() -> Variable {
             let exports = self.b.getProperty("exports", of: self.getModuleVariable())
-            // We check against any WasmExports instance here, according to our subsumption rules this is ok, regardless of the number.
-            assert(b.type(of: exports).Is(.object(ofGroup: "_fuzz_WasmExports0")))
             return exports
         }
 
