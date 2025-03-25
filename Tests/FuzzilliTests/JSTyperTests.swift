@@ -1478,7 +1478,7 @@ class JSTyperTests: XCTestCase {
             }
 
             // Function four
-            wasmModule.addWasmFunction(with: [] => [ILType.wasmRef(.Index(typeDesc), nullability: true)]) { function, label, _ in
+            wasmModule.addWasmFunction(with: [] => [ILType.wasmIndexRef(typeDesc, nullability: true)]) { function, label, _ in
                 return [function.wasmArrayNewDefault(arrayType: typeGroup[0], size: function.consti32(10))]
             }
         }

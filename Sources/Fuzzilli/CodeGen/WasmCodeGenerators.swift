@@ -173,7 +173,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind else {
             fatalError("unreachable: array.len input not an Index")
         }
-        if !(desc is WasmArrayTypeDescription) { return }
+        if !(desc.get() is WasmArrayTypeDescription) { return }
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmArrayLen(array)
     },
@@ -183,7 +183,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind else {
             fatalError("unreachable: array.get input not an Index")
         }
-        if !(desc is WasmArrayTypeDescription) { return }
+        if !(desc.get() is WasmArrayTypeDescription) { return }
         let function = b.currentWasmModule.currentWasmFunction
         // TODO(mliedtke): Track array length and use other indices as well.
         let index = function.consti32(0)
@@ -195,7 +195,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind else {
             fatalError("unreachable: array.set input not an Index")
         }
-        guard let arrayType = desc! as? WasmArrayTypeDescription else { return }
+        guard let arrayType = desc.get()! as? WasmArrayTypeDescription else { return }
         guard arrayType.mutability else { return }
         guard let element = b.randomVariable(ofType: arrayType.elementType) else { return }
         let function = b.currentWasmModule.currentWasmFunction
@@ -215,7 +215,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         guard case .Index(let desc) = b.type(of: theStruct).wasmReferenceType!.kind else {
             fatalError("unreachable: struct.get input not an Index")
         }
-        guard let structType = desc! as? WasmStructTypeDescription else { return }
+        guard let structType = desc.get()! as? WasmStructTypeDescription else { return }
         guard let fieldIndex = (0..<structType.fields.count).randomElement() else { return }
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmStructGet(theStruct: theStruct, fieldIndex: fieldIndex)
@@ -225,7 +225,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         guard case .Index(let desc) = b.type(of: theStruct).wasmReferenceType!.kind else {
             fatalError("unreachable: struct.set input not an Index")
         }
-        guard let structType = desc! as? WasmStructTypeDescription else { return }
+        guard let structType = desc.get()! as? WasmStructTypeDescription else { return }
         guard let fieldWithIndex = structType.fields.enumerated().filter({ (offset, field) in
             field.mutability
         }).randomElement() else { return }

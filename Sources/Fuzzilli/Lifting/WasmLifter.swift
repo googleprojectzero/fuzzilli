@@ -392,7 +392,7 @@ public class WasmLifter {
 
             switch refType.kind {
             case .Index(let description):
-                return try Data([nullabilityByte]) + encodeWasmGCType(description)
+                return try Data([nullabilityByte]) + encodeWasmGCType(description.get())
             case .Abstract(let heapType):
                 return Data([nullabilityByte]) + encodeAbstractHeapType(heapType)
             }
@@ -405,7 +405,7 @@ public class WasmLifter {
         if let refType = type.wasmReferenceType {
             switch refType.kind {
             case .Index(let description):
-                return try encodeWasmGCType(description)
+                return try encodeWasmGCType(description.get())
             case .Abstract(let heapType):
                 return encodeAbstractHeapType(heapType)
             }

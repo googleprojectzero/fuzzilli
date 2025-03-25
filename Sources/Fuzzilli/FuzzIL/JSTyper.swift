@@ -422,7 +422,7 @@ public struct JSTyper: Analyzer {
     func getTypeDescription(of variable: Variable) -> WasmTypeDescription {
         let varType = type(of: variable)
         if case .Index(let desc) = varType.wasmReferenceType?.kind {
-            return desc!
+            return desc.get()!
         }
         return varType.wasmTypeDefinition!.description!
     }
