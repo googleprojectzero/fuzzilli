@@ -237,6 +237,10 @@ public struct ILType: Hashable {
             wasmExt: WasmReferenceType(kind, nullability: nullability)))
     }
 
+    static func wasmIndexRef(_ desc: WasmTypeDescription?, nullability: Bool) -> ILType {
+        return wasmRef(.Index(UnownedWasmTypeDescription(desc)), nullability: nullability)
+    }
+
     // The union of all primitive wasm types
     public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef | .wasmSimd128 | .wasmGenericRef
 
@@ -1226,7 +1230,7 @@ public class WasmTypeDefinition: WasmTypeExtension {
 
     func getReferenceTypeTo(nullability: Bool) -> ILType {
         assert(description != nil)
-        return .wasmRef(.Index(description), nullability: nullability)
+        return .wasmIndexRef(description, nullability: nullability)
     }
 }
 
@@ -1236,9 +1240,28 @@ enum WasmAbstractHeapType {
     case WasmExn
 }
 
+// A wrapper around a WasmTypeDescription without owning the WasmTypeDescription.
+struct UnownedWasmTypeDescription : Hashable {
+    unowned var description: WasmTypeDescription?
+
+    init(_ description: WasmTypeDescription? = nil) {
+        self.description = description
+    }
+
+    func get() -> WasmTypeDescription? {
+        return description
+    }
+}
+
 public class WasmReferenceType: WasmTypeExtension {
     enum Kind : Hashable {
-        case Index(WasmTypeDescription? = nil)    // user-defined types
+        // A user defined (indexed) wasm-gc type. Note that the WasmReferenceType may not own the
+        // WasmTypeDescription as that would create cyclic references in case of self or forward
+        // references (e.g. an array could have its own type as an element type) leading to memory
+        // leaks. The underlying WasmTypeDescription is always owned and kept alive by the
+        // corresponding WasmTypeDefinition extension attached to the type of the operation
+        // defining the wasm-gc type (and is kept alive by the JSTyper).
+        case Index(UnownedWasmTypeDescription = UnownedWasmTypeDescription())
         case Abstract(WasmAbstractHeapType)
 
         func subsumes(_ other: Kind) -> Bool {
@@ -1246,7 +1269,7 @@ public class WasmReferenceType: WasmTypeExtension {
                 case .Index(let desc):
                     switch other {
                         case .Index(let otherDesc):
-                            return desc == nil || desc == otherDesc
+                            return desc.get() == nil || desc.get() == otherDesc.get()
                         case .Abstract(_):
                             return false
                     }
