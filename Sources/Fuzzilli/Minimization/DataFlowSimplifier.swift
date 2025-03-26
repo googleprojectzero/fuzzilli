@@ -69,16 +69,7 @@ struct DataFlowSimplifier: Reducer {
                 // incorrect way.
                 return false
             }
-            if let op = operation as? WasmTypedOperation {
-                // See if we have matching input Types
-                let outputType = op.outputType
-                // Once we support multiple outputs for Wasm we need to update this.
-                assert(helper.code[$0].allOutputs.count == 1)
-                // Find all indices of inputs that are the same type as the output
-                let filteredOutputs = op.inputTypes.filter {$0.Is(outputType)}
-                // If we have outputs, we can actually try to replace this.
-                return !filteredOutputs.isEmpty
-            } else if operation is WasmOperationBase {
+            if operation is WasmOperationBase {
                 guard operation.numOutputs == 1 else { return false }
                 let outputType = typer.type(of: helper.code[$0].output)
                 let filteredOutputs = helper.code[$0].inputs.map(typer.type).filter {$0.Is(outputType)}
@@ -100,17 +91,7 @@ struct DataFlowSimplifier: Reducer {
                     var replacement: Variable? = nil
 
                     // if the candidate is a Wasm operation we need to preserve types.
-                    if let op = instr.op as? WasmTypedOperation {
-                        let outputType = op.outputType
-                        // Once we support multiple outputs for Wasm we need to update this.
-                        assert(instr.allOutputs.count == 1)
-                        // Find all indices of inputs that are the same type as the output
-                        let filteredOutputs = op.inputTypes.enumerated().filter {$0.element.Is(outputType)}
-                        if !filteredOutputs.isEmpty {
-                            // Now pick a random index and choose that input as a replacement.
-                            replacement = instr.inputs[chooseUniform(from: filteredOutputs.map { $0.offset })]
-                        }
-                    } else if instr.op is WasmOperationBase {
+                    if instr.op is WasmOperationBase {
                         let outputType = typer.type(of: instr.output)
                         let filteredOutputs = instr.inputs.map(typer.type).enumerated().filter {$0.element.Is(outputType)}
                         if !filteredOutputs.isEmpty {
