@@ -489,7 +489,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             // Note that globals of exnref can only be defined in wasm, not in JS.
             let global = wasmModule.addGlobal(wasmGlobal: .exnref, isMutable: true)
-            assert(b.type(of: global) == .object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: ILType.wasmExnRef, isMutable: true)))
+            XCTAssert(b.type(of: global).Is(.object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: ILType.wasmExnRef, isMutable: true))))
 
             wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
                 let value = function.wasmLoadGlobal(globalVariable: global)
@@ -575,7 +575,7 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             let global = wasmModule.addGlobal(wasmGlobal: .externref, isMutable: true)
-            assert(b.type(of: global) == .object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
+            XCTAssert(b.type(of: global).Is(.object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true))))
 
             wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, label, args in
                 [function.wasmLoadGlobal(globalVariable: global)]
@@ -615,7 +615,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let global: Variable = b.createWasmGlobal(value: .externref, isMutable: true)
-        assert(b.type(of: global) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
+        XCTAssert(b.type(of: global) == .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         // The initial value is "undefined" (because we didn't provide an explicit initialization).
@@ -641,7 +641,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let javaScriptTable = b.createWasmTable(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64)
-        assert(b.type(of: javaScriptTable) == .wasmTable(wasmTableType: WasmTableType(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64, knownEntries: [])))
+        XCTAssert(b.type(of: javaScriptTable) == .wasmTable(wasmTableType: WasmTableType(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64, knownEntries: [])))
 
         let object = b.createObject(with: ["a": b.loadInt(41), "b": b.loadInt(42)])
 
@@ -1113,7 +1113,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let memory0: Variable = b.createWasmMemory(minPages: 10, maxPages: 20, isMemory64: isMemory64)
-        assert(b.type(of: memory0) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: isMemory64))
+        XCTAssert(b.type(of: memory0) == .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: isMemory64))
 
         let module = b.buildWasmModule { wasmModule in
             let memory1 = wasmModule.addMemory(minPages: 2, isMemory64: isMemory64)
@@ -2034,7 +2034,7 @@ class WasmFoundationTests: XCTestCase {
                 let argI32 = function.consti32(12345)
                 let argF64 = function.constf64(543.21)
                 function.wasmBuildBlock(with: [.wasmi32, .wasmf64] => [], args: [argI32, argF64]) { blockLabel, args in
-                    assert(args.count == 2)
+                    XCTAssert(args.count == 2)
                     let result = function.wasmf64BinOp(function.converti32Tof64(args[0], isSigned: true), args[1], binOpKind: .Add)
                     function.wasmReturn(result)
                 }

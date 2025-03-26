@@ -450,35 +450,7 @@ public struct JSTyper: Analyzer {
         // This typer is currently "Outside" of the wasm module, we just type
         // the instructions here such that we can set the type of the module at
         // the end. Figure out how we can set the correct type at the end?
-        if instr.op is WasmTypedOperation {
-            // TODO(mliedtke): Prior to wasm-gc types it was very convenient to just specify the
-            // output type in the WasmOperation. This doesn't scale very well with wasm-gc where
-            // the actual output type very much depends on the inputs of an operation (e.g.
-            // array.get). We should consider undoing that special-casing and explicitly adding
-            // typing for all wasm operations here just like it is done for JS operations.
-            if instr.numOutputs > 0 {
-                if instr.numOutputs > 1 {
-                    fatalError("More than one output for a wasm instruction!")
-                }
-                setType(of: instr.output, to: (instr.op as! WasmTypedOperation).outputType)
-            }
-
-            switch instr.op.opcode {
-            case .wasmDefineGlobal(let op):
-                dynamicObjectGroupManager.addWasmGlobal(withType: .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable)), forVariable: instr.output)
-            case .wasmDefineTable(_):
-                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.output), forVariable: instr.output)
-            case .wasmLoadGlobal(_):
-                dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forVariable: instr.input(0))
-            case .wasmTableGet(_), .wasmTableSet(_):
-                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forVariable: instr.input(0))
-            case .wasmStoreGlobal(_):
-                dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forVariable: instr.input(0))
-            default:
-                break
-            }
-        } else if (instr.op is WasmOperationBase) {
-            // TODO(mliedtke): Migrate the WasmTypedOperation implementations from above.
+        if (instr.op is WasmOperationBase) {
             switch instr.op.opcode {
             case .consti64(_):
                 setType(of: instr.output, to: .wasmi64)
@@ -553,6 +525,35 @@ public struct JSTyper: Analyzer {
                 setType(of: instr.output, to: outputType)
             case .wasmI64x2ExtractLane(_):
                 setType(of: instr.output, to: .wasmi64)
+            case .wasmDefineGlobal(let op):
+                let type = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable))
+                dynamicObjectGroupManager.addWasmGlobal(withType: type, forVariable: instr.output)
+                setType(of: instr.output, to: type)
+            case .wasmDefineTable(let op):
+                setType(of: instr.output, to: .wasmTable(wasmTableType: WasmTableType(elementType: op.elementType, limits: op.limits, isTable64: op.isTable64, knownEntries: op.definedEntries)))
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.output), forVariable: instr.output)
+            case .wasmDefineMemory(let op):
+                setType(of: instr.output, to: op.wasmMemory)
+            case .wasmDefineTag(let op):
+                setType(of: instr.output, to: .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameterTypes)))
+            case .wasmLoadGlobal(let op):
+                dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forVariable: instr.input(0))
+                setType(of: instr.output, to: op.globalType)
+            case .wasmStoreGlobal(_):
+                dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forVariable: instr.input(0))
+            case .wasmTableGet(let op):
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forVariable: instr.input(0))
+                setType(of: instr.output, to: op.tableType.elementType)
+            case .wasmTableSet(_):
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forVariable: instr.input(0))
+            case .wasmMemoryLoad(let op):
+                setType(of: instr.output, to: op.loadType.numberType())
+            case .wasmJsCall(let op):
+                let sigOutputTypes = op.functionSignature.outputTypes
+                assert(sigOutputTypes.count < 2, "multi-return js calls are not supported")
+                if !sigOutputTypes.isEmpty {
+                    setType(of: instr.output, to: sigOutputTypes[0])
+                }
             case .beginWasmFunction(let op):
                 wasmTypeBeginBlock(instr, op.signature)
             case .endWasmFunction(let op):

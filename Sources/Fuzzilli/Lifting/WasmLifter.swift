@@ -1224,11 +1224,6 @@ public class WasmLifter {
                 }
 
             default:
-                // TODO(mliedtke): Migrate this mechanism to WasmOperationBase.
-                if let typedOperation = instr.op as? WasmTypedOperation {
-                    assert(typedOperation.inputTypes.allSatisfy {!$0.Is(.object())},
-                        "\(instr.op) has an input that is .object() it should probably be handled here.")
-                }
                 continue
             }
         }

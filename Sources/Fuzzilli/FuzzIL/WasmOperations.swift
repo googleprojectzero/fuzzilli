@@ -28,26 +28,6 @@ struct WasmConstants {
 public class WasmOperationBase : Operation {
 }
 
-// Base class for all wasm operations that use "automatic" typing based on the operation only.
-// Note that this class shall be replaced by using WasmOperationBase and performing all typing of
-// outputs / innerOutputs in the JSTyper directly. (This is mostly done because it is needed for
-// wasm-gc operations where the result type depends on the actual instruction inputs which the
-// operation does not have access to, but it also aligns wasm operations closer to JS operations
-// hopefully reducing complexity.)
-public class WasmTypedOperation: WasmOperationBase {
-    var inputTypes: [ILType]
-    // If this wasm operation does not have an output, it will have .nothing as an output type but its numOutputs will be 0.
-    var outputType: ILType
-    var innerOutputTypes: [ILType]
-
-    init(inputTypes: [ILType] = [], outputType: ILType = .nothing, innerOutputTypes: [ILType] = [], firstVariadicInput: Int = -1, attributes: Attributes = [], requiredContext: Context, contextOpened: Context = .empty) {
-        self.inputTypes = inputTypes
-        self.outputType = outputType
-        self.innerOutputTypes = innerOutputTypes
-        super.init(numInputs: inputTypes.count, numOutputs: outputType == .nothing ? 0 : 1, numInnerOutputs: innerOutputTypes.count, firstVariadicInput: firstVariadicInput, attributes: attributes, requiredContext: requiredContext, contextOpened: contextOpened)
-    }
-}
-
 final class Consti64: WasmOperationBase {
     override var opcode: Opcode { .consti64(self) }
     let value: Int64
@@ -682,7 +662,7 @@ public enum WasmGlobal {
     // Maybe add static random func?
 }
 
-final class WasmDefineGlobal: WasmTypedOperation {
+final class WasmDefineGlobal: WasmOperationBase {
     override var opcode: Opcode { .wasmDefineGlobal(self) }
 
     let isMutable: Bool
@@ -691,12 +671,11 @@ final class WasmDefineGlobal: WasmTypedOperation {
     init(wasmGlobal: WasmGlobal, isMutable: Bool) {
         self.wasmGlobal = wasmGlobal
         self.isMutable = isMutable
-        let outputType = ILType.object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: wasmGlobal.toType(), isMutable: isMutable))
-        super.init(outputType: outputType, attributes: [.isMutable], requiredContext: [.wasm])
+        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasm])
     }
 }
 
-final class WasmDefineTable: WasmTypedOperation {
+final class WasmDefineTable: WasmOperationBase {
     override var opcode: Opcode { .wasmDefineTable(self) }
 
     let elementType: ILType
@@ -712,14 +691,9 @@ final class WasmDefineTable: WasmTypedOperation {
 
         // TODO(manoskouk): Find a way to define non-function tables with initializers.
         assert(elementType == .wasmFuncRef || definedEntries.isEmpty)
-        let inputTypes = if elementType == .wasmFuncRef {
-            Array(repeating: .wasmFunctionDef() | .function(), count: definedEntries.count)
-        } else {
-            [ILType]()
-        }
 
-        super.init(inputTypes: inputTypes,
-                   outputType: .wasmTable(wasmTableType: WasmTableType(elementType: elementType, limits: limits, isTable64: isTable64, knownEntries: definedEntries)),
+        super.init(numInputs: elementType == .wasmFuncRef ? definedEntries.count : 0,
+                   numOutputs: 1,
                    attributes: [.isMutable],
                    requiredContext: [.wasm])
     }
@@ -729,18 +703,18 @@ final class WasmDefineTable: WasmTypedOperation {
 // Currently they are by default zero initialized and fuzzilli should then just store or load from there.
 // Also note: https://webassembly.github.io/spec/core/syntax/modules.html#memories
 // There may only be one memory defined or imported at any given time and any instructions uses this memory implicitly
-final class WasmDefineMemory: WasmTypedOperation {
+final class WasmDefineMemory: WasmOperationBase {
     override var opcode: Opcode { .wasmDefineMemory(self) }
 
     let wasmMemory: ILType
 
     init(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) {
         self.wasmMemory = .wasmMemory(limits: limits, isShared: isShared, isMemory64: isMemory64)
-        super.init(outputType: self.wasmMemory, attributes: [.isMutable], requiredContext: [.wasm])
+        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasm])
     }
 }
 
-final class WasmDefineTag: WasmTypedOperation {
+final class WasmDefineTag: WasmOperationBase {
     override var opcode: Opcode { .wasmDefineTag(self) }
     public let parameterTypes: [ILType]
 
@@ -748,11 +722,11 @@ final class WasmDefineTag: WasmTypedOperation {
         self.parameterTypes = parameterTypes
         // Note that tags in wasm are nominal (differently to types) meaning that two tags with the same input are not
         // the same, therefore this operation is not considered to be .pure.
-        super.init(outputType: .object(ofGroup: "WasmTag", withWasmType: WasmTagType(parameterTypes)), attributes: [], requiredContext: [.wasm])
+        super.init(numOutputs: 1, attributes: [], requiredContext: [.wasm])
     }
 }
 
-final class WasmLoadGlobal: WasmTypedOperation {
+final class WasmLoadGlobal: WasmOperationBase {
     override var opcode: Opcode { .wasmLoadGlobal(self) }
 
     let globalType: ILType
@@ -760,12 +734,11 @@ final class WasmLoadGlobal: WasmTypedOperation {
     init(globalType: ILType) {
         assert(globalType.Is(.wasmPrimitive))
         self.globalType = globalType
-        let inputType = ILType.object(ofGroup: "WasmGlobal")
-        super.init(inputTypes: [inputType], outputType: globalType, attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class WasmStoreGlobal: WasmTypedOperation {
+final class WasmStoreGlobal: WasmOperationBase {
     override var opcode: Opcode { .wasmStoreGlobal(self) }
 
     let globalType: ILType
@@ -773,13 +746,12 @@ final class WasmStoreGlobal: WasmTypedOperation {
     init(globalType: ILType) {
         self.globalType = globalType
         assert(globalType.Is(.wasmPrimitive))
-        let inputType = ILType.object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: globalType, isMutable: true))
         // Takes two inputs, one is the global reference the other is the value that is being stored in the global
-        super.init(inputTypes: [inputType, globalType], attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class WasmTableGet: WasmTypedOperation {
+final class WasmTableGet: WasmOperationBase {
     override var opcode: Opcode { .wasmTableGet(self) }
 
     let tableType: WasmTableType
@@ -787,13 +759,12 @@ final class WasmTableGet: WasmTypedOperation {
     init(tableType: ILType) {
         assert(tableType.isWasmTableType)
         self.tableType = tableType.wasmTableType!
-        let elementType = self.tableType.elementType
-        let offsetType = self.tableType.isTable64 ? ILType.wasmi64 : ILType.wasmi32
-        super.init(inputTypes: [tableType, offsetType], outputType: elementType, requiredContext: [.wasmFunction])
+
+        super.init(numInputs: 2, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }
 
-final class WasmTableSet: WasmTypedOperation {
+final class WasmTableSet: WasmOperationBase {
     override var opcode: Opcode { .wasmTableSet(self) }
 
     let tableType: WasmTableType
@@ -801,9 +772,7 @@ final class WasmTableSet: WasmTypedOperation {
     init(tableType: ILType) {
         assert(tableType.isWasmTableType)
         self.tableType = tableType.wasmTableType!
-        let elementType = self.tableType.elementType
-        let offsetType = self.tableType.isTable64 ? ILType.wasmi64 : ILType.wasmi32
-        super.init(inputTypes: [tableType, offsetType, elementType], requiredContext: [.wasmFunction])
+        super.init(numInputs: 3, requiredContext: [.wasmFunction])
     }
 }
 
@@ -880,7 +849,7 @@ public enum WasmMemoryLoadType: UInt8, CaseIterable {
     }
 }
 
-final class WasmMemoryLoad: WasmTypedOperation {
+final class WasmMemoryLoad: WasmOperationBase {
     override var opcode: Opcode { .wasmMemoryLoad(self) }
 
     let loadType: WasmMemoryLoadType
@@ -891,8 +860,7 @@ final class WasmMemoryLoad: WasmTypedOperation {
         self.loadType = loadType
         self.staticOffset = staticOffset
         self.isMemory64 = isMemory64
-        let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
-        super.init(inputTypes: [.object(ofGroup: "WasmMemory"), dynamicOffsetType], outputType: loadType.numberType(), attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -927,7 +895,7 @@ public enum WasmMemoryStoreType: UInt8, CaseIterable {
     }
 }
 
-final class WasmMemoryStore: WasmTypedOperation {
+final class WasmMemoryStore: WasmOperationBase {
     override var opcode: Opcode { .wasmMemoryStore(self) }
 
     let storeType: WasmMemoryStoreType
@@ -938,21 +906,18 @@ final class WasmMemoryStore: WasmTypedOperation {
         self.storeType = storeType
         self.staticOffset = staticOffset
         self.isMemory64 = isMemory64
-        let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
-        super.init(inputTypes: [.object(ofGroup: "WasmMemory"), dynamicOffsetType, storeType.numberType()], attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 3, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-final class WasmJsCall: WasmTypedOperation {
+final class WasmJsCall: WasmOperationBase {
     override var opcode: Opcode { .wasmJsCall(self) }
 
     let functionSignature: WasmSignature
 
     init(signature: WasmSignature) {
         self.functionSignature = signature
-        assert(signature.outputTypes.count < 2, "multi-return js calls are not supported")
-        let outputType: ILType = signature.outputTypes.isEmpty ? .nothing : signature.outputTypes[0]
-        super.init(inputTypes: [.function() | .object(ofGroup: "WebAssembly.SuspendableObject")] + signature.parameterTypes, outputType: outputType, requiredContext: [.wasmFunction])
+        super.init(numInputs: 1 + signature.parameterTypes.count, numOutputs: signature.outputTypes.count, requiredContext: [.wasmFunction])
     }
 }
 
@@ -1194,36 +1159,37 @@ final class WasmThrowRef: WasmOperationBase {
 
 // The rethrow instruction of the legacy exception-handling proposal. This operation is replaced
 // with the throw_ref instruction in the updated proposal.
-final class WasmRethrow: WasmTypedOperation {
+final class WasmRethrow: WasmOperationBase {
     override var opcode: Opcode { .wasmRethrow(self) }
 
     init() {
-        super.init(inputTypes: [.exceptionLabel], attributes: [.isJump], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1, attributes: [.isJump], requiredContext: [.wasmFunction])
     }
 }
 
-final class WasmBranch: WasmTypedOperation {
+final class WasmBranch: WasmOperationBase {
     override var opcode: Opcode { .wasmBranch(self) }
     let labelTypes: [ILType]
 
     init(labelTypes: [ILType]) {
         self.labelTypes = labelTypes
-        super.init(inputTypes: [.label(self.labelTypes)] + labelTypes, requiredContext: [.wasmFunction])
+        super.init(numInputs: 1 + labelTypes.count, requiredContext: [.wasmFunction])
 
     }
 }
 
-final class WasmBranchIf: WasmTypedOperation {
+final class WasmBranchIf: WasmOperationBase {
     override var opcode: Opcode { .wasmBranchIf(self) }
     let labelTypes: [ILType]
 
     init(labelTypes: [ILType]) {
         self.labelTypes = labelTypes
-        super.init(inputTypes: [.label(self.labelTypes)] + labelTypes + [.wasmi32], requiredContext: [.wasmFunction])
+        // The inputs are the label, the arguments and the condition.
+        super.init(numInputs: 1 + labelTypes.count + 1, requiredContext: [.wasmFunction])
     }
 }
 
-final class WasmBranchTable: WasmTypedOperation {
+final class WasmBranchTable: WasmOperationBase {
     override var opcode: Opcode { .wasmBranchTable(self) }
     let labelTypes: [ILType]
     // The number of cases in the br_table. Note that the number of labels is one higher as each
@@ -1233,20 +1199,20 @@ final class WasmBranchTable: WasmTypedOperation {
     init(labelTypes: [ILType], valueCount: Int) {
         self.labelTypes = labelTypes
         self.valueCount = valueCount
-        super.init(inputTypes: (0...valueCount).map {_ in .label(labelTypes)} + labelTypes + [.wasmi32], requiredContext: [.wasmFunction])
+        super.init(numInputs: valueCount + 1 + labelTypes.count + 1, requiredContext: [.wasmFunction])
     }
 }
 
 // TODO: make this comprehensive, currently only works for locals, or assumes every thing it reassigns to is a local.
 // This should be doable in the lifter, where we can see what we reassign to.
-final class WasmReassign: WasmTypedOperation {
+final class WasmReassign: WasmOperationBase {
     override var opcode: Opcode { .wasmReassign(self) }
 
     let variableType: ILType
 
     init(variableType: ILType) {
         self.variableType = variableType
-        super.init(inputTypes: [variableType, variableType], attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2, attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1277,17 +1243,22 @@ final class EndWasmFunction: WasmOperationBase {
 }
 
 /// This class is used to indicate nops in the wasm world, this makes handling of minimization much easier.
-final class WasmNop: WasmTypedOperation {
+final class WasmNop: WasmOperationBase {
+    let outputType: ILType
+    let innerOutputTypes: [ILType]
+
     override var opcode: Opcode { .wasmNop(self) }
     init(outputType: ILType, innerOutputTypes: [ILType]) {
-        super.init(outputType: outputType, innerOutputTypes: innerOutputTypes, attributes: [.isInternal, .isNop], requiredContext: [.wasmFunction])
+        self.outputType = outputType
+        self.innerOutputTypes = innerOutputTypes
+        super.init(numOutputs: outputType != .nothing ? 1 : 0, numInnerOutputs: innerOutputTypes.count, attributes: [.isInternal, .isNop], requiredContext: [.wasmFunction])
     }
 }
 
-final class WasmUnreachable: WasmTypedOperation {
+final class WasmUnreachable: WasmOperationBase {
     override var opcode: Opcode { .wasmUnreachable(self) }
     init() {
-        super.init(outputType: .nothing, attributes: [], requiredContext: [.wasmFunction])
+        super.init(attributes: [], requiredContext: [.wasmFunction])
     }
 }
 

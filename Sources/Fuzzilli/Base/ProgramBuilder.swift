@@ -1932,8 +1932,7 @@ public class ProgramBuilder {
         }
 
         // For WasmOperations, we can assert here that the input types are correct.
-        let expectedTypes = types ?? (op as? WasmTypedOperation)?.inputTypes
-        if let expectedTypes {
+        if let expectedTypes = types {
             // TODO: try to make sure that mutations don't change the assumptions while ProgramBuilding.
             if inputs.count != expectedTypes.count {
                 handleInputTypeFailure("expected \(expectedTypes.count) inputs, actual \(inputs.count)")
@@ -3189,23 +3188,27 @@ public class ProgramBuilder {
         @discardableResult
         public func wasmLoadGlobal(globalVariable: Variable) -> Variable {
             let type = b.type(of: globalVariable).wasmGlobalType!.valueType
-            return b.emit(WasmLoadGlobal(globalType: type), withInputs:[globalVariable]).output
+            return b.emit(WasmLoadGlobal(globalType: type), withInputs:[globalVariable], types: [ILType.object(ofGroup: "WasmGlobal")]).output
         }
 
         public func wasmStoreGlobal(globalVariable: Variable, to value: Variable) {
             let type = b.type(of: globalVariable).wasmGlobalType!.valueType
-            b.emit(WasmStoreGlobal(globalType: type), withInputs: [globalVariable, value])
+            let inputTypes = [ILType.object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: type, isMutable: true)), type]
+            b.emit(WasmStoreGlobal(globalType: type), withInputs: [globalVariable, value], types: inputTypes)
         }
 
         @discardableResult
         public func wasmTableGet(tableRef: Variable, idx: Variable) -> Variable {
             let tableType = b.type(of: tableRef)
-            return b.emit(WasmTableGet(tableType: tableType), withInputs: [tableRef, idx]).output
+            let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            return b.emit(WasmTableGet(tableType: tableType), withInputs: [tableRef, idx], types: [tableType, offsetType]).output
         }
 
         public func wasmTableSet(tableRef: Variable, idx: Variable, to value: Variable) {
             let tableType = b.type(of: tableRef)
-            b.emit(WasmTableSet(tableType: tableType), withInputs: [tableRef, idx, value])
+            let elementType = tableType.wasmTableType!.elementType
+            let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            b.emit(WasmTableSet(tableType: tableType), withInputs: [tableRef, idx, value], types: [tableType, offsetType, elementType])
         }
 
         @discardableResult
@@ -3226,7 +3229,8 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmJsCall(function: Variable, withArgs args: [Variable], withWasmSignature signature: WasmSignature) -> Variable? {
-            let instr = b.emit(WasmJsCall(signature: signature), withInputs: [function] + args)
+            let instr = b.emit(WasmJsCall(signature: signature), withInputs: [function] + args,
+                types: [.function() | .object(ofGroup: "WebAssembly.SuspendableObject")] + signature.parameterTypes)
             if signature.outputTypes.isEmpty {
                 assert(!instr.hasOutputs)
                 return nil
@@ -3239,13 +3243,15 @@ public class ProgramBuilder {
         @discardableResult
         public func wasmMemoryLoad(memory: Variable, dynamicOffset: Variable, loadType: WasmMemoryLoadType, staticOffset: Int64) -> Variable {
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
-            return b.emit(WasmMemoryLoad(loadType: loadType, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset]).output
+            return b.emit(WasmMemoryLoad(loadType: loadType, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset], types: [.object(ofGroup: "WasmMemory"), isMemory64 ? ILType.wasmi64 : ILType.wasmi32]).output
         }
 
         public func wasmMemoryStore(memory: Variable, dynamicOffset: Variable, value: Variable, storeType: WasmMemoryStoreType, staticOffset: Int64) {
             assert(b.type(of: value) == storeType.numberType())
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
-            b.emit(WasmMemoryStore(storeType: storeType, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset, value])
+            let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
+            let inputTypes = [ILType.object(ofGroup: "WasmMemory"), dynamicOffsetType, storeType.numberType()]
+            b.emit(WasmMemoryStore(storeType: storeType, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset, value], types: inputTypes)
         }
 
         public func wasmReassign(variable: Variable, to: Variable) {
@@ -3688,7 +3694,13 @@ public class ProgramBuilder {
 
         @discardableResult
         public func addTable(elementType: ILType, minSize: Int, maxSize: Int? = nil, definedEntries: [WasmTableType.IndexInTableAndWasmSignature] = [], definedEntryValues: [Variable] = [], isTable64: Bool) -> Variable {
-            return b.emit(WasmDefineTable(elementType: elementType, limits: Limits(min: minSize, max: maxSize), definedEntries: definedEntries, isTable64: isTable64), withInputs: definedEntryValues).output
+            let inputTypes = if elementType == .wasmFuncRef {
+                Array(repeating: .wasmFunctionDef() | .function(), count: definedEntries.count)
+            } else {
+                [ILType]()
+            }
+            return b.emit(WasmDefineTable(elementType: elementType, limits: Limits(min: minSize, max: maxSize), definedEntries: definedEntries, isTable64: isTable64),
+                withInputs: definedEntryValues, types: inputTypes).output
         }
 
         // This result can be ignored right now, as we can only define one memory per module
