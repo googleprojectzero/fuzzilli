@@ -3035,127 +3035,127 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wrapi64Toi32(_ input: Variable) -> Variable {
-            return b.emit(WasmWrapi64Toi32(), withInputs: [input]).output
+            return b.emit(WasmWrapi64Toi32(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func truncatef32Toi32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncatef32Toi32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncatef32Toi32(isSigned: isSigned), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func truncatef64Toi32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncatef64Toi32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncatef64Toi32(isSigned: isSigned), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func extendi32Toi64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmExtendi32Toi64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmExtendi32Toi64(isSigned: isSigned), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func truncatef32Toi64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncatef32Toi64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncatef32Toi64(isSigned: isSigned), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func truncatef64Toi64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncatef64Toi64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncatef64Toi64(isSigned: isSigned), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func converti32Tof32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmConverti32Tof32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmConverti32Tof32(isSigned: isSigned), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func converti64Tof32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmConverti64Tof32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmConverti64Tof32(isSigned: isSigned), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func demotef64Tof32(_ input: Variable) -> Variable {
-            return b.emit(WasmDemotef64Tof32(), withInputs: [input]).output
+            return b.emit(WasmDemotef64Tof32(), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func converti32Tof64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmConverti32Tof64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmConverti32Tof64(isSigned: isSigned), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func converti64Tof64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmConverti64Tof64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmConverti64Tof64(isSigned: isSigned), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func promotef32Tof64(_ input: Variable) -> Variable {
-            return b.emit(WasmPromotef32Tof64(), withInputs: [input]).output
+            return b.emit(WasmPromotef32Tof64(), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func reinterpretf32Asi32(_ input: Variable) -> Variable {
-            return b.emit(WasmReinterpretf32Asi32(), withInputs: [input]).output
+            return b.emit(WasmReinterpretf32Asi32(), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func reinterpretf64Asi64(_ input: Variable) -> Variable {
-            return b.emit(WasmReinterpretf64Asi64(), withInputs: [input]).output
+            return b.emit(WasmReinterpretf64Asi64(), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func reinterpreti32Asf32(_ input: Variable) -> Variable {
-            return b.emit(WasmReinterpreti32Asf32(), withInputs: [input]).output
+            return b.emit(WasmReinterpreti32Asf32(), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func reinterpreti64Asf64(_ input: Variable) -> Variable {
-            return b.emit(WasmReinterpreti64Asf64(), withInputs: [input]).output
+            return b.emit(WasmReinterpreti64Asf64(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func signExtend8Intoi32(_ input: Variable) -> Variable {
-            return b.emit(WasmSignExtend8Intoi32(), withInputs: [input]).output
+            return b.emit(WasmSignExtend8Intoi32(), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func signExtend16Intoi32(_ input: Variable) -> Variable {
-            return b.emit(WasmSignExtend16Intoi32(), withInputs: [input]).output
+            return b.emit(WasmSignExtend16Intoi32(), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func signExtend8Intoi64(_ input: Variable) -> Variable {
-            return b.emit(WasmSignExtend8Intoi64(), withInputs: [input]).output
+            return b.emit(WasmSignExtend8Intoi64(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func signExtend16Intoi64(_ input: Variable) -> Variable {
-            return b.emit(WasmSignExtend16Intoi64(), withInputs: [input]).output
+            return b.emit(WasmSignExtend16Intoi64(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func signExtend32Intoi64(_ input: Variable) -> Variable {
-            return b.emit(WasmSignExtend32Intoi64(), withInputs: [input]).output
+            return b.emit(WasmSignExtend32Intoi64(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func truncateSatf32Toi32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncateSatf32Toi32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncateSatf32Toi32(isSigned: isSigned), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func truncateSatf64Toi32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncateSatf64Toi32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncateSatf64Toi32(isSigned: isSigned), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func truncateSatf32Toi64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncateSatf32Toi64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncateSatf32Toi64(isSigned: isSigned), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func truncateSatf64Toi64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncateSatf64Toi64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncateSatf64Toi64(isSigned: isSigned), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult

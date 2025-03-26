@@ -497,16 +497,41 @@ public struct JSTyper: Analyzer {
                  .wasmi64EqualZero(_):
                 setType(of: instr.output, to: .wasmi32)
             case .wasmi32BinOp(_),
-                 .wasmi32UnOp(_):
+                 .wasmi32UnOp(_),
+                 .wasmWrapi64Toi32(_),
+                 .wasmTruncatef32Toi32(_),
+                 .wasmTruncatef64Toi32(_),
+                 .wasmReinterpretf32Asi32(_),
+                 .wasmSignExtend8Intoi32(_),
+                 .wasmSignExtend16Intoi32(_),
+                 .wasmTruncateSatf32Toi32(_),
+                 .wasmTruncateSatf64Toi32(_):
                 setType(of: instr.output, to: .wasmi32)
             case .wasmi64BinOp(_),
-                 .wasmi64UnOp(_):
+                 .wasmi64UnOp(_),
+                 .wasmExtendi32Toi64(_),
+                 .wasmTruncatef32Toi64(_),
+                 .wasmTruncatef64Toi64(_),
+                 .wasmReinterpretf64Asi64(_),
+                 .wasmSignExtend8Intoi64(_),
+                 .wasmSignExtend16Intoi64(_),
+                 .wasmSignExtend32Intoi64(_),
+                 .wasmTruncateSatf32Toi64(_),
+                 .wasmTruncateSatf64Toi64(_):
                 setType(of: instr.output, to: .wasmi64)
             case .wasmf32BinOp(_),
-                 .wasmf32UnOp(_):
+                 .wasmf32UnOp(_),
+                 .wasmConverti32Tof32(_),
+                 .wasmConverti64Tof32(_),
+                 .wasmDemotef64Tof32(_),
+                 .wasmReinterpreti32Asf32(_):
                 setType(of: instr.output, to: .wasmf32)
             case .wasmf64BinOp(_),
-                 .wasmf64UnOp(_):
+                 .wasmf64UnOp(_),
+                 .wasmConverti32Tof64(_),
+                 .wasmConverti64Tof64(_),
+                 .wasmPromotef32Tof64(_),
+                 .wasmReinterpreti64Asf64(_):
                 setType(of: instr.output, to: .wasmf64)
             case .constSimd128(_),
                  .wasmSimd128Compare(_),
