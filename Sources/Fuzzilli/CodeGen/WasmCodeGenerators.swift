@@ -361,7 +361,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         var definedEntries: [WasmTableType.IndexInTableAndWasmSignature] = []
         var definedEntryValues: [Variable] = []
 
-        let expectedEntryType = elementType == .wasmFuncRef ? .wasmFuncRef | .function() : .object()
+        // For funcref tables, we need to look for functions to populate the entries.
+        // These are going to be either wasm function definitions (.wasmFunctionDef()) or JS functions (.function()).
+        // TODO(manoskouk): When we have support for constant expressions, consider looking for .wasmFuncRef instead.
+        let expectedEntryType = elementType == .wasmFuncRef ? .wasmFunctionDef() | .function() : .object()
 
         // Currently, only generate entries for funcref tables.
         // TODO(manoskouk): Generalize this.
