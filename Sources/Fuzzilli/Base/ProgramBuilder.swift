@@ -1837,6 +1837,34 @@ public class ProgramBuilder {
         trace("End of prefix code. \(numberOfVisibleVariables) variables are now visible")
     }
 
+    /// Builds into a `Context.wasmTypeGroup`.
+    /// This is called by the SpliceMutator and the CodeGenMutator to fix up the EndTypeGroup Instruction after building.
+    /// Needs to run from an adopting block.
+    public func buildIntoTypeGroup(endTypeGroupInstr instr: Instruction, by mode: BuildingMode) {
+        assert(instr.op is WasmEndTypeGroup)
+        assert(context.contains(.wasmTypeGroup))
+
+        // We need to update the inputs later, so take note of the visible variables here.
+        let oldVisibleVariables = visibleVariables
+
+        build(n: defaultCodeGenerationAmount, by: mode)
+
+        let newVisibleVariables = visibleVariables.filter { v in
+            let t = type(of: v)
+            return !oldVisibleVariables.contains(v) && t.wasmTypeDefinition?.description != .selfReference && t.Is(.wasmTypeDef())
+        }
+
+        let newOp = WasmEndTypeGroup(typesCount: instr.inputs.count + newVisibleVariables.count)
+        // We need to keep and adopt the inputs that are still there.
+        let newInputs = adopt(instr.inputs) + newVisibleVariables
+        // Adopt the old outputs and allocate new output variables for the new outputs
+        let newOutputs = adopt(instr.outputs) + newVisibleVariables.map { _ in
+            nextVariable()
+        }
+
+        append(Instruction(newOp, inouts: Array(newInputs) + newOutputs, flags: instr.flags))
+    }
+
     /// Runs a code generator in the current context and returns the number of generated instructions.
     @discardableResult
     private func run(_ generator: CodeGenerator) -> Int {
@@ -3796,7 +3824,7 @@ public class ProgramBuilder {
     }
 
     /// Returns the next free variable.
-    public func nextVariable() -> Variable {
+    func nextVariable() -> Variable {
         assert(numVariables < Code.maxNumberOfVariables, "Too many variables")
         numVariables += 1
         return Variable(number: numVariables - 1)

@@ -2542,7 +2542,7 @@ class WasmEndTypeGroup: WasmTypeOperation {
 
     init(typesCount: Int) {
         super.init(numInputs: typesCount, numOutputs: typesCount, firstVariadicInput: 0,
-                   attributes: [.isBlockEnd, .resumesSurroundingContext, .isVariadic],
+                   attributes: [.isBlockEnd, .resumesSurroundingContext, .isVariadic, .isNotInputMutable],
                    requiredContext: [.wasmTypeGroup])
     }
 }
