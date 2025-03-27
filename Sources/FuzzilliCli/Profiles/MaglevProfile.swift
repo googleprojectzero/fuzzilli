@@ -201,7 +201,7 @@ let maglevProfile = Profile(
             "--allow-natives-syntax",
             "--fuzzing",
             "--jit-fuzzing",
-            "--future",
+            // "--future",
             "--harmony",
             "--js-staging",
             "--concurrent-maglev-max-threads=1",
