@@ -98,6 +98,7 @@ Options:
     --tag=tag                    : Optional string tag associated with this instance which will be stored in the settings.json file as well as in crashing samples.
                                    This can for example be used to remember the target revision that is being fuzzed.
     --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
+    --builtinTemplates            : Use built-in templates also
 
 """)
     exit(0)
@@ -154,6 +155,7 @@ let swarmTesting = args.has("--swarmTesting")
 let argumentRandomization = args.has("--argumentRandomization")
 let additionalArguments = args["--additionalArguments"] ?? ""
 let tag = args["--tag"]
+let builtinTemplates = args["--builtinTemplate"]
 let enableWasm = args.has("--wasm")
 
 guard numJobs >= 1 else {
@@ -447,13 +449,15 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         }
     }
 
-    for template in ProgramTemplates {
-        guard let weight = programTemplateWeights[template.name] else {
-            print("Missing weight for program template \(template.name) in ProgramTemplateWeights.swift")
-            exit(-1)
-        }
+    if builtinTemplates != nil {
+        for template in ProgramTemplates {
+            guard let weight = programTemplateWeights[template.name] else {
+                print("Missing weight for program template \(template.name) in ProgramTemplateWeights.swift")
+                exit(-1)
+            }
 
-        programTemplates.append(template, withWeight: weight)
+            programTemplates.append(template, withWeight: weight)
+        }
     }
 
     // The environment containing available builtins, property names, and method names.
