@@ -145,7 +145,7 @@ public class Fuzzer {
     /// Currently active corpus import job, if any.
     private var currentCorpusImportJob = CorpusImportJob(corpus: [], mode: .full)
 
-    private var iterationsSinceLastInterestingProgram: Int {
+    public var iterationsSinceLastInterestingProgram: Int {
         assert(iterations >= iterationOfLastInteratingSample)
         return iterations - iterationOfLastInteratingSample
     }
