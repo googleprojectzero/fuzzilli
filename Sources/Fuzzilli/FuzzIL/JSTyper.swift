@@ -49,6 +49,7 @@ public struct JSTyper: Analyzer {
 
         var seenWasmGlobals: [Variable]? = nil
         var seenWasmTables: [Variable]? = nil
+        var seenWasmTags: [Variable]? = nil
 
         /// These are the different types of program local object groups this typer can track.
         /// TODO(cffsmith): We could also track WasmGlobals here.
@@ -141,6 +142,7 @@ public struct JSTyper: Analyzer {
             let instanceName = "_fuzz_WasmModule\(numObjectGroups)"
             seenWasmGlobals = []
             seenWasmTables = []
+            seenWasmTags = []
 
             let instanceType = ILType.object(ofGroup: instanceName, withProperties: ["exports"], withMethods: [])
 
@@ -238,6 +240,15 @@ public struct JSTyper: Analyzer {
             if !seenWasmTables!.contains(variable) {
                 let propertyName = "wt\(seenWasmTables!.count)"
                 seenWasmTables!.append(variable)
+                addProperty(propertyName: propertyName, withType: type)
+            }
+        }
+
+        public func addWasmTag(withType type: ILType, forVariable variable: Variable) {
+            // Add this property only if we have not seen it before
+            if !seenWasmTags!.contains(variable) {
+                let propertyName = "wex\(seenWasmTags!.count)"
+                seenWasmTags!.append(variable)
                 addProperty(propertyName: propertyName, withType: type)
             }
         }
@@ -536,6 +547,9 @@ public struct JSTyper: Analyzer {
                 setType(of: instr.output, to: op.wasmMemory)
             case .wasmDefineTag(let op):
                 setType(of: instr.output, to: .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameterTypes)))
+                dynamicObjectGroupManager.addWasmTag(withType: type(of: instr.output), forVariable: instr.output)
+            case .wasmThrow(_):
+                dynamicObjectGroupManager.addWasmTag(withType: type(of: instr.input(0)), forVariable: instr.input(0))
             case .wasmLoadGlobal(let op):
                 dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forVariable: instr.input(0))
                 setType(of: instr.output, to: op.globalType)
@@ -585,6 +599,11 @@ public struct JSTyper: Analyzer {
                 wasmTypeEndBlock(instr, op.outputTypes)
             case .wasmBeginTryTable(let op):
                 wasmTypeBeginBlock(instr, op.signature)
+                instr.inputs.forEach { input in
+                    if type(of: input).isWasmTagType {
+                        dynamicObjectGroupManager.addWasmTag(withType: type(of: input), forVariable: input)
+                    }
+                }
             case .wasmEndTryTable(let op):
                 wasmTypeEndBlock(instr, op.outputTypes)
             case .wasmBeginTry(let op):
@@ -592,7 +611,9 @@ public struct JSTyper: Analyzer {
             case .wasmBeginCatchAll(let op):
                 setType(of: instr.innerOutputs.first!, to: .label(op.inputTypes))
             case .wasmBeginCatch(let op):
-                setType(of: instr.innerOutput(0), to: .label(op.signature.outputTypes))
+                let tagType = ILType.label(op.signature.outputTypes)
+                setType(of: instr.innerOutput(0), to: tagType)
+                dynamicObjectGroupManager.addWasmTag(withType: tagType, forVariable: instr.innerOutput(0))
                 setType(of: instr.innerOutput(1), to: .exceptionLabel)
                 for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(2), op.signature.parameterTypes) {
                     setType(of: innerOutput, to: paramType)
@@ -735,6 +756,23 @@ public struct JSTyper: Analyzer {
                 // Check if we have it in the group and on the actual passed in ILType as it might've been deleted.
                 if let type = group.properties[propertyName], objType.properties.contains(propertyName) {
                     return type
+                } else if let type = group.methods[propertyName], objType.methods.contains(propertyName) {
+                    // If no property is present, look up the name in the methods instead.
+                    // Retrieving a method "as a property" results in a variable that is a function
+                    // with the method's signature. However, it loses the this-binding:
+                    //   let x = {val: 5, method: function() { return this.val; }};
+                    //   console.log(x.method()); // prints 5
+                    //   let y = x.method;
+                    //   console.log(y());        // prints undefined
+                    // So this is not 100% precise (parameter types will still be consistent)
+                    // but the usage of this inside the function might be "wrong" and the result
+                    // type might be off as also shown in the example above.
+
+                    // While a method can have multiple signatures, when converting to an ILType,
+                    // we need to pick one, so we just pick the first here (if present).
+                    // TODO: Would it be useful to expose all available signatures to the
+                    // .function() type? (E.g. a code generator could then randomly pick one.)
+                    return .function(type.first)
                 } else {
                     // This means the objectGroup doesn't have the property but we did see the objectGroup.
                     return .anything

@@ -2317,53 +2317,6 @@ class ProgramBuilderTests: XCTestCase {
             "Expected:\n\(FuzzILLifter().lift(expected.code))")
     }
 
-    func testWasmTypeSplicing() {
-        var splicePoint = -1
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        //
-        // Original Program
-        //
-        b.wasmDefineTypeGroup {
-            let arrayi64 = b.wasmDefineArrayType(elementType: .wasmi64, mutability: false)
-            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: false)
-            splicePoint = b.indexOfNextInstruction() // the WasmEndTypeGroup
-            let arrayref = b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: true), mutability: true, indexType: arrayi32)
-            return [arrayi64, arrayi32, arrayref]
-        }
-        let original = b.finalize()
-
-        //
-        // Actual Program
-        //
-        b.wasmDefineTypeGroup {
-            let arrayf32 = b.wasmDefineArrayType(elementType: .wasmf32, mutability: false)
-            XCTAssertTrue(b.splice(from: original, at: splicePoint, mergeDataFlow: false))
-            let arrayf64 = b.wasmDefineArrayType(elementType: .wasmf64, mutability: false)
-            return [arrayf32, arrayf64]
-        }
-        let actual = b.finalize()
-
-        //
-        // Expected Program
-        //
-        b.wasmDefineTypeGroup {
-            let arrayf32 = b.wasmDefineArrayType(elementType: .wasmf32, mutability: false)
-            // TODO(mliedtke): After splicing or running a code generator inside a .wasmTypeGroup
-            // scope, we should re-expose all new types via the WasmEndTypeGroup instruction.
-            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: false)
-            let _ = b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: true), mutability: true, indexType: arrayi32)
-            let arrayf64 = b.wasmDefineArrayType(elementType: .wasmf64, mutability: false)
-            return [arrayf32, arrayf64]
-        }
-        let expected = b.finalize()
-
-        XCTAssertEqual(actual, expected,
-            "Actual:\n\(FuzzILLifter().lift(actual.code))\n\n" +
-            "Expected:\n\(FuzzILLifter().lift(expected.code))")
-    }
-
     func testCodeStringSplicing() {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()

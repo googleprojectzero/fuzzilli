@@ -1303,6 +1303,92 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: object), .object(ofGroup: "_fuzz_Object0", withMethods: []))
     }
 
+    func testTypingOfPropertyForMethod() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let object = b.buildObjectLiteral { o in
+            o.addMethod("foo", with: .parameters(n: 0)) { _ in
+                b.doReturn(b.loadString("foo"))
+            }
+        }
+
+        XCTAssertEqual(b.type(of: object), .object(ofGroup: "_fuzz_Object0", withMethods: ["foo"]))
+        // When reading a "method" as a regular property, the method becomes a function where
+        // `this` isn't bound to `object`. The type system should still correctly infer the
+        // signatures of such functions.
+        let fooProperty = b.getProperty("foo", of: object)
+        XCTAssertEqual(b.type(of: fooProperty), .function([] => .string))
+
+        // Actions like `setProperty` modify the ILType but do not modify any information stored in
+        // the ObjectGroupManager.
+        b.setProperty("foo", of: object, to: b.loadInt(123))
+        XCTAssertEqual(b.type(of: object),
+            .object(ofGroup: "_fuzz_Object0", withProperties: ["foo"], withMethods: ["foo"]))
+        let fooPropertyNew = b.getProperty("foo", of: object)
+        XCTAssertEqual(b.type(of: fooPropertyNew), .function([] => .string))
+    }
+
+    func testTypingOfDuplicateProperties() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        let intVal = b.loadInt(123)
+        let stringVal = b.loadString("abc")
+
+        let object = b.buildObjectLiteral { o in
+            o.addProperty("foo", as: intVal)
+            o.addProperty("foo", as: stringVal)
+        }
+
+        XCTAssertEqual(b.type(of: object), .object(ofGroup: "_fuzz_Object0", withProperties: ["foo"]))
+        let fooProperty = b.getProperty("foo", of: object)
+        XCTAssertEqual(b.type(of: fooProperty), .string)
+        let fooResult = b.callMethod("foo", on: object)
+        XCTAssertEqual(b.type(of: fooResult), .anything)
+    }
+
+    func testTypingOfDuplicateMethods() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let object = b.buildObjectLiteral { o in
+            o.addMethod("foo", with: .parameters(n: 0)) { _ in
+                b.doReturn(b.loadString("abc"))
+            }
+            o.addMethod("foo", with: .parameters(n: 0)) { _ in
+                b.doReturn(b.loadInt(123))
+            }
+        }
+
+        XCTAssertEqual(b.type(of: object), .object(ofGroup: "_fuzz_Object0", withMethods: ["foo"]))
+        let fooProperty = b.getProperty("foo", of: object)
+        XCTAssertEqual(b.type(of: fooProperty), .function([] => .integer))
+        let fooResult = b.callMethod("foo", on: object)
+        XCTAssertEqual(b.type(of: fooResult), .integer)
+    }
+
+    func testTypingOfDuplicateMixedMethodAndProperty() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        let intVal = b.loadInt(123)
+
+        let object = b.buildObjectLiteral { o in
+            o.addProperty("foo", as: intVal)
+            o.addMethod("foo", with: .parameters(n: 0)) { _ in
+                b.doReturn(b.loadString("abc"))
+            }
+        }
+
+        // In JS, the last value a property is set to, overwrites the previous value. Since
+        // Fuzzilli tracks properties and methods separately, they do not overwrite each other in
+        // the ObjectGroupManager (but maybe should).
+        XCTAssertEqual(b.type(of: object), .object(ofGroup: "_fuzz_Object0", withProperties: ["foo"], withMethods: ["foo"]))
+        let fooProperty = b.getProperty("foo", of: object)
+        XCTAssertEqual(b.type(of: fooProperty), .integer)
+        let fooResult = b.callMethod("foo", on: object)
+        XCTAssertEqual(b.type(of: fooResult), .string)
+    }
+
     func testDynamicObjectGroupTypingOfClassesWithGettersAndSetters() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
