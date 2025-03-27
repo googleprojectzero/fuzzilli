@@ -2084,8 +2084,6 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let blockResult = function.wasmBuildBlockWithResults(with: [.wasmi32] => [.wasmi32, .wasmi64], args: args) { blockLabel, blockArgs in
-                    // TODO(mliedtke): A branch to the function end should also be allowed but
-                    // unfortunately a function doesn't have a label in FuzzIL, yet.
                     function.wasmBranchIf(blockArgs[0], to: blockLabel, args: [function.wasmi32BinOp(blockArgs[0], args[0], binOpKind: .Add), function.consti64(1)])
                     function.wasmBranch(to: blockLabel, args: [function.consti32(12345), function.consti64(54321)])
                     return [function.consti32(-1), function.consti64(0)]
@@ -2280,6 +2278,76 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "100\n123\n")
+    }
+
+    func tagExportedToDifferentWasmModule(defineInWasm: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+        let tagFromJS = b.createWasmTag(parameterTypes: [defineInWasm ? .wasmi64 : .wasmi32])
+        let moduleThrow = b.buildWasmModule { wasmModule in
+            let tagFromWasm = wasmModule.addTag(parameterTypes: [defineInWasm ? .wasmi32 : .wasmi64])
+            wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, label, args in
+                function.WasmBuildThrow(tag: defineInWasm ? tagFromWasm : tagFromJS, inputs: [args[0]])
+                return []
+            }
+            // Unused function that forces usage of the js tag if not used in the previous function.
+            // (So that both get exported.)
+            wasmModule.addWasmFunction(with: [.wasmi64] => []) { function, label, args in
+                function.WasmBuildThrow(tag: defineInWasm ? tagFromJS : tagFromWasm, inputs: [args[0]])
+                return []
+            }
+        }
+
+        let throwFct = b.getProperty("w0", of: moduleThrow.loadExports())
+        XCTAssert(b.type(of: throwFct).Is(.function([.integer] => .nullish)))
+        // Because the `wasmModule.addTag` in the `moduleThrow` appears before the usage, the wasm
+        // tag will always be exported as "wex0" even though the module-internal index will always
+        // be 1 while the imported tag will always have index 0 inside the lifted wasm binary but
+        // be exported as "wex1".
+        let wasmTagExported = b.getProperty("wex0", of: moduleThrow.loadExports())
+        let jsTagExported = b.getProperty("wex1", of: moduleThrow.loadExports())
+        XCTAssert(b.type(of: wasmTagExported).Is(.object(ofGroup: "WasmTag")))
+        XCTAssert(b.type(of: jsTagExported).Is(.object(ofGroup: "WasmTag")))
+        XCTAssertEqual(b.type(of: wasmTagExported).wasmTagType!.parameters, [defineInWasm ? .wasmi32 : .wasmi64])
+        XCTAssertEqual(b.type(of: jsTagExported).wasmTagType!.parameters, [defineInWasm ? .wasmi64 : .wasmi32])
+        let tagToUse = defineInWasm ? wasmTagExported : jsTagExported
+
+        let moduleCatch = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                let catchNoRefI32 = function.wasmBuildBlockWithResults(with: [] => [.wasmi32], args: []) { catchNoRefLabel, _ in
+                    // The usage of tagToUse in the try_table below is the interesting part of
+                    // this test case: It triggers an import of the tag exported by the previous
+                    // module and expects that we have all the correct information about it
+                    // (including the tag's parameter types.)
+                    function.wasmBuildTryTable(with: [] => [], args: [tagToUse, catchNoRefLabel], catches: [.NoRef]) { _, _ in
+                        function.wasmJsCall(function: throwFct, withArgs: [function.consti32(42)], withWasmSignature: [.wasmi32] => [])
+                        return []
+                    }
+                    return [function.consti32(-1)]
+                }
+                return [catchNoRefI32[0]]
+            }
+        }
+
+        let catchFct = b.getProperty("w0", of: moduleCatch.loadExports())
+        let result = b.callFunction(catchFct, withArgs: [throwFct])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
+    func testTagExportedToDifferentWasmModule() throws {
+        try tagExportedToDifferentWasmModule(defineInWasm: true)
+    }
+
+    func testImportedTagReexportedToDifferentWasmModule() throws {
+        try tagExportedToDifferentWasmModule(defineInWasm: false)
     }
 
     func testThrowRef() throws {

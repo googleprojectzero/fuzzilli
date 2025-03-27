@@ -110,6 +110,10 @@ public class WasmLifter {
         return "wt\(idx)"
     }
 
+    public static func nameOfTag(_ idx: Int) -> String {
+        return "wex\(idx)"
+    }
+
     // This contains imports, i.e. WasmJsCall arguments, tables, globals and memories that are not defined in this module. We need to track them here so that we can properly wire up the imports when lifting this module.
     // The Signature is only valid if the Variable is the argument to a WasmJsCall instruction, it is the Signature contained in the instruction. This Signature that is in the instruction is a loose approximation of the JS Signature, it depends on available Wasm types at the time when it was generated.
     private var imports: [(Variable, WasmSignature?)] = []
@@ -150,6 +154,7 @@ public class WasmLifter {
 
     // This tracks in which order we have seen globals, this can probably be unified with the .globals and .imports properties, as they should match in their keys.
     private var globalOrder: [Variable] = []
+    private var tagOrder: [Variable] = []
 
     public init(withTyper typer: JSTyper, withWasmCode instrs: Code) {
         self.typer = typer
@@ -886,7 +891,13 @@ public class WasmLifter {
             typer.type(of: $0).Is(.object(ofGroup: "WasmGlobal"))
         }
 
-        temp += Leb128.unsignedEncode(self.functions.count + importedGlobals.count + self.globals.count + self.tables.count)
+        let importedTags = self.imports.map({$0.0}).filter {
+            typer.type(of: $0).Is(.object(ofGroup: "WasmTag"))
+        }
+
+        temp += Leb128.unsignedEncode(self.functions.count + importedGlobals.count
+            + self.globals.count + self.tables.count + importedTags.count
+            + self.tags.reduce(0, {res, _ in res + 1}))
         for (idx, _) in self.functions.enumerated() {
             // Append the name as a vector
             let name = WasmLifter.nameOfFunction(idx)
@@ -903,7 +914,7 @@ public class WasmLifter {
             let name = WasmLifter.nameOfGlobal(index)
             temp += Leb128.unsignedEncode(name.count)
             temp += name.data(using: .utf8)!
-            temp += [0x3, UInt8(idx)]
+            temp += [0x3] + Leb128.unsignedEncode(idx)
         }
         // Also export all globals that we have defined.
         for (idx, instruction) in self.globals.enumerated() {
@@ -916,7 +927,7 @@ public class WasmLifter {
             temp += name.data(using: .utf8)!
             // Add the base, as our exports start after the imports. This variable needs to be incremented in the `buildImportSection` function.
             // TODO: maybe add something like a global base?
-            temp += [0x3, UInt8(importedGlobals.count + idx)]
+            temp += [0x3] + Leb128.unsignedEncode(importedGlobals.count + idx)
         }
 
         for instruction in self.tables {
@@ -924,10 +935,28 @@ public class WasmLifter {
             let name = WasmLifter.nameOfTable(index)
             temp += Leb128.unsignedEncode(name.count)
             temp += name.data(using: .utf8)!
-            temp += [0x1, UInt8(index)]
+            temp += [0x1] + Leb128.unsignedEncode(index)
         }
 
-        // TODO(mliedtke): Export defined tags.
+        for (wasmIndex, imp) in importedTags.enumerated() {
+            // Note that this mapping requires that the order in which imports are added during
+            // lifting matches exactly the order in which tags are added to the
+            // dynamicObjectGroupManager in the JSTyper.
+            let nameIndex = self.tagOrder.firstIndex(of: imp)!
+            let name = WasmLifter.nameOfTag(nameIndex)
+            temp += Leb128.unsignedEncode(name.count)
+            temp += name.data(using: .utf8)!
+            temp += [0x04] + Leb128.unsignedEncode(wasmIndex)
+        }
+
+        for (tag, _) in self.tags {
+            let wasmIndex = try resolveIdx(ofType: .tag, for: tag)
+            let nameIndex = self.tagOrder.firstIndex(of: tag)!
+            let name = WasmLifter.nameOfTag(nameIndex)
+            temp += Leb128.unsignedEncode(name.count)
+            temp += name.data(using: .utf8)!
+            temp += [0x04] + Leb128.unsignedEncode(wasmIndex)
+        }
 
         // Append the length of the section and the section contents itself.
         self.bytecode.append(Leb128.unsignedEncode(temp.count))
@@ -1107,6 +1136,8 @@ public class WasmLifter {
     private func importTagIfNeeded(tag: Variable, parameterTypes: [ILType]) {
         if (!self.tags.contains(tag) && self.imports.firstIndex(where: {variable, _ in variable == tag}) == nil) {
             self.imports.append((tag, parameterTypes => []))
+            assert(!tagOrder.contains(tag))
+            self.tagOrder.append(tag)
         }
     }
 
@@ -1200,6 +1231,8 @@ public class WasmLifter {
                 self.imports.append((instr.input(0), op.functionSignature))
 
             case .wasmDefineTag(let op):
+                assert(!self.tagOrder.contains(instr.output))
+                self.tagOrder.append(instr.output)
                 self.tags[instr.output] = op.parameterTypes
 
             case .wasmBeginCatch(let op):
