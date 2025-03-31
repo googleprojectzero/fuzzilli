@@ -374,8 +374,8 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmSimd128Compare(let op):
             // TODO: ?
             newOp = op
-        case .wasmI64x2ExtractLane(_):
-            newOp = WasmI64x2ExtractLane(lane: Int.random(in: 0...1))
+        case .wasmSimdExtractLane(let op):
+            newOp = WasmSimdExtractLane(kind: op.kind, lane: Int.random(in: 0..<op.kind.laneCount()))
         case .wasmSimdLoad(let op):
             let kind = chooseUniform(from: WasmSimdLoad.Kind.allCases)
             let staticOffset = probability(0.8)

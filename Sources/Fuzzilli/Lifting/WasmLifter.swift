@@ -1778,8 +1778,8 @@ public class WasmLifter {
             }
         case .wasmSimdSplat(let op):
             return Data([Prefix.Simd.rawValue, op.kind.rawValue])
-        case .wasmI64x2ExtractLane(let op):
-            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0x1D) + Leb128.unsignedEncode(op.lane)
+        case .wasmSimdExtractLane(let op):
+            return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + Leb128.unsignedEncode(op.lane)
          case .wasmSimdLoad(let op):
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))

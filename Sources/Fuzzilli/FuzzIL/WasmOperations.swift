@@ -1550,15 +1550,53 @@ final class WasmSimdSplat: WasmOperation {
     }
 }
 
-// TODO: Generalize to other shapes.
-final class WasmI64x2ExtractLane: WasmOperation {
-  override var opcode: Opcode { .wasmI64x2ExtractLane(self) }
-  let lane: Int
+final class WasmSimdExtractLane: WasmOperation {
+    enum Kind: UInt8, CaseIterable {
+        case I8x16S = 0x15
+        case I8x16U = 0x16
+        case I16x8S = 0x18
+        case I16x8U = 0x19
+        case I32x4 = 0x1B
+        case I64x2 = 0x1D
+        case F32x4 = 0x1F
+        case F64x2 = 0x21
 
-  init(lane: Int) {
-    self.lane = lane;
-    super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
-  }
+        func laneType() -> ILType {
+            switch self {
+                case .I8x16S, .I8x16U, .I16x8S, .I16x8U, .I32x4:
+                    return .wasmi32
+                case .I64x2:
+                    return .wasmi64
+                case .F32x4:
+                    return .wasmf32
+                case .F64x2:
+                    return .wasmf64
+            }
+        }
+
+        func laneCount() -> Int {
+            switch self {
+                case .I8x16S, .I8x16U:
+                    return 16
+                case .I16x8S, .I16x8U:
+                    return 8
+                case .I32x4, .F32x4:
+                    return 4
+                case .I64x2, .F64x2:
+                    return 2
+            }
+        }
+    }
+
+    override var opcode: Opcode { .wasmSimdExtractLane(self) }
+    let kind: Kind
+    let lane: Int
+
+    init(kind: Kind, lane: Int) {
+        self.kind = kind
+        self.lane = lane;
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
 }
 
 final class WasmSimdLoad: WasmOperation {

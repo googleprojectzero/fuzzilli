@@ -3554,8 +3554,8 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmI64x2ExtractLane(_ input: Variable, _ lane: Int) -> Variable {
-            return b.emit(WasmI64x2ExtractLane(lane: lane), withInputs: [input], types: [.wasmSimd128]).output
+        func wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind, _ input: Variable, _ lane: Int) -> Variable {
+            return b.emit(WasmSimdExtractLane(kind: kind, lane: lane), withInputs: [input], types: [.wasmSimd128]).output
         }
 
         @discardableResult

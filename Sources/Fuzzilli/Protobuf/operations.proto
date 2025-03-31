@@ -1333,8 +1333,20 @@ message WasmSimdSplat {
     WasmSimdSplatKind kind = 1;
 }
 
-message WasmI64x2ExtractLane {
-    uint32 lane = 1;
+enum WasmSimdExtractLaneKind {
+    EXTRACTI8x16S = 0;
+    EXTRACTI8x16U = 1;
+    EXTRACTI16x8S = 2;
+    EXTRACTI16x8U = 3;
+    EXTRACTI32x4 = 4;
+    EXTRACTI64x2 = 5;
+    EXTRACTF32x4 = 6;
+    EXTRACTF64x2 = 7;
+}
+
+message WasmSimdExtractLane {
+    WasmSimdExtractLaneKind kind = 1;
+    uint32 lane = 2;
 }
 
 enum WasmSimdLoadKind {
