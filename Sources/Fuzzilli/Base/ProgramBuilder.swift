@@ -3559,6 +3559,12 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        func wasmSimdReplaceLane(kind: WasmSimdReplaceLane.Kind, _ input: Variable, _ laneValue: Variable, _ lane: Int) -> Variable {
+            return b.emit(WasmSimdReplaceLane(kind: kind, lane: lane),
+                withInputs: [input, laneValue], types: [.wasmSimd128, kind.laneType()]).output
+        }
+
+        @discardableResult
         func wasmSimdLoad(kind: WasmSimdLoad.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: Int64) -> Variable {
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
             let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32

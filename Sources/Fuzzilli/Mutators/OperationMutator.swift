@@ -376,6 +376,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = op
         case .wasmSimdExtractLane(let op):
             newOp = WasmSimdExtractLane(kind: op.kind, lane: Int.random(in: 0..<op.kind.laneCount()))
+        case .wasmSimdReplaceLane(let op):
+            newOp = WasmSimdReplaceLane(kind: op.kind, lane: Int.random(in: 0..<op.kind.laneCount()))
         case .wasmSimdLoad(let op):
             let kind = chooseUniform(from: WasmSimdLoad.Kind.allCases)
             let staticOffset = probability(0.8)

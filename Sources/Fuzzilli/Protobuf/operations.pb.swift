@@ -941,6 +941,56 @@ public enum Fuzzilli_Protobuf_WasmSimdExtractLaneKind: SwiftProtobuf.Enum, Swift
 
 }
 
+public enum Fuzzilli_Protobuf_WasmSimdReplaceLaneKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case replacei8X16 // = 0
+  case replacei16X8 // = 1
+  case replacei32X4 // = 2
+  case replacei64X2 // = 3
+  case replacef32X4 // = 4
+  case replacef64X2 // = 5
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .replacei8X16
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .replacei8X16
+    case 1: self = .replacei16X8
+    case 2: self = .replacei32X4
+    case 3: self = .replacei64X2
+    case 4: self = .replacef32X4
+    case 5: self = .replacef64X2
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .replacei8X16: return 0
+    case .replacei16X8: return 1
+    case .replacei32X4: return 2
+    case .replacei64X2: return 3
+    case .replacef32X4: return 4
+    case .replacef64X2: return 5
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmSimdReplaceLaneKind] = [
+    .replacei8X16,
+    .replacei16X8,
+    .replacei32X4,
+    .replacei64X2,
+    .replacef32X4,
+    .replacef64X2,
+  ]
+
+}
+
 public enum Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case loads128 // = 0
@@ -4813,6 +4863,20 @@ public struct Fuzzilli_Protobuf_WasmSimdExtractLane: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_WasmSimdReplaceLane: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var kind: Fuzzilli_Protobuf_WasmSimdReplaceLaneKind = .replacei8X16
+
+  public var lane: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_WasmSimdLoad: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5245,6 +5309,17 @@ extension Fuzzilli_Protobuf_WasmSimdExtractLaneKind: SwiftProtobuf._ProtoNamePro
     5: .same(proto: "EXTRACTI64x2"),
     6: .same(proto: "EXTRACTF32x4"),
     7: .same(proto: "EXTRACTF64x2"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmSimdReplaceLaneKind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "REPLACEI8x16"),
+    1: .same(proto: "REPLACEI16x8"),
+    2: .same(proto: "REPLACEI32x4"),
+    3: .same(proto: "REPLACEI64x2"),
+    4: .same(proto: "REPLACEF32x4"),
+    5: .same(proto: "REPLACEF64x2"),
   ]
 }
 
@@ -13856,6 +13931,44 @@ extension Fuzzilli_Protobuf_WasmSimdExtractLane: SwiftProtobuf.Message, SwiftPro
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmSimdExtractLane, rhs: Fuzzilli_Protobuf_WasmSimdExtractLane) -> Bool {
+    if lhs.kind != rhs.kind {return false}
+    if lhs.lane != rhs.lane {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmSimdReplaceLane: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmSimdReplaceLane"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "kind"),
+    2: .same(proto: "lane"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.lane) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.kind != .replacei8X16 {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
+    }
+    if self.lane != 0 {
+      try visitor.visitSingularUInt32Field(value: self.lane, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmSimdReplaceLane, rhs: Fuzzilli_Protobuf_WasmSimdReplaceLane) -> Bool {
     if lhs.kind != rhs.kind {return false}
     if lhs.lane != rhs.lane {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
