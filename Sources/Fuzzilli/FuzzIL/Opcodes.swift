@@ -280,6 +280,7 @@ enum Opcode {
     case wasmCallDirect(WasmCallDirect)
     case wasmMemoryLoad(WasmMemoryLoad)
     case wasmMemoryStore(WasmMemoryStore)
+    case wasmMemorySize(WasmMemorySize)
     case beginWasmFunction(BeginWasmFunction)
     case endWasmFunction(EndWasmFunction)
     case wasmBeginBlock(WasmBeginBlock)

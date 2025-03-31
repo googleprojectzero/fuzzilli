@@ -1153,6 +1153,41 @@ class WasmFoundationTests: XCTestCase {
         try multiMemory(isMemory64: true)
     }
 
+    func memorySize(isMemory64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let memoryA = b.createWasmMemory(minPages: 7, maxPages: 7, isShared: false, isMemory64: isMemory64)
+
+        let module = b.buildWasmModule { wasmModule in
+            let memoryB = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: isMemory64)
+            let memoryC = wasmModule.addMemory(minPages: 0, maxPages: 12, isMemory64: isMemory64)
+            [memoryA, memoryB, memoryC].forEach { memory in
+                wasmModule.addWasmFunction(with: [] => [isMemory64 ? .wasmi64 : .wasmi32]) { function, label, args in
+                    return [function.wasmMemorySize(memory: memory)]
+                }
+            }
+        }
+
+        (0..<3).forEach {
+            let res = b.callMethod(module.getExportedMethod(at: $0), on: module.loadExports())
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res)])
+        }
+
+        let jsProg = fuzzer.lifter.lift(b.finalize())
+        testForOutput(program: jsProg, runner: runner, outputString: "7\n5\n0\n")
+    }
+
+    func testMemorySize32() throws {
+        try memorySize(isMemory64: false)
+    }
+
+    func testMemorySize64() throws {
+        try memorySize(isMemory64: true)
+    }
+
     func wasmSimdLoad(isMemory64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

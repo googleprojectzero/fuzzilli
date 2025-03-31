@@ -1142,12 +1142,11 @@ public class WasmLifter {
     }
 
     // Helper function for memory accessing instructions.
-    private func memoryOpImportAnalysis(instr: Instruction, isMemory64: Bool) throws {
+    private func memoryOpImportAnalysis(instr: Instruction) throws {
         let memory = instr.input(0)
         if !typer.type(of: memory).isWasmMemoryType {
             throw WasmLifter.CompileError.missingTypeInformation
         }
-        assert(typer.type(of: memory).wasmMemoryType!.isMemory64 == isMemory64)
         if !self.memories.contains(where: {$0.output == memory}) {
             if !self.imports.map({$0.0}).contains(memory) {
                 self.imports.append((memory, nil))
@@ -1204,12 +1203,14 @@ public class WasmLifter {
                 }
             case .wasmDefineMemory(_):
                 self.memories.append(instr)
-            case .wasmMemoryLoad(let op):
-                try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
-            case .wasmMemoryStore(let op):
-                try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
-            case .wasmSimdLoad(let op):
-                try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
+            case .wasmMemoryLoad(_):
+                try memoryOpImportAnalysis(instr: instr)
+            case .wasmMemoryStore(_):
+                try memoryOpImportAnalysis(instr: instr)
+            case .wasmMemorySize(_):
+                try memoryOpImportAnalysis(instr: instr)
+            case .wasmSimdLoad(_):
+                try memoryOpImportAnalysis(instr: instr)
             case .wasmTableGet(_),
                  .wasmTableSet(_):
                 let table = instr.input(0)
@@ -1558,6 +1559,9 @@ public class WasmLifter {
         case .wasmMemoryStore(let op):
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
             return Data([op.storeType.rawValue]) + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
+        case .wasmMemorySize(_):
+            let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
+            return Data([0x3F]) + Leb128.unsignedEncode(memoryIdx)
         case .wasmJsCall(let op):
             // We filter first, such that we get the index of functions only.
             let wasmSignature = op.functionSignature

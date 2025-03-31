@@ -3254,6 +3254,12 @@ public class ProgramBuilder {
             b.emit(WasmMemoryStore(storeType: storeType, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset, value], types: inputTypes)
         }
 
+        @discardableResult
+        public func wasmMemorySize(memory: Variable) -> Variable {
+            return b.emit(WasmMemorySize(), withInputs: [memory],
+                types: [.object(ofGroup: "WasmMemory")]).output
+        }
+
         public func wasmReassign(variable: Variable, to: Variable) {
             assert(b.type(of: variable) == b.type(of: to))
             b.emit(WasmReassign(variableType: b.type(of: variable)), withInputs: [variable, to])

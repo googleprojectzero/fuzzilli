@@ -341,6 +341,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("WasmMemorySizeGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmMemorySize(memory: memory)
+    },
+
     // Global Generators
 
     CodeGenerator("WasmDefineGlobalGenerator", inContext: .wasm) { b in

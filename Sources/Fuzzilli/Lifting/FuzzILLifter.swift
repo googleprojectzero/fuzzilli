@@ -842,6 +842,9 @@ public class FuzzILLifter: Lifter {
         case .wasmMemoryStore(let op):
             w.emit("WasmMemoryStore '\(op.storeType)' \(input(0))[\(input(1)) + \(op.staticOffset)] <- \(input(2))")
 
+        case .wasmMemorySize(_):
+            w.emit("\(output()) <- WasmMemorySize \(input(0))")
+
         case .wasmStoreGlobal(_):
             w.emit("WasmStoreGlobal \(input(0)) <- \(input(1))")
 

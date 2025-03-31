@@ -1605,6 +1605,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmCallDirect(_),
                  .wasmMemoryLoad(_),
                  .wasmMemoryStore(_),
+                 .wasmMemorySize(_),
                  .beginWasmFunction(_),
                  .endWasmFunction(_),
                  .wasmBeginBlock(_),

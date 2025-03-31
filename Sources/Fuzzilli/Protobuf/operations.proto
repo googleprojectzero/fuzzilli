@@ -1174,6 +1174,9 @@ message WasmMemoryStore {
   bool isMemory64 = 3;
 }
 
+message WasmMemorySize {
+}
+
 message WasmBeginBlock {
   repeated WasmILType parameterTypes = 1;
   repeated WasmILType outputTypes = 2;
