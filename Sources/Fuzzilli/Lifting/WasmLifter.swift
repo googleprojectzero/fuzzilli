@@ -1776,8 +1776,8 @@ public class WasmLifter {
             case .f64x2:
                 return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0x47 + op.compareOpKind.toInt())
             }
-        case .wasmI64x2Splat(_):
-            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0x12)
+        case .wasmSimdSplat(let op):
+            return Data([Prefix.Simd.rawValue, op.kind.rawValue])
         case .wasmI64x2ExtractLane(let op):
             return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0x1D) + Leb128.unsignedEncode(op.lane)
          case .wasmSimdLoad(let op):

@@ -521,7 +521,7 @@ public struct JSTyper: Analyzer {
                  .wasmSimd128IntegerBinOp(_),
                  .wasmSimd128FloatUnOp(_),
                  .wasmSimd128FloatBinOp(_),
-                 .wasmI64x2Splat(_),
+                 .wasmSimdSplat(_),
                  .wasmSimdLoad(_):
                 setType(of: instr.output, to: .wasmSimd128)
             case .wasmSimd128IntegerUnOp(let op):

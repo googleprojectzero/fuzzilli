@@ -302,7 +302,7 @@ message Instruction {
         WasmSimd128IntegerBinOp wasmSimd128IntegerBinOp = 276;
         WasmSimd128FloatUnOp wasmSimd128FloatUnOp = 277;
         WasmSimd128FloatBinOp wasmSimd128FloatBinOp = 278;
-        WasmI64x2Splat wasmI64x2Splat = 279;
+        WasmSimdSplat wasmSimdSplat = 279;
         WasmI64x2ExtractLane wasmI64x2ExtractLane = 280;
         WasmSimdLoad wasmSimdLoad = 281;
         WasmUnreachable wasmUnreachable = 282;

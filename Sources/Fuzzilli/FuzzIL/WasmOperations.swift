@@ -1518,10 +1518,34 @@ final class WasmSimd128FloatBinOp: WasmOperation {
     }
 }
 
-// TODO: Generalize to other shapes.
-final class WasmI64x2Splat: WasmOperation {
-    override var opcode: Opcode { .wasmI64x2Splat(self) }
-    init() {
+final class WasmSimdSplat: WasmOperation {
+    enum Kind: UInt8, CaseIterable {
+        case I8x16 = 0x0F
+        case I16x8 = 0x10
+        case I32x4 = 0x11
+        case I64x2 = 0x12
+        case F32x4 = 0x13
+        case F64x2 = 0x14
+
+        func laneType() -> ILType {
+            switch self {
+                case .I8x16, .I16x8, .I32x4:
+                    return .wasmi32
+                case .I64x2:
+                    return .wasmi64
+                case .F32x4:
+                    return .wasmf32
+                case .F64x2:
+                    return .wasmf64
+            }
+        }
+    }
+
+    override var opcode: Opcode { .wasmSimdSplat(self) }
+    let kind: Kind
+
+    init(_ kind: Kind) {
+        self.kind = kind
         super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.wasmFunction])
     }
 }

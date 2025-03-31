@@ -1419,8 +1419,10 @@ extension Instruction: ProtobufConvertible {
                     $0.shape = UInt32(op.shape.rawValue)
                     $0.compareOperator = UInt32(op.compareOpKind.toInt())
                 }
-            case .wasmI64x2Splat(_):
-                $0.wasmI64X2Splat = Fuzzilli_Protobuf_WasmI64x2Splat()
+            case .wasmSimdSplat(let op):
+                $0.wasmSimdSplat = Fuzzilli_Protobuf_WasmSimdSplat.with {
+                    $0.kind = convertEnum(op.kind, WasmSimdSplat.Kind.allCases)
+                }
             case .wasmI64x2ExtractLane(let op):
                 $0.wasmI64X2ExtractLane = Fuzzilli_Protobuf_WasmI64x2ExtractLane.with {
                     $0.lane = UInt32(op.lane)
@@ -2348,8 +2350,8 @@ extension Instruction: ProtobufConvertible {
                 WasmSimd128CompareOpKind.iKind(value: WasmIntegerCompareOpKind(rawValue: UInt8(p.compareOperator))!)
             }
             op = WasmSimd128Compare(shape: shape, compareOpKind: compareOpKind)
-        case .wasmI64X2Splat(_):
-            op = WasmI64x2Splat()
+        case .wasmSimdSplat(let p):
+            op = WasmSimdSplat(try convertEnum(p.kind, WasmSimdSplat.Kind.allCases))
         case .wasmI64X2ExtractLane(let p):
             op = WasmI64x2ExtractLane(lane: Int(p.lane))
         case .wasmSimdLoad(let p):
