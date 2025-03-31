@@ -536,6 +536,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmSignExtend8Intoi64(_),
              .wasmSignExtend16Intoi64(_),
              .wasmSignExtend32Intoi64(_),
+             .wasmMemorySize(_),
              .beginWasmFunction(_),
              .endWasmFunction(_),
              .wasmBeginBlock(_),

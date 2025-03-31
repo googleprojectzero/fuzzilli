@@ -563,6 +563,9 @@ public struct JSTyper: Analyzer {
                 dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forVariable: instr.input(0))
             case .wasmMemoryLoad(let op):
                 setType(of: instr.output, to: op.loadType.numberType())
+            case .wasmMemorySize(_):
+                let isMemory64 = type(of: instr.input(0)).wasmMemoryType?.isMemory64 ?? false
+                setType(of: instr.output, to: isMemory64 ? .wasmi64 : .wasmi32)
             case .wasmJsCall(let op):
                 let sigOutputTypes = op.functionSignature.outputTypes
                 assert(sigOutputTypes.count < 2, "multi-return js calls are not supported")

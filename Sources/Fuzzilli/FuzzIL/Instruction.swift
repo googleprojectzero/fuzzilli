@@ -1281,6 +1281,8 @@ extension Instruction: ProtobufConvertible {
                     $0.staticOffset = op.staticOffset
                     $0.isMemory64 = op.isMemory64
                 }
+            case .wasmMemorySize(_):
+                $0.wasmMemorySize = Fuzzilli_Protobuf_WasmMemorySize()
             case .beginWasmFunction(let op):
                 $0.beginWasmFunction = Fuzzilli_Protobuf_BeginWasmFunction.with {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
@@ -2255,6 +2257,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .wasmMemoryStore(let p):
             op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
+        case .wasmMemorySize(_):
+            op = WasmMemorySize()
         case .beginWasmFunction(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)

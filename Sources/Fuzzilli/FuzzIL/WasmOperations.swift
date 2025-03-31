@@ -910,6 +910,14 @@ final class WasmMemoryStore: WasmOperation {
     }
 }
 
+final class WasmMemorySize: WasmOperation {
+    override var opcode: Opcode { .wasmMemorySize(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmJsCall: WasmOperation {
     override var opcode: Opcode { .wasmJsCall(self) }
 
