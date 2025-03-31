@@ -1056,6 +1056,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmSimdExtractLane(kind: kind, input, Int.random(in: 0..<kind.laneCount()))
     },
 
+    CodeGenerator("WasmSimdReplaceLaneGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        let kind = chooseUniform(from: WasmSimdReplaceLane.Kind.allCases)
+        let replacement = function.findOrGenerateWasmVar(ofType: kind.laneType())
+        function.wasmSimdReplaceLane(kind: kind, input, replacement, Int.random(in: 0..<kind.laneCount()))
+    },
+
     CodeGenerator("WasmSimdLoadGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
         if (b.hasZeroPages(memory: memory)) { return }
 

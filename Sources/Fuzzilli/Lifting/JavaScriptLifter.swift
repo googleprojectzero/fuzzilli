@@ -1640,6 +1640,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmSimd128Compare(_),
                  .wasmSimdSplat(_),
                  .wasmSimdExtractLane(_),
+                 .wasmSimdReplaceLane(_),
                  .wasmSimdLoad(_),
                  .wasmBeginTypeGroup(_),
                  .wasmEndTypeGroup(_),

@@ -1192,55 +1192,62 @@ class WasmFoundationTests: XCTestCase {
         try wasmSimdLoad(isMemory64: true)
     }
 
-    func wasmSimdSplatAndExtractLane(splat: WasmSimdSplat.Kind, extractLane: WasmSimdExtractLane.Kind) throws {
+    func wasmSimdSplatAndExtractLane(splat: WasmSimdSplat.Kind,
+                                     extractLane: WasmSimdExtractLane.Kind,
+                                     replaceLane: WasmSimdReplaceLane.Kind) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
         XCTAssertEqual(splat.laneType(), extractLane.laneType())
+        XCTAssertEqual(extractLane.laneCount(), replaceLane.laneCount())
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [splat.laneType()] => [splat.laneType()]) { function, label, args in
-                let splat = function.wasmSimdSplat(kind: splat, args[0])
-                var sum = function.wasmSimdExtractLane(kind: extractLane, splat, 0)
+            let sig = [splat.laneType()] => (0..<extractLane.laneCount()).map {_ in extractLane.laneType()}
+            wasmModule.addWasmFunction(with: sig) { function, label, args in
+                var simdVal = function.wasmSimdSplat(kind: splat, args[0])
+                // Replace each lane with the previous lane + 1.
                 for i in 1..<extractLane.laneCount() {
-                    let val = function.wasmSimdExtractLane(kind: extractLane, splat, i)
-                    sum = switch extractLane.laneType() {
+                    let val = function.wasmSimdExtractLane(kind: extractLane, simdVal, i-1)
+                    let sum = switch extractLane.laneType() {
                         case .wasmi32:
-                            function.wasmi32BinOp(sum, val, binOpKind: .Add)
+                            function.wasmi32BinOp(val, function.consti32(1), binOpKind: .Add)
                         case .wasmi64:
-                            function.wasmi64BinOp(sum, val, binOpKind: .Add)
+                            function.wasmi64BinOp(val, function.consti64(1), binOpKind: .Add)
                         case .wasmf32:
-                            function.wasmf32BinOp(sum, val, binOpKind: .Add)
+                            function.wasmf32BinOp(val, function.constf32(1), binOpKind: .Add)
                         case .wasmf64:
-                            function.wasmf64BinOp(sum, val, binOpKind: .Add)
+                            function.wasmf64BinOp(val, function.constf64(1), binOpKind: .Add)
                         default:
                             fatalError("invalid lane type \(extractLane.laneType())")
                     }
+                    simdVal = function.wasmSimdReplaceLane(kind: replaceLane, simdVal, sum, i)
                 }
-                return [sum]
+                // Finally extract all the lanes and return them.
+                return (0..<extractLane.laneCount()).map {function.wasmSimdExtractLane(kind: extractLane, simdVal, $0)}
             }
         }
 
         let arg = extractLane.laneType() == .wasmi64 ? b.loadBigInt(7): b.loadInt(7)
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports(), withArgs: [arg])
-        b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res0)])
+        let res = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports(), withArgs: [arg])
+        b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res)])
 
         let jsProg = fuzzer.lifter.lift(b.finalize())
-        testForOutput(program: jsProg, runner: runner, outputString: "\(extractLane.laneCount() * 7)\n")
+        let expected = (0..<extractLane.laneCount()).map {String(7 + $0)}.joined(separator: ",")
+        testForOutput(program: jsProg, runner: runner, outputString: "\(expected)\n")
     }
 
-    func testWasmSimdSplatAndExtractLane() throws {
-        for (splat, extractLane) in [
-            (WasmSimdSplat.Kind.I8x16, WasmSimdExtractLane.Kind.I8x16S),
-            (WasmSimdSplat.Kind.I8x16, WasmSimdExtractLane.Kind.I8x16U),
-            (WasmSimdSplat.Kind.I16x8, WasmSimdExtractLane.Kind.I16x8S),
-            (WasmSimdSplat.Kind.I16x8, WasmSimdExtractLane.Kind.I16x8U),
-            (WasmSimdSplat.Kind.I32x4, WasmSimdExtractLane.Kind.I32x4),
-            (WasmSimdSplat.Kind.I64x2, WasmSimdExtractLane.Kind.I64x2),
+    func testWasmSimdSplatExtractAndReplaceLane() throws {
+        for (splat, extractLane, replaceLane) in [
+            (WasmSimdSplat.Kind.I8x16, WasmSimdExtractLane.Kind.I8x16S, WasmSimdReplaceLane.Kind.I8x16),
+            (WasmSimdSplat.Kind.I8x16, WasmSimdExtractLane.Kind.I8x16U, WasmSimdReplaceLane.Kind.I8x16),
+            (WasmSimdSplat.Kind.I16x8, WasmSimdExtractLane.Kind.I16x8S, WasmSimdReplaceLane.Kind.I16x8),
+            (WasmSimdSplat.Kind.I16x8, WasmSimdExtractLane.Kind.I16x8U, WasmSimdReplaceLane.Kind.I16x8),
+            (WasmSimdSplat.Kind.I32x4, WasmSimdExtractLane.Kind.I32x4, WasmSimdReplaceLane.Kind.I32x4),
+            (WasmSimdSplat.Kind.I64x2, WasmSimdExtractLane.Kind.I64x2, WasmSimdReplaceLane.Kind.I64x2),
         ] {
-            try wasmSimdSplatAndExtractLane(splat: splat, extractLane: extractLane)
+            try wasmSimdSplatAndExtractLane(splat: splat, extractLane: extractLane, replaceLane: replaceLane)
         }
     }
 

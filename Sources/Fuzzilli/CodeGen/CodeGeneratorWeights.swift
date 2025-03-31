@@ -298,6 +298,7 @@ public let codeGeneratorWeights = [
     "WasmSimd128CompareGenerator":              5,
     "WasmSimdSplatGenerator":                   5,
     "WasmSimdExtractLaneGenerator":             5,
+    "WasmSimdReplaceLaneGenerator":             5,
     "WasmSimdLoadGenerator":                    5,
 
     "WasmSelectGenerator":                      10,

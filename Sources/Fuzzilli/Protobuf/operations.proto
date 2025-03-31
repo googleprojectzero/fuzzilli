@@ -1349,6 +1349,20 @@ message WasmSimdExtractLane {
     uint32 lane = 2;
 }
 
+enum WasmSimdReplaceLaneKind {
+    REPLACEI8x16 = 0;
+    REPLACEI16x8 = 1;
+    REPLACEI32x4 = 2;
+    REPLACEI64x2 = 3;
+    REPLACEF32x4 = 4;
+    REPLACEF64x2 = 5;
+}
+
+message WasmSimdReplaceLane {
+    WasmSimdReplaceLaneKind kind = 1;
+    uint32 lane = 2;
+}
+
 enum WasmSimdLoadKind {
   LOADS128 = 0;
   LOAD8x8S = 1;

@@ -1599,6 +1599,53 @@ final class WasmSimdExtractLane: WasmOperation {
     }
 }
 
+final class WasmSimdReplaceLane: WasmOperation {
+    enum Kind: UInt8, CaseIterable {
+        case I8x16 = 0x17
+        case I16x8 = 0x1A
+        case I32x4 = 0x1C
+        case I64x2 = 0x1E
+        case F32x4 = 0x20
+        case F64x2 = 0x22
+
+        func laneCount() -> Int {
+            switch self {
+                case .I8x16:
+                    return 16
+                case .I16x8:
+                    return 8
+                case .I32x4, .F32x4:
+                    return 4
+                case .I64x2, .F64x2:
+                    return 2
+            }
+        }
+
+        func laneType() -> ILType {
+            switch self {
+                case .I8x16, .I16x8, .I32x4:
+                    return .wasmi32
+                case .I64x2:
+                    return .wasmi64
+                case .F32x4:
+                    return .wasmf32
+                case .F64x2:
+                    return .wasmf64
+            }
+        }
+    }
+
+    override var opcode: Opcode { .wasmSimdReplaceLane(self) }
+    let kind: Kind
+    let lane: Int
+
+    init(kind: Kind, lane: Int) {
+        self.kind = kind
+        self.lane = lane;
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmSimdLoad: WasmOperation {
     enum Kind: UInt8, CaseIterable {
         // TODO(mliedtke): Test all the other variants!

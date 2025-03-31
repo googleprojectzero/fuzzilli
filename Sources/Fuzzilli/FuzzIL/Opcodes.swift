@@ -314,6 +314,7 @@ enum Opcode {
     case wasmSimd128FloatBinOp(WasmSimd128FloatBinOp)
     case wasmSimdSplat(WasmSimdSplat)
     case wasmSimdExtractLane(WasmSimdExtractLane)
+    case wasmSimdReplaceLane(WasmSimdReplaceLane)
     case wasmSimdLoad(WasmSimdLoad)
 
     case wasmUnreachable(WasmUnreachable)

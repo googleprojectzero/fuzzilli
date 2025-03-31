@@ -1170,6 +1170,9 @@ public class FuzzILLifter: Lifter {
         case .wasmSimdExtractLane(let op):
             w.emit("\(output()) <- WasmSimdExtractLane \(op.kind) \(input(0)) \(op.lane)")
 
+        case .wasmSimdReplaceLane(let op):
+            w.emit("\(output()) <- WasmSimdReplaceLane \(op.kind) \(input(0)) \(op.lane)")
+
         case .wasmSimdLoad(let op):
             w.emit("\(output()) <- WasmSimdLoad \(op.kind) \(input(0)) + \(op.staticOffset)")
 
