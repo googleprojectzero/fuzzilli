@@ -90,7 +90,7 @@ public final class Program: CustomStringConvertible {
 
     public var containsWasm: Bool {
         for instr in code {
-            if instr.op is WasmOperationBase {
+            if instr.op is WasmOperation {
                 return true
             }
         }

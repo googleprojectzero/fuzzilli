@@ -461,7 +461,7 @@ public struct JSTyper: Analyzer {
         // This typer is currently "Outside" of the wasm module, we just type
         // the instructions here such that we can set the type of the module at
         // the end. Figure out how we can set the correct type at the end?
-        if (instr.op is WasmOperationBase) {
+        if (instr.op is WasmOperation) {
             switch instr.op.opcode {
             case .consti64(_):
                 setType(of: instr.output, to: .wasmi64)
@@ -830,7 +830,7 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processTypeChangesBeforeScopeChanges(_ instr: Instruction) {
-        if instr.op is WasmOperationBase {
+        if instr.op is WasmOperation {
             return
         }
         switch instr.op.opcode {
@@ -885,7 +885,7 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processScopeChanges(_ instr: Instruction) {
-        if instr.op is WasmOperationBase {
+        if instr.op is WasmOperation {
             return
         }
         switch instr.op.opcode {
@@ -1099,7 +1099,7 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processTypeChangesAfterScopeChanges(_ instr: Instruction) {
-        if instr.op is WasmOperationBase {
+        if instr.op is WasmOperation {
             return
         }
         // Helper function to process parameters
