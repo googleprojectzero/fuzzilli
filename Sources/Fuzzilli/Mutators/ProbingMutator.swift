@@ -57,7 +57,7 @@ public class ProbingMutator: RuntimeAssistedMutator {
         for instr in program.code {
             // TODO: we currently don't want to explore anything in the wasm world.
             // We might want to change this to explore the functions that the Wasm module emits.
-            guard !(instr.op is WasmOperationBase || instr.op is WasmTypeOperation) else { continue }
+            guard !(instr.op is WasmOperation || instr.op is WasmTypeOperation) else { continue }
 
             usedVariables.formUnion(instr.inputs)
         }

@@ -25,10 +25,10 @@ struct WasmConstants {
 }
 
 // Base class for all wasm operations.
-public class WasmOperationBase : Operation {
+public class WasmOperation : Operation {
 }
 
-final class Consti64: WasmOperationBase {
+final class Consti64: WasmOperation {
     override var opcode: Opcode { .consti64(self) }
     let value: Int64
 
@@ -38,7 +38,7 @@ final class Consti64: WasmOperationBase {
     }
 }
 
-final class Consti32: WasmOperationBase {
+final class Consti32: WasmOperation {
     override var opcode: Opcode { .consti32(self) }
     let value: Int32
 
@@ -48,7 +48,7 @@ final class Consti32: WasmOperationBase {
     }
 }
 
-final class Constf32: WasmOperationBase {
+final class Constf32: WasmOperation {
     override var opcode: Opcode { .constf32(self) }
     var value: Float32
 
@@ -58,7 +58,7 @@ final class Constf32: WasmOperationBase {
     }
 }
 
-final class Constf64: WasmOperationBase {
+final class Constf64: WasmOperation {
     override var opcode: Opcode { .constf64(self) }
     var value: Float64
 
@@ -72,7 +72,7 @@ final class Constf64: WasmOperationBase {
 // Control Instructions
 //
 
-final class WasmReturn: WasmOperationBase {
+final class WasmReturn: WasmOperation {
     override var opcode: Opcode { .wasmReturn(self) }
     let returnTypes: [ILType]
 
@@ -120,7 +120,7 @@ extension WasmIntegerCompareOpKind: CustomStringConvertible {
     }
 }
 
-final class Wasmi32CompareOp: WasmOperationBase {
+final class Wasmi32CompareOp: WasmOperation {
     override var opcode: Opcode { .wasmi32CompareOp(self) }
     let compareOpKind: WasmIntegerCompareOpKind
 
@@ -130,7 +130,7 @@ final class Wasmi32CompareOp: WasmOperationBase {
     }
 }
 
-final class Wasmi64CompareOp: WasmOperationBase {
+final class Wasmi64CompareOp: WasmOperation {
     override var opcode: Opcode { .wasmi64CompareOp(self) }
     let compareOpKind: WasmIntegerCompareOpKind
 
@@ -166,7 +166,7 @@ extension WasmFloatCompareOpKind: CustomStringConvertible {
     }
 }
 
-final class Wasmf32CompareOp: WasmOperationBase {
+final class Wasmf32CompareOp: WasmOperation {
     override var opcode: Opcode { .wasmf32CompareOp(self) }
     let compareOpKind: WasmFloatCompareOpKind
 
@@ -176,7 +176,7 @@ final class Wasmf32CompareOp: WasmOperationBase {
     }
 }
 
-final class Wasmf64CompareOp: WasmOperationBase {
+final class Wasmf64CompareOp: WasmOperation {
     override var opcode: Opcode { .wasmf64CompareOp(self) }
     let compareOpKind: WasmFloatCompareOpKind
 
@@ -186,7 +186,7 @@ final class Wasmf64CompareOp: WasmOperationBase {
     }
 }
 
-final class Wasmi32EqualZero: WasmOperationBase {
+final class Wasmi32EqualZero: WasmOperation {
     override var opcode: Opcode { .wasmi32EqualZero(self) }
 
     init() {
@@ -194,7 +194,7 @@ final class Wasmi32EqualZero: WasmOperationBase {
     }
 }
 
-final class Wasmi64EqualZero: WasmOperationBase {
+final class Wasmi64EqualZero: WasmOperation {
     override var opcode: Opcode { .wasmi64EqualZero(self) }
 
     init() {
@@ -234,7 +234,7 @@ public enum WasmIntegerBinaryOpKind: UInt8, CaseIterable {
     case Rotr = 14
 }
 
-final class Wasmi32BinOp: WasmOperationBase {
+final class Wasmi32BinOp: WasmOperation {
     override var opcode: Opcode { .wasmi32BinOp(self) }
     let binOpKind: WasmIntegerBinaryOpKind
 
@@ -244,7 +244,7 @@ final class Wasmi32BinOp: WasmOperationBase {
     }
 }
 
-final class Wasmi64BinOp: WasmOperationBase {
+final class Wasmi64BinOp: WasmOperation {
     override var opcode: Opcode { .wasmi64BinOp(self) }
     let binOpKind: WasmIntegerBinaryOpKind
 
@@ -254,7 +254,7 @@ final class Wasmi64BinOp: WasmOperationBase {
     }
 }
 
-final class Wasmi32UnOp: WasmOperationBase {
+final class Wasmi32UnOp: WasmOperation {
     override var opcode: Opcode { .wasmi32UnOp(self) }
     let unOpKind: WasmIntegerUnaryOpKind
 
@@ -264,7 +264,7 @@ final class Wasmi32UnOp: WasmOperationBase {
     }
 }
 
-final class Wasmi64UnOp: WasmOperationBase {
+final class Wasmi64UnOp: WasmOperation {
     override var opcode: Opcode { .wasmi64UnOp(self) }
     let unOpKind: WasmIntegerUnaryOpKind
 
@@ -302,7 +302,7 @@ public enum WasmFloatBinaryOpKind: UInt8, CaseIterable {
     case Copysign = 6
 }
 
-final class Wasmf32BinOp: WasmOperationBase {
+final class Wasmf32BinOp: WasmOperation {
     override var opcode: Opcode { .wasmf32BinOp(self) }
     let binOpKind: WasmFloatBinaryOpKind
 
@@ -312,7 +312,7 @@ final class Wasmf32BinOp: WasmOperationBase {
     }
 }
 
-final class Wasmf64BinOp: WasmOperationBase {
+final class Wasmf64BinOp: WasmOperation {
     override var opcode: Opcode { .wasmf64BinOp(self) }
     let binOpKind: WasmFloatBinaryOpKind
 
@@ -322,7 +322,7 @@ final class Wasmf64BinOp: WasmOperationBase {
     }
 }
 
-final class Wasmf32UnOp: WasmOperationBase {
+final class Wasmf32UnOp: WasmOperation {
     override var opcode: Opcode { .wasmf32UnOp(self)}
     let unOpKind: WasmFloatUnaryOpKind
 
@@ -332,7 +332,7 @@ final class Wasmf32UnOp: WasmOperationBase {
     }
 }
 
-final class Wasmf64UnOp: WasmOperationBase {
+final class Wasmf64UnOp: WasmOperation {
     override var opcode: Opcode { .wasmf64UnOp(self)}
     let unOpKind: WasmFloatUnaryOpKind
 
@@ -346,7 +346,7 @@ final class Wasmf64UnOp: WasmOperationBase {
 // Numerical Conversion Operations
 //
 
-final class WasmWrapi64Toi32: WasmOperationBase {
+final class WasmWrapi64Toi32: WasmOperation {
     override var opcode: Opcode { .wasmWrapi64Toi32(self) }
 
     init() {
@@ -354,7 +354,7 @@ final class WasmWrapi64Toi32: WasmOperationBase {
     }
 }
 
-final class WasmTruncatef32Toi32: WasmOperationBase {
+final class WasmTruncatef32Toi32: WasmOperation {
     override var opcode: Opcode { .wasmTruncatef32Toi32(self) }
 
     let isSigned: Bool
@@ -365,7 +365,7 @@ final class WasmTruncatef32Toi32: WasmOperationBase {
     }
 }
 
-final class WasmTruncatef64Toi32: WasmOperationBase {
+final class WasmTruncatef64Toi32: WasmOperation {
     override var opcode: Opcode { .wasmTruncatef64Toi32(self) }
 
     let isSigned: Bool
@@ -376,7 +376,7 @@ final class WasmTruncatef64Toi32: WasmOperationBase {
     }
 }
 
-final class WasmExtendi32Toi64: WasmOperationBase {
+final class WasmExtendi32Toi64: WasmOperation {
     override var opcode: Opcode { .wasmExtendi32Toi64(self) }
 
     let isSigned: Bool
@@ -387,7 +387,7 @@ final class WasmExtendi32Toi64: WasmOperationBase {
     }
 }
 
-final class WasmTruncatef32Toi64: WasmOperationBase {
+final class WasmTruncatef32Toi64: WasmOperation {
     override var opcode: Opcode { .wasmTruncatef32Toi64(self) }
 
     let isSigned: Bool
@@ -398,7 +398,7 @@ final class WasmTruncatef32Toi64: WasmOperationBase {
     }
 }
 
-final class WasmTruncatef64Toi64: WasmOperationBase {
+final class WasmTruncatef64Toi64: WasmOperation {
     override var opcode: Opcode { .wasmTruncatef64Toi64(self) }
 
     let isSigned: Bool
@@ -409,7 +409,7 @@ final class WasmTruncatef64Toi64: WasmOperationBase {
     }
 }
 
-final class WasmConverti32Tof32: WasmOperationBase {
+final class WasmConverti32Tof32: WasmOperation {
     override var opcode: Opcode { .wasmConverti32Tof32(self) }
 
     let isSigned: Bool
@@ -420,7 +420,7 @@ final class WasmConverti32Tof32: WasmOperationBase {
     }
 }
 
-final class WasmConverti64Tof32: WasmOperationBase {
+final class WasmConverti64Tof32: WasmOperation {
     override var opcode: Opcode { .wasmConverti64Tof32(self) }
 
     let isSigned: Bool
@@ -431,7 +431,7 @@ final class WasmConverti64Tof32: WasmOperationBase {
     }
 }
 
-final class WasmDemotef64Tof32: WasmOperationBase {
+final class WasmDemotef64Tof32: WasmOperation {
     override var opcode: Opcode { .wasmDemotef64Tof32(self) }
 
     init() {
@@ -439,7 +439,7 @@ final class WasmDemotef64Tof32: WasmOperationBase {
     }
 }
 
-final class WasmConverti32Tof64: WasmOperationBase {
+final class WasmConverti32Tof64: WasmOperation {
     override var opcode: Opcode { .wasmConverti32Tof64(self) }
 
     let isSigned: Bool
@@ -450,7 +450,7 @@ final class WasmConverti32Tof64: WasmOperationBase {
     }
 }
 
-final class WasmConverti64Tof64: WasmOperationBase {
+final class WasmConverti64Tof64: WasmOperation {
     override var opcode: Opcode { .wasmConverti64Tof64(self) }
 
     let isSigned: Bool
@@ -461,7 +461,7 @@ final class WasmConverti64Tof64: WasmOperationBase {
     }
 }
 
-final class WasmPromotef32Tof64: WasmOperationBase {
+final class WasmPromotef32Tof64: WasmOperation {
     override var opcode: Opcode { .wasmPromotef32Tof64(self) }
 
     init() {
@@ -469,7 +469,7 @@ final class WasmPromotef32Tof64: WasmOperationBase {
     }
 }
 
-final class WasmReinterpretf32Asi32: WasmOperationBase {
+final class WasmReinterpretf32Asi32: WasmOperation {
     override var opcode: Opcode { .wasmReinterpretf32Asi32(self) }
 
     init() {
@@ -477,7 +477,7 @@ final class WasmReinterpretf32Asi32: WasmOperationBase {
     }
 }
 
-final class WasmReinterpretf64Asi64: WasmOperationBase {
+final class WasmReinterpretf64Asi64: WasmOperation {
     override var opcode: Opcode { .wasmReinterpretf64Asi64(self) }
 
     init() {
@@ -485,7 +485,7 @@ final class WasmReinterpretf64Asi64: WasmOperationBase {
     }
 }
 
-final class WasmReinterpreti32Asf32: WasmOperationBase {
+final class WasmReinterpreti32Asf32: WasmOperation {
     override var opcode: Opcode { .wasmReinterpreti32Asf32(self) }
 
     init() {
@@ -493,7 +493,7 @@ final class WasmReinterpreti32Asf32: WasmOperationBase {
     }
 }
 
-final class WasmReinterpreti64Asf64: WasmOperationBase {
+final class WasmReinterpreti64Asf64: WasmOperation {
     override var opcode: Opcode { .wasmReinterpreti64Asf64(self) }
 
     init() {
@@ -501,7 +501,7 @@ final class WasmReinterpreti64Asf64: WasmOperationBase {
     }
 }
 
-final class WasmSignExtend8Intoi32: WasmOperationBase {
+final class WasmSignExtend8Intoi32: WasmOperation {
     override var opcode: Opcode { .wasmSignExtend8Intoi32(self) }
 
     init() {
@@ -509,7 +509,7 @@ final class WasmSignExtend8Intoi32: WasmOperationBase {
     }
 }
 
-final class WasmSignExtend16Intoi32: WasmOperationBase {
+final class WasmSignExtend16Intoi32: WasmOperation {
     override var opcode: Opcode { .wasmSignExtend16Intoi32(self) }
 
     init() {
@@ -517,7 +517,7 @@ final class WasmSignExtend16Intoi32: WasmOperationBase {
     }
 }
 
-final class WasmSignExtend8Intoi64: WasmOperationBase {
+final class WasmSignExtend8Intoi64: WasmOperation {
     override var opcode: Opcode { .wasmSignExtend8Intoi64(self) }
 
     init() {
@@ -525,7 +525,7 @@ final class WasmSignExtend8Intoi64: WasmOperationBase {
     }
 }
 
-final class WasmSignExtend16Intoi64: WasmOperationBase {
+final class WasmSignExtend16Intoi64: WasmOperation {
     override var opcode: Opcode { .wasmSignExtend16Intoi64(self) }
 
     init() {
@@ -533,7 +533,7 @@ final class WasmSignExtend16Intoi64: WasmOperationBase {
     }
 }
 
-final class WasmSignExtend32Intoi64: WasmOperationBase {
+final class WasmSignExtend32Intoi64: WasmOperation {
     override var opcode: Opcode { .wasmSignExtend32Intoi64(self) }
 
     init() {
@@ -541,7 +541,7 @@ final class WasmSignExtend32Intoi64: WasmOperationBase {
     }
 }
 
-final class WasmTruncateSatf32Toi32: WasmOperationBase {
+final class WasmTruncateSatf32Toi32: WasmOperation {
     override var opcode: Opcode { .wasmTruncateSatf32Toi32(self) }
 
     let isSigned: Bool
@@ -552,7 +552,7 @@ final class WasmTruncateSatf32Toi32: WasmOperationBase {
     }
 }
 
-final class WasmTruncateSatf64Toi32: WasmOperationBase {
+final class WasmTruncateSatf64Toi32: WasmOperation {
     override var opcode: Opcode { .wasmTruncateSatf64Toi32(self) }
 
     let isSigned: Bool
@@ -563,7 +563,7 @@ final class WasmTruncateSatf64Toi32: WasmOperationBase {
     }
 }
 
-final class WasmTruncateSatf32Toi64: WasmOperationBase {
+final class WasmTruncateSatf32Toi64: WasmOperation {
     override var opcode: Opcode { .wasmTruncateSatf32Toi64(self) }
 
     let isSigned: Bool
@@ -574,7 +574,7 @@ final class WasmTruncateSatf32Toi64: WasmOperationBase {
     }
 }
 
-final class WasmTruncateSatf64Toi64: WasmOperationBase {
+final class WasmTruncateSatf64Toi64: WasmOperation {
     override var opcode: Opcode { .wasmTruncateSatf64Toi64(self) }
 
     let isSigned: Bool
@@ -662,7 +662,7 @@ public enum WasmGlobal {
     // Maybe add static random func?
 }
 
-final class WasmDefineGlobal: WasmOperationBase {
+final class WasmDefineGlobal: WasmOperation {
     override var opcode: Opcode { .wasmDefineGlobal(self) }
 
     let isMutable: Bool
@@ -675,7 +675,7 @@ final class WasmDefineGlobal: WasmOperationBase {
     }
 }
 
-final class WasmDefineTable: WasmOperationBase {
+final class WasmDefineTable: WasmOperation {
     override var opcode: Opcode { .wasmDefineTable(self) }
 
     let elementType: ILType
@@ -703,7 +703,7 @@ final class WasmDefineTable: WasmOperationBase {
 // Currently they are by default zero initialized and fuzzilli should then just store or load from there.
 // Also note: https://webassembly.github.io/spec/core/syntax/modules.html#memories
 // There may only be one memory defined or imported at any given time and any instructions uses this memory implicitly
-final class WasmDefineMemory: WasmOperationBase {
+final class WasmDefineMemory: WasmOperation {
     override var opcode: Opcode { .wasmDefineMemory(self) }
 
     let wasmMemory: ILType
@@ -714,7 +714,7 @@ final class WasmDefineMemory: WasmOperationBase {
     }
 }
 
-final class WasmDefineTag: WasmOperationBase {
+final class WasmDefineTag: WasmOperation {
     override var opcode: Opcode { .wasmDefineTag(self) }
     public let parameterTypes: [ILType]
 
@@ -726,7 +726,7 @@ final class WasmDefineTag: WasmOperationBase {
     }
 }
 
-final class WasmLoadGlobal: WasmOperationBase {
+final class WasmLoadGlobal: WasmOperation {
     override var opcode: Opcode { .wasmLoadGlobal(self) }
 
     let globalType: ILType
@@ -738,7 +738,7 @@ final class WasmLoadGlobal: WasmOperationBase {
     }
 }
 
-final class WasmStoreGlobal: WasmOperationBase {
+final class WasmStoreGlobal: WasmOperation {
     override var opcode: Opcode { .wasmStoreGlobal(self) }
 
     let globalType: ILType
@@ -751,7 +751,7 @@ final class WasmStoreGlobal: WasmOperationBase {
     }
 }
 
-final class WasmTableGet: WasmOperationBase {
+final class WasmTableGet: WasmOperation {
     override var opcode: Opcode { .wasmTableGet(self) }
 
     let tableType: WasmTableType
@@ -764,7 +764,7 @@ final class WasmTableGet: WasmOperationBase {
     }
 }
 
-final class WasmTableSet: WasmOperationBase {
+final class WasmTableSet: WasmOperation {
     override var opcode: Opcode { .wasmTableSet(self) }
 
     let tableType: WasmTableType
@@ -776,7 +776,7 @@ final class WasmTableSet: WasmOperationBase {
     }
 }
 
-final class WasmCallIndirect: WasmOperationBase {
+final class WasmCallIndirect: WasmOperation {
     override var opcode: Opcode { .wasmCallIndirect(self) }
     let signature: WasmSignature
 
@@ -786,7 +786,7 @@ final class WasmCallIndirect: WasmOperationBase {
     }
 }
 
-final class WasmCallDirect: WasmOperationBase {
+final class WasmCallDirect: WasmOperation {
     override var opcode: Opcode { .wasmCallDirect(self) }
     let signature: WasmSignature
 
@@ -849,7 +849,7 @@ public enum WasmMemoryLoadType: UInt8, CaseIterable {
     }
 }
 
-final class WasmMemoryLoad: WasmOperationBase {
+final class WasmMemoryLoad: WasmOperation {
     override var opcode: Opcode { .wasmMemoryLoad(self) }
 
     let loadType: WasmMemoryLoadType
@@ -895,7 +895,7 @@ public enum WasmMemoryStoreType: UInt8, CaseIterable {
     }
 }
 
-final class WasmMemoryStore: WasmOperationBase {
+final class WasmMemoryStore: WasmOperation {
     override var opcode: Opcode { .wasmMemoryStore(self) }
 
     let storeType: WasmMemoryStoreType
@@ -910,7 +910,7 @@ final class WasmMemoryStore: WasmOperationBase {
     }
 }
 
-final class WasmJsCall: WasmOperationBase {
+final class WasmJsCall: WasmOperation {
     override var opcode: Opcode { .wasmJsCall(self) }
 
     let functionSignature: WasmSignature
@@ -921,7 +921,7 @@ final class WasmJsCall: WasmOperationBase {
     }
 }
 
-final class WasmSelect: WasmOperationBase {
+final class WasmSelect: WasmOperation {
     override var opcode: Opcode { .wasmSelect(self) }
 
     init() {
@@ -932,7 +932,7 @@ final class WasmSelect: WasmOperationBase {
     }
 }
 
-final class WasmBeginBlock: WasmOperationBase {
+final class WasmBeginBlock: WasmOperation {
     override var opcode: Opcode { .wasmBeginBlock(self) }
 
     let signature: WasmSignature
@@ -943,7 +943,7 @@ final class WasmBeginBlock: WasmOperationBase {
     }
 }
 
-final class WasmEndBlock: WasmOperationBase {
+final class WasmEndBlock: WasmOperation {
     override var opcode: Opcode { .wasmEndBlock(self) }
 
     let outputTypes: [ILType]
@@ -954,7 +954,7 @@ final class WasmEndBlock: WasmOperationBase {
     }
 }
 
-final class WasmBeginIf: WasmOperationBase {
+final class WasmBeginIf: WasmOperation {
     override var opcode: Opcode { .wasmBeginIf(self) }
     let signature: WasmSignature
     let inverted: Bool
@@ -972,7 +972,7 @@ final class WasmBeginIf: WasmOperationBase {
     }
 }
 
-final class WasmBeginElse: WasmOperationBase {
+final class WasmBeginElse: WasmOperation {
     override var opcode: Opcode { .wasmBeginElse(self) }
     let signature: WasmSignature
 
@@ -985,7 +985,7 @@ final class WasmBeginElse: WasmOperationBase {
     }
 }
 
-final class WasmEndIf: WasmOperationBase {
+final class WasmEndIf: WasmOperation {
     override var opcode: Opcode { .wasmEndIf(self) }
     let outputTypes: [ILType]
 
@@ -995,7 +995,7 @@ final class WasmEndIf: WasmOperationBase {
     }
 }
 
-final class WasmBeginLoop: WasmOperationBase {
+final class WasmBeginLoop: WasmOperation {
     override var opcode: Opcode { .wasmBeginLoop(self) }
     let signature: WasmSignature
 
@@ -1005,7 +1005,7 @@ final class WasmBeginLoop: WasmOperationBase {
     }
 }
 
-final class WasmEndLoop: WasmOperationBase {
+final class WasmEndLoop: WasmOperation {
     override var opcode: Opcode { .wasmEndLoop(self) }
     let outputTypes: [ILType]
 
@@ -1017,7 +1017,7 @@ final class WasmEndLoop: WasmOperationBase {
 
 // A try_table is a mix between a `br_table` (just with target blocks associated with different tags)
 // and the legacy `try` block.
-final class WasmBeginTryTable: WasmOperationBase {
+final class WasmBeginTryTable: WasmOperation {
     enum CatchKind : UInt8 {
         case NoRef = 0x0
         case Ref = 0x1
@@ -1038,7 +1038,7 @@ final class WasmBeginTryTable: WasmOperationBase {
     }
 }
 
-final class WasmEndTryTable: WasmOperationBase {
+final class WasmEndTryTable: WasmOperation {
     override var opcode: Opcode { .wasmEndTryTable(self) }
     let outputTypes: [ILType]
 
@@ -1048,7 +1048,7 @@ final class WasmEndTryTable: WasmOperationBase {
     }
 }
 
-final class WasmBeginTry: WasmOperationBase {
+final class WasmBeginTry: WasmOperation {
     override var opcode: Opcode { .wasmBeginTry(self) }
     let signature: WasmSignature
 
@@ -1058,7 +1058,7 @@ final class WasmBeginTry: WasmOperationBase {
     }
 }
 
-final class WasmBeginCatchAll : WasmOperationBase {
+final class WasmBeginCatchAll : WasmOperation {
     override var opcode: Opcode { .wasmBeginCatchAll(self) }
     let inputTypes: [ILType]
 
@@ -1079,7 +1079,7 @@ final class WasmBeginCatchAll : WasmOperationBase {
     }
 }
 
-final class WasmBeginCatch : WasmOperationBase {
+final class WasmBeginCatch : WasmOperation {
     override var opcode: Opcode { .wasmBeginCatch(self) }
     let signature: WasmSignature
 
@@ -1104,7 +1104,7 @@ final class WasmBeginCatch : WasmOperationBase {
     }
 }
 
-final class WasmEndTry: WasmOperationBase {
+final class WasmEndTry: WasmOperation {
     override var opcode: Opcode { .wasmEndTry(self) }
     let outputTypes: [ILType]
 
@@ -1115,7 +1115,7 @@ final class WasmEndTry: WasmOperationBase {
 }
 
 /// A special try block that does not have any catch / catch_all handlers but ends with a delegate to handle the exception.
-final class WasmBeginTryDelegate: WasmOperationBase {
+final class WasmBeginTryDelegate: WasmOperation {
     override var opcode: Opcode { .wasmBeginTryDelegate(self) }
     let signature: WasmSignature
 
@@ -1127,7 +1127,7 @@ final class WasmBeginTryDelegate: WasmOperationBase {
 
 /// Delegates any exception thrown inside WasmBeginTryDelegate and this end to another block defined by the label.
 /// This can be a "proper" try block (in which case its catch blocks apply) or any other block like a loop or an if.
-final class WasmEndTryDelegate: WasmOperationBase {
+final class WasmEndTryDelegate: WasmOperation {
     override var opcode: Opcode { .wasmEndTryDelegate(self) }
     let outputTypes: [ILType]
 
@@ -1138,7 +1138,7 @@ final class WasmEndTryDelegate: WasmOperationBase {
     }
 }
 
-final class WasmThrow: WasmOperationBase {
+final class WasmThrow: WasmOperation {
     override var opcode: Opcode { .wasmThrow(self) }
     public let parameterTypes: [ILType]
 
@@ -1149,7 +1149,7 @@ final class WasmThrow: WasmOperationBase {
     }
 }
 
-final class WasmThrowRef: WasmOperationBase {
+final class WasmThrowRef: WasmOperation {
     override var opcode: Opcode { .wasmThrowRef(self) }
 
     init() {
@@ -1159,7 +1159,7 @@ final class WasmThrowRef: WasmOperationBase {
 
 // The rethrow instruction of the legacy exception-handling proposal. This operation is replaced
 // with the throw_ref instruction in the updated proposal.
-final class WasmRethrow: WasmOperationBase {
+final class WasmRethrow: WasmOperation {
     override var opcode: Opcode { .wasmRethrow(self) }
 
     init() {
@@ -1167,7 +1167,7 @@ final class WasmRethrow: WasmOperationBase {
     }
 }
 
-final class WasmBranch: WasmOperationBase {
+final class WasmBranch: WasmOperation {
     override var opcode: Opcode { .wasmBranch(self) }
     let labelTypes: [ILType]
 
@@ -1178,7 +1178,7 @@ final class WasmBranch: WasmOperationBase {
     }
 }
 
-final class WasmBranchIf: WasmOperationBase {
+final class WasmBranchIf: WasmOperation {
     override var opcode: Opcode { .wasmBranchIf(self) }
     let labelTypes: [ILType]
 
@@ -1189,7 +1189,7 @@ final class WasmBranchIf: WasmOperationBase {
     }
 }
 
-final class WasmBranchTable: WasmOperationBase {
+final class WasmBranchTable: WasmOperation {
     override var opcode: Opcode { .wasmBranchTable(self) }
     let labelTypes: [ILType]
     // The number of cases in the br_table. Note that the number of labels is one higher as each
@@ -1205,7 +1205,7 @@ final class WasmBranchTable: WasmOperationBase {
 
 // TODO: make this comprehensive, currently only works for locals, or assumes every thing it reassigns to is a local.
 // This should be doable in the lifter, where we can see what we reassign to.
-final class WasmReassign: WasmOperationBase {
+final class WasmReassign: WasmOperation {
     override var opcode: Opcode { .wasmReassign(self) }
 
     let variableType: ILType
@@ -1222,7 +1222,7 @@ final class WasmReassign: WasmOperationBase {
 // They should all require at least .wasm.
 //
 
-final class BeginWasmFunction: WasmOperationBase {
+final class BeginWasmFunction: WasmOperation {
     override var opcode: Opcode { .beginWasmFunction(self) }
     public let signature: WasmSignature
 
@@ -1232,7 +1232,7 @@ final class BeginWasmFunction: WasmOperationBase {
     }
 }
 
-final class EndWasmFunction: WasmOperationBase {
+final class EndWasmFunction: WasmOperation {
     override var opcode: Opcode { .endWasmFunction(self) }
     let signature: WasmSignature
 
@@ -1243,7 +1243,7 @@ final class EndWasmFunction: WasmOperationBase {
 }
 
 /// This class is used to indicate nops in the wasm world, this makes handling of minimization much easier.
-final class WasmNop: WasmOperationBase {
+final class WasmNop: WasmOperation {
     let outputType: ILType
     let innerOutputTypes: [ILType]
 
@@ -1255,14 +1255,14 @@ final class WasmNop: WasmOperationBase {
     }
 }
 
-final class WasmUnreachable: WasmOperationBase {
+final class WasmUnreachable: WasmOperation {
     override var opcode: Opcode { .wasmUnreachable(self) }
     init() {
         super.init(attributes: [], requiredContext: [.wasmFunction])
     }
 }
 
-final class ConstSimd128: WasmOperationBase {
+final class ConstSimd128: WasmOperation {
     override var opcode: Opcode { .constSimd128(self) }
     let value: [UInt8]
 
@@ -1320,7 +1320,7 @@ public enum WasmSimd128Shape: UInt8, CaseIterable {
     }
 }
 
-final class WasmSimd128Compare: WasmOperationBase {
+final class WasmSimd128Compare: WasmOperation {
     override var opcode: Opcode { .wasmSimd128Compare(self) }
     let shape: WasmSimd128Shape
     let compareOpKind: WasmSimd128CompareOpKind
@@ -1372,7 +1372,7 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
     }
 }
 
-final class WasmSimd128IntegerUnOp: WasmOperationBase {
+final class WasmSimd128IntegerUnOp: WasmOperation {
     override var opcode: Opcode { .wasmSimd128IntegerUnOp(self) }
     let shape: WasmSimd128Shape
     let unOpKind: WasmSimd128IntegerUnOpKind
@@ -1447,7 +1447,7 @@ public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
     }
 }
 
-final class WasmSimd128IntegerBinOp: WasmOperationBase {
+final class WasmSimd128IntegerBinOp: WasmOperation {
     override var opcode: Opcode { .wasmSimd128IntegerBinOp(self) }
     let shape: WasmSimd128Shape
     let binOpKind: WasmSimd128IntegerBinOpKind
@@ -1474,7 +1474,7 @@ public enum WasmSimd128FloatUnOpKind: Int, CaseIterable {
     }
 }
 
-final class WasmSimd128FloatUnOp: WasmOperationBase {
+final class WasmSimd128FloatUnOp: WasmOperation {
     override var opcode: Opcode { .wasmSimd128FloatUnOp(self) }
     let shape: WasmSimd128Shape
     let unOpKind: WasmSimd128FloatUnOpKind
@@ -1505,7 +1505,7 @@ public enum WasmSimd128FloatBinOpKind: Int, CaseIterable {
     }
 }
 
-final class WasmSimd128FloatBinOp: WasmOperationBase {
+final class WasmSimd128FloatBinOp: WasmOperation {
     override var opcode: Opcode { .wasmSimd128FloatBinOp(self) }
     let shape: WasmSimd128Shape
     let binOpKind: WasmSimd128FloatBinOpKind
@@ -1519,7 +1519,7 @@ final class WasmSimd128FloatBinOp: WasmOperationBase {
 }
 
 // TODO: Generalize to other shapes.
-final class WasmI64x2Splat: WasmOperationBase {
+final class WasmI64x2Splat: WasmOperation {
     override var opcode: Opcode { .wasmI64x2Splat(self) }
     init() {
         super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.wasmFunction])
@@ -1527,7 +1527,7 @@ final class WasmI64x2Splat: WasmOperationBase {
 }
 
 // TODO: Generalize to other shapes.
-final class WasmI64x2ExtractLane: WasmOperationBase {
+final class WasmI64x2ExtractLane: WasmOperation {
   override var opcode: Opcode { .wasmI64x2ExtractLane(self) }
   let lane: Int
 
@@ -1537,7 +1537,7 @@ final class WasmI64x2ExtractLane: WasmOperationBase {
   }
 }
 
-final class WasmSimdLoad: WasmOperationBase {
+final class WasmSimdLoad: WasmOperation {
     enum Kind: UInt8, CaseIterable {
         // TODO(mliedtke): Test all the other variants!
         case LoadS128    = 0x00
@@ -1567,7 +1567,7 @@ final class WasmSimdLoad: WasmOperationBase {
     }
 }
 
-class WasmArrayNewFixed: WasmOperationBase {
+class WasmArrayNewFixed: WasmOperation {
     override var opcode: Opcode { .wasmArrayNewFixed(self) }
 
     let size: Int
@@ -1582,7 +1582,7 @@ class WasmArrayNewFixed: WasmOperationBase {
     }
 }
 
-class WasmArrayNewDefault: WasmOperationBase {
+class WasmArrayNewDefault: WasmOperation {
     override var opcode: Opcode { .wasmArrayNewDefault(self) }
 
     init() {
@@ -1590,7 +1590,7 @@ class WasmArrayNewDefault: WasmOperationBase {
     }
 }
 
-class WasmArrayLen: WasmOperationBase {
+class WasmArrayLen: WasmOperation {
     override var opcode: Opcode { .wasmArrayLen(self) }
 
     init() {
@@ -1601,7 +1601,7 @@ class WasmArrayLen: WasmOperationBase {
     }
 }
 
-class WasmArrayGet: WasmOperationBase {
+class WasmArrayGet: WasmOperation {
     override var opcode: Opcode { .wasmArrayGet(self) }
 
     init() {
@@ -1609,7 +1609,7 @@ class WasmArrayGet: WasmOperationBase {
     }
 }
 
-class WasmArraySet: WasmOperationBase {
+class WasmArraySet: WasmOperation {
     override var opcode: Opcode { .wasmArraySet(self) }
 
     init() {
@@ -1617,7 +1617,7 @@ class WasmArraySet: WasmOperationBase {
     }
 }
 
-class WasmStructNewDefault: WasmOperationBase {
+class WasmStructNewDefault: WasmOperation {
     override var opcode: Opcode { .wasmStructNewDefault(self) }
 
     init() {
@@ -1625,7 +1625,7 @@ class WasmStructNewDefault: WasmOperationBase {
     }
 }
 
-class WasmStructGet: WasmOperationBase {
+class WasmStructGet: WasmOperation {
     override var opcode: Opcode { .wasmStructGet(self) }
     let fieldIndex: Int
 
@@ -1635,7 +1635,7 @@ class WasmStructGet: WasmOperationBase {
     }
 }
 
-class WasmStructSet: WasmOperationBase {
+class WasmStructSet: WasmOperation {
     override var opcode: Opcode { .wasmStructSet(self) }
     let fieldIndex: Int
 
@@ -1645,7 +1645,7 @@ class WasmStructSet: WasmOperationBase {
     }
 }
 
-class WasmRefNull: WasmOperationBase {
+class WasmRefNull: WasmOperation {
     override var opcode: Opcode { .wasmRefNull(self) }
 
     let type: ILType?  // Only present if this operation has no input.
@@ -1657,7 +1657,7 @@ class WasmRefNull: WasmOperationBase {
     }
 }
 
-class WasmRefIsNull: WasmOperationBase {
+class WasmRefIsNull: WasmOperation {
     override var opcode: Opcode { .wasmRefIsNull(self) }
 
     init() {

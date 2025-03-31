@@ -69,7 +69,7 @@ struct DataFlowSimplifier: Reducer {
                 // incorrect way.
                 return false
             }
-            if operation is WasmOperationBase {
+            if operation is WasmOperation {
                 guard operation.numOutputs == 1 else { return false }
                 let outputType = typer.type(of: helper.code[$0].output)
                 let filteredOutputs = helper.code[$0].inputs.map(typer.type).filter {$0.Is(outputType)}
@@ -91,7 +91,7 @@ struct DataFlowSimplifier: Reducer {
                     var replacement: Variable? = nil
 
                     // if the candidate is a Wasm operation we need to preserve types.
-                    if instr.op is WasmOperationBase {
+                    if instr.op is WasmOperation {
                         let outputType = typer.type(of: instr.output)
                         let filteredOutputs = instr.inputs.map(typer.type).enumerated().filter {$0.element.Is(outputType)}
                         if !filteredOutputs.isEmpty {

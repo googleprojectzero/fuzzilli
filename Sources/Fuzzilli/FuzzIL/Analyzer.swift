@@ -128,7 +128,7 @@ struct VariableAnalyzer: Analyzer {
             let variablesInClosedScope = scopes.pop()
             visibleVariables.removeLast(variablesInClosedScope)
 
-            if instr.op is WasmOperationBase {
+            if instr.op is WasmOperation {
                 assert(wasmBranchDepth > 0)
                 wasmBranchDepth -= 1
             }
@@ -141,7 +141,7 @@ struct VariableAnalyzer: Analyzer {
         // This code has to be somewhat careful since e.g. BeginElse both ends and begins a variable scope.
         if instr.isBlockStart {
             scopes.push(0)
-            if instr.op is WasmOperationBase {
+            if instr.op is WasmOperation {
                 wasmBranchDepth += 1
             }
         }
