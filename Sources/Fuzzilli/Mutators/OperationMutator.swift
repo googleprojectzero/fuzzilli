@@ -563,7 +563,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmThrow(_),
              .wasmThrowRef(_),
              .wasmRethrow(_),
-             .wasmI64x2Splat(_),
+             .wasmSimdSplat(_),
              .wasmBeginTypeGroup(_),
              .wasmEndTypeGroup(_),
              .wasmDefineArrayType(_),

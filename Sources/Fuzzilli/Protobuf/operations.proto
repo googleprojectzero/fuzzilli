@@ -1320,7 +1320,17 @@ message WasmSimd128FloatBinOp {
     int32 binaryOperator = 2;
 }
 
-message WasmI64x2Splat {
+enum WasmSimdSplatKind {
+    I8x16 = 0;
+    I16x8 = 1;
+    I32x4 = 2;
+    I64x2 = 3;
+    F32x4 = 4;
+    F64x2 = 5;
+}
+
+message WasmSimdSplat {
+    WasmSimdSplatKind kind = 1;
 }
 
 message WasmI64x2ExtractLane {

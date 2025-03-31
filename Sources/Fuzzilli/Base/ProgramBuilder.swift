@@ -3549,8 +3549,8 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmI64x2Splat(_ input: Variable) -> Variable {
-            return b.emit(WasmI64x2Splat(), withInputs: [input], types: [.wasmi64]).output
+        func wasmSimdSplat(kind: WasmSimdSplat.Kind, _ input: Variable) -> Variable {
+            return b.emit(WasmSimdSplat(kind), withInputs: [input], types: [kind.laneType()]).output
         }
 
         @discardableResult

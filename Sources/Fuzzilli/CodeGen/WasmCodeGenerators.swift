@@ -1044,9 +1044,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmSimd128Compare(lhs, rhs, shape, compareOpKind)
     },
 
-    CodeGenerator("WasmI64x2SplatGenerator", inContext: .wasmFunction, inputs: .required(.wasmi64)) {b, input in
+    CodeGenerator("WasmSimdSplatGenerator", inContext: .wasmFunction) {b in
         let function = b.currentWasmModule.currentWasmFunction;
-        function.wasmI64x2Splat(input)
+        let kind = chooseUniform(from: WasmSimdSplat.Kind.allCases)
+        function.wasmSimdSplat(kind: kind, function.findOrGenerateWasmVar(ofType: kind.laneType()))
     },
 
     CodeGenerator("WasmI64x2ExtractLaneGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
