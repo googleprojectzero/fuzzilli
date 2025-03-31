@@ -883,6 +883,64 @@ public enum Fuzzilli_Protobuf_WasmSimdSplatKind: SwiftProtobuf.Enum, Swift.CaseI
 
 }
 
+public enum Fuzzilli_Protobuf_WasmSimdExtractLaneKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case extracti8X16S // = 0
+  case extracti8X16U // = 1
+  case extracti16X8S // = 2
+  case extracti16X8U // = 3
+  case extracti32X4 // = 4
+  case extracti64X2 // = 5
+  case extractf32X4 // = 6
+  case extractf64X2 // = 7
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .extracti8X16S
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .extracti8X16S
+    case 1: self = .extracti8X16U
+    case 2: self = .extracti16X8S
+    case 3: self = .extracti16X8U
+    case 4: self = .extracti32X4
+    case 5: self = .extracti64X2
+    case 6: self = .extractf32X4
+    case 7: self = .extractf64X2
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .extracti8X16S: return 0
+    case .extracti8X16U: return 1
+    case .extracti16X8S: return 2
+    case .extracti16X8U: return 3
+    case .extracti32X4: return 4
+    case .extracti64X2: return 5
+    case .extractf32X4: return 6
+    case .extractf64X2: return 7
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmSimdExtractLaneKind] = [
+    .extracti8X16S,
+    .extracti8X16U,
+    .extracti16X8S,
+    .extracti16X8U,
+    .extracti32X4,
+    .extracti64X2,
+    .extractf32X4,
+    .extractf64X2,
+  ]
+
+}
+
 public enum Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case loads128 // = 0
@@ -4741,10 +4799,12 @@ public struct Fuzzilli_Protobuf_WasmSimdSplat: Sendable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_WasmI64x2ExtractLane: Sendable {
+public struct Fuzzilli_Protobuf_WasmSimdExtractLane: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var kind: Fuzzilli_Protobuf_WasmSimdExtractLaneKind = .extracti8X16S
 
   public var lane: UInt32 = 0
 
@@ -5172,6 +5232,19 @@ extension Fuzzilli_Protobuf_WasmSimdSplatKind: SwiftProtobuf._ProtoNameProviding
     3: .same(proto: "I64x2"),
     4: .same(proto: "F32x4"),
     5: .same(proto: "F64x2"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmSimdExtractLaneKind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "EXTRACTI8x16S"),
+    1: .same(proto: "EXTRACTI8x16U"),
+    2: .same(proto: "EXTRACTI16x8S"),
+    3: .same(proto: "EXTRACTI16x8U"),
+    4: .same(proto: "EXTRACTI32x4"),
+    5: .same(proto: "EXTRACTI64x2"),
+    6: .same(proto: "EXTRACTF32x4"),
+    7: .same(proto: "EXTRACTF64x2"),
   ]
 }
 
@@ -13752,10 +13825,11 @@ extension Fuzzilli_Protobuf_WasmSimdSplat: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
-extension Fuzzilli_Protobuf_WasmI64x2ExtractLane: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".WasmI64x2ExtractLane"
+extension Fuzzilli_Protobuf_WasmSimdExtractLane: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmSimdExtractLane"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "lane"),
+    1: .same(proto: "kind"),
+    2: .same(proto: "lane"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -13764,20 +13838,25 @@ extension Fuzzilli_Protobuf_WasmI64x2ExtractLane: SwiftProtobuf.Message, SwiftPr
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.lane) }()
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.lane) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.kind != .extracti8X16S {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
+    }
     if self.lane != 0 {
-      try visitor.visitSingularUInt32Field(value: self.lane, fieldNumber: 1)
+      try visitor.visitSingularUInt32Field(value: self.lane, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_WasmI64x2ExtractLane, rhs: Fuzzilli_Protobuf_WasmI64x2ExtractLane) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmSimdExtractLane, rhs: Fuzzilli_Protobuf_WasmSimdExtractLane) -> Bool {
+    if lhs.kind != rhs.kind {return false}
     if lhs.lane != rhs.lane {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

@@ -1423,8 +1423,9 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmSimdSplat = Fuzzilli_Protobuf_WasmSimdSplat.with {
                     $0.kind = convertEnum(op.kind, WasmSimdSplat.Kind.allCases)
                 }
-            case .wasmI64x2ExtractLane(let op):
-                $0.wasmI64X2ExtractLane = Fuzzilli_Protobuf_WasmI64x2ExtractLane.with {
+            case .wasmSimdExtractLane(let op):
+                $0.wasmSimdExtractLane = Fuzzilli_Protobuf_WasmSimdExtractLane.with {
+                    $0.kind = convertEnum(op.kind, WasmSimdExtractLane.Kind.allCases)
                     $0.lane = UInt32(op.lane)
                 }
             case .wasmSimdLoad(let op):
@@ -2352,8 +2353,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmSimd128Compare(shape: shape, compareOpKind: compareOpKind)
         case .wasmSimdSplat(let p):
             op = WasmSimdSplat(try convertEnum(p.kind, WasmSimdSplat.Kind.allCases))
-        case .wasmI64X2ExtractLane(let p):
-            op = WasmI64x2ExtractLane(lane: Int(p.lane))
+        case .wasmSimdExtractLane(let p):
+            op = WasmSimdExtractLane(kind: try convertEnum(p.kind, WasmSimdExtractLane.Kind.allCases), lane: Int(p.lane))
         case .wasmSimdLoad(let p):
             op = WasmSimdLoad(kind: convertProtoWasmSimdLoadKind(p.kind), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .wasmBeginTypeGroup(_):

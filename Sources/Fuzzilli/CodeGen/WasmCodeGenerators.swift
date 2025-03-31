@@ -1050,9 +1050,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmSimdSplat(kind: kind, function.findOrGenerateWasmVar(ofType: kind.laneType()))
     },
 
-    CodeGenerator("WasmI64x2ExtractLaneGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
+    CodeGenerator("WasmSimdExtractLaneGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
         let function = b.currentWasmModule.currentWasmFunction
-        function.wasmI64x2ExtractLane(input, Int.random(in: 0...1))
+        let kind = chooseUniform(from: WasmSimdExtractLane.Kind.allCases)
+        function.wasmSimdExtractLane(kind: kind, input, Int.random(in: 0..<kind.laneCount()))
     },
 
     CodeGenerator("WasmSimdLoadGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in

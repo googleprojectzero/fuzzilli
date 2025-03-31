@@ -534,8 +534,8 @@ public struct JSTyper: Analyzer {
                     break
                 }
                 setType(of: instr.output, to: outputType)
-            case .wasmI64x2ExtractLane(_):
-                setType(of: instr.output, to: .wasmi64)
+            case .wasmSimdExtractLane(let op):
+                setType(of: instr.output, to: op.kind.laneType())
             case .wasmDefineGlobal(let op):
                 let type = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable))
                 dynamicObjectGroupManager.addWasmGlobal(withType: type, forVariable: instr.output)

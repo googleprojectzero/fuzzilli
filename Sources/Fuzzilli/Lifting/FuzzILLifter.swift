@@ -1167,8 +1167,8 @@ public class FuzzILLifter: Lifter {
         case .wasmSimdSplat(let op):
             w.emit("\(output()) <- WasmSimdSplat \(op.kind) \(input(0))")
 
-        case .wasmI64x2ExtractLane(let op):
-            w.emit("\(output()) <- WasmI64x2ExtractLane \(input(0)) \(op.lane)")
+        case .wasmSimdExtractLane(let op):
+            w.emit("\(output()) <- WasmSimdExtractLane \(op.kind) \(input(0)) \(op.lane)")
 
         case .wasmSimdLoad(let op):
             w.emit("\(output()) <- WasmSimdLoad \(op.kind) \(input(0)) + \(op.staticOffset)")
