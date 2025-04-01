@@ -346,6 +346,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmMemorySize(memory: memory)
     },
 
+    CodeGenerator("WasmMemoryGrowGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
+        let function = b.currentWasmModule.currentWasmFunction
+        let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
+        // Note that each wasm page has a size of 64KB. If we end up with a huge number (e.g. due to
+        // input mutation), the memory.grow operation fails silently on allocation and returns -1.
+        let growBy = isMemory64 ? function.consti64(Int64.random(in: 0...10))
+                                : function.consti32(Int32.random(in: 0...10))
+        function.wasmMemoryGrow(memory: memory, growByPages: growBy)
+    },
+
     // Global Generators
 
     CodeGenerator("WasmDefineGlobalGenerator", inContext: .wasm) { b in

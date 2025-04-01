@@ -3260,6 +3260,13 @@ public class ProgramBuilder {
                 types: [.object(ofGroup: "WasmMemory")]).output
         }
 
+        @discardableResult
+        public func wasmMemoryGrow(memory: Variable, growByPages: Variable) -> Variable {
+            let is64 = b.type(of: memory).wasmMemoryType!.isMemory64
+            return b.emit(WasmMemoryGrow(), withInputs: [memory, growByPages],
+                types: [.object(ofGroup: "WasmMemory"), is64 ? .wasmi64 : .wasmi32]).output
+        }
+
         public func wasmReassign(variable: Variable, to: Variable) {
             assert(b.type(of: variable) == b.type(of: to))
             b.emit(WasmReassign(variableType: b.type(of: variable)), withInputs: [variable, to])
