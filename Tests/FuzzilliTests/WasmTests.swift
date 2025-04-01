@@ -1163,10 +1163,16 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             let memoryB = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: isMemory64)
-            let memoryC = wasmModule.addMemory(minPages: 0, maxPages: 12, isMemory64: isMemory64)
+            let memoryC = wasmModule.addMemory(minPages: 0, maxPages: 1, isMemory64: isMemory64)
             [memoryA, memoryB, memoryC].forEach { memory in
-                wasmModule.addWasmFunction(with: [] => [isMemory64 ? .wasmi64 : .wasmi32]) { function, label, args in
-                    return [function.wasmMemorySize(memory: memory)]
+                let addrType: ILType = isMemory64 ? .wasmi64 : .wasmi32
+                wasmModule.addWasmFunction(with: [] => [addrType, addrType, addrType]) { function, label, args in
+                    let growBy = isMemory64 ? function.consti64(1) : function.consti32(1)
+                    return [
+                        function.wasmMemorySize(memory: memory),
+                        function.wasmMemoryGrow(memory: memory, growByPages: growBy),
+                        function.wasmMemorySize(memory: memory),
+                    ]
                 }
             }
         }
@@ -1177,7 +1183,7 @@ class WasmFoundationTests: XCTestCase {
         }
 
         let jsProg = fuzzer.lifter.lift(b.finalize())
-        testForOutput(program: jsProg, runner: runner, outputString: "7\n5\n0\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "7,-1,7\n5,5,6\n0,0,1\n")
     }
 
     func testMemorySize32() throws {

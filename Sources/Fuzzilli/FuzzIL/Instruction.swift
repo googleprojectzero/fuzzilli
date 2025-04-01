@@ -1283,6 +1283,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmMemorySize(_):
                 $0.wasmMemorySize = Fuzzilli_Protobuf_WasmMemorySize()
+            case .wasmMemoryGrow(_):
+                $0.wasmMemoryGrow = Fuzzilli_Protobuf_WasmMemoryGrow()
             case .beginWasmFunction(let op):
                 $0.beginWasmFunction = Fuzzilli_Protobuf_BeginWasmFunction.with {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
@@ -2259,6 +2261,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
         case .wasmMemorySize(_):
             op = WasmMemorySize()
+        case .wasmMemoryGrow(_):
+            op = WasmMemoryGrow()
         case .beginWasmFunction(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)

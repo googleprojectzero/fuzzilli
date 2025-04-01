@@ -918,6 +918,17 @@ final class WasmMemorySize: WasmOperation {
     }
 }
 
+// Grows a memory by the provided amount of pages (each page being 64KB). Returns the old size of
+// the memory before growing. Returns -1 if growing would exceed the maximum size of that memory or
+// if resource allocation fails.
+final class WasmMemoryGrow: WasmOperation {
+    override var opcode: Opcode { .wasmMemoryGrow(self) }
+
+    init() {
+        super.init(numInputs: 2, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmJsCall: WasmOperation {
     override var opcode: Opcode { .wasmJsCall(self) }
 

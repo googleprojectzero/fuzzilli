@@ -563,7 +563,8 @@ public struct JSTyper: Analyzer {
                 dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forVariable: instr.input(0))
             case .wasmMemoryLoad(let op):
                 setType(of: instr.output, to: op.loadType.numberType())
-            case .wasmMemorySize(_):
+            case .wasmMemorySize(_),
+                 .wasmMemoryGrow(_):
                 let isMemory64 = type(of: instr.input(0)).wasmMemoryType?.isMemory64 ?? false
                 setType(of: instr.output, to: isMemory64 ? .wasmi64 : .wasmi32)
             case .wasmJsCall(let op):

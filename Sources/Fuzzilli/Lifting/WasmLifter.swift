@@ -1209,6 +1209,8 @@ public class WasmLifter {
                 try memoryOpImportAnalysis(instr: instr)
             case .wasmMemorySize(_):
                 try memoryOpImportAnalysis(instr: instr)
+            case .wasmMemoryGrow(_):
+                try memoryOpImportAnalysis(instr: instr)
             case .wasmSimdLoad(_):
                 try memoryOpImportAnalysis(instr: instr)
             case .wasmTableGet(_),
@@ -1562,6 +1564,9 @@ public class WasmLifter {
         case .wasmMemorySize(_):
             let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
             return Data([0x3F]) + Leb128.unsignedEncode(memoryIdx)
+        case .wasmMemoryGrow(_):
+            let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
+            return Data([0x40]) + Leb128.unsignedEncode(memoryIdx)
         case .wasmJsCall(let op):
             // We filter first, such that we get the index of functions only.
             let wasmSignature = op.functionSignature
