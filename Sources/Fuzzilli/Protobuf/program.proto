@@ -307,25 +307,27 @@ message Instruction {
         WasmSimdSplat wasmSimdSplat = 281;
         WasmSimdExtractLane wasmSimdExtractLane = 282;
         WasmSimdReplaceLane wasmSimdReplaceLane = 283;
-        WasmSimdLoad wasmSimdLoad = 284;
-        WasmUnreachable wasmUnreachable = 285;
-        WasmSelect wasmSelect = 286;
-        WasmBeginTypeGroup wasmBeginTypeGroup = 287;
-        WasmEndTypeGroup wasmEndTypeGroup = 288;
-        WasmDefineArrayType wasmDefineArrayType = 289;
-        WasmDefineStructType wasmDefineStructType = 290;
-        WasmDefineForwardOrSelfReference wasmDefineForwardOrSelfReference = 291;
-        WasmResolveForwardReference wasmResolveForwardReference = 292;
-        WasmArrayNewFixed wasmArrayNewFixed = 293;
-        WasmArrayNewDefault wasmArrayNewDefault = 294;
-        WasmArrayLen wasmArrayLen = 295;
-        WasmArrayGet wasmArrayGet = 296;
-        WasmArraySet wasmArraySet = 297;
-        WasmStructNewDefault wasmStructNewDefault = 298;
-        WasmStructGet wasmStructGet = 299;
-        WasmStructSet wasmStructSet = 300;
-        WasmRefNull wasmRefNull = 301;
-        WasmRefIsNull wasmRefIsNull = 302;
+        WasmSimdStoreLane wasmSimdStoreLane = 284;
+        WasmSimdLoadLane wasmSimdLoadLane = 285;
+        WasmSimdLoad wasmSimdLoad = 286;
+        WasmUnreachable wasmUnreachable = 287;
+        WasmSelect wasmSelect = 288;
+        WasmBeginTypeGroup wasmBeginTypeGroup = 289;
+        WasmEndTypeGroup wasmEndTypeGroup = 290;
+        WasmDefineArrayType wasmDefineArrayType = 291;
+        WasmDefineStructType wasmDefineStructType = 292;
+        WasmDefineForwardOrSelfReference wasmDefineForwardOrSelfReference = 293;
+        WasmResolveForwardReference wasmResolveForwardReference = 294;
+        WasmArrayNewFixed wasmArrayNewFixed = 295;
+        WasmArrayNewDefault wasmArrayNewDefault = 296;
+        WasmArrayLen wasmArrayLen = 297;
+        WasmArrayGet wasmArrayGet = 298;
+        WasmArraySet wasmArraySet = 299;
+        WasmStructNewDefault wasmStructNewDefault = 300;
+        WasmStructGet wasmStructGet = 301;
+        WasmStructSet wasmStructSet = 302;
+        WasmRefNull wasmRefNull = 303;
+        WasmRefIsNull wasmRefIsNull = 304;
     }
 }
 

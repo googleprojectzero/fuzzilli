@@ -523,6 +523,7 @@ public struct JSTyper: Analyzer {
                  .wasmSimd128FloatBinOp(_),
                  .wasmSimdSplat(_),
                  .wasmSimdLoad(_),
+                 .wasmSimdLoadLane(_),
                  .wasmSimdReplaceLane(_):
                 setType(of: instr.output, to: .wasmSimd128)
             case .wasmSimd128IntegerUnOp(let op):

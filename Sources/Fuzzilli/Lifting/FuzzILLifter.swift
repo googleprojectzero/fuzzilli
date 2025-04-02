@@ -1174,13 +1174,19 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- WasmSimdSplat \(op.kind) \(input(0))")
 
         case .wasmSimdExtractLane(let op):
-            w.emit("\(output()) <- WasmSimdExtractLane \(op.kind) \(input(0)) \(op.lane)")
+            w.emit("\(output()) <- WasmSimdExtractLane \(op.kind) \(input(0)) lane \(op.lane)")
 
         case .wasmSimdReplaceLane(let op):
-            w.emit("\(output()) <- WasmSimdReplaceLane \(op.kind) \(input(0)) \(op.lane)")
+            w.emit("\(output()) <- WasmSimdReplaceLane \(op.kind) \(input(0)) lane \(op.lane)")
+
+        case .wasmSimdStoreLane(let op):
+            w.emit("WasmSimdStoreLane \(op.kind) \(input(0)), \(input(1)) + \(op.staticOffset), \(input(2)) lane \(op.lane)")
+
+        case .wasmSimdLoadLane(let op):
+            w.emit("\(output()) <- WasmSimdLoadLane \(op.kind) \(input(0)), \(input(1)) + \(op.staticOffset), \(input(2)) lane \(op.lane)")
 
         case .wasmSimdLoad(let op):
-            w.emit("\(output()) <- WasmSimdLoad \(op.kind) \(input(0)) + \(op.staticOffset)")
+            w.emit("\(output()) <- WasmSimdLoad \(op.kind) \(input(0)), \(input(1)) + \(op.staticOffset)")
 
         case .wasmArrayNewFixed(_):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")

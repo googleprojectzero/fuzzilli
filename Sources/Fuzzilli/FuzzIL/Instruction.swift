@@ -1415,6 +1415,18 @@ extension Instruction: ProtobufConvertible {
                     $0.kind = convertEnum(op.kind, WasmSimdLoad.Kind.allCases)
                     $0.staticOffset = op.staticOffset
                 }
+            case .wasmSimdLoadLane(let op):
+                $0.wasmSimdLoadLane = Fuzzilli_Protobuf_WasmSimdLoadLane.with {
+                    $0.kind = convertEnum(op.kind, WasmSimdLoadLane.Kind.allCases)
+                    $0.staticOffset = op.staticOffset
+                    $0.lane = UInt32(op.lane)
+                }
+            case .wasmSimdStoreLane(let op):
+                $0.wasmSimdStoreLane = Fuzzilli_Protobuf_WasmSimdStoreLane.with {
+                    $0.kind = convertEnum(op.kind, WasmSimdStoreLane.Kind.allCases)
+                    $0.staticOffset = op.staticOffset
+                    $0.lane = UInt32(op.lane)
+                }
             case .wasmBeginTypeGroup(_):
                 $0.wasmBeginTypeGroup = Fuzzilli_Protobuf_WasmBeginTypeGroup()
             case .wasmEndTypeGroup(_):
@@ -2317,6 +2329,10 @@ extension Instruction: ProtobufConvertible {
             op = WasmSimdReplaceLane(kind: try convertEnum(p.kind, WasmSimdReplaceLane.Kind.allCases), lane: Int(p.lane))
         case .wasmSimdLoad(let p):
             op = WasmSimdLoad(kind: try convertEnum(p.kind, WasmSimdLoad.Kind.allCases), staticOffset: p.staticOffset)
+        case .wasmSimdLoadLane(let p):
+            op = WasmSimdLoadLane(kind: try convertEnum(p.kind, WasmSimdLoadLane.Kind.allCases), staticOffset: p.staticOffset, lane: Int(p.lane))
+        case .wasmSimdStoreLane(let p):
+            op = WasmSimdStoreLane(kind: try convertEnum(p.kind, WasmSimdStoreLane.Kind.allCases), staticOffset: p.staticOffset, lane: Int(p.lane))
         case .wasmBeginTypeGroup(_):
             op = WasmBeginTypeGroup()
         case .wasmEndTypeGroup(_):
