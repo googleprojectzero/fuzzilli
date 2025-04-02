@@ -873,6 +873,7 @@ public enum WasmMemoryStoreType: UInt8, CaseIterable {
     case I64StoreMem8 = 0x3c
     case I64StoreMem16 = 0x3d
     case I64StoreMem32 = 0x3e
+    case S128StoreMem = 0x0B // Requires SIMD prefix!
 
     func numberType() -> ILType {
         switch self {
@@ -889,6 +890,8 @@ public enum WasmMemoryStoreType: UInt8, CaseIterable {
                 return .wasmf32
             case .F64StoreMem:
                 return .wasmf64
+            case .S128StoreMem:
+                return .wasmSimd128
         }
     }
 }
@@ -1663,7 +1666,6 @@ final class WasmSimdReplaceLane: WasmOperation {
 
 final class WasmSimdLoad: WasmOperation {
     enum Kind: UInt8, CaseIterable {
-        // TODO(mliedtke): Test all the other variants!
         case LoadS128    = 0x00
         case Load8x8S    = 0x01
         case Load8x8U    = 0x02
@@ -1675,6 +1677,8 @@ final class WasmSimdLoad: WasmOperation {
         case Load16Splat = 0x08
         case Load32Splat = 0x09
         case Load64Splat = 0x0A
+        case Load32Zero  = 0x5C
+        case Load64Zero  = 0x5D
     }
 
     override var opcode: Opcode { .wasmSimdLoad(self) }

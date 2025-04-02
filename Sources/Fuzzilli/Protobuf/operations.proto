@@ -1165,6 +1165,7 @@ enum WasmMemoryStoreType {
   I64_STOREMEM_8 = 6;
   I64_STOREMEM_16 = 7;
   I64_STOREMEM_32 = 8;
+  S128_STOREMEM = 9;
 }
 
 message WasmMemoryStore {
@@ -1379,6 +1380,8 @@ enum WasmSimdLoadKind {
   LOAD16SPLAT = 8;
   LOAD32SPLAT = 9;
   LOAD64SPLAT = 10;
+  LOAD32ZERO = 11;
+  LOAD64ZERO = 12;
 }
 
 message WasmSimdLoad {

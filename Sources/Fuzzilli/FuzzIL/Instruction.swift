@@ -457,33 +457,8 @@ extension Instruction: ProtobufConvertible {
                     return .i64Storemem16
                 case .I64StoreMem32:
                     return .i64Storemem32
-            }
-        }
-
-        func convertWasmSimdLoadKind(_ loadKind: WasmSimdLoad.Kind) -> Fuzzilli_Protobuf_WasmSimdLoadKind {
-            switch loadKind {
-                case .LoadS128:
-                    return .loads128
-                case .Load8x8S:
-                    return .load8X8S
-                case .Load8x8U:
-                    return .load8X8U
-                case .Load16x4S:
-                    return .load16X4S
-                case .Load16x4U:
-                    return .load16X4U
-                case .Load32x2S:
-                    return .load32X2S
-                case .Load32x2U:
-                    return .load32X2U
-                case .Load8Splat:
-                    return .load8Splat
-                case .Load16Splat:
-                    return .load16Splat
-                case .Load32Splat:
-                    return .load32Splat
-                case .Load64Splat:
-                    return .load64Splat
+                case .S128StoreMem:
+                    return .s128Storemem
             }
         }
 
@@ -1437,7 +1412,7 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmSimdLoad(let op):
                 $0.wasmSimdLoad = Fuzzilli_Protobuf_WasmSimdLoad.with {
-                    $0.kind = convertWasmSimdLoadKind(op.kind)
+                    $0.kind = convertEnum(op.kind, WasmSimdLoad.Kind.allCases)
                     $0.staticOffset = op.staticOffset
                 }
             case .wasmBeginTypeGroup(_):
@@ -1614,37 +1589,10 @@ extension Instruction: ProtobufConvertible {
                     return .I64StoreMem16
                 case .i64Storemem32:
                     return .I64StoreMem32
+                case .s128Storemem:
+                    return .S128StoreMem
                 default:
                     fatalError("Wrong WasmMemoryStoreType")
-            }
-        }
-
-        func convertProtoWasmSimdLoadKind(_ loadKind: Fuzzilli_Protobuf_WasmSimdLoadKind) -> WasmSimdLoad.Kind {
-            switch loadKind {
-                case .loads128:
-                    return .LoadS128
-                case .load8X8S:
-                    return .Load8x8S
-                case .load8X8U:
-                    return .Load8x8U
-                case .load16X4S:
-                    return .Load16x4S
-                case .load16X4U:
-                    return .Load16x4U
-                case .load32X2S:
-                    return .Load32x2S
-                case .load32X2U:
-                    return .Load32x2U
-                case .load8Splat:
-                    return .Load8Splat
-                case .load16Splat:
-                    return .Load16Splat
-                case .load32Splat:
-                    return .Load32Splat
-                case .load64Splat:
-                    return .Load64Splat
-                case .UNRECOGNIZED(let i):
-                    fatalError("Invalid WasmSimdLoadKind \(i)")
             }
         }
 
@@ -2368,7 +2316,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmSimdReplaceLane(let p):
             op = WasmSimdReplaceLane(kind: try convertEnum(p.kind, WasmSimdReplaceLane.Kind.allCases), lane: Int(p.lane))
         case .wasmSimdLoad(let p):
-            op = WasmSimdLoad(kind: convertProtoWasmSimdLoadKind(p.kind), staticOffset: p.staticOffset)
+            op = WasmSimdLoad(kind: try convertEnum(p.kind, WasmSimdLoad.Kind.allCases), staticOffset: p.staticOffset)
         case .wasmBeginTypeGroup(_):
             op = WasmBeginTypeGroup()
         case .wasmEndTypeGroup(_):

@@ -1079,6 +1079,7 @@ class WasmFoundationTests: XCTestCase {
                         case .wasmi64: function.consti64(8)
                         case .wasmf32: function.constf32(8.4)
                         case .wasmf64: function.constf64(8.4)
+                        case .wasmSimd128: function.constSimd128(value: Array(0..<16))
                         default: fatalError("Non-existent value to be stored")
                     }
                     function.wasmMemoryStore(memory: memory, dynamicOffset: storeOffset, value: value, storeType: storeType, staticOffset: 2)
@@ -1200,29 +1201,207 @@ class WasmFoundationTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
+        let testCases: [((ProgramBuilder.WasmModule, Variable) -> Void, String)] = [
+            // Test v128.load.
+            ({wasmModule, memory in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                    value: function.consti64(3), storeType: .I64StoreMem, staticOffset: 0)
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(8),
+                    value: function.consti64(6), storeType: .I64StoreMem, staticOffset: 0)
+
+                    let val = function.wasmSimdLoad(kind: .LoadS128, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 0)
+                    let sum = function.wasmi64BinOp(
+                        function.wasmSimdExtractLane(kind: .I64x2, val, 0),
+                        function.wasmSimdExtractLane(kind: .I64x2, val, 1), binOpKind: .Add)
+                    return [sum]
+                }
+            }, "9"),
+            // Test v128.store.
+            ({wasmModule, memory in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    let storeValue = function.wasmSimdSplat(kind: .I64x2, function.consti64(21))
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: storeValue, storeType: .S128StoreMem, staticOffset: 0)
+                    let loadValue1 = function.wasmMemoryLoad(memory: memory,
+                        dynamicOffset: const(0), loadType: .I64LoadMem, staticOffset: 0)
+                    let loadValue2 = function.wasmMemoryLoad(memory: memory,
+                        dynamicOffset: const(8), loadType: .I64LoadMem, staticOffset: 0)
+                    return [function.wasmi64BinOp(loadValue1, loadValue2, binOpKind: .Add)]
+                }
+            }, "42"),
+            // Test v128.load8x8_s.
+            ({wasmModule, memory in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    let storeValue = function.wasmSimdSplat(kind: .I8x16, function.consti32(-1))
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: storeValue, storeType: .S128StoreMem, staticOffset: 16)
+                    let loaded = function.wasmSimdLoad(kind: .Load8x8S, memory: memory,
+                        dynamicOffset: const(16), staticOffset: 0)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: .I16x8S, loaded, $0)}
+                }
+            }, "-1,-1,-1,-1,-1,-1,-1,-1"),
+            // Test v128.load8x8_u.
+            ({wasmModule, memory in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    let storeValue = function.wasmSimdSplat(kind: .I8x16, function.consti32(255))
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: storeValue, storeType: .S128StoreMem, staticOffset: 16)
+                    let loaded = function.wasmSimdLoad(kind: .Load8x8U, memory: memory,
+                        dynamicOffset: const(16), staticOffset: 0)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: .I16x8U, loaded, $0)}
+                }
+            }, "255,255,255,255,255,255,255,255"),
+            // Test v128.load16x4_s.
+            ({wasmModule, memory in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    let storeValue = function.wasmSimdSplat(kind: .I16x8, function.consti32(-2))
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: storeValue, storeType: .S128StoreMem, staticOffset: 16)
+                    let loaded = function.wasmSimdLoad(kind: .Load16x4S, memory: memory,
+                        dynamicOffset: const(16), staticOffset: 0)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: .I32x4, loaded, $0)}
+                }
+            }, "-2,-2,-2,-2"),
+            // Test v128.load16x4_u.
+            ({wasmModule, memory in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    let storeValue = function.wasmSimdSplat(kind: .I16x8, function.consti32(65432))
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: storeValue, storeType: .S128StoreMem, staticOffset: 16)
+                    let loaded = function.wasmSimdLoad(kind: .Load16x4U, memory: memory,
+                        dynamicOffset: const(16), staticOffset: 0)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: .I32x4, loaded, $0)}
+                }
+            }, "65432,65432,65432,65432"),
+            // Test v128.load32x2_s.
+            ({wasmModule, memory in
+                let returnType = (0..<2).map {_ in ILType.wasmi64}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    let storeValue = function.wasmSimdSplat(kind: .I32x4, function.consti32(-3))
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: storeValue, storeType: .S128StoreMem, staticOffset: 16)
+                    let loaded = function.wasmSimdLoad(kind: .Load32x2S, memory: memory,
+                        dynamicOffset: const(16), staticOffset: 0)
+                    return (0..<2).map {function.wasmSimdExtractLane(kind: .I64x2, loaded, $0)}
+                }
+            }, "-3,-3"),
+            // Test v128.load32x2_u.
+            ({wasmModule, memory in
+                let returnType = (0..<2).map {_ in ILType.wasmi64}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    let storeValue = function.wasmSimdSplat(
+                        kind: .I32x4, function.consti32(-171510507))
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: storeValue, storeType: .S128StoreMem, staticOffset: 16)
+                    let loaded = function.wasmSimdLoad(kind: .Load32x2U, memory: memory,
+                        dynamicOffset: const(16), staticOffset: 0)
+                    return (0..<2).map {function.wasmSimdExtractLane(kind: .I64x2, loaded, $0)}
+                }
+            }, "4123456789,4123456789"),
+            // Test v128.load8_splat.
+            ({wasmModule, memory in
+                let returnType = (0..<16).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: function.consti32(7), storeType: .I32StoreMem8, staticOffset: 32)
+                    let loaded = function.wasmSimdLoad(kind: .Load8Splat, memory: memory,
+                        dynamicOffset: const(32), staticOffset: 0)
+                    return (0..<16).map {function.wasmSimdExtractLane(kind: .I8x16S, loaded, $0)}
+                }
+            }, "7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7"),
+            // Test v128.load16_splat.
+            ({wasmModule, memory in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: function.consti32(8), storeType: .I32StoreMem16, staticOffset: 32)
+                    let loaded = function.wasmSimdLoad(kind: .Load16Splat, memory: memory,
+                        dynamicOffset: const(32), staticOffset: 0)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: .I16x8S, loaded, $0)}
+                }
+            }, "8,8,8,8,8,8,8,8"),
+            // Test v128.load32_splat.
+            ({wasmModule, memory in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: function.consti32(9), storeType: .I32StoreMem, staticOffset: 32)
+                    let loaded = function.wasmSimdLoad(kind: .Load32Splat, memory: memory,
+                        dynamicOffset: const(32), staticOffset: 0)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: .I32x4, loaded, $0)}
+                }
+            }, "9,9,9,9"),
+            // Test v128.load64_splat.
+            ({wasmModule, memory in
+                let returnType = (0..<2).map {_ in ILType.wasmi64}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: function.consti64(10), storeType: .I64StoreMem, staticOffset: 32)
+                    let loaded = function.wasmSimdLoad(kind: .Load64Splat, memory: memory,
+                        dynamicOffset: const(32), staticOffset: 0)
+                    return (0..<2).map {function.wasmSimdExtractLane(kind: .I64x2, loaded, $0)}
+                }
+            }, "10,10"),
+            // Test v128.load32_zero.
+            ({wasmModule, memory in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: function.consti32(11), storeType: .I32StoreMem, staticOffset: 32)
+                    let loaded = function.wasmSimdLoad(kind: .Load32Zero, memory: memory,
+                        dynamicOffset: const(32), staticOffset: 0)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: .I32x4, loaded, $0)}
+                }
+            }, "11,0,0,0"),
+            // Test v128.load64_zero.
+            ({wasmModule, memory in
+                let returnType = (0..<2).map {_ in ILType.wasmi64}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: function.consti64(12), storeType: .I64StoreMem, staticOffset: 32)
+                    let loaded = function.wasmSimdLoad(kind: .Load64Zero, memory: memory,
+                        dynamicOffset: const(32), staticOffset: 0)
+                    return (0..<2).map {function.wasmSimdExtractLane(kind: .I64x2, loaded, $0)}
+                }
+            }, "12,0"),
+        ]
+
         let module = b.buildWasmModule { wasmModule in
             let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: isMemory64)
-
-            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
-                let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
-                function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
-                value: function.consti64(3), storeType: .I64StoreMem, staticOffset: 0)
-                function.wasmMemoryStore(memory: memory, dynamicOffset: const(8),
-                value: function.consti64(6), storeType: .I64StoreMem, staticOffset: 0)
-
-                let val = function.wasmSimdLoad(kind: .LoadS128, memory: memory,
-                    dynamicOffset: const(0), staticOffset: 0)
-                let sum = function.wasmi64BinOp(function.wasmSimdExtractLane(kind: .I64x2, val, 0),
-                    function.wasmSimdExtractLane(kind: .I64x2, val, 1), binOpKind: .Add)
-                function.wasmReturn(sum)
+            for (createWasmFunction, _) in testCases {
+                createWasmFunction(wasmModule, memory)
             }
         }
 
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
-        b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res0)])
+        for (i, _) in testCases.enumerated() {
+            let res = b.callMethod(module.getExportedMethod(at: i), on: module.loadExports())
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"),
+                withArgs: [b.callMethod("toString", on: res)])
+        }
 
         let jsProg = fuzzer.lifter.lift(b.finalize())
-        testForOutput(program: jsProg, runner: runner, outputString: "9\n")
+        let expected = testCases.map {$0.1}.joined(separator: "\n") + "\n"
+        testForOutput(program: jsProg, runner: runner, outputString: expected)
     }
 
     func testWasmSimdLoadOnMemory32() throws {

@@ -740,6 +740,7 @@ public enum Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf.Enum, Swift.Cas
   case i64Storemem8 // = 6
   case i64Storemem16 // = 7
   case i64Storemem32 // = 8
+  case s128Storemem // = 9
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -757,6 +758,7 @@ public enum Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf.Enum, Swift.Cas
     case 6: self = .i64Storemem8
     case 7: self = .i64Storemem16
     case 8: self = .i64Storemem32
+    case 9: self = .s128Storemem
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -772,6 +774,7 @@ public enum Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf.Enum, Swift.Cas
     case .i64Storemem8: return 6
     case .i64Storemem16: return 7
     case .i64Storemem32: return 8
+    case .s128Storemem: return 9
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -787,6 +790,7 @@ public enum Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf.Enum, Swift.Cas
     .i64Storemem8,
     .i64Storemem16,
     .i64Storemem32,
+    .s128Storemem,
   ]
 
 }
@@ -5292,6 +5296,7 @@ extension Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf._ProtoNameProvidi
     6: .same(proto: "I64_STOREMEM_8"),
     7: .same(proto: "I64_STOREMEM_16"),
     8: .same(proto: "I64_STOREMEM_32"),
+    9: .same(proto: "S128_STOREMEM"),
   ]
 }
 
