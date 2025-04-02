@@ -1153,7 +1153,6 @@ enum WasmMemoryLoadType {
 message WasmMemoryLoad {
   WasmMemoryLoadType loadType = 1;
   int64 staticOffset = 2;
-  bool isMemory64 = 3;
 }
 
 enum WasmMemoryStoreType {
@@ -1171,7 +1170,6 @@ enum WasmMemoryStoreType {
 message WasmMemoryStore {
   WasmMemoryStoreType storeType = 1;
   int64 staticOffset = 2;
-  bool isMemory64 = 3;
 }
 
 message WasmMemorySize {
@@ -1386,7 +1384,6 @@ enum WasmSimdLoadKind {
 message WasmSimdLoad {
   WasmSimdLoadKind kind = 1;
   int64 staticOffset = 2;
-  bool isMemory64 = 3;
 }
 
 

@@ -1273,13 +1273,11 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with {
                     $0.loadType = convertWasmMemoryLoadType(op.loadType);
                     $0.staticOffset = op.staticOffset
-                    $0.isMemory64 = op.isMemory64
                 }
             case .wasmMemoryStore(let op):
                 $0.wasmMemoryStore = Fuzzilli_Protobuf_WasmMemoryStore.with {
                     $0.storeType = convertWasmMemoryStoreType(op.storeType);
                     $0.staticOffset = op.staticOffset
-                    $0.isMemory64 = op.isMemory64
                 }
             case .wasmMemorySize(_):
                 $0.wasmMemorySize = Fuzzilli_Protobuf_WasmMemorySize()
@@ -1441,7 +1439,6 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmSimdLoad = Fuzzilli_Protobuf_WasmSimdLoad.with {
                     $0.kind = convertWasmSimdLoadKind(op.kind)
                     $0.staticOffset = op.staticOffset
-                    $0.isMemory64 = op.isMemory64
                 }
             case .wasmBeginTypeGroup(_):
                 $0.wasmBeginTypeGroup = Fuzzilli_Protobuf_WasmBeginTypeGroup()
@@ -2256,9 +2253,9 @@ extension Instruction: ProtobufConvertible {
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             op = WasmCallDirect(signature: parameters => outputs)
         case .wasmMemoryLoad(let p):
-            op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
+            op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset)
         case .wasmMemoryStore(let p):
-            op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
+            op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset)
         case .wasmMemorySize(_):
             op = WasmMemorySize()
         case .wasmMemoryGrow(_):
@@ -2371,7 +2368,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmSimdReplaceLane(let p):
             op = WasmSimdReplaceLane(kind: try convertEnum(p.kind, WasmSimdReplaceLane.Kind.allCases), lane: Int(p.lane))
         case .wasmSimdLoad(let p):
-            op = WasmSimdLoad(kind: convertProtoWasmSimdLoadKind(p.kind), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
+            op = WasmSimdLoad(kind: convertProtoWasmSimdLoadKind(p.kind), staticOffset: p.staticOffset)
         case .wasmBeginTypeGroup(_):
             op = WasmBeginTypeGroup()
         case .wasmEndTypeGroup(_):

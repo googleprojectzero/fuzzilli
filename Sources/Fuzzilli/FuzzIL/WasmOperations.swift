@@ -854,12 +854,10 @@ final class WasmMemoryLoad: WasmOperation {
 
     let loadType: WasmMemoryLoadType
     let staticOffset: Int64
-    let isMemory64: Bool
 
-    init(loadType: WasmMemoryLoadType, staticOffset: Int64, isMemory64: Bool) {
+    init(loadType: WasmMemoryLoadType, staticOffset: Int64) {
         self.loadType = loadType
         self.staticOffset = staticOffset
-        self.isMemory64 = isMemory64
         super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
@@ -900,12 +898,10 @@ final class WasmMemoryStore: WasmOperation {
 
     let storeType: WasmMemoryStoreType
     let staticOffset: Int64
-    let isMemory64: Bool
 
-    init(storeType: WasmMemoryStoreType, staticOffset: Int64, isMemory64: Bool) {
+    init(storeType: WasmMemoryStoreType, staticOffset: Int64) {
         self.storeType = storeType
         self.staticOffset = staticOffset
-        self.isMemory64 = isMemory64
         super.init(numInputs: 3, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
@@ -1685,12 +1681,10 @@ final class WasmSimdLoad: WasmOperation {
 
     let kind: Kind
     let staticOffset: Int64
-    let isMemory64: Bool
 
-    init(kind: Kind, staticOffset: Int64, isMemory64: Bool) {
+    init(kind: Kind, staticOffset: Int64) {
         self.kind = kind
         self.staticOffset = staticOffset
-        self.isMemory64 = isMemory64
         super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
