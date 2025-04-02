@@ -1195,7 +1195,7 @@ class WasmFoundationTests: XCTestCase {
         try memorySize(isMemory64: true)
     }
 
-    func wasmSimdLoad(isMemory64: Bool) throws {
+    func wasmSimdLoadStore(isMemory64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1384,6 +1384,78 @@ class WasmFoundationTests: XCTestCase {
                     return (0..<2).map {function.wasmSimdExtractLane(kind: .I64x2, loaded, $0)}
                 }
             }, "12,0"),
+            // Test v128.load8_lane and v128.store8_lane.
+            ({wasmModule, memory in
+                let returnType = (0..<16).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: function.consti32(13), storeType: .I32StoreMem8, staticOffset: 64)
+                    let splat = function.wasmSimdSplat(kind: .I8x16, function.consti32(42))
+                    let loaded = function.wasmSimdLoadLane(kind: .Load8, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, into: splat, lane: 15)
+                    function.wasmSimdStoreLane(kind: .Store8, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, from: loaded, lane: 15)
+                    let reloaded = function.wasmSimdLoadLane(kind: .Load8, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, into: loaded, lane: 1)
+                    return (0..<16).map {function.wasmSimdExtractLane(kind: .I8x16U, reloaded, $0)}
+                }
+            }, "42,13,42,42,42,42,42,42,42,42,42,42,42,42,42,13"),
+            // Test v128.load16_lane and v128.store16_lane.
+            ({wasmModule, memory in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: function.consti32(14), storeType: .I32StoreMem16, staticOffset: 64)
+                    let splat = function.wasmSimdSplat(kind: .I16x8, function.consti32(42))
+                    let loaded = function.wasmSimdLoadLane(kind: .Load16, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, into: splat, lane: 7)
+                    function.wasmSimdStoreLane(kind: .Store16, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, from: loaded, lane: 7)
+                    let reloaded = function.wasmSimdLoadLane(kind: .Load16, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, into: loaded, lane: 1)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: .I16x8U, reloaded, $0)}
+                }
+            }, "42,14,42,42,42,42,42,14"),
+            // Test v128.load32_lane and v128.store32_lane.
+            ({wasmModule, memory in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: function.consti32(15), storeType: .I32StoreMem, staticOffset: 64)
+                    let splat = function.wasmSimdSplat(kind: .I32x4, function.consti32(42))
+                    let loaded = function.wasmSimdLoadLane(kind: .Load32, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, into: splat, lane: 3)
+                    function.wasmSimdStoreLane(kind: .Store32, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, from: loaded, lane: 3)
+                    let reloaded = function.wasmSimdLoadLane(kind: .Load32, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, into: loaded, lane: 1)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: .I32x4, reloaded, $0)}
+                }
+            }, "42,15,42,15"),
+            // Test v128.load64_lane and v128.store64_lane.
+            ({wasmModule, memory in
+                let returnType = (0..<4).map {_ in ILType.wasmi64}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let const = isMemory64 ? function.consti64 : {function.consti32(Int32($0))}
+                    function.wasmMemoryStore(memory: memory, dynamicOffset: const(0),
+                        value: function.consti64(16), storeType: .I64StoreMem, staticOffset: 64)
+                    let splat = function.wasmSimdSplat(kind: .I64x2, function.consti64(42))
+                    let loaded = function.wasmSimdLoadLane(kind: .Load64, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, into: splat, lane: 1)
+                    function.wasmSimdStoreLane(kind: .Store64, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, from: loaded, lane: 1)
+                    let reloaded = function.wasmSimdLoadLane(kind: .Load64, memory: memory,
+                        dynamicOffset: const(0), staticOffset: 64, into: loaded, lane: 0)
+                    return [
+                        function.wasmSimdExtractLane(kind: .I64x2, loaded, 0),
+                        function.wasmSimdExtractLane(kind: .I64x2, loaded, 1),
+                        function.wasmSimdExtractLane(kind: .I64x2, reloaded, 0),
+                        function.wasmSimdExtractLane(kind: .I64x2, reloaded, 1)]
+                }
+            }, "42,16,16,16"),
         ]
 
         let module = b.buildWasmModule { wasmModule in
@@ -1404,12 +1476,12 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: expected)
     }
 
-    func testWasmSimdLoadOnMemory32() throws {
-        try wasmSimdLoad(isMemory64: false)
+    func testWasmSimdLoadStoreOnMemory32() throws {
+        try wasmSimdLoadStore(isMemory64: false)
     }
 
-    func testWasmSimdLoadOnMemory64() throws {
-        try wasmSimdLoad(isMemory64: true)
+    func testWasmSimdLoadStoreOnMemory64() throws {
+        try wasmSimdLoadStore(isMemory64: true)
     }
 
     func wasmSimdSplatAndExtractLane(splat: WasmSimdSplat.Kind,

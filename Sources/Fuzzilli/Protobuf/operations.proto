@@ -1368,6 +1368,32 @@ message WasmSimdReplaceLane {
     uint32 lane = 2;
 }
 
+enum WasmSimdStoreLaneKind {
+  STORE8 = 0;
+  STORE16 = 1;
+  STORE32 = 2;
+  STORE64 = 3;
+}
+
+message WasmSimdStoreLane {
+  WasmSimdStoreLaneKind kind = 1;
+  int64 staticOffset = 2;
+  uint32 lane = 3;
+}
+
+enum WasmSimdLoadLaneKind {
+  LOAD8 = 0;
+  LOAD16 = 1;
+  LOAD32 = 2;
+  LOAD64 = 3;
+}
+
+message WasmSimdLoadLane {
+  WasmSimdLoadLaneKind kind = 1;
+  int64 staticOffset = 2;
+  uint32 lane = 3;
+}
+
 enum WasmSimdLoadKind {
   LOADS128 = 0;
   LOAD8x8S = 1;

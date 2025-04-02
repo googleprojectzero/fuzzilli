@@ -1203,15 +1203,13 @@ public class WasmLifter {
                 }
             case .wasmDefineMemory(_):
                 self.memories.append(instr)
-            case .wasmMemoryLoad(_):
-                try memoryOpImportAnalysis(instr: instr)
-            case .wasmMemoryStore(_):
-                try memoryOpImportAnalysis(instr: instr)
-            case .wasmMemorySize(_):
-                try memoryOpImportAnalysis(instr: instr)
-            case .wasmMemoryGrow(_):
-                try memoryOpImportAnalysis(instr: instr)
-            case .wasmSimdLoad(_):
+            case .wasmMemoryLoad(_),
+                 .wasmMemoryStore(_),
+                 .wasmMemorySize(_),
+                 .wasmMemoryGrow(_),
+                 .wasmSimdStoreLane(_),
+                 .wasmSimdLoadLane(_),
+                 .wasmSimdLoad(_):
                 try memoryOpImportAnalysis(instr: instr)
             case .wasmTableGet(_),
                  .wasmTableSet(_):
@@ -1794,6 +1792,14 @@ public class WasmLifter {
             return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + Leb128.unsignedEncode(op.lane)
         case .wasmSimdReplaceLane(let op):
             return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + Leb128.unsignedEncode(op.lane)
+        case .wasmSimdStoreLane(let op):
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
+            return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + alignAndMemory
+                + Leb128.signedEncode(Int(op.staticOffset)) + Leb128.unsignedEncode(op.lane)
+        case .wasmSimdLoadLane(let op):
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
+            return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + alignAndMemory
+                + Leb128.signedEncode(Int(op.staticOffset)) + Leb128.unsignedEncode(op.lane)
          case .wasmSimdLoad(let op):
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))

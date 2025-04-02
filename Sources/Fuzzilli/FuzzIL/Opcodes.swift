@@ -317,6 +317,8 @@ enum Opcode {
     case wasmSimdSplat(WasmSimdSplat)
     case wasmSimdExtractLane(WasmSimdExtractLane)
     case wasmSimdReplaceLane(WasmSimdReplaceLane)
+    case wasmSimdStoreLane(WasmSimdStoreLane)
+    case wasmSimdLoadLane(WasmSimdLoadLane)
     case wasmSimdLoad(WasmSimdLoad)
 
     case wasmUnreachable(WasmUnreachable)

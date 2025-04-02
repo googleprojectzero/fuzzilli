@@ -1664,6 +1664,75 @@ final class WasmSimdReplaceLane: WasmOperation {
     }
 }
 
+
+final class WasmSimdStoreLane: WasmOperation {
+    enum Kind: UInt8, CaseIterable {
+        case Store8 = 0x58
+        case Store16 = 0x59
+        case Store32 = 0x5A
+        case Store64 = 0x5B
+
+        func laneCount() -> Int {
+            switch self {
+                case .Store8:
+                    return 16
+                case .Store16:
+                    return 8
+                case .Store32:
+                    return 4
+                case .Store64:
+                    return 2
+            }
+        }
+    }
+
+    override var opcode: Opcode { .wasmSimdStoreLane(self) }
+    let kind: Kind
+    let staticOffset: Int64
+    let lane: Int
+
+    init(kind: Kind, staticOffset: Int64, lane: Int) {
+        self.kind = kind
+        self.staticOffset = staticOffset
+        self.lane = lane;
+        super.init(numInputs: 3, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+final class WasmSimdLoadLane: WasmOperation {
+    enum Kind: UInt8, CaseIterable {
+        case Load8 = 0x54
+        case Load16 = 0x55
+        case Load32 = 0x56
+        case Load64 = 0x57
+
+        func laneCount() -> Int {
+            switch self {
+                case .Load8:
+                    return 16
+                case .Load16:
+                    return 8
+                case .Load32:
+                    return 4
+                case .Load64:
+                    return 2
+            }
+        }
+    }
+
+    override var opcode: Opcode { .wasmSimdLoadLane(self) }
+    let kind: Kind
+    let staticOffset: Int64
+    let lane: Int
+
+    init(kind: Kind, staticOffset: Int64, lane: Int) {
+        self.kind = kind
+        self.staticOffset = staticOffset
+        self.lane = lane;
+        super.init(numInputs: 3, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmSimdLoad: WasmOperation {
     enum Kind: UInt8, CaseIterable {
         case LoadS128    = 0x00

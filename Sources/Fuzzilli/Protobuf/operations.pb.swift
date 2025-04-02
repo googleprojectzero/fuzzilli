@@ -995,6 +995,90 @@ public enum Fuzzilli_Protobuf_WasmSimdReplaceLaneKind: SwiftProtobuf.Enum, Swift
 
 }
 
+public enum Fuzzilli_Protobuf_WasmSimdStoreLaneKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case store8 // = 0
+  case store16 // = 1
+  case store32 // = 2
+  case store64 // = 3
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .store8
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .store8
+    case 1: self = .store16
+    case 2: self = .store32
+    case 3: self = .store64
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .store8: return 0
+    case .store16: return 1
+    case .store32: return 2
+    case .store64: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmSimdStoreLaneKind] = [
+    .store8,
+    .store16,
+    .store32,
+    .store64,
+  ]
+
+}
+
+public enum Fuzzilli_Protobuf_WasmSimdLoadLaneKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case load8 // = 0
+  case load16 // = 1
+  case load32 // = 2
+  case load64 // = 3
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .load8
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .load8
+    case 1: self = .load16
+    case 2: self = .load32
+    case 3: self = .load64
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .load8: return 0
+    case .load16: return 1
+    case .load32: return 2
+    case .load64: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmSimdLoadLaneKind] = [
+    .load8,
+    .load16,
+    .load32,
+    .load64,
+  ]
+
+}
+
 public enum Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case loads128 // = 0
@@ -1008,6 +1092,8 @@ public enum Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf.Enum, Swift.CaseIt
   case load16Splat // = 8
   case load32Splat // = 9
   case load64Splat // = 10
+  case load32Zero // = 11
+  case load64Zero // = 12
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -1027,6 +1113,8 @@ public enum Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf.Enum, Swift.CaseIt
     case 8: self = .load16Splat
     case 9: self = .load32Splat
     case 10: self = .load64Splat
+    case 11: self = .load32Zero
+    case 12: self = .load64Zero
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -1044,6 +1132,8 @@ public enum Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf.Enum, Swift.CaseIt
     case .load16Splat: return 8
     case .load32Splat: return 9
     case .load64Splat: return 10
+    case .load32Zero: return 11
+    case .load64Zero: return 12
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -1061,6 +1151,8 @@ public enum Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf.Enum, Swift.CaseIt
     .load16Splat,
     .load32Splat,
     .load64Splat,
+    .load32Zero,
+    .load64Zero,
   ]
 
 }
@@ -4897,6 +4989,38 @@ public struct Fuzzilli_Protobuf_WasmSimdReplaceLane: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_WasmSimdStoreLane: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var kind: Fuzzilli_Protobuf_WasmSimdStoreLaneKind = .store8
+
+  public var staticOffset: Int64 = 0
+
+  public var lane: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_WasmSimdLoadLane: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var kind: Fuzzilli_Protobuf_WasmSimdLoadLaneKind = .load8
+
+  public var staticOffset: Int64 = 0
+
+  public var lane: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_WasmSimdLoad: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -4905,8 +5029,6 @@ public struct Fuzzilli_Protobuf_WasmSimdLoad: Sendable {
   public var kind: Fuzzilli_Protobuf_WasmSimdLoadKind = .loads128
 
   public var staticOffset: Int64 = 0
-
-  public var isMemory64: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5344,6 +5466,24 @@ extension Fuzzilli_Protobuf_WasmSimdReplaceLaneKind: SwiftProtobuf._ProtoNamePro
   ]
 }
 
+extension Fuzzilli_Protobuf_WasmSimdStoreLaneKind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "STORE8"),
+    1: .same(proto: "STORE16"),
+    2: .same(proto: "STORE32"),
+    3: .same(proto: "STORE64"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmSimdLoadLaneKind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "LOAD8"),
+    1: .same(proto: "LOAD16"),
+    2: .same(proto: "LOAD32"),
+    3: .same(proto: "LOAD64"),
+  ]
+}
+
 extension Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "LOADS128"),
@@ -5357,6 +5497,8 @@ extension Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf._ProtoNameProviding 
     8: .same(proto: "LOAD16SPLAT"),
     9: .same(proto: "LOAD32SPLAT"),
     10: .same(proto: "LOAD64SPLAT"),
+    11: .same(proto: "LOAD32ZERO"),
+    12: .same(proto: "LOAD64ZERO"),
   ]
 }
 
@@ -14023,12 +14165,12 @@ extension Fuzzilli_Protobuf_WasmSimdReplaceLane: SwiftProtobuf.Message, SwiftPro
   }
 }
 
-extension Fuzzilli_Protobuf_WasmSimdLoad: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".WasmSimdLoad"
+extension Fuzzilli_Protobuf_WasmSimdStoreLane: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmSimdStoreLane"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "kind"),
     2: .same(proto: "staticOffset"),
-    3: .same(proto: "isMemory64"),
+    3: .same(proto: "lane"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -14039,7 +14181,93 @@ extension Fuzzilli_Protobuf_WasmSimdLoad: SwiftProtobuf.Message, SwiftProtobuf._
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.isMemory64) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.lane) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.kind != .store8 {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
+    }
+    if self.staticOffset != 0 {
+      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
+    }
+    if self.lane != 0 {
+      try visitor.visitSingularUInt32Field(value: self.lane, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmSimdStoreLane, rhs: Fuzzilli_Protobuf_WasmSimdStoreLane) -> Bool {
+    if lhs.kind != rhs.kind {return false}
+    if lhs.staticOffset != rhs.staticOffset {return false}
+    if lhs.lane != rhs.lane {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmSimdLoadLane: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmSimdLoadLane"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "kind"),
+    2: .same(proto: "staticOffset"),
+    3: .same(proto: "lane"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.lane) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.kind != .load8 {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
+    }
+    if self.staticOffset != 0 {
+      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
+    }
+    if self.lane != 0 {
+      try visitor.visitSingularUInt32Field(value: self.lane, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmSimdLoadLane, rhs: Fuzzilli_Protobuf_WasmSimdLoadLane) -> Bool {
+    if lhs.kind != rhs.kind {return false}
+    if lhs.staticOffset != rhs.staticOffset {return false}
+    if lhs.lane != rhs.lane {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmSimdLoad: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmSimdLoad"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "kind"),
+    2: .same(proto: "staticOffset"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
       default: break
       }
     }
@@ -14052,16 +14280,12 @@ extension Fuzzilli_Protobuf_WasmSimdLoad: SwiftProtobuf.Message, SwiftProtobuf._
     if self.staticOffset != 0 {
       try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
     }
-    if self.isMemory64 != false {
-      try visitor.visitSingularBoolField(value: self.isMemory64, fieldNumber: 3)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmSimdLoad, rhs: Fuzzilli_Protobuf_WasmSimdLoad) -> Bool {
     if lhs.kind != rhs.kind {return false}
     if lhs.staticOffset != rhs.staticOffset {return false}
-    if lhs.isMemory64 != rhs.isMemory64 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

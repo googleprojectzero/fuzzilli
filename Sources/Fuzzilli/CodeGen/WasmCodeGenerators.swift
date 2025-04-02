@@ -1078,6 +1078,26 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmSimdReplaceLane(kind: kind, input, replacement, Int.random(in: 0..<kind.laneCount()))
     },
 
+    CodeGenerator("WasmSimdStoreLaneGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"), .wasmSimd128)) { b, memory, simdValue in
+        if (b.hasZeroPages(memory: memory)) { return }
+
+        let function = b.currentWasmModule.currentWasmFunction
+        let (dynamicOffset, staticOffset) = b.generateMemoryIndexes(forMemory: memory)
+        let kind = chooseUniform(from: WasmSimdStoreLane.Kind.allCases)
+        function.wasmSimdStoreLane(kind: kind, memory: memory, dynamicOffset: dynamicOffset,
+            staticOffset: staticOffset, from: simdValue, lane: Int.random(in: 0..<kind.laneCount()))
+    },
+
+    CodeGenerator("WasmSimdLoadLaneGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"), .wasmSimd128)) { b, memory, simdValue in
+        if (b.hasZeroPages(memory: memory)) { return }
+
+        let function = b.currentWasmModule.currentWasmFunction
+        let (dynamicOffset, staticOffset) = b.generateMemoryIndexes(forMemory: memory)
+        let kind = chooseUniform(from: WasmSimdLoadLane.Kind.allCases)
+        function.wasmSimdLoadLane(kind: kind, memory: memory, dynamicOffset: dynamicOffset,
+            staticOffset: staticOffset, into: simdValue, lane: Int.random(in: 0..<kind.laneCount()))
+    },
+
     CodeGenerator("WasmSimdLoadGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
         if (b.hasZeroPages(memory: memory)) { return }
 

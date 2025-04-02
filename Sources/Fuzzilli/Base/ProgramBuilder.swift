@@ -3577,12 +3577,30 @@ public class ProgramBuilder {
                 withInputs: [input, laneValue], types: [.wasmSimd128, kind.laneType()]).output
         }
 
+        func wasmSimdStoreLane(kind: WasmSimdStoreLane.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: Int64, from: Variable, lane: Int) {
+            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
+            let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
+            b.emit(WasmSimdStoreLane(kind: kind, staticOffset: staticOffset, lane: lane),
+                withInputs: [memory, dynamicOffset, from],
+                types: [.object(ofGroup: "WasmMemory"), dynamicOffsetType, .wasmSimd128])
+        }
+
+        @discardableResult
+        func wasmSimdLoadLane(kind: WasmSimdLoadLane.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: Int64, into: Variable, lane: Int) -> Variable {
+            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
+            let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
+            return b.emit(WasmSimdLoadLane(kind: kind, staticOffset: staticOffset, lane: lane),
+                withInputs: [memory, dynamicOffset, into],
+                types: [.object(ofGroup: "WasmMemory"), dynamicOffsetType, .wasmSimd128]).output
+        }
+
         @discardableResult
         func wasmSimdLoad(kind: WasmSimdLoad.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: Int64) -> Variable {
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
             let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
             return b.emit(WasmSimdLoad(kind: kind, staticOffset: staticOffset),
-                withInputs: [memory, dynamicOffset], types: [.object(ofGroup: "WasmMemory"), dynamicOffsetType]).output
+                withInputs: [memory, dynamicOffset],
+                types: [.object(ofGroup: "WasmMemory"), dynamicOffsetType]).output
         }
 
         @discardableResult
