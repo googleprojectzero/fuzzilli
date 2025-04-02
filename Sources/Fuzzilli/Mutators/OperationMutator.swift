@@ -352,11 +352,11 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmMemoryLoad(let op):
             let newLoadType = chooseUniform(from: WasmMemoryLoadType.allCases.filter({$0.numberType() == op.loadType.numberType()}))
             let newStaticOffset = b.randomInt()
-            newOp = WasmMemoryLoad(loadType: newLoadType, staticOffset: newStaticOffset, isMemory64: op.isMemory64)
+            newOp = WasmMemoryLoad(loadType: newLoadType, staticOffset: newStaticOffset)
         case .wasmMemoryStore(let op):
             let newStoreType = chooseUniform(from: WasmMemoryStoreType.allCases.filter({$0.numberType() == op.storeType.numberType()}))
             let newStaticOffset = b.randomInt()
-            newOp = WasmMemoryStore(storeType: newStoreType, staticOffset: newStaticOffset, isMemory64: op.isMemory64)
+            newOp = WasmMemoryStore(storeType: newStoreType, staticOffset: newStaticOffset)
         case .constSimd128(_):
             newOp = ConstSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
         case .wasmSimd128IntegerUnOp(let op):
@@ -378,12 +378,12 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = WasmSimdExtractLane(kind: op.kind, lane: Int.random(in: 0..<op.kind.laneCount()))
         case .wasmSimdReplaceLane(let op):
             newOp = WasmSimdReplaceLane(kind: op.kind, lane: Int.random(in: 0..<op.kind.laneCount()))
-        case .wasmSimdLoad(let op):
+        case .wasmSimdLoad(_):
             let kind = chooseUniform(from: WasmSimdLoad.Kind.allCases)
             let staticOffset = probability(0.8)
                 ? Int64.random(in: -256...256)
                 : Int64.random(in: Int64.min...Int64.max) // most likely out of bounds
-            newOp = WasmSimdLoad(kind: kind, staticOffset: staticOffset, isMemory64: op.isMemory64)
+            newOp = WasmSimdLoad(kind: kind, staticOffset: staticOffset)
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
              .loadUndefined(_),
