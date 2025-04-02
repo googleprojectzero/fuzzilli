@@ -1681,8 +1681,6 @@ func => (parameters: [ILType], returnTypes: [ILType]) -> WasmSignature {
     return WasmSignature(expects: parameters, returns: returnTypes)
 }
 
-// TODO(mliedtke): We'll probbaly need some base class for array, struct and function definitions
-// like this, right now it seems a bit useless, however.
 class WasmTypeDescription: Hashable {
     static let selfReference = WasmTypeDescription(typeGroupIndex: -1)
     public let typeGroupIndex: Int
