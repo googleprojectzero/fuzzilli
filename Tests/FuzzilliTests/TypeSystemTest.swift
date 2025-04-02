@@ -1083,14 +1083,28 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testWasmTypeExtensionSubsumptionRules() {
+        let arrayi32Desc = WasmArrayTypeDescription(elementType: .wasmi32, mutability: true, typeGroupIndex: 0)
+        let arrayi64Desc = WasmArrayTypeDescription(elementType: .wasmi64, mutability: true, typeGroupIndex: 0)
+
+        // Test Wasm reference type definitions.
+        XCTAssertNotEqual(ILType.wasmTypeDef(), ILType.wasmTypeDef(description: arrayi32Desc))
+        XCTAssertNotEqual(ILType.wasmTypeDef(description: arrayi64Desc),
+                          ILType.wasmTypeDef(description: arrayi32Desc))
+        XCTAssertEqual(ILType.wasmTypeDef(description: arrayi32Desc),
+                       ILType.wasmTypeDef(description: arrayi32Desc))
+        XCTAssert(ILType.wasmTypeDef(description:arrayi32Desc) <= ILType.wasmTypeDef())
+        XCTAssert(ILType.wasmTypeDef(description: arrayi32Desc) <=
+                  ILType.wasmTypeDef(description: arrayi32Desc))
+        XCTAssertFalse(ILType.wasmTypeDef(description: arrayi32Desc) <=
+                       ILType.wasmTypeDef(description: arrayi64Desc))
+
+        // Test Wasm references.
         XCTAssert(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmRef(.Index(), nullability: true))
         XCTAssert(ILType.wasmRef(.Index(), nullability: false) <= ILType.wasmRef(.Index(), nullability: false))
         XCTAssert(ILType.wasmRef(.Index(), nullability: false) <= ILType.wasmRef(.Index(), nullability: true))
         XCTAssertFalse(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmRef(.Index(), nullability: false))
         XCTAssertFalse(ILType.wasmi32 <= ILType.wasmRef(.Index(), nullability: true))
         XCTAssertFalse(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmi32)
-        let arrayi32Desc = WasmArrayTypeDescription(elementType: .wasmi32, mutability: true, typeGroupIndex: 0)
-        let arrayi64Desc = WasmArrayTypeDescription(elementType: .wasmi64, mutability: true, typeGroupIndex: 0)
         XCTAssertFalse(ILType.wasmIndexRef(arrayi32Desc, nullability: true)
             >= ILType.wasmIndexRef(arrayi64Desc, nullability: true))
         XCTAssertFalse(ILType.wasmIndexRef(arrayi64Desc, nullability: true)

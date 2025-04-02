@@ -1211,16 +1211,16 @@ public class WasmLabelType: WasmTypeExtension {
     }
 }
 
-// TODO(mliedtke): Does this justify a separate class or should the WasmTypeDescription just be a
-// WasmTypeExtension?
 public class WasmTypeDefinition: WasmTypeExtension {
     var description : WasmTypeDescription? = nil
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmTypeDefinition else { return false }
-        // TODO(mliedtke): We treat two definitions as equal if they don't have a description, so
-        // that the .Is(.wasmTypeDef()) works as desired. We should improve the type system to
-        // support proper subsumption rules for the wasm type extensions instead.
+        return description == other.description
+    }
+
+    override func subsumes(_ other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmTypeDefinition else { return false }
         return description == nil || other.description == nil || description == other.description
     }
 
