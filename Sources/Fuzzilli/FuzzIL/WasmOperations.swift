@@ -980,13 +980,11 @@ final class WasmBeginIf: WasmOperation {
     init(with signature: WasmSignature = [] => [], inverted: Bool = false) {
         self.signature = signature
         self.inverted = inverted
-        // TODO(mliedtke): Why does this set .isNotInputMutable? Try to remove it and see if the WasmLifter failure rate is affected.
-
         // Note that the condition is the last input! This is due to how lifting works for the wasm
         // value stack and that the condition is the first value to be removed from the stack, so
         // it needs to be the last one pushed to it.
         // Inner outputs: 1 label (used for branch instructions) plus all the parameters.
-        super.init(numInputs: signature.parameterTypes.count + 1, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext, .isNotInputMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(numInputs: signature.parameterTypes.count + 1, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
@@ -1789,9 +1787,6 @@ class WasmArrayLen: WasmOperation {
     override var opcode: Opcode { .wasmArrayLen(self) }
 
     init() {
-        // TODO(mliedtke): Once we have struct types, we'll need to adapt these input types to
-        // be limited to array types (similar in other operations like array.get and operations
-        // expecting an array type definiiton like array.new_fixed.)
         super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }
