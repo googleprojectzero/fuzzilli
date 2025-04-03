@@ -27,7 +27,7 @@ public let ProgramTemplates = [
         b.build(n: 50)
     },
 
-    ProgramTemplate("WasmCodegen50") { b in
+    WasmProgramTemplate("WasmCodegen50") { b in
         b.buildPrefix()
         let m = b.buildWasmModule() { _ in
             b.build(n: 50)
@@ -39,7 +39,7 @@ public let ProgramTemplates = [
         b.build(n: 20)
     },
 
-    ProgramTemplate("WasmCodegen100") { b in
+    WasmProgramTemplate("WasmCodegen100") { b in
         b.buildPrefix()
         let m = b.buildWasmModule() { _ in
             b.build(n: 100)
@@ -51,7 +51,7 @@ public let ProgramTemplates = [
         b.build(n: 20)
     },
 
-    ProgramTemplate("MixedJsAndWasm1") { b in
+    WasmProgramTemplate("MixedJsAndWasm1") { b in
         b.buildPrefix()
         b.build(n: 10)
         let m = b.buildWasmModule() { _ in
@@ -64,7 +64,7 @@ public let ProgramTemplates = [
         b.build(n: 20)
     },
 
-    ProgramTemplate("MixedJsAndWasm2") { b in
+    WasmProgramTemplate("MixedJsAndWasm2") { b in
         b.buildPrefix()
         b.build(n: 10)
         b.buildWasmModule() { _ in
@@ -81,7 +81,7 @@ public let ProgramTemplates = [
         b.build(n: 20)
     },
 
-    ProgramTemplate("JSPI") { b in
+    WasmProgramTemplate("JSPI") { b in
         b.buildPrefix()
         b.build(n: 20)
 
@@ -139,7 +139,7 @@ public let ProgramTemplates = [
         b.build(n: 5)
     },
 
-    ProgramTemplate("ThrowInWasmCatchInJS") { b in
+    WasmProgramTemplate("ThrowInWasmCatchInJS") { b in
         b.buildPrefix()
         b.build(n: 10)
 

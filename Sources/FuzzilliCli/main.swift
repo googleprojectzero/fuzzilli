@@ -440,13 +440,6 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     // Program templates to use.
     var programTemplates = profile.additionalProgramTemplates
 
-    // Filter out ProgramTemplates that will use Wasm if we have not enabled it.
-    if !enableWasm {
-        programTemplates = programTemplates.filter {
-            !($0 is WasmProgramTemplate)
-        }
-    }
-
     for template in ProgramTemplates {
         guard let weight = programTemplateWeights[template.name] else {
             print("Missing weight for program template \(template.name) in ProgramTemplateWeights.swift")
@@ -454,6 +447,13 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         }
 
         programTemplates.append(template, withWeight: weight)
+    }
+
+    // Filter out ProgramTemplates that will use Wasm if we have not enabled it.
+    if !enableWasm {
+        programTemplates = programTemplates.filter {
+            !($0 is WasmProgramTemplate)
+        }
     }
 
     // The environment containing available builtins, property names, and method names.
