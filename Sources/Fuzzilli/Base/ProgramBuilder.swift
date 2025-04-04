@@ -3485,14 +3485,19 @@ public class ProgramBuilder {
                 return self.constf64(b.randomFloat())
             case .wasmSimd128:
                 return self.constSimd128(value: (0 ..< 16).map{ _ in UInt8.random(in: UInt8.min ... UInt8.max) })
-            case .wasmExternRef,
-                 .wasmExnRef,
-                 .wasmFuncRef:
-                // TODO(cffsmith): Can we improve this once we have better support for ad hoc code
-                // generation in other contexts?
-                return self.wasmRefNull(type: type)
             default:
-                fatalError("unimplemented")
+                if (type.Is(.wasmGenericRef)) {
+                    // TODO(cffsmith): Can we improve this once we have better support for ad hoc
+                    // code generation in other contexts?
+                    assert(type.wasmReferenceType!.nullability)
+                    switch type.wasmReferenceType!.kind {
+                        case .Abstract(_):
+                            return self.wasmRefNull(type: type)
+                        case .Index(_):
+                            break // Unimplemented
+                    }
+                }
+                fatalError("unimplemented for \(type)")
             }
         }
 

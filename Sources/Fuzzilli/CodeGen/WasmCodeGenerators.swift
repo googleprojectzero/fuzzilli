@@ -239,9 +239,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         if let typeDef = (b.findVariable{b.type(of: $0).Is(.wasmTypeDef())}), probability(0.5) {
             function.wasmRefNull(typeDef: typeDef)
         } else {
-            // TODO(mliedtke): Extend this list once we migrated the abstract heap types to fit
-            // with the wasm-gc types and added the missing ones (like anyref, eqref, ...)
-            function.wasmRefNull(type: chooseUniform(from: [.wasmFuncRef, .wasmExternRef, .wasmExnRef]))
+            function.wasmRefNull(type: .wasmRef(.Abstract( chooseUniform(from: WasmAbstractHeapType.allCases)), nullability: true))
         }
     },
 

@@ -1234,7 +1234,7 @@ public class WasmTypeDefinition: WasmTypeExtension {
     }
 }
 
-enum WasmAbstractHeapType {
+enum WasmAbstractHeapType: CaseIterable {
     case WasmExtern
     case WasmFunc
     case WasmExn
