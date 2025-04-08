@@ -536,6 +536,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmTableSet(_),
              .wasmCallIndirect(_),
              .wasmCallDirect(_),
+             .wasmReturnCallDirect(_),
              .wasmi32EqualZero(_),
              .wasmi64EqualZero(_),
              .wasmWrapi64Toi32(_),

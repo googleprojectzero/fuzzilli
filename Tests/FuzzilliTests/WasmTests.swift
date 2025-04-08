@@ -896,6 +896,37 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "341\n")
     }
 
+    func testReturnCallDirect() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            let callee = wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32]) { function, label, params in
+                return [function.consti32(100), function.consti32(200)]
+            }
+
+            wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32]) { function, label, params in
+                function.wasmReturnCallDirect(signature: [] => [.wasmi32, .wasmi32], function: callee, functionArgs: [])
+                return [function.consti32(-1), function.consti32(-1)]
+            }
+        }
+
+        let exports = module.loadExports()
+        let wasmFunction = b.getProperty(module.getExportedMethod(at: 1), of: exports)
+        let result = b.callFunction(wasmFunction, withArgs: [b.loadInt(42)])
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        b.callFunction(outputFunc, withArgs: [result])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "100,200\n")
+    }
+
     // Test every memory testcase for both memory32 and memory64.
 
     func importedMemoryTestCase(isMemory64: Bool) throws {

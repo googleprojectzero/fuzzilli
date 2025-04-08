@@ -420,6 +420,18 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmCallDirect(signature: signature, function: functionVar, functionArgs: functionArgs)
     },
 
+    CodeGenerator("WasmReturnCallDirectGenerator", inContext: .wasmFunction) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+        guard let functionVar = (b.findVariable { v in
+            let type = b.type(of: v)
+            return type.Is(.wasmFunctionDef()) && type.wasmFunctionDefSignature!.outputTypes == function.signature.outputTypes
+        }) else { return }
+        let signature = b.type(of: functionVar).wasmFunctionDefSignature!
+        let functionArgs = b.randomWasmArguments(forWasmSignature: signature)
+        guard let functionArgs else { return }
+        function.wasmReturnCallDirect(signature: signature, function: functionVar, functionArgs: functionArgs)
+    },
+
     CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, global in
         let function = b.currentWasmModule.currentWasmFunction
 
