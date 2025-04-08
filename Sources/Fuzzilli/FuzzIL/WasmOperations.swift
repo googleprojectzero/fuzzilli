@@ -806,6 +806,16 @@ final class WasmReturnCallDirect: WasmOperation {
     }
 }
 
+final class WasmReturnCallIndirect: WasmOperation {
+    override var opcode: Opcode { .wasmReturnCallIndirect(self) }
+    let signature: WasmSignature
+
+    init(signature: WasmSignature) {
+        self.signature = signature
+        super.init(numInputs: 2 + signature.parameterTypes.count, numOutputs: 0, attributes: [.isJump], requiredContext: [.wasmFunction])
+    }
+}
+
 // WasmMemory operations
 //
 // The format of memory instructions is

@@ -26,4 +26,5 @@ public let programTemplateWeights = [
     "JIT2Functions":         3,
     "JITTrickyFunction":     2,
     "JSONFuzzer":            1,
+    "WasmReturnCalls":       2,
 ]

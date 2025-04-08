@@ -189,6 +189,51 @@ public let ProgramTemplates = [
         b.build(n: 5)
     },
 
+    WasmProgramTemplate("WasmReturnCalls") { b in
+        b.buildPrefix()
+        b.build(n: 10)
+
+        let calleeSig = b.randomWasmSignature()
+        let mainSig = b.randomWasmSignature().parameterTypes => calleeSig.outputTypes
+        let useTable64 = Bool.random()
+        let numCallees = Int.random(in: 1...5)
+
+        let module = b.buildWasmModule { wasmModule in
+            let callees = (0..<numCallees).map {_ in wasmModule.addWasmFunction(with: calleeSig) { function, label, params in
+                b.build(n: 10)
+                return calleeSig.outputTypes.map(function.findOrGenerateWasmVar)
+            }}
+
+            let table = wasmModule.addTable(elementType: .wasmFuncRef,
+                                            minSize: 10,
+                                            definedEntries: callees.enumerated().map { (index, callee) in
+                                                .init(indexInTable: index, signature: calleeSig)
+                                            },
+                                            definedEntryValues: callees,
+                                            isTable64: useTable64)
+
+            let main = wasmModule.addWasmFunction(with: mainSig) { function, label, params in
+                b.build(n:20)
+                if let arguments = b.randomWasmArguments(forWasmSignature: calleeSig) {
+                    if Bool.random() {
+                        function.wasmReturnCallDirect(signature: calleeSig, function: callees.randomElement()!, functionArgs: arguments)
+                    } else {
+                        let calleeIndex = useTable64
+                            ? function.consti64(Int64(Int.random(in: 0..<callees.count)))
+                            : function.consti32(Int32(Int.random(in: 0..<callees.count)))
+                        function.wasmReturnCallIndirect(signature: calleeSig, table: table, functionArgs: arguments, tableIndex: calleeIndex)
+                    }
+                }
+                return mainSig.outputTypes.map(function.findOrGenerateWasmVar)
+            }
+        }
+
+        let exports = module.loadExports()
+        let args = b.randomArguments(forCallingFunctionWithSignature:
+            ProgramBuilder.convertWasmSignatureToJsSignature(mainSig))
+        b.callMethod(module.getExportedMethod(at: numCallees), on: exports, withArgs: args)
+    },
+
     ProgramTemplate("JIT1Function") { b in
         let smallCodeBlockSize = 5
         let numIterations = 100

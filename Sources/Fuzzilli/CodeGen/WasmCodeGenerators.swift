@@ -404,7 +404,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         guard let indexedSignature = tableType.knownEntries.randomElement() else { return }
 
         let function = b.currentWasmModule.currentWasmFunction
-        let indexVar = function.consti32(Int32(indexedSignature.indexInTable))
+        let indexVar = tableType.isTable64
+            ? function.consti64(Int64(indexedSignature.indexInTable))
+            : function.consti32(Int32(indexedSignature.indexInTable))
 
         guard let functionArgs = b.randomWasmArguments(forWasmSignature: indexedSignature.signature) else { return }
 
@@ -430,6 +432,18 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let functionArgs = b.randomWasmArguments(forWasmSignature: signature)
         guard let functionArgs else { return }
         function.wasmReturnCallDirect(signature: signature, function: functionVar, functionArgs: functionArgs)
+    },
+
+    CodeGenerator("WasmReturnCallIndirectGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmTable"))) { b, table in
+        let function = b.currentWasmModule.currentWasmFunction
+        let tableType = b.type(of: table).wasmTableType!
+        if !tableType.elementType.Is(.wasmFuncRef) { return }
+        guard let indexedSignature = (tableType.knownEntries.filter { $0.signature.outputTypes == function.signature.outputTypes }.randomElement()) else { return }
+        let indexVar = tableType.isTable64
+            ? function.consti64(Int64(indexedSignature.indexInTable))
+            : function.consti32(Int32(indexedSignature.indexInTable))
+        guard let functionArgs = b.randomWasmArguments(forWasmSignature: indexedSignature.signature) else { return }
+        function.wasmReturnCallIndirect(signature: indexedSignature.signature, table: table, functionArgs: functionArgs, tableIndex: indexVar)
     },
 
     CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmGlobal"))) { b, global in

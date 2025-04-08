@@ -1249,6 +1249,11 @@ extension Instruction: ProtobufConvertible {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
                     $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
+            case .wasmReturnCallIndirect(let op):
+                $0.wasmReturnCallIndirect = Fuzzilli_Protobuf_WasmReturnCallIndirect.with {
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
             case .wasmMemoryLoad(let op):
                 $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with {
                     $0.loadType = convertWasmMemoryLoadType(op.loadType);
@@ -2221,6 +2226,10 @@ extension Instruction: ProtobufConvertible {
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             op = WasmReturnCallDirect(signature: parameters => outputs)
+        case .wasmReturnCallIndirect(let p):
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmReturnCallIndirect(signature: parameters => outputs)
         case .wasmMemoryLoad(let p):
             op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset)
         case .wasmMemoryStore(let p):

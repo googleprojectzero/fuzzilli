@@ -3213,9 +3213,10 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmCallIndirect(signature: WasmSignature, table: Variable, functionArgs: [Variable], tableIndex: Variable) -> [Variable] {
+            let isTable64 = b.type(of: table).wasmTableType!.isTable64
             return Array(b.emit(WasmCallIndirect(signature: signature),
                 withInputs: [table] + functionArgs + [tableIndex],
-                types: [.wasmTable] + signature.parameterTypes + [.wasmi32]
+                types: [.wasmTable] + signature.parameterTypes + [isTable64 ? .wasmi64 : .wasmi32]
             ).outputs)
         }
 
@@ -3232,6 +3233,14 @@ public class ProgramBuilder {
             b.emit(WasmReturnCallDirect(signature: signature),
                 withInputs: [function] + functionArgs,
                 types: [.wasmFunctionDef(signature)] + signature.parameterTypes)
+        }
+
+        public func wasmReturnCallIndirect(signature: WasmSignature, table: Variable, functionArgs: [Variable], tableIndex: Variable) {
+            let isTable64 = b.type(of: table).wasmTableType!.isTable64
+            assert(self.signature.outputTypes == signature.outputTypes)
+            b.emit(WasmReturnCallIndirect(signature: signature),
+                withInputs: [table] + functionArgs + [tableIndex],
+                types: [.wasmTable] + signature.parameterTypes + [isTable64 ? .wasmi64 : .wasmi32])
         }
 
         @discardableResult

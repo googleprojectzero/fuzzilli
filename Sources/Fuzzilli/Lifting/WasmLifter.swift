@@ -1024,6 +1024,9 @@ public class WasmLifter {
         case .wasmCallIndirect(let op):
             registerSignature(op.signature)
             return true
+        case .wasmReturnCallIndirect(let op):
+            registerSignature(op.signature)
+            return true
         case .wasmNop(_):
             // Just analyze the instruction but do nothing else here.
             // This lets the typer know that we can skip this instruction without breaking any analysis.
@@ -1095,7 +1098,7 @@ public class WasmLifter {
                 || inputType.isWasmMemoryType && memories.contains(where: {$0.output == input})
                 || inputType.Is(.wasmTypeDef())
             if !isLocallyDefined {
-                assert(self.imports.contains(where: {$0.0 == input}), "Variable \(input) needs to be imported during importAnalysis()")
+                assert(self.imports.contains(where: {$0.0 == input}), "Variable \(input) of type \(inputType) needs to be imported during importAnalysis() for instruction \(instr)")
             }
         }
     }
@@ -1220,7 +1223,8 @@ public class WasmLifter {
                         self.imports.append((table, nil))
                     }
                 }
-            case .wasmCallIndirect(_):
+            case .wasmCallIndirect(_),
+                 .wasmReturnCallIndirect(_):
                 let table = instr.input(0)
                 if !self.tables.contains(where: {$0.output == table}) {
                     // TODO: check if the ordering here is also somehow important?
@@ -1556,6 +1560,10 @@ public class WasmLifter {
         case .wasmReturnCallDirect(_):
             let functionRef = wasmInstruction.input(0)
             return Data([0x12]) + Leb128.unsignedEncode(try resolveIdx(ofType: .function, for: functionRef))
+        case .wasmReturnCallIndirect(let op):
+            let tableRef = wasmInstruction.input(0)
+            let sigIndex = try getSignatureIndex(op.signature)
+            return Data([0x13]) + Leb128.unsignedEncode(sigIndex) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
         case .wasmMemoryLoad(let op):
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
             return Data([op.loadType.rawValue]) + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
