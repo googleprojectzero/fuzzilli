@@ -1138,6 +1138,11 @@ message WasmReturnCallDirect {
   repeated WasmILType outputTypes = 2;
 }
 
+message WasmReturnCallIndirect {
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
+}
+
 enum WasmMemoryLoadType {
   I32_LOADMEM = 0;
   I64_LOADMEM = 1;

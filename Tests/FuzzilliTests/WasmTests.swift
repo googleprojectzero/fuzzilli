@@ -927,6 +927,54 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "100,200\n")
     }
 
+    func testReturnCallIndirect() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let jsFunction = b.buildPlainFunction(with: .parameters(.bigint)) { params in
+            b.doReturn(b.binary(params[0], b.loadBigInt(42), with: .Add))
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64, .wasmi64]) { function, label, params in
+                return [params[0], function.consti64(1)]
+            }
+            let table = wasmModule.addTable(elementType: .wasmFuncRef,
+                                            minSize: 10,
+                                            definedEntries: [.init(indexInTable: 0, signature: [.wasmi64] => [.wasmi64, .wasmi64]), .init(indexInTable: 1, signature: [.wasmi64] => [.wasmi64])],
+                                            definedEntryValues: [wasmFunction, jsFunction],
+                                            isTable64: false)
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64, .wasmi64]) { fn, label, params in
+                fn.wasmReturnCallIndirect(signature: [.wasmi64] => [.wasmi64, .wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])
+                return [fn.consti64(-1), fn.consti64(-1)]
+            }
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) { fn, label, params in
+                fn.wasmReturnCallIndirect(signature: [.wasmi64] => [.wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])
+                return [fn.consti64(-1)]
+            }
+        }
+
+        let exports = module.loadExports()
+
+        let callIndirectSig0 = b.getProperty(module.getExportedMethod(at: 1), of: exports)
+        let result0 = b.callFunction(callIndirectSig0, withArgs: [b.loadInt(0), b.loadBigInt(10)])
+        let callIndirectSig1 = b.getProperty(module.getExportedMethod(at: 2), of: exports)
+        let result1 = b.callFunction(callIndirectSig1, withArgs: [b.loadInt(1), b.loadBigInt(10)])
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result1)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        print(jsProg)
+
+        testForOutput(program: jsProg, runner: runner, outputString: "10,1\n52\n")
+    }
+
     // Test every memory testcase for both memory32 and memory64.
 
     func importedMemoryTestCase(isMemory64: Bool) throws {
