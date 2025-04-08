@@ -994,6 +994,10 @@ public class FuzzILLifter: Lifter {
                 w.emit("\(outputs) <- WasmCallDirect(\(op.signature)) \(inputs)")
             }
 
+        case .wasmReturnCallDirect(let op):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("WasmReturnCallDirect(\(op.signature)) \(inputs)")
+
         case .wasmBeginBlock(let op):
             // TODO(cffsmith): Maybe lift labels as e.g. L7 or something like that?
             let inputs = instr.inputs.map(lift).joined(separator: ", ")

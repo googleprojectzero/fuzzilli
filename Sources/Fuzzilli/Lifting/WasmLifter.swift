@@ -1553,6 +1553,9 @@ public class WasmLifter {
         case .wasmCallDirect(_):
             let functionRef = wasmInstruction.input(0)
             return Data([0x10]) + Leb128.unsignedEncode(try resolveIdx(ofType: .function, for: functionRef))
+        case .wasmReturnCallDirect(_):
+            let functionRef = wasmInstruction.input(0)
+            return Data([0x12]) + Leb128.unsignedEncode(try resolveIdx(ofType: .function, for: functionRef))
         case .wasmMemoryLoad(let op):
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
             return Data([op.loadType.rawValue]) + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))

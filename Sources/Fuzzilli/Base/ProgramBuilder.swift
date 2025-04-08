@@ -3227,6 +3227,13 @@ public class ProgramBuilder {
             ).outputs)
         }
 
+        public func wasmReturnCallDirect(signature: WasmSignature, function: Variable, functionArgs: [Variable]) {
+            assert(self.signature.outputTypes == signature.outputTypes)
+            b.emit(WasmReturnCallDirect(signature: signature),
+                withInputs: [function] + functionArgs,
+                types: [.wasmFunctionDef(signature)] + signature.parameterTypes)
+        }
+
         @discardableResult
         public func wasmJsCall(function: Variable, withArgs args: [Variable], withWasmSignature signature: WasmSignature) -> Variable? {
             let instr = b.emit(WasmJsCall(signature: signature), withInputs: [function] + args,
