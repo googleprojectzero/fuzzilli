@@ -1269,8 +1269,15 @@ message WasmBranch {
   repeated WasmILType parameters = 1;
 }
 
+enum WasmBranchHint {
+    BRANCHHINT_NONE = 0;
+    BRANCHHINT_LIKELY = 1;
+    BRANCHHINT_UNLIKELY = 2;
+}
+
 message WasmBranchIf {
   repeated WasmILType parameters = 1;
+  WasmBranchHint hint = 2;
 }
 
 message WasmBranchTable {
@@ -1286,6 +1293,7 @@ message WasmBeginIf {
   repeated WasmILType parameterTypes = 1;
   repeated WasmILType outputTypes = 2;
   bool inverted = 3;
+  WasmBranchHint hint = 4;
 }
 
 message WasmBeginElse {

@@ -152,6 +152,9 @@ public class WasmLifter {
     // This should only be set once we have preprocessed all imported memories, so that we know where internally defined memories start
     private var baseDefinedMemories: Int? = nil
 
+    // This should only be set once we have preprocessed all imported functions, so that we know where internally defined funcions start
+    private var baseDefinedFunctions: Int? = nil
+
     // This tracks in which order we have seen globals, this can probably be unified with the .globals and .imports properties, as they should match in their keys.
     private var globalOrder: [Variable] = []
     private var tagOrder: [Variable] = []
@@ -214,6 +217,7 @@ public class WasmLifter {
     private class FunctionInfo {
         var signature: WasmSignature
         var code: Data
+        var branchHints: [(hint: WasmBranchHint, offset: Int)] = []
         var outputVariable: Variable? = nil
         // Locals that we spill to, this maps from the ordering to the stack.
         var localsInfo: [(Variable, ILType)]
@@ -267,6 +271,12 @@ public class WasmLifter {
             assert(isLocal(variable) && getStackSlot(for: variable) != nil)
             // This emits a local.get for the function argument.
             self.code += Data([0x20]) + Leb128.unsignedEncode(getStackSlot(for: variable)!)
+        }
+
+        func addBranchHint(_ hint: WasmBranchHint) {
+            if hint != .None {
+                self.branchHints.append((hint: hint, offset: self.code.count))
+            }
         }
     }
 
@@ -719,14 +729,13 @@ public class WasmLifter {
     }
 
     private func buildCodeSection(_ instructions: Code) throws {
-        self.bytecode += [WasmSection.code.rawValue]
-
         // Build the contents of the section
         var temp = Data()
-
         temp += Leb128.unsignedEncode(self.functions.count)
 
-        for (_, functionInfo) in self.functions.enumerated() {
+        var functionBranchHints = [Data]()
+
+        for (defIndex, functionInfo) in self.functions.enumerated() {
             if verbose {
                 print("code is:")
                 for byte in functionInfo.code {
@@ -744,6 +753,7 @@ public class WasmLifter {
                 funcTemp += Leb128.unsignedEncode(1)
                 funcTemp += try encodeType(type)
             }
+            let localsDefSizeInBytes = funcTemp.count
             // append the actual code and the end marker
             funcTemp += functionInfo.code
             funcTemp += [0x0b]
@@ -751,8 +761,35 @@ public class WasmLifter {
             // Append the function object to the section
             temp += Leb128.unsignedEncode(funcTemp.count)
             temp += funcTemp
+
+            // Encode the branch hint section entry for this function.
+            if !functionInfo.branchHints.isEmpty {
+                // The function entry is the function index, followed by the counts of branch hints
+                // for this function and then the bytes containing the actual branch hints.
+                let functionIndex = defIndex + self.baseDefinedFunctions!
+                let hintsEncoded = Leb128.unsignedEncode(functionIndex)
+                    + Leb128.unsignedEncode(functionInfo.branchHints.count)
+                    + functionInfo.branchHints.map {
+                        // Each branch hint is the instruction offset starting from the locals
+                        // definitions of the functions, a 0x01 byte, followed by the hint byte.
+                        Leb128.unsignedEncode(localsDefSizeInBytes + $0.offset) + [0x01]
+                            + [$0.hint == .Likely ? 1 : 0]
+                    }.joined()
+                functionBranchHints.append(hintsEncoded)
+            }
         }
 
+        // The branch hint section has to appear before the code section.
+        if !functionBranchHints.isEmpty {
+            self.bytecode += [WasmSection.custom.rawValue]
+            let name = "metadata.code.branch_hint"
+            let sectionContent = Leb128.unsignedEncode(name.count) + Data(name.data(using: .ascii)!)
+                + Leb128.unsignedEncode(functionBranchHints.count) + functionBranchHints.joined()
+            self.bytecode.append(Leb128.unsignedEncode(sectionContent.count))
+            self.bytecode.append(sectionContent)
+        }
+
+        self.bytecode += [WasmSection.code.rawValue]
         // Append the length of the section and the section contents itself.
         self.bytecode.append(Leb128.unsignedEncode(temp.count))
         self.bytecode.append(temp)
@@ -1272,6 +1309,8 @@ public class WasmLifter {
         self.baseDefinedTables = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTable")) }).count
         // The number of internally defined memories indices come after the imports.
         self.baseDefinedMemories = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmMemory")) }).count
+        // The number of internally defined function indices come after the imports.
+        self.baseDefinedFunctions = self.imports.filter {typer.type(of: $0.0).Is(.function()) || self.typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))}.count
 
         // Eagerly map all types in typegroups to module-specific indices. (We can't do this when
         // building the type section as the instructions get lowered before we emit the type
@@ -1318,12 +1357,7 @@ public class WasmLifter {
                 self.typer.type(of: $0.0).Is(.object(ofGroup: groupType!))
             }).count
         case .function:
-            // TODO(mliedtke): This repeats non-trivial conditions of the importAnalysis to split
-            // different imports into their categories. Consider reintroducing the separate
-            // categories to make index calculation easier.
-            base = self.imports.filter {
-                self.typer.type(of: $0.0).Is(.function()) || self.typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))
-            }.count
+            base = self.baseDefinedFunctions!
         }
 
         let predicate: ((Variable) -> Bool) = switch type {
@@ -1651,6 +1685,7 @@ public class WasmLifter {
             let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x0C]) + Leb128.unsignedEncode(branchDepth) + Data(op.labelTypes.map {_ in 0x1A})
         case .wasmBranchIf(let op):
+            currentFunction!.addBranchHint(op.hint)
             let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
             return Data([0x0D]) + Leb128.unsignedEncode(branchDepth) + Data(op.labelTypes.map {_ in 0x1A})
         case .wasmBranchTable(let op):
@@ -1659,6 +1694,7 @@ public class WasmLifter {
             }
             return Data([0x0E]) + Leb128.unsignedEncode(op.valueCount) + depths.map(Leb128.unsignedEncode).joined()
         case .wasmBeginIf(let op):
+            currentFunction!.addBranchHint(op.hint)
             let beginIf = Data([0x04] + Leb128.unsignedEncode(try getSignatureIndex(op.signature)))
             // Invert the condition with an `i32.eqz` (resulting in 0 becoming 1 and everything else becoming 0).
             return op.inverted ? Data([0x45]) + beginIf : beginIf

@@ -398,6 +398,10 @@ public class OperationMutator: BaseInstructionMutator {
                 ? Int64.random(in: -256...256)
                 : Int64.random(in: Int64.min...Int64.max) // most likely out of bounds
             newOp = WasmSimdLoad(kind: kind, staticOffset: staticOffset)
+        case .wasmBranchIf(let op):
+            newOp = WasmBranchIf(labelTypes: op.labelTypes, hint: chooseUniform(from: WasmBranchHint.allCases))
+        case .wasmBeginIf(let op):
+            newOp = WasmBeginIf(with: op.signature, hint: chooseUniform(from: WasmBranchHint.allCases), inverted: Bool.random())
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
              .loadUndefined(_),
@@ -569,9 +573,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmBeginTryDelegate(_),
              .wasmEndTryDelegate(_),
              .wasmBranch(_),
-             .wasmBranchIf(_),
              .wasmBranchTable(_),
-             .wasmBeginIf(_),
              .wasmBeginElse(_),
              .wasmEndIf(_),
              .wasmNop(_),

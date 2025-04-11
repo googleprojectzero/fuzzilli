@@ -1554,7 +1554,7 @@ class MinimizerTests: XCTestCase {
         try runWasmMinimization { evaluator, b in
             b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, label, args in
-                    function.wasmBuildIfElse(args[0]) {
+                    function.wasmBuildIfElse(args[0], hint: .None) {
                         evaluator.nextInstructionIsImportant(in: b)
                         function.consti64(43)
                     } elseBody: {
