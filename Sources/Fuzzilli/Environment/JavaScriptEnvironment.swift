@@ -1617,12 +1617,14 @@ public extension ObjectGroup {
     /// ObjectGroup modelling JavaScript WebAssembly Memory objects.
     static let jsWasmMemory = ObjectGroup(
         name: "WasmMemory",
-        instanceType: .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow"]),
+        instanceType: .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow", "toResizableBuffer", "toFixedLengthBuffer"]),
         properties: [
             "buffer" : .jsArrayBuffer | .jsSharedArrayBuffer
         ],
         methods: [
-            "grow" : [.number] => .number
+            "grow" : [.number] => .number,
+            "toResizableBuffer" : [] => (.jsArrayBuffer | .jsSharedArrayBuffer),
+            "toFixedLengthBuffer" : [] => (.jsArrayBuffer | .jsSharedArrayBuffer),
         ]
     )
 
