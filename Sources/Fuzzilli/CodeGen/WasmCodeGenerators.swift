@@ -780,8 +780,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
             // Backedge of loop, we continue if it is not equal to zero.
             let isNotZero = function.wasmi32CompareOp(loopCtr, function.consti32(0), using: .Ne)
-            function.wasmBranchIf(isNotZero, to: label)
-
+            function.wasmBranchIf(isNotZero, to: label, hint: b.randomWasmBranchHint())
         }
     },
 
@@ -802,7 +801,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             let loopCtr = function.wasmi32BinOp(args[0], function.consti32(1), binOpKind: .Add)
             let condition = function.wasmi32CompareOp(loopCtr, function.consti32(iterationCount), using: .Lt_s)
             let backedgeArgs = [loopCtr] + randomArgTypes.map{b.randomVariable(ofType: $0)!}
-            function.wasmBranchIf(condition, to: label, args: backedgeArgs)
+            function.wasmBranchIf(condition, to: label, args: backedgeArgs, hint: b.randomWasmBranchHint())
             return outputTypes.map(function.findOrGenerateWasmVar)
         }
     },
@@ -866,7 +865,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
         let assignProb = probability(0.2)
 
-        function.wasmBuildIfElse(conditionVar) {
+        function.wasmBuildIfElse(conditionVar, hint: b.randomWasmBranchHint()) {
             b.buildRecursive(block: 1, of: 2, n: 4)
             if let variable = b.randomVariable(ofType: b.type(of: outputVar)) {
                 function.wasmReassign(variable: variable, to: outputVar)
@@ -885,7 +884,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let args = b.randomWasmBlockArguments(upTo: 5)
         let parameters = args.map(b.type)
         let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
-        function.wasmBuildIfElseWithResult(conditionVar, signature: parameters => outputTypes, args: args) { label, args in
+        function.wasmBuildIfElseWithResult(conditionVar, hint: b.randomWasmBranchHint(), signature: parameters => outputTypes, args: args) { label, args in
             b.buildRecursive(block: 1, of: 2, n: 4)
             return outputTypes.map(function.findOrGenerateWasmVar)
         } elseBody: { label, args in
@@ -936,7 +935,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator("WasmBranchIfGenerator", inContext: .wasmFunction, inputs: .required(.anyLabel, .wasmi32)) { b, label, conditionVar in
         let function = b.currentWasmModule.currentWasmFunction
         let args = b.type(of: label).wasmLabelType!.parameters.map(function.findOrGenerateWasmVar)
-        function.wasmBranchIf(conditionVar, to: label, args: args)
+        function.wasmBranchIf(conditionVar, to: label, args: args, hint: b.randomWasmBranchHint())
     },
 
     RecursiveCodeGenerator("WasmBranchTableGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, value in

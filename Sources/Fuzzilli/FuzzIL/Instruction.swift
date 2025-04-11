@@ -1352,6 +1352,7 @@ extension Instruction: ProtobufConvertible {
             case .wasmBranchIf(let op):
                 $0.wasmBranchIf = Fuzzilli_Protobuf_WasmBranchIf.with {
                     $0.parameters = op.labelTypes.map(ILTypeToWasmTypeEnum)
+                    $0.hint = convertEnum(op.hint, WasmBranchHint.allCases)
                 }
             case .wasmBranchTable(let op):
                 $0.wasmBranchTable = Fuzzilli_Protobuf_WasmBranchTable.with {
@@ -1363,6 +1364,7 @@ extension Instruction: ProtobufConvertible {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
                     $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                     $0.inverted = op.inverted
+                    $0.hint = convertEnum(op.hint, WasmBranchHint.allCases)
                 }
             case .wasmBeginElse(let op):
                 $0.wasmBeginElse = Fuzzilli_Protobuf_WasmBeginElse.with {
@@ -2294,13 +2296,13 @@ extension Instruction: ProtobufConvertible {
         case .wasmBranch(let p):
             op = WasmBranch(labelTypes: p.parameters.map(WasmTypeEnumToILType))
         case .wasmBranchIf(let p):
-            op = WasmBranchIf(labelTypes: p.parameters.map(WasmTypeEnumToILType))
+            op = WasmBranchIf(labelTypes: p.parameters.map(WasmTypeEnumToILType), hint: try convertEnum(p.hint, WasmBranchHint.allCases))
         case .wasmBranchTable(let p):
             op = WasmBranchTable(labelTypes: p.parameters.map(WasmTypeEnumToILType), valueCount: Int(p.valueCount))
         case .wasmBeginIf(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)
-            op = WasmBeginIf(with: parameters => outputs, inverted: p.inverted)
+            op = WasmBeginIf(with: parameters => outputs, hint: try convertEnum(p.hint, WasmBranchHint.allCases), inverted: p.inverted)
         case .wasmBeginElse(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)

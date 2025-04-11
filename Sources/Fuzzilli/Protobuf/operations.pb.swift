@@ -837,6 +837,44 @@ public enum Fuzzilli_Protobuf_WasmCatchKind: SwiftProtobuf.Enum, Swift.CaseItera
 
 }
 
+public enum Fuzzilli_Protobuf_WasmBranchHint: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case branchhintNone // = 0
+  case branchhintLikely // = 1
+  case branchhintUnlikely // = 2
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .branchhintNone
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .branchhintNone
+    case 1: self = .branchhintLikely
+    case 2: self = .branchhintUnlikely
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .branchhintNone: return 0
+    case .branchhintLikely: return 1
+    case .branchhintUnlikely: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmBranchHint] = [
+    .branchhintNone,
+    .branchhintLikely,
+    .branchhintUnlikely,
+  ]
+
+}
+
 public enum Fuzzilli_Protobuf_WasmSimdSplatKind: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case i8X16 // = 0
@@ -4783,6 +4821,8 @@ public struct Fuzzilli_Protobuf_WasmBranchIf: Sendable {
 
   public var parameters: [Fuzzilli_Protobuf_WasmILType] = []
 
+  public var hint: Fuzzilli_Protobuf_WasmBranchHint = .branchhintNone
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -4833,6 +4873,8 @@ public struct Fuzzilli_Protobuf_WasmBeginIf: Sendable {
   public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
   public var inverted: Bool = false
+
+  public var hint: Fuzzilli_Protobuf_WasmBranchHint = .branchhintNone
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5456,6 +5498,14 @@ extension Fuzzilli_Protobuf_WasmCatchKind: SwiftProtobuf._ProtoNameProviding {
     1: .same(proto: "REF"),
     2: .same(proto: "ALL_NO_REF"),
     3: .same(proto: "ALL_REF"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmBranchHint: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "BRANCHHINT_NONE"),
+    1: .same(proto: "BRANCHHINT_LIKELY"),
+    2: .same(proto: "BRANCHHINT_UNLIKELY"),
   ]
 }
 
@@ -13666,6 +13716,7 @@ extension Fuzzilli_Protobuf_WasmBranchIf: SwiftProtobuf.Message, SwiftProtobuf._
   public static let protoMessageName: String = _protobuf_package + ".WasmBranchIf"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "parameters"),
+    2: .same(proto: "hint"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -13675,6 +13726,7 @@ extension Fuzzilli_Protobuf_WasmBranchIf: SwiftProtobuf.Message, SwiftProtobuf._
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameters) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.hint) }()
       default: break
       }
     }
@@ -13684,11 +13736,15 @@ extension Fuzzilli_Protobuf_WasmBranchIf: SwiftProtobuf.Message, SwiftProtobuf._
     if !self.parameters.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.parameters, fieldNumber: 1)
     }
+    if self.hint != .branchhintNone {
+      try visitor.visitSingularEnumField(value: self.hint, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmBranchIf, rhs: Fuzzilli_Protobuf_WasmBranchIf) -> Bool {
     if lhs.parameters != rhs.parameters {return false}
+    if lhs.hint != rhs.hint {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -13774,6 +13830,7 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
     1: .same(proto: "parameterTypes"),
     2: .same(proto: "outputTypes"),
     3: .same(proto: "inverted"),
+    4: .same(proto: "hint"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -13785,6 +13842,7 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.outputTypes) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.inverted) }()
+      case 4: try { try decoder.decodeSingularEnumField(value: &self.hint) }()
       default: break
       }
     }
@@ -13800,6 +13858,9 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
     if self.inverted != false {
       try visitor.visitSingularBoolField(value: self.inverted, fieldNumber: 3)
     }
+    if self.hint != .branchhintNone {
+      try visitor.visitSingularEnumField(value: self.hint, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -13807,6 +13868,7 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
     if lhs.parameterTypes != rhs.parameterTypes {return false}
     if lhs.outputTypes != rhs.outputTypes {return false}
     if lhs.inverted != rhs.inverted {return false}
+    if lhs.hint != rhs.hint {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

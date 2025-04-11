@@ -3324,10 +3324,10 @@ public class ProgramBuilder {
             b.emit(WasmBranch(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args)
         }
 
-        public func wasmBranchIf(_ condition: Variable, to label: Variable, args: [Variable] = []) {
+        public func wasmBranchIf(_ condition: Variable, to label: Variable, args: [Variable] = [], hint: WasmBranchHint = .None) {
             assert(b.type(of: label).Is(.label(args.map({b.type(of: $0)}))), "label type \(b.type(of: label)) doesn't match argument types \(args.map({b.type(of: $0)}))")
             assert(b.type(of: condition).Is(.wasmi32))
-            b.emit(WasmBranchIf(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args + [condition])
+            b.emit(WasmBranchIf(labelTypes: b.type(of: label).wasmLabelType!.parameters, hint: hint), withInputs: [label] + args + [condition])
         }
 
         public func wasmBranchTable(on: Variable, labels: [Variable], args: [Variable]) {
@@ -3340,8 +3340,8 @@ public class ProgramBuilder {
                 withInputs: labels + args + [on])
         }
 
-        public func wasmBuildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: (() -> Void)? = nil) {
-            b.emit(WasmBeginIf(), withInputs: [condition])
+        public func wasmBuildIfElse(_ condition: Variable, hint: WasmBranchHint = .None, ifBody: () -> Void, elseBody: (() -> Void)? = nil) {
+            b.emit(WasmBeginIf(hint: hint), withInputs: [condition])
             ifBody()
             if let elseBody {
                 b.emit(WasmBeginElse())
@@ -3363,8 +3363,8 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmBuildIfElseWithResult(_ condition: Variable, signature: WasmSignature, args: [Variable], ifBody: (Variable, [Variable]) -> [Variable], elseBody: (Variable, [Variable]) -> [Variable]) -> [Variable] {
-            let beginBlock = b.emit(WasmBeginIf(with: signature), withInputs: args + [condition], types: signature.parameterTypes + [.wasmi32])
+        public func wasmBuildIfElseWithResult(_ condition: Variable, hint: WasmBranchHint = .None, signature: WasmSignature, args: [Variable], ifBody: (Variable, [Variable]) -> [Variable], elseBody: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            let beginBlock = b.emit(WasmBeginIf(with: signature, hint: hint), withInputs: args + [condition], types: signature.parameterTypes + [.wasmi32])
             let trueResults = ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
             let elseBlock = b.emit(WasmBeginElse(with: signature), withInputs: trueResults, types: signature.outputTypes)
             let falseResults = elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
@@ -3841,6 +3841,10 @@ public class ProgramBuilder {
             // This requires updating the inner output types based on the input types.
             type(of: $0).Is(.wasmPrimitive) && !type(of: $0).Is(.wasmGenericRef)
         }}.filter {$0 != nil}.map {$0!}
+    }
+
+    public func randomWasmBranchHint() -> WasmBranchHint {
+        probability(0.8) ? .None : Bool.random() ? .Likely : .Unlikely
     }
 
     @discardableResult

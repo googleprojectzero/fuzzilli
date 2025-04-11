@@ -1700,7 +1700,7 @@ class WasmFoundationTests: XCTestCase {
                     function.wasmBranchIf(condition, to: loopLabel, args: [incFirst, incSecond])
                     return [incFirst, incSecond]
                 }
-                function.wasmBuildIfElse(function.wasmi32CompareOp(loopResult[1], function.consti32(20), using: .Ne)) {
+                function.wasmBuildIfElse(function.wasmi32CompareOp(loopResult[1], function.consti32(20), using: .Ne), hint: .None) {
                     function.wasmUnreachable()
                 }
                 function.wasmReturn(loopResult[0])
@@ -1731,7 +1731,7 @@ class WasmFoundationTests: XCTestCase {
 
                 let comp = function.wasmi32CompareOp(variable, condVariable, using: .Lt_s)
 
-                function.wasmBuildIfElse(comp, ifBody: {
+                function.wasmBuildIfElse(comp, hint: .None, ifBody: {
                     let tmp = function.wasmi32BinOp(variable, condVariable, binOpKind: .Add)
                     function.wasmReassign(variable: result, to: tmp)
                 }, elseBody: {
@@ -1848,6 +1848,52 @@ class WasmFoundationTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "133\n331\n")
+    }
+
+    func testBranchHints() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+        // Use a JS function so that we have an imported function (causing all function indices to
+        // shift which is relevant for the branch hint section.)
+        let jsReturnOne = b.buildPlainFunction(with: .parameters()) { _ in
+            b.doReturn(b.loadInt(1))
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+
+                function.wasmBuildIfElse(function.wasmi32EqualZero(args[0]), hint: .Unlikely) {
+                    let one = function.wasmJsCall(function: jsReturnOne, withArgs: [],
+                        withWasmSignature: [] => [.wasmi32])!
+                    function.wasmReturn(one)
+                }
+                let cond = function.wasmi32CompareOp(args[0], function.consti32(4), using: .Gt_s)
+                function.wasmBuildIfElse(cond, hint: .Likely) {
+                    function.wasmReturn(function.consti32(2))
+                }
+                function.wasmBranchIf(
+                    function.wasmi32CompareOp(args[0], function.consti32(1), using: .Eq),
+                    to: label, args: [function.consti32(3)], hint: .Likely)
+                return [function.consti32(4)]
+            }
+        }
+        let exports = module.loadExports()
+        let out0 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out0)])
+        let out5 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(5)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out5)])
+        let out1 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out1)])
+        let out3 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(3)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out3)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "1\n2\n3\n4\n")
     }
 
     func testTryVoid() throws {
@@ -2111,7 +2157,7 @@ class WasmFoundationTests: XCTestCase {
             */
             wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, param in
                 function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
-                    function.wasmBuildIfElse(param[0]) {
+                    function.wasmBuildIfElse(param[0], hint: .None) {
                         function.WasmBuildThrow(tag: definedTag, inputs: [param[0]])
                     } elseBody: {
                         function.WasmBuildThrow(tag: importedTag, inputs: [function.consti32(123)])
@@ -2199,13 +2245,13 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, args in
                 let contant42 = function.consti64(42)
                 let result = function.wasmBuildLegacyTryWithResult(with: [.wasmi32] => [.wasmi32, .wasmi64], args: args, body: { label, args in
-                    function.wasmBuildIfElse(function.wasmi32EqualZero(args[0])) {
+                    function.wasmBuildIfElse(function.wasmi32EqualZero(args[0]), hint: .None) {
                         function.WasmBuildThrow(tag: tagVoid, inputs: [])
                     }
-                    function.wasmBuildIfElse(function.wasmi32CompareOp(args[0], function.consti32(1), using: .Eq)) {
+                    function.wasmBuildIfElse(function.wasmi32CompareOp(args[0], function.consti32(1), using: .Eq), hint: .None) {
                         function.WasmBuildThrow(tag: tagi32, inputs: [function.consti32(100)])
                     }
-                    function.wasmBuildIfElse(function.wasmi32CompareOp(args[0], function.consti32(2), using: .Eq)) {
+                    function.wasmBuildIfElse(function.wasmi32CompareOp(args[0], function.consti32(2), using: .Eq), hint: .None) {
                         function.WasmBuildThrow(tag: tagi32Other, inputs: [function.consti32(200)])
                     }
                     return [args[0], contant42]
@@ -2221,7 +2267,7 @@ class WasmFoundationTests: XCTestCase {
                 ], catchAllBody: { _ in
                     return [function.consti32(900), contant42]
                 })
-                function.wasmBuildIfElse(function.wasmi64CompareOp(result[1], contant42, using: .Ne)) {
+                function.wasmBuildIfElse(function.wasmi64CompareOp(result[1], contant42, using: .Ne), hint: .None) {
                     function.wasmUnreachable()
                 }
                 function.wasmReturn(result[0])
@@ -2644,7 +2690,7 @@ class WasmFoundationTests: XCTestCase {
                 function.wasmBuildBlock(with: [] => [], args: []) { catchAllNoRefLabel, _ in
                     let catchNoRefI32 = function.wasmBuildBlockWithResults(with: [] => [.wasmi32], args: []) { catchNoRefLabel, _ in
                         function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchNoRefLabel, catchAllNoRefLabel], catches: [.NoRef, .AllNoRef]) { _, _ in
-                            function.wasmBuildIfElse(function.wasmi32EqualZero(args[0])) {
+                            function.wasmBuildIfElse(function.wasmi32EqualZero(args[0]), hint: .None) {
                                 function.WasmBuildThrow(tag: tagVoid, inputs: [])
                             } elseBody: {
                                 function.WasmBuildThrow(tag: tagi32, inputs: [args[0]])
@@ -2683,7 +2729,7 @@ class WasmFoundationTests: XCTestCase {
                 function.wasmBuildBlockWithResults(with: [] => [.wasmExnRef], args: []) { catchAllRefLabel, _ in
                     let catchRefI32 = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchRefLabel, _ in
                         function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchRefLabel, catchAllRefLabel], catches: [.Ref, .AllRef]) { _, _ in
-                            function.wasmBuildIfElse(function.wasmi32EqualZero(args[0])) {
+                            function.wasmBuildIfElse(function.wasmi32EqualZero(args[0]), hint: .None) {
                                 function.WasmBuildThrow(tag: tagVoid, inputs: [])
                             } elseBody: {
                                 function.WasmBuildThrow(tag: tagi32, inputs: [args[0]])

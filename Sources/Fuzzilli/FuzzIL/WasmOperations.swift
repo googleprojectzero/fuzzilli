@@ -992,19 +992,27 @@ final class WasmEndBlock: WasmOperation {
     }
 }
 
+public enum WasmBranchHint: CaseIterable  {
+    case None
+    case Likely
+    case Unlikely
+}
+
 final class WasmBeginIf: WasmOperation {
     override var opcode: Opcode { .wasmBeginIf(self) }
     let signature: WasmSignature
     let inverted: Bool
+    let hint: WasmBranchHint
 
-    init(with signature: WasmSignature = [] => [], inverted: Bool = false) {
+    init(with signature: WasmSignature = [] => [], hint: WasmBranchHint = .None, inverted: Bool = false) {
         self.signature = signature
         self.inverted = inverted
+        self.hint = hint
         // Note that the condition is the last input! This is due to how lifting works for the wasm
         // value stack and that the condition is the first value to be removed from the stack, so
         // it needs to be the last one pushed to it.
         // Inner outputs: 1 label (used for branch instructions) plus all the parameters.
-        super.init(numInputs: signature.parameterTypes.count + 1, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(numInputs: signature.parameterTypes.count + 1, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext, .isMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
@@ -1217,11 +1225,13 @@ final class WasmBranch: WasmOperation {
 final class WasmBranchIf: WasmOperation {
     override var opcode: Opcode { .wasmBranchIf(self) }
     let labelTypes: [ILType]
+    let hint: WasmBranchHint
 
-    init(labelTypes: [ILType]) {
+    init(labelTypes: [ILType], hint: WasmBranchHint) {
         self.labelTypes = labelTypes
+        self.hint = hint
         // The inputs are the label, the arguments and the condition.
-        super.init(numInputs: 1 + labelTypes.count + 1, requiredContext: [.wasmFunction])
+        super.init(numInputs: 1 + labelTypes.count + 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
