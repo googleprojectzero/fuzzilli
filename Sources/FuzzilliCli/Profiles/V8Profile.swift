@@ -662,7 +662,6 @@ let v8Profile = Profile(
         if probability(0.05) {
             if probability(0.5) { args.append("--stress-gc-during-compilation") }
             if probability(0.5) { args.append("--lazy-new-space-shrinking") }
-            if probability(0.5) { args.append("--const-tracking-let") }
             if probability(0.5) { args.append("--stress-wasm-memory-moving") }
             if probability(0.5) { args.append("--stress-background-compile") }
             if probability(0.5) { args.append("--parallel-compile-tasks-for-lazy") }
