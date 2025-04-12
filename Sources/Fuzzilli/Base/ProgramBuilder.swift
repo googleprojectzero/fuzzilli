@@ -604,7 +604,6 @@ public class ProgramBuilder {
                     let (pattern, flags) = self.randomRegExpPatternAndFlags()
                     return self.loadRegExp(pattern, flags)
                 }),
-            (.iterable, { return self.createArray(with: self.randomJsVariables(upTo: 5)) }),
             (.function(), {
                     // TODO: We could technically generate a full function here but then we would enter the full code generation logic which could do anything.
                     // Because we want to avoid this, we will just pick anything that can be a function.
@@ -663,48 +662,48 @@ public class ProgramBuilder {
                         return self.construct(prop, withArgs: args)
                     }
                 }
-                    let producingMethods = self.fuzzer.environment.getProducingMethods(ofType: type)
-                    let producingProperties = self.fuzzer.environment.getProducingProperties(ofType: type)
-                    let globalProperties = producingProperties.filter() {(group: String, property: String) in
-                        // Global properties are those that don't belong to a group, i.e. where the group is empty.
-                        return group == ""
-                    }
-                    // If there is a global property or builtin for this type, use it with high probability.
-                    if !globalProperties.isEmpty && probability(0.9) {
-                        return usePropertyToProduce(globalProperties.randomElement()!)
-                    }
-                    let maybeMethod = producingMethods.randomElement()
-                    let maybeProperty = producingProperties.randomElement()
-                    if let method = maybeMethod ,let property = maybeProperty {
-                        if probability(Double(producingMethods.count) / Double(producingMethods.count + producingProperties.count)) {
-                            return useMethodToProduce(method)
-                        } else {
-                            return usePropertyToProduce(property)
-                        }
-                    } else if let method = maybeMethod {
+
+                let producingMethods = self.fuzzer.environment.getProducingMethods(ofType: type)
+                let producingProperties = self.fuzzer.environment.getProducingProperties(ofType: type)
+                let globalProperties = producingProperties.filter() {(group: String, property: String) in
+                    // Global properties are those that don't belong to a group, i.e. where the group is empty.
+                    return group == ""
+                }
+                // If there is a global property or builtin for this type, use it with high probability.
+                if !globalProperties.isEmpty && probability(0.9) {
+                    return usePropertyToProduce(globalProperties.randomElement()!)
+                }
+                let maybeMethod = producingMethods.randomElement()
+                let maybeProperty = producingProperties.randomElement()
+                if let method = maybeMethod ,let property = maybeProperty {
+                    if probability(Double(producingMethods.count) / Double(producingMethods.count + producingProperties.count)) {
                         return useMethodToProduce(method)
-                    } else if let property = maybeProperty {
+                    } else {
                         return usePropertyToProduce(property)
                     }
-
-                    let codeGenerators =
-                        self.fuzzer.codeGenerators.filter({$0.requiredContext.isSubset(of: self.context) &&
-                            $0.produces != nil && $0.produces!.Is(type)})
-                    if codeGenerators.count > 0 {
-                      let generator = codeGenerators.randomElement()
-                      self.run(generator)
-                      // The generator we ran above is supposed to generate the
-                      // requested type. If no variable of that type exists
-                      // now, then either the generator or its annotation is
-                      // wrong.
-                      return self.randomVariable(ofTypeOrSubtype: type)!
-                    }
-                    // Otherwise this is one of the following:
-                    // 1. an object with more type information, i.e. it has a group, but no associated builtin, e.g. we cannot construct it with new.
-                    // 2. an object without a group, but it has some required fields.
-                    // In either case, we try to construct such an object.
-                    return self.createObjectWithProperties(type)
-                })
+                } else if let method = maybeMethod {
+                    return useMethodToProduce(method)
+                } else if let property = maybeProperty {
+                    return usePropertyToProduce(property)
+                }
+                let codeGenerators =
+                    self.fuzzer.codeGenerators.filter({$0.requiredContext.isSubset(of: self.context) &&
+                        !$0.isRecursive && $0.produces != nil && $0.produces!.Is(type)})
+                if codeGenerators.count > 0 {
+                  let generator = codeGenerators.randomElement()
+                  self.run(generator)
+                  // The generator we ran above is supposed to generate the
+                  // requested type. If no variable of that type exists
+                  // now, then either the generator or its annotation is
+                  // wrong.
+                  return self.randomVariable(ofTypeOrSubtype: type)!
+                }
+                // Otherwise this is one of the following:
+                // 1. an object with more type information, i.e. it has a group, but no associated builtin, e.g. we cannot construct it with new.
+                // 2. an object without a group, but it has some required fields.
+                // In either case, we try to construct such an object.
+                return self.createObjectWithProperties(type)
+            })
         ]
 
         // Make sure that we walk over these tests and their generators randomly.
