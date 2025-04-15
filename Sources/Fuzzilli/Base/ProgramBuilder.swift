@@ -1891,7 +1891,6 @@ public class ProgramBuilder {
 
         if numGeneratedInstructions > 0 {
             contributors.insert(generator)
-            generator.addedInstructions(numGeneratedInstructions)
         }
 
         return numGeneratedInstructions

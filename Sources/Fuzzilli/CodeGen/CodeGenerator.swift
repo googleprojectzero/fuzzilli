@@ -192,9 +192,11 @@ public class CodeGenerator: Contributor {
     public func run(in b: ProgramBuilder, with inputs: [Variable]) -> Int {
         let codeSizeBeforeGeneration = b.indexOfNextInstruction()
         adapter.run(in: b, with: inputs)
+        self.invoked()
         let codeSizeAfterGeneration = b.indexOfNextInstruction()
-        assert(codeSizeAfterGeneration >= codeSizeBeforeGeneration)
-        return codeSizeAfterGeneration - codeSizeBeforeGeneration
+        let addedInstructions = codeSizeAfterGeneration - codeSizeBeforeGeneration
+        self.addedInstructions(addedInstructions)
+        return addedInstructions
     }
 
     public convenience init(_ name: String, inContext context: Context = .javascript, produces: ILType? = nil, _ f: @escaping GeneratorFuncNoArgs) {

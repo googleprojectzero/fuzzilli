@@ -28,6 +28,10 @@ public class Contributor: Hashable {
     private var timedOutSamples = 0
     // Number of crashing programs produced.
     private var crashingSamples = 0
+    // The number of times this contributor has been invoked
+    private(set) var invocationCount = 0
+    // The number of times this contributor has actually emitted more than 0 instructions
+    private var successfulGenerationCount = 0
 
     // Number of times this instance failed to generate/mutate code.
     private var failures = 0
@@ -58,10 +62,16 @@ public class Contributor: Hashable {
         crashingSamples += 1
     }
 
+    func invoked() {
+        invocationCount += 1
+    }
 
     func addedInstructions(_ n: Int) {
-        guard n > 0 else { return }
+        assert(n >= 0)
         totalInstructionProduced += n
+        if n > 0 {
+            successfulGenerationCount += 1
+        }
     }
 
     func failedToGenerate() {
@@ -76,24 +86,30 @@ public class Contributor: Hashable {
         return validSamples + interestingSamples + invalidSamples + timedOutSamples + crashingSamples
     }
 
-    public var correctnessRate: Double {
-        guard totalSamples > 0 else { return 1.0 }
+    // If this is low, that means the CodeGenerator has dynamic requirements that are not met most of the time.
+    public var invocationSuccessRate: Double? {
+        guard invocationCount > 0 else { return nil }
+        return Double(successfulGenerationCount) / Double(invocationCount)
+    }
+
+    public var correctnessRate: Double? {
+        guard totalSamples > 0 else { return nil }
         return Double(validSamples + interestingSamples) / Double(totalSamples)
     }
 
-    public var interestingSamplesRate: Double {
-        guard totalSamples > 0 else { return 0.0 }
+    public var interestingSamplesRate: Double? {
+        guard totalSamples > 0 else { return nil }
         return Double(interestingSamples) / Double(totalSamples)
     }
 
-    public var timeoutRate: Double {
-        guard totalSamples > 0 else { return 0.0 }
+    public var timeoutRate: Double? {
+        guard totalSamples > 0 else { return nil }
         return Double(timedOutSamples) / Double(totalSamples)
     }
 
-    public var failureRate: Double {
+    public var failureRate: Double? {
         let totalAttempts = totalSamples + failures
-        guard totalAttempts > 0 else { return 0.0 }
+        guard totalAttempts > 0 else { return nil }
         return Double(failures) / Double(totalAttempts)
     }
 

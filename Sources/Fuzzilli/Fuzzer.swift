@@ -264,14 +264,27 @@ public class Fuzzer {
 
         // Install a timer to monitor for faulty code generators and program templates.
         timers.scheduleTask(every: 5 * Minutes) {
+            let nameMaxLength = self.codeGenerators.map({ $0.name.count }).max()!
+
             for generator in self.codeGenerators {
-                if generator.totalSamples >= 100 && generator.correctnessRate < 0.05 {
-                    self.logger.warning("Code generator \(generator.name) might be broken. Correctness rate is only \(generator.correctnessRate * 100)% after \(generator.totalSamples) generated samples")
+                if generator.invocationCount > 100 && generator.invocationSuccessRate! < 0.2 {
+                    let percentage = Statistics.percentageOrNa(generator.invocationSuccessRate, 7)
+                    let name = generator.name.rightPadded(toLength: nameMaxLength)
+                    let invocations = String(format: "%12d", generator.invocationCount)
+                    self.logger.warning("Code generator \(name) might have too restrictive dynamic requirements. Its successful invocation rate is only \(percentage)% after \(invocations) invocations")
+                }
+                if generator.totalSamples >= 100 && generator.correctnessRate! < 0.05 {
+                    let name = generator.name.rightPadded(toLength: nameMaxLength)
+                    let percentage = Statistics.percentageOrNa(generator.correctnessRate, 7)
+                    let totalSamples = String(format: "%10d", generator.totalSamples)
+                    self.logger.warning("Code generator \(name) might be broken. Correctness rate is only \(percentage)% after \(totalSamples) generated samples")
                 }
             }
             for template in self.programTemplates {
-                if template.totalSamples >= 100 && template.correctnessRate < 0.05 {
-                    self.logger.warning("Program template \(template.name) might be broken. Correctness rate is only \(template.correctnessRate * 100)% after \(template.totalSamples) generated samples")
+                if template.totalSamples >= 100 && template.correctnessRate! < 0.05 {
+                    let percentage = Statistics.percentageOrNa(template.correctnessRate, 7)
+                    let totalSamples = String(format: "%10d", template.totalSamples)
+                    self.logger.warning("Program template \(template.name) might be broken. Correctness rate is only \(percentage)% after \(totalSamples) generated samples")
                 }
             }
         }
