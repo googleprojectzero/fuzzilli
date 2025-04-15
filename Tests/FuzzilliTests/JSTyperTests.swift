@@ -1531,15 +1531,28 @@ class JSTyperTests: XCTestCase {
         let wasmGlobalf64: Variable = b.createWasmGlobal(value: .wasmf64(1337), isMutable: false)
         XCTAssertEqual(b.type(of: wasmGlobalf64), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmf64, isMutable: false)))
 
+        let memory = b.createWasmMemory(minPages: 1)
+
         let typeGroup = b.wasmDefineTypeGroup {
             return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
         }
+
+        let plainFunction = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+            let obj = b.buildObjectLiteral { obj in
+            }
+            b.doReturn(obj)
+        }
+        let wasmSignature = [] => [.wasmExternRef]
 
         let typeDesc = b.type(of: typeGroup[0]).wasmTypeDefinition!.description!
 
         let module = b.buildWasmModule { wasmModule in
             // Defines one global
             wasmModule.addGlobal(wasmGlobal: .wasmi64(1339), isMutable: true)
+
+            wasmModule.addMemory(minPages: 3)
+
+            wasmModule.addTag(parameterTypes: [.wasmi32])
 
             // Function zero
             wasmModule.addWasmFunction(with: [] => []) { function, _ in
@@ -1548,7 +1561,9 @@ class JSTyperTests: XCTestCase {
             }
 
             // Function one
-            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi64]) { function, label, _ in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi64]) { function, label, args in
+                // Do a store to import the memory.
+                function.wasmMemoryStore(memory: memory, dynamicOffset: function.consti32(0), value: args[0], storeType: .I32StoreMem, staticOffset: 0)
                 return [function.consti64(1338)]
             }
 
@@ -1567,26 +1582,47 @@ class JSTyperTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => [ILType.wasmIndexRef(typeDesc, nullability: true)]) { function, label, _ in
                 return [function.wasmArrayNewDefault(arrayType: typeGroup[0], size: function.consti32(10))]
             }
+
+
+            // Function five
+            wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, label, _ in
+                // This forces an import and we should see a re-exported function on the module.
+                return [function.wasmJsCall(function: plainFunction, withArgs: [], withWasmSignature: wasmSignature)!]
+            }
         }
 
         let exports = module.loadExports()
-        XCTAssert(b.type(of: exports).Is(.object(ofGroup: "_fuzz_WasmExports0", withProperties: ["wg0", "wg1"], withMethods: ["w0", "w1", "w2", "w3", "w4"])))
+        XCTAssertEqual(b.type(of: exports), .object(ofGroup: "_fuzz_WasmExports1", withProperties: ["wg0", "iwg0", "wm0", "iwm0", "wex0"], withMethods: ["w0", "w1", "w2", "w3", "w4", "w5", "iw0"]))
 
         let fun0 = b.methodSignatures(of: module.getExportedMethod(at: 0), on: exports)
         let fun1 = b.methodSignatures(of: module.getExportedMethod(at: 1), on: exports)
         let fun2 = b.methodSignatures(of: module.getExportedMethod(at: 2), on: exports)
         let fun3 = b.methodSignatures(of: module.getExportedMethod(at: 3), on: exports)
         let fun4 = b.methodSignatures(of: module.getExportedMethod(at: 4), on: exports)
+        let fun5 = b.methodSignatures(of: module.getExportedMethod(at: 5), on: exports)
+        let reexportedFunction = b.methodSignatures(of: "iw0", on: exports)
 
         XCTAssertEqual(fun0, [[] => .undefined])
         XCTAssertEqual(fun1, [[.integer] => .bigint])
         XCTAssertEqual(fun2, [[.float] => .float])
         XCTAssertEqual(fun3, [[.anything] => .jsArray])
         XCTAssertEqual(fun4, [[] => .anything])
+        XCTAssertEqual(fun5, [[] => .anything])
+        // Here the typer should be able to see the full JS signature.
+        XCTAssertEqual(reexportedFunction, [[] => .object(ofGroup: "_fuzz_Object0")])
 
         let glob0 = b.getProperty("wg0", of: exports)
-        XCTAssert(b.type(of: glob0).Is(.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: .wasmi64, isMutable: true))))
-        let glob1 = b.getProperty("wg1", of: exports)
-        XCTAssert(b.type(of: glob1).Is(.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: .wasmf64, isMutable: false))))
+        XCTAssertEqual(b.type(of: glob0), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: .wasmi64, isMutable: true)))
+
+        let glob1 = b.getProperty("iwg0", of: exports)
+        XCTAssertEqual(b.type(of: glob1), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: .wasmf64, isMutable: false)))
+
+        let mem0 = b.getProperty("wm0", of: exports)
+        let memType = ILType.wasmMemory(limits: Limits(min: 3))
+        XCTAssertEqual(b.type(of: mem0), memType)
+
+        let importedMem = b.getProperty("iwm0", of: exports)
+        let importedMemType = ILType.wasmMemory(limits: Limits(min: 1))
+        XCTAssertEqual(b.type(of: importedMem), importedMemType)
     }
 }

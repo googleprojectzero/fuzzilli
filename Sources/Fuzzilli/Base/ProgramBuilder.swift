@@ -998,10 +998,10 @@ public class ProgramBuilder {
         return Signature(expects: parameterTypes.map(Parameter.plain), returns: returnType)
     }
 
-    public static func convertJsSignatureToWasmSignatureDeterministic(_ signature: Signature) -> Signature {
+    public static func convertJsSignatureToWasmSignatureDeterministic(_ signature: Signature) -> WasmSignature {
         let parameterTypes = prepareArgumentTypesDeterministic(forParameters: signature.parameters).map { mapJsToWasmType($0) }
         let outputType = mapJsToWasmType(signature.outputType)
-        return Signature(expects: parameterTypes.map(Parameter.plain), returns: outputType)
+        return WasmSignature(expects: parameterTypes, returns: [outputType])
     }
 
     /// Find random arguments for a function call and spread some of them.
