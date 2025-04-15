@@ -389,7 +389,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 for index in definedEntryIndices {
                     let value = b.randomVariable(ofType: expectedEntryType)!
                     let actualEntryType = b.type(of: value)
-                    definedEntries.append(.init(indexInTable: index, signature: actualEntryType == .wasmFunctionDef() ? actualEntryType.wasmFunctionDefSignature! : WasmSignature(from: ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(actualEntryType.signature ?? Signature.forUnknownFunction))))
+                    definedEntries.append(.init(indexInTable: index, signature: actualEntryType == .wasmFunctionDef() ? actualEntryType.wasmFunctionDefSignature! : ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(actualEntryType.signature ?? Signature.forUnknownFunction)))
                     definedEntryValues.append(value)
                 }
             }
