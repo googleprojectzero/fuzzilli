@@ -16,7 +16,7 @@
 /// For example, an element with weight 10 is 2x more likely to be selected by randomElement() than an element with weight 5.
 public struct WeightedList<Element>: Sequence {
     private var elements = [(elem: Element, weight: Int, cumulativeWeight: Int)]()
-    private var totalWeight = 0
+    private(set) var totalWeight = 0
 
     public init() {}
 
@@ -80,5 +80,9 @@ public struct WeightedList<Element>: Sequence {
 
     public func makeIterator() -> Array<Element>.Iterator {
         return elements.map({ $0.elem }).makeIterator()
+    }
+
+    public func iteratorWithWeights() -> Array<(Element, Int)>.Iterator {
+        return elements.map({ ($0.elem, $0.weight) }).makeIterator()
     }
 }
