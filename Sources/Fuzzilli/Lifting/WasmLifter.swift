@@ -1424,7 +1424,7 @@ public class WasmLifter {
                         let sig = op.definedEntries[idx].signature
                         importIfNeeded(.import(type: .function(nil), variable: input, signature: sig))
                     } else {
-                        fatalError("unreachable")
+                        fatalError("unreachable, seeing \(inputType) in instruction \(instr.op)")
                     }
                 }
             }
