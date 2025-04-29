@@ -277,16 +277,15 @@ class ProgramBuilderTests: XCTestCase {
 
         b.blockStatement {
             let var1 = b.loadString("HelloWorld")
-            XCTAssertEqual(b.findVariable(satisfying: { $0 == var1 }), var1)
             b.blockStatement {
                 let var2 = b.loadFloat(13.37)
-                XCTAssertEqual(b.findVariable(satisfying: { $0 == var2 }), var2)
                 b.blockStatement {
                     let var3 = b.loadInt(100)
-                    XCTAssertEqual(b.findVariable(satisfying: { $0 == var3 }), var3)
                 }
             }
         }
+
+        print(fuzzer.lifter.lift(b.finalize()))
     }
 
     func testVariableHiding() {

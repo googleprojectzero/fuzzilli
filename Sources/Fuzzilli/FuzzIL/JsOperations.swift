@@ -1945,7 +1945,7 @@ final class BeginIf: JsOperation {
 
     init(inverted: Bool) {
         self.inverted = inverted
-        super.init(numInputs: 1, attributes: [.isBlockStart, .isMutable, .propagatesSurroundingContext], contextOpened: .javascript)
+        super.init(numInputs: 1, attributes: [.isBlockStart, .isMutable, .propagatesSurroundingContext], contextOpened: [.javascript, .ifBlock])
     }
 }
 
@@ -1953,7 +1953,7 @@ final class BeginElse: JsOperation {
     override var opcode: Opcode { .beginElse(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd, .isBlockStart, .propagatesSurroundingContext], contextOpened: .javascript)
+        super.init(attributes: [.isBlockEnd, .isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .ifBlock])
     }
 }
 
@@ -2234,7 +2234,7 @@ final class BeginTry: JsOperation {
     override var opcode: Opcode { .beginTry(self) }
 
     init() {
-        super.init(attributes: [.isBlockStart, .propagatesSurroundingContext])
+        super.init(attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .tryBlock])
     }
 }
 
@@ -2242,7 +2242,7 @@ final class BeginCatch: JsOperation {
     override var opcode: Opcode { .beginCatch(self) }
 
     init() {
-        super.init(numInnerOutputs: 1, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext])
+        super.init(numInnerOutputs: 1, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], contextOpened: [.javascript, .tryBlock])
     }
 }
 
@@ -2250,13 +2250,13 @@ final class BeginFinally: JsOperation {
     override var opcode: Opcode { .beginFinally(self) }
 
     init() {
-        super.init(attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext])
+        super.init(attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], contextOpened: [.javascript, .tryBlock])
     }
 }
 
 final class EndTryCatchFinally: JsOperation {
     override var opcode: Opcode { .endTryCatchFinally(self) }
-
+ 
     init() {
         super.init(attributes: [.isBlockEnd])
     }
@@ -2292,7 +2292,7 @@ final class BeginBlockStatement: JsOperation {
     override var opcode: Opcode { .beginBlockStatement(self) }
 
     init() {
-        super.init(attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: .javascript)
+        super.init(attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .codeBlock])
     }
 }
 
@@ -2461,6 +2461,67 @@ class BindMethod: JsOperation {
         self.methodName = methodName
         // TODO(cffsmith): We probably want to expand this in the future to also bind arguments at some point.
         super.init(numInputs: 1, numOutputs: 1, requiredContext: .javascript)
+    }
+}
+
+final class LoopNestedBreak: JsOperation {
+    override var opcode: Opcode { .loopNestedBreak(self) }
+
+    let depth: Int
+
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .loop])
+    }
+}
+final class BlockNestedBreak: JsOperation {
+    override var opcode: Opcode { .blockNestedBreak(self) }
+
+    let depth: Int
+
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .codeBlock])
+    }
+}
+final class IfNestedBreak: JsOperation {
+    override var opcode: Opcode { .ifNestedBreak(self) }
+
+    let depth: Int
+
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .ifBlock])
+    }
+}
+final class TryNestedBreak: JsOperation {
+    override var opcode: Opcode { .tryNestedBreak(self) }
+
+    let depth: Int
+
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .tryBlock])
+    }
+}
+final class SwitchNestedBreak: JsOperation {
+    override var opcode: Opcode { .switchNestedBreak(self) }
+
+    let depth: Int
+
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .switchCase])
+    }
+}
+final class WithNestedBreak: JsOperation {
+    override var opcode: Opcode { .withNestedBreak(self) }
+
+    let depth: Int
+
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .with])
     }
 }
 

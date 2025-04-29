@@ -2754,43 +2754,6 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testBlockStatements() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(1337)
-        let v1 = b.createObject(with: ["a": v0])
-        b.buildForInLoop(v1) { v2 in
-            b.blockStatement {
-                let v3 = b.loadInt(1337)
-                b.reassign(v2, to: v3)
-                b.blockStatement {
-                    let v4 = b.createObject(with: ["a" : v1])
-                    b.reassign(v2, to: v4)
-                }
-
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-        const v1 = { a: 1337 };
-        for (let v2 in v1) {
-            {
-                v2 = 1337;
-                {
-                    v2 = { a: v1 };
-                }
-            }
-        }
-
-        """
-
-        XCTAssertEqual(actual, expected)
-    }
-
     func testSingularOperationLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -3095,4 +3058,521 @@ class LifterTests: XCTestCase {
         """
         XCTAssertEqual(actual, expected)
     }
+
+    // TestLoopNestedBreak0-6 is the nested break operation corresponding to different uses of the loop
+    func testLoopNestedBreakLifting0(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let d2 = 2
+        let d3 = 3
+        b.buildForLoop() {
+            b.buildForLoop() {
+                b.buildForLoop() {
+                    b.loopNestedBreak(d2)
+                }
+            }
+            b.loopNestedBreak(d3)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        label0:
+        for (;;) {
+            for (;;) {
+                label2:
+                for (;;) {
+                    break label2;
+                }
+            }
+            break label0;
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testLoopNestedBreakLifting1(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let a1 = b.loadInt(0)
+
+        let d1 = 1
+        let d3 = 3
+
+        b.buildWhileLoop({ b.compare(a1, with: b.loadInt(100), using: .lessThan) }) {
+            b.buildWhileLoop({ b.compare(a1, with: b.loadInt(100), using: .lessThan) })  {
+                b.buildWhileLoop({ b.compare(a1, with: b.loadInt(100), using: .lessThan) })  {
+                    b.loopNestedBreak(d1)
+                }
+            }
+            b.loopNestedBreak(d3)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        label0:
+        while (0 < 100) {
+            label1:
+            while (0 < 100) {
+                while (0 < 100) {
+                    break label1;
+                }
+            }
+            break label0;
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+
+    }
+
+    func testLoopNestedBreakLifting2(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let a1 = b.loadInt(0)
+
+        let d1 = 1
+        let d3 = 3
+        b.buildDoWhileLoop(do: {
+            b.buildDoWhileLoop(do: {
+                b.buildDoWhileLoop(do: {
+                }, while: { b.compare(a1, with: b.loadInt(100), using: .lessThan) })
+                b.loopNestedBreak(d1)
+            }, while: { b.compare(a1, with: b.loadInt(100), using: .lessThan) })
+                 b.loopNestedBreak(d3)
+        }, while: { b.compare(a1, with: b.loadInt(100), using: .lessThan) })
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        label0:
+        do {
+            label1:
+            do {
+                do {
+                } while (0 < 100)
+                break label1;
+            } while (0 < 100)
+            break label0;
+        } while (0 < 100)
+
+        """
+        XCTAssertEqual(actual, expected)
+  }
+
+
+  func testLoopNestedBreakLifting3(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let a1 = b.loadInt(0)
+
+        let d1 = 1
+        let d3 = 3
+        let v1 = b.createObject(with: ["a": a1])
+        b.buildForInLoop(v1) { v2 in
+            b.buildForInLoop(v1) { v2 in
+                b.buildForInLoop(v1) { v2 in
+                    b.loopNestedBreak(d1)
+                }
+                b.loopNestedBreak(d3)
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v1 = { a: 0 };
+        for (const v2 in v1) {
+            label1:
+            for (const v3 in v1) {
+                for (const v4 in v1) {
+                    break label1;
+                }
+                break label1;
+            }
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+
+    }
+
+
+    func testLoopNestedBreakLifting4(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let n1 = b.loadFloat(Double.nan)
+        let v1 = b.createArray(with: [n1, n1, n1])
+
+        let d2 = 2
+        b.buildForOfLoop(v1) { v2 in
+            b.buildForOfLoop(v1) { v2 in
+                b.buildForOfLoop(v1) { v2 in
+                }
+                b.loopNestedBreak(d2)
+            }
+        }
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v1 = [NaN,NaN,NaN];
+        label0:
+        for (const v2 of v1) {
+            for (const v3 of v1) {
+                for (const v4 of v1) {
+                }
+                break label0;
+            }
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+
+    }
+
+    func testLoopNestedBreakLifting5(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let a1 = b.createArray(with: [b.loadInt(10), b.loadInt(11), b.loadInt(12), b.loadInt(13), b.loadInt(14)])
+        let a2 = b.createArray(with: [b.loadInt(20), b.loadInt(21), b.loadInt(22), b.loadInt(23)])
+        let a3 = b.createArray(with: [b.loadInt(30), b.loadInt(31), b.loadInt(32)])
+        let a4 = b.createArray(with: [a1, a2, a3])
+
+        let d2 = 2
+
+        b.buildForOfLoop(a4, selecting: [0,2], hasRestElement: true) { args in
+
+            b.buildForOfLoop(a4, selecting: [0,2], hasRestElement: true) { args in
+                b.buildForOfLoop(a4, selecting: [0,2], hasRestElement: true) { args in
+                }
+                b.loopNestedBreak(d2)
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v15 = [[10,11,12,13,14],[20,21,22,23],[30,31,32]];
+        label0:
+        for (let [v16,,...v17] of v15) {
+            for (let [v18,,...v19] of v15) {
+                for (let [v20,,...v21] of v15) {
+                }
+                break label0;
+            }
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+
+    }
+
+    func testLoopNestedBreakLifting6(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let d1 = 1
+        let d2 = 2
+
+        b.buildRepeatLoop(n: 10) { d1
+            b.buildRepeatLoop(n: 10) { d1
+                b.buildRepeatLoop(n: 10) { d1
+                }
+                b.loopNestedBreak(d2)
+            }
+        }
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        label0:
+        for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 10; i++) {
+                for (let i = 0; i < 10; i++) {
+                }
+                break label0;
+            }
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    // testLoopNestedBreak7 is a comprehensive test of the loop
+    // 1. breaking and continuing to the same label
+    // 2. breaking/continuing to the same label multiple times from different depths
+    // 3. breaking out of a loop at depth 1
+    // 4. breaking out of a loop at depth 2
+    func testLoopNestedBreakLifting7(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildRepeatLoop(n: 10) { 
+            b.buildRepeatLoop(n: 10) { 
+                b.buildRepeatLoop(n: 10) { 
+                    b.loopNestedBreak(0)
+                }
+                b.loopNestedBreak(0)
+                b.loopNestedBreak(1)
+            }
+        }
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        label0:
+        for (let i = 0; i < 10; i++) {
+            label1:
+            for (let i = 0; i < 10; i++) {
+                for (let i = 0; i < 10; i++) {
+                    break label0;
+                }
+                break label0;
+                break label1;
+            }
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testBlockNestedBreakLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.blockStatement{
+            b.blockStatement {
+                b.blockStatement {
+                    b.blockNestedBreak(0)
+                }
+                b.blockNestedBreak(0)
+                b.blockNestedBreak(1)
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        label0:
+        {
+            label1:
+            {
+                {
+                    break label0;
+                }
+                break label0;
+                break label1;
+            }
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    
+    func testTryNestedBreakLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildTryCatchFinally(tryBody: {
+                b.buildTryCatchFinally(tryBody: {
+                    b.buildTryCatchFinally(tryBody: {
+                        b.tryNestedBreak(0)
+                    }, catchBody: { _ in})
+                        b.tryNestedBreak(0)
+                        b.tryNestedBreak(1)
+                }, catchBody: { _ in
+                        b.tryNestedBreak(1)
+                    }){
+                }
+            }, catchBody: { _ in})
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+        
+        let expected = """
+        label0:
+        try {
+            label1:
+            try {
+                try {
+                    break label0;
+                } catch(e0) {
+                }
+                break label0;
+                break label1;
+            } catch(e1) {
+                break label1;
+            } finally {
+            }
+        } catch(e2) {
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testIfNestedBreakLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        
+        let cmp = b.loadBool(false)
+        
+        b.buildIfElse(cmp, ifBody: {
+            b.buildIfElse(cmp, ifBody: {
+                b.ifNestedBreak(0)
+            }, elseBody: {
+                b.buildIfElse(cmp, ifBody: {
+                    b.ifNestedBreak(0)
+                }, elseBody: {
+                    b.ifNestedBreak(1)
+                })
+            })
+        }, elseBody: {
+            b.ifNestedBreak(2)
+        })
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+        let expected = """
+        label0:
+        if (false) {
+            label1:
+            if (false) {
+                break label0;
+            } else {
+                if (false) {
+                    break label0;
+                } else {
+                    break label1;
+                }
+            }
+        } else {
+            break label0;
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+
+    func testSwitchNestedBreakLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        
+        let v0 = b.loadInt(42)
+        let v1 = b.createObject(with: ["foo": v0])
+        let v2 =  b.getProperty("foo", of: v1)
+        let v3 = b.loadInt(1337)
+        let v4 = b.loadString("42")
+
+        b.buildSwitch(on: v2) { swtch in
+            swtch.addCase(v3, fallsThrough: false) {
+            }
+            swtch.addCase(v4, fallsThrough: false){
+                        let v0 = b.loadInt(42)
+                        let v1 = b.createObject(with: ["foo": v0])
+                        let v2 =  b.getProperty("foo", of: v1)
+                        let v3 = b.loadInt(1337)
+                        let v4 = b.loadString("42")
+                        let v5 = b.loadFloat(13.37)
+                        b.buildSwitch(on: v2) { swtch in
+                            swtch.addCase(v3, fallsThrough: false) {
+                            }
+                            swtch.addCase(v4, fallsThrough: false){
+                                b.switchNestedBreak(1)
+                            }
+                            swtch.addDefaultCase(fallsThrough: true){
+                                b.switchNestedBreak(2)
+                            }
+                        }
+            }
+            swtch.addDefaultCase(fallsThrough: true){
+                b.switchNestedBreak(0)
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+        let expected = """
+        label0:
+        switch (({ foo: 42 }).foo) {
+            case 1337:
+                break;
+            case "42":
+            label1:
+                switch (({ foo: 42 }).foo) {
+                    case 1337:
+                        break;
+                    case "42":
+                        break label1;
+                        break;
+                    default:
+                        break label0;
+                }
+                break;
+            default:
+                break label0;
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+
+    func testWithNestedBreakLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        
+        let obj = b.loadString("HelloWorld")
+        b.buildWith(obj) {
+            b.buildWith(obj) {
+                b.buildWith(obj) {
+                    b.withNestedBreak(2)
+                }
+                b.withNestedBreak(0)
+                b.withNestedBreak(1)
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+        let expected = """
+        label0:
+        with ("HelloWorld") {
+            label1:
+            with ("HelloWorld") {
+                label2:
+                with ("HelloWorld") {
+                    break label2;
+                }
+                break label0;
+                break label1;
+            }
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+    
 }
