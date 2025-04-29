@@ -233,6 +233,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = SwitchNestedBreak(Int.random(in: 0...10))
         case .withNestedBreak(let op):
             newOp = WithNestedBreak(Int.random(in: 0...10))
+        case .loopNestedContinue(let op):
+            newOp = LoopNestedContinue(Int.random(in: 0...10))
         case .createWasmGlobal(let op):
             // The type has to match for wasm, we cannot just switch types here as the rest of the wasm code will become invalid.
             // TODO: add nullref and funcref as types here.

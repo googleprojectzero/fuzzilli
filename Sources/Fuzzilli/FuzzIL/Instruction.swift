@@ -1042,6 +1042,8 @@ extension Instruction: ProtobufConvertible {
                 $0.switchNestedBreak = Fuzzilli_Protobuf_SwitchNestedBreak()
             case .withNestedBreak:
                 $0.withNestedBreak = Fuzzilli_Protobuf_WithNestedBreak()
+            case .loopNestedContinue:
+                $0.loopNestedContinue = Fuzzilli_Protobuf_LoopNestedContinue()
             case .print(_):
                 fatalError("Print operations should not be serialized")
             // Wasm Operations
@@ -1916,7 +1918,8 @@ extension Instruction: ProtobufConvertible {
             op = SwitchNestedBreak(d.depth)
         case .withNestedBreak(let d):   
             op = WithNestedBreak(d.depth)
-
+        case .loopNestedContinue(let d):   
+            op = LoopNestedContinue(d.depth)
         case .createWasmGlobal(let p):
             op = CreateWasmGlobal(value: convertWasmGlobal(p.wasmGlobal), isMutable: p.wasmGlobal.isMutable)
         case .createWasmMemory(let p):

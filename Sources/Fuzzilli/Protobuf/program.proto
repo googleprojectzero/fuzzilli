@@ -307,6 +307,7 @@ message Instruction {
         TryNestedBreak tryNestedBreak = 281;
         SwitchNestedBreak switchNestedBreak = 282;
         WithNestedBreak withNestedBreak = 283;
+        LoopNestedContinue loopNestedContinue = 284;
     }
 }
 

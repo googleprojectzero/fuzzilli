@@ -208,6 +208,7 @@ enum Opcode {
     case tryNestedBreak(TryNestedBreak)
     case switchNestedBreak(SwitchNestedBreak)
     case withNestedBreak(WithNestedBreak)
+    case loopNestedContinue(LoopNestedContinue)
     case print(Print)
     case explore(Explore)
     case probe(Probe)

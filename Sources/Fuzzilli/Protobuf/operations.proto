@@ -1238,6 +1238,9 @@ message SwitchNestedBreak {
 message WithNestedBreak {
 }
 
+message LoopNestedContinue {
+}
+
 message ConstSimd128 {
     repeated uint32 value = 1;
 }

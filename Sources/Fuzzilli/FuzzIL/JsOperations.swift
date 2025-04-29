@@ -2525,6 +2525,17 @@ final class WithNestedBreak: JsOperation {
     }
 }
 
+final class LoopNestedContinue: JsOperation {
+    override var opcode: Opcode { .loopNestedContinue(self) }
+
+    let depth: Int
+
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .loop])
+    }
+}
+
 
 // This instruction is used to create strongly typed WasmGlobals in the JS world that can be imported by a WasmModule.
 class CreateWasmGlobal: JsOperation {

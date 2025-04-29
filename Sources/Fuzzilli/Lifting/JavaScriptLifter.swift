@@ -1416,32 +1416,37 @@ public class JavaScriptLifter: Lifter {
             
             case .loopNestedBreak(let op):
                 w.withScriptWriter { writer in
-                    loopLabelStack.translate(w: &writer, expDepth: op.depth)
+                    loopLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
                 }
 
             case .blockNestedBreak(let op):
                 w.withScriptWriter { writer in
-                    blockLabelStack.translate(w: &writer, expDepth: op.depth)
+                    blockLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
                 }
 
             case .ifNestedBreak(let op):
                 w.withScriptWriter { writer in
-                    ifLabelStack.translate(w: &writer, expDepth: op.depth)
+                    ifLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
                 }
 
             case .tryNestedBreak(let op):
                 w.withScriptWriter { writer in
-                    tryLabelStack.translate(w: &writer, expDepth: op.depth)
+                    tryLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
                 }
 
             case .switchNestedBreak(let op):
                 w.withScriptWriter { writer in
-                    switchLabelStack.translate(w: &writer, expDepth: op.depth)
+                    switchLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
                 }
 
             case .withNestedBreak(let op):
                 w.withScriptWriter { writer in
-                    withLabelStack.translate(w: &writer, expDepth: op.depth)
+                    withLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
+                }
+
+            case .loopNestedContinue(let op):
+                w.withScriptWriter { writer in
+                    loopLabelStack.translateContinueLabel(w: &writer, expDepth: op.depth)
                 }
 
             case .createWasmGlobal(let op):
@@ -2406,7 +2411,7 @@ public class JavaScriptLifter: Lifter {
             }
         }
 
-        mutating func translate(w: inout ScriptWriter, expDepth: Int){
+        mutating func translateBreakLabel(w: inout ScriptWriter, expDepth: Int){
             let d = expDepth % stack.count
             let pre = String(repeating: " ", count: 4 * d)
             let s = pre + "label" + String(d) + ":\n"
@@ -2414,6 +2419,16 @@ public class JavaScriptLifter: Lifter {
                 insertLabel(writer: &w, at: d, labelContent: s)
             }
             w.emit("break " + "label" + String(d) + ";")
+        }
+
+        mutating func translateContinueLabel(w: inout ScriptWriter, expDepth: Int){
+            let d = expDepth % stack.count
+            let pre = String(repeating: " ", count: 4 * d)
+            let s = pre + "label" + String(d) + ":\n"
+            if(!stack[d].hasLabel){
+                insertLabel(writer: &w, at: d, labelContent: s)
+            }
+            w.emit("continue " + "label" + String(d) + ";")
         }
 
         mutating func depth() -> Int{

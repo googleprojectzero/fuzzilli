@@ -1871,6 +1871,10 @@ public let CodeGenerators: [CodeGenerator] = [
         b.loopNestedBreak(Int.random(in: 0...10))
     },
 
+    CodeGenerator("LoopNestedContinueGenerator", inContext: .loop) { b in
+        b.loopNestedContinue(Int.random(in: 0...10))
+    },
+
     CodeGenerator("BlockNestedBreakGenerator", inContext: .codeBlock) { b in
         b.blockNestedBreak(Int.random(in: 0...10))
     },

@@ -2842,6 +2842,10 @@ public class ProgramBuilder {
         emit(TryNestedBreak(depth), withInputs: [])
     }  
 
+    public func loopNestedContinue(_ depth: Int){
+        emit(LoopNestedContinue(depth), withInputs: [])
+    }
+
     public func doPrint(_ value: Variable) {
         emit(Print(), withInputs: [value])
     }

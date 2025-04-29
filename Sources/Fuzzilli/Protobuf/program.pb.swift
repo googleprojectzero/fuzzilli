@@ -2305,6 +2305,13 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .withNestedBreak(newValue)}
   }
 
+  public var loopNestedContinue: Fuzzilli_Protobuf_LoopNestedContinue {
+    get {
+      if case .loopNestedContinue(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoopNestedContinue()
+    }
+    set {operation = .loopNestedContinue(newValue)}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2591,6 +2598,7 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case tryNestedBreak(Fuzzilli_Protobuf_TryNestedBreak)
     case switchNestedBreak(Fuzzilli_Protobuf_SwitchNestedBreak)
     case withNestedBreak(Fuzzilli_Protobuf_WithNestedBreak)
+    case loopNestedContinue(Fuzzilli_Protobuf_LoopNestedContinue)
   }
 
   public init() {}
@@ -2922,6 +2930,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     281: .same(proto: "tryNestedBreak"),
     282: .same(proto: "switchNestedBreak"),
     283: .same(proto: "withNestedBreak"),
+    284: .same(proto: "loopNestedContinue"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6592,6 +6601,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
             self.operation = .withNestedBreak(v)
           }
         }()
+      case 284: try {
+          var v: Fuzzilli_Protobuf_LoopNestedContinue?
+          var hadOneofValue = false
+          if let current = self.operation {
+            hadOneofValue = true
+            if case .loopNestedContinue(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            self.operation = .loopNestedContinue(v)
+          }
+      }()
       default: break
       }
     }
@@ -7733,6 +7755,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .withNestedBreak?: try {
       guard case .withNestedBreak(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 283)
+    }()
+    case .loopNestedContinue?: try {
+      guard case .loopNestedContinue(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 284)
     }()
     case nil: break
     }
