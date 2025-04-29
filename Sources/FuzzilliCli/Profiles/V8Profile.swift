@@ -544,10 +544,6 @@ let v8Profile = Profile(
         }
 
         if probability(0.1) {
-            args.append("--no-turboshaft")
-        }
-
-        if probability(0.1) {
             args.append("--no-maglev")
         }
 
@@ -581,15 +577,15 @@ let v8Profile = Profile(
             args.append("--maglev-future")
         }
 
-        if probability(0.1) && !args.contains("--no-turboshaft") {
+        if probability(0.1) {
             args.append("--turboshaft-typed-optimizations")
         }
 
-        if probability(0.1) && !args.contains("--no-turboshaft") {
+        if probability(0.1) {
             args.append("--turbolev")
         }
 
-        if probability(0.1) && !args.contains("--no-turboshaft") {
+        if probability(0.1) {
             args.append("--turboshaft_wasm_in_js_inlining")
         }
 
