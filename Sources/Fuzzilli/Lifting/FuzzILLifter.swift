@@ -756,6 +756,24 @@ public class FuzzILLifter: Lifter {
         case .loopNestedContinue(let op):
             w.emit("LoopNestedContinue \(op.depth)")
 
+        case .loopNestedBreak(let op):
+            w.emit("LoopNestedBreak \(op.depth)")
+
+        case .blockNestedBreak(let op):
+            w.emit("BlockNestedBreak \(op.depth)")
+
+        case .ifNestedBreak(let op):
+            w.emit("IfNestedBreak \(op.depth)")
+
+        case .tryNestedBreak(let op):
+            w.emit("TryNestedBreak \(op.depth)")
+
+        case .switchNestedBreak(let op):
+            w.emit("SwitchNestedBreak \(op.depth)")
+            
+        case .withNestedBreak(let op):
+            w.emit("WithNestedBreak \(op.depth)")
+
         case .beginWasmModule:
             w.emit("BeginWasmModule")
             w.increaseIndentionLevel()

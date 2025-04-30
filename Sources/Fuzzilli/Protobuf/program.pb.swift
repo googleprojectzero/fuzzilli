@@ -2265,6 +2265,56 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .loopNestedContinue(newValue)}
   }
 
+  public var loopNestedBreak: Fuzzilli_Protobuf_LoopNestedBreak {
+    get {
+      if case .loopNestedBreak(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoopNestedBreak()
+    }
+    set {operation = .loopNestedBreak(newValue)}
+  }
+
+  public var blockNestedBreak: Fuzzilli_Protobuf_BlockNestedBreak {
+    get {
+      if case .blockNestedBreak(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BlockNestedBreak()
+    }
+    set {operation = .blockNestedBreak(newValue)}
+  }
+
+  public var ifNestedBreak: Fuzzilli_Protobuf_IfNestedBreak {
+    get {
+      if case .ifNestedBreak(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_IfNestedBreak()
+    }
+    set {operation = .ifNestedBreak(newValue)}
+  }
+
+  public var tryNestedBreak: Fuzzilli_Protobuf_TryNestedBreak {
+    get {
+      if case .tryNestedBreak(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_TryNestedBreak()
+    }
+    set {operation = .tryNestedBreak(newValue)}
+  }
+
+  public var switchNestedBreak: Fuzzilli_Protobuf_SwitchNestedBreak {
+    get {
+      if case .switchNestedBreak(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_SwitchNestedBreak()
+    }
+    set {operation = .switchNestedBreak(newValue)}
+  }
+
+  public var withNestedBreak: Fuzzilli_Protobuf_WithNestedBreak {
+    get {
+      if case .withNestedBreak(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WithNestedBreak()
+    }
+    set {operation = .withNestedBreak(newValue)}
+  }
+
+
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable, Sendable {
@@ -2545,6 +2595,12 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmUnreachable(Fuzzilli_Protobuf_WasmUnreachable)
     case wasmSelect(Fuzzilli_Protobuf_WasmSelect)
     case loopNestedContinue(Fuzzilli_Protobuf_LoopNestedContinue)
+    case loopNestedBreak(Fuzzilli_Protobuf_LoopNestedBreak)
+    case blockNestedBreak(Fuzzilli_Protobuf_BlockNestedBreak)
+    case ifNestedBreak(Fuzzilli_Protobuf_IfNestedBreak)
+    case tryNestedBreak(Fuzzilli_Protobuf_TryNestedBreak)
+    case switchNestedBreak(Fuzzilli_Protobuf_SwitchNestedBreak)
+    case withNestedBreak(Fuzzilli_Protobuf_WithNestedBreak)
   }
 
   public init() {}
@@ -2871,6 +2927,12 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     276: .same(proto: "wasmUnreachable"),
     277: .same(proto: "wasmSelect"),
     278: .same(proto: "loopNestedContinue"),
+    279: .same(proto: "loopNestedBreak"),
+    280: .same(proto: "blockNestedBreak"),
+    281: .same(proto: "ifNestedBreak"),
+    282: .same(proto: "tryNestedBreak"),
+    283: .same(proto: "switchNestedBreak"),
+    284: .same(proto: "withNestedBreak"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6476,6 +6538,84 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
             self.operation = .loopNestedContinue(v)
           }
       }()
+      case 279: try {
+        var v: Fuzzilli_Protobuf_LoopNestedBreak?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loopNestedBreak(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loopNestedBreak(v)
+        }
+      }()
+    case 280: try {
+        var v: Fuzzilli_Protobuf_BlockNestedBreak?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .blockNestedBreak(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .blockNestedBreak(v)
+        }
+      }()
+    case 281: try {
+        var v: Fuzzilli_Protobuf_IfNestedBreak?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .ifNestedBreak(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .ifNestedBreak(v)
+        }
+      }()
+    case 282: try {
+        var v: Fuzzilli_Protobuf_TryNestedBreak?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .tryNestedBreak(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .tryNestedBreak(v)
+        }
+      }()
+    case 283: try {
+        var v: Fuzzilli_Protobuf_SwitchNestedBreak?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .switchNestedBreak(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .switchNestedBreak(v)
+        }
+      }()
+    case 284: try {
+        var v: Fuzzilli_Protobuf_WithNestedBreak?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .withNestedBreak(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .withNestedBreak(v)
+        }
+      }()
       default: break
       }
     }
@@ -7596,6 +7736,30 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     }()
     case .loopNestedContinue?: try {
       guard case .loopNestedContinue(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 278)
+    }()
+    case .loopNestedBreak?: try {
+      guard case .loopNestedBreak(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 279)
+    }()
+    case .blockNestedBreak?: try {
+      guard case .blockNestedBreak(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 280)
+    }()
+    case .ifNestedBreak?: try {
+      guard case .ifNestedBreak(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 281)
+    }()
+    case .tryNestedBreak?: try {
+      guard case .tryNestedBreak(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 282)
+    }()
+    case .switchNestedBreak?: try {
+      guard case .switchNestedBreak(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 283)
+    }()
+    case .withNestedBreak?: try {
+      guard case .withNestedBreak(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 284)
     }()
     case nil: break

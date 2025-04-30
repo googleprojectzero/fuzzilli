@@ -1223,6 +1223,24 @@ message WasmSelect {
 message LoopNestedContinue {
 }
 
+message LoopNestedBreak {
+}
+
+message BlockNestedBreak {
+}
+
+message IfNestedBreak {
+}
+
++message TryNestedBreak {
+}
+
+message SwitchNestedBreak {
+}
+
+message WithNestedBreak {
+}
+
 message ConstSimd128 {
     repeated uint32 value = 1;
 }

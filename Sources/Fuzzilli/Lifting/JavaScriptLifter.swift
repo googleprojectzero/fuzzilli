@@ -102,6 +102,11 @@ public class JavaScriptLifter: Lifter {
         var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers))
 
         var loopLabelStack = LabelStack(type: .loopblock)
+        var ifLabelStack = LabelStack(type: .ifblock)
+        var switchLabelStack = LabelStack(type: .switchblock)
+        var tryLabelStack = LabelStack(type: .tryblock)
+        var blockLabelStack = LabelStack(type: .codeBlock)
+        var withLabelStack = LabelStack(type: .withblock)
 
         var wasmCodeStarts: Int? = nil
 
@@ -1037,12 +1042,14 @@ public class JavaScriptLifter: Lifter {
 
             case .beginWith:
                 let OBJ = input(0)
+                withLabelStack.push(currentCodeLength: w.code.count)
                 w.emit("with (\(OBJ)) {")
                 w.enterNewBlock()
 
             case .endWith:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                withLabelStack.pop()
 
             case .nop:
                 break
@@ -1109,6 +1116,7 @@ public class JavaScriptLifter: Lifter {
                 if op.inverted {
                     COND = UnaryExpression.new() + "!" + COND
                 }
+                ifLabelStack.push(currentCodeLength: w.code.count)
                 w.emit("if (\(COND)) {")
                 w.enterNewBlock()
 
@@ -1120,9 +1128,11 @@ public class JavaScriptLifter: Lifter {
             case .endIf:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                ifLabelStack.pop()
 
             case .beginSwitch:
                 let VALUE = input(0)
+                switchLabelStack.push(currentCodeLength: w.code.count)
                 w.emit("switch (\(VALUE)) {")
                 w.enterNewBlock()
 
@@ -1144,6 +1154,7 @@ public class JavaScriptLifter: Lifter {
             case .endSwitch:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                switchLabelStack.pop()
 
             case .beginWhileLoopHeader:
                 // Must not inline across loop boundaries as that would change the program's semantics.
@@ -1342,6 +1353,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("continue;")
 
             case .beginTry:
+                tryLabelStack.push(currentCodeLength: w.code.count)
                 w.emit("try {")
                 w.enterNewBlock()
 
@@ -1355,6 +1367,7 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("} finally {")
                 w.enterNewBlock()
+                tryLabelStack.pop()
 
             case .endTryCatchFinally:
                 w.leaveCurrentBlock()
@@ -1383,6 +1396,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("\(ESCAPE)`;")
 
             case .beginBlockStatement:
+                blockLabelStack.push(currentCodeLength: w.code.count)
                 w.emit("{")
                 w.enterNewBlock()
 
@@ -1390,6 +1404,7 @@ public class JavaScriptLifter: Lifter {
             case .endBlockStatement:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                blockLabelStack.pop()
 
             case .loadNewTarget:
                 w.assign(Identifier.new("new.target"), to: instr.output)
@@ -1401,6 +1416,36 @@ public class JavaScriptLifter: Lifter {
             case .loopNestedContinue(let op):
                 w.withScriptWriter { writer in
                     loopLabelStack.translateContinueLabel(w: &writer, expDepth: op.depth)
+                }
+
+            case .loopNestedBreak(let op):
+                w.withScriptWriter { writer in
+                    loopLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
+                }
+
+            case .blockNestedBreak(let op):
+                w.withScriptWriter { writer in
+                    blockLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
+                }
+
+            case .ifNestedBreak(let op):
+                w.withScriptWriter { writer in
+                    ifLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
+                }
+
+            case .tryNestedBreak(let op):
+                w.withScriptWriter { writer in
+                    tryLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
+                }
+
+            case .switchNestedBreak(let op):
+                w.withScriptWriter { writer in
+                    switchLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
+                }
+
+            case .withNestedBreak(let op):
+                w.withScriptWriter { writer in
+                    withLabelStack.translateBreakLabel(w: &writer, expDepth: op.depth)
                 }
 
             case .createWasmGlobal(let op):

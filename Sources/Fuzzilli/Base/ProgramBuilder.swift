@@ -2826,6 +2826,30 @@ public class ProgramBuilder {
         emit(LoopNestedContinue(depth), withInputs: [])
     }
 
+    public func loopNestedBreak(_ depth: Int){
+        emit(LoopNestedBreak(depth), withInputs: [])
+    }
+
+    public func blockNestedBreak(_ depth: Int){
+        emit(BlockNestedBreak(depth), withInputs: [])
+    }
+
+    public func ifNestedBreak(_ depth: Int){
+        emit(IfNestedBreak(depth), withInputs: [])
+    }
+
+    public func switchNestedBreak(_ depth: Int){
+        emit(SwitchNestedBreak(depth), withInputs: [])
+    }  
+
+    public func withNestedBreak(_ depth: Int){
+        emit(WithNestedBreak(depth), withInputs: [])
+    }  
+
+    public func tryNestedBreak(_ depth: Int){
+        emit(TryNestedBreak(depth), withInputs: [])
+    }  
+
 
     @discardableResult
     public func createWasmGlobal(value: WasmGlobal, isMutable: Bool) -> Variable {
