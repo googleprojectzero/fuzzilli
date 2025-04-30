@@ -2256,7 +2256,7 @@ final class BeginFinally: JsOperation {
 
 final class EndTryCatchFinally: JsOperation {
     override var opcode: Opcode { .endTryCatchFinally(self) }
-
+ 
     init() {
         super.init(attributes: [.isBlockEnd])
     }
@@ -2461,6 +2461,17 @@ class BindMethod: JsOperation {
         self.methodName = methodName
         // TODO(cffsmith): We probably want to expand this in the future to also bind arguments at some point.
         super.init(numInputs: 1, numOutputs: 1, requiredContext: .javascript)
+    }
+}
+
+final class LoopNestedContinue: JsOperation {
+    override var opcode: Opcode { .loopNestedContinue(self) }
+
+    let depth: Int
+
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .loop])
     }
 }
 

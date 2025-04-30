@@ -101,6 +101,8 @@ public class JavaScriptLifter: Lifter {
 
         var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers))
 
+        var loopLabelStack = LabelStack(type: .loopblock)
+
         var wasmCodeStarts: Int? = nil
 
         if options.contains(.includeComments), let header = program.comments.at(.header) {
@@ -1150,14 +1152,19 @@ public class JavaScriptLifter: Lifter {
 
             case .beginWhileLoopBody:
                 let COND = handleEndSingleExpressionContext(result: input(0), with: &w)
+                loopLabelStack.push(currentCodeLength: w.code.count)
                 w.emitBlock("while (\(COND)) {")
                 w.enterNewBlock()
+
 
             case .endWhileLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                loopLabelStack.pop()
+
 
             case .beginDoWhileLoopBody:
+                loopLabelStack.push(currentCodeLength: w.code.count)
                 w.emit("do {")
                 w.enterNewBlock()
 
@@ -1168,6 +1175,7 @@ public class JavaScriptLifter: Lifter {
             case .endDoWhileLoop:
                 let COND = handleEndSingleExpressionContext(result: input(0), with: &w)
                 w.emitBlock("} while (\(COND))")
+                loopLabelStack.pop()
 
             case .beginForLoopInitializer:
                 // While we could inline into the loop header, we probably don't want to do that as it will often lead
@@ -1243,6 +1251,7 @@ public class JavaScriptLifter: Lifter {
                 let INITIALIZER = header.initializer
                 var CONDITION = header.condition
                 var AFTERTHOUGHT = handleEndSingleExpressionContext(with: &w)
+                loopLabelStack.push(currentCodeLength: w.code.count)
 
                 if !INITIALIZER.contains("\n") && !CONDITION.contains("\n") && !AFTERTHOUGHT.contains("\n") {
                     if !CONDITION.isEmpty { CONDITION = " " + CONDITION }
@@ -1262,36 +1271,48 @@ public class JavaScriptLifter: Lifter {
             case .endForLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                loopLabelStack.pop()
+
 
             case .beginForInLoop:
                 let LET = w.declarationKeyword(for: instr.innerOutput)
                 let V = w.declare(instr.innerOutput)
                 let OBJ = input(0)
+                loopLabelStack.push(currentCodeLength: w.code.count)
                 w.emit("for (\(LET) \(V) in \(OBJ)) {")
                 w.enterNewBlock()
+
 
             case .endForInLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                loopLabelStack.pop()
+
 
             case .beginForOfLoop:
                 let V = w.declare(instr.innerOutput)
                 let LET = w.declarationKeyword(for: instr.innerOutput)
                 let OBJ = input(0)
+                loopLabelStack.push(currentCodeLength: w.code.count)
                 w.emit("for (\(LET) \(V) of \(OBJ)) {")
                 w.enterNewBlock()
+
 
             case .beginForOfLoopWithDestruct(let op):
                 let outputs = w.declareAll(instr.innerOutputs)
                 let PATTERN = liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement)
                 let LET = w.varKeyword
                 let OBJ = input(0)
+                loopLabelStack.push(currentCodeLength: w.code.count)
                 w.emit("for (\(LET) [\(PATTERN)] of \(OBJ)) {")
                 w.enterNewBlock()
+
 
             case .endForOfLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                loopLabelStack.pop()
+
 
             case .beginRepeatLoop(let op):
                 let LET = w.varKeyword
@@ -1302,12 +1323,16 @@ public class JavaScriptLifter: Lifter {
                     I = "i"
                 }
                 let ITERATIONS = op.iterations
+                loopLabelStack.push(currentCodeLength: w.code.count)
                 w.emit("for (\(LET) \(I) = 0; \(I) < \(ITERATIONS); \(I)++) {")
                 w.enterNewBlock()
+
 
             case .endRepeatLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                loopLabelStack.pop()
+
 
             case .loopBreak(_),
                  .switchBreak:
@@ -1361,6 +1386,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("{")
                 w.enterNewBlock()
 
+
             case .endBlockStatement:
                 w.leaveCurrentBlock()
                 w.emit("}")
@@ -1371,6 +1397,11 @@ public class JavaScriptLifter: Lifter {
             case .print:
                 let VALUE = input(0)
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(VALUE));")
+
+            case .loopNestedContinue(let op):
+                w.withScriptWriter { writer in
+                    loopLabelStack.translateContinueLabel(w: &writer, expDepth: op.depth)
+                }
 
             case .createWasmGlobal(let op):
                 let V = w.declare(instr.output)
@@ -1818,6 +1849,7 @@ public class JavaScriptLifter: Lifter {
         }
     }
 
+
     /// A wrapper around a ScriptWriter. It's main responsibility is expression inlining.
     ///
     /// Expression inlining roughly works as follows:
@@ -2236,6 +2268,10 @@ public class JavaScriptLifter: Lifter {
                 return analyzer.numUses(of: v) <= 1
             }
         }
+
+        mutating func withScriptWriter(_ body: (inout ScriptWriter) -> Void) {
+            body(&writer)
+        }
     }
 
     // Helper class for formatting object literals.
@@ -2266,6 +2302,91 @@ public class JavaScriptLifter: Lifter {
             writer.leaveCurrentBlock()
             let body = writer.popTemporaryOutputBuffer()
             fields[fields.count - 1] += body + "}"
+        }
+    }
+
+    // Every possible position of label
+    struct LabelPin {
+        var beginPos: Int
+        var hasLabel: Bool
+    }
+
+    enum LabelType {
+        case loopblock
+        case ifblock
+        case switchblock
+        case tryblock
+        case codeBlock
+        case withblock
+    }
+
+    /// A structure that manages label positions within a specific control flow block (e.g., loop, if, switch, etc.).
+    public struct LabelStack {
+        let type: LabelType
+
+        private var stack: [LabelPin] = []
+
+        init(type: LabelType) {
+            self.type = type
+        }
+
+        /// Records a new label pin at the current code position.
+        mutating func push(currentCodeLength: Int) {
+            stack.append(LabelPin(beginPos: currentCodeLength, hasLabel: false))
+        }
+
+        /// Removes the most recently recorded label pin.
+        mutating func pop() {
+            _ = stack.popLast()
+        }
+
+        /// Checks whether a label has already been inserted at the specified index.
+        func labelExists(at index: Int) -> Bool {
+            return stack[index].hasLabel
+        }
+
+        /// Updates the label stack when a label is inserted into the code.
+        ///
+        /// This method:
+        /// - Marks the label at the specified index as inserted.
+        /// - Inserts the label content at the given code position.
+        /// - Shifts the positions of subsequent labels accordingly.
+        mutating func insertLabel(writer: inout ScriptWriter, at index: Int, labelContent: String) {
+            guard index < stack.count else { return }
+
+            let insertPos = stack[index].beginPos
+            writer.insert(insertPos, labelContent)
+
+            stack[index].hasLabel = true
+
+            let delta = labelContent.count
+            for i in index+1..<stack.count {
+                stack[i].beginPos += delta
+            }
+        }
+
+        mutating func translateBreakLabel(w: inout ScriptWriter, expDepth: Int){
+            let d = expDepth % stack.count
+            let pre = String(repeating: " ", count: 4 * d)
+            let s = pre + "label" + String(d) + ":\n"
+            if(!stack[d].hasLabel){
+                insertLabel(writer: &w, at: d, labelContent: s)
+            }
+            w.emit("break " + "label" + String(d) + ";")
+        }
+
+        mutating func translateContinueLabel(w: inout ScriptWriter, expDepth: Int){
+            let d = expDepth % stack.count
+            let pre = String(repeating: " ", count: 4 * d)
+            let s = pre + "label" + String(d) + ":\n"
+            if(!stack[d].hasLabel){
+                insertLabel(writer: &w, at: d, labelContent: s)
+            }
+            w.emit("continue " + "label" + String(d) + ";")
+        }
+
+        mutating func depth() -> Int{
+            return stack.count
         }
     }
 }

@@ -753,6 +753,9 @@ public class FuzzILLifter: Lifter {
         case .loadNewTarget:
             w.emit("\(output()) <- LoadNewTarget")
 
+        case .loopNestedContinue(let op):
+            w.emit("LoopNestedContinue \(op.depth)")
+
         case .beginWasmModule:
             w.emit("BeginWasmModule")
             w.increaseIndentionLevel()

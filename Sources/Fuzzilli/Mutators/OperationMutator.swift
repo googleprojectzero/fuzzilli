@@ -221,6 +221,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = UpdateSuperProperty(propertyName: b.randomPropertyName(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .beginIf(let op):
             newOp = BeginIf(inverted: !op.inverted)
+        case .loopNestedContinue(let op):
+            newOp = LoopNestedContinue(Int.random(in: 0...10))
         case .createWasmGlobal(let op):
             // The type has to match for wasm, we cannot just switch types here as the rest of the wasm code will become invalid.
             // TODO: add nullref and funcref as types here.

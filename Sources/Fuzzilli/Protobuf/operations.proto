@@ -1220,6 +1220,9 @@ message WasmSelect {
     WasmILType type = 1;
 }
 
+message LoopNestedContinue {
+}
+
 message ConstSimd128 {
     repeated uint32 value = 1;
 }
