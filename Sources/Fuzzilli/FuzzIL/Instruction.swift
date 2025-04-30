@@ -1030,6 +1030,20 @@ extension Instruction: ProtobufConvertible {
                 $0.wrapSuspending = Fuzzilli_Protobuf_WrapSuspending()
             case .bindMethod(let op):
                 $0.bindMethod = Fuzzilli_Protobuf_BindMethod.with { $0.methodName = op.methodName }
+            case .loopNestedContinue:
+                $0.loopNestedContinue = Fuzzilli_Protobuf_LoopNestedContinue()
+            case .loopNestedBreak:
+                $0.loopNestedBreak = Fuzzilli_Protobuf_LoopNestedBreak()
+            case .blockNestedBreak:
+                $0.blockNestedBreak = Fuzzilli_Protobuf_BlockNestedBreak()
+            case .ifNestedBreak:
+                $0.ifNestedBreak = Fuzzilli_Protobuf_IfNestedBreak()
+            case .tryNestedBreak:
+                $0.tryNestedBreak = Fuzzilli_Protobuf_TryNestedBreak()
+            case .switchNestedBreak:
+                $0.switchNestedBreak = Fuzzilli_Protobuf_SwitchNestedBreak()
+            case .withNestedBreak:
+                $0.withNestedBreak = Fuzzilli_Protobuf_WithNestedBreak()
             case .print(_):
                 fatalError("Print operations should not be serialized")
             // Wasm Operations
@@ -1892,6 +1906,20 @@ extension Instruction: ProtobufConvertible {
             op = LoadNewTarget()
         case .nop:
             op = Nop()
+        case .loopNestedContinue(let d):   
+            op = LoopNestedContinue(d.depth)
+        case .loopNestedBreak(let d):   
+            op = LoopNestedBreak(d.depth)
+        case .blockNestedBreak(let d):   
+            op = BlockNestedBreak(d.depth)
+        case .ifNestedBreak(let d):   
+            op = IfNestedBreak(d.depth)
+        case .tryNestedBreak(let d):   
+            op = TryNestedBreak(d.depth)
+        case .switchNestedBreak(let d):   
+            op = SwitchNestedBreak(d.depth)
+        case .withNestedBreak(let d):   
+            op = WithNestedBreak(d.depth)
         case .createWasmGlobal(let p):
             op = CreateWasmGlobal(value: convertWasmGlobal(p.wasmGlobal), isMutable: p.wasmGlobal.isMutable)
         case .createWasmMemory(let p):

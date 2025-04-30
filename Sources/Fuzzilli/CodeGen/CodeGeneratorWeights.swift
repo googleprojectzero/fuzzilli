@@ -169,6 +169,13 @@ public let codeGeneratorWeights = [
     "TryCatchGenerator":                        5,
     "ThrowGenerator":                           1,
     "BlockStatementGenerator":                  1,
+    "LoopNestedContinueGenerator":              1,
+    "LoopNestedBreakGenerator":                 1,
+    "BlockNestedBreakGenerator":                1,
+    "IfNestedBreakGenerator":                   1,
+    "TryNestedBreakGenerator":                  1,
+    "SwitchNestedBreakGenerator":               1,
+    "WithNestedBreakGenerator":                 1,
 
     // Special generators
     "WellKnownPropertyLoadGenerator":           5,

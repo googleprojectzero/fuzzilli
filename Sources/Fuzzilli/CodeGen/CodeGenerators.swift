@@ -54,7 +54,7 @@ public let CodeGenerators: [CodeGenerator] = [
     ValueGenerator("StringGenerator") { b, n in
         for _ in 0..<n {
             b.loadString(b.randomString())
-        }
+        }   
     },
 
     ValueGenerator("BooleanGenerator") { b, n in
@@ -1865,6 +1865,34 @@ public let CodeGenerators: [CodeGenerator] = [
             let args = b.findOrGenerateArguments(forSignature: signature)
             b.callFunction(f, withArgs: args)
         }, catchBody: { _ in })
+    },
+
+    CodeGenerator("LoopNestedContinueGenerator", inContext: .loop) { b in
+        b.loopNestedContinue(Int.random(in: 0...10))
+    },
+
+    CodeGenerator("LoopNestedBreakGenerator", inContext: .loop) { b in
+        b.loopNestedBreak(Int.random(in: 0...10))
+    },
+
+    CodeGenerator("BlockNestedBreakGenerator", inContext: .codeBlock) { b in
+        b.blockNestedBreak(Int.random(in: 0...10))
+    },
+
+    CodeGenerator("IfNestedBreakGenerator", inContext: .ifBlock) { b in
+        b.ifNestedBreak(Int.random(in: 0...10))
+    },
+
+    CodeGenerator("TryNestedBreakGenerator", inContext: .tryBlock) { b in
+        b.tryNestedBreak(Int.random(in: 0...10))
+    },
+
+    CodeGenerator("SwitchNestedBreakGenerator", inContext: .switchBlock) { b in
+        b.switchNestedBreak(Int.random(in: 0...10))
+    },
+
+    CodeGenerator("WithNestedBreakGenerator", inContext: .with) { b in
+        b.withNestedBreak(Int.random(in: 0...10))
     },
 ]
 

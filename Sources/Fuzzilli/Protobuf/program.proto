@@ -301,6 +301,13 @@ message Instruction {
         WasmSimdLoad wasmSimdLoad = 275;
         WasmUnreachable wasmUnreachable = 276;
         WasmSelect wasmSelect = 277;
+        LoopNestedContinue loopNestedContinue = 278;
+        LoopNestedBreak loopNestedBreak = 279;
+        BlockNestedBreak blockNestedBreak = 280;
+        IfNestedBreak ifNestedBreak = 281;
+        TryNestedBreak tryNestedBreak = 282;
+        SwitchNestedBreak switchNestedBreak = 283;
+        WithNestedBreak withNestedBreak = 284;
     }
 }
 
