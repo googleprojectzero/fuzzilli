@@ -623,6 +623,13 @@ let v8Profile = Profile(
             args.append("--stress-wasm-stack-switching")
         }
 
+        // Revectorization is only supported on the x86_64 architecture.
+        #if arch(x86_64)
+        if (probability(0.25)) {
+            args.append("--experimental-wasm-revectorize")
+        }
+        #endif
+
         //
         // Sometimes enable additional verification/stressing logic (which may be fairly expensive).
         //
