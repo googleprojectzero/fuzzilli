@@ -453,7 +453,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             "Boolean",        // returns .boolean
             "Number",         // returns .number
             "Object",         // returns plain .object
-            "Proxy",          // returns .anything
+            "Proxy",          // returns .jsAnything
         ]
         for builtin in builtins where type(ofBuiltin: builtin).Is(.constructor()) {
             if knownExceptions.contains(builtin) { continue }
@@ -576,7 +576,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             return type
         } else {
             logger.warning("Missing type for builtin \(builtinName)")
-            return .anything
+            return .jsAnything
         }
     }
 
@@ -585,7 +585,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             return type
         } else {
             logger.warning("Missing type for group \(groupName)")
-            return .anything
+            return .jsAnything
         }
     }
 
@@ -601,7 +601,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             }
         }
 
-        return .anything
+        return .jsAnything
     }
 
     public func signatures(ofMethod methodName: String, on baseType: ILType) -> [Signature] {
@@ -687,8 +687,8 @@ public struct ObjectGroup {
 //
 // As such, one rule of thumb here is that each object type should only contain the properties and methods that are specific to this type
 // and not shared with other, unrelated objects.
-// Another rule of thumb is that the type information should either be complete or missing entirely. I.e. it is better to have a field be .anything
-// or .anythingObject instead of only specifying a subset of its properties for example. Partial type information is usually bad as
+// Another rule of thumb is that the type information should either be complete or missing entirely. I.e. it is better to have a field be .jsAnything
+// or .jsAnythingObject instead of only specifying a subset of its properties for example. Partial type information is usually bad as
 // only the available parts will be used by e.g. CodeGenerators while for example the ExplorationMutator will believe that type information is
 // complete and so it does not need to explore this value.
 //
@@ -757,7 +757,7 @@ public extension ILType {
     }
 
     /// Type of the JavaScript Object constructor builtin.
-    static let jsObjectConstructor = .functionAndConstructor([.anything...] => .object()) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
+    static let jsObjectConstructor = .functionAndConstructor([.jsAnything...] => .object()) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
 
     /// Type of the JavaScript Array constructor builtin.
     static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "of", "isArray"])
@@ -766,13 +766,13 @@ public extension ILType {
     static let jsFunctionConstructor = ILType.constructor([.string] => .jsFunction(Signature.forUnknownFunction))
 
     /// Type of the JavaScript String constructor builtin.
-    static let jsStringConstructor = ILType.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
+    static let jsStringConstructor = ILType.functionAndConstructor([.jsAnything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
 
     /// Type of the JavaScript Boolean constructor builtin.
-    static let jsBooleanConstructor = ILType.functionAndConstructor([.anything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
+    static let jsBooleanConstructor = ILType.functionAndConstructor([.jsAnything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
 
     /// Type of the JavaScript Number constructor builtin.
-    static let jsNumberConstructor = ILType.functionAndConstructor([.anything] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
+    static let jsNumberConstructor = ILType.functionAndConstructor([.jsAnything] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
 
     /// Type of the JavaScript Symbol constructor builtin.
     static let jsSymbolConstructor = ILType.function([.string] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: JavaScriptEnvironment.wellKnownSymbols, withMethods: ["for", "keyFor"])
@@ -812,7 +812,7 @@ public extension ILType {
     static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled"])
 
     /// Type of the JavaScript Proxy constructor builtin.
-    static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .anything)
+    static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .jsAnything)
 
     /// Type of the JavaScript Map constructor builtin.
     static let jsMapConstructor = ILType.constructor([.object()] => .jsMap)
@@ -848,31 +848,31 @@ public extension ILType {
     static let jsReflectObject = ILType.object(ofGroup: "Reflect", withMethods: ["apply", "construct", "defineProperty", "deleteProperty", "get", "getOwnPropertyDescriptor", "getPrototypeOf", "has", "isExtensible", "ownKeys", "preventExtensions", "set", "setPrototypeOf"])
 
     /// Type of the JavaScript isNaN builtin function.
-    static let jsIsNaNFunction = ILType.function([.anything] => .boolean)
+    static let jsIsNaNFunction = ILType.function([.jsAnything] => .boolean)
 
     /// Type of the JavaScript isFinite builtin function.
-    static let jsIsFiniteFunction = ILType.function([.anything] => .boolean)
+    static let jsIsFiniteFunction = ILType.function([.jsAnything] => .boolean)
 
     /// Type of the JavaScript escape builtin function.
-    static let jsEscapeFunction = ILType.function([.anything] => .jsString)
+    static let jsEscapeFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript unescape builtin function.
-    static let jsUnescapeFunction = ILType.function([.anything] => .jsString)
+    static let jsUnescapeFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript decodeURI builtin function.
-    static let jsDecodeURIFunction = ILType.function([.anything] => .jsString)
+    static let jsDecodeURIFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript decodeURIComponent builtin function.
-    static let jsDecodeURIComponentFunction = ILType.function([.anything] => .jsString)
+    static let jsDecodeURIComponentFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript encodeURI builtin function.
-    static let jsEncodeURIFunction = ILType.function([.anything] => .jsString)
+    static let jsEncodeURIFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript encodeURIComponent builtin function.
-    static let jsEncodeURIComponentFunction = ILType.function([.anything] => .jsString)
+    static let jsEncodeURIComponentFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript eval builtin function.
-    static let jsEvalFunction = ILType.function([.string] => .anything)
+    static let jsEvalFunction = ILType.function([.string] => .jsAnything)
 
     /// Type of the JavaScript parseInt builtin function.
     static let jsParseIntFunction = ILType.function([.string] => .integer)
@@ -909,11 +909,11 @@ public extension ObjectGroup {
             "charAt"      : [.integer] => .jsString,
             "charCodeAt"  : [.integer] => .integer,
             "codePointAt" : [.integer] => .integer,
-            "concat"      : [.anything...] => .jsString,
-            "includes"    : [.anything, .opt(.integer)] => .boolean,
+            "concat"      : [.jsAnything...] => .jsString,
+            "includes"    : [.jsAnything, .opt(.integer)] => .boolean,
             "endsWith"    : [.string, .opt(.integer)] => .boolean,
-            "indexOf"     : [.anything, .opt(.integer)] => .integer,
-            "lastIndexOf" : [.anything, .opt(.integer)] => .integer,
+            "indexOf"     : [.jsAnything, .opt(.integer)] => .integer,
+            "lastIndexOf" : [.jsAnything, .opt(.integer)] => .integer,
             "match"       : [.regexp] => .jsString,
             "matchAll"    : [.regexp] => .jsString,
             "normalize"   : [] => .jsString,  // the first parameter must be a specific string value, so we have a CodeGenerator for that instead
@@ -970,44 +970,44 @@ public extension ObjectGroup {
             "length"      : .integer,
         ],
         methods: [
-            "at"             : [.integer] => .anything,
+            "at"             : [.integer] => .jsAnything,
             "copyWithin"     : [.integer, .integer, .opt(.integer)] => .jsArray,
             "entries"        : [] => .jsArray,
             "every"          : [.function(), .opt(.object())] => .boolean,
-            "fill"           : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
-            "find"           : [.function(), .opt(.object())] => .anything,
+            "fill"           : [.jsAnything, .opt(.integer), .opt(.integer)] => .undefined,
+            "find"           : [.function(), .opt(.object())] => .jsAnything,
             "findIndex"      : [.function(), .opt(.object())] => .integer,
-            "findLast"       : [.function(), .opt(.object())] => .anything,
+            "findLast"       : [.function(), .opt(.object())] => .jsAnything,
             "findLastIndex"  : [.function(), .opt(.object())] => .integer,
             "forEach"        : [.function(), .opt(.object())] => .undefined,
-            "includes"       : [.anything, .opt(.integer)] => .boolean,
-            "indexOf"        : [.anything, .opt(.integer)] => .integer,
+            "includes"       : [.jsAnything, .opt(.integer)] => .boolean,
+            "indexOf"        : [.jsAnything, .opt(.integer)] => .integer,
             "join"           : [.string] => .jsString,
             "keys"           : [] => .object(),          // returns an array iterator
-            "lastIndexOf"    : [.anything, .opt(.integer)] => .integer,
-            "reduce"         : [.function(), .opt(.anything)] => .anything,
-            "reduceRight"    : [.function(), .opt(.anything)] => .anything,
+            "lastIndexOf"    : [.jsAnything, .opt(.integer)] => .integer,
+            "reduce"         : [.function(), .opt(.jsAnything)] => .jsAnything,
+            "reduceRight"    : [.function(), .opt(.jsAnything)] => .jsAnything,
             "reverse"        : [] => .undefined,
-            "some"           : [.function(), .opt(.anything)] => .boolean,
+            "some"           : [.function(), .opt(.jsAnything)] => .boolean,
             "sort"           : [.function()] => .undefined,
             "values"         : [] => .object(),
-            "pop"            : [] => .anything,
-            "push"           : [.anything...] => .integer,
-            "shift"          : [] => .anything,
-            "splice"         : [.integer, .opt(.integer), .anything...] => .jsArray,
-            "unshift"        : [.anything...] => .integer,
-            "concat"         : [.anything...] => .jsArray,
+            "pop"            : [] => .jsAnything,
+            "push"           : [.jsAnything...] => .integer,
+            "shift"          : [] => .jsAnything,
+            "splice"         : [.integer, .opt(.integer), .jsAnything...] => .jsArray,
+            "unshift"        : [.jsAnything...] => .integer,
+            "concat"         : [.jsAnything...] => .jsArray,
             "filter"         : [.function(), .opt(.object())] => .jsArray,
             "map"            : [.function(), .opt(.object())] => .jsArray,
             "slice"          : [.opt(.integer), .opt(.integer)] => .jsArray,
             "flat"           : [.opt(.integer)] => .jsArray,
-            "flatMap"        : [.function(), .opt(.anything)] => .jsArray,
+            "flatMap"        : [.function(), .opt(.jsAnything)] => .jsArray,
             "toString"       : [] => .jsString,
             "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
             "toReversed"     : [] => .jsArray,
             "toSorted"       : [.opt(.function())] => .jsArray,
-            "toSpliced"      : [.integer, .opt(.integer), .anything...] => .jsArray,
-            "with"           : [.integer, .anything] => .jsArray,
+            "toSpliced"      : [.integer, .opt(.integer), .jsAnything...] => .jsArray,
+            "with"           : [.integer, .jsAnything] => .jsArray,
         ]
     )
 
@@ -1023,9 +1023,9 @@ public extension ObjectGroup {
             "name"        : .jsString,
         ],
         methods: [
-            "apply" : [.object(), .object()] => .anything,
-            "call"  : [.object(), .anything...] => .anything,
-            "bind"  : [.object(), .anything...] => .anything,
+            "apply" : [.object(), .object()] => .jsAnything,
+            "call"  : [.object(), .jsAnything...] => .jsAnything,
+            "bind"  : [.object(), .jsAnything...] => .jsAnything,
         ]
     )
 
@@ -1055,9 +1055,9 @@ public extension ObjectGroup {
         instanceType: .jsGenerator,
         properties: [:],
         methods: [
-            "next"   : [.opt(.anything)] => .object(withProperties: ["done", "value"]),
-            "return" : [.opt(.anything)] => .object(withProperties: ["done", "value"]),
-            "throw"  : [.opt(.anything)] => .object(withProperties: ["done", "value"])
+            "next"   : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
+            "return" : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
+            "throw"  : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"])
         ]
     )
 
@@ -1082,13 +1082,13 @@ public extension ObjectGroup {
         ],
         methods: [
             "clear"   : [] => .undefined,
-            "delete"  : [.anything] => .boolean,
+            "delete"  : [.jsAnything] => .boolean,
             "entries" : [] => .object(),
             "forEach" : [.function(), .opt(.object())] => .undefined,
-            "get"     : [.anything] => .anything,
-            "has"     : [.anything] => .boolean,
+            "get"     : [.jsAnything] => .jsAnything,
+            "has"     : [.jsAnything] => .boolean,
             "keys"    : [] => .object(),
-            "set"     : [.anything, .anything] => .jsMap,
+            "set"     : [.jsAnything, .jsAnything] => .jsMap,
             "values"  : [] => .object(),
         ]
     )
@@ -1099,10 +1099,10 @@ public extension ObjectGroup {
         instanceType: .jsWeakMap,
         properties: [:],
         methods: [
-            "delete" : [.anything] => .boolean,
-            "get"    : [.anything] => .anything,
-            "has"    : [.anything] => .boolean,
-            "set"    : [.anything, .anything] => .jsWeakMap,
+            "delete" : [.jsAnything] => .boolean,
+            "get"    : [.jsAnything] => .jsAnything,
+            "has"    : [.jsAnything] => .boolean,
+            "set"    : [.jsAnything, .jsAnything] => .jsWeakMap,
         ]
     )
 
@@ -1114,12 +1114,12 @@ public extension ObjectGroup {
             "size"      : .integer
         ],
         methods: [
-            "add"     : [.anything] => .jsSet,
+            "add"     : [.jsAnything] => .jsSet,
             "clear"   : [] => .undefined,
-            "delete"  : [.anything] => .boolean,
+            "delete"  : [.jsAnything] => .boolean,
             "entries" : [] => .object(),
             "forEach" : [.function(), .opt(.object())] => .undefined,
-            "has"     : [.anything] => .boolean,
+            "has"     : [.jsAnything] => .boolean,
             "keys"    : [] => .object(),
             "values"  : [] => .object(),
         ]
@@ -1131,9 +1131,9 @@ public extension ObjectGroup {
         instanceType: .jsWeakSet,
         properties: [:],
         methods: [
-            "add"    : [.anything] => .jsWeakSet,
-            "delete" : [.anything] => .boolean,
-            "has"    : [.anything] => .boolean,
+            "add"    : [.jsAnything] => .jsWeakSet,
+            "delete" : [.jsAnything] => .boolean,
+            "has"    : [.jsAnything] => .boolean,
         ]
     )
 
@@ -1153,8 +1153,8 @@ public extension ObjectGroup {
         instanceType: .jsFinalizationRegistry,
         properties: [:],
         methods: [
-            "register"   : [.object(), .anything, .opt(.object())] => .object(),
-            "unregister" : [.anything] => .undefined,
+            "register"   : [.object(), .jsAnything, .opt(.object())] => .object(),
+            "unregister" : [.jsAnything] => .undefined,
         ]
     )
 
@@ -1201,26 +1201,26 @@ public extension ObjectGroup {
                 "length"      : .integer
             ],
             methods: [
-                "at"          : [.integer] => .anything,
+                "at"          : [.integer] => .jsAnything,
                 "copyWithin"  : [.integer, .integer, .opt(.integer)] => .undefined,
                 "entries"     : [] => .jsArray,
                 "every"       : [.function(), .opt(.object())] => .boolean,
-                "fill"        : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
-                "find"        : [.function(), .opt(.object())] => .anything,
+                "fill"        : [.jsAnything, .opt(.integer), .opt(.integer)] => .undefined,
+                "find"        : [.function(), .opt(.object())] => .jsAnything,
                 "findIndex"   : [.function(), .opt(.object())] => .integer,
-                "findLast"    : [.function(), .opt(.object())] => .anything,
+                "findLast"    : [.function(), .opt(.object())] => .jsAnything,
                 "findLastIndex"  : [.function(), .opt(.object())] => .integer,
                 "forEach"     : [.function(), .opt(.object())] => .undefined,
-                "includes"    : [.anything, .opt(.integer)] => .boolean,
-                "indexOf"     : [.anything, .opt(.integer)] => .integer,
+                "includes"    : [.jsAnything, .opt(.integer)] => .boolean,
+                "indexOf"     : [.jsAnything, .opt(.integer)] => .integer,
                 "join"        : [.string] => .jsString,
                 "keys"        : [] => .object(),          // returns an array iterator
-                "lastIndexOf" : [.anything, .opt(.integer)] => .integer,
-                "reduce"      : [.function(), .opt(.anything)] => .anything,
-                "reduceRight" : [.function(), .opt(.anything)] => .anything,
+                "lastIndexOf" : [.jsAnything, .opt(.integer)] => .integer,
+                "reduce"      : [.function(), .opt(.jsAnything)] => .jsAnything,
+                "reduceRight" : [.function(), .opt(.jsAnything)] => .jsAnything,
                 "reverse"     : [] => .undefined,
                 "set"         : [.object(), .opt(.integer)] => .undefined,
-                "some"        : [.function(), .opt(.anything)] => .boolean,
+                "some"        : [.function(), .opt(.jsAnything)] => .boolean,
                 "sort"        : [.function()] => .undefined,
                 "values"      : [] => .object(),
                 "filter"      : [.function(), .opt(.object())] => .jsTypedArray(variant),
@@ -1231,7 +1231,7 @@ public extension ObjectGroup {
                 "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
                 "toReversed"     : [] => .jsTypedArray(variant),
                 "toSorted"       : [.opt(.function())] => .jsTypedArray(variant),
-                "with"           : [.integer, .anything] => .jsTypedArray(variant),
+                "with"           : [.integer, .jsAnything] => .jsTypedArray(variant),
             ]
         )
     }
@@ -1275,8 +1275,8 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "resolve"    : [.anything] => .jsPromise,
-            "reject"     : [.anything] => .jsPromise,
+            "resolve"    : [.jsAnything] => .jsPromise,
+            "reject"     : [.jsAnything] => .jsPromise,
             "all"        : [.jsPromise...] => .jsPromise,
             "any"        : [.jsPromise...] => .jsPromise,
             "race"       : [.jsPromise...] => .jsPromise,
@@ -1392,9 +1392,9 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "from"    : [.anything, .opt(.function()), .opt(.object())] => .jsArray,
-            "isArray" : [.anything] => .boolean,
-            "of"      : [.anything...] => .jsArray,
+            "from"    : [.jsAnything, .opt(.function()), .opt(.object())] => .jsArray,
+            "isArray" : [.jsAnything] => .boolean,
+            "of"      : [.jsAnything...] => .jsArray,
         ]
     )
 
@@ -1405,7 +1405,7 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "isView" : [.anything] => .boolean
+            "isView" : [.jsAnything] => .boolean
         ]
     )
 
@@ -1426,9 +1426,9 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "fromCharCode"  : [.anything...] => .jsString,
-            "fromCodePoint" : [.anything...] => .jsString,
-            "raw"           : [.anything...] => .jsString
+            "fromCharCode"  : [.jsAnything...] => .jsString,
+            "fromCodePoint" : [.jsAnything...] => .jsString,
+            "raw"           : [.jsAnything...] => .jsString
         ]
     )
 
@@ -1499,10 +1499,10 @@ public extension ObjectGroup {
             "POSITIVE_INFINITY" : .number,
         ],
         methods: [
-            "isNaN"         : [.anything] => .boolean,
-            "isFinite"      : [.anything] => .boolean,
-            "isInteger"     : [.anything] => .boolean,
-            "isSafeInteger" : [.anything] => .boolean,
+            "isNaN"         : [.jsAnything] => .boolean,
+            "isFinite"      : [.jsAnything] => .boolean,
+            "isInteger"     : [.jsAnything] => .boolean,
+            "isSafeInteger" : [.jsAnything] => .boolean,
         ]
     )
 
@@ -1515,41 +1515,41 @@ public extension ObjectGroup {
             "PI" : .number
         ],
         methods: [
-            "abs"    : [.anything] => .number,
-            "acos"   : [.anything] => .number,
-            "acosh"  : [.anything] => .number,
-            "asin"   : [.anything] => .number,
-            "asinh"  : [.anything] => .number,
-            "atan"   : [.anything] => .number,
-            "atanh"  : [.anything] => .number,
-            "atan2"  : [.anything, .anything] => .number,
-            "cbrt"   : [.anything] => .number,
-            "ceil"   : [.anything] => .number,
-            "clz32"  : [.anything] => .number,
-            "cos"    : [.anything] => .number,
-            "cosh"   : [.anything] => .number,
-            "exp"    : [.anything] => .number,
-            "expm1"  : [.anything] => .number,
-            "floor"  : [.anything] => .number,
-            "fround" : [.anything] => .number,
-            "hypot"  : [.anything...] => .number,
-            "imul"   : [.anything, .anything] => .integer,
-            "log"    : [.anything] => .number,
-            "log1p"  : [.anything] => .number,
-            "log10"  : [.anything] => .number,
-            "log2"   : [.anything] => .number,
-            "max"    : [.anything...] => .anything,
-            "min"    : [.anything...] => .anything,
-            "pow"    : [.anything, .anything] => .number,
+            "abs"    : [.jsAnything] => .number,
+            "acos"   : [.jsAnything] => .number,
+            "acosh"  : [.jsAnything] => .number,
+            "asin"   : [.jsAnything] => .number,
+            "asinh"  : [.jsAnything] => .number,
+            "atan"   : [.jsAnything] => .number,
+            "atanh"  : [.jsAnything] => .number,
+            "atan2"  : [.jsAnything, .jsAnything] => .number,
+            "cbrt"   : [.jsAnything] => .number,
+            "ceil"   : [.jsAnything] => .number,
+            "clz32"  : [.jsAnything] => .number,
+            "cos"    : [.jsAnything] => .number,
+            "cosh"   : [.jsAnything] => .number,
+            "exp"    : [.jsAnything] => .number,
+            "expm1"  : [.jsAnything] => .number,
+            "floor"  : [.jsAnything] => .number,
+            "fround" : [.jsAnything] => .number,
+            "hypot"  : [.jsAnything...] => .number,
+            "imul"   : [.jsAnything, .jsAnything] => .integer,
+            "log"    : [.jsAnything] => .number,
+            "log1p"  : [.jsAnything] => .number,
+            "log10"  : [.jsAnything] => .number,
+            "log2"   : [.jsAnything] => .number,
+            "max"    : [.jsAnything...] => .jsAnything,
+            "min"    : [.jsAnything...] => .jsAnything,
+            "pow"    : [.jsAnything, .jsAnything] => .number,
             "random" : [] => .number,
-            "round"  : [.anything] => .number,
-            "sign"   : [.anything] => .number,
-            "sin"    : [.anything] => .number,
-            "sinh"   : [.anything] => .number,
-            "sqrt"   : [.anything] => .number,
-            "tan"    : [.anything] => .number,
-            "tanh"   : [.anything] => .number,
-            "trunc"  : [.anything] => .number,
+            "round"  : [.jsAnything] => .number,
+            "sign"   : [.jsAnything] => .number,
+            "sin"    : [.jsAnything] => .number,
+            "sinh"   : [.jsAnything] => .number,
+            "sqrt"   : [.jsAnything] => .number,
+            "tan"    : [.jsAnything] => .number,
+            "tanh"   : [.jsAnything] => .number,
+            "trunc"  : [.jsAnything] => .number,
         ]
     )
 
@@ -1559,8 +1559,8 @@ public extension ObjectGroup {
         instanceType: .jsJSONObject,
         properties: [:],
         methods: [
-            "parse"     : [.string, .opt(.function())] => .anything,
-            "stringify" : [.anything, .opt(.function()), .opt(.number | .string)] => .jsString,
+            "parse"     : [.string, .opt(.function())] => .jsAnything,
+            "stringify" : [.jsAnything, .opt(.function()), .opt(.number | .string)] => .jsString,
         ]
     )
 
@@ -1570,18 +1570,18 @@ public extension ObjectGroup {
         instanceType: .jsReflectObject,
         properties: [:],
         methods: [
-            "apply"                    : [.function(), .anything, .object()] => .anything,
-            "construct"                : [.constructor(), .object(), .opt(.object())] => .anything,
+            "apply"                    : [.function(), .jsAnything, .object()] => .jsAnything,
+            "construct"                : [.constructor(), .object(), .opt(.object())] => .jsAnything,
             "defineProperty"           : [.object(), .string, .object()] => .boolean,
             "deleteProperty"           : [.object(), .string] => .boolean,
-            "get"                      : [.object(), .string, .opt(.object())] => .anything,
-            "getOwnPropertyDescriptor" : [.object(), .string] => .anything,
-            "getPrototypeOf"           : [.anything] => .anything,
+            "get"                      : [.object(), .string, .opt(.object())] => .jsAnything,
+            "getOwnPropertyDescriptor" : [.object(), .string] => .jsAnything,
+            "getPrototypeOf"           : [.jsAnything] => .jsAnything,
             "has"                      : [.object(), .string] => .boolean,
-            "isExtensible"             : [.anything] => .boolean,
-            "ownKeys"                  : [.anything] => .jsArray,
+            "isExtensible"             : [.jsAnything] => .boolean,
+            "ownKeys"                  : [.jsAnything] => .jsArray,
             "preventExtensions"        : [.object()] => .boolean,
-            "set"                      : [.object(), .string, .anything, .opt(.object())] => .boolean,
+            "set"                      : [.object(), .string, .jsAnything, .opt(.object())] => .boolean,
             "setPrototypeOf"           : [.object(), .object()] => .boolean,
         ]
     )
@@ -1594,7 +1594,7 @@ public extension ObjectGroup {
             properties: [
                 "message"     : .jsString,
                 "name"        : .jsString,
-                "cause"       : .anything,
+                "cause"       : .jsAnything,
                 "stack"       : .jsString,
             ],
             methods: [
@@ -1609,7 +1609,7 @@ public extension ObjectGroup {
         instanceType: .object(ofGroup: "WasmGlobal", withProperties: ["value"]),
         properties: [
             // TODO: Try using precise JS types based on the global's underlying valuetype (e.g. float for f32 and f64).
-            "value" : .anything
+            "value" : .jsAnything
         ],
         methods: [:]
     )
@@ -1645,9 +1645,9 @@ public extension ObjectGroup {
             "length": .number
         ],
         methods: [
-            "get": [.number] => .anything,
-            "grow": [.number, .opt(.anything)] => .number,
-            "set": [.number, .anything] => .undefined,
+            "get": [.number] => .jsAnything,
+            "grow": [.number, .opt(.jsAnything)] => .number,
+            "set": [.number, .jsAnything] => .undefined,
         ]
     )
 }

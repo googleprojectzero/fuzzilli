@@ -222,7 +222,7 @@ public struct JSTyper: Analyzer {
             let classType = activeClasses.top.objectGroup.instanceType
             let newType = ILType.object(ofGroup: classType.group, withProperties: [propertyName]) + classType
             assert(newType != .nothing)
-            activeClasses.top.objectGroup.properties[propertyName] = .anything
+            activeClasses.top.objectGroup.properties[propertyName] = .jsAnything
             activeClasses.top.objectGroup.instanceType = newType
         }
 
@@ -829,9 +829,9 @@ public struct JSTyper: Analyzer {
         // No JS output should be .nothing
         assert(instr.allOutputs.allSatisfy { !type(of: $0).Is(.nothing) })
 
-        // More sanity checking: the outputs of guarded operation should be typed as .anything.
+        // More sanity checking: the outputs of guarded operation should be typed as .jsAnything.
         if let op = instr.op as? GuardableOperation, op.isGuarded {
-            assert(instr.allOutputs.allSatisfy({ type(of: $0).Is(.anything) }))
+            assert(instr.allOutputs.allSatisfy({ type(of: $0).Is(.jsAnything) }))
         }
     }
 
@@ -841,7 +841,7 @@ public struct JSTyper: Analyzer {
         if dynamicObjectGroupManager.numActiveClasses > 0 {
             return dynamicObjectGroupManager.activeClasses.top.superType
         } else {
-            return .anything
+            return .jsAnything
         }
     }
 
@@ -854,7 +854,7 @@ public struct JSTyper: Analyzer {
             assert(dynamicObjectGroupManager.activeClasses.top.superConstructorType != .nothing)
             return dynamicObjectGroupManager.activeClasses.top.superConstructorType
         } else {
-            return .anything
+            return .jsAnything
         }
     }
 
@@ -913,7 +913,7 @@ public struct JSTyper: Analyzer {
                     return .function(type.first)
                 } else {
                     // This means the objectGroup doesn't have the property but we did see the objectGroup.
-                    return .anything
+                    return .jsAnything
                 }
             }
         }
@@ -927,7 +927,7 @@ public struct JSTyper: Analyzer {
 
     /// Attempts to infer the constructed type of the given constructor.
     public func inferConstructedType(of constructor: Variable) -> ILType {
-        if let signature = state.type(of: constructor).constructorSignature, signature.outputType != .anything {
+        if let signature = state.type(of: constructor).constructorSignature, signature.outputType != .jsAnything {
             return signature.outputType
         }
         return .object()
@@ -938,7 +938,7 @@ public struct JSTyper: Analyzer {
         if let signature = state.type(of: function).functionSignature {
             return signature.outputType
         }
-        return .anything
+        return .jsAnything
     }
 
     public mutating func setType(of v: Variable, to t: ILType) {
@@ -951,7 +951,7 @@ public struct JSTyper: Analyzer {
     }
 
     /// Attempts to infer the parameter types of the given subroutine definition.
-    /// If parameter types have been added for this function, they are returned, otherwise generic parameter types (i.e. .anything parameters) for the parameters specified in the operation are generated.
+    /// If parameter types have been added for this function, they are returned, otherwise generic parameter types (i.e. .jsAnything parameters) for the parameters specified in the operation are generated.
     private func inferSubroutineParameterList(of op: BeginAnySubroutine, at index: Int) -> ParameterList {
         return signatures[index] ?? ParameterList(numParameters: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
     }
@@ -979,15 +979,15 @@ public struct JSTyper: Analyzer {
         case .beginPlainFunction(let op):
             // Plain functions can also be used as constructors.
             // The return value type will only be known after fully processing the function definitions.
-            set(instr.output, .functionAndConstructor(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
+            set(instr.output, .functionAndConstructor(inferSubroutineParameterList(of: op, at: instr.index) => .jsAnything))
         case .beginArrowFunction(let op as BeginAnyFunction),
              .beginGeneratorFunction(let op as BeginAnyFunction),
              .beginAsyncFunction(let op as BeginAnyFunction),
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
              .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
-            set(instr.output, .function(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
+            set(instr.output, .function(inferSubroutineParameterList(of: op, at: instr.index) => .jsAnything))
         case .beginConstructor(let op):
-            set(instr.output, .constructor(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
+            set(instr.output, .constructor(inferSubroutineParameterList(of: op, at: instr.index) => .jsAnything))
         case .beginCodeString:
             set(instr.output, .string)
         case .beginClassDefinition(let op):
@@ -1012,7 +1012,7 @@ public struct JSTyper: Analyzer {
 
             dynamicObjectGroupManager.createNewClass(withSuperType: superType, propertyMap: propertySuperTypeMap, methodMap: methodSuperTypeMap, superConstructorType: superConstructorType, forOutput: instr.output)
 
-            set(instr.output, .anything)         // Treat the class variable as unknown until we have fully analyzed the class definition
+            set(instr.output, .jsAnything)         // Treat the class variable as unknown until we have fully analyzed the class definition
         case .endClassDefinition:
             let (instanceType, classDefinition) = dynamicObjectGroupManager.finalizeClass()
             set(classDefinition.output, classDefinition.objectGroup.instanceType + .constructor(classDefinition.constructorParameters => instanceType))
@@ -1336,7 +1336,7 @@ public struct JSTyper: Analyzer {
             } else if (environment.hasBuiltin(op.variableName)) {
                 set(instr.output, environment.type(ofBuiltin: op.variableName))
             } else {
-                set(instr.output, .anything)
+                set(instr.output, .jsAnything)
             }
 
         case .loadDisposableVariable:
@@ -1400,7 +1400,7 @@ public struct JSTyper: Analyzer {
 
         case .classAddInstanceProperty(let op):
             dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
-            dynamicObjectGroupManager.updatePropertyType(propertyName: op.propertyName, type: op.hasValue ? type(ofInput: 0) : .anything)
+            dynamicObjectGroupManager.updatePropertyType(propertyName: op.propertyName, type: op.hasValue ? type(ofInput: 0) : .jsAnything)
 
         case .beginClassInstanceMethod(let op):
             // The first inner output is the explicit |this|
@@ -1489,13 +1489,13 @@ public struct JSTyper: Analyzer {
             set(instr.output, .boolean)
 
             // TODO: An additional analyzer is required to determine the runtime value of the output variable generated from the following operations
-            // For now we treat this as .anything
+            // For now we treat this as .jsAnything
         case .getElement,
              .getComputedProperty,
              .getComputedSuperProperty,
              .callComputedMethod,
              .callComputedMethodWithSpread:
-            set(instr.output, .anything)
+            set(instr.output, .jsAnything)
 
         case .ternaryOperation:
             let outputType = type(ofInput: 1) | type(ofInput: 2)
@@ -1573,10 +1573,10 @@ public struct JSTyper: Analyzer {
             }
 
         case .destructArray:
-            instr.outputs.forEach{set($0, .anything)}
+            instr.outputs.forEach{set($0, .jsAnything)}
 
         case .destructArrayAndReassign:
-            instr.inputs.dropFirst().forEach{set($0, .anything)}
+            instr.inputs.dropFirst().forEach{set($0, .jsAnything)}
 
         case .destructObject(let op):
             for (property, output) in zip(op.properties, instr.outputs) {
@@ -1601,20 +1601,20 @@ public struct JSTyper: Analyzer {
 
         case .await:
             // TODO if input type is known, set to input type and possibly unwrap the Promise
-            set(instr.output, .anything)
+            set(instr.output, .jsAnything)
 
         case .yield:
-            set(instr.output, .anything)
+            set(instr.output, .jsAnything)
 
         case .eval:
             if instr.hasOneOutput {
-                set(instr.output, .anything)
+                set(instr.output, .jsAnything)
             }
 
         case .fixup:
             // As Fixup operations may change the action that they perform at runtime, we cannot statically know the output type.
             if instr.hasOneOutput {
-                set(instr.output, .anything)
+                set(instr.output, .jsAnything)
             }
 
         case .beginPlainFunction(let op as BeginAnyFunction),
@@ -1636,11 +1636,11 @@ public struct JSTyper: Analyzer {
 
         case .getPrivateProperty:
             // We currently don't track the types of private properties
-            set(instr.output, .anything)
+            set(instr.output, .jsAnything)
 
         case .callPrivateMethod:
             // We currently don't track the signatures of private methods
-            set(instr.output, .anything)
+            set(instr.output, .jsAnything)
 
         case .getSuperProperty(let op):
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
@@ -1669,11 +1669,11 @@ public struct JSTyper: Analyzer {
             set(instr.innerOutput, .string)
 
         case .beginForOfLoop:
-            set(instr.innerOutput, .anything)
+            set(instr.innerOutput, .jsAnything)
 
         case .beginForOfLoopWithDestruct:
             for v in instr.innerOutputs {
-                set(v, .anything)
+                set(v, .jsAnything)
             }
 
         case .beginRepeatLoop(let op):
@@ -1682,7 +1682,7 @@ public struct JSTyper: Analyzer {
             }
 
         case .beginCatch:
-            set(instr.innerOutput, .anything)
+            set(instr.innerOutput, .jsAnything)
 
         // TODO: also add other macro instructions here.
         case .createWasmGlobal(let op):
@@ -1774,15 +1774,15 @@ public struct JSTyper: Analyzer {
             assert(instr.isNop || (instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0)))
         }
 
-        // We explicitly type the outputs of guarded operations as .anything for two reasons:
+        // We explicitly type the outputs of guarded operations as .jsAnything for two reasons:
         // (1) if the operation raises an exception, then the output will probably be `undefined`
         //     but that's not clearly specified
-        // (2) typing to .anything allows us try and fix the operation at runtime (e.g. by looking
+        // (2) typing to .jsAnything allows us try and fix the operation at runtime (e.g. by looking
         //     at the existing methods for a method call or by selecting different inputs), in
         //     which case the return value may change. See FixupMutator.swift for more details.
         if instr.hasOutputs && instr.isGuarded {
             assert(instr.numInnerOutputs == 0)
-            instr.allOutputs.forEach({ set($0, .anything) })
+            instr.allOutputs.forEach({ set($0, .jsAnything) })
         }
 
         // We should only have parameter types for operations that start a subroutine, otherwise, something is inconsistent.
@@ -1881,9 +1881,9 @@ public struct JSTyper: Analyzer {
         }
 
         /// Return the current type of the given variable.
-        /// Return .anything for variables not available in this state.
+        /// Return .jsAnything for variables not available in this state.
         func type(of variable: Variable) -> ILType {
-            return overallState.types[variable] ?? .anything
+            return overallState.types[variable] ?? .jsAnything
         }
 
         func hasType(for v: Variable) -> Bool {

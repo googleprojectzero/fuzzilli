@@ -44,12 +44,12 @@ class WasmSignatureConversionTests: XCTestCase {
 
     func testWasmSignatureConversion() {
         XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmi32, .wasmi64] => [.wasmf32]), [.integer, .bigint] => .float)
-        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmi32, .wasmExnRef] => [.wasmf64]), [.integer, .anything] => .float)
-        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmExternRef, .wasmFuncRef] => [.wasmf64, .wasmf64]), [.anything, .function()] => .jsArray)
-        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmRef(.Index(), nullability: false), .wasmFuncRef] => [.wasmf64, .wasmf64]), [.anything, .function()] => .jsArray)
-        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmRef(.Abstract(.WasmExtern), nullability: false), .wasmFuncRef] => [.wasmf64, .wasmf64]), [.anything, .function()] => .jsArray)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmi32, .wasmExnRef] => [.wasmf64]), [.integer, .jsAnything] => .float)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmExternRef, .wasmFuncRef] => [.wasmf64, .wasmf64]), [.jsAnything, .function()] => .jsArray)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmRef(.Index(), nullability: false), .wasmFuncRef] => [.wasmf64, .wasmf64]), [.jsAnything, .function()] => .jsArray)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmRef(.Abstract(.WasmExtern), nullability: false), .wasmFuncRef] => [.wasmf64, .wasmf64]), [.jsAnything, .function()] => .jsArray)
         // TODO(cffsmith): Change this once we know how we want to represent .wasmSimd128 types in JS.
-        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmSimd128] => [.wasmSimd128]), [.anything] => .anything)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmSimd128] => [.wasmSimd128]), [.jsAnything] => .jsAnything)
     }
 }
 

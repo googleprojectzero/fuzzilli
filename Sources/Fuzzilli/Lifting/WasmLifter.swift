@@ -50,7 +50,7 @@ private let ILTypeMapping: [ILType: Data] = [
     .wasmSimd128: Data([0x7B]),
 
     .bigint  : Data([0x7e]), // Maps to .wasmi64
-    .anything: Data([0x6f]), // Maps to .wasmExternRef
+    .jsAnything: Data([0x6f]), // Maps to .wasmExternRef
     .integer: Data([0x7f]), // Maps to .wasmi32
     .number: Data([0x7d]) // Maps to .wasmf32
 ]

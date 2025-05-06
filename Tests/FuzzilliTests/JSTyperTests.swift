@@ -115,7 +115,7 @@ class JSTyperTests: XCTestCase {
 
         // Properties whose values are functions are still treated as properties, not methods.
         let function = b.buildPlainFunction(with: .parameters(n: 1)) { params in }
-        XCTAssertEqual(b.type(of: function), .functionAndConstructor([.anything] => .undefined))
+        XCTAssertEqual(b.type(of: function), .functionAndConstructor([.jsAnything] => .undefined))
         let obj2 = b.createObject(with: ["foo": intVar, "bar": intVar, "baz": function])
         XCTAssertEqual(b.type(of: obj2), .object(ofGroup: "_fuzz_Object1", withProperties: ["foo", "bar", "baz"]))
     }
@@ -154,8 +154,8 @@ class JSTyperTests: XCTestCase {
             cls.addInstanceMethod("g", with: .parameters(n: 2)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(ofGroup: "_fuzz_Class0", withProperties: ["a", "b", "c"], withMethods: ["f"]))
-                XCTAssertEqual(b.type(of: params[1]), .anything)
-                XCTAssertEqual(b.type(of: params[2]), .anything)
+                XCTAssertEqual(b.type(of: params[1]), .jsAnything)
+                XCTAssertEqual(b.type(of: params[2]), .jsAnything)
             }
 
             cls.addStaticProperty("a")
@@ -164,8 +164,8 @@ class JSTyperTests: XCTestCase {
             cls.addStaticMethod("g", with: .parameters(n: 2)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(ofGroup: "_fuzz_Constructor0", withProperties: ["a", "d"]))
-                XCTAssertEqual(b.type(of: params[1]), .anything)
-                XCTAssertEqual(b.type(of: params[2]), .anything)
+                XCTAssertEqual(b.type(of: params[1]), .jsAnything)
+                XCTAssertEqual(b.type(of: params[2]), .jsAnything)
             }
 
             cls.addStaticSetter(for: "e") { this, v in
@@ -330,14 +330,14 @@ class JSTyperTests: XCTestCase {
         let signature2 = [.string, .number] => .undefined
 
         // Plain functions are both functions and constructors. This might yield interesting results since these function often return a value.
-        var f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .anything); XCTAssertEqual(b.type(of: params[1]), .anything) }
-        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .undefined))
+        var f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .jsAnything); XCTAssertEqual(b.type(of: params[1]), .jsAnything) }
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.jsAnything, .jsAnything] => .undefined))
 
         f = b.buildPlainFunction(with: .parameters(signature1.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature1))
 
-        f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .anything); XCTAssertEqual(b.type(of: params[1]), .anything) }
-        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .undefined))
+        f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .jsAnything); XCTAssertEqual(b.type(of: params[1]), .jsAnything) }
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.jsAnything, .jsAnything] => .undefined))
 
         // All other function types are just functions...
         f = b.buildArrowFunction(with: .parameters(signature2.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
@@ -513,7 +513,7 @@ class JSTyperTests: XCTestCase {
         }
         XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
 
-        let signature2 = [.integer, .anything...] => .float
+        let signature2 = [.integer, .jsAnything...] => .float
         let f2 = b.buildPlainFunction(with: .parameters(signature2.parameters)) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
             XCTAssertEqual(b.type(of: params[1]), fuzzer.environment.arrayType)
@@ -687,7 +687,7 @@ class JSTyperTests: XCTestCase {
                 }
             case 3:
                 b.buildForOfLoop(obj) { loopVar in
-                    XCTAssertEqual(b.type(of: loopVar), .anything)
+                    XCTAssertEqual(b.type(of: loopVar), .jsAnything)
                     body()
                 }
             case 4:
@@ -737,7 +737,7 @@ class JSTyperTests: XCTestCase {
 
     func testPropertyTypeInference() {
         let propFooType = ILType.float
-        let propBarType = ILType.function([] => .anything)
+        let propBarType = ILType.function([] => .jsAnything)
         let propBazType = ILType.object(withProperties: ["a", "b", "c"])
         let propertiesByGroup: [String: [String: ILType]] = [
             "B": [
@@ -760,7 +760,7 @@ class JSTyperTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let aObj = b.createNamedVariable(forBuiltin: "A")
-        XCTAssertEqual(b.type(of: aObj), .anything)
+        XCTAssertEqual(b.type(of: aObj), .jsAnything)
         let bObj = b.createNamedVariable(forBuiltin: "B")
         XCTAssertEqual(b.type(of: bObj), .object(ofGroup: "B"))
 
@@ -772,7 +772,7 @@ class JSTyperTests: XCTestCase {
 
         // But .baz is only known on C objects
         p = b.getProperty("baz", of: bObj)
-        XCTAssertEqual(b.type(of: p), .anything)
+        XCTAssertEqual(b.type(of: p), .jsAnything)
 
         let cObj = b.createNamedVariable(forBuiltin: "C")
         p = b.getProperty("baz", of: cObj)
@@ -780,11 +780,11 @@ class JSTyperTests: XCTestCase {
 
         // No property types are known for A objects though.
         p = b.getProperty("foo", of: aObj)
-        XCTAssertEqual(b.type(of: p), .anything)
+        XCTAssertEqual(b.type(of: p), .jsAnything)
         p = b.getProperty("bar", of: aObj)
-        XCTAssertEqual(b.type(of: p), .anything)
+        XCTAssertEqual(b.type(of: p), .jsAnything)
         p = b.getProperty("baz", of: aObj)
-        XCTAssertEqual(b.type(of: p), .anything)
+        XCTAssertEqual(b.type(of: p), .jsAnything)
     }
 
     func testMethodTypeInference() {
@@ -810,7 +810,7 @@ class JSTyperTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let aObj = b.createNamedVariable(forBuiltin: "A")
-        XCTAssertEqual(b.type(of: aObj), .anything)
+        XCTAssertEqual(b.type(of: aObj), .jsAnything)
         let bObj = b.createNamedVariable(forBuiltin: "B")
         XCTAssertEqual(b.type(of: bObj), .object(ofGroup: "B"))
 
@@ -818,7 +818,7 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: r), .float)
 
         r = b.callMethod("m2", on: bObj)
-        XCTAssertEqual(b.type(of: r), .anything)
+        XCTAssertEqual(b.type(of: r), .jsAnything)
 
         let cObj = b.createNamedVariable(forBuiltin: "C")
         r = b.callMethod("m2", on: cObj)
@@ -826,7 +826,7 @@ class JSTyperTests: XCTestCase {
     }
 
     func testConstructorTypeInference() {
-        let aConstructorType = ILType.constructor([.rest(.anything)] => .object(ofGroup: "A"))
+        let aConstructorType = ILType.constructor([.rest(.jsAnything)] => .object(ofGroup: "A"))
         let builtins: [String: ILType] = [
             "A": aConstructorType,
         ]
@@ -859,7 +859,7 @@ class JSTyperTests: XCTestCase {
     }
 
     func testReturnTypeInference() {
-        let aFunctionType = ILType.function([.rest(.anything)] => .primitive)
+        let aFunctionType = ILType.function([.rest(.jsAnything)] => .primitive)
         let builtins: [String: ILType] = [
             "a": aFunctionType,
         ]
@@ -876,10 +876,10 @@ class JSTyperTests: XCTestCase {
         var r = b.callFunction(a)
         XCTAssertEqual(b.type(of: r), .primitive)
 
-        // For an unknown function, the result will be .anything
+        // For an unknown function, the result will be .jsAnything
         let c = b.createNamedVariable(forBuiltin: "c")
         r = b.callFunction(c)
-        XCTAssertEqual(b.type(of: r), .anything)
+        XCTAssertEqual(b.type(of: r), .jsAnything)
     }
 
     func testPrimitiveTypesOverride() {
@@ -956,7 +956,7 @@ class JSTyperTests: XCTestCase {
                 b.callSuperConstructor(withArgs: [b.loadFloat(42)])
             }
 
-            cls.addInstanceMethod("g", with: .parameters(.anything)) { params in
+            cls.addInstanceMethod("g", with: .parameters(.jsAnything)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(ofGroup: "_fuzz_Class2", withProperties: ["a", "b"], withMethods: ["f"]))
                 XCTAssertEqual(b.currentSuperType(), superType)
@@ -1344,7 +1344,7 @@ class JSTyperTests: XCTestCase {
         let fooProperty = b.getProperty("foo", of: object)
         XCTAssertEqual(b.type(of: fooProperty), .string)
         let fooResult = b.callMethod("foo", on: object)
-        XCTAssertEqual(b.type(of: fooResult), .anything)
+        XCTAssertEqual(b.type(of: fooResult), .jsAnything)
     }
 
     func testTypingOfDuplicateMethods() {
@@ -1437,7 +1437,7 @@ class JSTyperTests: XCTestCase {
 
         XCTAssertEqual(b.methodSignatures(of: "f", on: instance), [[.float] => .string])
         XCTAssertEqual(b.type(ofProperty: "foo", on: instance), .bigint)
-        XCTAssertEqual(b.type(ofProperty: "bar", on: instance), .anything)
+        XCTAssertEqual(b.type(ofProperty: "bar", on: instance), .jsAnything)
         XCTAssertEqual(b.type(ofProperty: "baz", on: instance), .undefined)
         XCTAssertEqual(b.type(ofProperty: "blub", on: instance), .nullish)
     }
@@ -1484,7 +1484,7 @@ class JSTyperTests: XCTestCase {
                b.callSuperConstructor(withArgs: [b.loadFloat(42)])
            }
 
-           cls.addInstanceMethod("g", with: .parameters(.anything)) { params in
+           cls.addInstanceMethod("g", with: .parameters(.jsAnything)) { params in
                let this = params[0]
                XCTAssertEqual(b.type(of: this), .object(ofGroup: "_fuzz_Class2", withProperties: ["a", "b"], withMethods: ["f"]))
                XCTAssertEqual(b.currentSuperType(), instanceType)
@@ -1496,8 +1496,8 @@ class JSTyperTests: XCTestCase {
         let instance = b.construct(cls, withArgs: [b.loadString("bla")])
 
         XCTAssertEqual(b.methodSignatures(of: "f", on: instance), [[.float] => .string])
-        XCTAssertEqual(b.methodSignatures(of: "g", on: instance), [[.anything] => .undefined])
-        XCTAssertEqual(b.type(ofProperty: "a", on: instance), .anything)
+        XCTAssertEqual(b.methodSignatures(of: "g", on: instance), [[.jsAnything] => .undefined])
+        XCTAssertEqual(b.type(ofProperty: "a", on: instance), .jsAnything)
     }
 
 
@@ -1605,9 +1605,9 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(fun0, [[] => .undefined])
         XCTAssertEqual(fun1, [[.integer] => .bigint])
         XCTAssertEqual(fun2, [[.float] => .float])
-        XCTAssertEqual(fun3, [[.anything] => .jsArray])
-        XCTAssertEqual(fun4, [[] => .anything])
-        XCTAssertEqual(fun5, [[] => .anything])
+        XCTAssertEqual(fun3, [[.jsAnything] => .jsArray])
+        XCTAssertEqual(fun4, [[] => .jsAnything])
+        XCTAssertEqual(fun5, [[] => .jsAnything])
         // Here the typer should be able to see the full JS signature.
         XCTAssertEqual(reexportedFunction, [[] => .object(ofGroup: "_fuzz_Object0")])
 

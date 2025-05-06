@@ -101,7 +101,7 @@ public class CodeGenerator: Contributor {
             case loose
             /// In this mode, the code generator will only be invoked with inputs that are
             /// statically known to have the desired types. In particular, no variables of
-            /// unknown types will be used (unless the input type is .anything).
+            /// unknown types will be used (unless the input type is .jsAnything).
             case strict
         }
 
@@ -116,9 +116,9 @@ public class CodeGenerator: Contributor {
             return Inputs(types: [], mode: .loose)
         }
 
-        // One input of type .anything
+        // One input of type .jsAnything
         public static var one: Inputs {
-            return Inputs(types: [.anything], mode: .loose)
+            return Inputs(types: [.jsAnything], mode: .loose)
         }
 
         // One input of a wasmPrimitive and it has to be strict to ensure type correctness.
@@ -130,19 +130,19 @@ public class CodeGenerator: Contributor {
             return Inputs(types: [.wasmNumericalPrimitive], mode: .strict)
         }
 
-        // Two inputs of type .anything
+        // Two inputs of type .jsAnything
         public static var two: Inputs {
-            return Inputs(types: [.anything, .anything], mode: .loose)
+            return Inputs(types: [.jsAnything, .jsAnything], mode: .loose)
         }
 
-        // Three inputs of type .anything
+        // Three inputs of type .jsAnything
         public static var three: Inputs {
-            return Inputs(types: [.anything, .anything, .anything], mode: .loose)
+            return Inputs(types: [.jsAnything, .jsAnything, .jsAnything], mode: .loose)
         }
 
-        // Four inputs of type .anything
+        // Four inputs of type .jsAnything
         public static var four: Inputs {
-            return Inputs(types: [.anything, .anything, .anything, .anything], mode: .loose)
+            return Inputs(types: [.jsAnything, .jsAnything, .jsAnything, .jsAnything], mode: .loose)
         }
 
 

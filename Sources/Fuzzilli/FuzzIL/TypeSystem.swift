@@ -76,7 +76,8 @@
 // another type T2 if all instances of T2 are also instances of T1. See the .subsumes method for the exact subsumption
 // rules. Some examples:
 //
-//    - .anything, the union of all types, subsumes every other type
+//    - .jsAnything, the union of all js types, subsumes every other type in js
+//    - .wasmAnything, the union of all wasm types, subsumes every other type in wasm.
 //    - .nothing, the empty type, is subsumed by all other types. .nothing occurs e.g. during intersection
 //    - .object() subsumes all other object type. I.e. objects with a property "foo" are sill objects
 //          e.g. .object() >= .object(withProperties: ["foo"]) and .object() >= .object(withMethods: ["bar"])
@@ -130,8 +131,11 @@ public struct ILType: Hashable {
     /// A type that can be iterated over, such as an array or a generator.
     public static let iterable  = ILType(definiteType: .iterable)
 
-    /// The type that subsumes all others.
-    public static let anything  = ILType(definiteType: .nothing, possibleType: .anything)
+    /// The type that subsumes all others (in js).
+    public static let jsAnything  = ILType(definiteType: .nothing, possibleType: .jsAnything)
+
+    /// The type that subsumes all others (in wasm).
+    public static let wasmAnything  = ILType(definiteType: .nothing, possibleType: .wasmAnything)
 
     /// The type that is subsumed by all others.
     public static let nothing   = ILType(definiteType: .nothing, possibleType: .nothing)
@@ -379,7 +383,7 @@ public struct ILType: Hashable {
         }
 
         // Wasm type extension.
-        guard !self.hasWasmTypeInfo || (self.hasWasmTypeInfo && other.hasWasmTypeInfo
+        guard !self.hasWasmTypeInfo || (other.hasWasmTypeInfo
             && self.wasmType!.subsumes(other.wasmType!)) else {
             return false
         }
@@ -591,12 +595,14 @@ public struct ILType: Hashable {
     /// To have a WasmTypeExtension in the union, they have to be equal.
     public func union(with other: ILType) -> ILType {
         // Trivial cases.
-        if self == .anything || other == .anything {
-            return .anything
+        if self == .jsAnything && other.Is(.jsAnything) || other == .jsAnything && self.Is(.jsAnything) {
+            return .jsAnything
         } else if self == .nothing {
             return other
         } else if other == .nothing {
             return self
+        } else if self == .wasmAnything && other.Is(.wasmAnything) || other == .wasmAnything && self.Is(.wasmAnything) {
+            return .wasmAnything
         }
 
         // Form a union: the intersection of both definiteTypes and the union of both possibleTypes.
@@ -679,12 +685,12 @@ public struct ILType: Hashable {
         guard self.group == nil || other.group == nil || self.group == other.group else {
             return .nothing
         }
-        let group = self.group == nil ? other.group : self.group
+        let group = self.group ?? other.group
 
         // For signatures we take a shortcut: if one signature subsumes the other, then the intersection
         // must be the subsumed signature. Additionally, we know that if there is an intersection, the
         // return value must be the intersection of the return values, so we can compute that up-front.
-        let returnValue = (self.signature?.outputType ?? .anything) & (other.signature?.outputType ?? .anything)
+        let returnValue = (self.signature?.outputType ?? .jsAnything) & (other.signature?.outputType ?? .jsAnything)
         guard returnValue != .nothing else {
             return .nothing
         }
@@ -699,13 +705,11 @@ public struct ILType: Hashable {
             return .nothing
         }
 
-        // Handling Wasm type extension.
-        var wasmExt: WasmTypeExtension?
-        if self.wasmType == other.wasmType {
-            wasmExt = self.wasmType
-        } else {
+        // Either they must be the same, or one must be nil, in which case the result is the non-nil one, the smaller type.
+        guard self.wasmType == nil || other.wasmType == nil || self.wasmType == other.wasmType else {
             return .nothing
         }
+        let wasmExt = self.wasmType ?? other.wasmType
 
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: properties, methods: methods, signature: signature, wasmExt: wasmExt))
     }
@@ -740,6 +744,11 @@ public struct ILType: Hashable {
             return false
         }
 
+        // Merging objects with different wasm extensions is not allowed.
+        guard self.ext?.wasmExt == nil || other.ext?.wasmExt == nil || self.ext?.wasmExt == other.ext?.wasmExt else {
+            return false
+        }
+
         return true
     }
 
@@ -761,7 +770,10 @@ public struct ILType: Hashable {
         // Same is true for the group name
         let group = self.group ?? other.group
 
-        let ext = TypeExtension(group: group, properties: self.properties.union(other.properties), methods: self.methods.union(other.methods), signature: signature)
+        let wasmExt = self.wasmType ?? other.wasmType
+
+        // We just take the self.wasmExt as they have to be the same, see `canMerge`.
+        let ext = TypeExtension(group: group, properties: self.properties.union(other.properties), methods: self.methods.union(other.methods), signature: signature, wasmExt: wasmExt)
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: ext)
     }
 
@@ -870,8 +882,10 @@ public struct ILType: Hashable {
 extension ILType: CustomStringConvertible {
     public func format(abbreviate: Bool) -> String {
         // Test for well-known union types and .nothing
-        if self == .anything {
-            return ".anything"
+        if self == .jsAnything {
+            return ".jsAnything"
+        } else if self == .wasmAnything {
+            return ".wasmAnything"
         } else if self == .nothing {
             return ".nothing"
         } else if self == .primitive {
@@ -969,7 +983,9 @@ extension ILType: CustomStringConvertible {
         case .label:
             return ".label"
         case .wasmRef:
-            let refType = self.wasmReferenceType!
+            guard let refType = self.wasmReferenceType else {
+                return ".wasmGenericRef"
+            }
             let nullPrefix = refType.nullability ? "null " : ""
             switch refType.kind {
                 case .Abstract(let heapType):
@@ -1057,9 +1073,11 @@ struct BaseType: OptionSet, Hashable {
     static let wasmRef = BaseType(rawValue: 1 << 19)
     static let wasmTypeDef = BaseType(rawValue: 1 << 20)
 
-    static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
+    static let jsAnything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 
-    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable]
+    static let wasmAnything = BaseType([.wasmf32, .wasmi32, .wasmf64, .wasmi64, .wasmRef, .wasmSimd128, .wasmTypeDef, .wasmFunctionDef])
+
+    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable, .wasmf32, .wasmi32, .wasmf64, .wasmi64, .wasmRef, .wasmSimd128, .wasmTypeDef, .wasmFunctionDef]
 }
 
 class TypeExtension: Hashable {
@@ -1374,21 +1392,16 @@ public enum Parameter: Hashable {
     case rest(ILType)
 
     // Convenience constructors for plain parameters.
-    public static let integer   = Parameter.plain(.integer)
-    public static let bigint    = Parameter.plain(.bigint)
-    public static let float     = Parameter.plain(.float)
-    public static let string    = Parameter.plain(.string)
-    public static let boolean   = Parameter.plain(.boolean)
-    public static let regexp    = Parameter.plain(.regexp)
-    public static let iterable  = Parameter.plain(.iterable)
-    public static let anything  = Parameter.plain(.anything)
-    public static let number    = Parameter.plain(.number)
-    public static let primitive = Parameter.plain(.primitive)
-    public static let wasmi32   = Parameter.plain(.wasmi32)
-    public static let wasmi64   = Parameter.plain(.wasmi64)
-    public static let wasmf32   = Parameter.plain(.wasmf32)
-    public static let wasmf64   = Parameter.plain(.wasmf64)
-    public static let wasmExternRef   = Parameter.plain(.wasmExternRef)
+    public static let integer    = Parameter.plain(.integer)
+    public static let bigint     = Parameter.plain(.bigint)
+    public static let float      = Parameter.plain(.float)
+    public static let string     = Parameter.plain(.string)
+    public static let boolean    = Parameter.plain(.boolean)
+    public static let regexp     = Parameter.plain(.regexp)
+    public static let iterable   = Parameter.plain(.iterable)
+    public static let jsAnything = Parameter.plain(.jsAnything)
+    public static let number     = Parameter.plain(.number)
+    public static let primitive  = Parameter.plain(.primitive)
     public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> Parameter {
         return Parameter.plain(.object(ofGroup: group, withProperties: properties, withMethods: methods))
     }
@@ -1427,12 +1440,12 @@ public enum Parameter: Hashable {
 // A ParameterList represents all parameters in a function signature.
 public typealias ParameterList = Array<Parameter>
 extension ParameterList {
-    // Construct a generic parameter list with `numParameters` parameters of type `.anything`
+    // Construct a generic parameter list with `numParameters` parameters of type `.jsAnything`
     init(numParameters: Int, hasRestParam: Bool) {
         assert(!hasRestParam || numParameters > 0)
-        self.init(repeating: .anything, count: numParameters)
+        self.init(repeating: .jsAnything, count: numParameters)
         if hasRestParam {
-            self[endIndex - 1] = .anything...
+            self[endIndex - 1] = .jsAnything...
         }
     }
 
@@ -1508,10 +1521,10 @@ public struct Signature: Hashable, CustomStringConvertible {
         self.outputType = returnType
     }
 
-    // Constructs a function with N parameters of any type and returning .anything.
+    // Constructs a function with N parameters of any type and returning .jsAnything.
     public init(withParameterCount numParameters: Int, hasRestParam: Bool = false) {
         let parameters = ParameterList(numParameters: numParameters, hasRestParam: hasRestParam)
-        self.init(expects: parameters, returns: .anything)
+        self.init(expects: parameters, returns: .jsAnything)
     }
 
     // Returns a new signature with the output type replaced with the given type.
@@ -1519,8 +1532,8 @@ public struct Signature: Hashable, CustomStringConvertible {
         return parameters => newOutputType
     }
 
-    // The most generic function signature: varargs function returning .anything
-    public static let forUnknownFunction = [.anything...] => .anything
+    // The most generic function signature: varargs function returning .jsAnything
+    public static let forUnknownFunction = [.jsAnything...] => .jsAnything
 
     // Signature subsumption.
     //
@@ -1534,9 +1547,9 @@ public struct Signature: Hashable, CustomStringConvertible {
     // signature works fine. In other words, the other signature is an instance of us.
     //
     // Some examples:
-    //   [.integer, .boolean] => .undefined subsumes [.anything] => .undefined
+    //   [.integer, .boolean] => .undefined subsumes [.jsAnything] => .undefined
     //   [.integer] => .undefined subsumes [.number] => .undefined
-    //   [.anything] => .undefined *only* subsumes [.anything] => undefined or [] => .undefined
+    //   [.jsAnything] => .undefined *only* subsumes [.jsAnything] => undefined or [] => .undefined
     //   [.number] => .undefined does *not* subsume [.integer] => .undefined
     public func subsumes(_ other: Signature) -> Bool {
         // First, check that the return types are compatible:
@@ -1596,9 +1609,9 @@ public struct Signature: Hashable, CustomStringConvertible {
         //    then ensures that the rest parameters are compatible.
         //
         // For example:
-        // [.anything...] => .undefined does *not* subsume [.anything] => .undefined
+        // [.jsAnything...] => .undefined does *not* subsume [.jsAnything] => .undefined
         // because the first function may be legitimately called with no arguments.
-        // [...integer] => .undefined subsumes [.anything...] => .undefined
+        // [...integer] => .undefined subsumes [.jsAnything...] => .undefined
         // but not the other way around.
         if case .rest(let paramType) = ourParameters.last {
             ourParameters.removeLast()

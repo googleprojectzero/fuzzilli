@@ -69,7 +69,7 @@ class ProgramBuilderTests: XCTestCase {
             // value generator generates a reassignment of a variable created by a previous value
             // generator. As that should be rare in practice, we don't care too much about that though.
             for v in b.visibleVariables {
-                XCTAssertNotEqual(b.type(of: v), .anything)
+                XCTAssertNotEqual(b.type(of: v), .jsAnything)
             }
 
             let _ = b.finalize()
@@ -167,7 +167,7 @@ class ProgramBuilderTests: XCTestCase {
         // There is only one visible variable, so we always get that, no matter what we actually query
         XCTAssertLessThan(b.numberOfVisibleVariables, b.minVisibleVariablesOfRequestedTypeForVariableSelection)
         XCTAssertEqual(b.randomVariable(forUseAs: .integer), i)
-        XCTAssertEqual(b.randomVariable(forUseAs: .anything), i)
+        XCTAssertEqual(b.randomVariable(forUseAs: .jsAnything), i)
         XCTAssertEqual(b.randomVariable(forUseAs: .string), i)
 
         // Now there's also a string variable. Now, when asking for e.g. an integer, we will not get the string
@@ -180,13 +180,13 @@ class ProgramBuilderTests: XCTestCase {
         // Now there's also a variable of unknown type, which may be anything. Since we don't have enough variables
         // of a known type, all queries will use a `MayBe` type query to find matches and so may return the unknown variable.
         let unknown = b.createNamedVariable(forBuiltin: "unknown")
-        XCTAssertEqual(b.type(of: unknown), .anything)
+        XCTAssertEqual(b.type(of: unknown), .jsAnything)
 
         XCTAssert([i, unknown].contains(b.randomVariable(forUseAs: .integer)))
         XCTAssert([i, unknown].contains(b.randomVariable(forUseAs: .number)))
         XCTAssert([s, unknown].contains(b.randomVariable(forUseAs: .string)))
         XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .primitive)))
-        XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .anything)))
+        XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .jsAnything)))
 
         // Now we add some more integers and set the probability of trying an exact match (i.e. an `Is` query instead of a
         // `MayBe` query) to 100%. Then, we expect to always get back the known integers when asking for them.
@@ -201,7 +201,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert([s, unknown].contains(b.randomVariable(forUseAs: .string)))
         // But enough primitive values.
         XCTAssert([i, i2, i3, s].contains(b.randomVariable(forUseAs: .primitive)))
-        XCTAssert([i, i2, i3, s, unknown].contains(b.randomVariable(forUseAs: .anything)))
+        XCTAssert([i, i2, i3, s, unknown].contains(b.randomVariable(forUseAs: .jsAnything)))
     }
 
     func testVariableRetrieval2() {
@@ -215,23 +215,23 @@ class ProgramBuilderTests: XCTestCase {
         let v = b.loadInt(42)
         XCTAssertEqual(b.randomVariable(ofType: .integer), v)
         XCTAssertEqual(b.randomVariable(ofType: .number), v)
-        XCTAssertEqual(b.randomVariable(ofType: .anything), v)
+        XCTAssertEqual(b.randomVariable(ofType: .jsAnything), v)
         XCTAssertEqual(b.randomVariable(ofType: .string), nil)
 
         let s = b.loadString("foobar")
         XCTAssertEqual(b.randomVariable(ofType: .integer), v)
         XCTAssertEqual(b.randomVariable(ofType: .number), v)
         XCTAssert([v, s].contains(b.randomVariable(ofType: .primitive)))
-        XCTAssert([v, s].contains(b.randomVariable(ofType: .anything)))
+        XCTAssert([v, s].contains(b.randomVariable(ofType: .jsAnything)))
         XCTAssertEqual(b.randomVariable(ofType: .string), s)
 
         let _ = b.finalize()
 
         let unknown = b.createNamedVariable(forBuiltin: "unknown")
-        XCTAssertEqual(b.type(of: unknown), .anything)
+        XCTAssertEqual(b.type(of: unknown), .jsAnything)
         XCTAssertEqual(b.randomVariable(ofType: .integer), nil)
         XCTAssertEqual(b.randomVariable(ofType: .number), nil)
-        XCTAssertEqual(b.randomVariable(ofType: .anything), unknown)
+        XCTAssertEqual(b.randomVariable(ofType: .jsAnything), unknown)
 
         let _ = b.finalize()
 
@@ -262,13 +262,13 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(b.randomVariable(preferablyNotOfType: .string), v)
         XCTAssert([v, s].contains(b.randomVariable(preferablyNotOfType: .boolean)))
         XCTAssertEqual(b.randomVariable(preferablyNotOfType: .primitive), nil)
-        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .anything), nil)
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .jsAnything), nil)
 
         let unknown = b.createNamedVariable(forBuiltin: "unknown")
-        XCTAssertEqual(b.type(of: unknown), .anything)
+        XCTAssertEqual(b.type(of: unknown), .jsAnything)
         XCTAssert([v, unknown].contains(b.randomVariable(preferablyNotOfType: .string)))
         XCTAssertEqual(b.randomVariable(preferablyNotOfType: .primitive), unknown)
-        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .anything), nil)
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .jsAnything), nil)
     }
 
     func testRandomVarableInternal() {
@@ -474,10 +474,10 @@ class ProgramBuilderTests: XCTestCase {
         }
         XCTAssert(usesOfParameterType.values.allSatisfy({ $0 > 0 }))
 
-        // However, if we set the probability of using .anything as parameter to 100%, we expect to only see .anything parameters.
+        // However, if we set the probability of using .jsAnything as parameter to 100%, we expect to only see .jsAnything parameters.
         b.probabilityOfUsingAnythingAsParameterTypeIfAvoidable = 1.0
-        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .anything)
-        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .anything)
+        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .jsAnything)
+        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .jsAnything)
     }
 
     func testParameterGeneration3() {
@@ -1473,12 +1473,12 @@ class ProgramBuilderTests: XCTestCase {
         //
         b.probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 1.0
 
-        // This function is "compatible" with the original function (also one parameter of type .anything).
+        // This function is "compatible" with the original function (also one parameter of type .jsAnything).
         b.buildPlainFunction(with: .parameters(n: 1)) { args in
             let two = b.loadInt(2)
             let r = b.binary(args[0], two, with: .Mul)
             // Due to the way remapping is currently implemented, function return values
-            // are currently assumed to be .anything when looking for compatible functions.
+            // are currently assumed to be .jsAnything when looking for compatible functions.
             b.doReturn(r)
         }
         // This function is not compatible since it requires more parameters.
@@ -1495,7 +1495,7 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Variables should be remapped to variables of the same type (unless there are none).
         // In this case, the two functions are compatible because their parameter types are
-        // identical (both take one .anything parameter).
+        // identical (both take one .jsAnything parameter).
         f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             let two = b.loadInt(2)
             let r = b.binary(args[0], two, with: .Mul)
@@ -1521,12 +1521,12 @@ class ProgramBuilderTests: XCTestCase {
         // Original Program
         //
         //
-        // Here we have a function with one parameter of type .anything.
+        // Here we have a function with one parameter of type .jsAnything.
         var f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             let print = b.createNamedVariable(forBuiltin: "print")
             b.callFunction(print, withArgs: args)
         }
-        XCTAssertEqual(b.type(of: f).signature?.parameters, [.anything])
+        XCTAssertEqual(b.type(of: f).signature?.parameters, [.jsAnything])
         var n = b.loadInt(1337)
         splicePoint = b.indexOfNextInstruction()
         b.callFunction(f, withArgs: [n])
@@ -1589,7 +1589,7 @@ class ProgramBuilderTests: XCTestCase {
 
         // For splicing, we will not use a variable of an unknown type as replacement.
         let unknown = b.createNamedVariable(forBuiltin: "unknown")
-        XCTAssertEqual(b.type(of: unknown), .anything)
+        XCTAssertEqual(b.type(of: unknown), .jsAnything)
         b.loadBool(true)        // This should also never be used as replacement as it definitely has a different type
         b.splice(from: original, at: splicePoint, mergeDataFlow: true)
         let actual = b.finalize()
@@ -2498,14 +2498,14 @@ class ProgramBuilderTests: XCTestCase {
         let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
         let jsD8Test = ILType.object(ofGroup: "D8Test", withProperties: ["FastCAPI"], withMethods: [])
         let jsD8FastCAPI = ILType.object(ofGroup: "D8FastCAPI", withProperties: [], withMethods: ["throw_no_fallback", "add_32bit_int"])
-        let jsD8FastCAPIConstructor = ILType.constructor(Signature(expects: [], returns: jsD8FastCAPI))
+        let jsD8FastCAPIConstructor = ILType.constructor([] => jsD8FastCAPI)
 
         // Object groups
         let jsD8Group = ObjectGroup(name: "D8", instanceType: jsD8, properties: ["test" : jsD8Test], methods: [:])
         let jsD8TestGroup = ObjectGroup(name: "D8Test", instanceType: jsD8Test, properties: ["FastCAPI": jsD8FastCAPIConstructor], methods: [:])
         let jsD8FastCAPIGroup = ObjectGroup(name: "D8FastCAPI", instanceType: jsD8FastCAPI, properties: [:],
-                methods:["throw_no_fallback": Signature(expects: [], returns: ILType.integer),
-                        "add_32bit_int": Signature(expects: [Parameter.plain(ILType.integer), Parameter.plain(ILType.integer)], returns: ILType.integer)
+                methods:["throw_no_fallback": [] => ILType.integer,
+                        "add_32bit_int": [.integer, .integer] => .integer
             ])
         let additionalObjectGroups = [jsD8Group, jsD8TestGroup, jsD8FastCAPIGroup]
 
@@ -2528,7 +2528,7 @@ class ProgramBuilderTests: XCTestCase {
 
     func testFindOrGenerateTypeWithGlobalConstructor() {
         let objType = ILType.object(ofGroup: "Test", withProperties: [], withMethods: [])
-        let constructor = ILType.constructor(Signature(expects: [], returns: objType))
+        let constructor = ILType.constructor([] => objType)
 
         let testGroup = ObjectGroup(name: "Test", instanceType: objType, properties: [:], methods: [:])
 
@@ -2548,7 +2548,7 @@ class ProgramBuilderTests: XCTestCase {
         let objType = ILType.object(ofGroup: "Test", withProperties: [], withMethods: [])
 
         // Object groups
-        let jsD8Group = ObjectGroup(name: "D8", instanceType: jsD8, properties: [:], methods: ["test" : Signature(expects: [], returns: objType)])
+        let jsD8Group = ObjectGroup(name: "D8", instanceType: jsD8, properties: [:], methods: ["test" : [] => objType])
 
         let testGroup = ObjectGroup(name: "Test", instanceType: objType, properties: [:], methods: [:])
 
@@ -2573,9 +2573,9 @@ class ProgramBuilderTests: XCTestCase {
             instanceType: jsD8,
             properties: [:],
             overloads: ["test" : [
-                Signature(expects: [.string], returns: .integer),
-                Signature(expects: [.integer, .integer], returns: .string),
-                Signature(expects: [], returns: objType)
+                [.string] => .integer,
+                [.integer, .integer] => .string,
+                [] => objType
                 ]])
 
         let testGroup = ObjectGroup(name: "Test", instanceType: objType, properties: [:], methods: [:])

@@ -145,10 +145,10 @@ public class ProgramBuilder {
 
     public var hasVisibleJsVariables: Bool {
         let jsVarCount = variablesInScope.filter({
-            type(of: $0).Is(.anything)
+            type(of: $0).Is(.jsAnything)
         }).count
         let hiddenJsVarCount = hiddenVariables.filter({
-            type(of: $0).Is(.anything)
+            type(of: $0).Is(.jsAnything)
         }).count
 
         return jsVarCount > hiddenJsVarCount
@@ -439,7 +439,7 @@ public class ProgramBuilder {
     // parameters of type .integer.
     private let thresholdForUseAsParameter = 3
 
-    // The probability of using .anything as parameter type even though we have more specific alternatives.
+    // The probability of using .jsAnything as parameter type even though we have more specific alternatives.
     // Doing this sometimes is probably beneficial so that completely random values are passed to the function.
     // Future mutations, such as the ExplorationMutator can then figure out what to do with the parameters.
     // Writable so it can be changed for tests.
@@ -473,7 +473,7 @@ public class ProgramBuilder {
         // Find all types of which we currently have at least a few visible variables that we could later use as arguments.
         // TODO: improve this code by using some kind of cache? That could then also be used for randomVariable(ofType:) etc.
         var availableVariablesByType = [ILType: Int]()
-        for v in visibleVariables where type(of: v).Is(.anything) {
+        for v in visibleVariables where type(of: v).Is(.jsAnything) {
             let t = type(of: v)
             // TODO: should we also add this values to the buckets for supertypes (without this becoming O(n^2))?
             // TODO: alternatively just check for some common union types, e.g. .number, .primitive, as long as these can be used meaningfully?
@@ -482,13 +482,13 @@ public class ProgramBuilder {
 
         var candidates = Array(availableVariablesByType.filter({ k, v in v >= thresholdForUseAsParameter }).keys)
         if candidates.isEmpty {
-            candidates.append(.anything)
+            candidates.append(.jsAnything)
         }
 
         var params = ParameterList()
         for _ in 0..<n {
             if probability(probabilityOfUsingAnythingAsParameterTypeIfAvoidable) {
-                params.append(.anything)
+                params.append(.jsAnything)
             } else {
                 params.append(.plain(chooseUniform(from: candidates)))
             }
@@ -551,7 +551,7 @@ public class ProgramBuilder {
         var properties: [String: Variable] = [:]
 
         for propertyName in type.properties {
-            // If we have an object that has a group, we should get a type here, otherwise if we don't have a group, we will get .anything.
+            // If we have an object that has a group, we should get a type here, otherwise if we don't have a group, we will get .jsAnything.
             let propType = fuzzer.environment.type(ofProperty: propertyName, on: type)
             properties[propertyName] = generateTypeInternal(propType)
         }
@@ -728,7 +728,7 @@ public class ProgramBuilder {
     /// Returns a random JavaScript variable.
     public func randomJsVariable() -> Variable {
         assert(hasVisibleVariables)
-        return randomVariable(ofType: .anything)!
+        return randomVariable(ofType: .jsAnything)!
     }
 
     /// Returns up to N (different) random JavaScript variables.
@@ -738,7 +738,7 @@ public class ProgramBuilder {
 
         var variables = [Variable]()
         while variables.count < n {
-            guard let newVar = findVariable(satisfying: { !variables.contains($0) && type(of: $0).Is(.anything) }) else {
+            guard let newVar = findVariable(satisfying: { !variables.contains($0) && type(of: $0).Is(.jsAnything) }) else {
                 break
             }
             variables.append(newVar)
@@ -761,14 +761,14 @@ public class ProgramBuilder {
 
     /// This threshold  affects the behavior of `randomVariable(forUseAs:)`. It determines how many existing variables of the
     /// requested type we want to have before we try to find an exact match. If there are fewer variables of the requested type, we'll
-    /// always do a more general search which may also return variables of unknown (i.e. `.anything`) type.
+    /// always do a more general search which may also return variables of unknown (i.e. `.jsAnything`) type.
     /// This ensures that consecutive queries for the same type can return different variables.
     let minVisibleVariablesOfRequestedTypeForVariableSelection = 3
 
     /// Returns a random variable to be used as the given type.
     ///
     /// This function may return variables of a different type, or variables that may have the requested type, but could also have a different type.
-    /// For example, when requesting a .integer, this function may also return a variable of type .number, .primitive, or even .anything as all of these
+    /// For example, when requesting a .integer, this function may also return a variable of type .number, .primitive, or even .jsAnything as all of these
     /// types may be an integer (but aren't guaranteed to be). In this way, this function ensures that variables for which no exact type could be statically
     /// determined will also be used as inputs for following code.
     ///
@@ -790,14 +790,14 @@ public class ProgramBuilder {
 
         // Otherwise, select variables that may have the desired type, but could also be something else.
         // In particular, this query will include all variable for which we don't know the type as they'll
-        // be typed as .anything. We usually expect to have a lot of candidates available for this query,
+        // be typed as .jsAnything. We usually expect to have a lot of candidates available for this query,
         // so we don't check the number of them upfront as we do for the above query.
         if result == nil {
             result = findVariable(satisfying: { self.type(of: $0).MayBe(type) })
         }
 
         // Worst case fall back to completely random variables. This should happen rarely, as we'll usually have
-        // at least some variables of type .anything.
+        // at least some variables of type .jsAnything.
         return result ?? randomJsVariable()
     }
 
@@ -1083,21 +1083,21 @@ public class ProgramBuilder {
         } else if type.Is(.wasmi64) {
             return .bigint
         } else if type.Is(.wasmSimd128) {
-            // We should not see these in JS per spec but we might export them, as such type them as .anything for now.
+            // We should not see these in JS per spec but we might export them, as such type them as .jsAnything for now.
             // Consider passing the .wasmSimd128 through somehow, such that it's unlikely that it gets called?
             // https://github.com/WebAssembly/simd/blob/main/proposals/simd/SIMD.md#javascript-api-and-simd-values
-            return .anything
+            return .jsAnything
         } else if type.Is(.nothing) {
             return .undefined
         } else if type.Is(.wasmFuncRef) {
             // TODO(cffsmith): refine this type with the signature if we can.
             return .function()
         } else if type.Is(.wasmExternRef) {
-            return .anything
+            return .jsAnything
         } else if type.Is(.wasmExnRef) {
-            return .anything
+            return .jsAnything
         } else if type.Is(.wasmGenericRef) {
-            return .anything
+            return .jsAnything
         } else {
             fatalError("Unexpected type encountered: \(type).")
         }
@@ -1394,10 +1394,10 @@ public class ProgramBuilder {
             for v in variables {
                 let type = typer.type(of: v)
                 // For subroutines, the return type is only available once the subroutine has been fully processed.
-                // Prior to that, it is assumed to be .anything. This may lead to incompatible functions being selected
+                // Prior to that, it is assumed to be .jsAnything. This may lead to incompatible functions being selected
                 // as replacements (e.g. if the following code assumes that the return value must be of type X), but
                 // is probably fine in practice.
-                assert(!instr.hasOneOutput || v != instr.output || !(instr.op is BeginAnySubroutine) || (type.signature?.outputType ?? .anything) == .anything)
+                assert(!instr.hasOneOutput || v != instr.output || !(instr.op is BeginAnySubroutine) || (type.signature?.outputType ?? .jsAnything) == .jsAnything)
                 // Try to find a compatible variable in the host program.
                 let replacement: Variable
                 if let match = randomVariable(ofType: type) {
@@ -2425,7 +2425,7 @@ public class ProgramBuilder {
         // Currently, this information is also fully contained in the parameterTypes member. However, if we ever
         // add support for features such as parameter destructuring, this would no longer be the case.
         public let parameters: Parameters
-        // Type information for every parameter. If no type information is specified, the parameters will all use .anything as type.
+        // Type information for every parameter. If no type information is specified, the parameters will all use .jsAnything as type.
         public let parameterTypes: ParameterList
 
         public var count: Int {
@@ -2453,7 +2453,7 @@ public class ProgramBuilder {
                 self.parameterTypes = types
             } else {
                 self.parameterTypes = ParameterList(numParameters: parameters.count, hasRestParam: parameters.hasRestParameter)
-                assert(self.parameterTypes.allSatisfy({ $0 == .plain(.anything) || $0 == .rest(.anything) }))
+                assert(self.parameterTypes.allSatisfy({ $0 == .plain(.jsAnything) || $0 == .rest(.jsAnything) }))
             }
             self.parameters = parameters
         }

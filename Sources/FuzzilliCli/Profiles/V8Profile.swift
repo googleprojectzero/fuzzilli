@@ -219,7 +219,7 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
         var parameters = b.randomParameters()
         let haveVisibleObjects = b.visibleVariables.contains(where: { b.type(of: $0).Is(objType) })
         if probability(0.5) && haveVisibleObjects {
-            parameters = .parameters(.plain(objType), .plain(objType), .anything, .anything)
+            parameters = .parameters(.plain(objType), .plain(objType), .jsAnything, .jsAnything)
         }
 
         let f = b.buildPlainFunction(with: parameters) { params in
@@ -422,7 +422,7 @@ public extension ILType {
 
     static let jsD8FastCAPI = ILType.object(ofGroup: "D8FastCAPI", withProperties: [], withMethods: ["throw_no_fallback", "add_32bit_int"])
 
-    static let jsD8FastCAPIConstructor = ILType.constructor(Signature(expects: [], returns: ILType.jsD8FastCAPI))
+    static let jsD8FastCAPIConstructor = ILType.constructor([] => .jsD8FastCAPI)
 
     static let gcTypeEnum = ILType.enumeration(ofName: "gcType", withValues: ["minor", "major"])
     static let gcExecutionEnum = ILType.enumeration(ofName: "gcExecution", withValues: ["async", "sync"])
@@ -433,8 +433,8 @@ let jsD8 = ObjectGroup(name: "D8", instanceType: .jsD8, properties: ["test" : .j
 let jsD8Test = ObjectGroup(name: "D8Test", instanceType: .jsD8Test, properties: ["FastCAPI": .jsD8FastCAPIConstructor], methods: [:])
 
 let jsD8FastCAPI = ObjectGroup(name: "D8FastCAPI", instanceType: .jsD8FastCAPI, properties: [:],
-        methods:["throw_no_fallback": Signature(expects: [], returns: ILType.integer),
-                 "add_32bit_int": Signature(expects: [Parameter.plain(ILType.integer), Parameter.plain(ILType.integer)], returns: ILType.integer)
+        methods:["throw_no_fallback": [] => .integer,
+                 "add_32bit_int": [.integer, .integer] => .integer
     ])
 
 let gcOptions = ObjectGroup(
@@ -459,7 +459,7 @@ let WasmFastCallFuzzer = WasmProgramTemplate("WasmFastCallFuzzer") { b in
     let wrapped = b.bindMethod(target.method, on: apiObj)
 
     let functionSig = chooseUniform(from: b.methodSignatures(of: target.method, on: target.group))
-    let wrappedSig = Signature(expects: [.plain(b.type(of: apiObj))] + functionSig.parameters, returns: functionSig.outputType)
+    let wrappedSig = [.plain(b.type(of: apiObj))] + functionSig.parameters => functionSig.outputType
 
     let m = b.buildWasmModule { m in
         let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
@@ -763,7 +763,7 @@ let v8Profile = Profile(
     additionalBuiltins: [
         "gc"                                            : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
         "d8"                                            : .jsD8,
-        "Worker"                                        : .constructor([.anything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
+        "Worker"                                        : .constructor([.jsAnything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
 
     additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],
