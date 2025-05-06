@@ -1225,10 +1225,7 @@ public class WasmLifter {
             assert(self.exports.contains(where: {
                 $0.isMemory && $0.getDefInstr()!.output == instr.output
             }))
-        case .wasmJsCall(let op):
-            assert(self.exports.contains(where: {
-                $0.getImport()?.variable == instr.input(0) && $0.getImport()!.signature == op.functionSignature
-            }))
+        case .wasmJsCall(_):
             return true
         case .wasmThrow(_):
             assert(self.exports.contains(where: { export in
