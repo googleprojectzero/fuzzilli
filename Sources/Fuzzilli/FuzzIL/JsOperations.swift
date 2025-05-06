@@ -38,7 +38,7 @@ class JsOperation: Operation {
 /// unguarded ones if no runtime exception is raised.
 ///
 /// The outputs of guarded operations (i.e. `GuardableOperations`
-/// where the guard is active) should always be typed as `.anything`
+/// where the guard is active) should always be typed as `.jsAnything`
 /// by our static type inference. This allows us to try and fix failing
 /// operations at runtime (when we have a full picture of e.g. the methods
 /// that exist on an object or the types of variables available as inputs)

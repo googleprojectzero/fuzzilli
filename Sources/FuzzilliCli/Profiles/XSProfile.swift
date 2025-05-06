@@ -342,9 +342,9 @@ let jsCompartments = ObjectGroup(
     ],
     methods: [  //@@ import/importNow can accept more than strings
         "import"    : [.string] => .jsPromise,
-        "importNow" : [.string] => .anything,
+        "importNow" : [.string] => .jsAnything,
         // "module"    : [.opt(.string)] => .object(), (currently unavailable)
-        "evaluate"  : [.string] => .anything,
+        "evaluate"  : [.string] => .jsAnything,
     ]
 )
 
@@ -441,7 +441,7 @@ let xsProfile = Profile(
         "ModuleSource"        : .function([.opt(.string)] => .jsModuleSourceConstructor),
         "harden"              : .function([.object()] => .object()),
         "lockdown"            : .function([] => .undefined) ,
-        "petrify"             : .function([.anything] => .anything),
+        "petrify"             : .function([.jsAnything] => .jsAnything),
         "mutabilities"        : .function([.object()] => .object())
     ],
 

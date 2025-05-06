@@ -70,7 +70,7 @@ class MockEnvironment: ComponentBase, Environment {
     var promiseType = ILType.object(ofGroup: "Promise")
 
     func functionType(forSignature signature: Signature) -> ILType {
-        return .anything
+        return .jsAnything
     }
 
     func hasBuiltin(_ name: String) -> Bool {
@@ -82,11 +82,11 @@ class MockEnvironment: ComponentBase, Environment {
     }
 
     func type(ofBuiltin builtinName: String) -> ILType {
-        return builtinTypes[builtinName] ?? .anything
+        return builtinTypes[builtinName] ?? .jsAnything
     }
 
     func type(ofGroup groupName: String) -> ILType {
-        return .anything
+        return .jsAnything
     }
 
     func getProducingMethods(ofType type: ILType) -> [(group: String, method: String)] {
@@ -117,7 +117,7 @@ class MockEnvironment: ComponentBase, Environment {
                 }
             }
         }
-        return .anything
+        return .jsAnything
     }
 
     func signatures(ofMethod methodName: String, on baseType: ILType) -> [Signature] {

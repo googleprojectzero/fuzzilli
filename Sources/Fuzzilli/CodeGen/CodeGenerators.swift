@@ -885,7 +885,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // If this is an existing property with a specific type, try to find a variable with a matching type.
         var propertyType = b.type(ofProperty: propertyName, on: obj)
-        assert(propertyType == .anything || b.type(of: obj).properties.contains(propertyName))
+        assert(propertyType == .jsAnything || b.type(of: obj).properties.contains(propertyName))
         let value = b.randomVariable(forUseAs: propertyType)
 
         // TODO: (here and below) maybe wrap in try catch if obj may be nullish?
@@ -1028,7 +1028,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.void(val)
     },
 
-    CodeGenerator("InstanceOfGenerator", inputs: .preferred(.anything, .constructor())) { b, val, cls in
+    CodeGenerator("InstanceOfGenerator", inputs: .preferred(.jsAnything, .constructor())) { b, val, cls in
         b.testInstanceOf(val, cls)
     },
 
@@ -1272,7 +1272,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }, catchBody: { e in })
     },
 
-    CodeGenerator("PrivatePropertyAssignmentGenerator", inContext: .classMethod, inputs: .preferred(.object(), .anything)) { b, obj, value in
+    CodeGenerator("PrivatePropertyAssignmentGenerator", inContext: .classMethod, inputs: .preferred(.object(), .jsAnything)) { b, obj, value in
         // See LoadPrivatePropertyGenerator for an explanation.
         guard !b.currentClassDefinition.privateProperties.isEmpty else { return }
         let propertyName = chooseUniform(from: b.currentClassDefinition.privateProperties)
@@ -1281,7 +1281,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }, catchBody: { e in })
     },
 
-    CodeGenerator("PrivatePropertyUpdateGenerator", inContext: .classMethod, inputs: .preferred(.object(), .anything)) { b, obj, value in
+    CodeGenerator("PrivatePropertyUpdateGenerator", inContext: .classMethod, inputs: .preferred(.object(), .jsAnything)) { b, obj, value in
         // See LoadPrivatePropertyGenerator for an explanation.
         guard !b.currentClassDefinition.privateProperties.isEmpty else { return }
         let propertyName = chooseUniform(from: b.currentClassDefinition.privateProperties)

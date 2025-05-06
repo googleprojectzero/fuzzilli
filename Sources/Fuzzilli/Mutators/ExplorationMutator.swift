@@ -71,7 +71,7 @@ public class ExplorationMutator: RuntimeAssistedMutator {
             guard !(instr.op is WasmOperation || instr.op is WasmTypeOperation) else { continue }
 
             for v in instr.allOutputs {
-                if b.type(of: v) == .anything || b.type(of: v) == .unknownObject {
+                if b.type(of: v) == .jsAnything || b.type(of: v) == .unknownObject {
                     untypedVariables.append(v)
                 } else {
                     typedVariables.append(v)
