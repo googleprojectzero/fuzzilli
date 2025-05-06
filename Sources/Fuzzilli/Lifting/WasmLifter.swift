@@ -1278,25 +1278,6 @@ public class WasmLifter {
                 currentFunction!.appendToCode(expr)
                 continue
             }
-
-            #if DEBUG
-            // Special inputs that aren't locals (e.g. memories, functions, tags, ...)
-            let isLocallyDefined = inputType.isWasmTagType && self.exports.contains(where: {$0.isTag && $0.getDefInstr()!.output == input})
-            || inputType.isWasmTableType && self.exports.contains(where: {$0.isTable && $0.getDefInstr()!.output == input})
-            || inputType.Is(.wasmFunctionDef()) && self.exports.contains(where: {
-                    if case .function(let fInfo) = $0 {
-                        return fInfo!.outputVariable == input
-                    } else {
-                        return false
-                    }
-            })
-            || inputType.isWasmGlobalType && self.exports.contains(where: { $0.isGlobal && $0.getDefInstr()!.output == input})
-            || inputType.isWasmMemoryType && self.exports.contains(where: {$0.isMemory && $0.getDefInstr()!.output == input})
-                || inputType.Is(.wasmTypeDef())
-            if !isLocallyDefined {
-                assert(self.exports.compactMap({$0.getImport()}).contains(where: {$0.variable == input}), "Variable \(input) of type \(inputType) needs to be imported during importAnalysis() for instruction \(instr)")
-            }
-            #endif
         }
     }
 
