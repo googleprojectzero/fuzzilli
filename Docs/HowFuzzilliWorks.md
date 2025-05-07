@@ -256,7 +256,7 @@ Up to this point, a code generator is a simple function that fetches zero or mor
 
 ```swift
 CodeGenerator("FunctionCallGenerator") { b in
-    let function = b.randomVariable()
+    let f = b.randomVariable()
     let arguments = [b.randomVariable(), b.randomVariable(), b.randomVariable()]
     b.callFunction(f, with: arguments)
 }
@@ -310,7 +310,7 @@ With type information available, the CodeGenerator from above can now request a 
 ```swift
 CodeGenerator("FunctionCallGenerator") { b in
     let f = b.randomVariable(ofType: .function())
-    let arguments = b.randomArguments(forCalling: function)
+    let arguments = b.randomArguments(forCalling: f)
     b.callFunction(f, with: arguments)
 }
 ```
