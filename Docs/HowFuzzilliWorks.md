@@ -187,7 +187,7 @@ CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, r
 
 This generator emits a comparison instruction (e.g. `==`) comparing two existing variables (of arbitrary type).
 
-The default code generators can be found in [CodeGenerators.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/CodeGen/CodeGenerators.swift) while custom code generators can be added for specific engines, for example to [trigger different levels of JITing](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/Profiles/JSCProfile.swift).
+The default code generators can be found in [CodeGenerators.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/CodeGen/CodeGenerators.swift) while custom code generators can be added for specific Javascript engines, for example to [trigger different levels of JITing](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/Profiles/JSCProfile.swift).
 
 Code generators are stored in a weighted list and are thus selected with different, currently [manually chosen weights](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/CodeGen/CodeGeneratorWeights.swift). This allows some degree of control over the distribution of the generated code, for example roughly how often arithmetic operations or method calls are performed, or how much control flow (if-else, loops, ...) is generated relative to data flow. Furthermore, CodeGenerators provide a simple way to steer Fuzzilli towards certain bug types by adding CodeGenerators that generate code fragments that have frequently resulted in bugs in the past, such as prototype changes, custom type conversion callbacks (e.g. valueOf), or indexed accessors.
 
@@ -309,7 +309,7 @@ With type information available, the CodeGenerator from above can now request a 
 
 ```swift
 CodeGenerator("FunctionCallGenerator") { b in
-    let function = b.randomVariable(ofType: .function())
+    let f = b.randomVariable(ofType: .function())
     let arguments = b.randomArguments(forCalling: function)
     b.callFunction(f, with: arguments)
 }
