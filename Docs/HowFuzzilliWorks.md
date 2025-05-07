@@ -716,7 +716,7 @@ CodeGenerator("ComputedPropertyAssignmentGenerator", inputs: .preferred(.object(
 },
 ```
 
-When running the first generator, the `ProgramBuilder.randomBuiltin` API will consult the static environment model to find an available builtin. In this case, the environment model may contain the following builtin: `bar: .function([] => .anything)`, which is then choosen. Next, code generation may select the  `FunctionCallGenerator`. As it states that it would like a `.function()` as argument, the ProgramBuilder would (likely) select the previously loaded builtin. As its signature is known, no argument values are selected for the call and the return value is typed as `.anything`. Finally, code generation may pick the `ComputedPropertyAssignmentGenerator`. As there is currently no value of type `.object()` available, the return value of the function call would (likely) be selected as it has type `.anything`. This way, there is al least a chance that the value will be an object at runtime. As it cannot be ruled out that the value is not "nullish" (`null` or `undefined`), in which case a runtime exception would be raised, the code generator marks the operation as guarded. Putting everything together, the following code is generated for the function:
+When running the first generator, the `ProgramBuilder.randomBuiltin` API will consult the static environment model to find an available builtin. In this case, the environment model may contain the following builtin: `bar: .function([] => .anything)`, which is then choosen. Next, code generation may select the  `FunctionCallGenerator`. As it states that it would like a `.function()` as argument, the ProgramBuilder would (likely) select the previously loaded builtin. As its signature is known, no argument values are selected for the call and the return value is typed as `.anything`. Finally, code generation may pick the `ComputedPropertyAssignmentGenerator`. As there is currently no value of type `.object()` available, the return value of the function call would (likely) be selected as it has type `.anything`. This way, there is at least a chance that the value will be an object at runtime. As it cannot be ruled out that the value is not "nullish" (`null` or `undefined`), in which case a runtime exception would be raised, the code generator marks the operation as guarded. Putting everything together, the following code is generated for the function:
 
 ```
 v4 <- BeginPlainFunction -> v5, v6
@@ -738,7 +738,7 @@ function f4(a5, a6) {
     return v8;
 }
 for (let v9 = 0; v9 < 100; v9++) {
-    f6("foo", 42 * 1337);
+    f4("foo", 42 * 1337);
 }
 ```
 
@@ -751,7 +751,7 @@ function f4(a5, a6) {
     return v8;
 }
 for (let v9 = 0; v9 < 100; v9++) {
-    f6("foo", 42 * 1337);
+    f4("foo", 42 * 1337);
 }
 ```
 
