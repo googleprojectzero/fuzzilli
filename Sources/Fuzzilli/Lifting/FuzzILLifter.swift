@@ -1117,8 +1117,16 @@ public class FuzzILLifter: Lifter {
         case .wasmBranch(_):
             w.emit("WasmBranch: \(instr.inputs.map(lift).joined(separator: ", "))")
 
-        case .wasmBranchIf(_):
-            w.emit("WasmBranchIf \(instr.input(1)), \(([instr.input(0)] + Array(instr.inputs)[2...]).map(lift).joined(separator: ", "))")
+        case .wasmBranchIf(let op):
+            let hint = switch op.hint {
+                case .None: ""
+                case .Likely: "likely "
+                case .Unlikely: "unlikely "
+            }
+            let condition = instr.inputs.last!
+            let label = instr.inputs.first!
+            let args = instr.inputs.dropFirst().dropLast().map(lift)
+            w.emit("WasmBranchIf \(hint)\(condition) to \(label) [\(args.joined(separator: ", "))]")
 
         case .wasmBranchTable(let op):
             let table = (0..<op.valueCount).enumerated().map {"\($0) => \(instr.input($1)), "}.joined()
