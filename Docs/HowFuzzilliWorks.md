@@ -758,9 +758,9 @@ for (let v9 = 0; v9 < 100; v9++) {
 The subsequent mutations may then change the generated program in all sorts of interesting (and less interesting) ways.
 
 ### Code Generation + Mutations: The HybridEngine
-The HybridEngine combines the code generation engine with the existing mutators. For that, it first selects a random ProgramTemplate, then generates a program from it, using the code generation engine as discussed previously. If the generated program is valid, it is further mutated a few times, using the algorithm that is also used by the Mutationengine.
+The HybridEngine combines the code generation engine with the existing mutators. For that, it first selects a random ProgramTemplate, then generates a program from it, using the code generation engine as discussed previously. If the generated program is valid, it is further mutated a few times, using the algorithm that is also used by the MutationEngine.
 
-The high-level algorithm used by the hybrid engine is summarized by the image below.
+The high-level algorithm used by the HybridEngine is summarized by the image below.
 
 ![Hybrid Fuzzing Algorithm](images/hybrid_engine.png)
 
