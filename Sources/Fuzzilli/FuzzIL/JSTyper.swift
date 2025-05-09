@@ -649,11 +649,10 @@ public struct JSTyper: Analyzer {
                 setType(of: instr.output, to: .wasmTable(wasmTableType: WasmTableType(elementType: op.elementType, limits: op.limits, isTable64: op.isTable64, knownEntries: op.definedEntries)))
                 dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.output), forDefinition: instr, forVariable: instr.output)
                 // Also re-export all functions that we now import through the activeElementSection
-                for (idx, _) in op.definedEntries.enumerated() {
+                for (idx, entry) in op.definedEntries.enumerated() {
                     let definingInstruction = defUseAnalyzer.definition(of: instr.input(idx))
-                    // These should match the WasmSignatures
-                    // But taking the signature of the definingInstruction will be more accurate.
-                    let jsSignature = type(of: definingInstruction.output).signature ?? Signature.forUnknownFunction
+                    // TODO(cffsmith): Once we change the way we track signatures, we should also store the JS Signature here if we have one. The table might contain JS functions but we lose that signature in the entries. Which is why we convert back into JS Signatures here.
+                    let jsSignature = ProgramBuilder.convertWasmSignatureToJsSignature(entry.signature)
                     dynamicObjectGroupManager.addWasmFunction(withSignature: jsSignature, forDefinition: definingInstruction, forVariable: instr.input(idx))
                 }
             case .wasmDefineMemory(let op):
