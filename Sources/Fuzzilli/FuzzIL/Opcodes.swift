@@ -202,6 +202,7 @@ enum Opcode {
     case endSwitch(EndSwitch)
     case switchBreak(SwitchBreak)
     case loadNewTarget(LoadNewTarget)
+    case loopNestedContinue(LoopNestedContinue)
     case print(Print)
     case explore(Explore)
     case probe(Probe)

@@ -1150,14 +1150,17 @@ public class JavaScriptLifter: Lifter {
 
             case .beginWhileLoopBody:
                 let COND = handleEndSingleExpressionContext(result: input(0), with: &w)
+                w.pushLabelStack(LabelType.loopblock)
                 w.emitBlock("while (\(COND)) {")
                 w.enterNewBlock()
 
             case .endWhileLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                w.popLabelStack(LabelType.loopblock)
 
             case .beginDoWhileLoopBody:
+                w.pushLabelStack(LabelType.loopblock)
                 w.emit("do {")
                 w.enterNewBlock()
 
@@ -1168,6 +1171,7 @@ public class JavaScriptLifter: Lifter {
             case .endDoWhileLoop:
                 let COND = handleEndSingleExpressionContext(result: input(0), with: &w)
                 w.emitBlock("} while (\(COND))")
+                w.popLabelStack(LabelType.loopblock)
 
             case .beginForLoopInitializer:
                 // While we could inline into the loop header, we probably don't want to do that as it will often lead
@@ -1243,6 +1247,7 @@ public class JavaScriptLifter: Lifter {
                 let INITIALIZER = header.initializer
                 var CONDITION = header.condition
                 var AFTERTHOUGHT = handleEndSingleExpressionContext(with: &w)
+                w.pushLabelStack(LabelType.loopblock)
 
                 if !INITIALIZER.contains("\n") && !CONDITION.contains("\n") && !AFTERTHOUGHT.contains("\n") {
                     if !CONDITION.isEmpty { CONDITION = " " + CONDITION }
@@ -1262,22 +1267,26 @@ public class JavaScriptLifter: Lifter {
             case .endForLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                w.popLabelStack(LabelType.loopblock)
 
             case .beginForInLoop:
                 let LET = w.declarationKeyword(for: instr.innerOutput)
                 let V = w.declare(instr.innerOutput)
                 let OBJ = input(0)
+                w.pushLabelStack(LabelType.loopblock)
                 w.emit("for (\(LET) \(V) in \(OBJ)) {")
                 w.enterNewBlock()
 
             case .endForInLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                w.popLabelStack(LabelType.loopblock)
 
             case .beginForOfLoop:
                 let V = w.declare(instr.innerOutput)
                 let LET = w.declarationKeyword(for: instr.innerOutput)
                 let OBJ = input(0)
+                w.pushLabelStack(LabelType.loopblock)
                 w.emit("for (\(LET) \(V) of \(OBJ)) {")
                 w.enterNewBlock()
 
@@ -1286,12 +1295,14 @@ public class JavaScriptLifter: Lifter {
                 let PATTERN = liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement)
                 let LET = w.varKeyword
                 let OBJ = input(0)
+                w.pushLabelStack(LabelType.loopblock)
                 w.emit("for (\(LET) [\(PATTERN)] of \(OBJ)) {")
                 w.enterNewBlock()
 
             case .endForOfLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                w.popLabelStack(LabelType.loopblock)
 
             case .beginRepeatLoop(let op):
                 let LET = w.varKeyword
@@ -1302,12 +1313,14 @@ public class JavaScriptLifter: Lifter {
                     I = "i"
                 }
                 let ITERATIONS = op.iterations
+                w.pushLabelStack(LabelType.loopblock)
                 w.emit("for (\(LET) \(I) = 0; \(I) < \(ITERATIONS); \(I)++) {")
                 w.enterNewBlock()
 
             case .endRepeatLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
+                w.popLabelStack(LabelType.loopblock)
 
             case .loopBreak(_),
                  .switchBreak:
@@ -1371,6 +1384,9 @@ public class JavaScriptLifter: Lifter {
             case .print:
                 let VALUE = input(0)
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(VALUE));")
+
+            case .loopNestedContinue(let op):
+                w.liftContinueLabel(LabelType.loopblock, expDepth: op.depth)
 
             case .createWasmGlobal(let op):
                 let V = w.declare(instr.output)
@@ -1640,6 +1656,7 @@ public class JavaScriptLifter: Lifter {
             w.emitComment(footer)
         }
 
+        assert(w.labelStackDepth(LabelType.loopblock) == 0)
         return w.code
     }
 
@@ -1846,6 +1863,11 @@ public class JavaScriptLifter: Lifter {
             return writer.code
         }
 
+        // Used for nestBreak series operations to record location information during append code, where temporary data structures such as temporaryOutputBufferStack may not necessarily be empty
+        var codeLength: Int {
+            return writer.code.count
+        }
+
         // Maps each FuzzIL variable to its JavaScript expression.
         // The expression for a FuzzIL variable can generally either be
         //  * an identifier like "v42" if the FuzzIL variable is mapped to a JavaScript variable OR
@@ -1860,6 +1882,11 @@ public class JavaScriptLifter: Lifter {
         // identifier of the JavaScript variable again (the lhs of the reassignment). This map is used to remember these identifiers.
         // See `reassign()` for more details about reassignment inlining.
         private var inlinedReassignments = VariableMap<Expression>()
+
+        // Trace nested code block to break/continue a label
+        private var labelStack: [LabelType: [LabelPin]] = [
+            LabelType.loopblock: []
+        ]
 
         init(analyzer: DefUseAnalyzer, version: ECMAScriptVersion, stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4) {
             self.writer = ScriptWriter(stripComments: stripComments, includeLineNumbers: includeLineNumbers, indent: indent)
@@ -2236,6 +2263,66 @@ public class JavaScriptLifter: Lifter {
                 return analyzer.numUses(of: v) <= 1
             }
         }
+
+        /// Records a new label pin at the current code position.
+        mutating func pushLabelStack(_ labelStackType: LabelType) {
+            labelStack[labelStackType, default: []].append(
+                LabelPin(
+                    beginPos: codeLength,
+                    hasLabel: false,
+                    indention: writer.getCurrentIndention()
+                )
+            )
+        }
+
+        /// Removes the most recently recorded label pin.
+        mutating func popLabelStack(_ labelStackType: LabelType) {
+            _ = labelStack[labelStackType, default: []].popLast()
+        }
+
+        /// Checks whether a label has already been inserted at the specified index.
+        private mutating func labelExists(_ labelStack: inout [LabelPin], at index: Int) -> Bool {
+            return labelStack[index].hasLabel
+        }
+
+        /// Updates the label stack when a label is inserted into the code.
+        ///
+        /// This method:
+        /// - Marks the label at the specified index as inserted.
+        /// - Inserts the label content at the given code position.
+        /// - Shifts the positions of subsequent labels accordingly.
+        private mutating func insertLabel(_ type: LabelType, _ index: Int, _ labelContent: String) {
+            var stack = labelStack[type]!
+            let insertPos = stack[index].beginPos
+            let indention = stack[index].indention
+
+            writer.insert(insertPos, labelContent, indention)
+
+            stack[index].hasLabel = true
+            let delta = labelContent.count
+
+            for i in index+1..<stack.count {
+                stack[i].beginPos += delta
+            }
+
+            labelStack[type] = stack
+        }
+
+        mutating func liftContinueLabel(_ type: LabelType, expDepth: Int) {
+            let stack = labelStack[type]!
+            let d = expDepth % stack.count
+            let labelName = "label\(d):"
+
+            if !stack[d].hasLabel {
+                insertLabel(type, d, labelName)
+            }
+
+            emit("continue label\(d);")
+        }
+
+        mutating func labelStackDepth(_ type: LabelType) -> Int {
+            return labelStack[type]!.count
+        }
     }
 
     // Helper class for formatting object literals.
@@ -2267,5 +2354,16 @@ public class JavaScriptLifter: Lifter {
             let body = writer.popTemporaryOutputBuffer()
             fields[fields.count - 1] += body + "}"
         }
+    }
+
+    // Every possible position of label
+    struct LabelPin {
+        var beginPos: Int
+        var hasLabel: Bool
+        var indention: String
+    }
+
+    enum LabelType {
+        case loopblock
     }
 }

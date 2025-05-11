@@ -1866,6 +1866,10 @@ public let CodeGenerators: [CodeGenerator] = [
             b.callFunction(f, withArgs: args)
         }, catchBody: { _ in })
     },
+
+    CodeGenerator("LoopNestedContinueGenerator", inContext: .loop) { b in
+        b.loopNestedContinue(Int.random(in: 0...10))
+    }
 ]
 
 extension Array where Element == CodeGenerator {
