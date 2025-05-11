@@ -84,4 +84,19 @@ struct ScriptWriter {
         assert(currentIndention.count >= indent.count)
         currentIndention.removeLast(indent.count)
     }
+
+    /// Insert one or more lines of code
+    mutating func insert(_ pos: Int, _ content: String, _ indention: String) {
+        assert(!content.contains("\n"))
+        assert(pos >= 0 && pos <= code.count)
+
+        var lineNumHeaderCnt = 0
+        if includeLineNumbers { lineNumHeaderCnt = "\(String(format: "%3i", currentLineNumber)). ".count }
+        let index = code.index(code.startIndex, offsetBy: pos + indention.count + lineNumHeaderCnt)
+        code.insert(contentsOf: content, at: index)
+    }
+
+    mutating func getCurrentIndention() -> String{
+        return currentIndention
+    }
 }

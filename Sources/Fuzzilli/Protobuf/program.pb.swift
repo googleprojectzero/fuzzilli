@@ -2257,6 +2257,14 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmSelect(newValue)}
   }
 
+  public var loopNestedContinue: Fuzzilli_Protobuf_LoopNestedContinue {
+    get {
+      if case .loopNestedContinue(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoopNestedContinue()
+    }
+    set {operation = .loopNestedContinue(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable, Sendable {
@@ -2536,7 +2544,7 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmSimdLoad(Fuzzilli_Protobuf_WasmSimdLoad)
     case wasmUnreachable(Fuzzilli_Protobuf_WasmUnreachable)
     case wasmSelect(Fuzzilli_Protobuf_WasmSelect)
-
+    case loopNestedContinue(Fuzzilli_Protobuf_LoopNestedContinue)
   }
 
   public init() {}
@@ -2862,6 +2870,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     275: .same(proto: "wasmSimdLoad"),
     276: .same(proto: "wasmUnreachable"),
     277: .same(proto: "wasmSelect"),
+    278: .same(proto: "loopNestedContinue"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6454,6 +6463,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSelect(v)
         }
       }()
+      case 278: try {
+          var v: Fuzzilli_Protobuf_LoopNestedContinue?
+          var hadOneofValue = false
+          if let current = self.operation {
+            hadOneofValue = true
+            if case .loopNestedContinue(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            self.operation = .loopNestedContinue(v)
+          }
+      }()
       default: break
       }
     }
@@ -7571,6 +7593,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .wasmSelect?: try {
       guard case .wasmSelect(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 277)
+    }()
+    case .loopNestedContinue?: try {
+      guard case .loopNestedContinue(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 284)
     }()
     case nil: break
     }

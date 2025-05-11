@@ -3095,4 +3095,36 @@ class LifterTests: XCTestCase {
         """
         XCTAssertEqual(actual, expected)
     }
+
+    func testLoopNestedContinueLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildRepeatLoop(n: 10) {
+            b.buildRepeatLoop(n: 10) {
+                b.buildRepeatLoop(n: 10) {
+                    b.loopNestedContinue(2)
+                    b.loopNestedContinue(2)
+                }
+                b.loopNestedContinue(1)
+            }
+            b.loopNestedContinue(0)
+        }
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+        let expected = """
+        label0:for (let i = 0; i < 10; i++) {
+            label1:for (let i = 0; i < 10; i++) {
+                label2:for (let i = 0; i < 10; i++) {
+                    continue label2;
+                    continue label2;
+                }
+                continue label1;
+            }
+            continue label0;
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
 }

@@ -2822,6 +2822,9 @@ public class ProgramBuilder {
         emit(Print(), withInputs: [value])
     }
 
+    public func loopNestedContinue(_ depth: Int){
+        emit(LoopNestedContinue(depth), withInputs: [])
+    }
 
     @discardableResult
     public func createWasmGlobal(value: WasmGlobal, isMutable: Bool) -> Variable {

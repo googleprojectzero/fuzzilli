@@ -2463,6 +2463,17 @@ class BindMethod: JsOperation {
         super.init(numInputs: 1, numOutputs: 1, requiredContext: .javascript)
     }
 }
+// Assuming the current nested depth is D, then depth % D is the actual level that can be continued, and a label will be generated at that level for continue
+final class LoopNestedContinue: JsOperation {
+    override var opcode: Opcode { .loopNestedContinue(self) }
+
+    let depth: Int
+
+    init(_ depth: Int) {
+        self.depth = depth
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .loop])
+    }
+}
 
 
 // This instruction is used to create strongly typed WasmGlobals in the JS world that can be imported by a WasmModule.

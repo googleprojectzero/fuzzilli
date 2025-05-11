@@ -301,6 +301,7 @@ message Instruction {
         WasmSimdLoad wasmSimdLoad = 275;
         WasmUnreachable wasmUnreachable = 276;
         WasmSelect wasmSelect = 277;
+        LoopNestedContinue loopNestedContinue = 278;
     }
 }
 
