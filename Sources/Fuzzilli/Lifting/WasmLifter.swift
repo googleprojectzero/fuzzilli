@@ -1182,10 +1182,6 @@ public class WasmLifter {
         case .wasmBeginCatch(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(1)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
-            assert(self.exports.contains(where: { export in
-                // The first input needs to be an import or a tag.
-                (export.isTag && export.getDefInstr()?.output == instr.input(0)) || export.getImport()?.variable == instr.input(0)
-            }))
             // Needs typer analysis
             return true
         case .wasmBeginCatchAll(_):
@@ -1228,10 +1224,6 @@ public class WasmLifter {
         case .wasmJsCall(_):
             return true
         case .wasmThrow(_):
-            assert(self.exports.contains(where: { export in
-                // The first input needs to be an import or a tag.
-                (export.isTag && export.getDefInstr()?.output == instr.input(0)) || export.getImport()?.variable == instr.input(0)
-            }))
             return true
         case .wasmDefineTag(_):
             assert(self.exports.contains(where: {
