@@ -76,6 +76,8 @@ public class WasmLifter {
         case missingTypeInformation
         // If we fail to find a variable during import linking
         case failedRetrieval
+        // This means likely some input has been reassigned in JS, which means it is not of the expected type in Wasm, this is similar to the unknownImportType
+        case invalidInput
     }
 
     indirect enum Export {
@@ -1394,7 +1396,9 @@ public class WasmLifter {
                         let sig = op.definedEntries[idx].signature
                         importIfNeeded(.import(type: .function(nil), variable: input, signature: sig))
                     } else {
-                        fatalError("unreachable, seeing \(inputType) in instruction \(instr.op)")
+                        // This instruction has likely expected some .object() of a specific group, as this variable can originate from outside wasm, it might have been reassigned to. Which means we will enter this path.
+                        // Therefore we need to bail.
+                        throw CompileError.invalidInput
                     }
                 }
             }
