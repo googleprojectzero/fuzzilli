@@ -3095,4 +3095,57 @@ class LifterTests: XCTestCase {
         """
         XCTAssertEqual(actual, expected)
     }
+
+    func testImportAnalysisMisTypedJS() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let table = b.createWasmTable(elementType: .wasmFuncRef, limits: Limits(min: 1), isTable64: true)
+        XCTAssertTrue(b.type(of: table).Is(.object(ofGroup: "WasmTable")))
+
+        let f = b.buildPlainFunction(with: .parameters(n: 0)) {_ in
+            b.doReturn(b.loadInt(1))
+        }
+
+        let mutationIndex = b.indexOfNextInstruction()
+        // We will mutate this to reassign table to be f.
+        // The steps for this to happen during fuzzing are as follows, we emit all of this during generation time, then we emit this reassign later, e.g. during CodeGenMutation or we change an existing reassign during InputMutation.
+        // Then we need to be able to recover from this in the importAnalysis as this is the first code that tries to use the mistyped inputs.
+        b.reassign(table, to: table)
+
+        b.buildWasmModule { m in
+            m.addWasmFunction(with: [] => []) { f, _ in
+                f.wasmCallIndirect(signature: [] => [], table: table, functionArgs: [], tableIndex: f.consti64(0))
+            }
+        }
+
+        let prog = b.finalize()
+        let lifter = JavaScriptLifter(ecmaVersion: .es6, environment: JavaScriptEnvironment())
+
+        // lifting this to JavaScript should work and not fail
+        let _ = lifter.lift(prog)
+
+        // Now we build the mutated Program.
+        b.beginAdoption(from: prog)
+        for i in 0..<mutationIndex {
+            b.adopt(prog.code[i])
+        }
+        // Now, mutate at the mutationIndex and reassign f to table.
+        let oldInstr = prog.code[mutationIndex]
+        var newInouts = oldInstr.inouts
+        // This is the mutation
+        newInouts[1] = f
+        let instr = Instruction(oldInstr.op, inouts: newInouts, flags: .empty)
+        // Append the mutated instruction now.
+        b.append(instr)
+        // Adopt the rest of the Program.
+        for i in mutationIndex+1..<prog.code.count {
+            b.adopt(prog.code[i])
+        }
+
+        let mutatedProg = b.finalize()
+        // This should now fail to lift, i.e. we should see `throw "Wasmlifting failed"` in the JavaScript.
+        let js = lifter.lift(mutatedProg)
+        XCTAssertTrue(js.contains("Wasmlifting failed"))
+    }
 }
