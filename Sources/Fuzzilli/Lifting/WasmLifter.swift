@@ -78,6 +78,9 @@ public class WasmLifter {
         case failedRetrieval
         // This means likely some input has been reassigned in JS, which means it is not of the expected type in Wasm, this is similar to the unknownImportType
         case invalidInput
+        // Any kind of error that should result in a fatal error instead of gracefully catching it.
+        // (Use this over fatalError() to get better error reporting about the crashing program.
+        case fatalError(String)
     }
 
     indirect enum Export {
@@ -1506,6 +1509,13 @@ public class WasmLifter {
         return memoryIdx == 0 ? Data([0]) : (Data([0x40]) + Leb128.unsignedEncode(memoryIdx))
     }
 
+    private func branchDepthFor(label: Variable) throws -> Int {
+        guard let labelDepth = self.currentFunction!.labelBranchDepthMapping[label] else {
+            throw CompileError.fatalError("No branch depth information for label \(label)")
+        }
+        return self.currentFunction!.variableAnalyzer.wasmBranchDepth - labelDepth - 1
+    }
+
     /// Returns the Bytes that correspond to this instruction.
     /// This will also automatically add bytes that are necessary based on the state of the Lifter.
     /// Example: LoadGlobal with an input variable will resolve the input variable to a concrete global index.
@@ -1743,12 +1753,12 @@ public class WasmLifter {
                     switch $0 {
                     case .Ref, .NoRef:
                         let tag = try resolveIdx(ofType: .tag, for: wasmInstruction.input(inputIndex))
-                        let depth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(inputIndex+1)]! - 2
+                        let depth = try branchDepthFor(label: wasmInstruction.input(inputIndex + 1)) - 1
                         let result = Data([$0.rawValue]) + Leb128.unsignedEncode(tag) + Leb128.unsignedEncode(depth)
                         inputIndex += 2
                         return result
                     case .AllRef, .AllNoRef:
-                        let depth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(inputIndex)]! - 2
+                        let depth = try branchDepthFor(label: wasmInstruction.input(inputIndex)) - 1
                         inputIndex += 1
                         return Data([$0.rawValue]) + Leb128.unsignedEncode(depth)
                     }
@@ -1773,7 +1783,7 @@ public class WasmLifter {
             // Basically the same as EndBlock, just an explicit instruction.
             return Data([0x0B])
         case .wasmEndTryDelegate(_):
-            let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             // Mutation might make this EndTryDelegate branch to itself, which should not happen.
             if branchDepth < 0 {
                 throw WasmLifter.CompileError.invalidBranch
@@ -1784,18 +1794,18 @@ public class WasmLifter {
         case .wasmThrowRef(_):
             return Data([0x0a])
         case .wasmRethrow(_):
-            let blockDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            let blockDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0x09] + Leb128.unsignedEncode(blockDepth))
         case .wasmBranch(let op):
-            let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0x0C]) + Leb128.unsignedEncode(branchDepth) + Data(op.labelTypes.map {_ in 0x1A})
         case .wasmBranchIf(let op):
             currentFunction!.addBranchHint(op.hint)
-            let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0x0D]) + Leb128.unsignedEncode(branchDepth) + Data(op.labelTypes.map {_ in 0x1A})
         case .wasmBranchTable(let op):
-            let depths = (0...op.valueCount).map {
-                self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input($0)]! - 1
+            let depths = try (0...op.valueCount).map {
+                try branchDepthFor(label: wasmInstruction.input($0))
             }
             return Data([0x0E]) + Leb128.unsignedEncode(op.valueCount) + depths.map(Leb128.unsignedEncode).joined()
         case .wasmBeginIf(let op):

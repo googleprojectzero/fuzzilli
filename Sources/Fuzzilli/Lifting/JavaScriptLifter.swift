@@ -1475,6 +1475,8 @@ public class JavaScriptLifter: Lifter {
                         w.leaveCurrentBlock()
                         w.emit("} });")
                     }
+                } catch WasmLifter.CompileError.fatalError(let errorMsg) {
+                    fatalError("\(errorMsg)\nFor program:\n\(FuzzILLifter().lift(program, withOptions: [.includeComments]))\nWith contributors: \(program.contributors.map {$0.name})")
                 } catch {
                     wasmLiftingFailures += 1
                     logger.warning("WasmLifting failed with error \(error), current failure count:  \(wasmLiftingFailures) (failure rate: \(String(format: "%.5f", Double(wasmLiftingFailures) / Double(liftedSamples) * 100.0))%)")
