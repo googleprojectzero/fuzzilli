@@ -658,6 +658,9 @@ let v8Profile = Profile(
         if probability(0.1) {
             args.append("--maglev-poly-calls")
         }
+        if probability(0.2) {
+            args.append("--turboshaft-verify-load-elimination")
+        }
 
         //
         // More exotic configuration changes.
