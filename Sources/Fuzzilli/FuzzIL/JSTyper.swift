@@ -747,7 +747,7 @@ public struct JSTyper: Analyzer {
                 let tagType = ILType.label(op.signature.outputTypes)
                 setType(of: instr.innerOutput(0), to: tagType)
                 let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-                dynamicObjectGroupManager.addWasmTag(withType: tagType, forDefinition: definingInstruction, forVariable: instr.input(0))
+                dynamicObjectGroupManager.addWasmTag(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
                 setType(of: instr.innerOutput(1), to: .exceptionLabel)
                 for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(2), op.signature.parameterTypes) {
                     setType(of: innerOutput, to: paramType)
