@@ -1532,6 +1532,7 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: wasmGlobalf64), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmf64, isMutable: false)))
 
         let memory = b.createWasmMemory(minPages: 1)
+        let jsTag = b.createWasmJSTag()
 
         let typeGroup = b.wasmDefineTypeGroup {
             return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
@@ -1558,6 +1559,13 @@ class JSTyperTests: XCTestCase {
             wasmModule.addWasmFunction(with: [] => []) { function, _ in
                 // This forces an import of the wasmGlobalf64, second global
                 function.wasmLoadGlobal(globalVariable: wasmGlobalf64)
+                // This forces an import and a re-export of the jsTag.
+                function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
+                    function.WasmBuildLegacyCatch(tag: jsTag) { label, exception, args in
+                        function.wasmReturn()
+                    }
+                }
+                function.wasmUnreachable()
             }
 
             // Function one
@@ -1592,7 +1600,7 @@ class JSTyperTests: XCTestCase {
         }
 
         let exports = module.loadExports()
-        XCTAssertEqual(b.type(of: exports), .object(ofGroup: "_fuzz_WasmExports1", withProperties: ["wg0", "iwg0", "wm0", "iwm0", "wex0"], withMethods: ["w0", "w1", "w2", "w3", "w4", "w5", "iw0"]))
+        XCTAssertEqual(b.type(of: exports), .object(ofGroup: "_fuzz_WasmExports1", withProperties: ["wg0", "iwg0", "wm0", "iwm0", "wex0", "iwex0"], withMethods: ["w0", "w1", "w2", "w3", "w4", "w5", "iw0"]))
 
         let fun0 = b.methodSignatures(of: module.getExportedMethod(at: 0), on: exports)
         let fun1 = b.methodSignatures(of: module.getExportedMethod(at: 1), on: exports)
@@ -1624,5 +1632,8 @@ class JSTyperTests: XCTestCase {
         let importedMem = b.getProperty("iwm0", of: exports)
         let importedMemType = ILType.wasmMemory(limits: Limits(min: 1))
         XCTAssertEqual(b.type(of: importedMem), importedMemType)
+
+        let reexportedJsTag = b.getProperty("iwex0", of: exports)
+        XCTAssertEqual(b.type(of: reexportedJsTag), b.type(of: jsTag))
     }
 }
