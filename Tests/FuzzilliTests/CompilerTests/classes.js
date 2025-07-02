@@ -87,3 +87,33 @@ class C5 {
 }
 output(C5.a);
 output(C5.b);
+
+const c = class {
+  static a = 42;
+};
+output(c.a);
+
+o = new class {
+  a;
+  constructor(a) {
+    this.a = a;
+  }
+  getA() {
+    return this.a;
+  }
+}(42);
+output(o.a);
+output(o.getA());
+
+o = (c => new c())(class extends C1 {});
+output(o instanceof C1);
+
+const x = class z {
+  static a = 42;
+};
+const y = class z {
+  static a = 42;
+};
+
+output(x.a);
+output(y.a);
