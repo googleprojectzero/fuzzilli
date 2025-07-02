@@ -123,6 +123,14 @@ message ClassDeclaration {
     repeated ClassField fields = 3;
 }
 
+message ClassExpression {
+    // The name is optional
+    string name = 1;
+    // The superclass is optional
+    Expression superClass = 2;
+    repeated ClassField fields = 3;
+}
+
 message ReturnStatement {
     // The argument is optional
     Expression argument = 1;
@@ -476,5 +484,6 @@ message Expression {
         AwaitExpression awaitExpression = 26;
         SuperMemberExpression superMemberExpression = 27;
         CallSuperConstructor callSuperConstructor = 28;
+        ClassExpression classExpression = 29;
     }
 }
