@@ -132,7 +132,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             let nullability = b.type(of: elementType).wasmTypeDefinition!.description == .selfReference || probability(0.5)
             b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: nullability), mutability: mutability, indexType: elementType)
         } else {
-            b.wasmDefineArrayType(elementType: chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128]), mutability: mutability)
+            b.wasmDefineArrayType(elementType: chooseUniform(from: [.wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128]), mutability: mutability)
         }
     },
 
@@ -145,6 +145,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 indexTypes.append(elementType)
                 type = .wasmRef(.Index(), nullability: nullability)
             } else {
+                // TODO(mliedtke): Support packed types i8 and i16.
                 type = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128])
             }
             return WasmStructTypeDescription.Field(type: type, mutability: probability(0.75))
@@ -156,10 +157,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator("WasmArrayNewGenerator", inContext: .wasmFunction, inputs: .required(.wasmTypeDef())) { b, arrayType in
         if let typeDesc = b.type(of: arrayType).wasmTypeDefinition?.description as? WasmArrayTypeDescription {
             let function = b.currentWasmModule.currentWasmFunction
-            let hasElement = b.findVariable{b.type(of: $0).Is(typeDesc.elementType)} != nil
+            let hasElement = b.findVariable{b.type(of: $0).Is(typeDesc.elementType.unpacked())} != nil
             let isDefaultable = typeDesc.elementType.isWasmDefaultable
             if hasElement && (!isDefaultable || probability(0.5))  {
-                let elements = (0..<Int.random(in: 0...10)).map {_ in b.findVariable {b.type(of: $0).Is(typeDesc.elementType)}!}
+                let elements = (0..<Int.random(in: 0...10)).map {_ in b.findVariable {b.type(of: $0).Is(typeDesc.elementType.unpacked())}!}
                 function.wasmArrayNewFixed(arrayType: arrayType, elements: elements)
             } else if isDefaultable {
                 function.wasmArrayNewDefault(arrayType: arrayType, size: function.consti32(Int32(b.randomSize(upTo: 0x1000))))
@@ -187,7 +188,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         // TODO(mliedtke): Track array length and use other indices as well.
         let index = function.consti32(0)
-        function.wasmArrayGet(array: array, index: index)
+        function.wasmArrayGet(array: array, index: index, isSigned: Bool.random())
     },
 
     // We use false nullability so we do not invoke null traps.
@@ -197,7 +198,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
         guard let arrayType = desc.get()! as? WasmArrayTypeDescription else { return }
         guard arrayType.mutability else { return }
-        guard let element = b.randomVariable(ofType: arrayType.elementType) else { return }
+        guard let element = b.randomVariable(ofType: arrayType.elementType.unpacked()) else { return }
         let function = b.currentWasmModule.currentWasmFunction
         // TODO(mliedtke): Track array length and use other indices as well.
         let index = function.consti32(0)

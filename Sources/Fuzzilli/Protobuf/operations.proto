@@ -861,10 +861,12 @@ message WasmReturn {
 
 // We only serialize the wasm types as the rest would be overkill and are not needed.
 enum WasmValueType {
-  CONSTi32 = 0;
-  CONSTi64 = 1;
-  CONSTf32 = 2;
-  CONSTf64 = 3;
+  I32 = 0;
+  I64 = 1;
+  F32 = 2;
+  F64 = 3;
+  PACKED_I8 = 4;
+  PACKED_I16 = 5;
   SIMD128 = 6;
   // Fuzzilli-specific types
   FUNCTIONDEF = 7;  // Stands for the type of a funcref table with function indices.
@@ -1470,6 +1472,7 @@ message WasmArrayLen {
 }
 
 message WasmArrayGet {
+    bool isSigned = 1;
 }
 
 message WasmArraySet {

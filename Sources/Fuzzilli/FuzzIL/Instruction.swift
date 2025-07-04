@@ -352,19 +352,27 @@ extension Instruction: ProtobufConvertible {
             switch underlyingWasmType {
             case .wasmi32:
                 return Fuzzilli_Protobuf_WasmILType.with {
-                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.consti32
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.i32
                 }
             case .wasmi64:
                 return Fuzzilli_Protobuf_WasmILType.with {
-                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.consti64
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.i64
                 }
             case .wasmf32:
                 return Fuzzilli_Protobuf_WasmILType.with {
-                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.constf32
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.f32
                 }
             case .wasmf64:
                 return Fuzzilli_Protobuf_WasmILType.with {
-                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.constf64
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.f64
+                }
+            case .wasmPackedI8:
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.packedI8
+                }
+            case .wasmPackedI16:
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.packedI16
                 }
             case .wasmExternRef:
                 return Fuzzilli_Protobuf_WasmILType.with {
@@ -1467,8 +1475,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmArrayNewDefault = Fuzzilli_Protobuf_WasmArrayNewDefault()
             case .wasmArrayLen(_):
                 $0.wasmArrayLen = Fuzzilli_Protobuf_WasmArrayLen()
-            case .wasmArrayGet(_):
-                $0.wasmArrayGet = Fuzzilli_Protobuf_WasmArrayGet()
+            case .wasmArrayGet(let op):
+                $0.wasmArrayGet = Fuzzilli_Protobuf_WasmArrayGet.with {
+                    $0.isSigned = op.isSigned
+                }
             case .wasmArraySet(_):
                 $0.wasmArraySet = Fuzzilli_Protobuf_WasmArraySet()
             case .wasmStructNewDefault(_):
@@ -1523,14 +1533,18 @@ extension Instruction: ProtobufConvertible {
             switch wasmType.type {
             case .valueType(_):
                 switch wasmType.valueType {
-                case .constf32:
+                case .f32:
                     return .wasmf32
-                case .constf64:
+                case .f64:
                     return .wasmf64
-                case .consti32:
+                case .i32:
                     return .wasmi32
-                case .consti64:
+                case .i64:
                     return .wasmi64
+                case .packedI8:
+                    return .wasmPackedI8
+                case .packedI16:
+                    return .wasmPackedI16
                 case .simd128:
                     return .wasmSimd128
                 case .functiondef:
@@ -2374,8 +2388,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmArrayNewDefault()
         case .wasmArrayLen(_):
             op = WasmArrayLen()
-        case .wasmArrayGet(_):
-            op = WasmArrayGet()
+        case .wasmArrayGet(let p):
+            op = WasmArrayGet(isSigned: p.isSigned)
         case .wasmArraySet(_):
             op = WasmArraySet()
         case .wasmStructNewDefault(_):

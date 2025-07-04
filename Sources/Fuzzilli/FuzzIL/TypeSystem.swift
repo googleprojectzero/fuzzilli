@@ -212,6 +212,8 @@ public struct ILType: Hashable {
     // Wasm Types
     //
 
+    public static let wasmPackedI8 = ILType(definiteType: .wasmPackedI8)
+    public static let wasmPackedI16 = ILType(definiteType: .wasmPackedI16)
     public static let wasmi32 = ILType(definiteType: .wasmi32)
     public static let wasmi64 = ILType(definiteType: .wasmi64)
     public static let wasmf32 = ILType(definiteType: .wasmf32)
@@ -569,6 +571,15 @@ public struct ILType: Hashable {
             }
         }
         return 0
+    }
+
+    // Returns true if the type is .wasmPackedI8 or .wasmPackedI16.
+    public func isPacked() -> Bool {
+        self == .wasmPackedI8 || self == .wasmPackedI16
+    }
+    // Returns the same type but "unpacks" .wasmPackedI8 and .wasmPackedI16 to .wasmi32.
+    public func unpacked() -> ILType {
+        return isPacked() ? .wasmi32 : self
     }
 
 
@@ -971,6 +982,10 @@ extension ILType: CustomStringConvertible {
             return ".wasmf64"
         case .wasmSimd128:
             return ".wasmSimd128"
+        case .wasmPackedI8:
+            return ".wasmPackedI8"
+        case .wasmPackedI16:
+            return ".wasmPackedI16"
         case .label:
             return ".label"
         case .wasmRef:
@@ -1063,6 +1078,12 @@ struct BaseType: OptionSet, Hashable {
     // Wasm-gc types
     static let wasmRef = BaseType(rawValue: 1 << 19)
     static let wasmTypeDef = BaseType(rawValue: 1 << 20)
+
+    // Wasm packed types. These types only exist as part of struct / array definitions. A wasm value
+    // can never have the type i8 or i16 (they will always be extended to i32 by any operation
+    // loading them.)
+    static let wasmPackedI8 = BaseType(rawValue: 1 << 21)
+    static let wasmPackedI16 = BaseType(rawValue: 1 << 22)
 
     static let jsAnything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 

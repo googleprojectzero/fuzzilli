@@ -402,6 +402,9 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = WasmBranchIf(labelTypes: op.labelTypes, hint: chooseUniform(from: WasmBranchHint.allCases))
         case .wasmBeginIf(let op):
             newOp = WasmBeginIf(with: op.signature, hint: chooseUniform(from: WasmBranchHint.allCases), inverted: Bool.random())
+        case .wasmArrayGet(let op):
+            // Switch signedness. (This only matters for packed types i8 and i16.)
+            newOp = WasmArrayGet(isSigned: !op.isSigned)
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
              .loadUndefined(_),
@@ -595,7 +598,6 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmArrayNewFixed(_),
              .wasmArrayNewDefault(_),
              .wasmArrayLen(_),
-             .wasmArrayGet(_),
              .wasmArraySet(_),
              .wasmStructNewDefault(_),
              .wasmStructGet(_),
