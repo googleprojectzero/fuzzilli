@@ -1219,9 +1219,9 @@ public class FuzzILLifter: Lifter {
         case .wasmArrayLen(_):
             w.emit("\(output()) <- WasmArrayLen \(input(0))")
 
-        case .wasmArrayGet(_):
+        case .wasmArrayGet(let op):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            w.emit("\(output()) <- WasmArrayGet [\(inputs)]")
+            w.emit("\(output()) <- WasmArrayGet \(op.isSigned ? "signed" : "unsigned") [\(inputs)]")
 
         case .wasmArraySet(_):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")

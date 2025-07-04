@@ -44,10 +44,12 @@ private enum Prefix: UInt8 {
 // This maps ILTypes to their respective binary encoding.
 private let ILTypeMapping: [ILType: Data] = [
     .wasmi32 : Data([0x7f]),
-    .wasmi64 : Data([0x7e]),
+    .wasmi64 : Data([0x7E]),
     .wasmf32 : Data([0x7D]),
     .wasmf64 : Data([0x7C]),
     .wasmSimd128: Data([0x7B]),
+    .wasmPackedI8: Data([0x78]),
+    .wasmPackedI16: Data([0x77]),
 
     .bigint  : Data([0x7e]), // Maps to .wasmi64
     .jsAnything: Data([0x6f]), // Maps to .wasmExternRef
@@ -1976,10 +1978,11 @@ public class WasmLifter {
             return Data([Prefix.GC.rawValue, 0x07]) + arrayIndex
         case .wasmArrayLen(_):
             return Data([Prefix.GC.rawValue, 0x0F])
-        case .wasmArrayGet(_):
-            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+        case .wasmArrayGet(let op):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0)) as! WasmArrayTypeDescription
+            let opCode: UInt8 = typeDesc.elementType.isPacked() ? (op.isSigned ? 0x0C : 0x0D) : 0x0B
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
-            return Data([Prefix.GC.rawValue, 0x0B]) + arrayIndex
+            return Data([Prefix.GC.rawValue, opCode]) + arrayIndex
         case .wasmArraySet(_):
             let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)

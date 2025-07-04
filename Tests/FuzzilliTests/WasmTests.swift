@@ -3074,6 +3074,48 @@ class WasmGCTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "100\n")
     }
 
+    func testArrayPacked() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let typeGroup = b.wasmDefineTypeGroup {
+            let arrayi8 = b.wasmDefineArrayType(elementType: .wasmPackedI8, mutability: true)
+            let arrayi16 = b.wasmDefineArrayType(elementType: .wasmPackedI16, mutability: true)
+            return [arrayi8, arrayi16]
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            for type in typeGroup {
+                wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32, .wasmi32]) { function, label, args in
+                    let array = function.wasmArrayNewFixed(arrayType: type, elements: [
+                        function.consti32(-100),
+                        function.consti32(0),
+                    ])
+                    function.wasmArraySet(array: array, index: function.consti32(1),
+                                          element: function.consti32(42))
+                    return [
+                        function.wasmArrayGet(array: array, index: function.consti32(0), isSigned: true),
+                        function.wasmArrayGet(array: array, index: function.consti32(0), isSigned: false),
+                        function.wasmArrayGet(array: array, index: function.consti32(1), isSigned: true),
+                    ]
+                }
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        wasmOut = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "-100,156,42\n-100,65436,42\n")
+    }
+
     func testArrayNewDefault() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

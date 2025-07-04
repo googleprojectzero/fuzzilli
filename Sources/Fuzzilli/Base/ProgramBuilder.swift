@@ -3625,7 +3625,7 @@ public class ProgramBuilder {
         @discardableResult
         public func wasmArrayNewFixed(arrayType: Variable, elements: [Variable]) -> Variable {
             let arrayDesc = b.jsTyper.getTypeDescription(of: arrayType) as! WasmArrayTypeDescription
-            assert(elements.allSatisfy {b.jsTyper.type(of: $0).Is(arrayDesc.elementType)})
+            assert(elements.allSatisfy {b.jsTyper.type(of: $0).Is(arrayDesc.elementType.unpacked())})
             return b.emit(WasmArrayNewFixed(size: elements.count), withInputs: [arrayType] + elements).output
         }
 
@@ -3640,14 +3640,16 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmArrayGet(array: Variable, index: Variable) -> Variable {
-            return b.emit(WasmArrayGet(), withInputs: [array, index]).output
+        public func wasmArrayGet(array: Variable, index: Variable, isSigned: Bool = false) -> Variable {
+            return b.emit(WasmArrayGet(isSigned: isSigned), withInputs: [array, index],
+                          types: [.wasmGenericRef, .wasmi32]).output
         }
 
         public func wasmArraySet(array: Variable, index: Variable, element: Variable) {
             let arrayDesc = b.jsTyper.getTypeDescription(of: array) as! WasmArrayTypeDescription
             assert(arrayDesc.mutability)
-            b.emit(WasmArraySet(), withInputs: [array, index, element])
+            b.emit(WasmArraySet(), withInputs: [array, index, element],
+                   types: [.wasmGenericRef, .wasmi32, arrayDesc.elementType.unpacked()])
         }
 
         @discardableResult

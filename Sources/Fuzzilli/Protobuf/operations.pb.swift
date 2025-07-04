@@ -551,10 +551,12 @@ public enum Fuzzilli_Protobuf_NamedVariableDeclarationMode: SwiftProtobuf.Enum, 
 /// We only serialize the wasm types as the rest would be overkill and are not needed.
 public enum Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
-  case consti32 // = 0
-  case consti64 // = 1
-  case constf32 // = 2
-  case constf64 // = 3
+  case i32 // = 0
+  case i64 // = 1
+  case f32 // = 2
+  case f64 // = 3
+  case packedI8 // = 4
+  case packedI16 // = 5
   case simd128 // = 6
 
   /// Fuzzilli-specific types
@@ -563,15 +565,17 @@ public enum Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf.Enum, Swift.CaseItera
   case UNRECOGNIZED(Int)
 
   public init() {
-    self = .consti32
+    self = .i32
   }
 
   public init?(rawValue: Int) {
     switch rawValue {
-    case 0: self = .consti32
-    case 1: self = .consti64
-    case 2: self = .constf32
-    case 3: self = .constf64
+    case 0: self = .i32
+    case 1: self = .i64
+    case 2: self = .f32
+    case 3: self = .f64
+    case 4: self = .packedI8
+    case 5: self = .packedI16
     case 6: self = .simd128
     case 7: self = .functiondef
     case 8: self = .nothing
@@ -581,10 +585,12 @@ public enum Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf.Enum, Swift.CaseItera
 
   public var rawValue: Int {
     switch self {
-    case .consti32: return 0
-    case .consti64: return 1
-    case .constf32: return 2
-    case .constf64: return 3
+    case .i32: return 0
+    case .i64: return 1
+    case .f32: return 2
+    case .f64: return 3
+    case .packedI8: return 4
+    case .packedI16: return 5
     case .simd128: return 6
     case .functiondef: return 7
     case .nothing: return 8
@@ -594,10 +600,12 @@ public enum Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf.Enum, Swift.CaseItera
 
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   public static let allCases: [Fuzzilli_Protobuf_WasmValueType] = [
-    .consti32,
-    .consti64,
-    .constf32,
-    .constf64,
+    .i32,
+    .i64,
+    .f32,
+    .f64,
+    .packedI8,
+    .packedI16,
     .simd128,
     .functiondef,
     .nothing,
@@ -3641,7 +3649,7 @@ public struct Fuzzilli_Protobuf_WasmILType: Sendable {
   public var valueType: Fuzzilli_Protobuf_WasmValueType {
     get {
       if case .valueType(let v)? = type {return v}
-      return .consti32
+      return .i32
     }
     set {type = .valueType(newValue)}
   }
@@ -5238,6 +5246,8 @@ public struct Fuzzilli_Protobuf_WasmArrayGet: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  public var isSigned: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5439,10 +5449,12 @@ extension Fuzzilli_Protobuf_NamedVariableDeclarationMode: SwiftProtobuf._ProtoNa
 
 extension Fuzzilli_Protobuf_WasmValueType: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    0: .same(proto: "CONSTi32"),
-    1: .same(proto: "CONSTi64"),
-    2: .same(proto: "CONSTf32"),
-    3: .same(proto: "CONSTf64"),
+    0: .same(proto: "I32"),
+    1: .same(proto: "I64"),
+    2: .same(proto: "F32"),
+    3: .same(proto: "F64"),
+    4: .same(proto: "PACKED_I8"),
+    5: .same(proto: "PACKED_I16"),
     6: .same(proto: "SIMD128"),
     7: .same(proto: "FUNCTIONDEF"),
     8: .same(proto: "NOTHING"),
@@ -14708,18 +14720,31 @@ extension Fuzzilli_Protobuf_WasmArrayLen: SwiftProtobuf.Message, SwiftProtobuf._
 
 extension Fuzzilli_Protobuf_WasmArrayGet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmArrayGet"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "isSigned"),
+  ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    // Load everything into unknown fields
-    while try decoder.nextFieldNumber() != nil {}
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.isSigned) }()
+      default: break
+      }
+    }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.isSigned != false {
+      try visitor.visitSingularBoolField(value: self.isSigned, fieldNumber: 1)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmArrayGet, rhs: Fuzzilli_Protobuf_WasmArrayGet) -> Bool {
+    if lhs.isSigned != rhs.isSigned {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -779,14 +779,14 @@ public struct JSTyper: Analyzer {
                 setType(of: instr.output, to: .wasmi32)
             case .wasmArrayGet(_):
                 let typeDesc = getTypeDescription(of: instr.input(0)) as! WasmArrayTypeDescription
-                setType(of: instr.output, to: typeDesc.elementType)
+                setType(of: instr.output, to: typeDesc.elementType.unpacked())
             case .wasmArraySet(_):
                 break
             case .wasmStructNewDefault(_):
                 setReferenceType(of: instr.output, typeDef: instr.input(0), nullability: false)
             case .wasmStructGet(let op):
                 let typeDesc = getTypeDescription(of: instr.input(0)) as! WasmStructTypeDescription
-                setType(of: instr.output, to: typeDesc.fields[op.fieldIndex].type)
+                setType(of: instr.output, to: typeDesc.fields[op.fieldIndex].type.unpacked())
             case .wasmStructSet(_):
                 break;
             case .wasmRefNull(let op):

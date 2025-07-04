@@ -1823,8 +1823,11 @@ class WasmArrayLen: WasmOperation {
 
 class WasmArrayGet: WasmOperation {
     override var opcode: Opcode { .wasmArrayGet(self) }
+    // For packed types this flag indicates whether to use signed or zero extension.
+    let isSigned: Bool
 
-    init() {
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
         super.init(numInputs: 2, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }
