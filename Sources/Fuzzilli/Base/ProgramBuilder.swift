@@ -3658,8 +3658,8 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmStructGet(theStruct: Variable, fieldIndex: Int) -> Variable {
-            return b.emit(WasmStructGet(fieldIndex: fieldIndex), withInputs: [theStruct]).output
+        public func wasmStructGet(theStruct: Variable, fieldIndex: Int, isSigned: Bool = false) -> Variable {
+            return b.emit(WasmStructGet(fieldIndex: fieldIndex, isSigned: isSigned), withInputs: [theStruct]).output
         }
 
         public func wasmStructSet(theStruct: Variable, fieldIndex: Int, value: Variable) {

@@ -1851,9 +1851,12 @@ class WasmStructNewDefault: WasmOperation {
 class WasmStructGet: WasmOperation {
     override var opcode: Opcode { .wasmStructGet(self) }
     let fieldIndex: Int
+    // For packed types this flag indicates whether to use signed or zero extension.
+    let isSigned: Bool
 
-    init(fieldIndex: Int) {
+    init(fieldIndex: Int, isSigned: Bool) {
         self.fieldIndex = fieldIndex
+        self.isSigned = isSigned
         super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }

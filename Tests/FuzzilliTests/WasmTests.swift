@@ -3263,6 +3263,47 @@ class WasmGCTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 
+    func testStructPacked() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let structType = b.wasmDefineTypeGroup {
+            return [b.wasmDefineStructType(fields: [
+                WasmStructTypeDescription.Field(type: .wasmPackedI8, mutability: true),
+                WasmStructTypeDescription.Field(type: .wasmPackedI8, mutability: true),
+                WasmStructTypeDescription.Field(type: .wasmPackedI16, mutability: true),
+            ], indexTypes: [])]
+        }[0]
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => Array(repeating: .wasmi32, count: 6)) { function, label, args in
+                let structObj = function.wasmStructNewDefault(structType: structType)
+                function.wasmStructSet(theStruct: structObj, fieldIndex: 0, value: function.consti32(-100))
+                function.wasmStructSet(theStruct: structObj, fieldIndex: 1, value: function.consti32(42))
+                function.wasmStructSet(theStruct: structObj, fieldIndex: 2, value: function.consti32(-10_000))
+                return [
+                    function.wasmStructGet(theStruct: structObj, fieldIndex: 0, isSigned: true),
+                    function.wasmStructGet(theStruct: structObj, fieldIndex: 0, isSigned: false),
+                    function.wasmStructGet(theStruct: structObj, fieldIndex: 1, isSigned: true),
+                    function.wasmStructGet(theStruct: structObj, fieldIndex: 1, isSigned: false),
+                    function.wasmStructGet(theStruct: structObj, fieldIndex: 2, isSigned: true),
+                    function.wasmStructGet(theStruct: structObj, fieldIndex: 2, isSigned: false),
+                ]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "-100,156,42,42,-10000,55536\n")
+    }
+
     func testSelfReferenceType() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

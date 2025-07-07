@@ -145,8 +145,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 indexTypes.append(elementType)
                 type = .wasmRef(.Index(), nullability: nullability)
             } else {
-                // TODO(mliedtke): Support packed types i8 and i16.
-                type = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128])
+                type = chooseUniform(from: [.wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128])
             }
             return WasmStructTypeDescription.Field(type: type, mutability: probability(0.75))
         }
@@ -219,7 +218,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         guard let structType = desc.get()! as? WasmStructTypeDescription else { return }
         guard let fieldIndex = (0..<structType.fields.count).randomElement() else { return }
         let function = b.currentWasmModule.currentWasmFunction
-        function.wasmStructGet(theStruct: theStruct, fieldIndex: fieldIndex)
+        function.wasmStructGet(theStruct: theStruct, fieldIndex: fieldIndex, isSigned: Bool.random())
     },
 
     CodeGenerator("WasmStructSetGenerator", inContext: .wasmFunction, inputs: .required(.anyNonNullableIndexRef)) { b, theStruct in

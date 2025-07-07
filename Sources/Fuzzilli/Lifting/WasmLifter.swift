@@ -1992,10 +1992,11 @@ public class WasmLifter {
             let structIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
             return Data([Prefix.GC.rawValue, 0x01]) + structIndex
         case .wasmStructGet(let op):
-            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0)) as! WasmStructTypeDescription
+            let opCode: UInt8 = typeDesc.fields[op.fieldIndex].type.isPacked() ? (op.isSigned ? 0x03 : 0x04) : 0x02
             let structIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
             let fieldIndex = Leb128.unsignedEncode(op.fieldIndex)
-            return Data([Prefix.GC.rawValue, 0x02]) + structIndex + fieldIndex
+            return Data([Prefix.GC.rawValue, opCode]) + structIndex + fieldIndex
         case .wasmStructSet(let op):
             let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             let structIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
