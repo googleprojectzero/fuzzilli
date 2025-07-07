@@ -405,6 +405,9 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmArrayGet(let op):
             // Switch signedness. (This only matters for packed types i8 and i16.)
             newOp = WasmArrayGet(isSigned: !op.isSigned)
+        case .wasmStructGet(let op):
+            // Switch signedness. (This only matters for packed types i8 and i16.)
+            newOp = WasmStructGet(fieldIndex: op.fieldIndex, isSigned: !op.isSigned)
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
              .loadUndefined(_),
@@ -600,7 +603,6 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmArrayLen(_),
              .wasmArraySet(_),
              .wasmStructNewDefault(_),
-             .wasmStructGet(_),
              .wasmStructSet(_),
              .wasmRefNull(_),
              .wasmRefIsNull(_):

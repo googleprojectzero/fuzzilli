@@ -1486,6 +1486,7 @@ extension Instruction: ProtobufConvertible {
             case .wasmStructGet(let op):
                 $0.wasmStructGet = Fuzzilli_Protobuf_WasmStructGet.with {
                     $0.fieldIndex = Int32(op.fieldIndex)
+                    $0.isSigned = op.isSigned
                 }
             case .wasmStructSet(let op):
                 $0.wasmStructSet = Fuzzilli_Protobuf_WasmStructSet.with {
@@ -2395,7 +2396,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmStructNewDefault(_):
             op = WasmStructNewDefault()
         case .wasmStructGet(let p):
-            op = WasmStructGet(fieldIndex: Int(p.fieldIndex))
+            op = WasmStructGet(fieldIndex: Int(p.fieldIndex), isSigned: p.isSigned)
         case .wasmStructSet(let p):
             op = WasmStructSet(fieldIndex: Int(p.fieldIndex))
         case .wasmRefNull(let p):
