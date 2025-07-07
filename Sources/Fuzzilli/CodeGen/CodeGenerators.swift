@@ -874,6 +874,20 @@ public let CodeGenerators: [CodeGenerator] = [
         b.getProperty(propertyName, of: obj, guard: needGuard)
     },
 
+    // Tries to return a "method" as a function via a property access.
+    // A method can always also just be retrieved without calling it, however, note that this has
+    // implications on the receiver:
+    //   let x = {f() { return this; }};
+    //   console.log(x.f() === x); // true
+    //   let y = x.f;
+    //   console.log(y() === x); // false
+    CodeGenerator("MethodAsPropertyRetrievalGenerator", inputs: .preferred(.object())) { b, obj in
+        let type = b.type(of: obj)
+        let propertyName = type.randomMethod() ?? type.randomProperty() ?? b.randomCustomPropertyName()
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.getProperty(propertyName, of: obj, guard: needGuard)
+    },
+
     CodeGenerator("PropertyAssignmentGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName: String
         // Either change an existing property or define a new one
