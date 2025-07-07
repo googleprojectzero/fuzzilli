@@ -450,16 +450,7 @@ public struct ILType: Hashable {
     }
 
     public var group: String? {
-        get {
-            return ext?.group
-        }
-        set(newGroup) {
-            if let ext = ext {
-                ext.group = newGroup
-            } else {
-                ext = TypeExtension(group: newGroup, properties: Set<String>(), methods: Set<String>(), signature: nil)
-            }
-        }
+        return ext?.group
     }
 
     public var hasWasmTypeInfo: Bool {
@@ -1088,7 +1079,7 @@ class TypeExtension: Hashable {
     // The group name. Basically each group is its own sub type of the object type.
     // (For now), there is no subtyping for group: if two objects have a different
     // group then there is no subsumption relationship between them.
-    var group: String?
+    let group: String?
 
     // The function signature. Will only be != nil if isFunction or isConstructor is true.
     let signature: Signature?
