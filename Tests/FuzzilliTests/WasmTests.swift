@@ -3035,6 +3035,51 @@ class WasmFoundationTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
+
+    func testReexportedJSFunction() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .warning, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let jsFunction = b.buildPlainFunction(with: .parameters()) { _ in
+            b.doReturn(b.loadBigInt(42))
+        }
+
+        let moduleA = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, label, args in
+                function.wasmReturn(function.consti64(-1))
+                return [function.wasmJsCall(function: jsFunction,
+                    withArgs: [], withWasmSignature: [] => [.wasmi64])!]
+            }
+        }
+
+        let exportsA = moduleA.loadExports()
+        let reexportedJSFct = b.getProperty("iw0", of: exportsA)
+        // Test that the type system knows about the re-exported function, so that it is
+        // discoverable by code generators.
+        XCTAssert(b.type(of: exportsA).Is(
+            .object(ofGroup: nil, withProperties: [], withMethods: ["w0", "iw0"])))
+        XCTAssert(b.type(of: reexportedJSFct).Is(.function([] => .bigint)))
+
+        let moduleB = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, label, args in
+                [function.wasmJsCall(function: reexportedJSFct,
+                    withArgs: [], withWasmSignature: [] => [.wasmi64])!]
+            }
+        }
+        let exportsB = moduleB.loadExports()
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOutA = b.callMethod("iw0", on: exportsA, withArgs: [])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOutA)])
+        let wasmOutB = b.callMethod("w0", on: exportsB)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOutB)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n42\n")
+    }
 }
 
 class WasmGCTests: XCTestCase {
