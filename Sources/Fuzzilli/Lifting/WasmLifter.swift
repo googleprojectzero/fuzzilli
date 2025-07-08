@@ -999,6 +999,9 @@ public class WasmLifter {
             case .exnref:
                 temp += try! Data([0xD0]) + encodeHeapType(.wasmExnRef) + Data([0x0B])
                 continue
+            case .i31ref:
+                temp += try! Data([0xD0]) + encodeHeapType(.wasmI31Ref) + Data([0x0B])
+                continue
             case .refFunc(_),
                  .imported(_):
                 fatalError("unreachable")

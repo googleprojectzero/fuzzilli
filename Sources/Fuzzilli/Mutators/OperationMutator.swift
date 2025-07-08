@@ -235,7 +235,8 @@ public class OperationMutator: BaseInstructionMutator {
             case .wasmi64:
                 wasmGlobal = .wasmi64(b.randomInt())
             case .externref,
-                 .exnref:
+                 .exnref,
+                 .i31ref:
                 return instr
             case .refFunc,
                  .imported:
@@ -332,7 +333,8 @@ public class OperationMutator: BaseInstructionMutator {
             case .wasmi64:
                 wasmGlobal = .wasmi64(b.randomInt())
             case .wasmExternRef,
-                    .wasmExnRef:
+                 .wasmExnRef,
+                 .wasmI31Ref:
                 wasmGlobal = op.wasmGlobal
             default:
                 fatalError("unexpected/unimplemented Value Type!")

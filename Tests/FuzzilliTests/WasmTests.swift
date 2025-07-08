@@ -633,6 +633,70 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "undefined\nHello!\n")
     }
 
+    func testGlobalI31Ref() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            let global = wasmModule.addGlobal(wasmGlobal: .i31ref, isMutable: true)
+            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmI31Ref, isMutable: true)))
+
+            wasmModule.addWasmFunction(with: [] => [.wasmI31Ref]) { function, label, args in
+                [function.wasmLoadGlobal(globalVariable: global)]
+            }
+
+            wasmModule.addWasmFunction(with: [.wasmI31Ref] => []) { function, label, args in
+                function.wasmStoreGlobal(globalVariable: global, to: args[0])
+                return []
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let loadGlobal = module.getExportedMethod(at: 0)
+        let storeGlobal = module.getExportedMethod(at: 1)
+        // The initial value is "null".
+        b.callFunction(outputFunc, withArgs: [b.callMethod(loadGlobal, on: exports)])
+        // Store a number in the global.
+        b.callMethod(storeGlobal, on: exports, withArgs: [b.loadInt(-42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod(loadGlobal, on: exports)])
+        // The same value is returned from JS when accessing it via the .value property.
+        let global = b.getProperty("wg0", of: exports)
+        b.callFunction(outputFunc, withArgs: [b.getProperty("value", of: global)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: "null\n-42\n-42\n")
+    }
+
+    func testGlobalI31RefFromJS() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let global: Variable = b.createWasmGlobal(value: .i31ref, isMutable: true)
+        XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmI31Ref, isMutable: true)))
+
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        // The initial value is "null" (because we didn't provide an explicit initialization).
+        b.callFunction(outputFunc, withArgs: [b.getProperty("value", of: global)])
+        // Store a number in the global.
+        b.setProperty("value", of: global, to: b.loadInt(-42))
+        b.callFunction(outputFunc, withArgs: [b.getProperty("value", of: global)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        print(jsProg)
+
+        testForOutput(program: jsProg, runner: runner, outputString: "null\n-42\n")
+    }
+
     func importedTableTestCase(isTable64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
