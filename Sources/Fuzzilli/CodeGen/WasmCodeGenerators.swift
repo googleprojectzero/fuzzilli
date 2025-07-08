@@ -247,6 +247,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         b.currentWasmModule.currentWasmFunction.wasmRefIsNull(ref)
     },
 
+    CodeGenerator("WasmRefI31Generator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, value in
+        b.currentWasmModule.currentWasmFunction.wasmRefI31(value)
+    },
+
+    CodeGenerator("WasmI31GetGenerator", inContext: .wasmFunction, inputs: .required(.wasmI31Ref)) { b, ref in
+        b.currentWasmModule.currentWasmFunction.wasmI31Get(ref, isSigned: Bool.random())
+    },
+
     // Primitive Value Generators
 
     ValueGenerator("WasmLoadi32Generator", inContext: .wasmFunction) { b, n in

@@ -1243,6 +1243,12 @@ public class FuzzILLifter: Lifter {
         case .wasmRefIsNull(_):
             w.emit("\(output()) <- WasmRefIsNull \(input(0))")
 
+        case .wasmRefI31(_):
+            w.emit("\(output()) <- WasmRefI31 \(input(0))")
+
+        case .wasmI31Get(let op):
+            w.emit("\(output()) <- WasmI31Get \(op.isSigned ? "signed" : "unsigned") \(input(0))")
+
         case .wasmBeginTypeGroup(_):
             w.emit("WasmBeginTypeGroup")
             w.increaseIndentionLevel()

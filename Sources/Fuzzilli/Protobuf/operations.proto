@@ -878,6 +878,7 @@ enum WasmReferenceTypeKind {
   EXTERNREF = 1;
   FUNCREF = 2;
   EXNREF = 3;
+  I31REF = 4;
 }
 
 message WasmReferenceType {
@@ -1495,4 +1496,11 @@ message WasmRefNull {
 }
 
 message WasmRefIsNull {
+}
+
+message WasmRefI31 {
+}
+
+message WasmI31Get {
+    bool isSigned = 1;
 }

@@ -1091,7 +1091,7 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testWasmSubsumptionRules() {
-        let wasmTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExternRef]
+        let wasmTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExternRef, .wasmI31Ref, .wasmExnRef]
         // Make sure that no Wasm type is subsumed by (JS-)anything.
         for t in wasmTypes {
             XCTAssertEqual(t <= .jsAnything, false)
@@ -1134,6 +1134,18 @@ class TypeSystemTests: XCTestCase {
 
         XCTAssert(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmGenericRef)
         XCTAssertFalse(ILType.wasmGenericRef <= ILType.wasmRef(.Index(), nullability: true))
+
+        // Test nullability rules for abstract Wasm types.
+        for heapType: WasmAbstractHeapType in [.WasmExn, .WasmExtern, .WasmFunc, .WasmI31] {
+            let nullable = ILType.wasmRef(.Abstract(heapType), nullability: true)
+            let nonNullable = ILType.wasmRef(.Abstract(heapType), nullability: false)
+            XCTAssert(nonNullable.Is(nullable))
+            XCTAssertFalse(nullable.Is(nonNullable))
+            XCTAssertEqual(nullable.union(with: nonNullable), nullable)
+            XCTAssertEqual(nonNullable.union(with: nullable), nullable)
+            XCTAssertEqual(nullable.intersection(with: nonNullable), nonNullable)
+            XCTAssertEqual(nonNullable.intersection(with: nullable), nonNullable)
+        }
     }
 
     let primitiveTypes: [ILType] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
@@ -1227,6 +1239,8 @@ class TypeSystemTests: XCTestCase {
                                .wasmFuncRef,
                                .wasmExternRef,
                                .wasmExnRef,
+                               .wasmI31Ref,
+                               .wasmRefI31,
                                .wasmFunctionDef([.wasmi32] => [.wasmi64]),
                                .wasmFunctionDef([.wasmf32] => [.wasmi32]),
                                .wasmFunctionDef([.wasmExternRef] => [.wasmExternRef]),

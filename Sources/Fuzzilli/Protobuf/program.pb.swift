@@ -2489,6 +2489,22 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmRefIsNull(newValue)}
   }
 
+  public var wasmRefI31: Fuzzilli_Protobuf_WasmRefI31 {
+    get {
+      if case .wasmRefI31(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmRefI31()
+    }
+    set {operation = .wasmRefI31(newValue)}
+  }
+
+  public var wasmI31Get: Fuzzilli_Protobuf_WasmI31Get {
+    get {
+      if case .wasmI31Get(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmI31Get()
+    }
+    set {operation = .wasmI31Get(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable, Sendable {
@@ -2797,6 +2813,8 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmStructSet(Fuzzilli_Protobuf_WasmStructSet)
     case wasmRefNull(Fuzzilli_Protobuf_WasmRefNull)
     case wasmRefIsNull(Fuzzilli_Protobuf_WasmRefIsNull)
+    case wasmRefI31(Fuzzilli_Protobuf_WasmRefI31)
+    case wasmI31Get(Fuzzilli_Protobuf_WasmI31Get)
 
   }
 
@@ -3152,6 +3170,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     304: .same(proto: "wasmStructSet"),
     305: .same(proto: "wasmRefNull"),
     306: .same(proto: "wasmRefIsNull"),
+    307: .same(proto: "wasmRefI31"),
+    308: .same(proto: "wasmI31Get"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -7121,6 +7141,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmRefIsNull(v)
         }
       }()
+      case 307: try {
+        var v: Fuzzilli_Protobuf_WasmRefI31?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmRefI31(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmRefI31(v)
+        }
+      }()
+      case 308: try {
+        var v: Fuzzilli_Protobuf_WasmI31Get?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmI31Get(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmI31Get(v)
+        }
+      }()
       default: break
       }
     }
@@ -8354,6 +8400,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .wasmRefIsNull?: try {
       guard case .wasmRefIsNull(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 306)
+    }()
+    case .wasmRefI31?: try {
+      guard case .wasmRefI31(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 307)
+    }()
+    case .wasmI31Get?: try {
+      guard case .wasmI31Get(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 308)
     }()
     case nil: break
     }

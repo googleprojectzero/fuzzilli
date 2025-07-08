@@ -330,6 +330,8 @@ message Instruction {
         WasmStructSet wasmStructSet = 304;
         WasmRefNull wasmRefNull = 305;
         WasmRefIsNull wasmRefIsNull = 306;
+        WasmRefI31 wasmRefI31 = 307;
+        WasmI31Get wasmI31Get = 308;
     }
 }
 

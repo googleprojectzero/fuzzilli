@@ -1055,7 +1055,7 @@ public class ProgramBuilder {
         if jsType.Is(.integer) {
             return [.wasmi32, .wasmf64, .wasmf32]
         } else if jsType.Is(.number) {
-            return [.wasmf32, .wasmf64, .wasmi32]
+            return [.wasmf32, .wasmf64, .wasmi32, .wasmRefI31, .wasmI31Ref]
         } else if jsType.Is(.bigint) {
             return [.wasmi64]
         } else if jsType.Is(.function()) {
@@ -1098,6 +1098,8 @@ public class ProgramBuilder {
             return .jsAnything
         } else if type.Is(.wasmGenericRef) {
             return .jsAnything
+        } else if type.Is(.wasmI31Ref) {
+            return .integer
         } else {
             fatalError("Unexpected type encountered: \(type).")
         }
@@ -3681,6 +3683,16 @@ public class ProgramBuilder {
         @discardableResult
         public func wasmRefIsNull(_ ref: Variable) -> Variable {
             return b.emit(WasmRefIsNull(), withInputs: [ref], types: [.wasmGenericRef]).output
+        }
+
+        @discardableResult
+        public func wasmRefI31(_ number: Variable) -> Variable {
+            return b.emit(WasmRefI31(), withInputs: [number], types: [.wasmi32]).output
+        }
+
+        @discardableResult
+        public func wasmI31Get(_ refI31: Variable, isSigned: Bool) -> Variable {
+            return b.emit(WasmI31Get(isSigned: isSigned), withInputs: [refI31], types: [.wasmI31Ref]).output
         }
     }
 
