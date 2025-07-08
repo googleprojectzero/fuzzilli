@@ -395,16 +395,25 @@ extension Instruction: ProtobufConvertible {
                         $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
                     }
                 }
+            case .wasmI31Ref:
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
+                        $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.i31Ref
+                        $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                    }
+                }
             case .wasmSimd128:
                 return Fuzzilli_Protobuf_WasmILType.with {
                     $0.valueType = Fuzzilli_Protobuf_WasmValueType.simd128
                 }
             default:
-                if (underlyingWasmType <= .wasmGenericRef) {
-                    return Fuzzilli_Protobuf_WasmILType.with {
-                        $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
-                            $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.index
-                            $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                if underlyingWasmType <= .wasmGenericRef {
+                    if case .Index(_) = underlyingWasmType.wasmReferenceType!.kind {
+                        return Fuzzilli_Protobuf_WasmILType.with {
+                            $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
+                                $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.index
+                                $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                            }
                         }
                     }
                 }
@@ -1500,6 +1509,12 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmRefIsNull(_):
                 $0.wasmRefIsNull = Fuzzilli_Protobuf_WasmRefIsNull()
+            case .wasmRefI31(_):
+                $0.wasmRefI31 = Fuzzilli_Protobuf_WasmRefI31()
+            case .wasmI31Get(let op):
+                $0.wasmI31Get = Fuzzilli_Protobuf_WasmI31Get.with {
+                    $0.isSigned = op.isSigned
+                }
             }
         }
 
@@ -1565,6 +1580,8 @@ extension Instruction: ProtobufConvertible {
                     return .wasmFuncRef
                 case .exnref:
                     return .wasmExnRef
+                case .i31Ref:
+                    return .wasmI31Ref
                 case .UNRECOGNIZED(let value):
                     fatalError("Unrecognized wasm reference type \(value)")
                 }
@@ -2403,6 +2420,10 @@ extension Instruction: ProtobufConvertible {
             op = p.hasType ? WasmRefNull(type: WasmTypeEnumToILType(p.type)) : WasmRefNull(type: nil)
         case .wasmRefIsNull(_):
             op = WasmRefIsNull()
+        case .wasmRefI31(_):
+            op = WasmRefI31()
+        case .wasmI31Get(let p):
+            op = WasmI31Get(isSigned: p.isSigned)
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

@@ -3459,6 +3459,40 @@ class WasmGCTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "null\nnull\n1\n0\n")
     }
+
+    func testI31Ref() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmI31Ref]) { function, label, args in
+                [function.wasmRefI31(args[0])]
+            }
+            wasmModule.addWasmFunction(with: [.wasmI31Ref] => [.wasmi32, .wasmi32]) { function, label, args in
+                [function.wasmI31Get(args[0], isSigned: true),
+                 function.wasmI31Get(args[0], isSigned: false)]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let positiveI31 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(42)])
+        let negativeI31 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(-42)])
+        // An i31ref converts to a JS number.
+        b.callFunction(outputFunc, withArgs: [positiveI31])
+        b.callFunction(outputFunc, withArgs: [negativeI31])
+
+        let positiveResults = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [positiveI31])
+        let negativeResults = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [negativeI31])
+        b.callFunction(outputFunc, withArgs: [positiveResults])
+        b.callFunction(outputFunc, withArgs: [negativeResults])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n-42\n42,42\n-42,2147483606\n")
+    }
 }
 
 class WasmNumericalTests: XCTestCase {

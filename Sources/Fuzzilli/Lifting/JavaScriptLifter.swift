@@ -1504,6 +1504,7 @@ public class JavaScriptLifter: Lifter {
                     type = "externref"
                 case .wasmFuncRef:
                     type = "anyfunc"
+                // TODO(mliedtke): add tables for i31ref.
                 default:
                     fatalError("Unknown table type")
                 }
@@ -1544,6 +1545,7 @@ public class JavaScriptLifter: Lifter {
                             return "\"funcref\""
                         case .wasmExnRef:
                             return "\"exnref\""
+                        // TODO(mliedtke): Support Wasm tags of i31 defined in JS.
                         default:
                             fatalError("Unhandled wasm type \(type)")
                     }
@@ -1665,7 +1667,9 @@ public class JavaScriptLifter: Lifter {
                  .wasmStructGet(_),
                  .wasmStructSet(_),
                  .wasmRefNull(_),
-                 .wasmRefIsNull(_):
+                 .wasmRefIsNull(_),
+                 .wasmRefI31(_),
+                 .wasmI31Get(_):
                  fatalError("unreachable")
             }
 

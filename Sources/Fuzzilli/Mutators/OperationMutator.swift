@@ -408,6 +408,8 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmStructGet(let op):
             // Switch signedness. (This only matters for packed types i8 and i16.)
             newOp = WasmStructGet(fieldIndex: op.fieldIndex, isSigned: !op.isSigned)
+        case .wasmI31Get(let op):
+            newOp = WasmI31Get(isSigned: !op.isSigned)
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
              .loadUndefined(_),
@@ -605,7 +607,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmStructNewDefault(_),
              .wasmStructSet(_),
              .wasmRefNull(_),
-             .wasmRefIsNull(_):
+             .wasmRefIsNull(_),
+             .wasmRefI31(_):
              assert(!instr.isOperationMutable)
              fatalError("Unexpected Operation")
         }

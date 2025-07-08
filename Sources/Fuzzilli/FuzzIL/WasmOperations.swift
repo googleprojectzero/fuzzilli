@@ -597,6 +597,7 @@ public enum WasmGlobal {
     // Empty reference
     case externref
     case exnref
+    // TODO(mliedtke): Add i31ref globals.
     // function reference
     case refFunc(Int)
 
@@ -1887,6 +1888,24 @@ class WasmRefIsNull: WasmOperation {
     override var opcode: Opcode { .wasmRefIsNull(self) }
 
     init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
+class WasmRefI31: WasmOperation {
+    override var opcode: Opcode { .wasmRefI31(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
+class WasmI31Get: WasmOperation {
+    override var opcode: Opcode { .wasmI31Get(self) }
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
         super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }

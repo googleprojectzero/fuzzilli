@@ -221,6 +221,8 @@ public struct ILType: Hashable {
     public static let wasmExternRef = ILType.wasmRef(.Abstract(.WasmExtern), nullability: true)
     public static let wasmFuncRef = ILType.wasmRef(.Abstract(.WasmFunc), nullability: true)
     public static let wasmExnRef = ILType.wasmRef(.Abstract(.WasmExn), nullability: true)
+    public static let wasmI31Ref = ILType.wasmRef(.Abstract(.WasmI31), nullability: true)
+    public static let wasmRefI31 = ILType.wasmRef(.Abstract(.WasmI31), nullability: false)
     public static let wasmSimd128 = ILType(definiteType: .wasmSimd128)
     public static let wasmGenericRef = ILType(definiteType: .wasmRef)
 
@@ -248,7 +250,7 @@ public struct ILType: Hashable {
     }
 
     // The union of all primitive wasm types
-    public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef | .wasmSimd128 | .wasmGenericRef
+    public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef | .wasmI31Ref | .wasmSimd128 | .wasmGenericRef
 
     public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
 
@@ -594,7 +596,9 @@ public struct ILType: Hashable {
     /// Unioning is imprecise (over-approximative). For example, constructing the following union
     ///    let r = .object(withProperties: ["a", "b"]) | .object(withProperties: ["a", "c"])
     /// will result in r == .object(withProperties: ["a"]). Which is wider than it needs to be.
-    /// To have a WasmTypeExtension in the union, they have to be equal.
+    ///
+    /// By default, a WasmTypeExtension only appears in the union if they are equal. For some
+    /// WasmTypeExtensions (currently WasmReferenceType), there are more complex union rules.
     public func union(with other: ILType) -> ILType {
         // Trivial cases.
         if self == .jsAnything && other.Is(.jsAnything) || other == .jsAnything && self.Is(.jsAnything) {
@@ -624,7 +628,7 @@ public struct ILType: Hashable {
         let commonMethods = self.methods.intersection(other.methods)
         let signature = self.signature == other.signature ? self.signature : nil        // TODO: this is overly coarse, we could also see if one signature subsumes the other, then take the subsuming one.
         let group = self.group == other.group ? self.group : nil
-        let wasmExt = self.wasmType == other.wasmType ? self.wasmType : nil
+        let wasmExt = self.wasmType != nil && other.wasmType != nil ? self.wasmType!.union(other.wasmType!) : nil
 
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: commonProperties, methods: commonMethods, signature: signature, wasmExt: wasmExt))
     }
@@ -707,11 +711,13 @@ public struct ILType: Hashable {
             return .nothing
         }
 
-        // Either they must be the same, or one must be nil, in which case the result is the non-nil one, the smaller type.
-        guard self.wasmType == nil || other.wasmType == nil || self.wasmType == other.wasmType else {
-            return .nothing
+        // If either value is nil, the result is the non-nil value. If both are non-nil, the result
+        // is their intersection if valid, otherwise .nothing is returned.
+        var wasmExt: WasmTypeExtension? = self.wasmType ?? other.wasmType
+        if self.wasmType != nil && other.wasmType != nil {
+            guard let wasmIntersection = self.wasmType!.intersection(other.wasmType!) else { return .nothing }
+            wasmExt = wasmIntersection
         }
-        let wasmExt = self.wasmType ?? other.wasmType
 
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: properties, methods: methods, signature: signature, wasmExt: wasmExt))
     }
@@ -1152,6 +1158,16 @@ public class WasmTypeExtension: Hashable {
         // Default: Only if the type extensions are equal, one subsumes the other.
         self == other
     }
+
+    func union(_ other: WasmTypeExtension) -> WasmTypeExtension? {
+        // Default: The union is specified only if both type extensions are the same.
+        self == other ? self : nil
+    }
+
+    func intersection(_ other: WasmTypeExtension) -> WasmTypeExtension? {
+        // Default: The intersection is only valid if both type extensions are the same.
+        self == other ? self : nil
+    }
 }
 
 public class WasmFunctionDefinition: WasmTypeExtension {
@@ -1268,6 +1284,7 @@ enum WasmAbstractHeapType: CaseIterable {
     case WasmExtern
     case WasmFunc
     case WasmExn
+    case WasmI31
 }
 
 // A wrapper around a WasmTypeDescription without owning the WasmTypeDescription.
@@ -1329,6 +1346,54 @@ public class WasmReferenceType: WasmTypeExtension {
     override func subsumes(_ other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmReferenceType else { return false }
         return self.kind.subsumes(other.kind) && (self.nullability || !other.nullability)
+    }
+
+    override func union(_ other: WasmTypeExtension) -> WasmTypeExtension? {
+        guard let other = other as? WasmReferenceType else { return nil }
+        // The union is nullable if either of the two types input types is nullable.
+        let nullability = self.nullability || other.nullability
+        // TODO(gc): Add subtyping between different index types, different abstract types and
+        // between index and abstract types.
+        switch self.kind {
+            case .Index(let desc):
+                switch other.kind {
+                    case .Index(let otherDesc):
+                        return desc.get() == otherDesc.get() ? WasmReferenceType(.Index(desc), nullability: nullability) : nil
+                    case .Abstract(_):
+                        return nil
+                }
+            case .Abstract(let heapType):
+                switch other.kind {
+                    case .Index(_):
+                        return nil
+                    case .Abstract(let otherHeapType):
+                        return heapType == otherHeapType ? WasmReferenceType(.Abstract(heapType), nullability: nullability) : nil
+                }
+        }
+    }
+
+    override func intersection(_ other: WasmTypeExtension) -> WasmTypeExtension? {
+        guard let other = other as? WasmReferenceType else { return nil }
+        // The intersection is nullable if both are nullable.
+        let nullability = self.nullability && other.nullability
+        // TODO(gc): Add subtyping between different index types, different abstract types and
+        // between index and abstract types.
+        switch self.kind {
+            case .Index(let desc):
+                switch other.kind {
+                    case .Index(let otherDesc):
+                        return desc.get() == otherDesc.get() ? WasmReferenceType(.Index(desc), nullability: nullability) : nil
+                    case .Abstract(_):
+                        return nil
+                }
+            case .Abstract(let heapType):
+                switch other.kind {
+                    case .Index(_):
+                        return nil
+                    case .Abstract(let otherHeapType):
+                        return heapType == otherHeapType ? WasmReferenceType(.Abstract(heapType), nullability: nullability) : nil
+                }
+        }
     }
 
     override public func hash(into hasher: inout Hasher) {
