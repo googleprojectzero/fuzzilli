@@ -595,9 +595,10 @@ public enum WasmGlobal {
     case wasmf32(Float32)
     case wasmf64(Float64)
     // Empty reference
+    // TODO(gc): Add support for globals with non-nullable references.
     case externref
     case exnref
-    // TODO(mliedtke): Add i31ref globals.
+    case i31ref
     // function reference
     case refFunc(Int)
 
@@ -619,6 +620,8 @@ public enum WasmGlobal {
             return .wasmExternRef
         case .exnref:
             return .wasmExnRef
+        case .i31ref:
+            return .wasmI31Ref
         case .imported(let type):
             assert(type.wasmGlobalType != nil)
             return type.wasmGlobalType!.valueType
@@ -639,15 +642,20 @@ public enum WasmGlobal {
             return "f64"
         case .externref:
             return "externref"
+        case .exnref:
+            return "exnref"
+        case .i31ref:
+            return "i31ref"
         default:
             fatalError("Unimplemented / unhandled")
         }
     }
 
+    // Returns a JS string representing the initial value.
     func valueToString() -> String {
         switch self {
         case .wasmi64(let val):
-            return "\(val)"
+            return "\(val)n"
         case .wasmi32(let val):
             return "\(val)"
         case .wasmf32(let val):
@@ -656,6 +664,9 @@ public enum WasmGlobal {
             return "\(val)"
         case .externref:
             return ""
+        case .exnref,
+             .i31ref:
+            return "null"
         default:
             fatalError("Unimplemented / unhandled")
         }

@@ -3318,23 +3318,32 @@ public class ProgramBuilder {
             b.emit(WasmEndBlock(outputTypes: outputTypes), withInputs: args, types: outputTypes)
         }
 
+        private func checkArgumentsMatchLabelType(label: ILType, args: [Variable]) {
+            let parameterTypes = label.wasmLabelType!.parameters
+            let errorMsg = "label type \(label) doesn't match argument types \(args.map({b.type(of: $0)}))"
+            assert(parameterTypes.count == args.count, errorMsg)
+            // Each argument type must be a subtype of the corresponding label's parameter type.
+            assert(zip(parameterTypes, args).allSatisfy {b.type(of: $0.1).Is($0.0)}, errorMsg)
+        }
+
         // This can branch to label variables only, has a variable input for dataflow purposes.
         public func wasmBranch(to label: Variable, args: [Variable] = []) {
-            assert(b.type(of: label).Is(.label(args.map({b.type(of: $0)}))), "label type \(b.type(of: label)) doesn't match argument types \(args.map({b.type(of: $0)}))")
-            b.emit(WasmBranch(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args)
+            let labelType = b.type(of: label)
+            checkArgumentsMatchLabelType(label: labelType, args: args)
+            b.emit(WasmBranch(labelTypes: labelType.wasmLabelType!.parameters), withInputs: [label] + args)
         }
 
         public func wasmBranchIf(_ condition: Variable, to label: Variable, args: [Variable] = [], hint: WasmBranchHint = .None) {
-            assert(b.type(of: label).Is(.label(args.map({b.type(of: $0)}))), "label type \(b.type(of: label)) doesn't match argument types \(args.map({b.type(of: $0)}))")
+            let labelType = b.type(of: label)
+            checkArgumentsMatchLabelType(label: labelType, args: args)
             assert(b.type(of: condition).Is(.wasmi32))
-            b.emit(WasmBranchIf(labelTypes: b.type(of: label).wasmLabelType!.parameters, hint: hint), withInputs: [label] + args + [condition])
+            b.emit(WasmBranchIf(labelTypes: labelType.wasmLabelType!.parameters, hint: hint), withInputs: [label] + args + [condition])
         }
 
         public func wasmBranchTable(on: Variable, labels: [Variable], args: [Variable]) {
             let argumentTypes = args.map({b.type(of: $0)})
-            let labelType = ILType.label(argumentTypes)
             labels.forEach {
-                assert(b.type(of: $0).Is(labelType), "label \($0) (\(b.type(of: $0))) doesn't match argument types \(argumentTypes)")
+                checkArgumentsMatchLabelType(label: b.type(of: $0), args: args)
             }
             b.emit(WasmBranchTable(labelTypes: argumentTypes, valueCount: labels.count - 1),
                 withInputs: labels + args + [on])
@@ -3502,12 +3511,18 @@ public class ProgramBuilder {
             case .wasmSimd128:
                 return self.constSimd128(value: (0 ..< 16).map{ _ in UInt8.random(in: UInt8.min ... UInt8.max) })
             default:
-                if (type.Is(.wasmGenericRef)) {
+                if type.Is(.wasmGenericRef) {
                     // TODO(cffsmith): Can we improve this once we have better support for ad hoc
                     // code generation in other contexts?
-                    assert(type.wasmReferenceType!.nullability)
                     switch type.wasmReferenceType!.kind {
-                        case .Abstract(_):
+                        case .Abstract(let heapType):
+                            if heapType == .WasmI31 {
+                                // Prefer generating a non-null value.
+                                return probability(0.2) && type.wasmReferenceType!.nullability
+                                    ? self.wasmRefNull(type: type)
+                                    : self.wasmRefI31(self.consti32(Int32(truncatingIfNeeded: b.randomInt())))
+                            }
+                            assert(type.wasmReferenceType!.nullability)
                             return self.wasmRefNull(type: type)
                         case .Index(_):
                             break // Unimplemented
@@ -3825,13 +3840,14 @@ public class ProgramBuilder {
             {.wasmi32(Int32(truncatingIfNeeded: self.randomInt()))},
             {.wasmi64(self.randomInt())},
             {.externref},
-            {.exnref})
+            {.exnref},
+            {.i31ref})
     }
 
     public func randomTagParameters() -> [ILType] {
         // TODO(mliedtke): The list of types should be shared with function signature generation etc.
         return (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from:
-            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExnRef, .wasmExternRef, .wasmSimd128])}
+            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExnRef, .wasmExternRef, .wasmI31Ref, .wasmSimd128])}
     }
 
     public func randomWasmSignature() -> WasmSignature {
@@ -3842,9 +3858,13 @@ public class ProgramBuilder {
     }
 
     public func randomWasmBlockOutputTypes(upTo n: Int) -> [ILType] {
-        // TODO(mliedtke): This should allow more types.
+        // TODO(mliedtke): This should allow more types as well as non-nullable references for all
+        // // abstract heap types. To be able to emit them, generateRandomWasmVar() needs to be able
+        // to generate a sequence that produces such a non-nullable value which might be difficult
+        // for some types as of now.
         (0..<Int.random(in: 0...n)).map {_ in chooseUniform(from:
-            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmExternRef, .wasmFuncRef, .wasmExnRef, .wasmSimd128])}
+            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmExternRef, .wasmFuncRef, .wasmExnRef,
+             .wasmI31Ref, .wasmRefI31, .wasmSimd128])}
     }
 
     public func randomWasmBlockArguments(upTo n: Int) -> [Variable] {

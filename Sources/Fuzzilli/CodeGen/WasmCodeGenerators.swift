@@ -23,15 +23,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     /// Wasm related generators in JavaScript
 
     CodeGenerator("WasmGlobalGenerator", inContext: .javascript) { b in
-        // TODO: add funcref?
-        // TODO: maybe put this as static func into WasmGlobal enum? no access to builder for interesting values though....
-        let wasmGlobal: WasmGlobal = withEqualProbability(
-            {.wasmf32(Float32(b.randomFloat()))},
-            {.wasmf64(b.randomFloat())},
-            {.wasmi32(Int32(truncatingIfNeeded: b.randomInt()))},
-            {.wasmi64(b.randomInt())},
-            {.externref})
-        b.createWasmGlobal(value: wasmGlobal, isMutable: probability(0.5))
+        b.createWasmGlobal(value: b.randomWasmGlobal(), isMutable: probability(0.5))
     },
 
     CodeGenerator("WasmMemoryGenerator", inContext: .javascript) { b in

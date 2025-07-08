@@ -1394,11 +1394,7 @@ public class JavaScriptLifter: Lifter {
                 let V = w.declare(instr.output)
                 let LET = w.varKeyword
                 let type = op.value.typeString()
-                var value = op.value.valueToString()
-                // TODO: make this nicer? if we create an i64, we need a bigint.
-                if type == "i64" {
-                    value = value + "n"
-                }
+                let value = op.value.valueToString()
                 w.emit("\(LET) \(V) = new WebAssembly.Global({ value: \"\(type)\", mutable: \(op.isMutable) }, \(value));")
 
             case .createWasmMemory(let op):
@@ -1545,7 +1541,8 @@ public class JavaScriptLifter: Lifter {
                             return "\"funcref\""
                         case .wasmExnRef:
                             return "\"exnref\""
-                        // TODO(mliedtke): Support Wasm tags of i31 defined in JS.
+                        case .wasmI31Ref:
+                            return "\"i31ref\""
                         default:
                             fatalError("Unhandled wasm type \(type)")
                     }

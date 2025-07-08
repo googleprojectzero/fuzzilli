@@ -374,47 +374,37 @@ extension Instruction: ProtobufConvertible {
                 return Fuzzilli_Protobuf_WasmILType.with {
                     $0.valueType = Fuzzilli_Protobuf_WasmValueType.packedI16
                 }
-            case .wasmExternRef:
-                return Fuzzilli_Protobuf_WasmILType.with {
-                    $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
-                        $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.externref
-                        $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
-                    }
-                }
-            case .wasmFuncRef:
-                return Fuzzilli_Protobuf_WasmILType.with {
-                    $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
-                        $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.funcref
-                        $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
-                    }
-                }
-            case .wasmExnRef:
-                return Fuzzilli_Protobuf_WasmILType.with {
-                    $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
-                        $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.exnref
-                        $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
-                    }
-                }
-            case .wasmI31Ref:
-                return Fuzzilli_Protobuf_WasmILType.with {
-                    $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
-                        $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.i31Ref
-                        $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
-                    }
-                }
             case .wasmSimd128:
                 return Fuzzilli_Protobuf_WasmILType.with {
                     $0.valueType = Fuzzilli_Protobuf_WasmValueType.simd128
                 }
             default:
                 if underlyingWasmType <= .wasmGenericRef {
-                    if case .Index(_) = underlyingWasmType.wasmReferenceType!.kind {
-                        return Fuzzilli_Protobuf_WasmILType.with {
-                            $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
-                                $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.index
-                                $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                    switch underlyingWasmType.wasmReferenceType!.kind {
+                        case .Index(_):
+                            return Fuzzilli_Protobuf_WasmILType.with {
+                                $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
+                                    $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.index
+                                    $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                                }
                             }
-                        }
+                        case .Abstract(let heapType):
+                            let kind = switch heapType {
+                                case .WasmExn:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.exnref
+                                case .WasmI31:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.i31Ref
+                                case .WasmFunc:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.funcref
+                                case .WasmExtern:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.externref
+                            }
+                            return Fuzzilli_Protobuf_WasmILType.with {
+                                $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
+                                    $0.kind = kind
+                                    $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                                }
+                            }
                     }
                 }
                 fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a Protobuf_WasmILType! for instruction \(self)")
@@ -495,6 +485,8 @@ extension Instruction: ProtobufConvertible {
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.externref)
             case .exnref:
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.exnref)
+            case .i31ref:
+                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.i31Ref)
             case .imported(let ilType):
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.imported(ILTypeToWasmTypeEnum(ilType))
             }
@@ -1575,13 +1567,13 @@ extension Instruction: ProtobufConvertible {
                 case .index:
                     return .wasmRef(.Index(), nullability: wasmType.refType.nullability)
                 case .externref:
-                    return .wasmExternRef
+                    return .wasmRef(.Abstract(.WasmExtern), nullability: wasmType.refType.nullability)
                 case .funcref:
-                    return .wasmFuncRef
+                    return .wasmRef(.Abstract(.WasmFunc), nullability: wasmType.refType.nullability)
                 case .exnref:
-                    return .wasmExnRef
+                    return .wasmRef(.Abstract(.WasmExn), nullability: wasmType.refType.nullability)
                 case .i31Ref:
-                    return .wasmI31Ref
+                    return .wasmRef(.Abstract(.WasmI31), nullability: wasmType.refType.nullability)
                 case .UNRECOGNIZED(let value):
                     fatalError("Unrecognized wasm reference type \(value)")
                 }
@@ -1660,6 +1652,8 @@ extension Instruction: ProtobufConvertible {
                     return .externref
                 case .exnref:
                     return .exnref
+                case .i31Ref:
+                    return .i31ref
                 default:
                     fatalError("Unrecognized global wasm reference type \(val)")
                 }

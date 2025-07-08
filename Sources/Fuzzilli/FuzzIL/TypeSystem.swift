@@ -993,6 +993,9 @@ extension ILType: CustomStringConvertible {
         case .wasmPackedI16:
             return ".wasmPackedI16"
         case .label:
+            if let labelType = self.wasmLabelType {
+                return ".label(\(labelType.parameters))"
+            }
             return ".label"
         case .wasmRef:
             guard let refType = self.wasmReferenceType else {
