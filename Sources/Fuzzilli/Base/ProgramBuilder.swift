@@ -3246,7 +3246,7 @@ public class ProgramBuilder {
         @discardableResult
         public func wasmJsCall(function: Variable, withArgs args: [Variable], withWasmSignature signature: WasmSignature) -> Variable? {
             let instr = b.emit(WasmJsCall(signature: signature), withInputs: [function] + args,
-                types: [.function() | .object(ofGroup: "WebAssembly.SuspendableObject")] + signature.parameterTypes)
+                types: [.function() | .object(ofGroup: "WasmSuspendingObject")] + signature.parameterTypes)
             if signature.outputTypes.isEmpty {
                 assert(!instr.hasOutputs)
                 return nil

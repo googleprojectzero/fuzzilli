@@ -88,8 +88,8 @@ public class WasmLifter {
     indirect enum Export {
         // The associated data can be nil, which means that this is a re-export of an import.
         case function(FunctionInfo?)
-        // This should only be an import, this is always of type .import(.suspendableObject, variable, signature)
-        case suspendableObject
+        // This should only be an import, this is always of type .import(.suspendingObject, variable, signature)
+        case suspendingObject
         case table(Instruction?)
         case memory(Instruction?)
         case global(Instruction?)
@@ -158,8 +158,8 @@ public class WasmLifter {
             }
         }
 
-        var isSuspendableObject : Bool {
-            if case .suspendableObject = self {
+        var isSuspendingObject : Bool {
+            if case .suspendingObject = self {
                 return true
             } else {
                 return false
@@ -177,7 +177,7 @@ public class WasmLifter {
             switch self {
             case .function(_),
                  .import(_, _, _),
-                 .suspendableObject:
+                 .suspendingObject:
                 return nil
             case .global(let instr),
                  .table(let instr),
@@ -191,7 +191,7 @@ public class WasmLifter {
             switch self {
             case .function,
                  .import,
-                 .suspendableObject:
+                 .suspendingObject:
                 // Functions and imports don't have group names, this is used for getting imports of that type.
                 fatalError("unreachable")
             case .table:
@@ -208,7 +208,7 @@ public class WasmLifter {
         func exportName(forIdx idx: Int) -> String {
             return switch self {
             case .function,
-                 .suspendableObject:
+                 .suspendingObject:
                 WasmLifter.nameOfFunction(idx)
             case .table:
                 WasmLifter.nameOfTable(idx)
@@ -226,7 +226,7 @@ public class WasmLifter {
         func exportTypeByte() -> Int {
             switch self {
             case .function,
-                 .suspendableObject:
+                 .suspendingObject:
                 return 0x0
             case .table:
                 return 0x1
@@ -702,7 +702,7 @@ public class WasmLifter {
             temp += importName.data(using: .utf8)!
             let type = typer.type(of: importVariable)
             // This is a temporary workaround for functions that have been marked as suspendable.
-            if type.Is(.function()) || type.Is(.object(ofGroup: "WebAssembly.SuspendableObject")) {
+            if type.Is(.function()) || type.Is(.object(ofGroup: "WasmSuspendingObject")) {
                 if verbose {
                     print(functionIdxBase)
                 }
@@ -1334,7 +1334,7 @@ public class WasmLifter {
         let imports = self.exports.compactMap { $0.getImport() }
 
         // We also need a signature for this import to distinguish it from other imports.
-        if type.isFunction || type.isSuspendableObject {
+        if type.isFunction || type.isSuspendingObject {
             if !imports.contains(where: {
                 if let otherSig = $0.signature {
                     $0.variable == variable && otherSig == signature
@@ -1397,8 +1397,8 @@ public class WasmLifter {
                 }
 
                 // Special handling for functions, we only expect them in WasmJSCalls, and WasmDefineTable instructions right now.
-                // We can treat the suspendableObjects as function imports.
-                if inputType.Is(.function()) || inputType.Is(.object(ofGroup: "WebAssembly.SuspendableObject")) {
+                // We can treat the suspendingObjects as function imports.
+                if inputType.Is(.function()) || inputType.Is(.object(ofGroup: "WasmSuspendingObject")) {
                     if case .wasmJsCall(let op) = instr.op.opcode {
                         importIfNeeded(.import(type: .function(nil), variable: input, signature: op.functionSignature))
                     } else if case .wasmDefineTable(let op) = instr.op.opcode {
@@ -1470,7 +1470,7 @@ public class WasmLifter {
             case .tag:
                 return export.isTag
             case .function:
-                return export.isFunction || export.isSuspendableObject
+                return export.isFunction || export.isSuspendingObject
 
             }
         }
@@ -1737,7 +1737,7 @@ public class WasmLifter {
             // TODO(cffsmith): consider adding that signature matching feature to resolveIdx.
             if let index = self.exports.filter({
                 if let imp = $0.getImport() {
-                    return imp.type.isFunction || imp.type.isSuspendableObject
+                    return imp.type.isFunction || imp.type.isSuspendingObject
                 } else {
                     return false
                 }

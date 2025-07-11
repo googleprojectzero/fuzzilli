@@ -1708,7 +1708,7 @@ public struct JSTyper: Analyzer {
             // TODO: right now this "loses" the signature of the JS function, this is unfortunate but won't break fuzzing, in the template we can just store the signature.
             // The WasmJsCall generator just won't work as it requires a callable.
             // In the future we should also attach a WasmTypeExtension to this object that stores the signature of input(0) here.
-            set(instr.output, .object(ofGroup:"WebAssembly.SuspendableObject"))
+            set(instr.output, .object(ofGroup:"WasmSuspendingObject"))
 
         case .wrapPromising(_):
             // Here we basically pass through the type transparently as we just annotate this exported function as "promising"

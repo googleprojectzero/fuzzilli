@@ -5134,7 +5134,7 @@ class WasmJSPITests: XCTestCase {
 
         // Wrap the JS function for JSPI use.
         let importFunction = b.wrapSuspending(function: function)
-        XCTAssertEqual(b.type(of: importFunction), .object(ofGroup: "WebAssembly.SuspendableObject"))
+        XCTAssertEqual(b.type(of: importFunction), .object(ofGroup: "WasmSuspendingObject"))
 
         // Now lets build the module
         let module = b.buildWasmModule { m in

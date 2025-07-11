@@ -362,6 +362,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsWasmMemory)
         registerObjectGroup(.wasmTable)
         registerObjectGroup(.jsWasmTag)
+        registerObjectGroup(.jsWasmSuspendingObject)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -1649,5 +1650,12 @@ public extension ObjectGroup {
             "grow": [.number, .opt(.jsAnything)] => .number,
             "set": [.number, .jsAnything] => .undefined,
         ]
+    )
+
+    static let jsWasmSuspendingObject = ObjectGroup(
+        name: "WasmSuspendingObject",
+        instanceType: .object(ofGroup: "WasmSuspendingObject"),
+        properties: [:],
+        methods: [:]
     )
 }
