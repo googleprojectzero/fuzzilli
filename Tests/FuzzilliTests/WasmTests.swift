@@ -692,7 +692,6 @@ class WasmFoundationTests: XCTestCase {
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
-        print(jsProg)
 
         testForOutput(program: jsProg, runner: runner, outputString: "null\n-42\n")
     }
