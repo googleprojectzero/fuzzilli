@@ -960,6 +960,15 @@ final class WasmMemoryGrow: WasmOperation {
     }
 }
 
+class WasmMemoryFill: WasmOperation {
+    override var opcode: Opcode { .wasmMemoryFill(self) }
+
+    init() {
+        super.init(
+            numInputs: 4, numOutputs: 0, requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmJsCall: WasmOperation {
     override var opcode: Opcode { .wasmJsCall(self) }
 

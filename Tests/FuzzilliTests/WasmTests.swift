@@ -1138,12 +1138,13 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: isMemory64)
+            let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
 
             wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
                 let value = function.consti64(1337)
-                let storeOffset = isMemory64 ? function.consti64(8) : function.consti32(8)
+                let storeOffset = function.memoryArgument(8, memoryTypeInfo)
                 function.wasmMemoryStore(memory: memory, dynamicOffset: storeOffset, value: value, storeType: .I64StoreMem, staticOffset: 2)
-                let loadOffset = isMemory64 ? function.consti64(10) : function.consti32(10)
+                let loadOffset = function.memoryArgument(10, memoryTypeInfo)
                 let val = function.wasmMemoryLoad(memory: memory, dynamicOffset: loadOffset, loadType: .I32LoadMem, staticOffset: 0)
                 function.wasmReturn(val)
             }
@@ -1366,6 +1367,47 @@ class WasmFoundationTests: XCTestCase {
 
     func testMemorySize64() throws {
         try memorySize(isMemory64: true)
+    }
+
+    func memoryBulkOperations(isMemory64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        // We have to use the proper JavaScriptEnvironment here.
+        // This ensures that we use the available builtins.
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addMemory(minPages: 1, maxPages: 2, isMemory64: isMemory64)
+            let memory = wasmModule.addMemory(minPages: 1, maxPages: 2, isMemory64: isMemory64)
+            let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
+
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
+                let fillOffset = function.memoryArgument(100, memoryTypeInfo)
+                let byteToSet = function.consti32(0xAA)
+                let nrOfBytesToUpdate = function.memoryArgument(4, memoryTypeInfo)
+                function.wasmMemoryFill(memory: memory, offset: fillOffset, byteToSet: byteToSet, nrOfBytesToUpdate: nrOfBytesToUpdate)
+                let loadOffset =  function.memoryArgument(102, memoryTypeInfo)
+                let val = function.wasmMemoryLoad(memory: memory, dynamicOffset: loadOffset, loadType: .I32LoadMem, staticOffset: 0)
+                function.wasmReturn(val)
+            }
+        }
+
+        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+        b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res0)])
+
+        let jsProg = fuzzer.lifter.lift(b.finalize())
+        testForOutput(program: jsProg, runner: runner, outputString: "43690\n") // 0x 00 00 AA AA
+    }
+
+    func testMemoryBulkOperations32() throws {
+        try memoryBulkOperations(isMemory64: false)
+    }
+
+    func testMemoryBulkOperations64() throws {
+        try memoryBulkOperations(isMemory64: true)
     }
 
     func wasmSimdLoadStore(isMemory64: Bool) throws {

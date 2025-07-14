@@ -2991,6 +2991,15 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func memoryArgument(_ value: Int64, _ memoryTypeInfo: WasmMemoryType) -> Variable {
+            if (memoryTypeInfo.isMemory64) {
+                return self.consti64(value)
+            } else {
+                return self.consti32(Int32(value))
+            }
+        }
+
+        @discardableResult
         public func constf32(_ value: Float32) -> Variable {
             return b.emit(Constf32(value: value)).output
         }
@@ -3268,15 +3277,14 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmMemoryLoad(memory: Variable, dynamicOffset: Variable, loadType: WasmMemoryLoadType, staticOffset: Int64) -> Variable {
-            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
-            return b.emit(WasmMemoryLoad(loadType: loadType, staticOffset: staticOffset), withInputs: [memory, dynamicOffset], types: [.object(ofGroup: "WasmMemory"), isMemory64 ? ILType.wasmi64 : ILType.wasmi32]).output
+            let addrType = b.type(of: memory).wasmMemoryType!.addrType
+            return b.emit(WasmMemoryLoad(loadType: loadType, staticOffset: staticOffset), withInputs: [memory, dynamicOffset], types: [.object(ofGroup: "WasmMemory"), addrType]).output
         }
 
         public func wasmMemoryStore(memory: Variable, dynamicOffset: Variable, value: Variable, storeType: WasmMemoryStoreType, staticOffset: Int64) {
             assert(b.type(of: value) == storeType.numberType())
-            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
-            let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
-            let inputTypes = [ILType.object(ofGroup: "WasmMemory"), dynamicOffsetType, storeType.numberType()]
+            let addrType = b.type(of: memory).wasmMemoryType!.addrType
+            let inputTypes = [ILType.object(ofGroup: "WasmMemory"), addrType, storeType.numberType()]
             b.emit(WasmMemoryStore(storeType: storeType, staticOffset: staticOffset), withInputs: [memory, dynamicOffset, value], types: inputTypes)
         }
 
@@ -3288,9 +3296,15 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmMemoryGrow(memory: Variable, growByPages: Variable) -> Variable {
-            let is64 = b.type(of: memory).wasmMemoryType!.isMemory64
+            let addrType = b.type(of: memory).wasmMemoryType!.addrType
             return b.emit(WasmMemoryGrow(), withInputs: [memory, growByPages],
-                types: [.object(ofGroup: "WasmMemory"), is64 ? .wasmi64 : .wasmi32]).output
+                types: [.object(ofGroup: "WasmMemory"), addrType]).output
+        }
+
+        public func wasmMemoryFill(memory: Variable, offset: Variable, byteToSet: Variable, nrOfBytesToUpdate: Variable) {
+            let addrType = b.type(of: memory).wasmMemoryType!.addrType
+            b.emit(WasmMemoryFill(), withInputs: [memory, offset, byteToSet, nrOfBytesToUpdate],
+                types: [.object(ofGroup: "WasmMemory"), addrType, .wasmi32, addrType])
         }
 
         public func wasmReassign(variable: Variable, to: Variable) {
@@ -3834,8 +3848,7 @@ public class ProgramBuilder {
 
         // Generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.
         let dynamicOffsetValue = self.randomNonNegativeIndex(upTo: memSize)
-        let dynamicOffset = memoryTypeInfo.isMemory64 ? function.consti64(dynamicOffsetValue)
-                                                  : function.consti32(Int32(dynamicOffsetValue))
+        let dynamicOffset = function.memoryArgument(dynamicOffsetValue, memoryTypeInfo)
         var staticOffset: Int64
         if (dynamicOffsetValue == memSize) {
             staticOffset = 0

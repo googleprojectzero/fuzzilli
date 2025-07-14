@@ -217,7 +217,13 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
     let minimizer = Minimizer()
 
     // Use all builtin CodeGenerators
-    let codeGenerators = WeightedList<CodeGenerator>(CodeGenerators.map { return ($0, codeGeneratorWeights[$0.name]!) } + WasmCodeGenerators.map { return ($0, codeGeneratorWeights[$0.name]!) } + additionalCodeGenerators)
+    let codeGenerators = WeightedList<CodeGenerator>(
+        (CodeGenerators + WasmCodeGenerators).map {
+            guard let weight = codeGeneratorWeights[$0.name] else {
+                fatalError("Missing weight for code generator \($0.name) in CodeGeneratorWeights.swift")
+            }
+            return ($0, weight)
+        } + additionalCodeGenerators)
 
     // Use all builtin ProgramTemplates
     let programTemplates = WeightedList<ProgramTemplate>(ProgramTemplates.map { return ($0, programTemplateWeights[$0.name]!) })
