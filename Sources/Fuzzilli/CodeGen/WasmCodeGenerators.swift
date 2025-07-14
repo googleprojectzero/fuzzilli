@@ -969,6 +969,8 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             let tag = b.randomVariable(ofType: .object(ofGroup: "WasmTag"))
             // nil will map to a catch all. Note that this means that we can generate multiple
             // catch all targets.
+            b.reportErrorIf(tag != nil && !b.type(of: tag!).isWasmTagType,
+                    "Expected tag misses the WasmTagType extension for variable \(String(describing: tag)).")
             return tag == nil || b.type(of: tag!).wasmTagType!.isJSTag || probability(0.1) ? nil : tag
         }
         let withExnRef = tags.map {_ in Bool.random()}

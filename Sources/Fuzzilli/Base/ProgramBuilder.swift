@@ -199,6 +199,16 @@ public class ProgramBuilder {
         print(FuzzILLifter().lift(code))
     }
 
+    // This can be used to crash the fuzzer if we see an unexpected condition.
+    // Since some edge cases are hard to trigger, this can be used to surface these conditions
+    // during "real" fuzzing runs, i.e. in release builds.
+    public func reportErrorIf(_ condition: Bool, _ message: String) {
+        if condition {
+            let prog = FuzzILLifter().lift(code)
+            fatalError("\(message)\nProgram:\n\(prog)")
+        }
+    }
+
     /// Returns the current number of instructions of the program we're building.
     public var currentNumberOfInstructions: Int {
         return code.count
@@ -3448,6 +3458,8 @@ public class ProgramBuilder {
             let instr = b.emit(WasmBeginTry(with: signature), withInputs: args, types: signature.parameterTypes)
             var result = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             for (tag, generator) in catchClauses {
+                b.reportErrorIf(!b.type(of: tag).isWasmTagType,
+                    "Expected tag misses the WasmTagType extension for variable \(tag), typed \(b.type(of: tag)).")
                 let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => signature.outputTypes),
                     withInputs: [tag] + result,
                     types: [.object(ofGroup: "WasmTag")] + signature.outputTypes)
@@ -3464,6 +3476,8 @@ public class ProgramBuilder {
         // try blocks that also don't have a result type. (Use wasmBuildLegacyTryWithResult to
         // create a catch block with a result value.)
         public func WasmBuildLegacyCatch(tag: Variable, body: ((Variable, Variable, [Variable]) -> Void)) {
+            b.reportErrorIf(!b.type(of: tag).isWasmTagType,
+                "Expected tag misses the WasmTagType extension for variable \(tag), typed \(b.type(of: tag)).")
             let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => []), withInputs: [tag], types: [.object(ofGroup: "WasmTag")])
             body(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
         }
