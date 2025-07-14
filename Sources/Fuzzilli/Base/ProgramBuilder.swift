@@ -112,6 +112,14 @@ public class ProgramBuilder {
         return activeWasmModule!
     }
 
+    public var currentWasmSignature: WasmSignature {
+        return activeWasmModule!.blockSignatures.top
+    }
+
+    public var currentWasmFunction: WasmFunction {
+        return activeWasmModule!.functions.last!
+    }
+
     /// Stack of active class definitions.
     ///
     /// Similar to object literals, class definitions can be nested so this needs to be a stack.
@@ -3525,7 +3533,7 @@ public class ProgramBuilder {
             ).outputs)
         }
 
-        public func generateRandomWasmVar(ofType type: ILType) -> Variable {
+        public func generateRandomWasmVar(ofType type: ILType) -> Variable? {
             switch type {
             case .wasmi32:
                 return self.consti32(Int32(truncatingIfNeeded: b.randomInt()))
@@ -3553,14 +3561,16 @@ public class ProgramBuilder {
                             return self.wasmRefNull(type: type)
                         case .Index(_):
                             break // Unimplemented
-                    }
+                        }
+                } else {
+                    return nil
                 }
-                fatalError("unimplemented for \(type)")
+                return nil
             }
         }
 
         public func findOrGenerateWasmVar(ofType type: ILType) -> Variable {
-            b.randomVariable(ofType: type) ?? generateRandomWasmVar(ofType: type)
+            b.randomVariable(ofType: type) ?? generateRandomWasmVar(ofType: type)!
         }
 
         public func wasmUnreachable() {
@@ -3742,6 +3752,8 @@ public class ProgramBuilder {
         private let b: ProgramBuilder
         public var methods: [String]
         public var functions: [WasmFunction]
+        // This is the stack of current active block signatures.
+        public var blockSignatures: Stack<WasmSignature>
         public var currentWasmFunction: WasmFunction {
             return functions.last!
         }
@@ -3770,6 +3782,7 @@ public class ProgramBuilder {
             self.methods = [String]()
             self.moduleVariable = nil
             self.functions = []
+            self.blockSignatures = Stack()
         }
 
         @discardableResult
@@ -3781,21 +3794,19 @@ public class ProgramBuilder {
         // TODO: distinguish between exported and non-exported functions
         @discardableResult
         public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, [Variable]) -> ()) -> Variable {
-            let functionBuilder = WasmFunction(forBuilder: b, withSignature: signature)
             let instr = b.emit(BeginWasmFunction(signature: signature))
             // Ignore the label in this overload.
-            body(functionBuilder, Array(instr.innerOutputs.dropFirst()))
+            body(currentWasmFunction, Array(instr.innerOutputs.dropFirst()))
             // TODO(mliedtke): Ideally we'd replace all overloads of this function to the new one
             // expecting explicit return values.
-            let results = signature.outputTypes.map {b.randomVariable(ofType: $0) ?? functionBuilder.generateRandomWasmVar(ofType: $0)}
+            let results = signature.outputTypes.map {b.randomVariable(ofType: $0) ?? currentWasmFunction.generateRandomWasmVar(ofType: $0)!}
             return b.emit(EndWasmFunction(signature: signature), withInputs: results).output
         }
 
         @discardableResult
         public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, Variable, [Variable]) -> [Variable]) -> Variable {
-            let functionBuilder = WasmFunction(forBuilder: b, withSignature: signature)
             let instr = b.emit(BeginWasmFunction(signature: signature))
-            let results = body(functionBuilder, instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            let results = body(currentWasmFunction, instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             return b.emit(EndWasmFunction(signature: signature), withInputs: results).output
         }
 
@@ -4115,6 +4126,25 @@ public class ProgramBuilder {
             break
         case .beginWasmFunction(let op):
             activeWasmModule!.functions.append(WasmFunction(forBuilder: self, withSignature: op.signature))
+        case .wasmBeginIf(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmBeginBlock(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmBeginLoop(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmBeginTry(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmBeginTryDelegate(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmBeginTryTable(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmEndIf(_),
+             .wasmEndLoop(_),
+             .wasmEndTry(_),
+             .wasmEndTryDelegate(_),
+             .wasmEndTryTable(_),
+             .wasmEndBlock(_):
+            activeWasmModule!.blockSignatures.pop()
 
         default:
             assert(!instr.op.requiredContext.contains(.objectLiteral))
