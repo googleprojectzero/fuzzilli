@@ -1021,6 +1021,8 @@ extension ILType: CustomStringConvertible {
                 }
             }
             return ".wasmTypeDef(nil)"
+        case .exceptionLabel:
+            return ".exceptionLabel"
         default:
             break
         }
