@@ -21,9 +21,10 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         let N = 100
+        let numPrograms = 100
 
         var sumOfProgramSizes = 0
-        for _ in 0..<100 {
+        for _ in 0..<numPrograms {
             b.buildPrefix()
             b.build(n: N)
             let program = b.finalize()
@@ -37,7 +38,7 @@ class ProgramBuilderTests: XCTestCase {
         }
 
         // On average, we should generate between n and 2x n instructions.
-        let averageSize = sumOfProgramSizes / 100
+        let averageSize = sumOfProgramSizes / numPrograms
         XCTAssertLessThanOrEqual(averageSize, 2*N)
     }
 
