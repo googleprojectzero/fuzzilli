@@ -1716,6 +1716,275 @@ class WasmFoundationTests: XCTestCase {
         }
     }
 
+    func testWasmSimd128IntegerBinOp() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        // note: only works on little-endian platforms
+        let uint16ArrayToByteArray: ([UInt16]) -> [UInt8] = { uint16Array in
+        return uint16Array.flatMap { value -> [UInt8] in
+                let highByte = UInt8((value >> 8) & 0xFF)
+                let lowByte = UInt8(value & 0xFF)
+                return [lowByte, highByte]
+            }
+        }
+
+        let testCases: [((ProgramBuilder.WasmModule) -> Void, String)] = [
+            // Test q15mulr_sat_s
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([16383, 16384, 32767, 65535, 65535, 32765, UInt16(bitPattern: -32768), 32768]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([16384, 16384, 32767, 65535, 32768, 1, UInt16(bitPattern: -32768), 1]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.q15mulr_sat_s)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
+                }
+            }, "8192,8192,32766,0,1,1,32767,-1"),
+            // // Test narrow_s
+            ({wasmModule in
+                let returnType = (0..<16).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 128, 256, 0, 1, 128, 256]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([-1, -128, -129, -256, -1, -128, -129, -256].map( {UInt16(bitPattern: $0)})))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i8x16, WasmSimd128IntegerBinOpKind.narrow_s)
+                    return (0..<16).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I8x16S, result, $0)}
+                }
+            }, "0,1,127,127,0,1,127,127,-1,-128,-128,-128,-1,-128,-128,-128"),
+            // Test narrow_u
+            ({wasmModule in
+                let returnType = (0..<16).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 127, 128, 255, 256, 512, 1024]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 127, 128, 255, 256, 512, 1024]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i8x16, WasmSimd128IntegerBinOpKind.narrow_u)
+                    return (0..<16).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)}
+                }
+            }, "0,1,127,128,255,255,255,255,0,1,127,128,255,255,255,255"),
+            // Test shl
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 4, 8, 9, 16, 18]))
+                    let varB = function.consti32(1)
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.shl)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8U, result, $0)}
+                }
+            }, "0,2,4,8,16,18,32,36"),
+            // Test shr_s
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 4, 8, 9, UInt16(bitPattern: -16), 18]))
+                    let varB = function.consti32(1)
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.shr_s)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
+                }
+            }, "0,0,1,2,4,4,-8,9"),
+            // Test shr_u
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 4, 8, 9, UInt16(bitPattern: -16), 18]))
+                    let varB = function.consti32(1)
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.shr_u)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
+                }
+            }, "0,0,1,2,4,4,32760,9"),
+            // Test add
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 3, 4, 5, 6, 7]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, 9, 10, 11, 12, 13, 14, 32767]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.add)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
+                }
+            }, "8,10,12,14,16,18,20,-32762"),
+            // Test add_sat_s
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray(
+                        [UInt16(bitPattern: -32768), 32767, UInt16(bitPattern: -32768), UInt16(bitPattern: -32768), 32767, 32767, 32767, 7]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray(
+                        [UInt16(bitPattern: -32768), 32767, UInt16(bitPattern: -1), 1, 1, UInt16(bitPattern: -1), UInt16(bitPattern: -2), 4]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.add_sat_s)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
+                }
+            }, "-32768,32767,-32768,-32767,32767,32766,32765,11"),
+            // Test add_sat_u
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray(
+                        [65534, 65534, 65534, 8, 9, 10, 11, 12]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray(
+                        [0, 1, 2, 3, 4, 5, 6, 7]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.add_sat_u)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8U, result, $0)}
+                }
+            }, "65534,65535,65535,11,13,15,17,19"),
+            // Test sub
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([UInt16(bitPattern:-2), 3, 6, 9, 12, 15, 18, 21]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([32767, 0, 1, 2, 3, 4, 5, 6]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.sub)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
+                }
+            }, "32767,3,5,7,9,11,13,15"),
+            // Test sub_sat_s
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([UInt16(bitPattern:-2), 32000, 6, 9, 12, 15, 18, 21]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([32767, UInt16(bitPattern:-1000), 1, 2, 3, 4, 5, 6]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.sub_sat_s)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
+                }
+            }, "-32768,32767,5,7,9,11,13,15"),
+            // Test sub_sat_u
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 3, 6, 9, 12, 15, 18, 21]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([1, 0, 1, 2, 3, 4, 5, 6]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.sub_sat_u)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8U, result, $0)}
+                }
+            }, "0,3,5,7,9,11,13,15"),
+            // Test mul
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 3, 4, 5, 6, 7]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, 9, 10, 11, 12, 13, 14, 15]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.mul)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8U, result, $0)}
+                }
+            }, "0,9,20,33,48,65,84,105"),
+            // Test min_u
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 3, 4, 5, 6, 65535]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, 9, 10, 11, 12, 13, 14, 65534]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.min_u)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8U, result, $0)}
+                }
+            }, "0,1,2,3,4,5,6,65534"),
+            // Test min_s
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 8, 0, UInt16(bitPattern:-8), 4, UInt16(bitPattern:-5), 6, 7]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, 0, UInt16(bitPattern:-8), 0, 0, UInt16(bitPattern:-12), 13, 14]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.min_s)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
+                }
+            }, "0,0,-8,-8,0,-12,6,7"),
+            // Test max_u
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 3, 4, 5, 6, 65535]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, 9, 10, 11, 12, 13, 14, 65534]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.max_u)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8U, result, $0)}
+                }
+            }, "8,9,10,11,12,13,14,65535"),
+            // Test max_s
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 8, 0, UInt16(bitPattern:-8), 4, UInt16(bitPattern:-5), 6, 7]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, 0, UInt16(bitPattern:-8), 0, 0, UInt16(bitPattern:-12), 13, 14]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.max_s)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
+                }
+            }, "8,8,0,0,4,-5,13,14"),
+            // Test dot_i16x8_s
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 4, 5, UInt16(bitPattern: -4), 5, 32767, 32767]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([2, 3, 6, 7, 6, UInt16(bitPattern: -7), 32767, 32767]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i32x4, WasmSimd128IntegerBinOpKind.dot_i16x8_s)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "3,59,-59,2147352578"),
+            // Test avgr_u
+            ({wasmModule in
+                let returnType = (0..<8).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 3, 4, 5, 6, 7]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, 10, 12, 14, 16, 18, 20, 22]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.avgr_u)
+                    return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
+                }
+            }, "4,6,7,9,10,12,13,15"),
+            // Test extmul_low_s
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 3, 4, 5, 6, UInt16(bitPattern:-7)]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, UInt16(bitPattern: -10), 12, 14, 16, 18, 20, 22]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i32x4, WasmSimd128IntegerBinOpKind.extmul_low_s)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "0,-10,24,42"),
+            // Test extmul_high_s
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 3, 4, 5, 6, UInt16(bitPattern:-7)]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, UInt16(bitPattern: -10), 12, 14, 16, 18, 20, 22]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i32x4, WasmSimd128IntegerBinOpKind.extmul_high_s)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "64,90,120,-154"),
+            // Test extmul_low_u
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 256, 2, 3, 4, 5, 6, 7]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, 256, 12, 14, 16, 18, 20, 22]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i32x4, WasmSimd128IntegerBinOpKind.extmul_low_u)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "0,65536,24,42"),
+            // Test extmul_high_u
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: uint16ArrayToByteArray([0, 1, 2, 3, 4, 5, 6, 256]))
+                    let varB = function.constSimd128(value: uint16ArrayToByteArray([8, UInt16(bitPattern: -10), 12, 14, 16, 18, 20, 65535]))
+                    let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i32x4, WasmSimd128IntegerBinOpKind.extmul_high_u)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "64,90,120,16776960"),
+        ]
+
+        let module = b.buildWasmModule { wasmModule in
+            for(createWasmFunction, _) in testCases {
+                createWasmFunction(wasmModule)
+            }
+        }
+
+        for (i, _) in testCases.enumerated() {
+            let res = b.callMethod(module.getExportedMethod(at: i), on: module.loadExports())
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"),
+                withArgs: [b.callMethod("toString", on:res)])
+        }
+
+        let jsProg = fuzzer.lifter.lift(b.finalize())
+        let expected = testCases.map {$0.1}.joined(separator: "\n") + "\n"
+        testForOutput(program: jsProg, runner: runner, outputString: expected)
+    }
+
     func testLoops() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
