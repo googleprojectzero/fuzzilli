@@ -848,6 +848,9 @@ public class FuzzILLifter: Lifter {
         case .wasmMemoryGrow(_):
             w.emit("\(output()) <- WasmMemoryGrow \(input(0)), \(input(1))")
 
+        case .wasmMemoryFill(_):
+            w.emit("WasmMemoryFill \(input(0))")
+
         case .wasmStoreGlobal(_):
             w.emit("WasmStoreGlobal \(input(0)) <- \(input(1))")
 

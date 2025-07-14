@@ -1192,6 +1192,9 @@ message WasmMemorySize {
 message WasmMemoryGrow {
 }
 
+message WasmMemoryFill {
+}
+
 message WasmBeginBlock {
   repeated WasmILType parameterTypes = 1;
   repeated WasmILType outputTypes = 2;

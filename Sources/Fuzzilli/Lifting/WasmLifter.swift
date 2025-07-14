@@ -1729,6 +1729,9 @@ public class WasmLifter {
         case .wasmMemoryGrow(_):
             let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
             return Data([0x40]) + Leb128.unsignedEncode(memoryIdx)
+        case .wasmMemoryFill(_):
+            let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
+            return Data([0xFC, 0x0b]) + Leb128.unsignedEncode(memoryIdx)
         case .wasmJsCall(let op):
             // We filter first, such that we get the index of functions only.
             let wasmSignature = op.functionSignature

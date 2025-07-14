@@ -346,12 +346,26 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("WasmMemoryGrowGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
         let function = b.currentWasmModule.currentWasmFunction
-        let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
+        let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
         // Note that each wasm page has a size of 64KB. If we end up with a huge number (e.g. due to
         // input mutation), the memory.grow operation fails silently on allocation and returns -1.
-        let growBy = isMemory64 ? function.consti64(Int64.random(in: 0...10))
-                                : function.consti32(Int32.random(in: 0...10))
+        let growBy = function.memoryArgument(Int64.random(in: 0...10), memoryTypeInfo)
         function.wasmMemoryGrow(memory: memory, growByPages: growBy)
+    },
+
+    CodeGenerator("WasmMemoryFillGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
+        if (b.hasZeroPages(memory: memory)) { return }
+
+        let function = b.currentWasmModule.currentWasmFunction
+        let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
+        let memSize = Int64(b.type(of: memory).wasmMemoryType!.limits.min * WasmConstants.specWasmMemPageSize)
+
+        let offsetValue = b.randomNonNegativeIndex(upTo: memSize)
+        let offset = function.memoryArgument(offsetValue, memoryTypeInfo)
+        let byteToSet = function.consti32(Int32.random(in: 0...255))
+        let nrOfBytesToUpdate = function.memoryArgument(Int64.random(in: 0...(memSize - offsetValue)) + 1, memoryTypeInfo)
+
+        function.wasmMemoryFill(memory: memory, offset: offset, byteToSet: byteToSet, nrOfBytesToUpdate: nrOfBytesToUpdate)
     },
 
     // Global Generators

@@ -1414,6 +1414,7 @@ public class WasmMemoryType: WasmTypeExtension {
     let limits: Limits
     let isShared: Bool
     let isMemory64: Bool
+    let addrType: ILType
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmMemoryType else { return false }
@@ -1430,6 +1431,7 @@ public class WasmMemoryType: WasmTypeExtension {
         self.limits = limits
         self.isShared = isShared
         self.isMemory64 = isMemory64
+        self.addrType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
     }
 }
 
