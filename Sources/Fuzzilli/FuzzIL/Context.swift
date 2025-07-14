@@ -13,7 +13,27 @@
 // limitations under the License.
 
 /// Current context in the program
-public struct Context: OptionSet {
+public struct Context: OptionSet, Hashable, CaseIterable {
+    public static var allCases: [Context] = [
+        .javascript,
+        .subroutine,
+        .generatorFunction,
+        .asyncFunction,
+        .method,
+        .classMethod,
+        .loop,
+        .with,
+        .objectLiteral,
+        .classDefinition,
+        .switchBlock,
+        .switchCase,
+        .wasm,
+        .wasmFunction,
+        .wasmBlock,
+        .wasmTypeGroup,
+        .empty,
+    ]
+
     public let rawValue: UInt32
 
     public init(rawValue: UInt32) {
@@ -68,5 +88,60 @@ public struct Context: OptionSet {
     public var inWasm: Bool {
         // .wasmBlock is propagating surrounding context
         self.contains(.wasm) || self.contains(.wasmFunction)
+    }
+}
+
+extension Context: CustomStringConvertible {
+    public var description: String {
+        var strings: [String] = []
+        if self.contains(.javascript) {
+            strings.append(".javascript")
+        }
+        if self.contains(.subroutine) {
+            strings.append(".subroutine")
+        }
+        if self.contains(.generatorFunction) {
+            strings.append(".generatorFunction")
+        }
+        if self.contains(.asyncFunction) {
+            strings.append(".asyncFunction")
+        }
+        if self.contains(.method) {
+            strings.append(".method")
+        }
+        if self.contains(.classMethod) {
+            strings.append(".classMethod")
+        }
+        if self.contains(.loop) {
+            strings.append(".loop")
+        }
+        if self.contains(.with) {
+            strings.append(".with")
+        }
+        if self.contains(.objectLiteral) {
+            strings.append(".objectLiteral")
+        }
+        if self.contains(.classDefinition) {
+            strings.append(".classDefinition")
+        }
+        if self.contains(.switchBlock) {
+            strings.append(".switchBlock")
+        }
+        if self.contains(.switchCase) {
+            strings.append(".switchCase")
+        }
+        if self.contains(.wasm) {
+            strings.append(".wasm")
+        }
+        if self.contains(.wasmFunction) {
+            strings.append(".wasmFunction")
+        }
+        if self.contains(.wasmBlock) {
+            strings.append(".wasmBlock")
+        }
+        if self.contains(.wasmTypeGroup) {
+            strings.append(".wasmTypeGroup")
+        }
+        return strings.joined(separator: " | ")
     }
 }
