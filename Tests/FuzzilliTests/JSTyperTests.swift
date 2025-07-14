@@ -28,7 +28,7 @@ class JSTyperTests: XCTestCase {
 
         XCTAssertEqual(.integer, b.type(of: intVar))
         XCTAssertEqual(.float, b.type(of: floatVar))
-        XCTAssertEqual(.string, b.type(of: stringVar))
+        XCTAssertEqual(.jsString, b.type(of: stringVar))
         XCTAssertEqual(.boolean, b.type(of: boolVar))
 
         let sum = b.binary(intVar, stringVar, with: .Add)
@@ -217,13 +217,13 @@ class JSTyperTests: XCTestCase {
                 b.reassign(v, to: b.loadString("bar"))
                 b.reassign(f, to: b.loadString("baz"))
 
-                XCTAssertEqual(b.type(of: v), .string)
-                XCTAssertEqual(b.type(of: f), .string)
+                XCTAssertEqual(b.type(of: v), .jsString)
+                XCTAssertEqual(b.type(of: f), .jsString)
             }
 
             cls.addStaticMethod("n", with: .parameters(n: 0)) { args in
-                XCTAssertEqual(b.type(of: v), .integer | .float | .string)
-                XCTAssertEqual(b.type(of: s), .string)
+                XCTAssertEqual(b.type(of: v), .integer | .float | .jsString)
+                XCTAssertEqual(b.type(of: s), .jsString)
 
                 b.reassign(v, to: b.loadBool(true))
                 b.reassign(s, to: b.loadFloat(13.37))
@@ -234,10 +234,10 @@ class JSTyperTests: XCTestCase {
 
             // The same is true for class static initializers, even though they technically execute unconditionally.
             // However, treating them as executing unconditionally would cause them to overwrite any variable changes
-            // performed in preceeding blocks. For example, in this example |s| would be .string after the initializer
-            // if it were treated as executing unconditionally, while .string | .float is "more correct".
+            // performed in preceeding blocks. For example, in this example |s| would be .jsString after the initializer
+            // if it were treated as executing unconditionally, while .jsString | .float is "more correct".
             cls.addStaticInitializer { this in
-                XCTAssertEqual(b.type(of: f), .float | .string)
+                XCTAssertEqual(b.type(of: f), .float | .jsString)
 
                 b.reassign(f, to: b.loadBool(true))
 
@@ -245,8 +245,8 @@ class JSTyperTests: XCTestCase {
             }
         }
 
-        XCTAssertEqual(b.type(of: v), .primitive)
-        XCTAssertEqual(b.type(of: s), .string | .float)
+        XCTAssertEqual(b.type(of: v), .primitive | .object() | .iterable)
+        XCTAssertEqual(b.type(of: s), .jsString | .float)
         XCTAssertEqual(b.type(of: f), .boolean)         // A static initializer block runs unconditionally
     }
 
@@ -343,14 +343,14 @@ class JSTyperTests: XCTestCase {
         f = b.buildArrowFunction(with: .parameters(signature2.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .function(signature2))
 
-        let signature3 = [.integer, .number] => fuzzer.environment.generatorType
+        let signature3 = [.integer, .number] => .jsGenerator
         f = b.buildGeneratorFunction(with: .parameters(signature3.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .function(signature3))
 
         f = b.buildAsyncGeneratorFunction(with: .parameters(signature3.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .function(signature3))
 
-        let signature4 = [.string, .number] => fuzzer.environment.promiseType
+        let signature4 = [.string, .number] => .jsPromise
         f = b.buildAsyncFunction(with: .parameters(signature4.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .function(signature4))
 
@@ -396,7 +396,7 @@ class JSTyperTests: XCTestCase {
             })
             b.doReturn(b.loadBool(false))
         }
-        XCTAssertEqual(b.type(of: f3).signature?.outputType, .float | .string)
+        XCTAssertEqual(b.type(of: f3).signature?.outputType, .float | .jsString)
 
         let f4 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             b.buildIfElse(args[0], ifBody: {
@@ -404,7 +404,7 @@ class JSTyperTests: XCTestCase {
             }, elseBody: {
             })
         }
-        XCTAssertEqual(b.type(of: f4).signature?.outputType, .string | .undefined)
+        XCTAssertEqual(b.type(of: f4).signature?.outputType, .undefined | .jsString)
 
         let f5 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             b.buildIfElse(args[0], ifBody: {
@@ -413,7 +413,7 @@ class JSTyperTests: XCTestCase {
             })
             b.doReturn(b.loadBool(true))
         }
-        XCTAssertEqual(b.type(of: f5).signature?.outputType, .string | .boolean)
+        XCTAssertEqual(b.type(of: f5).signature?.outputType, .boolean | .jsString)
 
         let f6 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             b.doReturn(b.loadInt(42))
@@ -486,18 +486,18 @@ class JSTyperTests: XCTestCase {
         let g1 = b.buildGeneratorFunction(with: .parameters(n: 0)) { _ in
             b.yield(b.loadInt(42))
         }
-        XCTAssertEqual(b.type(of: g1).signature?.outputType, fuzzer.environment.generatorType)
+        XCTAssertEqual(b.type(of: g1).signature?.outputType, .jsGenerator)
 
         let g2 = b.buildAsyncGeneratorFunction(with: .parameters(n: 0)) { _ in
             b.yield(b.loadInt(42))
         }
-        XCTAssertEqual(b.type(of: g2).signature?.outputType, fuzzer.environment.generatorType)
+        XCTAssertEqual(b.type(of: g2).signature?.outputType, .jsGenerator)
 
         let a2 = b.buildAsyncFunction(with: .parameters(n: 0)) { _ in }
-        XCTAssertEqual(b.type(of: a2).signature?.outputType, fuzzer.environment.promiseType)
+        XCTAssertEqual(b.type(of: a2).signature?.outputType, .jsPromise)
 
         let a3 = b.buildAsyncArrowFunction(with: .parameters(n: 0)) { _ in }
-        XCTAssertEqual(b.type(of: a3).signature?.outputType, fuzzer.environment.promiseType)
+        XCTAssertEqual(b.type(of: a3).signature?.outputType, .jsPromise)
     }
 
     func testParameterTypeInference() {
@@ -516,7 +516,7 @@ class JSTyperTests: XCTestCase {
         let signature2 = [.integer, .jsAnything...] => .float
         let f2 = b.buildPlainFunction(with: .parameters(signature2.parameters)) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
-            XCTAssertEqual(b.type(of: params[1]), fuzzer.environment.arrayType)
+            XCTAssertEqual(b.type(of: params[1]), .jsArray)
             b.doReturn(b.loadFloat(13.37))
         }
         XCTAssertEqual(b.type(of: f2), .functionAndConstructor(signature2))
@@ -554,7 +554,7 @@ class JSTyperTests: XCTestCase {
             XCTAssertEqual(b.type(of: v), .integer)
             let stringVar = b.loadString("foobar")
             b.reassign(v, to: stringVar)
-            XCTAssertEqual(b.type(of: v), .string)
+            XCTAssertEqual(b.type(of: v), .jsString)
         }, elseBody: {
             XCTAssertEqual(b.type(of: obj), .object(ofGroup: "_fuzz_Object0", withProperties: ["foo"]))
             b.setProperty("bar", of: obj, to: v)
@@ -566,7 +566,7 @@ class JSTyperTests: XCTestCase {
             b.reassign(v, to: floatVar)
         })
 
-        XCTAssertEqual(b.type(of: v), .string | .float)
+        XCTAssertEqual(b.type(of: v), .string | .float | .object() | .iterable)
         XCTAssertEqual(b.type(of: obj), .object(ofGroup: "_fuzz_Object0", withProperties: ["foo", "bar"]))
 
         // Test another program using if/else
@@ -583,8 +583,8 @@ class JSTyperTests: XCTestCase {
             b.reassign(v1, to: b.loadString("bar"))
         })
 
-        XCTAssertEqual(b.type(of: v0), .string | .integer)
-        XCTAssertEqual(b.type(of: v1), .string)
+        XCTAssertEqual(b.type(of: v0), .integer | .jsString)
+        XCTAssertEqual(b.type(of: v1), .jsString)
 
 
         // Test another program using just if
@@ -596,7 +596,7 @@ class JSTyperTests: XCTestCase {
             b.reassign(i, to: b.loadString("foo"))
         }
 
-        XCTAssertEqual(b.type(of: i), .string | .integer)
+        XCTAssertEqual(b.type(of: i), .integer | .jsString)
     }
 
     func testDeeplyNestedBlocksHandling() {
@@ -610,24 +610,24 @@ class JSTyperTests: XCTestCase {
             b.buildIfElse(v, ifBody: {
                 b.buildIfElse(v, ifBody: {
                     b.reassign(v, to: b.loadString("foo"))
-                    XCTAssertEqual(b.type(of: v), .string)
+                    XCTAssertEqual(b.type(of: v), .jsString)
                 }, elseBody: {
                     XCTAssertEqual(b.type(of: v), .integer)
                     b.reassign(v, to: b.loadBool(true))
                     XCTAssertEqual(b.type(of: v), .boolean)
                 })
 
-                XCTAssertEqual(b.type(of: v), .string | .boolean)
+                XCTAssertEqual(b.type(of: v), .boolean | .jsString)
             }, elseBody: {
                 XCTAssertEqual(b.type(of: v), .integer)
             })
 
-            XCTAssertEqual(b.type(of: v), .string | .boolean | .integer)
+            XCTAssertEqual(b.type(of: v), .boolean | .integer | .jsString)
         }, elseBody: {
             XCTAssertEqual(b.type(of: v), .integer)
         })
 
-        XCTAssertEqual(b.type(of: v), .string | .boolean | .integer)
+        XCTAssertEqual(b.type(of: v), .boolean | .integer | .jsString)
     }
 
     func testFunctionReassignment() {
@@ -642,7 +642,7 @@ class JSTyperTests: XCTestCase {
             }
             XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
             b.reassign(f, to: b.loadString("foo"))
-            XCTAssertEqual(b.type(of: f), .string)
+            XCTAssertEqual(b.type(of: f), .jsString)
         }
     }
 
@@ -661,7 +661,7 @@ class JSTyperTests: XCTestCase {
                 XCTAssertEqual(b.type(of: obj), .object(ofGroup: "_fuzz_Object0", withProperties: ["foo"]))
                 b.setProperty("bar", of: obj, to: intVar1)
 
-                XCTAssertEqual(b.type(of: v), .string)
+                XCTAssertEqual(b.type(of: v), .jsString)
                 let floatVar = b.loadFloat(13.37)
                 b.reassign(v, to: floatVar)
 
@@ -705,7 +705,7 @@ class JSTyperTests: XCTestCase {
             XCTAssertEqual(b.type(of: intVar1), .integer)
             XCTAssertEqual(b.type(of: intVar2), .integer)
             XCTAssertEqual(b.type(of: intVar3), .integer)
-            XCTAssertEqual(b.type(of: v), .string | .float)
+            XCTAssertEqual(b.type(of: v), .float | .jsString)
             XCTAssertEqual(b.type(of: obj), .object(ofGroup: "_fuzz_Object0", withProperties: ["foo"]))
 
             b.reset()
@@ -717,7 +717,7 @@ class JSTyperTests: XCTestCase {
         let builtinBType = ILType.object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"])
         let builtinCType = ILType.function([] => .number)
 
-        let env = MockEnvironment(builtins: [
+        let env = JavaScriptEnvironment(additionalBuiltins: [
             "A": builtinAType,
             "B": builtinBType,
             "C": builtinCType
@@ -739,14 +739,20 @@ class JSTyperTests: XCTestCase {
         let propFooType = ILType.float
         let propBarType = ILType.function([] => .jsAnything)
         let propBazType = ILType.object(withProperties: ["a", "b", "c"])
-        let propertiesByGroup: [String: [String: ILType]] = [
-            "B": [
-                "foo": propFooType,
-                "bar": propBarType
-            ],
-            "C": [
-                "baz": propBazType,
-            ]
+        let additionalObjectGroups: [ObjectGroup] = [
+            ObjectGroup(name: "B",
+                        instanceType: .object(ofGroup: "B", withProperties: ["foo", "bar"]),
+                properties:  [
+                    "foo": propFooType,
+                    "bar": propBarType
+                    ],
+                overloads: [:]),
+            ObjectGroup(name: "C",
+                        instanceType: .object(ofGroup: "C", withProperties: ["baz"]),
+                properties: [
+                    "baz": propBazType,
+                    ],
+                overloads: [:])
         ]
 
         let builtins: [String: ILType] = [
@@ -754,7 +760,7 @@ class JSTyperTests: XCTestCase {
             "C": .object(ofGroup: "C")
         ]
 
-        let env = MockEnvironment(builtins: builtins, propertiesByGroup: propertiesByGroup)
+        let env = JavaScriptEnvironment(additionalBuiltins: builtins, additionalObjectGroups: additionalObjectGroups)
 
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
@@ -790,13 +796,15 @@ class JSTyperTests: XCTestCase {
     func testMethodTypeInference() {
         let m1Signature = [] => .float
         let m2Signature = [.string] => .object(ofGroup: "X")
-        let methodsByGroup: [String: [String: Signature]] = [
-            "B": [
-                "m1": m1Signature,
-            ],
-            "C": [
-                "m2": m2Signature,
-            ]
+        let groups: [ObjectGroup] = [
+            ObjectGroup(name: "B",
+                        instanceType: .object(ofGroup: "B", withMethods: ["m1"]),
+                        properties: [:],
+                        methods: ["m1": m1Signature]),
+            ObjectGroup(name: "C",
+                        instanceType: .object(ofGroup: "C", withMethods: ["m2"]),
+                        properties: [:],
+                        methods: ["m2": m2Signature]),
         ]
 
         let builtins: [String: ILType] = [
@@ -804,7 +812,7 @@ class JSTyperTests: XCTestCase {
             "C": .object(ofGroup: "C")
         ]
 
-        let env = MockEnvironment(builtins: builtins, methodsByGroup: methodsByGroup)
+        let env = JavaScriptEnvironment(additionalBuiltins: builtins, additionalObjectGroups: groups)
 
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
@@ -831,7 +839,7 @@ class JSTyperTests: XCTestCase {
             "A": aConstructorType,
         ]
 
-        let env = MockEnvironment(builtins: builtins)
+        let env = JavaScriptEnvironment(additionalBuiltins: builtins)
 
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
@@ -864,7 +872,7 @@ class JSTyperTests: XCTestCase {
             "a": aFunctionType,
         ]
 
-        let env = MockEnvironment(builtins: builtins)
+        let env = JavaScriptEnvironment(additionalBuiltins: builtins)
 
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
@@ -882,36 +890,14 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: r), .jsAnything)
     }
 
-    func testPrimitiveTypesOverride() {
-        let env = MockEnvironment(builtins: [:])
-        env.intType = .integer + .object(ofGroup: "Number")
-        env.floatType = .float + .object(ofGroup: "Number")
-        env.booleanType = .boolean + .object(ofGroup: "Number")
-        env.stringType = .string + .object(ofGroup: "Number")
-
-        let fuzzer = makeMockFuzzer(environment: env)
-        let b = fuzzer.makeBuilder()
-
-        let iv = b.loadInt(42)
-        let fv = b.loadFloat(13.37)
-        let bv = b.loadBool(true)
-        let sv = b.loadString("foobar")
-
-        XCTAssertEqual(b.type(of: iv), env.intType)
-        XCTAssertEqual(b.type(of: fv), env.floatType)
-        XCTAssertEqual(b.type(of: bv), env.booleanType)
-        XCTAssertEqual(b.type(of: sv), env.stringType)
-    }
-
     func testArrayCreation() {
-        let env = MockEnvironment(builtins: [:])
-        env.arrayType = .object(ofGroup: "Array")
+        let env = JavaScriptEnvironment()
 
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
         let a = b.createArray(with: [])
-        XCTAssertEqual(b.type(of: a), .object(ofGroup: "Array"))
+        XCTAssertEqual(b.type(of: a), ILType.jsArray)
     }
 
     func testSuperBinding() {
@@ -1032,8 +1018,8 @@ class JSTyperTests: XCTestCase {
             b.reassign(v2, to: b.loadString("bar"))
         }
 
-        XCTAssertEqual(b.type(of: v1), .string)
-        XCTAssertEqual(b.type(of: v2), .integer | .string)
+        XCTAssertEqual(b.type(of: v1), .jsString)
+        XCTAssertEqual(b.type(of: v2), .integer | .jsString)
     }
 
     func testDoWhileLoopHandling() {
@@ -1047,8 +1033,8 @@ class JSTyperTests: XCTestCase {
             b.reassign(v2, to: b.loadString("foo"))
         }, while: { b.reassign(v1, to: b.loadString("bar")); return b.loadBool(false) })
 
-        XCTAssertEqual(b.type(of: v1), .string)
-        XCTAssertEqual(b.type(of: v2), .string)
+        XCTAssertEqual(b.type(of: v1), .jsString)
+        XCTAssertEqual(b.type(of: v2), .jsString)
     }
 
     func testForLoopHandling() {
@@ -1072,10 +1058,10 @@ class JSTyperTests: XCTestCase {
             b.reassign(v4, to: b.loadString("bla"))
         }
 
-        XCTAssertEqual(b.type(of: v1), .string)
-        XCTAssertEqual(b.type(of: v2), .string)
-        XCTAssertEqual(b.type(of: v3), .integer | .string)
-        XCTAssertEqual(b.type(of: v4), .integer | .string)
+        XCTAssertEqual(b.type(of: v1), .jsString)
+        XCTAssertEqual(b.type(of: v2), .jsString)
+        XCTAssertEqual(b.type(of: v3), .integer | .jsString)
+        XCTAssertEqual(b.type(of: v4), .integer | .jsString)
     }
 
     func testForLoopLoopVariableTyping() {
@@ -1122,7 +1108,7 @@ class JSTyperTests: XCTestCase {
                 XCTAssertEqual(b.type(of: v0), .integer)
                 let stringVar = b.loadString("foobar")
                 b.reassign(v0, to: stringVar)
-                XCTAssertEqual(b.type(of: v0), .string)
+                XCTAssertEqual(b.type(of: v0), .jsString)
             }
             swtch.addDefaultCase {
                 XCTAssertEqual(b.type(of: v1), .object(ofGroup: "_fuzz_Object0", withProperties: ["foo"]))
@@ -1148,10 +1134,10 @@ class JSTyperTests: XCTestCase {
             }
         }
 
-        XCTAssertEqual(b.type(of: v0), .float | .string | .boolean)
+        XCTAssertEqual(b.type(of: v0), .float | .boolean | .jsString)
         XCTAssertEqual(b.type(of: v1), .object(ofGroup: "_fuzz_Object0", withProperties: ["foo", "bar"]))
         XCTAssertEqual(b.type(of: v3), .integer)
-        XCTAssertEqual(b.type(of: v4), .string)
+        XCTAssertEqual(b.type(of: v4), .jsString)
     }
 
     func testSwitchStatementHandling2() {
@@ -1169,7 +1155,7 @@ class JSTyperTests: XCTestCase {
         }
 
         XCTAssertEqual(b.type(of: i1), .integer)
-        XCTAssertEqual(b.type(of: i2), .string)
+        XCTAssertEqual(b.type(of: i2), .jsString)
     }
 
     func testSwitchStatementHandling3() {
@@ -1184,19 +1170,19 @@ class JSTyperTests: XCTestCase {
 
         b.buildSwitch(on: i1) { swtch in
             swtch.addCase(i2) {
-                XCTAssertEqual(b.type(of: v), .string)
+                XCTAssertEqual(b.type(of: v), .jsString)
                 b.reassign(v, to: b.loadFloat(13.37))
                 XCTAssertEqual(b.type(of: v), .float)
             }
 
             swtch.addCase(i3) {
-                XCTAssertEqual(b.type(of: v), .string)
+                XCTAssertEqual(b.type(of: v), .jsString)
                 b.reassign(v, to: b.loadBool(false))
                 XCTAssertEqual(b.type(of: v), .boolean)
             }
         }
 
-        XCTAssertEqual(b.type(of: v), .string | .float | .boolean)
+        XCTAssertEqual(b.type(of: v), .float | .boolean | .jsString)
     }
 
     func testSwitchStatementHandling4() {
@@ -1211,15 +1197,18 @@ class JSTyperTests: XCTestCase {
     }
 
     func testDestructObjectTypeInference() {
-        let objectGroups: [String: [String: ILType]] = [
-            "O": [
-                "foo": .integer,
-                "bar": .string,
-                "baz": .boolean
-            ],
+        let objectGroups: [ObjectGroup] = [
+            ObjectGroup(name: "O",
+                        instanceType: .object(ofGroup: "O", withProperties: ["foo", "bar", "baz"]),
+                        properties: [
+                            "foo": .integer,
+                            "bar": .string,
+                            "baz": .boolean
+                        ],
+                        methods: [:])
         ]
 
-        let env = MockEnvironment(builtins: [:], propertiesByGroup: objectGroups)
+        let env = JavaScriptEnvironment(additionalBuiltins: [:], additionalObjectGroups: objectGroups)
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
@@ -1318,7 +1307,7 @@ class JSTyperTests: XCTestCase {
         // `this` isn't bound to `object`. The type system should still correctly infer the
         // signatures of such functions.
         let fooProperty = b.getProperty("foo", of: object)
-        XCTAssertEqual(b.type(of: fooProperty), .function([] => .string))
+        XCTAssertEqual(b.type(of: fooProperty), .function([] => .jsString))
 
         // Actions like `setProperty` modify the ILType but do not modify any information stored in
         // the ObjectGroupManager.
@@ -1326,7 +1315,7 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: object),
             .object(ofGroup: "_fuzz_Object0", withProperties: ["foo"], withMethods: ["foo"]))
         let fooPropertyNew = b.getProperty("foo", of: object)
-        XCTAssertEqual(b.type(of: fooPropertyNew), .function([] => .string))
+        XCTAssertEqual(b.type(of: fooPropertyNew), .function([] => .jsString))
     }
 
     func testTypingOfDuplicateProperties() {
@@ -1342,7 +1331,7 @@ class JSTyperTests: XCTestCase {
 
         XCTAssertEqual(b.type(of: object), .object(ofGroup: "_fuzz_Object0", withProperties: ["foo"]))
         let fooProperty = b.getProperty("foo", of: object)
-        XCTAssertEqual(b.type(of: fooProperty), .string)
+        XCTAssertEqual(b.type(of: fooProperty), .jsString)
         let fooResult = b.callMethod("foo", on: object)
         XCTAssertEqual(b.type(of: fooResult), .jsAnything)
     }
@@ -1386,7 +1375,7 @@ class JSTyperTests: XCTestCase {
         let fooProperty = b.getProperty("foo", of: object)
         XCTAssertEqual(b.type(of: fooProperty), .integer)
         let fooResult = b.callMethod("foo", on: object)
-        XCTAssertEqual(b.type(of: fooResult), .string)
+        XCTAssertEqual(b.type(of: fooResult), .jsString)
     }
 
     func testDynamicObjectGroupTypingOfClassesWithGettersAndSetters() {
@@ -1435,7 +1424,7 @@ class JSTyperTests: XCTestCase {
 
         let instance = b.construct(classDef, withArgs: [b.loadInt(42)])
 
-        XCTAssertEqual(b.methodSignatures(of: "f", on: instance), [[.float] => .string])
+        XCTAssertEqual(b.methodSignatures(of: "f", on: instance), [[.float] => .jsString])
         XCTAssertEqual(b.type(ofProperty: "foo", on: instance), .bigint)
         XCTAssertEqual(b.type(ofProperty: "bar", on: instance), .jsAnything)
         XCTAssertEqual(b.type(ofProperty: "baz", on: instance), .undefined)
@@ -1495,7 +1484,7 @@ class JSTyperTests: XCTestCase {
 
         let instance = b.construct(cls, withArgs: [b.loadString("bla")])
 
-        XCTAssertEqual(b.methodSignatures(of: "f", on: instance), [[.float] => .string])
+        XCTAssertEqual(b.methodSignatures(of: "f", on: instance), [[.float] => .jsString])
         XCTAssertEqual(b.methodSignatures(of: "g", on: instance), [[.jsAnything] => .undefined])
         XCTAssertEqual(b.type(ofProperty: "a", on: instance), .jsAnything)
     }
