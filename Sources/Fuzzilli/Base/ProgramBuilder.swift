@@ -90,9 +90,9 @@ public class ProgramBuilder {
     /// This budget is used in `findOrGenerateArguments(forSignature)` and tracks the upper limit of variables that that function should emit.
     /// If that upper limit is reached the function will stop generating new variables and use existing ones instead.
     /// If this value is set to nil, there is no argument generation happening, every argument generation should enter the recursive function (findOrGenerateArgumentsInternal) through the public non-internal one.
-    private var argumentGenerationVariableBudget: Int? = nil
+    private var argumentGenerationVariableBudget: Stack<Int> = Stack()
     /// This is the top most signature that was requested when `findOrGeneratorArguments(forSignature)` was called, this is helpful for debugging.
-    private var argumentGenerationSignature: Signature? = nil
+    private var argumentGenerationSignature: Stack<Signature> = Stack()
 
     /// Stack of active object literals.
     ///
@@ -512,13 +512,12 @@ public class ProgramBuilder {
     public func findOrGenerateArguments(forSignature signature: Signature, maxNumberOfVariablesToGenerate: Int = 100) -> [Variable] {
         assert(context.contains(.javascript))
 
-        assert(argumentGenerationVariableBudget == nil)
-        argumentGenerationVariableBudget = numVariables + maxNumberOfVariablesToGenerate
-        argumentGenerationSignature = signature
+        argumentGenerationVariableBudget.push(numVariables + maxNumberOfVariablesToGenerate)
+        argumentGenerationSignature.push(signature)
 
         defer {
-            argumentGenerationVariableBudget = nil
-            argumentGenerationSignature = nil
+            argumentGenerationVariableBudget.pop()
+            argumentGenerationSignature.pop()
         }
 
         return findOrGenerateArgumentsInternal(forSignature: signature)
@@ -554,9 +553,9 @@ public class ProgramBuilder {
 
         // Before we do any generation below, let's take into account that we already create a variable with this invocation, i.e. the createObject at the end.
         // Therefore we need to decrease the budget here temporarily.
-        self.argumentGenerationVariableBudget! -= 1
+        self.argumentGenerationVariableBudget.top -= 1
         // We defer the increase again, because at that point the variable is actually visible, i.e. `numVariables` was increased through the `createObject` call.
-        defer { self.argumentGenerationVariableBudget! += 1 }
+        defer { self.argumentGenerationVariableBudget.top += 1 }
 
         var properties: [String: Variable] = [:]
 
@@ -571,12 +570,12 @@ public class ProgramBuilder {
 
     public func findOrGenerateType(_ type: ILType, maxNumberOfVariablesToGenerate: Int = 100) -> Variable {
         assert(context.contains(.javascript))
-        assert(argumentGenerationVariableBudget == nil)
+//        assert(argumentGenerationVariableBudget == nil)
 
-        argumentGenerationVariableBudget = numVariables + maxNumberOfVariablesToGenerate
+        argumentGenerationVariableBudget.push(numVariables + maxNumberOfVariablesToGenerate)
 
         defer {
-            argumentGenerationVariableBudget = nil
+            argumentGenerationVariableBudget.pop()
         }
 
         return generateTypeInternal(type)
@@ -589,9 +588,9 @@ public class ProgramBuilder {
             }
         }
 
-        if numVariables >= argumentGenerationVariableBudget! {
-            if argumentGenerationSignature != nil {
-              logger.warning("Reached variable generation limit in generateType for Signature: \(argumentGenerationSignature!), returning a random variable for use as type \(type).")
+        if numVariables >= argumentGenerationVariableBudget.top {
+            if !argumentGenerationSignature.isEmpty {
+                logger.warning("Reached variable generation limit in generateType for Signature: \(argumentGenerationSignature.top), returning a random variable for use as type \(type).")
             } else {
               logger.warning("Reached variable generation limit in generateType, returning a random variable for use as type \(type).")
             }
