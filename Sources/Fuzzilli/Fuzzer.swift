@@ -52,7 +52,7 @@ public class Fuzzer {
     public let evaluator: ProgramEvaluator
 
     /// The model of the target environment.
-    public let environment: Environment
+    public let environment: JavaScriptEnvironment
 
     /// The lifter to translate FuzzIL programs to the target language.
     public let lifter: Lifter
@@ -157,7 +157,7 @@ public class Fuzzer {
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
         codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator,
-        environment: Environment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
+        environment: JavaScriptEnvironment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         let uniqueId = UUID()
         self.id = uniqueId

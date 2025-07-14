@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-public class JavaScriptEnvironment: ComponentBase, Environment {
+public class JavaScriptEnvironment: ComponentBase {
     // Possible return values of the 'typeof' operator.
     public static let jsTypeNames = ["undefined", "boolean", "number", "string", "symbol", "function", "object", "bigint"]
 
@@ -278,18 +278,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     ]
 
     public let interestingRegExpQuantifiers = ["*", "+", "?"]
-
-    public let intType = ILType.integer
-    public let bigIntType = ILType.bigint
-    public let floatType = ILType.float
-    public let booleanType = ILType.boolean
-    public let regExpType = ILType.jsRegExp
-    public let stringType = ILType.jsString
-    public let emptyObjectType = ILType.object()
-    public let arrayType = ILType.jsArray
-    public let argumentsType = ILType.jsArguments
-    public let generatorType = ILType.jsGenerator
-    public let promiseType = ILType.jsPromise
 
     /// Identifiers that should be used for custom properties and methods.
     public static let CustomPropertyNames = ["a", "b", "c", "d", "e", "f", "g", "h"]

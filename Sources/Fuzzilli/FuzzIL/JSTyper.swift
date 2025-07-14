@@ -20,7 +20,7 @@ public struct JSTyper: Analyzer {
     //    only the first singular operation is executed at runtime)
 
     // The environment model from which to obtain various pieces of type information.
-    private let environment: Environment
+    private let environment: JavaScriptEnvironment
 
     // The current state
     private var state = AnalyzerState()
@@ -392,7 +392,7 @@ public struct JSTyper: Analyzer {
     // The index of the last instruction that was processed. Just used for debug assertions.
     private var indexOfLastInstruction = -1
 
-    init(for environ: Environment) {
+    init(for environ: JavaScriptEnvironment) {
         self.environment = environ
     }
 
@@ -992,9 +992,10 @@ public struct JSTyper: Analyzer {
         case .beginConstructor(let op):
             set(instr.output, .constructor(inferSubroutineParameterList(of: op, at: instr.index) => .jsAnything))
         case .beginCodeString:
-            set(instr.output, .string)
+            set(instr.output, .jsString)
         case .beginClassDefinition(let op):
-            var superType = environment.emptyObjectType
+            // The empty object type.
+            var superType = ILType.object()
             var superConstructorType: ILType = .nothing
             if op.hasSuperclass {
                 superConstructorType = state.type(of: instr.input(0))
@@ -1166,10 +1167,10 @@ public struct JSTyper: Analyzer {
                     switch begin.op.opcode {
                     case .beginGeneratorFunction,
                          .beginAsyncGeneratorFunction:
-                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => environment.generatorType))
+                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => .jsGenerator))
                     case .beginAsyncFunction,
                          .beginAsyncArrowFunction:
-                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => environment.promiseType))
+                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => .jsPromise))
                     default:
                         setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => returnValueType))
                     }
@@ -1296,30 +1297,30 @@ public struct JSTyper: Analyzer {
             var allInputsAreBigint = true
             for i in 0..<instr.numInputs {
                 if type(ofInput: i).MayBe(.bigint) {
-                    outputType |= environment.bigIntType
+                    outputType |= .bigint
                 }
                 if !type(ofInput: i).Is(.bigint) {
                     allInputsAreBigint = false
                 }
             }
-            return allInputsAreBigint ? environment.bigIntType : outputType
+            return allInputsAreBigint ? .bigint : outputType
         }
 
         switch instr.op.opcode {
         case .loadInteger:
-            set(instr.output, environment.intType)
+            set(instr.output, .integer)
 
         case .loadBigInt:
-            set(instr.output, environment.bigIntType)
+            set(instr.output, .bigint)
 
         case .loadFloat:
-            set(instr.output, environment.floatType)
+            set(instr.output, .float)
 
         case .loadString:
-            set(instr.output, environment.stringType)
+            set(instr.output, .jsString)
 
         case .loadBoolean:
-            set(instr.output, environment.booleanType)
+            set(instr.output, .boolean)
 
         case .loadUndefined:
             set(instr.output, .undefined)
@@ -1331,7 +1332,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, .object())
 
         case .loadArguments:
-            set(instr.output, environment.argumentsType)
+            set(instr.output, .jsArguments)
 
         case .createNamedVariable(let op):
             if op.hasInitialValue {
@@ -1352,7 +1353,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, .function() | .undefined)
 
         case .loadRegExp:
-            set(instr.output, environment.regExpType)
+            set(instr.output, .jsRegExp)
 
         case .beginObjectLiteral:
             dynamicObjectGroupManager.createNewObjectLiteral()
@@ -1465,10 +1466,10 @@ public struct JSTyper: Analyzer {
              .createIntArray,
              .createFloatArray,
              .createArrayWithSpread:
-            set(instr.output, environment.arrayType)
+            set(instr.output, .jsArray)
 
         case .createTemplateString:
-            set(instr.output, environment.stringType)
+            set(instr.output, .jsString)
 
         case .getProperty(let op):
             set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
@@ -1587,7 +1588,7 @@ public struct JSTyper: Analyzer {
             }
             if op.hasRestElement {
                 // TODO: Add the subset of object properties and methods captured by the rest element
-                set(instr.outputs.last!, environment.emptyObjectType)
+                set(instr.outputs.last!, .object())
             }
 
         case .destructObjectAndReassign(let op):
@@ -1596,7 +1597,7 @@ public struct JSTyper: Analyzer {
             }
             if op.hasRestElement {
                 // TODO: Add the subset of object properties and methods captured by the rest element
-                set(instr.inputs.last!, environment.emptyObjectType)
+                set(instr.inputs.last!, .object())
             }
 
         case .compare:
@@ -1803,7 +1804,7 @@ public struct JSTyper: Analyzer {
                 types.append(t | .undefined)
             case .rest:
                 // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
-                types.append(environment.arrayType)
+                types.append(.jsArray)
             }
         }
         return types

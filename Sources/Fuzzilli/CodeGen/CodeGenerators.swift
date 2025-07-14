@@ -802,7 +802,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     RecursiveCodeGenerator("StrictModeFunctionGenerator") { b in
         // We could consider having a standalone DirectiveGenerator, but probably most of the time it won't do anything meaningful.
-        // We could also consider keeping a list of known directives in the Environment, but currently we only use 'use strict'.
+        // We could also consider keeping a list of known directives in the JavaScriptEnvironment, but currently we only use 'use strict'.
         let f = b.buildPlainFunction(with: b.randomParameters()) { _ in
             b.directive("use strict")
             b.buildRecursive()

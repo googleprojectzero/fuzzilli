@@ -34,7 +34,7 @@ public class JavaScriptLifter: Lifter {
     let version: ECMAScriptVersion
 
     /// This environment is used if we need to re-type a program before we compile Wasm code.
-    private var environment: Environment?
+    private var environment: JavaScriptEnvironment?
 
     /// Counter to assist the lifter in detecting nested CodeStrings
     private var codeStringNestingLevel = 0
@@ -64,7 +64,7 @@ public class JavaScriptLifter: Lifter {
     public init(prefix: String = "",
                 suffix: String = "",
                 ecmaVersion: ECMAScriptVersion,
-                environment: Environment? = nil) {
+                environment: JavaScriptEnvironment? = nil) {
         self.prefix = prefix
         self.suffix = suffix
         self.version = ecmaVersion

@@ -31,10 +31,7 @@
 /// roughly the right type.
 struct DataFlowSimplifier: Reducer {
     func reduce(with helper: MinimizationHelper) {
-        // Compute all candidates: intermediate operations in a data flow chain.
-        // Using a MockEnvironment here for simplicity. The typing is only needed for wasm
-        // operations, so we don't need a full environment.
-        var typer = JSTyper(for: MockEnvironment(builtins: [:]))
+        var typer = JSTyper(for: helper.fuzzer.environment)
         var candidates = [Int]()
         var uses = VariableMap<Int>()
         for instr in helper.code {
