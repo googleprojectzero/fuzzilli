@@ -1779,6 +1779,29 @@ class WasmFoundationTests: XCTestCase {
             }
         }
 
+        let floatToByteArray = { (values: [Float]) -> [UInt8] in
+            assert(values.count == 4)
+            var byteArray: [UInt8] = []
+            for value in values {
+                var bits = value.bitPattern.littleEndian
+                let data = Data(bytes: &bits, count: MemoryLayout<UInt32>.size)
+                byteArray.append(contentsOf: data)
+            }
+            return byteArray
+        }
+
+        let doubleToByteArray = { (values: [Double]) -> [UInt8] in
+            assert(values.count == 2)
+            var byteArray: [UInt8] = []
+            for value in values {
+                var bits = value.bitPattern.littleEndian
+                let data = Data(bytes: &bits, count: MemoryLayout<UInt64>.size)
+                byteArray.append(contentsOf: data)
+            }
+            return byteArray
+        }
+
+
         let testCases: [((ProgramBuilder.WasmModule) -> Void, String)] = [
             // Test q15mulr_sat_s
             ({wasmModule in
@@ -2185,6 +2208,60 @@ class WasmFoundationTests: XCTestCase {
                     return [result]
                 }
             }, "3851"),
+            // Test relaxed_trunc_f32x4_s
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([0.0 / 0.0, 1.5, -2.5, Float.greatestFiniteMagnitude]))
+                    let result = function.wasmSimd128IntegerUnOp(varA, WasmSimd128Shape.i32x4, WasmSimd128IntegerUnOpKind.relaxed_trunc_f32x4_s)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "(0|-2147483648),1,-2,(2147483647|-2147483648)"),
+            // Test relaxed_trunc_f32x4_u
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([0.0 / 0.0, 1.5, -2.5, Float.greatestFiniteMagnitude]))
+                    let result = function.wasmSimd128IntegerUnOp(varA, WasmSimd128Shape.i32x4, WasmSimd128IntegerUnOpKind.relaxed_trunc_f32x4_u)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "(0|-1),1,(0|-1),-1"), // note: we use -1 to denote UINT32_MAX as it is pain to make .wasmi32 represented as unsigned integer
+            // Test relaxed_trunc_f64x2_s_zero corner cases
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: doubleToByteArray([0.0 / 0.0, Double.greatestFiniteMagnitude]))
+                    let result = function.wasmSimd128IntegerUnOp(varA, WasmSimd128Shape.i32x4, WasmSimd128IntegerUnOpKind.relaxed_trunc_f64x2_s_zero)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "(0|-2147483648),(2147483647|-2147483648),0,0"),
+            // Test relaxed_trunc_f64x2_s_zero standard cases
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: doubleToByteArray([-3.5, 7.6]))
+                    let result = function.wasmSimd128IntegerUnOp(varA, WasmSimd128Shape.i32x4, WasmSimd128IntegerUnOpKind.relaxed_trunc_f64x2_s_zero)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "-3,7,0,0"),
+            // Test relaxed_trunc_f64x2_u_zero corner cases
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: doubleToByteArray([0.0 / 0.0, Double.greatestFiniteMagnitude]))
+                    let result = function.wasmSimd128IntegerUnOp(varA, WasmSimd128Shape.i32x4, WasmSimd128IntegerUnOpKind.relaxed_trunc_f64x2_u_zero)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "(0|-1),(0|-1),0,0"), // note: we use -1 to denote UINT32_MAX as it is pain to make .wasmi32 represented as unsigned integer
+            // Test relaxed_trunc_f64x2_u_zero standard cases
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: doubleToByteArray([-3.5, 7.6]))
+                    let result = function.wasmSimd128IntegerUnOp(varA, WasmSimd128Shape.i32x4, WasmSimd128IntegerUnOpKind.relaxed_trunc_f64x2_u_zero)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            }, "(0|-1),7,0,0"), // note: we use -1 to denote UINT32_MAX as it is pain to make .wasmi32 represented as unsigned integer
         ]
 
         let module = b.buildWasmModule { wasmModule in

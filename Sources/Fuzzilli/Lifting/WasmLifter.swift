@@ -1863,7 +1863,7 @@ public class WasmLifter {
         case .constSimd128(let op):
             return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(12) + Data(op.value)
         case .wasmSimd128IntegerUnOp(let op):
-            assert(WasmSimd128IntegerUnOpKind.allCases.count == 13, "New WasmSimd128IntegerUnOpKind added: check if the encoding is still correct!")
+            assert(WasmSimd128IntegerUnOpKind.allCases.count == 17, "New WasmSimd128IntegerUnOpKind added: check if the encoding is still correct!")
             let base = switch op.shape {
                 case .i8x16: 0x5C
                 case .i16x8: 0x7C

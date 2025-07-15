@@ -1419,6 +1419,11 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
     case extend_low_u            = 13
     case extend_high_u           = 14
 
+    case relaxed_trunc_f32x4_s      = 101
+    case relaxed_trunc_f32x4_u      = 102
+    case relaxed_trunc_f64x2_s_zero = 103
+    case relaxed_trunc_f64x2_u_zero = 104
+
     func isValidForShape(shape: WasmSimd128Shape) -> Bool {
         if shape.isFloat() { return false }
         switch self {
@@ -1435,6 +1440,11 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
         case .extend_high_s:            return shape != .i8x16
         case .extend_low_u:             return shape != .i8x16
         case .extend_high_u:            return shape != .i8x16
+
+        case .relaxed_trunc_f32x4_s:      return shape == .i32x4
+        case .relaxed_trunc_f32x4_u:      return shape == .i32x4
+        case .relaxed_trunc_f64x2_s_zero: return shape == .i32x4
+        case .relaxed_trunc_f64x2_u_zero: return shape == .i32x4
         }
     }
 }
