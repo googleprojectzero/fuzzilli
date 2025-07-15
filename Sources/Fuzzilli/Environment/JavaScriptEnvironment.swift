@@ -1378,7 +1378,8 @@ public extension ObjectGroup {
         name: "ArrayConstructor",
         instanceType: .jsArrayConstructor,
         properties: [
-            "prototype" : .object()
+            // This might seem wrong, note however that `Array.isArray(Array.prototype)` is true.
+            "prototype" : .jsArray,
         ],
         methods: [
             "from"    : [.jsAnything, .opt(.function()), .opt(.object())] => .jsArray,
