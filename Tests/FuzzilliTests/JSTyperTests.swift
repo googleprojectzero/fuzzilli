@@ -1625,4 +1625,22 @@ class JSTyperTests: XCTestCase {
         let reexportedJsTag = b.getProperty("iwex0", of: exports)
         XCTAssertEqual(b.type(of: reexportedJsTag), b.type(of: jsTag))
     }
+
+    func testArrayBuiltinPrototype() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let arrayBuiltin = b.createNamedVariable(forBuiltin: "Array")
+        XCTAssert(b.type(of: arrayBuiltin).Is(.object(ofGroup: "ArrayConstructor")))
+        let arrayProto = b.getProperty("prototype", of: arrayBuiltin)
+        XCTAssert(b.type(of: arrayProto).Is(.object(ofGroup: "Array")))
+        let signatures = b.methodSignatures(of: "indexOf", on: arrayProto)
+        XCTAssertEqual([[.jsAnything, .opt(.integer)] => .integer], signatures)
+        // TODO(mliedtke): It would be nice if we could type this correctly. Note however that
+        // calling this with an unbound `this` will throw an exception, so typing it correctly will
+        // probably lower Fuzzilli's correctness rate as Fuzzilli's signatures don't have a
+        // receiver.
+        let indexOf = b.getProperty("indexOf", of: arrayProto)
+        XCTAssert(b.type(of: indexOf).Is(.jsAnything))
+    }
 }
