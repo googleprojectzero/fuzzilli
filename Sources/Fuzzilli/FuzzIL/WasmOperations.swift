@@ -1484,6 +1484,11 @@ public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
     case extmul_low_u  = 34
     case extmul_high_u = 35
 
+    case relaxed_q15_mulr_s         = 149
+    case relaxed_dot_i8x16_i7x16_s  = 150
+
+    case relaxed_swizzle            = 164
+
     func isValidForShape(shape: WasmSimd128Shape) -> Bool {
         if shape.isFloat() { return false }
         switch self {
@@ -1510,6 +1515,10 @@ public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
         case .extmul_high_s: return shape != .i8x16
         case .extmul_low_u:  return shape != .i8x16
         case .extmul_high_u: return shape != .i8x16
+
+        case .relaxed_q15_mulr_s:         return shape == .i16x8
+        case .relaxed_dot_i8x16_i7x16_s:  return shape == .i16x8
+        case .relaxed_swizzle:            return shape == .i8x16
         }
     }
 }

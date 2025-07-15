@@ -1887,7 +1887,7 @@ public class WasmLifter {
             }
             return encoding
         case .wasmSimd128IntegerBinOp(let op):
-            assert(WasmSimd128IntegerBinOpKind.allCases.count == 23, "New WasmSimd128IntegerBinOpKind added: check if the encoding is still correct!")
+            assert(WasmSimd128IntegerBinOpKind.allCases.count == 26, "New WasmSimd128IntegerBinOpKind added: check if the encoding is still correct!")
             let base = switch op.shape {
                 case .i8x16: 0x5C
                 case .i16x8: 0x7C
