@@ -415,6 +415,41 @@ fileprivate let RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
     b.build(n: 15)
 }
 
+// Emits calls with recursive calls of limited depth.
+fileprivate let LazyDeoptFuzzer = ProgramTemplate("LazyDeoptFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 30)
+
+    let counter = b.loadInt(0)
+    let max = b.loadInt(Int64.random(in: 2...5))
+    let params = b.randomParameters()
+    let dummyFct = b.buildPlainFunction(with: params) { args in
+        b.loadString("Dummy function for emitting recursive call")
+    }
+    let realFct = b.buildPlainFunction(with: params) { args in
+        b.build(n: 10)
+
+        b.buildIf(b.compare(counter, with: max, using: .lessThan)) {
+            b.reassign(counter, to: b.binary(counter, b.loadInt(1), with: .Add))
+            b.callFunction(dummyFct, withArgs: b.randomArguments(forCalling: dummyFct))
+        }
+        // Mark the function for deoptimization. Due to the recursive pattern above, on the outer
+        // stack frames this should trigger a lazy deoptimization.
+        b.eval("%DeoptimizeNow();");
+        b.build(n: 30)
+        b.doReturn(b.randomJsVariable())
+    }
+
+    // Turn the call into a recursive call.
+    b.reassign(dummyFct, to: realFct)
+    let args = b.randomArguments(forCalling: realFct)
+    b.eval("%PrepareFunctionForOptimization(%@)", with: [realFct]);
+    b.callFunction(realFct, withArgs: args)
+    b.eval("%OptimizeFunctionOnNextCall(%@)", with: [realFct]);
+    // Call the function.
+    b.callFunction(realFct, withArgs: args)
+}
+
 public extension ILType {
     static let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
 
@@ -755,6 +790,7 @@ let v8Profile = Profile(
         (RegExpFuzzer,           1),
         (WasmFastCallFuzzer,     1),
         (FastApiCallFuzzer,      1),
+        (LazyDeoptFuzzer,        1),
     ]),
 
     disabledCodeGenerators: [],
