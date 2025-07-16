@@ -463,28 +463,28 @@ public extension ILType {
     static let gcExecutionEnum = ILType.enumeration(ofName: "gcExecution", withValues: ["async", "sync"])
 }
 
-let jsD8 = ObjectGroup(name: "D8", instanceType: .jsD8, properties: ["test" : .jsD8Test], methods: [:])
+fileprivate let jsD8 = ObjectGroup(name: "D8", instanceType: .jsD8, properties: ["test" : .jsD8Test], methods: [:])
 
-let jsD8Test = ObjectGroup(name: "D8Test", instanceType: .jsD8Test, properties: ["FastCAPI": .jsD8FastCAPIConstructor], methods: [:])
+fileprivate let jsD8Test = ObjectGroup(name: "D8Test", instanceType: .jsD8Test, properties: ["FastCAPI": .jsD8FastCAPIConstructor], methods: [:])
 
-let jsD8FastCAPI = ObjectGroup(name: "D8FastCAPI", instanceType: .jsD8FastCAPI, properties: [:],
+fileprivate let jsD8FastCAPI = ObjectGroup(name: "D8FastCAPI", instanceType: .jsD8FastCAPI, properties: [:],
         methods:["throw_no_fallback": [] => .integer,
                  "add_32bit_int": [.integer, .integer] => .integer
     ])
 
-let gcOptions = ObjectGroup(
+fileprivate let gcOptions = ObjectGroup(
     name: "GCOptions",
     instanceType: .object(ofGroup: "GCOptions", withProperties: ["type", "execution"], withMethods: []),
     properties: ["type": .gcTypeEnum,
                  "execution": .gcExecutionEnum],
     methods: [:])
 
-let fastCallables : [(group: ILType, method: String)] = [
+fileprivate let fastCallables : [(group: ILType, method: String)] = [
     (group: .jsD8FastCAPI, method: "throw_no_fallback"),
     (group: .jsD8FastCAPI, method: "add_32bit_int"),
 ]
 
-let WasmFastCallFuzzer = WasmProgramTemplate("WasmFastCallFuzzer") { b in
+fileprivate let WasmFastCallFuzzer = WasmProgramTemplate("WasmFastCallFuzzer") { b in
     b.buildPrefix()
     b.build(n: 10)
     let target = fastCallables.randomElement()!
