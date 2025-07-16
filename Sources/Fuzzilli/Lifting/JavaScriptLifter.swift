@@ -432,15 +432,18 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case .beginClassDefinition(let op):
-                // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreLifting code to detect constructors works correctly (see shouldTreatAsConstructor).
-                let NAME = "C\(instr.output.number)"
-                w.declare(instr.output, as: NAME)
-                var declaration = "class \(NAME)"
-                if op.hasSuperclass {
-                    declaration += " extends \(input(0))"
+                let EXTENDS = op.hasSuperclass ? " extends \(input(0))" : ""
+                if op.isExpression {
+                    // TODO(https://crbug.com/428620828): Enable inlining of class expressions.
+                    let LET = w.declarationKeyword(for: instr.output)
+                    let V = w.declare(instr.output)
+                    w.emit("\(LET) \(V) = class\(EXTENDS) {")
+                } else {
+                    // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreLifting code to detect constructors works correctly (see shouldTreatAsConstructor).
+                    let NAME = "C\(instr.output.number)"
+                    w.declare(instr.output, as: NAME)
+                    w.emit("class \(NAME)\(EXTENDS) {")
                 }
-                declaration += " {"
-                w.emit(declaration)
                 w.enterNewBlock()
 
             case .beginClassConstructor(let op):

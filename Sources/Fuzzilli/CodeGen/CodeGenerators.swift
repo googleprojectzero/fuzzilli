@@ -212,7 +212,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
 
         // Create the class.
-        let c = b.buildClassDefinition(withSuperclass: superclass) { cls in
+        let c = b.buildClassDefinition(withSuperclass: superclass, isExpression: probability(0.3)) { cls in
             b.buildRecursive()
         }
 
@@ -1567,7 +1567,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let base = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             b.doReturn(b.randomJsVariable())
         }
-        b.buildClassDefinition(withSuperclass: base) { cls in
+        b.buildClassDefinition(withSuperclass: base, isExpression: probability(0.3)) { cls in
             b.buildRecursive()
         }
     },
@@ -1714,7 +1714,7 @@ public let CodeGenerators: [CodeGenerator] = [
             // Either make a class that extends that object's constructor or make a new object with the original object as prototype.
             if probability(0.5) {
                 let constructor = b.getProperty("constructor", of: orig)
-                let cls = b.buildClassDefinition(withSuperclass: constructor) { _ in
+                let cls = b.buildClassDefinition(withSuperclass: constructor, isExpression: probability(0.3)) { _ in
                     b.buildRecursive(n: 3)
                 }
                 imitation = b.construct(cls, withArgs: b.randomArguments(forCalling: cls))

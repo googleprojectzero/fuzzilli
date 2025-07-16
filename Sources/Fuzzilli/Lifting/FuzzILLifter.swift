@@ -140,7 +140,8 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- EndObjectLiteral")
 
         case .beginClassDefinition(let op):
-            var line = "\(output()) <- BeginClassDefinition"
+            let type = op.isExpression ? "exp" : "decl"
+            var line = "\(output()) <- BeginClassDefinition (\(type))"
             if op.hasSuperclass {
                line += " \(input(0))"
             }

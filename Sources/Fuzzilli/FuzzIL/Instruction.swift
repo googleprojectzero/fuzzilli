@@ -583,7 +583,10 @@ extension Instruction: ProtobufConvertible {
             case .endObjectLiteral:
                 $0.endObjectLiteral = Fuzzilli_Protobuf_EndObjectLiteral()
             case .beginClassDefinition(let op):
-                $0.beginClassDefinition = Fuzzilli_Protobuf_BeginClassDefinition.with { $0.hasSuperclass_p = op.hasSuperclass }
+                $0.beginClassDefinition = Fuzzilli_Protobuf_BeginClassDefinition.with {
+                    $0.hasSuperclass_p = op.hasSuperclass
+                    $0.isExpression = op.isExpression
+                }
             case .beginClassConstructor(let op):
                 $0.beginClassConstructor = Fuzzilli_Protobuf_BeginClassConstructor.with { $0.parameters = convertParameters(op.parameters) }
             case .endClassConstructor:
@@ -1762,7 +1765,7 @@ extension Instruction: ProtobufConvertible {
         case .endObjectLiteral:
             op = EndObjectLiteral()
         case .beginClassDefinition(let p):
-            op = BeginClassDefinition(hasSuperclass: p.hasSuperclass_p)
+            op = BeginClassDefinition(hasSuperclass: p.hasSuperclass_p, isExpression: p.isExpression)
         case .beginClassConstructor(let p):
             op = BeginClassConstructor(parameters: convertParameters(p.parameters))
         case .endClassConstructor:
