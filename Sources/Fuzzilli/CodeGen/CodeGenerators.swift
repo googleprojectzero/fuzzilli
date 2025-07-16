@@ -1063,7 +1063,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
         // TODO: here and below, if we aren't finding arguments of compatible types, we probably still need a guard.
         let arguments = b.randomArguments(forCallingMethod: methodName, on: obj)
-        b.callMethod(methodName, on: obj, withArgs: arguments, guard: true)
+        b.callMethod(methodName, on: obj, withArgs: arguments, guard: needGuard)
     },
 
     CodeGenerator("MethodCallWithSpreadGenerator", inputs: .preferred(.object())) { b, obj in
@@ -1136,6 +1136,30 @@ public let CodeGenerators: [CodeGenerator] = [
             needGuard = needGuard || b.type(of: arg).MayNotBe(.iterable)
         }
         b.construct(c, withArgs: arguments, spreading: spreads, guard: needGuard)
+    },
+
+    CodeGenerator("UnboundFunctionCallGenerator", inputs: .preferred(.unboundFunction())) { b, f in
+        let arguments = b.randomArguments(forCalling: f)
+        let fctType = b.type(of: f)
+        // TODO: we may also need guarding if the arguments aren't compatible with the expected ones
+        let needGuard = fctType.MayNotBe(.unboundFunction())
+        let receiver = b.randomVariable(forUseAs: fctType.receiver ?? .object())
+        // For simplicity we just hard-code the call function. If this was a separate IL
+        // instruction, the JSTyper could infer the result type.
+        b.callMethod("call", on: f, withArgs: [receiver] + arguments, guard: needGuard)
+    },
+
+    // TODO(mliedtke): Add operation and type inference for a BindFunction which binds a receiver
+    // and an arbitrary amount of function arguments.
+    CodeGenerator("UnboundFunctionApplyGenerator", inputs: .preferred(.unboundFunction())) { b, f in
+        let arguments = b.randomArguments(forCalling: f)
+        let fctType = b.type(of: f)
+        // TODO: we may also need guarding if the arguments aren't compatible with the expected ones
+        let needGuard = fctType.MayNotBe(.unboundFunction())
+        let receiver = b.randomVariable(forUseAs: fctType.receiver ?? .object())
+        // For simplicity we just hard-code the apply function. If this was a separate IL
+        // instruction, the JSTyper could infer the result type.
+        b.callMethod("apply", on: f, withArgs: [receiver, b.createArray(with: arguments)], guard: needGuard)
     },
 
     CodeGenerator("SubroutineReturnGenerator", inContext: .subroutine, inputs: .one) { b, val in

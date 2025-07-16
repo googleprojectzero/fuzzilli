@@ -876,6 +876,10 @@ class TypeSystemTests: XCTestCase {
                     XCTAssertFalse(t1.canMerge(with: t2))
                 }
 
+                else if t1.isCallable && t2.isCallable && t1.receiver != nil && t2.receiver != nil && t1.receiver != t2.receiver {
+                    XCTAssertFalse(t1.canMerge(with: t2))
+                }
+
                 // Objects of different groups cannot be merged
                 else if t1.group != nil && t2.group != nil && t1.group != t2.group {
                     XCTAssertFalse(t1.canMerge(with: t2))
@@ -888,7 +892,7 @@ class TypeSystemTests: XCTestCase {
 
                 // Everything else can be merged
                 else {
-                    XCTAssert(t1.canMerge(with: t2))
+                    XCTAssert(t1.canMerge(with: t2), "\(t1) \(t2)")
                     // Merging is symmetric
                     XCTAssert(t2.canMerge(with: t1))
                 }
@@ -1056,6 +1060,9 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(ILType.functionAndConstructor([.rest(.jsAnything)] => .jsAnything).description, ".function([.jsAnything...] => .jsAnything) + .constructor([.jsAnything...] => .jsAnything)")
         XCTAssertEqual(ILType.functionAndConstructor([.integer, .boolean, .rest(.jsAnything)] => .object()).description, ".function([.integer, .boolean, .jsAnything...] => .object()) + .constructor([.integer, .boolean, .jsAnything...] => .object())")
 
+        XCTAssertEqual(ILType.unboundFunction([.integer, .boolean, .rest(.jsAnything)] => .object(), receiver: .object()).description, ".unboundFunction([.integer, .boolean, .jsAnything...] => .object(), receiver: .object())")
+        XCTAssertEqual(ILType.unboundFunction().description, ".unboundFunction(nil, receiver: nil)")
+
         // Test other "well-known" types
         XCTAssertEqual(ILType.nothing.description, ".nothing")
         XCTAssertEqual(ILType.jsAnything.description, ".jsAnything")
@@ -1148,6 +1155,29 @@ class TypeSystemTests: XCTestCase {
         }
     }
 
+    func testUnboundFunctionSubsumptionRules() {
+        XCTAssertEqual(ILType.unboundFunction(), .unboundFunction())
+        XCTAssertNotEqual(ILType.unboundFunction([] => .object()), .unboundFunction())
+        XCTAssertNotEqual(ILType.unboundFunction(receiver: .object()), .unboundFunction())
+        XCTAssert(ILType.unboundFunction(receiver: .object()).Is(.unboundFunction()))
+        XCTAssertFalse(ILType.unboundFunction().Is(.unboundFunction(receiver: .object())))
+        XCTAssert(ILType.unboundFunction(receiver: .object()).Is(.unboundFunction(receiver: .jsAnything)))
+        XCTAssertFalse(ILType.unboundFunction(receiver: .jsAnything).Is(.unboundFunction(receiver: .object())))
+
+        let receiverNil = ILType.unboundFunction()
+        let receiverObject = ILType.unboundFunction(receiver: .object())
+        let receiverArray = ILType.unboundFunction(receiver: .object(ofGroup: "Array"))
+
+        XCTAssertEqual(receiverArray.union(with: receiverObject), receiverArray)
+        XCTAssertEqual(receiverObject.union(with: receiverArray), receiverArray)
+        XCTAssertEqual(receiverNil.union(with: receiverObject), receiverNil)
+        XCTAssertEqual(receiverObject.union(with: receiverNil), receiverNil)
+        XCTAssertEqual(receiverObject.intersection(with: receiverArray), receiverObject)
+        XCTAssertEqual(receiverArray.intersection(with: receiverObject), receiverObject)
+        XCTAssertEqual(receiverNil.intersection(with: receiverObject), receiverObject)
+        XCTAssertEqual(receiverObject.intersection(with: receiverNil), receiverObject)
+    }
+
     let primitiveTypes: [ILType] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
 
     // A set of different types used by various tests.
@@ -1201,6 +1231,10 @@ class TypeSystemTests: XCTestCase {
                                .function([.integer] => .number),
                                .function([.jsAnything...] => .jsAnything),
                                .function([.integer, .string, .opt(.jsAnything)] => .float),
+                               .unboundFunction(),
+                               .unboundFunction([.string] => .string),
+                               .unboundFunction([.string] => .string, receiver: .object()),
+                               .unboundFunction([.string] => .jsAnything, receiver: .object()),
                                .constructor(),
                                .constructor([.string] => .string),
                                .constructor([.string] => .jsAnything),

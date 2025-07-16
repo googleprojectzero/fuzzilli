@@ -182,6 +182,13 @@ public struct ILType: Hashable {
         return ILType(definiteType: [.function, .constructor], ext: ext)
     }
 
+    /// An unbound function. This is a function with this === null which requires to get a this
+    /// bound (e.g. via .bind(), .call() or .apply()).
+    public static func unboundFunction(_ signature: Signature? = nil, receiver: ILType? = nil) -> ILType {
+        let ext = TypeExtension(properties: Set(), methods: Set(), signature: signature, receiver: receiver)
+        return ILType(definiteType: [.unboundFunction], ext: ext)
+    }
+
     // Internal types
 
     // This type is used to indicate block labels in wasm.
@@ -262,7 +269,7 @@ public struct ILType: Hashable {
 
     // Whether it is a function or a constructor (or both).
     public var isCallable: Bool {
-        return !definiteType.intersection([.function, .constructor]).isEmpty
+        return !definiteType.intersection([.function, .constructor, .unboundFunction]).isEmpty
     }
 
     /// Whether this type is a union, i.e can be one of multiple types.
@@ -386,6 +393,10 @@ public struct ILType: Hashable {
             return false
         }
 
+        guard receiver == nil || (other.receiver != nil && receiver!.subsumes(other.receiver!)) else {
+            return false
+        }
+
         // Wasm type extension.
         guard !self.hasWasmTypeInfo || (other.hasWasmTypeInfo
             && self.wasmType!.subsumes(other.wasmType!)) else {
@@ -439,6 +450,10 @@ public struct ILType: Hashable {
 
     public var signature: Signature? {
         return ext?.signature
+    }
+
+    public var receiver: ILType? {
+        return ext?.receiver
     }
 
     public var functionSignature: Signature? {
@@ -627,10 +642,11 @@ public struct ILType: Hashable {
         let commonProperties = self.properties.intersection(other.properties)
         let commonMethods = self.methods.intersection(other.methods)
         let signature = self.signature == other.signature ? self.signature : nil        // TODO: this is overly coarse, we could also see if one signature subsumes the other, then take the subsuming one.
+        let receiver = other.receiver != nil && other.receiver != nil ? self.receiver?.intersection(with: other.receiver!) : nil
         let group = self.group == other.group ? self.group : nil
         let wasmExt = self.wasmType != nil && other.wasmType != nil ? self.wasmType!.union(other.wasmType!) : nil
 
-        return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: commonProperties, methods: commonMethods, signature: signature, wasmExt: wasmExt))
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: commonProperties, methods: commonMethods, signature: signature, wasmExt: wasmExt, receiver: receiver))
     }
 
     public static func |(lhs: ILType, rhs: ILType) -> ILType {
@@ -711,6 +727,8 @@ public struct ILType: Hashable {
             return .nothing
         }
 
+        let receiver = self.receiver != nil && other.receiver != nil ? self.receiver?.union(with: other.receiver!) : self.receiver ?? other.receiver
+
         // If either value is nil, the result is the non-nil value. If both are non-nil, the result
         // is their intersection if valid, otherwise .nothing is returned.
         var wasmExt: WasmTypeExtension? = self.wasmType ?? other.wasmType
@@ -719,7 +737,7 @@ public struct ILType: Hashable {
             wasmExt = wasmIntersection
         }
 
-        return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: properties, methods: methods, signature: signature, wasmExt: wasmExt))
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: properties, methods: methods, signature: signature, wasmExt: wasmExt, receiver: receiver))
     }
 
     public static func &(lhs: ILType, rhs: ILType) -> ILType {
@@ -739,6 +757,11 @@ public struct ILType: Hashable {
 
         // Merging of callables with different signatures is not allowed.
         guard self.signature == nil || other.signature == nil || self.signature == other.signature else {
+            return false
+        }
+
+        // Merging of unbound fucntions with different receivers is not allowed.
+        guard self.receiver == nil || other.receiver == nil || self.receiver == other.receiver else {
             return false
         }
 
@@ -775,13 +798,15 @@ public struct ILType: Hashable {
         // Signatures must be equal here or one of them is nil (see canMerge)
         let signature = self.signature ?? other.signature
 
+        let receiver = self.receiver ?? other.receiver
+
         // Same is true for the group name
         let group = self.group ?? other.group
 
         let wasmExt = self.wasmType ?? other.wasmType
 
         // We just take the self.wasmExt as they have to be the same, see `canMerge`.
-        let ext = TypeExtension(group: group, properties: self.properties.union(other.properties), methods: self.methods.union(other.methods), signature: signature, wasmExt: wasmExt)
+        let ext = TypeExtension(group: group, properties: self.properties.union(other.properties), methods: self.methods.union(other.methods), signature: signature, wasmExt: wasmExt, receiver: receiver)
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: ext)
     }
 
@@ -978,6 +1003,8 @@ extension ILType: CustomStringConvertible {
             } else {
                 return ".constructor()"
             }
+        case .unboundFunction:
+               return ".unboundFunction(\(signature?.format(abbreviate: abbreviate) ?? "nil"), receiver: \(receiver?.format(abbreviate: abbreviate) ?? "nil"))"
         case .wasmi32:
             return ".wasmi32"
         case .wasmi64:
@@ -1067,40 +1094,41 @@ struct BaseType: OptionSet, Hashable {
     static let object      = BaseType(rawValue: 1 << 7)
     static let function    = BaseType(rawValue: 1 << 8)
     static let constructor = BaseType(rawValue: 1 << 9)
-    static let iterable    = BaseType(rawValue: 1 << 10)
+    static let unboundFunction = BaseType(rawValue: 1 << 10)
+    static let iterable    = BaseType(rawValue: 1 << 11)
 
     // Wasm Types
-    static let wasmi32     = BaseType(rawValue: 1 << 11)
-    static let wasmi64     = BaseType(rawValue: 1 << 12)
-    static let wasmf32     = BaseType(rawValue: 1 << 13)
-    static let wasmf64     = BaseType(rawValue: 1 << 14)
+    static let wasmi32     = BaseType(rawValue: 1 << 12)
+    static let wasmi64     = BaseType(rawValue: 1 << 13)
+    static let wasmf32     = BaseType(rawValue: 1 << 14)
+    static let wasmf64     = BaseType(rawValue: 1 << 15)
 
     // These are wasm internal types, these are never lifted as such and are only used to glue together dataflow in wasm.
-    static let label       = BaseType(rawValue: 1 << 15)
+    static let label       = BaseType(rawValue: 1 << 16)
     // Any catch block exposes such a label now to rethrow the exception caught by that catch.
     // Note that in wasm the label is actually the try block's label but as rethrows are only possible inside a catch
     // block, semantically having a label on the catch makes more sense.
-    static let exceptionLabel = BaseType(rawValue: 1 << 16)
+    static let exceptionLabel = BaseType(rawValue: 1 << 17)
     // This is a reference to a table, which can be passed around to table instructions
     // The lifter will resolve this to the proper index when lifting.
-    static let wasmSimd128     = BaseType(rawValue: 1 << 17)
-    static let wasmFunctionDef = BaseType(rawValue: 1 << 18)
+    static let wasmSimd128     = BaseType(rawValue: 1 << 18)
+    static let wasmFunctionDef = BaseType(rawValue: 1 << 19)
 
     // Wasm-gc types
-    static let wasmRef = BaseType(rawValue: 1 << 19)
-    static let wasmTypeDef = BaseType(rawValue: 1 << 20)
+    static let wasmRef = BaseType(rawValue: 1 << 20)
+    static let wasmTypeDef = BaseType(rawValue: 1 << 21)
 
     // Wasm packed types. These types only exist as part of struct / array definitions. A wasm value
     // can never have the type i8 or i16 (they will always be extended to i32 by any operation
     // loading them.)
-    static let wasmPackedI8 = BaseType(rawValue: 1 << 21)
-    static let wasmPackedI16 = BaseType(rawValue: 1 << 22)
+    static let wasmPackedI8 = BaseType(rawValue: 1 << 22)
+    static let wasmPackedI16 = BaseType(rawValue: 1 << 23)
 
-    static let jsAnything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
+    static let jsAnything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .unboundFunction, .bigint, .regexp, .iterable])
 
     static let wasmAnything = BaseType([.wasmf32, .wasmi32, .wasmf64, .wasmi64, .wasmRef, .wasmSimd128, .wasmTypeDef, .wasmFunctionDef])
 
-    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable, .wasmf32, .wasmi32, .wasmf64, .wasmi64, .wasmRef, .wasmSimd128, .wasmTypeDef, .wasmFunctionDef]
+    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .unboundFunction, .bigint, .regexp, .iterable, .wasmf32, .wasmi32, .wasmf64, .wasmi64, .wasmRef, .wasmSimd128, .wasmTypeDef, .wasmFunctionDef]
 }
 
 class TypeExtension: Hashable {
@@ -1119,8 +1147,11 @@ class TypeExtension: Hashable {
     // Wasm specific properties for Wasm types.
     let wasmExt: WasmTypeExtension?
 
-    init?(group: String? = nil, properties: Set<String>, methods: Set<String>, signature: Signature?, wasmExt: WasmTypeExtension? = nil) {
-        if group == nil && properties.isEmpty && methods.isEmpty && signature == nil && wasmExt == nil {
+    // The receiver type of a function (used for unbound functions).
+    let receiver: ILType?
+
+    init?(group: String? = nil, properties: Set<String>, methods: Set<String>, signature: Signature?, wasmExt: WasmTypeExtension? = nil, receiver: ILType? = nil) {
+        if group == nil && properties.isEmpty && methods.isEmpty && signature == nil && wasmExt == nil && receiver == nil {
             return nil
         }
 
@@ -1129,10 +1160,16 @@ class TypeExtension: Hashable {
         self.group = group
         self.signature = signature
         self.wasmExt = wasmExt
+        self.receiver = receiver
     }
 
     static func ==(lhs: TypeExtension, rhs: TypeExtension) -> Bool {
-        return lhs.properties == rhs.properties && lhs.methods == rhs.methods && lhs.group == rhs.group && lhs.signature == rhs.signature && lhs.wasmExt == rhs.wasmExt
+        return lhs.properties == rhs.properties
+            && lhs.methods == rhs.methods
+            && lhs.group == rhs.group
+            && lhs.signature == rhs.signature
+            && lhs.wasmExt == rhs.wasmExt
+            && lhs.receiver == rhs.receiver
     }
 
     public func hash(into hasher: inout Hasher) {
@@ -1141,6 +1178,7 @@ class TypeExtension: Hashable {
         hasher.combine(methods)
         hasher.combine(signature)
         hasher.combine(wasmExt)
+        hasher.combine(receiver)
     }
 }
 

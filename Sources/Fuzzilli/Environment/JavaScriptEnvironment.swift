@@ -584,6 +584,9 @@ public class JavaScriptEnvironment: ComponentBase {
                 if let type = group.properties[propertyName] {
                     return type
                 }
+                if let signatures = group.methods[propertyName] {
+                    return .unboundFunction(signatures.first, receiver: baseType)
+                }
             } else {
                 // This shouldn't happen, probably forgot to register the object group
                 logger.warning("No type information for object group \(groupName) available")

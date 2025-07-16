@@ -1636,11 +1636,7 @@ class JSTyperTests: XCTestCase {
         XCTAssert(b.type(of: arrayProto).Is(.object(ofGroup: "Array")))
         let signatures = b.methodSignatures(of: "indexOf", on: arrayProto)
         XCTAssertEqual([[.jsAnything, .opt(.integer)] => .integer], signatures)
-        // TODO(mliedtke): It would be nice if we could type this correctly. Note however that
-        // calling this with an unbound `this` will throw an exception, so typing it correctly will
-        // probably lower Fuzzilli's correctness rate as Fuzzilli's signatures don't have a
-        // receiver.
         let indexOf = b.getProperty("indexOf", of: arrayProto)
-        XCTAssert(b.type(of: indexOf).Is(.jsAnything))
+        XCTAssert(b.type(of: indexOf).Is(.unboundFunction([.jsAnything, .opt(.integer)] => .integer, receiver: .jsArray)))
     }
 }
