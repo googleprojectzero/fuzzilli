@@ -2262,9 +2262,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildClassDefinition(withSuperclass superclass: Variable? = nil, _ body: (ClassDefinition) -> ()) -> Variable {
+    public func buildClassDefinition(withSuperclass superclass: Variable? = nil, isExpression: Bool = false, _ body: (ClassDefinition) -> ()) -> Variable {
         let inputs = superclass != nil ? [superclass!] : []
-        let output = emit(BeginClassDefinition(hasSuperclass: superclass != nil), withInputs: inputs).output
+        let output = emit(BeginClassDefinition(hasSuperclass: superclass != nil, isExpression: isExpression), withInputs: inputs).output
         if enableRecursionGuard { hide(output) }
         body(currentClassDefinition)
         if enableRecursionGuard { unhide(output) }

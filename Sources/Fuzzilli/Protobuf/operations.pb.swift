@@ -1545,6 +1545,8 @@ public struct Fuzzilli_Protobuf_BeginClassDefinition: Sendable {
 
   public var hasSuperclass_p: Bool = false
 
+  public var isExpression: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -6362,6 +6364,7 @@ extension Fuzzilli_Protobuf_BeginClassDefinition: SwiftProtobuf.Message, SwiftPr
   public static let protoMessageName: String = _protobuf_package + ".BeginClassDefinition"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "hasSuperclass"),
+    2: .same(proto: "isExpression"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6371,6 +6374,7 @@ extension Fuzzilli_Protobuf_BeginClassDefinition: SwiftProtobuf.Message, SwiftPr
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularBoolField(value: &self.hasSuperclass_p) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isExpression) }()
       default: break
       }
     }
@@ -6380,11 +6384,15 @@ extension Fuzzilli_Protobuf_BeginClassDefinition: SwiftProtobuf.Message, SwiftPr
     if self.hasSuperclass_p != false {
       try visitor.visitSingularBoolField(value: self.hasSuperclass_p, fieldNumber: 1)
     }
+    if self.isExpression != false {
+      try visitor.visitSingularBoolField(value: self.isExpression, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginClassDefinition, rhs: Fuzzilli_Protobuf_BeginClassDefinition) -> Bool {
     if lhs.hasSuperclass_p != rhs.hasSuperclass_p {return false}
+    if lhs.isExpression != rhs.isExpression {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

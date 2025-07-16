@@ -645,9 +645,11 @@ final class BeginClassDefinition: JsOperation {
     override var opcode: Opcode { .beginClassDefinition(self) }
 
     let hasSuperclass: Bool
+    let isExpression: Bool
 
-    init(hasSuperclass: Bool) {
+    init(hasSuperclass: Bool, isExpression: Bool) {
         self.hasSuperclass = hasSuperclass
+        self.isExpression = isExpression
         super.init(numInputs: hasSuperclass ? 1 : 0, numOutputs: 1, attributes: .isBlockStart, contextOpened: .classDefinition)
     }
 }

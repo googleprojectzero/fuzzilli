@@ -800,6 +800,57 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testClassExpressionLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let C = b.buildClassDefinition(isExpression: true) { cls in
+            cls.addInstanceElement(1)
+        }
+
+        let D = b.createNamedVariable("d", declarationMode: .let, initialValue: C)
+        b.construct(C, withArgs: [])
+        b.construct(D, withArgs: [])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v0 = class {
+            1;
+        }
+        let d = v0;
+        new v0();
+        new d();
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testClassExpressionWithSuperClassLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let C = b.buildClassDefinition(isExpression: true) { _ in }
+        let D = b.buildClassDefinition(withSuperclass: C, isExpression: true) { _ in }
+        b.construct(D, withArgs: [])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v0 = class {
+        }
+        const v1 = class extends v0 {
+        }
+        new v1();
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testArrayLiteralLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

@@ -118,6 +118,7 @@ message EndObjectLiteral {
 
 message BeginClassDefinition {
     bool hasSuperclass = 1;
+    bool isExpression = 2;
 }
 
 message BeginClassConstructor {

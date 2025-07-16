@@ -93,9 +93,9 @@ public class JavaScriptCompiler {
         let classDecl: Instruction
         if let superClass = superClass {
             let superClass = try compileExpression(superClass)
-            classDecl = emit(BeginClassDefinition(hasSuperclass: true), withInputs: [superClass])
+            classDecl = emit(BeginClassDefinition(hasSuperclass: true, isExpression: isExpression), withInputs: [superClass])
         } else {
-            classDecl = emit(BeginClassDefinition(hasSuperclass: false))
+            classDecl = emit(BeginClassDefinition(hasSuperclass: false, isExpression: isExpression))
         }
         if !isExpression {
             map(name, to: classDecl.output)
