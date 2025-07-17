@@ -216,6 +216,7 @@ enum Opcode {
     case wrapPromising(WrapPromising)
     case wrapSuspending(WrapSuspending)
     case bindMethod(BindMethod)
+    case bindFunction(BindFunction)
 
     // Wasm opcodes
     case consti64(Consti64)

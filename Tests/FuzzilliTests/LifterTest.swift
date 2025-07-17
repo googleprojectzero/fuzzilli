@@ -1733,6 +1733,46 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testFunctionBindLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        let indexOfSig = [.jsAnything, .opt(.integer)] => .integer
+
+        let arrayBuiltin = b.createNamedVariable(forBuiltin: "Array")
+        let arrayProto = b.getProperty("prototype", of: arrayBuiltin)
+        let indexOf = b.getProperty("indexOf", of: arrayProto)
+        XCTAssertEqual(b.type(of: indexOf), .unboundFunction(indexOfSig, receiver: .jsArray))
+        let indexOfNothingBound = b.bindFunction(indexOf, boundArgs: [])
+        XCTAssertEqual(b.type(of: indexOfNothingBound), b.type(of: indexOf))
+        let array = b.construct(arrayBuiltin)
+        let indexOfBoundThis = b.bindFunction(indexOf, boundArgs: [array])
+        XCTAssertEqual(b.type(of: indexOfBoundThis), .function(indexOfSig))
+        let str = b.loadString("value")
+        let indexOfBoundThisAndArg = b.bindFunction(indexOf, boundArgs: [array, str])
+        XCTAssertEqual(b.type(of: indexOfBoundThisAndArg), .function([.opt(.integer)] => .integer))
+        let int = b.loadInt(1)
+        let indexOfBoundAll = b.bindFunction(indexOf, boundArgs: [array, str, int])
+        XCTAssertEqual(b.type(of: indexOfBoundAll), .function([] => .integer))
+        let indexOfBoundTooMuch = b.bindFunction(indexOf, boundArgs: [array, str, int, int])
+        XCTAssertEqual(b.type(of: indexOfBoundTooMuch), .function([] => .integer))
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v2 = Array.prototype.indexOf;
+        let v3 = v2.bind();
+        const v4 = new Array();
+        let v5 = v2.bind(v4);
+        let v7 = v2.bind(v4, "value");
+        let v9 = v2.bind(v4, "value", 1);
+        let v10 = v2.bind(v4, "value", 1, 1);
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testMethodCallWithSpreadLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

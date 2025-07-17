@@ -1724,6 +1724,24 @@ public struct JSTyper: Analyzer {
             let newParameters = [Parameter.plain(.object())] + signature.parameters
             set(instr.output, .function(newParameters => signature.outputType))
 
+        case .bindFunction(_):
+            let inputType = type(ofInput: 0)
+            if let signature = inputType.signature {
+                if instr.inputs.count == 1 {
+                    set(instr.output, inputType)
+                } else {
+                    // We only bind any actual parameters if the BindFunction operation has more
+                    // than 2 inputs(instr.inputs.count - 2) as the first input is the function
+                    // on which we call .bind() and the second input is the receiver, so the bind
+                    // only replaces the existing receiver.
+                    let start = min(instr.inputs.count - 2, signature.parameters.count)
+                    let params = Array(signature.parameters[start..<signature.parameters.count])
+                    set(instr.output, .function(params => signature.outputType))
+                }
+            } else {
+                set(instr.output, .jsAnything)
+            }
+
         case .wasmBeginTypeGroup(_):
             startTypeGroup()
 

@@ -2466,6 +2466,14 @@ class BindMethod: JsOperation {
     }
 }
 
+class BindFunction: JsOperation {
+    override var opcode: Opcode { .bindFunction(self) }
+
+    init(numInputs: Int) {
+        super.init(numInputs: numInputs, numOutputs: 1, firstVariadicInput: 1,
+            attributes: [.isVariadic], requiredContext: .javascript)
+    }
+}
 
 // This instruction is used to create strongly typed WasmGlobals in the JS world that can be imported by a WasmModule.
 class CreateWasmGlobal: JsOperation {

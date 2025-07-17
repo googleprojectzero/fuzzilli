@@ -139,6 +139,8 @@ public let codeGeneratorWeights = [
     "SuperMethodCallGenerator":                 20,
     "UnboundFunctionCallGenerator":             10,
     "UnboundFunctionApplyGenerator":            10,
+    "UnboundFunctionBindGenerator":             10,
+    "FunctionBindGenerator":                    10,
 
     // These will only be used inside class methods, and only if private properties were previously declared in that class.
     "PrivatePropertyRetrievalGenerator":        30,

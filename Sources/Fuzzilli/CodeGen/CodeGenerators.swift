@@ -1149,8 +1149,6 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod("call", on: f, withArgs: [receiver] + arguments, guard: needGuard)
     },
 
-    // TODO(mliedtke): Add operation and type inference for a BindFunction which binds a receiver
-    // and an arbitrary amount of function arguments.
     CodeGenerator("UnboundFunctionApplyGenerator", inputs: .preferred(.unboundFunction())) { b, f in
         let arguments = b.randomArguments(forCalling: f)
         let fctType = b.type(of: f)
@@ -1160,6 +1158,22 @@ public let CodeGenerators: [CodeGenerator] = [
         // For simplicity we just hard-code the apply function. If this was a separate IL
         // instruction, the JSTyper could infer the result type.
         b.callMethod("apply", on: f, withArgs: [receiver, b.createArray(with: arguments)], guard: needGuard)
+    },
+
+    CodeGenerator("UnboundFunctionBindGenerator", inputs: .required(.unboundFunction())) { b, f in
+        let arguments = b.randomArguments(forCalling: f)
+        let fctType = b.type(of: f)
+        let receiver = b.randomVariable(forUseAs: fctType.receiver ?? .object())
+        let boundArgs = [receiver] + arguments
+        b.bindFunction(f, boundArgs: Array(boundArgs[0..<Int.random(in: 0...boundArgs.count)]))
+    },
+
+    CodeGenerator("FunctionBindGenerator", inputs: .required(.function())) { b, f in
+        let arguments = b.randomArguments(forCalling: f)
+        let fctType = b.type(of: f)
+        let receiver = b.randomVariable(forUseAs: .object())
+        let boundArgs = [receiver] + arguments
+        b.bindFunction(f, boundArgs: Array(boundArgs[0..<Int.random(in: 0...boundArgs.count)]))
     },
 
     CodeGenerator("SubroutineReturnGenerator", inContext: .subroutine, inputs: .one) { b, val in

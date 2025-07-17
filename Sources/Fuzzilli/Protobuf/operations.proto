@@ -838,6 +838,9 @@ message BindMethod {
     string methodName = 1;
 }
 
+message BindFunction {
+}
+
 // Wasm Operations
 
 message Consti64 {

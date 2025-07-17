@@ -3571,6 +3571,16 @@ public struct Fuzzilli_Protobuf_BindMethod: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_BindFunction: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_Consti64: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -10883,6 +10893,25 @@ extension Fuzzilli_Protobuf_BindMethod: SwiftProtobuf.Message, SwiftProtobuf._Me
 
   public static func ==(lhs: Fuzzilli_Protobuf_BindMethod, rhs: Fuzzilli_Protobuf_BindMethod) -> Bool {
     if lhs.methodName != rhs.methodName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_BindFunction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BindFunction"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_BindFunction, rhs: Fuzzilli_Protobuf_BindFunction) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
