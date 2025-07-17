@@ -69,6 +69,8 @@ struct VariadicInputReducer: Reducer {
                     newOp = CallPrivateMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
                 case .callSuperMethod(let op):
                     newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
+                case .bindFunction(let op):
+                    newOp = BindFunction(numInputs: op.numInputs - 1)
                 case .createTemplateString(let op):
                     newOp = CreateTemplateString(parts: op.parts.dropLast())
                 case .wasmEndTypeGroup(_):

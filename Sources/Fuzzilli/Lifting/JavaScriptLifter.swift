@@ -1435,6 +1435,12 @@ public class JavaScriptLifter: Lifter {
                 let LET = w.varKeyword
                 w.emit("\(LET) \(V) = Function.prototype.call.bind(\(OBJECT).\(op.methodName));")
 
+            case .bindFunction(_):
+                let V = w.declare(instr.output)
+                let function = input(0)
+                let args = inputs.dropFirst()
+                w.emit("\(w.varKeyword) \(V) = \(function).bind(\(liftCallArguments(args)));")
+
             case .beginWasmModule:
                 wasmCodeStarts = instr.index
                 assert(wasmInstructions.isEmpty)

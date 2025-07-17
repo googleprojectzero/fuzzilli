@@ -2624,6 +2624,11 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func bindFunction(_ fct: Variable, boundArgs arguments: [Variable]) -> Variable {
+        return emit(BindFunction(numInputs: arguments.count + 1), withInputs: [fct] + arguments).output
+    }
+
+    @discardableResult
     public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable] = [], guard isGuarded: Bool = false) -> Variable {
         return emit(CallComputedMethod(numArguments: arguments.count, isGuarded: isGuarded), withInputs: [object, name] + arguments).output
     }

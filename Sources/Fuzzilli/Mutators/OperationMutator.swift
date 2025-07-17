@@ -553,6 +553,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wrapPromising(_),
              .wrapSuspending(_),
              .bindMethod(_),
+             .bindFunction(_),
              // Wasm instructions
              .beginWasmModule(_),
              .endWasmModule(_),
@@ -699,6 +700,9 @@ public class OperationMutator: BaseInstructionMutator {
         case .callSuperMethod(let op):
             inputs.append(b.randomJsVariable())
             newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments + 1)
+        case .bindFunction(_):
+            inputs.append(b.randomJsVariable())
+            newOp = BindFunction(numInputs: inputs.count)
         case .createTemplateString(let op):
             var parts = op.parts
             parts.append(b.randomString())

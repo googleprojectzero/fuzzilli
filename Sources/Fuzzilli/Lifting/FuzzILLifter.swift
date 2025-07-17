@@ -795,6 +795,10 @@ public class FuzzILLifter: Lifter {
         case .bindMethod(_):
             w.emit("\(output()) <- BindMethod \(input(0))")
 
+        case .bindFunction(_):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- BindFunction \(inputs)")
+
         // Wasm Instructions
 
         case .beginWasmFunction(let op):
