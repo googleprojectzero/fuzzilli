@@ -330,8 +330,10 @@ public class JavaScriptEnvironment: ComponentBase {
 
         registerObjectGroup(.jsObjectConstructor)
         registerObjectGroup(.jsPromiseConstructor)
+        registerObjectGroup(.jsPromisePrototype)
         registerObjectGroup(.jsArrayConstructor)
         registerObjectGroup(.jsStringConstructor)
+        registerObjectGroup(.jsStringPrototype)
         registerObjectGroup(.jsSymbolConstructor)
         registerObjectGroup(.jsBigIntConstructor)
         registerObjectGroup(.jsBooleanConstructor)
@@ -339,10 +341,13 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsMathObject)
         registerObjectGroup(.jsDate)
         registerObjectGroup(.jsDateConstructor)
+        registerObjectGroup(.jsDatePrototype)
         registerObjectGroup(.jsJSONObject)
         registerObjectGroup(.jsReflectObject)
         registerObjectGroup(.jsArrayBufferConstructor)
+        registerObjectGroup(.jsArrayBufferPrototype)
         registerObjectGroup(.jsSharedArrayBufferConstructor)
+        registerObjectGroup(.jsSharedArrayBufferPrototype)
         for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError", "SuppressedError"] {
             registerObjectGroup(.jsError(variant))
         }
@@ -885,6 +890,28 @@ public extension ILType {
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
 }
 
+public extension ObjectGroup {
+    // Creates an object group representing a "prototype" object on a built-in, like Date.prototype.
+    // These objects are somewhat special in JavaScript as they describe an object which has
+    // methods on them for which you shall not call them with the bound this as a receiver, e.g.
+    // `Date.prototype.getTime()` fails as `Date.prototype` is not a `Date`.
+    // Therefore the methods are registered as properties, so Fuzzilli doesn't generate calls for
+    // them. Instead Fuzzilli generates GetProperty operations for them which will then be typed as
+    // an `ILType.unboundFunction` which knows the required receiver type (in the example `Date`),
+    // so Fuzzilli can generate sequences like `Date.prototype.getTime.call(new Date())`.
+    static func createPrototypeObjectGroup(_ receiver: ObjectGroup) -> ObjectGroup {
+        let name = receiver.name + ".prototype"
+        let properties = Dictionary(uniqueKeysWithValues: receiver.methods.map {
+            ($0.0, ILType.unboundFunction($0.1.first, receiver: receiver.instanceType)) })
+        return ObjectGroup(
+            name: name,
+            instanceType: .object(ofGroup: name, withProperties: properties.map {$0.0}, withMethods: []),
+            properties: properties,
+            methods: [:]
+        )
+    }
+}
+
 // Type information for the object groups that we use to model the JavaScript runtime environment.
 // The general rules here are:
 //  * "output" type information (properties and return values) should be as precise as possible
@@ -1259,12 +1286,14 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsPromisePrototype = createPrototypeObjectGroup(jsPromises)
+
     /// ObjectGroup modelling the JavaScript Promise constructor builtin
     static let jsPromiseConstructor = ObjectGroup(
         name: "PromiseConstructor",
         instanceType: .jsPromiseConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsPromisePrototype.instanceType
         ],
         methods: [
             "resolve"    : [.jsAnything] => .jsPromise,
@@ -1330,12 +1359,14 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsDatePrototype = createPrototypeObjectGroup(jsDate)
+
     /// ObjectGroup modelling the JavaScript Date constructor
     static let jsDateConstructor = ObjectGroup(
         name: "DateConstructor",
         instanceType: .jsDateConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsDatePrototype.instanceType
         ],
         methods: [
             "UTC"   : [.number, .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number)] => .jsDate,
@@ -1391,32 +1422,38 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsArrayBufferPrototype = createPrototypeObjectGroup(jsArrayBuffers)
+
     static let jsArrayBufferConstructor = ObjectGroup(
         name: "ArrayBufferConstructor",
         instanceType: .jsArrayBufferConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsArrayBufferPrototype.instanceType
         ],
         methods: [
             "isView" : [.jsAnything] => .boolean
         ]
     )
 
+    static let jsSharedArrayBufferPrototype = createPrototypeObjectGroup(jsSharedArrayBuffers)
+
     static let jsSharedArrayBufferConstructor = ObjectGroup(
         name: "SharedArrayBufferConstructor",
         instanceType: .jsSharedArrayBufferConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsSharedArrayBufferPrototype.instanceType
         ],
         methods: [:]
     )
+
+    static let jsStringPrototype = createPrototypeObjectGroup(jsStrings)
 
     /// Object group modelling the JavaScript String constructor builtin
     static let jsStringConstructor = ObjectGroup(
         name: "StringConstructor",
         instanceType: .jsStringConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsStringPrototype.instanceType
         ],
         methods: [
             "fromCharCode"  : [.jsAnything...] => .jsString,

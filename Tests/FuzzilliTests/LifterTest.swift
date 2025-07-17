@@ -3233,4 +3233,30 @@ class LifterTests: XCTestCase {
         let js = lifter.lift(mutatedProg)
         XCTAssertTrue(js.contains("Wasmlifting failed"))
     }
+
+    func testBuiltinPrototypeCall() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let dateBuiltin = b.createNamedVariable(forBuiltin: "Date")
+        XCTAssert(b.type(of: dateBuiltin).Is(.object(ofGroup: "DateConstructor")))
+        let dateProto = b.getProperty("prototype", of: dateBuiltin)
+        XCTAssert(b.type(of: dateProto).Is(.object(ofGroup: "Date.prototype")))
+        let getTime = b.getProperty("getTime", of: dateProto)
+        XCTAssertEqual(b.type(of: getTime), .unboundFunction([] => .number, receiver: .jsDate))
+        let date = b.construct(dateBuiltin)
+        XCTAssertEqual(b.type(of: date), .jsDate)
+        b.callMethod("call", on: getTime, withArgs: [date])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v2 = Date.prototype.getTime;
+        const v3 = new Date();
+        v2.call(v3);
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
 }

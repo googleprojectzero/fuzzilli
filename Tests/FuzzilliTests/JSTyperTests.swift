@@ -1626,10 +1626,11 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: reexportedJsTag), b.type(of: jsTag))
     }
 
-    func testArrayBuiltinPrototype() {
+    func testBuiltinPrototypes() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
+        // Array.prototype
         let arrayBuiltin = b.createNamedVariable(forBuiltin: "Array")
         XCTAssert(b.type(of: arrayBuiltin).Is(.object(ofGroup: "ArrayConstructor")))
         let arrayProto = b.getProperty("prototype", of: arrayBuiltin)
@@ -1637,6 +1638,38 @@ class JSTyperTests: XCTestCase {
         let signatures = b.methodSignatures(of: "indexOf", on: arrayProto)
         XCTAssertEqual([[.jsAnything, .opt(.integer)] => .integer], signatures)
         let indexOf = b.getProperty("indexOf", of: arrayProto)
-        XCTAssert(b.type(of: indexOf).Is(.unboundFunction([.jsAnything, .opt(.integer)] => .integer, receiver: .jsArray)))
+        XCTAssertEqual(b.type(of: indexOf), .unboundFunction([.jsAnything, .opt(.integer)] => .integer, receiver: .jsArray))
+
+        // Date.prototype
+        let dateBuiltin = b.createNamedVariable(forBuiltin: "Date")
+        XCTAssert(b.type(of: dateBuiltin).Is(.object(ofGroup: "DateConstructor")))
+        let dateProto = b.getProperty("prototype", of: dateBuiltin)
+        XCTAssert(b.type(of: dateProto).Is(.object(ofGroup: "Date.prototype")))
+        let getTime = b.getProperty("getTime", of: dateProto)
+        XCTAssertEqual(b.type(of: getTime), .unboundFunction([] => .number, receiver: .jsDate))
+
+        // Promise.prototype
+        let promiseBuiltin = b.createNamedVariable(forBuiltin: "Promise")
+        XCTAssert(b.type(of: promiseBuiltin).Is(.object(ofGroup: "PromiseConstructor")))
+        let promiseProto = b.getProperty("prototype", of: promiseBuiltin)
+        XCTAssert(b.type(of: dateProto).Is(.object(ofGroup: "Date.prototype")))
+        let then = b.getProperty("then", of: promiseProto)
+        XCTAssertEqual(b.type(of: then), .unboundFunction([.function()] => .jsPromise, receiver: .jsPromise))
+
+        // ArrayBuffer.prototype
+        let arrayBufferBuiltin = b.createNamedVariable(forBuiltin: "ArrayBuffer")
+        XCTAssert(b.type(of: arrayBufferBuiltin).Is(.object(ofGroup: "ArrayBufferConstructor")))
+        let arrayBufferProto = b.getProperty("prototype", of: arrayBufferBuiltin)
+        XCTAssert(b.type(of: arrayBufferProto).Is(.object(ofGroup: "ArrayBuffer.prototype")))
+        let resize = b.getProperty("resize", of: arrayBufferProto)
+        XCTAssertEqual(b.type(of: resize), .unboundFunction([.integer] => .undefined, receiver: .jsArrayBuffer))
+
+        // ArrayBuffer.prototype
+        let sharedArrayBufferBuiltin = b.createNamedVariable(forBuiltin: "SharedArrayBuffer")
+        XCTAssert(b.type(of: sharedArrayBufferBuiltin).Is(.object(ofGroup: "SharedArrayBufferConstructor")))
+        let sharedArrayBufferProto = b.getProperty("prototype", of: sharedArrayBufferBuiltin)
+        XCTAssert(b.type(of: sharedArrayBufferProto).Is(.object(ofGroup: "SharedArrayBuffer.prototype")))
+        let grow = b.getProperty("grow", of: sharedArrayBufferProto)
+        XCTAssertEqual(b.type(of: grow), .unboundFunction([.number] => .undefined, receiver: .jsSharedArrayBuffer))
     }
 }
