@@ -446,6 +446,40 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testForceVariableDefinitions() {
+        let createProgram = {(config: Configuration) in
+            let fuzzer = makeMockFuzzer(config: config)
+            let b = fuzzer.makeBuilder()
+            let dateBuiltin = b.createNamedVariable(forBuiltin: "Date")
+            b.getProperty("prototype", of: dateBuiltin)
+            let array = b.createNamedVariable(forBuiltin: "Array")
+            let _ = b.construct(array)
+
+            let program = b.finalize()
+            return fuzzer.lifter.lift(program)
+        }
+        do {
+            let config = Configuration(logLevel: .warning)
+            let actual = createProgram(config)
+            let expected = """
+            Date.prototype;
+            new Array();
+
+            """
+            XCTAssertEqual(actual, expected)
+        }
+        do {
+            let config = Configuration(logLevel: .warning, forDifferentialFuzzing: true)
+            let actual = createProgram(config)
+            let expected = """
+            const v1 = Date.prototype;
+            const v3 = new Array();
+
+            """
+            XCTAssertEqual(actual, expected)
+        }
+    }
+
     func testIdentifierLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

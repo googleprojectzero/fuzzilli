@@ -21,7 +21,6 @@ let protoBufFileExtension = ".fzil"
 let jsPrefix = ""
 let jsSuffix = ""
 
-let jsLifter = JavaScriptLifter(prefix: jsPrefix, suffix: jsSuffix, ecmaVersion: ECMAScriptVersion.es6, environment: JavaScriptEnvironment())
 let fuzzILLifter = FuzzILLifter()
 
 // Loads a serialized FuzzIL program from the given file
@@ -56,20 +55,20 @@ func loadAllPrograms(in dirPath: String) -> [(filename: String, program: Program
     return results
 }
 
-// Take a program and lifts it to JavaScript
-func liftToJS(_ prog: Program) -> String {
+// Takes a program and lifts it to JavaScript.
+func liftToJS(_ jsLifter: JavaScriptLifter,_ prog: Program) -> String {
     let res = jsLifter.lift(prog)
     return res.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
-// Take a program and lifts it to FuzzIL's text format
+// Takes a program and lifts it to FuzzIL's text format.
 func liftToFuzzIL(_ prog: Program) -> String {
     let res = fuzzILLifter.lift(prog)
     return res.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
-// Loads all .fzil files in a directory, and lifts them to JS
-// Returns the number of files successfully converted
+// Loads all .fzil files in a directory, and lifts them to JS.
+// Returns the number of files successfully converted.
 func liftAllPrograms(in dirPath: String, with lifter: Lifter, fileExtension: String) -> Int {
     var numLiftedPrograms = 0
     for (filename, program) in loadAllPrograms(in: dirPath) {
@@ -96,25 +95,29 @@ func loadProgramOrExit(from path: String) -> Program {
 
 let args = Arguments.parse(from: CommandLine.arguments)
 
-if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 1 || args.numOptionalArguments != 1 {
+if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 1 || args.numOptionalArguments > 2 {
     print("""
           Usage:
-          \(args.programName) option path
+          \(args.programName) options path
 
           Options:
-              --liftToFuzzIL         : Lifts the given protobuf program to FuzzIL's text format and prints it
-              --liftToJS             : Lifts the given protobuf program to JS and prints it
-              --liftCorpusToJS       : Loads all .fzil files in a directory and lifts them to .js files in that same directory
-              --dumpProtobuf         : Dumps the raw content of the given protobuf file
-              --dumpProgram          : Dumps the internal representation of the program stored in the given protobuf file
-              --checkCorpus          : Attempts to load all .fzil files in a directory and checks if they are statically valid
-              --compile              : Compile the given JavaScript program to a FuzzIL program. Requires node.js
-              --generate             : Generate a random program using Fuzzilli's code generators and save it to the specified path.
+              --liftToFuzzIL           : Lifts the given protobuf program to FuzzIL's text format and prints it
+              --liftToJS               : Lifts the given protobuf program to JS and prints it
+              --liftCorpusToJS         : Loads all .fzil files in a directory and lifts them to .js files in that same directory
+              --dumpProtobuf           : Dumps the raw content of the given protobuf file
+              --dumpProgram            : Dumps the internal representation of the program stored in the given protobuf file
+              --checkCorpus            : Attempts to load all .fzil files in a directory and checks if they are statically valid
+              --compile                : Compile the given JavaScript program to a FuzzIL program. Requires node.js
+              --generate               : Generate a random program using Fuzzilli's code generators and save it to the specified path.
+              --forDifferentialFuzzing : Enable additional features for better support of external differential fuzzing.
           """)
     exit(0)
 }
 
 let path = args[0]
+
+let forDifferentialFuzzing = args.has("--forDifferentialFuzzing")
+let jsLifter = JavaScriptLifter(prefix: jsPrefix, suffix: jsSuffix, ecmaVersion: ECMAScriptVersion.es6, environment: JavaScriptEnvironment(), alwaysEmitVariables: forDifferentialFuzzing)
 
 // Covert a single IL protobuf file to FuzzIL's text format and print to stdout
 if args.has("--liftToFuzzIL") {
@@ -125,7 +128,7 @@ if args.has("--liftToFuzzIL") {
 // Covert a single IL protobuf file to JS and print to stdout
 else if args.has("--liftToJS") {
     let program = loadProgramOrExit(from: path)
-    print(liftToJS(program))
+    print(liftToJS(jsLifter, program))
 }
 
 // Lift all protobuf programs to JavaScript

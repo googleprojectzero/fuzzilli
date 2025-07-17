@@ -107,7 +107,7 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
     let environment = maybeEnvironment ?? JavaScriptEnvironment()
 
     // A lifter to translate FuzzIL programs to JavaScript.
-    let lifter = JavaScriptLifter(prefix: "", suffix: "", ecmaVersion: .es6, environment: environment)
+    let lifter = JavaScriptLifter(prefix: "", suffix: "", ecmaVersion: .es6, environment: environment, alwaysEmitVariables: configuration.forDifferentialFuzzing)
 
     // Corpus managing interesting programs that have been found during fuzzing.
     let corpus = maybeCorpus ?? BasicCorpus(minSize: 1000, maxSize: 2000, minMutationsPerSample: 5)
