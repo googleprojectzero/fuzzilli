@@ -714,7 +714,6 @@ let v8Profile = Profile(
             args.append(probability(0.5) ? "--maglev-inline-api-calls" : "--no-maglev-inline-api-calls")
 
             // Compiler related flags
-            args.append(probability(0.5) ? "--always-turbofan" : "--no-always-turbofan")
             args.append(probability(0.5) ? "--turbo-move-optimization" : "--no-turbo-move-optimization")
             args.append(probability(0.5) ? "--turbo-jt" : "--no-turbo-jt")
             args.append(probability(0.5) ? "--turbo-loop-peeling" : "--no-turbo-loop-peeling")
