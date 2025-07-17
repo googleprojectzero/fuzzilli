@@ -98,6 +98,7 @@ Options:
     --tag=tag                    : Optional string tag associated with this instance which will be stored in the settings.json file as well as in crashing samples.
                                    This can for example be used to remember the target revision that is being fuzzed.
     --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
+    --forDifferentialFuzzing     : Enable additional features for better support of external differential fuzzing.
 
 """)
     exit(0)
@@ -155,6 +156,7 @@ let argumentRandomization = args.has("--argumentRandomization")
 let additionalArguments = args["--additionalArguments"] ?? ""
 let tag = args["--tag"]
 let enableWasm = args.has("--wasm")
+let forDifferentialFuzzing = args.has("--forDifferentialFuzzing")
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -469,7 +471,8 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     let lifter = JavaScriptLifter(prefix: profile.codePrefix,
                                   suffix: profile.codeSuffix,
                                   ecmaVersion: profile.ecmaVersion,
-                                  environment: environment)
+                                  environment: environment,
+                                  alwaysEmitVariables: configuration.forDifferentialFuzzing)
 
     // The evaluator to score produced samples.
     let evaluator = ProgramCoverageEvaluator(runner: runner)

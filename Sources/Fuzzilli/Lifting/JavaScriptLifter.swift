@@ -39,6 +39,9 @@ public class JavaScriptLifter: Lifter {
     /// Counter to assist the lifter in detecting nested CodeStrings
     private var codeStringNestingLevel = 0
 
+    /// Force emission of variables even if the result is unused.
+    private let alwaysEmitVariables: Bool
+
     /// Stack of for-loop header parts. A for-loop's header consists of three different blocks (initializer, condition, afterthought), which
     /// are lifted independently but should then typically be combined into a single line. This helper stack makes that possible.
     struct ForLoopHeader {
@@ -64,12 +67,14 @@ public class JavaScriptLifter: Lifter {
     public init(prefix: String = "",
                 suffix: String = "",
                 ecmaVersion: ECMAScriptVersion,
-                environment: JavaScriptEnvironment? = nil) {
+                environment: JavaScriptEnvironment? = nil,
+                alwaysEmitVariables: Bool = false) {
         self.prefix = prefix
         self.suffix = suffix
         self.version = ecmaVersion
         self.environment = environment
         self.logger = Logger(withLabel: "JavaScriptLifter")
+        self.alwaysEmitVariables = alwaysEmitVariables
     }
 
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
@@ -99,7 +104,7 @@ public class JavaScriptLifter: Lifter {
             typer = JSTyper(for: environment!)
         }
 
-        var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers))
+        var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers), alwaysEmitVariables: alwaysEmitVariables)
 
         var wasmCodeStarts: Int? = nil
         var wasmTypeGroupStarts: Int? = nil
@@ -1894,6 +1899,9 @@ public class JavaScriptLifter: Lifter {
         let varKeyword: String
         let constKeyword: String
 
+        // Forces the writer to also emit variables for unused expressions.
+        let alwaysEmitVariables: Bool
+
         /// Code can be emitted into a temporary buffer instead of into the final script. This is mainly useful for inlining entire blocks.
         /// The typical way to use this would be to call pushTemporaryOutputBuffer() when handling a BeginXYZBlock, then calling
         /// popTemporaryOutputBuffer() when handling the corresponding EndXYZBlock and then either inlining the block's body
@@ -1921,11 +1929,12 @@ public class JavaScriptLifter: Lifter {
         // See `reassign()` for more details about reassignment inlining.
         private var inlinedReassignments = VariableMap<Expression>()
 
-        init(analyzer: DefUseAnalyzer, version: ECMAScriptVersion, stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4) {
+        init(analyzer: DefUseAnalyzer, version: ECMAScriptVersion, stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4, alwaysEmitVariables: Bool = false) {
             self.writer = ScriptWriter(stripComments: stripComments, includeLineNumbers: includeLineNumbers, indent: indent)
             self.analyzer = analyzer
             self.varKeyword = version == .es6 ? "let" : "var"
             self.constKeyword = version == .es6 ? "const" : "var"
+            self.alwaysEmitVariables = alwaysEmitVariables
         }
 
         /// Assign a JavaScript expression to a FuzzIL variable.
@@ -1949,7 +1958,7 @@ public class JavaScriptLifter: Lifter {
                 // The expression cannot be inlined. Now decide whether to define the output variable or not. The output variable can be omitted if:
                 //  * It is not used by any following instructions, and
                 //  * It is not an Object literal, as that would not be valid syntax (it would mistakenly be interpreted as a block statement)
-                if analyzer.numUses(of: v) == 0 && expr.type !== ObjectLiteral {
+                if analyzer.numUses(of: v) == 0 && expr.type !== ObjectLiteral && !alwaysEmitVariables {
                     emit("\(expr);")
                 } else {
                     let LET = declarationKeyword(for: v)
@@ -2247,7 +2256,7 @@ public class JavaScriptLifter: Lifter {
                 // Pending expressions with no uses are allowed and are for example necessary to be able to
                 // combine multiple expressions into a single comma-expression for e.g. a loop header.
                 // See the loop header lifting code and tests for examples.
-                if EXPR.type === ObjectLiteral {
+                if EXPR.type === ObjectLiteral || alwaysEmitVariables {
                     // Special case: we cannot just emit these as expression statements as they would
                     // not be distinguishable from block statements. So create a dummy variable.
                     let LET = constKeyword
