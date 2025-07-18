@@ -361,21 +361,36 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = WasmMemoryStore(storeType: newStoreType, staticOffset: newStaticOffset)
         case .constSimd128(_):
             newOp = ConstSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
-        case .wasmSimd128IntegerUnOp(let op):
-            // TODO: ?
-            newOp = op
+        case .wasmSimd128IntegerUnOp(_):
+            let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter {!$0.isFloat()})
+            let unOpKind = chooseUniform(from: WasmSimd128IntegerUnOpKind.allCases.filter {
+                $0.isValidForShape(shape: shape)
+            })
+            newOp = WasmSimd128IntegerUnOp(shape: shape, unOpKind: unOpKind)
         case .wasmSimd128IntegerBinOp(let op):
-            // TODO: ?
-            newOp = op
-        case .wasmSimd128FloatUnOp(let op):
-            // TODO: ?
-            newOp = op
-        case .wasmSimd128FloatBinOp(let op):
-            // TODO: ?
-            newOp = op
-        case .wasmSimd128Compare(let op):
-            // TODO: ?
-            newOp = op
+            let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter {!$0.isFloat()})
+            // We can't convert between shift operations and other operations as they require
+            // different input types.
+            let isShift = op.binOpKind.isShift()
+            let binOpKind = chooseUniform(from: WasmSimd128IntegerBinOpKind.allCases.filter{
+                $0.isValidForShape(shape: shape) && $0.isShift() == isShift
+            })
+            newOp = WasmSimd128IntegerBinOp(shape: shape, binOpKind: binOpKind)
+        case .wasmSimd128FloatUnOp(_):
+            let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter {$0.isFloat()})
+            let unOpKind = chooseUniform(from: WasmSimd128FloatUnOpKind.allCases.filter {
+                $0.isValidForShape(shape: shape)
+            })
+            newOp = WasmSimd128FloatUnOp(shape: shape, unOpKind: unOpKind)
+        case .wasmSimd128FloatBinOp(_):
+            let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter {$0.isFloat()})
+            let binOpKind = chooseUniform(from: WasmSimd128FloatBinOpKind.allCases.filter {
+                $0.isValidForShape(shape: shape)
+            })
+            newOp = WasmSimd128FloatBinOp(shape: shape, binOpKind: binOpKind)
+        case .wasmSimd128Compare(_):
+            let shape = chooseUniform(from: WasmSimd128Shape.allCases)
+            newOp = WasmSimd128Compare(shape: shape, compareOpKind: b.randomSimd128CompareOpKind(shape))
         case .wasmSimdExtractLane(let op):
             newOp = WasmSimdExtractLane(kind: op.kind, lane: Int.random(in: 0..<op.kind.laneCount()))
         case .wasmSimdReplaceLane(let op):
