@@ -3324,8 +3324,7 @@ public class ProgramBuilder {
             case valueType(ILType)
         }
 
-        // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
-        // TODO(cffsmith): I think the best way to handle these types of blocks is to treat them like inline functions that have a signature. E.g. they behave like a definition and call of a wasmfunction. The output should be the output of the signature.
+        // The first innerOutput of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         public func wasmBuildBlock(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> ()) {
             assert(signature.outputTypes.count == 0)
             let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args, types: signature.parameterTypes)

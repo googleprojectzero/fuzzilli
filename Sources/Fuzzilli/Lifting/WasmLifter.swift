@@ -332,12 +332,6 @@ public class WasmLifter {
             return expr
         }
 
-        // Return all not-yet-emitted variables
-        // TODO: this does not preserve order?
-        func getPendingVars() -> [Variable] {
-            varMap.filter({ !emittedVariables.contains($0.0) }).map { $0.0 }
-        }
-
         public var isEmpty: Bool {
             return varMap.isEmpty
         }
@@ -1217,8 +1211,6 @@ public class WasmLifter {
             currentFunction = functionInfo
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
         case .endWasmFunction(_):
-            // TODO: Make sure that the stack is matching the output of the function signature, at least depth wise
-            // Make sure that we exit the current function, this is necessary such that the variableAnalyzer can be reset too, it is local to a function definition and we should only pass .wasmFunction context instructions to the variableAnalyzer.
             currentFunction!.outputVariable = instr.output
             return true
         case .wasmDefineGlobal(_):
