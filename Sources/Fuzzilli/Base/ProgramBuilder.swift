@@ -3915,6 +3915,22 @@ public class ProgramBuilder {
         probability(0.8) ? .None : Bool.random() ? .Likely : .Unlikely
     }
 
+    public func randomSimd128CompareOpKind(_ shape: WasmSimd128Shape) -> WasmSimd128CompareOpKind {
+        if shape.isFloat() {
+            return .fKind(value: chooseUniform(from: WasmFloatCompareOpKind.allCases))
+        } else {
+            if shape == .i64x2 {
+                // i64x2 does not provide unsigned comparison.
+                return .iKind(value:
+                    chooseUniform(from: WasmIntegerCompareOpKind.allCases.filter{
+                        return $0 != .Lt_u && $0 != .Le_u && $0 != .Gt_u && $0 != .Ge_u
+                    }))
+            } else {
+                return .iKind(value: chooseUniform(from: WasmIntegerCompareOpKind.allCases))
+            }
+        }
+    }
+
     @discardableResult
     public func buildWasmModule(_ body: (WasmModule) -> ()) -> WasmModule {
         emit(BeginWasmModule())

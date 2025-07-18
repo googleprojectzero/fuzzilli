@@ -1499,6 +1499,15 @@ public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
 
     case relaxed_swizzle            = 164
 
+    func isShift() -> Bool {
+        switch self {
+            case .shl, .shr_s, .shr_u:
+                return true
+            default:
+                return false
+        }
+    }
+
     func isValidForShape(shape: WasmSimd128Shape) -> Bool {
         if shape.isFloat() { return false }
         switch self {

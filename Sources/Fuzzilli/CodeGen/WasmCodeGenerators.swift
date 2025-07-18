@@ -1030,9 +1030,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmSimd128IntegerUnOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
-        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ return !$0.isFloat() })
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ !$0.isFloat() })
         let unOpKind = chooseUniform(from: WasmSimd128IntegerUnOpKind.allCases.filter{
-            return $0.isValidForShape(shape: shape)
+            $0.isValidForShape(shape: shape)
         })
 
         let function = b.currentWasmModule.currentWasmFunction;
@@ -1040,27 +1040,22 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmSimd128IntegerBinOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, lhs in
-        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ return !$0.isFloat() })
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ !$0.isFloat() })
         let binOpKind = chooseUniform(from: WasmSimd128IntegerBinOpKind.allCases.filter{
-            return $0.isValidForShape(shape: shape)
+            $0.isValidForShape(shape: shape)
         })
         let function = b.currentWasmModule.currentWasmFunction;
 
         // Shifts take an i32 as an rhs input, the others take a regular .wasmSimd128 input.
-        var rhs = switch binOpKind {
-        case .shl, .shr_s, .shr_u:
-            b.randomVariable(ofType: .wasmi32) ?? function.consti32(Int32(truncatingIfNeeded: b.randomInt()))
-        default:
-            b.randomVariable(ofType: .wasmSimd128) ?? function.constSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
-        }
-
+        let rhsType = binOpKind.isShift() ? ILType.wasmi32 : .wasmSimd128
+        var rhs = function.findOrGenerateWasmVar(ofType: rhsType)
         function.wasmSimd128IntegerBinOp(lhs, rhs, shape, binOpKind)
     },
 
     CodeGenerator("WasmSimd128FloatUnOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
-        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ return $0.isFloat() })
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ $0.isFloat() })
         let unOpKind = chooseUniform(from: WasmSimd128FloatUnOpKind.allCases.filter{
-            return $0.isValidForShape(shape: shape)
+            $0.isValidForShape(shape: shape)
         })
 
         let function = b.currentWasmModule.currentWasmFunction;
@@ -1068,9 +1063,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmSimd128FloatBinOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128, .wasmSimd128)) { b, lhs, rhs in
-        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ return $0.isFloat() })
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ $0.isFloat() })
         let binOpKind = chooseUniform(from: WasmSimd128FloatBinOpKind.allCases.filter{
-            return $0.isValidForShape(shape: shape)
+            $0.isValidForShape(shape: shape)
         })
 
         let function = b.currentWasmModule.currentWasmFunction;
@@ -1079,20 +1074,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("WasmSimd128CompareGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128, .wasmSimd128)) { b, lhs, rhs in
         let shape = chooseUniform(from: WasmSimd128Shape.allCases)
-        let compareOpKind = if shape.isFloat() {
-            WasmSimd128CompareOpKind.fKind(value: chooseUniform(from: WasmFloatCompareOpKind.allCases))
-        } else {
-            if shape == .i64x2 {
-                // i64x2 does not provide unsigned comparison.
-                WasmSimd128CompareOpKind.iKind(value:
-                    chooseUniform(from: WasmIntegerCompareOpKind.allCases.filter{
-                        return $0 != .Lt_u && $0 != .Le_u && $0 != .Gt_u && $0 != .Ge_u
-                    }))
-            } else {
-                WasmSimd128CompareOpKind.iKind(value:
-                    chooseUniform(from: WasmIntegerCompareOpKind.allCases))
-            }
-        }
+        let compareOpKind = b.randomSimd128CompareOpKind(shape)
 
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmSimd128Compare(lhs, rhs, shape, compareOpKind)
