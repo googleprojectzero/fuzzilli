@@ -1543,7 +1543,7 @@ public class JavaScriptLifter: Lifter {
                         case .wasmSimd128:
                             return "\"v128\""
                         case .wasmFuncRef:
-                            return "\"funcref\""
+                            return "\"anyfunc\""
                         case .wasmExnRef:
                             return "\"exnref\""
                         case .wasmI31Ref:

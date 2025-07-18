@@ -3482,6 +3482,21 @@ class WasmFoundationTests: XCTestCase {
         try tagExportedToDifferentWasmModule(defineInWasm: false)
     }
 
+    // Test that defining a Wasm tag in JS with a funcref in its parameter types does not fail.
+    func testTagFuncRefInJS() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        b.createWasmTag(parameterTypes: [.wasmFuncRef])
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        // The "funcref" type name is only available with the reflection proposal. Otherwise the
+        // name has to be "anyfunc".
+        XCTAssert(jsProg.contains("\"anyfunc\""))
+        testForOutput(program: jsProg, runner: runner, outputString: "")
+    }
+
     func testThrowRef() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
