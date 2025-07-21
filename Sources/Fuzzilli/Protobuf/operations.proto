@@ -883,6 +883,14 @@ enum WasmReferenceTypeKind {
   FUNCREF = 2;
   EXNREF = 3;
   I31REF = 4;
+  ANYREF = 5;
+  EQREF = 6;
+  STRUCTREF = 7;
+  ARRAYREF = 8;
+  NONEREF = 9;
+  NOEXTERNREF = 10;
+  NOFUNCREF = 11;
+  NOEXNREF = 12;
 }
 
 message WasmReferenceType {

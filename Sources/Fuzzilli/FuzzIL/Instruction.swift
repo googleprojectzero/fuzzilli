@@ -398,6 +398,23 @@ extension Instruction: ProtobufConvertible {
                                     Fuzzilli_Protobuf_WasmReferenceTypeKind.funcref
                                 case .WasmExtern:
                                     Fuzzilli_Protobuf_WasmReferenceTypeKind.externref
+                                case .WasmAny:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.anyref
+                                case .WasmEq:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.eqref
+                                case .WasmStruct:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.structref
+                                case .WasmArray:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.arrayref
+                                case .WasmNone:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.noneref
+                                case .WasmNoExtern:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.noexternref
+                                case .WasmNoFunc:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.nofuncref
+                                case .WasmNoExn:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.noexnref
+
                             }
                             return Fuzzilli_Protobuf_WasmILType.with {
                                 $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
@@ -1580,20 +1597,37 @@ extension Instruction: ProtobufConvertible {
                     fatalError("Unrecognized wasm value type \(value)")
                 }
             case .refType(_):
-                switch wasmType.refType.kind {
+                let refKind: WasmReferenceType.Kind = switch wasmType.refType.kind {
                 case .index:
-                    return .wasmRef(.Index(), nullability: wasmType.refType.nullability)
+                    .Index()
                 case .externref:
-                    return .wasmRef(.Abstract(.WasmExtern), nullability: wasmType.refType.nullability)
+                    .Abstract(.WasmExtern)
                 case .funcref:
-                    return .wasmRef(.Abstract(.WasmFunc), nullability: wasmType.refType.nullability)
+                    .Abstract(.WasmFunc)
                 case .exnref:
-                    return .wasmRef(.Abstract(.WasmExn), nullability: wasmType.refType.nullability)
+                    .Abstract(.WasmExn)
                 case .i31Ref:
-                    return .wasmRef(.Abstract(.WasmI31), nullability: wasmType.refType.nullability)
+                    .Abstract(.WasmI31)
+                case .anyref:
+                    .Abstract(.WasmAny)
+                case .eqref:
+                    .Abstract(.WasmEq)
+                case .structref:
+                    .Abstract(.WasmStruct)
+                case .arrayref:
+                    .Abstract(.WasmArray)
+                case .noneref:
+                    .Abstract(.WasmNone)
+                case .noexternref:
+                    .Abstract(.WasmNoExtern)
+                case .nofuncref:
+                    .Abstract(.WasmNoFunc)
+                case .noexnref:
+                    .Abstract(.WasmNoExn)
                 case .UNRECOGNIZED(let value):
                     fatalError("Unrecognized wasm reference type \(value)")
                 }
+                return .wasmRef(refKind, nullability: wasmType.refType.nullability)
             case .none:
                 fatalError("Absent wasm type")
             }

@@ -527,10 +527,26 @@ public class WasmLifter {
                 return Data([0x6f])
             case .WasmFunc:
                 return Data([0x70])
+            case .WasmAny:
+                return Data([0x6e])
+            case .WasmEq:
+                return Data([0x6d])
             case .WasmI31:
                 return Data([0x6c])
+            case .WasmStruct:
+                return Data([0x6b])
+            case .WasmArray:
+                return Data([0x6a])
             case .WasmExn:
                 return Data([0x69])
+            case .WasmNone:
+                return Data([0x71])
+            case .WasmNoExtern:
+                return Data([0x72])
+            case .WasmNoFunc:
+                return Data([0x73])
+            case .WasmNoExn:
+                return Data([0x74])
         }
     }
 

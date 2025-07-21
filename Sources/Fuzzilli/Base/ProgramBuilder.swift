@@ -3738,6 +3738,8 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmRefNull(type: ILType) -> Variable {
+            assert(type.isWasmReferenceType)
+            assert(type.wasmReferenceType!.isAbstract(), "index types must use .wasmRefNull(Variable)")
             return b.emit(WasmRefNull(type: type)).output
         }
 
@@ -3910,12 +3912,12 @@ public class ProgramBuilder {
 
     public func randomWasmBlockOutputTypes(upTo n: Int) -> [ILType] {
         // TODO(mliedtke): This should allow more types as well as non-nullable references for all
-        // // abstract heap types. To be able to emit them, generateRandomWasmVar() needs to be able
+        // abstract heap types. To be able to emit them, generateRandomWasmVar() needs to be able
         // to generate a sequence that produces such a non-nullable value which might be difficult
         // for some types as of now.
         (0..<Int.random(in: 0...n)).map {_ in chooseUniform(from:
-            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmExternRef, .wasmFuncRef, .wasmExnRef,
-             .wasmI31Ref, .wasmRefI31, .wasmSimd128])}
+            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128, .wasmRefI31]
+                + WasmAbstractHeapType.allCases.map {.wasmRef(.Abstract($0), nullability: true)})}
     }
 
     public func randomWasmBlockArguments(upTo n: Int) -> [Variable] {

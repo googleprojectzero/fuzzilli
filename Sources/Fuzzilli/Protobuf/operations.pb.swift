@@ -620,6 +620,14 @@ public enum Fuzzilli_Protobuf_WasmReferenceTypeKind: SwiftProtobuf.Enum, Swift.C
   case funcref // = 2
   case exnref // = 3
   case i31Ref // = 4
+  case anyref // = 5
+  case eqref // = 6
+  case structref // = 7
+  case arrayref // = 8
+  case noneref // = 9
+  case noexternref // = 10
+  case nofuncref // = 11
+  case noexnref // = 12
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -633,6 +641,14 @@ public enum Fuzzilli_Protobuf_WasmReferenceTypeKind: SwiftProtobuf.Enum, Swift.C
     case 2: self = .funcref
     case 3: self = .exnref
     case 4: self = .i31Ref
+    case 5: self = .anyref
+    case 6: self = .eqref
+    case 7: self = .structref
+    case 8: self = .arrayref
+    case 9: self = .noneref
+    case 10: self = .noexternref
+    case 11: self = .nofuncref
+    case 12: self = .noexnref
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -644,6 +660,14 @@ public enum Fuzzilli_Protobuf_WasmReferenceTypeKind: SwiftProtobuf.Enum, Swift.C
     case .funcref: return 2
     case .exnref: return 3
     case .i31Ref: return 4
+    case .anyref: return 5
+    case .eqref: return 6
+    case .structref: return 7
+    case .arrayref: return 8
+    case .noneref: return 9
+    case .noexternref: return 10
+    case .nofuncref: return 11
+    case .noexnref: return 12
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -655,6 +679,14 @@ public enum Fuzzilli_Protobuf_WasmReferenceTypeKind: SwiftProtobuf.Enum, Swift.C
     .funcref,
     .exnref,
     .i31Ref,
+    .anyref,
+    .eqref,
+    .structref,
+    .arrayref,
+    .noneref,
+    .noexternref,
+    .nofuncref,
+    .noexnref,
   ]
 
 }
@@ -5546,6 +5578,14 @@ extension Fuzzilli_Protobuf_WasmReferenceTypeKind: SwiftProtobuf._ProtoNameProvi
     2: .same(proto: "FUNCREF"),
     3: .same(proto: "EXNREF"),
     4: .same(proto: "I31REF"),
+    5: .same(proto: "ANYREF"),
+    6: .same(proto: "EQREF"),
+    7: .same(proto: "STRUCTREF"),
+    8: .same(proto: "ARRAYREF"),
+    9: .same(proto: "NONEREF"),
+    10: .same(proto: "NOEXTERNREF"),
+    11: .same(proto: "NOFUNCREF"),
+    12: .same(proto: "NOEXNREF"),
   ]
 }
 
