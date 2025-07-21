@@ -4226,7 +4226,7 @@ class WasmGCTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 
-    func testRefNull() throws {
+    func testRefNullIndexTypes() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -4235,32 +4235,64 @@ class WasmGCTests: XCTestCase {
         let arrayType = b.wasmDefineTypeGroup {[b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]}[0]
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, args in
-                function.wasmReturn(function.wasmRefNull(type: .wasmExternRef))
-            }
-            wasmModule.addWasmFunction(with: [] => [.wasmFuncRef]) { function, args in
-                function.wasmReturn(function.wasmRefNull(type: .wasmFuncRef))
-            }
-            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, args in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
                 let refNull = function.wasmRefNull(typeDef: arrayType)
-                function.wasmRefIsNull(refNull)
+                return [function.wasmRefIsNull(refNull)]
             }
-            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, args in
+            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
                 let array = function.wasmArrayNewFixed(arrayType: arrayType, elements: [])
-                function.wasmRefIsNull(array)
+                return [function.wasmRefIsNull(array)]
             }
         }
 
         let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        for i in 0..<4 {
+        for i in 0..<2 {
             let wasmOut = b.callMethod(module.getExportedMethod(at: i), on: exports, withArgs: [])
             b.callFunction(outputFunc, withArgs: [wasmOut])
         }
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
-        testForOutput(program: jsProg, runner: runner, outputString: "null\nnull\n1\n0\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "1\n0\n")
+    }
+
+    func testRefNullAbstractTypes() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            for heapType in WasmAbstractHeapType.allCases {
+                let valueType = ILType.wasmRef(.Abstract(heapType), nullability: true)
+                if heapType.isUsableInJS() {
+                    // ref.null <heapType>
+                    wasmModule.addWasmFunction(with: [] => [valueType]) { function, label, args in
+                        [function.wasmRefNull(type: valueType)]
+                    }
+                }
+                // ref.is_null(ref.null <heapType>)
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    [function.wasmRefIsNull(function.wasmRefNull(type: valueType))]
+                }
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let exportedFctCount = WasmAbstractHeapType.allCases.count
+                             + WasmAbstractHeapType.allCases.count {$0.isUsableInJS()}
+        for i in 0..<exportedFctCount {
+            let wasmOut = b.callMethod(module.getExportedMethod(at: i), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [wasmOut])
+        }
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        // In JS all null values look the same (they are the same).
+        let expected = WasmAbstractHeapType.allCases.map {$0.isUsableInJS() ? "null\n1\n" : "1\n"}.joined()
+        testForOutput(program: jsProg, runner: runner, outputString: expected)
     }
 
     func testI31Ref() throws {

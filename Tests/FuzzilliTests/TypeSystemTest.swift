@@ -1099,6 +1099,11 @@ class TypeSystemTests: XCTestCase {
         // Test union of merged types
         let strObjOrFuncObj = (ILType.string + ILType.object(withProperties: ["foo"])) | (ILType.function([.rest(.jsAnything)] => .float) + ILType.object(withProperties: ["foo"]))
         XCTAssertEqual(strObjOrFuncObj.description, ".string + .object(withProperties: [\"foo\"]) | .object(withProperties: [\"foo\"]) + .function()")
+
+        let nullExn = ILType.wasmRef(.Abstract(.WasmExn), nullability: true)
+        let nonNullAny = ILType.wasmRef(.Abstract(.WasmAny), nullability: false)
+        XCTAssertEqual(nullExn.description, ".wasmRef(.Abstract(null WasmExn))")
+        XCTAssertEqual(nonNullAny.description, ".wasmRef(.Abstract(WasmAny))")
     }
 
     func testWasmSubsumptionRules() {
@@ -1147,7 +1152,7 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse(ILType.wasmGenericRef <= ILType.wasmRef(.Index(), nullability: true))
 
         // Test nullability rules for abstract Wasm types.
-        for heapType: WasmAbstractHeapType in [.WasmExn, .WasmExtern, .WasmFunc, .WasmI31] {
+        for heapType: WasmAbstractHeapType in WasmAbstractHeapType.allCases {
             let nullable = ILType.wasmRef(.Abstract(heapType), nullability: true)
             let nonNullable = ILType.wasmRef(.Abstract(heapType), nullability: false)
             XCTAssert(nonNullable.Is(nullable))

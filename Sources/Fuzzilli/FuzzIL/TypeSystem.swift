@@ -1329,11 +1329,34 @@ public class WasmTypeDefinition: WasmTypeExtension {
     }
 }
 
+// TODO: Add continuation types for core stack switching.
+// TODO: Add shared bit for shared-everything-threads.
+// TODO: Add internal string type for JS string builtins.
 enum WasmAbstractHeapType: CaseIterable {
     case WasmExtern
     case WasmFunc
-    case WasmExn
+    case WasmAny
+    case WasmEq
     case WasmI31
+    case WasmStruct
+    case WasmArray
+    case WasmExn
+    case WasmNone
+    case WasmNoExtern
+    case WasmNoFunc
+    case WasmNoExn
+
+    // True if the type can be used from JS, i.e. either passing the value from JS as a parameter or
+    // returning the value to JS as a result. (exnrefs cannot be passed from/to JS and throw
+    // runtime errors when trying to do so.)
+    func isUsableInJS() -> Bool {
+        switch self {
+            case .WasmExn, .WasmNoExn:
+                return false
+            default:
+                return true
+        }
+    }
 }
 
 // A wrapper around a WasmTypeDescription without owning the WasmTypeDescription.
@@ -1385,6 +1408,15 @@ public class WasmReferenceType: WasmTypeExtension {
     init(_ kind: Kind, nullability: Bool) {
         self.kind = kind
         self.nullability = nullability
+    }
+
+    func isAbstract() -> Bool {
+        switch self.kind {
+            case .Abstract(_):
+                return true
+            case .Index(_):
+                return false
+        }
     }
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
