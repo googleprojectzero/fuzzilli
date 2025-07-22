@@ -643,8 +643,14 @@ public struct ILType: Hashable {
         let commonMethods = self.methods.intersection(other.methods)
         let signature = self.signature == other.signature ? self.signature : nil        // TODO: this is overly coarse, we could also see if one signature subsumes the other, then take the subsuming one.
         let receiver = other.receiver != nil && other.receiver != nil ? self.receiver?.intersection(with: other.receiver!) : nil
-        let group = self.group == other.group ? self.group : nil
+        var group = self.group == other.group ? self.group : nil
         let wasmExt = self.wasmType != nil && other.wasmType != nil ? self.wasmType!.union(other.wasmType!) : nil
+        // Object groups are used to describe certain wasm types. If the WasmTypeExtension is lost,
+        // the group should also be invalidated. This ensures that e.g. any
+        // `.object(ofGroup: "WasmTag")` always has a `.wasmTagType` extension.
+        if wasmExt == nil && (self.wasmType ?? other.wasmType) != nil {
+            group = nil
+        }
 
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: commonProperties, methods: commonMethods, signature: signature, wasmExt: wasmExt, receiver: receiver))
     }
