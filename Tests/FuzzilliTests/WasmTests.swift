@@ -2262,6 +2262,88 @@ class WasmFoundationTests: XCTestCase {
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
                 }
             }, "(0|-1),7,0,0"), // note: we use -1 to denote UINT32_MAX as it is pain to make .wasmi32 represented as unsigned integer
+            // Test float add
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmf32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([0.0, 1.5, 2.6, 3.7]))
+                    let varB = function.constSimd128(value: floatToByteArray([4.8, 5.9, 7.0, 8.1]))
+                    let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.add)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
+                }
+            },"4.8[0-9]*,7.4[0-9]*,9.6[0-9]*,11.8[0-9]*"), // for floating point math need to allow trailing digits
+            // Test float sub
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmf32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([4.8, 1.5, 7.0, 8.1]))
+                    let varB = function.constSimd128(value: floatToByteArray([0.0, 5.9, 2.6, 3.7]))
+                    let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.sub)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
+                }
+            },"4.8[0-9]*,-4.4[0-9]*,4.4[0-9]*,4.4[0-9]*"), // for floating point math need to allow trailing digits
+            // Test float mul
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmf32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([4.8, 1.5, 7.0, 8.1]))
+                    let varB = function.constSimd128(value: floatToByteArray([0.0, 5.9, 2.6, 3.7]))
+                    let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.mul)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
+                }
+            },"0,8.85[0-9]*,(18.1[0-9]*|18.2[0-9]*),29.97[0-9]*"), // for floating point math need to allow trailing digits and take into account rounding issues
+            // Test float div
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmf32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([0.0, 1.5, 7.0, 8.1]))
+                    let varB = function.constSimd128(value: floatToByteArray([4.8, 5.9, 2.6, 3.7]))
+                    let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.div)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
+                }
+            },"0,0.2542[0-9]*,2.6923[0-9]*,2.1891[0-9]*"), // for floating point math need to allow trailing digits and take into account rounding issues
+            // Test float min
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmf32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([0.0, 5.9, 7.0, 0.0 / 0.0]))
+                    let varB = function.constSimd128(value: floatToByteArray([4.8, 1.5, 0.0 / 0.0, 3.7]))
+                    let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.min)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
+                }
+            },"0,1.5[0-9]*,NaN,NaN"), // for floating point math need to allow trailing digits and take into account rounding issues
+            // Test float max
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmf32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([0.0, 5.9, 7.0, 0.0 / 0.0]))
+                    let varB = function.constSimd128(value: floatToByteArray([4.8, 1.5, 0.0 / 0.0, 3.7]))
+                    let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.max)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
+                }
+            },"4.8[0-9]*,5.9[0-9]*,NaN,NaN"), // for floating point math need to allow trailing digits and take into account rounding issues
+            // Test float pmin
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmf32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([0.0, 5.9, 7.0, 0.0 / 0.0]))
+                    let varB = function.constSimd128(value: floatToByteArray([4.8, 1.5, 0.0 / 0.0, 3.7]))
+                    let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.pmin)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
+                }
+            },"0,1.5[0-9]*,7,NaN"), // for floating point math need to allow trailing digits and take into account rounding issues
+            // Test float pmax
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmf32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([0.0, 5.9, 7.0, 0.0 / 0.0]))
+                    let varB = function.constSimd128(value: floatToByteArray([4.8, 1.5, 0.0 / 0.0, 3.7]))
+                    let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.pmax)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
+                }
+            },"4.8[0-9]*,5.9[0-9]*,7,NaN"), // for floating point math need to allow trailing digits and take into account rounding issues
+
+
         ]
 
         let module = b.buildWasmModule { wasmModule in
