@@ -1595,8 +1595,17 @@ public enum WasmSimd128FloatBinOpKind: Int, CaseIterable {
     case pmin = 6
     case pmax = 7
 
+    // f32x4: 0x100 + offset
+    // f64x2: 0x102 + offset
+    case relaxed_min = 13
+    case relaxed_max = 14
+
     func isValidForShape(shape: WasmSimd128Shape) -> Bool {
         return shape.isFloat()
+    }
+
+    func isRelaxed() -> Bool {
+        return self == .relaxed_min || self == .relaxed_max
     }
 }
 
@@ -1610,6 +1619,15 @@ final class WasmSimd128FloatBinOp: WasmOperation {
         self.shape = shape
         self.binOpKind = binOpKind
         super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+
+    func getOpcode() -> Int {
+        let base = if(binOpKind.isRelaxed()) {
+            shape == .f32x4 ? 0x100 : 0x102;
+        } else {
+            shape == .f32x4 ? 0xE4 : 0xF0;
+        }
+        return base + binOpKind.rawValue
     }
 }
 
