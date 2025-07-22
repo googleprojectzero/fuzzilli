@@ -1918,9 +1918,8 @@ public class WasmLifter {
             }
             return Data([Prefix.Simd.rawValue]) + encoding
         case .wasmSimd128FloatBinOp(let op):
-            assert(WasmSimd128FloatBinOpKind.allCases.count == 8, "New WasmSimd128FloatBinOpKind added: check if the encoding is still correct!")
-            let base = (op.shape == .f32x4) ? 0xE4 : 0xF0;
-            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue) + Leb128.unsignedEncode(0x01)
+            assert(WasmSimd128FloatBinOpKind.allCases.count == 10, "New WasmSimd128FloatBinOpKind added: check if the encoding is still correct!")
+            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(op.getOpcode()) + Leb128.unsignedEncode(0x01)
         case .wasmSimd128Compare(let op):
             assert(WasmIntegerCompareOpKind.allCases.count == 10, "New WasmIntegerCompareOpKind added: check if the encoding is still correct!")
             assert(WasmFloatCompareOpKind.allCases.count == 6, "New WasmFloatCompareOpKind added: check if the encoding is still correct!")
