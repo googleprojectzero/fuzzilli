@@ -611,18 +611,22 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalI32Mutable, ILTypeGlobalI32Mutable)
 
         // Types with not equal WasmTypeExtension don't have a WasmTypeExtension in their union.
-        let unionMutabilityDiff = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"])
+        let unionMutabilityDiff = ILType.object(withProperties: ["value"])
         XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalI32NonMutable, unionMutabilityDiff)
         // Invariant: the union of two types subsumes both types.
         XCTAssert(unionMutabilityDiff >= ILTypeGlobalI32Mutable)
         XCTAssert(unionMutabilityDiff >= ILTypeGlobalI32NonMutable)
 
-        let unionValueTypeDiff = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"])
+        let unionValueTypeDiff = ILType.object(withProperties: ["value"])
         XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalF32Mutable, unionValueTypeDiff)
         XCTAssert(unionValueTypeDiff >= ILTypeGlobalI32Mutable)
         XCTAssert(unionValueTypeDiff >= ILTypeGlobalI32NonMutable)
 
-        XCTAssertEqual(ILTypeGlobalI32Mutable | .object(ofGroup: "WasmGlobal"), .object(ofGroup: "WasmGlobal"))
+        // When removing the WasmTypeExtension, the group is also removed. (Note that this specific
+        // case is artificial as a .object(ofGroup: WasmGlobal) should only be used e.g. as a
+        // search criteria but never appear as a type for a variable without a corresponding
+        // .wasmGlobalType extension.)
+        XCTAssertEqual(ILTypeGlobalI32Mutable | .object(ofGroup: "WasmGlobal"), .object())
         XCTAssert(.object(ofGroup: "WasmGlobal") >= ILTypeGlobalI32Mutable)
         XCTAssertEqual(ILTypeGlobalI32Mutable | .object(withProperties: ["value"]), .object(withProperties: ["value"]))
         XCTAssert(.object(withProperties: ["value"]) >= ILTypeGlobalI32Mutable)
@@ -1153,6 +1157,25 @@ class TypeSystemTests: XCTestCase {
             XCTAssertEqual(nullable.intersection(with: nonNullable), nonNullable)
             XCTAssertEqual(nonNullable.intersection(with: nullable), nonNullable)
         }
+    }
+
+    func testWasmTypeExtensionUnionTypeExtensionVsWasmTypeExtension() {
+        let tagA = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi32]))
+        let tagB = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi64]))
+        // The union with itself doesn't modify the type.
+        XCTAssertEqual(tagA.union(with: tagA), tagA)
+        // The union of two distinct wasm tags / WasmTypeExtensions leads to the removal of the wasm
+        // type extension. To make the types easier to use (e.g. a catch might just want to search
+        // for any wasm tag by doing `required(.object(ofGroup: "WasmTag"))` and expect to get a tag
+        // with a valid type extension), if the WasmTypeExtension is removed, also any object group
+        // is invalidated on the TypeExtension.
+        let tagUnion = tagA.union(with: tagB)
+        XCTAssertNil(tagUnion.wasmType)
+        XCTAssertNil(tagUnion.group)
+        // The intersection of two unequal tags always leads to an invalid type (as tags never
+        // subsume each other).
+        let tagIntersection = tagA.intersection(with: tagB)
+        XCTAssertEqual(tagIntersection, .nothing)
     }
 
     func testUnboundFunctionSubsumptionRules() {
