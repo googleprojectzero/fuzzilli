@@ -3926,9 +3926,16 @@ public class ProgramBuilder {
     }
 
     public func randomTagParameters() -> [ILType] {
-        // TODO(mliedtke): The list of types should be shared with function signature generation etc.
-        return (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from:
-            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExnRef, .wasmExternRef, .wasmI31Ref, .wasmSimd128])}
+        // TODO(mliedtke): The list of types should be shared with function signature generation
+        // etc. We should also support non-nullable references but that requires being able
+        // to generate valid ones which currently isn't the case for most of them.
+        return (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from: [
+            // Value types:
+            .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
+            // Subset of abstract heap types (the null (bottom) types are not allowed in the JS API):
+            .wasmExternRef, .wasmFuncRef, .wasmAnyRef, .wasmEqRef, .wasmI31Ref, .wasmStructRef,
+            .wasmArrayRef, .wasmExnRef
+        ])}
     }
 
     public func randomWasmSignature() -> WasmSignature {
