@@ -4000,7 +4000,13 @@ public class ProgramBuilder {
 
     /// Returns the next free variable.
     func nextVariable() -> Variable {
-        assert(numVariables < Code.maxNumberOfVariables, "Too many variables")
+        // Temporarily introduce a lower limit: Programs shouldn't get exceedingly large.
+        // TODO(mliedtke): Undo this once the issues are fixed.
+        let maxNumberOfVariables = 10_000
+        assert(maxNumberOfVariables <= Code.maxNumberOfVariables)
+        if numVariables >= maxNumberOfVariables {
+            fatalError("Too many variables \(numVariables). Contributors: \(contributors.map {$0.name})")
+        }
         numVariables += 1
         return Variable(number: numVariables - 1)
     }
