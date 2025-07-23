@@ -377,7 +377,7 @@ public class OperationMutator: BaseInstructionMutator {
             })
             newOp = WasmSimd128IntegerBinOp(shape: shape, binOpKind: binOpKind)
         case .wasmSimd128IntegerTernaryOp(_):
-            let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter { $0.isFloat() })
+            let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter { !$0.isFloat() })
             let ternaryOpKind = chooseUniform(from: WasmSimd128IntegerTernaryOpKind.allCases.filter {
                 $0.isValidForShape(shape: shape)
             })

@@ -1053,7 +1053,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmSimd128IntegerTernaryOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128, .wasmSimd128, .wasmSimd128)) { b, left, mid, right in
-        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ $0.isFloat() } )
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ !$0.isFloat() } )
         let ternaryOpKind = chooseUniform(from: WasmSimd128IntegerTernaryOpKind.allCases.filter{
             $0.isValidForShape(shape: shape)
         })
