@@ -376,6 +376,12 @@ public class OperationMutator: BaseInstructionMutator {
                 $0.isValidForShape(shape: shape) && $0.isShift() == isShift
             })
             newOp = WasmSimd128IntegerBinOp(shape: shape, binOpKind: binOpKind)
+        case .wasmSimd128IntegerTernaryOp(_):
+            let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter { $0.isFloat() })
+            let ternaryOpKind = chooseUniform(from: WasmSimd128IntegerTernaryOpKind.allCases.filter {
+                $0.isValidForShape(shape: shape)
+            })
+            newOp = WasmSimd128IntegerTernaryOp(shape: shape, ternaryOpKind: ternaryOpKind)
         case .wasmSimd128FloatUnOp(_):
             let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter {$0.isFloat()})
             let unOpKind = chooseUniform(from: WasmSimd128FloatUnOpKind.allCases.filter {
@@ -388,6 +394,12 @@ public class OperationMutator: BaseInstructionMutator {
                 $0.isValidForShape(shape: shape)
             })
             newOp = WasmSimd128FloatBinOp(shape: shape, binOpKind: binOpKind)
+        case .wasmSimd128FloatTernaryOp(_):
+            let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter { $0.isFloat() })
+            let ternaryOpKind = chooseUniform(from: WasmSimd128FloatTernaryOpKind.allCases.filter {
+                $0.isValidForShape(shape: shape)
+            })
+            newOp = WasmSimd128FloatTernaryOp(shape: shape, ternaryOpKind: ternaryOpKind)
         case .wasmSimd128Compare(_):
             let shape = chooseUniform(from: WasmSimd128Shape.allCases)
             newOp = WasmSimd128Compare(shape: shape, compareOpKind: b.randomSimd128CompareOpKind(shape))

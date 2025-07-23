@@ -1190,11 +1190,17 @@ public class FuzzILLifter: Lifter {
         case .wasmSimd128IntegerBinOp(let op):
             w.emit("\(output()) <- WasmSimd128IntegerBinOp \(op.shape) \(op.binOpKind) \(input(0)) \(input(1))")
 
+        case .wasmSimd128IntegerTernaryOp(let op):
+            w.emit("\(output()) <- WasmSimd128IntegerTernaryOp \(op.shape) \(op.ternaryOpKind) \(input(0)) \(input(1)) \(input(2))")
+
         case .wasmSimd128FloatUnOp(let op):
             w.emit("\(output()) <- WasmSimd128FloatUnOp \(op.shape).\(op.unOpKind) \(input(0))")
 
         case .wasmSimd128FloatBinOp(let op):
             w.emit("\(output()) <- WasmSimd128FloatBinOp \(op.shape).\(op.binOpKind) \(input(0)) \(input(1))")
+
+        case .wasmSimd128FloatTernaryOp(let op):
+            w.emit("\(output()) <- WasmSimd128FloatTernaryOp \(op.shape).\(op.ternaryOpKind) \(input(0)) \(input(1)) \(input(2))")
 
         case .wasmSimd128Compare(let op):
             w.emit("\(output()) <- WasmSimd128Compare \(op.shape) \(op.compareOpKind) \(input(0)) \(input(1))")

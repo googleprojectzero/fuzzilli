@@ -3624,6 +3624,11 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func wasmSimd128IntegerTernaryOp(_ left: Variable, _ mid: Variable, _ right: Variable, _ shape: WasmSimd128Shape, _ integerTernaryOpKind: WasmSimd128IntegerTernaryOpKind) -> Variable {
+            return b.emit(WasmSimd128IntegerTernaryOp(shape: shape, ternaryOpKind: integerTernaryOpKind), withInputs: [left, mid, right], types: [.wasmSimd128, .wasmSimd128, .wasmSimd128]).output
+        }
+
+        @discardableResult
         public func wasmSimd128FloatUnOp(_ input: Variable, _ shape: WasmSimd128Shape, _ floatUnOpKind: WasmSimd128FloatUnOpKind) -> Variable {
             return b.emit(WasmSimd128FloatUnOp(shape: shape, unOpKind: floatUnOpKind), withInputs: [input], types: [.wasmSimd128]).output
         }
@@ -3631,6 +3636,11 @@ public class ProgramBuilder {
         @discardableResult
         public func wasmSimd128FloatBinOp(_ left: Variable, _ right: Variable, _ shape: WasmSimd128Shape, _ floatBinOpKind: WasmSimd128FloatBinOpKind) -> Variable {
             return b.emit(WasmSimd128FloatBinOp(shape: shape, binOpKind: floatBinOpKind), withInputs: [left, right], types: [.wasmSimd128, .wasmSimd128]).output
+        }
+
+        @discardableResult
+        public func wasmSimd128FloatTernaryOp(_ left: Variable, _ mid: Variable, _ right: Variable, _ shape: WasmSimd128Shape, _ floatTernaryOpKind: WasmSimd128FloatTernaryOpKind) -> Variable {
+            return b.emit(WasmSimd128FloatTernaryOp(shape: shape, ternaryOpKind: floatTernaryOpKind), withInputs: [left, mid, right], types: [.wasmSimd128, .wasmSimd128, .wasmSimd128]).output
         }
 
         @discardableResult
