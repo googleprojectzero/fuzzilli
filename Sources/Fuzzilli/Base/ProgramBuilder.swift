@@ -272,8 +272,10 @@ public class ProgramBuilder {
     /// Returns a random integer value suitable as size of for example an array.
     /// The returned value is guaranteed to be positive.
     public func randomSize(upTo maximum: Int64 = 0x100000000) -> Int64 {
-        assert(maximum >= 0x1000)
-        if probability(0.5) {
+        assert(maximum >= 0)
+        if maximum < 0x1000 {
+            return Int64.random(in: 0...maximum)
+        } else if probability(0.5) {
             return chooseUniform(from: fuzzer.environment.interestingIntegers.filter({ $0 >= 0 && $0 <= maximum }))
         } else {
             return withEqualProbability({
@@ -291,7 +293,7 @@ public class ProgramBuilder {
     /// Returns a random non-negative integer value suitable as index.
     public func randomNonNegativeIndex(upTo max: Int64 = 0x100000000) -> Int64 {
         // Prefer small indices.
-        if probability(0.33) {
+        if max > 10 && probability(0.33) {
             return Int64.random(in: 0...10)
         } else {
             return randomSize(upTo: max)
