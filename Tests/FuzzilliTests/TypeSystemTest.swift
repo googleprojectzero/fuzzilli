@@ -1183,6 +1183,85 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(tagIntersection, .nothing)
     }
 
+    func testWasmAbstractHeapTypeSubsumptionRules() {
+        let groupAny: [WasmAbstractHeapType] =
+            [.WasmAny, .WasmEq, .WasmI31, .WasmStruct, .WasmArray, .WasmNone]
+        let groupExtern: [WasmAbstractHeapType] = [.WasmExtern, .WasmNoExtern]
+        let groupFunc: [WasmAbstractHeapType] = [.WasmFunc, .WasmNoFunc]
+        let groupExn: [WasmAbstractHeapType] = [.WasmExn, .WasmNoExn]
+        let allGroups = [groupAny, groupExtern, groupFunc, groupExn]
+        let allTypes = allGroups.joined()
+        // If this fails, please extend the arrays above with the newly added type(s).
+        XCTAssert(WasmAbstractHeapType.allCases.allSatisfy(allTypes.contains))
+
+        // All types in the same type group share the same bottom type.
+        XCTAssert(groupAny.allSatisfy {$0.getBottom() == .WasmNone})
+        XCTAssert(groupExtern.allSatisfy {$0.getBottom() == .WasmNoExtern})
+        XCTAssert(groupFunc.allSatisfy {$0.getBottom() == .WasmNoFunc})
+        XCTAssert(groupExn.allSatisfy {$0.getBottom() == .WasmNoExn})
+
+        // The union and intersection of of two unrelated types are nil.
+        for groupA in allGroups {
+            for groupB in allGroups where groupA != groupB {
+                for typeA in groupA {
+                    for typeB in groupB {
+                        XCTAssertNil(typeA.union(typeB), "a=\(typeA) b=\(typeB)")
+                        XCTAssertNil(typeA.intersection(typeB), "a=\(typeA) b=\(typeB)")
+                    }
+                }
+            }
+        }
+
+        for type in allTypes {
+            XCTAssertEqual(type.union(type), type)
+            XCTAssertEqual(type.union(type.getBottom()), type)
+            XCTAssertEqual(type.getBottom().union(type), type)
+            XCTAssertEqual(type.intersection(type), type)
+            XCTAssertEqual(type.intersection(type.getBottom()), type.getBottom())
+        }
+
+        // Testing a few combinations.
+        XCTAssertEqual(WasmAbstractHeapType.WasmAny.union(.WasmEq), .WasmAny)
+        XCTAssertEqual(WasmAbstractHeapType.WasmStruct.union(.WasmArray), .WasmEq)
+        XCTAssertEqual(WasmAbstractHeapType.WasmI31.union(.WasmArray), .WasmEq)
+        XCTAssertEqual(WasmAbstractHeapType.WasmArray.union(.WasmEq), .WasmEq)
+        XCTAssertEqual(WasmAbstractHeapType.WasmArray.intersection(.WasmStruct), .WasmNone)
+        XCTAssertEqual(WasmAbstractHeapType.WasmI31.intersection(.WasmStruct), .WasmNone)
+        XCTAssertEqual(WasmAbstractHeapType.WasmI31.intersection(.WasmEq), .WasmI31)
+        XCTAssertEqual(WasmAbstractHeapType.WasmAny.intersection(.WasmArray), .WasmArray)
+
+        // Tests on the whole ILType.
+        let ref = {t in ILType.wasmRef(.Abstract(t), nullability: false)}
+        let refNull = {t in ILType.wasmRef(.Abstract(t), nullability: false)}
+        for type in allTypes {
+            let refT = ref(type)
+            let refNullT = refNull(type)
+            XCTAssertEqual(refT.union(with: refNullT), refNullT)
+            XCTAssertEqual(refNullT.union(with: refT), refNullT)
+            XCTAssertEqual(refT.union(with: refT), refT)
+            XCTAssertEqual(refNullT.union(with: refNullT), refNullT)
+            XCTAssertEqual(refT.intersection(with: refT), refT)
+            XCTAssertEqual(refNullT.intersection(with: refNullT), refNullT)
+            XCTAssertEqual(refT.intersection(with: refNullT), refT)
+            XCTAssertEqual(refNullT.intersection(with: refT), refT)
+        }
+
+        XCTAssertEqual(ref(.WasmAny).union(with: refNull(.WasmEq)), refNull(.WasmAny))
+        XCTAssertEqual(ref(.WasmStruct).union(with: ref(.WasmArray)), ref(.WasmEq))
+        // We should never do this for the type information of any Variable as .wasmGenericRef
+        // cannot be encoded in the Wasm module and any instruction that leads to such a static type
+        // is "broken". However, we will still need to allow this union type if we want to be able
+        // to request a .required(.wasmGenericRef) for operations like WasmRefIsNull.
+        XCTAssertEqual(ref(.WasmI31).union(with: refNull(.WasmExn)), .wasmGenericRef)
+
+        XCTAssertEqual(ref(.WasmAny).intersection(with: refNull(.WasmEq)), ref(.WasmEq))
+        XCTAssertEqual(refNull(.WasmI31).intersection(with: refNull(.WasmStruct)), refNull(.WasmNone))
+        // Note that `ref none` is a perfectly valid type in Wasm but such a reference can never be
+        // constructed.
+        XCTAssertEqual(ref(.WasmArray).intersection(with: refNull(.WasmStruct)), ref(.WasmNone))
+        XCTAssertEqual(refNull(.WasmArray).intersection(with: ref(.WasmAny)), ref(.WasmArray))
+    }
+
     func testUnboundFunctionSubsumptionRules() {
         XCTAssertEqual(ILType.unboundFunction(), .unboundFunction())
         XCTAssertNotEqual(ILType.unboundFunction([] => .object()), .unboundFunction())
