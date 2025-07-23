@@ -1555,6 +1555,37 @@ final class WasmSimd128IntegerBinOp: WasmOperation {
     }
 }
 
+public enum WasmSimd128IntegerTernaryOpKind: Int, CaseIterable {
+    // i8x16: 0x100 + offset
+    // i16x8: 0x101 + offset
+    // i32x4: 0x102 + offset
+    // i64x2: 0x103 + offset
+
+    case relaxed_laneselect = 9
+    case relaxed_dot_i8x16_i7x16_add_s = 17
+
+    func isValidForShape(shape: WasmSimd128Shape) -> Bool {
+        if shape.isFloat() { return false }
+        switch self {
+            case .relaxed_laneselect: return true
+            case .relaxed_dot_i8x16_i7x16_add_s: return shape == .i32x4
+        }
+    }
+}
+
+final class WasmSimd128IntegerTernaryOp: WasmOperation {
+    override var opcode: Opcode { .wasmSimd128IntegerTernaryOp(self) }
+    let shape: WasmSimd128Shape
+    let ternaryOpKind: WasmSimd128IntegerTernaryOpKind
+
+    init(shape: WasmSimd128Shape, ternaryOpKind: WasmSimd128IntegerTernaryOpKind) {
+        assert(ternaryOpKind.isValidForShape(shape: shape))
+        self.shape = shape
+        self.ternaryOpKind = ternaryOpKind
+        super.init(numInputs: 3, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
 public enum WasmSimd128FloatUnOpKind: Int, CaseIterable {
     case ceil
     case floor
@@ -1628,6 +1659,30 @@ final class WasmSimd128FloatBinOp: WasmOperation {
             shape == .f32x4 ? 0xE4 : 0xF0;
         }
         return base + binOpKind.rawValue
+    }
+}
+
+public enum WasmSimd128FloatTernaryOpKind: Int, CaseIterable {
+    // f32x4: 0x100 + offset
+    // f64x2: 0x102 + offset
+    case madd = 5
+    case nmadd = 6
+
+    func isValidForShape(shape: WasmSimd128Shape) -> Bool {
+        return shape.isFloat()
+    }
+}
+
+final class WasmSimd128FloatTernaryOp: WasmOperation {
+    override var opcode: Opcode { .wasmSimd128FloatTernaryOp(self) }
+    let shape: WasmSimd128Shape
+    let ternaryOpKind: WasmSimd128FloatTernaryOpKind
+
+    init(shape: WasmSimd128Shape, ternaryOpKind: WasmSimd128FloatTernaryOpKind) {
+        assert(ternaryOpKind.isValidForShape(shape: shape))
+        self.shape = shape
+        self.ternaryOpKind = ternaryOpKind
+        super.init(numInputs: 3, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 

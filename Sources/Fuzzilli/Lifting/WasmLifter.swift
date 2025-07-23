@@ -1893,6 +1893,16 @@ public class WasmLifter {
                 encoding += Leb128.unsignedEncode(0x01)
             }
             return encoding
+        case .wasmSimd128IntegerTernaryOp(let op):
+            assert(WasmSimd128IntegerTernaryOpKind.allCases.count == 2, "New WasmSimd128IntegerTernaryOpKind added: check if the encoding is still correct!")
+            let base = switch op.shape {
+                case .i8x16: 0x100
+                case .i16x8: 0x101
+                case .i32x4: 0x102
+                case .i64x2: 0x103
+                default: fatalError("Shape \(op.shape) not supported for WasmSimd128IntegerTernaryOp")
+            }
+            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.ternaryOpKind.rawValue) + Leb128.unsignedEncode(0x01)
         case .wasmSimd128FloatUnOp(let op):
             assert(WasmSimd128FloatUnOpKind.allCases.count == 7, "New WasmSimd128FloatUnOpKind added: check if the encoding is still correct!")
             let encoding = switch op.shape {
@@ -1920,6 +1930,14 @@ public class WasmLifter {
         case .wasmSimd128FloatBinOp(let op):
             assert(WasmSimd128FloatBinOpKind.allCases.count == 10, "New WasmSimd128FloatBinOpKind added: check if the encoding is still correct!")
             return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(op.getOpcode()) + Leb128.unsignedEncode(0x01)
+        case .wasmSimd128FloatTernaryOp(let op):
+            assert(WasmSimd128FloatTernaryOpKind.allCases.count == 2, "New WasmSimd128FloatTernaryOpKind added: check if the encoding is still correct!")
+            let base = switch op.shape {
+                case .f32x4: 0x100
+                case .f64x2: 0x102
+                default: fatalError("Shape \(op.shape) not supported for WasmSimd128FloatTernaryOp")
+            }
+            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.ternaryOpKind.rawValue) + Leb128.unsignedEncode(0x01)
         case .wasmSimd128Compare(let op):
             assert(WasmIntegerCompareOpKind.allCases.count == 10, "New WasmIntegerCompareOpKind added: check if the encoding is still correct!")
             assert(WasmFloatCompareOpKind.allCases.count == 6, "New WasmFloatCompareOpKind added: check if the encoding is still correct!")

@@ -2183,31 +2183,34 @@ class WasmFoundationTests: XCTestCase {
             }, "255,254,253,252,251,250,249,248"),
             // Test all_true positive
             ({wasmModule in
-                wasmModule.addWasmFunction(with: [] => [ILType.wasmi32]) { function, label, args in
+                let returnType = (0..<2).map {_ in ILType.wasmi32 }
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
                     let varA = function.constSimd128(value:
                         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
                     let result = function.wasmSimd128IntegerUnOp(varA, WasmSimd128Shape.i8x16, WasmSimd128IntegerUnOpKind.all_true)
-                    return [result]
+                    return [result, result] // hack to not confuse JS code extracting the result, as it always expects an array
                 }
-            }, "1"),
+            }, "1,1"),
             // Test all_true negative
             ({wasmModule in
-                wasmModule.addWasmFunction(with: [] => [ILType.wasmi32]) { function, label, args in
+                let returnType = (0..<2).map {_ in ILType.wasmi32 }
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
                     let varA = function.constSimd128(value:
                         [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
                     let result = function.wasmSimd128IntegerUnOp(varA, WasmSimd128Shape.i8x16, WasmSimd128IntegerUnOpKind.all_true)
-                    return [result]
+                    return [result, result]
                 }
-            }, "0"),
+            }, "0,0"),
             // Test bitmask
             ({wasmModule in
-                wasmModule.addWasmFunction(with: [] => [ILType.wasmi32]) { function, label, args in
+                let returnType = (0..<2).map {_ in ILType.wasmi32 }
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
                     let varA = function.constSimd128(value:
                         [255, 200, 2, 230, 8, 16, 64, 127, 128, 129, 150, 180, 0, 1, 4, 8])
                     let result = function.wasmSimd128IntegerUnOp(varA, WasmSimd128Shape.i8x16, WasmSimd128IntegerUnOpKind.bitmask)
-                    return [result]
+                    return [result, result]
                 }
-            }, "3851"),
+            }, "3851,3851"),
             // Test relaxed_trunc_f32x4_s
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmi32}
@@ -2271,7 +2274,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.add)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
                 }
-            },"4.8[0-9]*,7.4[0-9]*,9.6[0-9]*,11.8[0-9]*"), // for floating point math need to allow trailing digits and take into account rounding issues
+            },"4.80,7.40,9.60,11.80"),
             // Test float sub
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmf32}
@@ -2281,7 +2284,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.sub)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
                 }
-            },"4.8[0-9]*,-4.4[0-9]*,4.4[0-9]*,4.4[0-9]*"),
+            },"4.80,-4.40,4.40,4.40"),
             // Test float mul
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmf32}
@@ -2291,7 +2294,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.mul)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
                 }
-            },"0,8.85[0-9]*,(18.1[0-9]*|18.2[0-9]*),29.97[0-9]*"),
+            },"0,8.85,18.20,29.97"),
             // Test float div
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmf32}
@@ -2301,7 +2304,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.div)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
                 }
-            },"0,0.2542[0-9]*,2.6923[0-9]*,2.1891[0-9]*"),
+            },"0,0.25,2.69,2.19"),
             // Test float min
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmf32}
@@ -2311,7 +2314,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.min)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
                 }
-            },"0,1.5[0-9]*,NaN,NaN"),
+            },"0,1.50,NaN,NaN"),
             // Test float max
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmf32}
@@ -2321,7 +2324,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.max)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
                 }
-            },"4.8[0-9]*,5.9[0-9]*,NaN,NaN"),
+            },"4.80,5.90,NaN,NaN"),
             // Test float pmin
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmf32}
@@ -2331,7 +2334,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.pmin)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
                 }
-            },"0,1.5[0-9]*,7,NaN"),
+            },"0,1.50,7,NaN"),
             // Test float pmax
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmf32}
@@ -2341,7 +2344,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.pmax)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
                 }
-            },"4.8[0-9]*,5.9[0-9]*,7,NaN"),
+            },"4.80,5.90,7,NaN"),
             // Test float relaxed_min
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmf32}
@@ -2351,7 +2354,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.relaxed_min)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
                 }
-            },"0,1.5[0-9]*,(NaN|7),(NaN|3.7[0-9]*)"),
+            },"0,1.50,(NaN|7),(NaN|3.70)"),
             // Test float relaxed_max
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmf32}
@@ -2361,9 +2364,51 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128FloatBinOp(varA, varB, WasmSimd128Shape.f32x4, WasmSimd128FloatBinOpKind.relaxed_max)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
                 }
-            },"4.8[0-9]*,5.9[0-9]*,(NaN|7),(NaN|3.7[0-9]*)"),
-
-
+            },"4.80,5.90,(NaN|7),(NaN|3.70)"),
+             // Test madd
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmf32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([0.0, 5.9, 7.0, 8.1]))
+                    let varB = function.constSimd128(value: floatToByteArray([4.8, 1.5, 2.7, 3.7]))
+                    let varC = function.constSimd128(value: floatToByteArray([9.2, 10.3, 11.4, 12.5]))
+                    let result = function.wasmSimd128FloatTernaryOp(varA, varB, varC, WasmSimd128Shape.f32x4, WasmSimd128FloatTernaryOpKind.madd)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
+                }
+            },"9.20,19.15,30.30,42.47"),
+            // Test nmadd
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmf32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: floatToByteArray([0.0, 5.9, 7.0, 8.1]))
+                    let varB = function.constSimd128(value: floatToByteArray([4.8, 1.5, 2.7, 3.7]))
+                    let varC = function.constSimd128(value: floatToByteArray([9.2, 10.3, 11.4, 12.5]))
+                    let result = function.wasmSimd128FloatTernaryOp(varA, varB, varC, WasmSimd128Shape.f32x4, WasmSimd128FloatTernaryOpKind.nmadd)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.F32x4, result, $0)}
+                }
+            },"9.20,1.45,-7.50,-17.47"),
+            // Test relaxed_laneselect
+            ({wasmModule in
+                let returnType = (0..<16).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: [34, 23, 27, 164, 4, 123, 34, 23, 27, 164, 4, 123, 34, 23, 27, 164])
+                    let varB = function.constSimd128(value: [42, 24, 160, 35, 24, 28, 42, 24, 160, 35, 24, 28, 42, 24, 160, 35])
+                    let varC = function.constSimd128(value: [255, 0, 128, 129, 20, 65, 255, 0, 128, 129, 20, 65, 255, 0, 128, 129])
+                    let result = function.wasmSimd128IntegerTernaryOp(varA, varB, varC, WasmSimd128Shape.i8x16, WasmSimd128IntegerTernaryOpKind.relaxed_laneselect)
+                    return (0..<16).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)}
+                }
+            },"34,24,(155|27),(37|164),(16|24),(122|28),34,24,(155|27),(37|164),(16|24),(122|28),34,24,(155|27),(37|164)"),
+            // Test relaxed_dot_i8x16_i7x16_add_s
+            ({wasmModule in
+                let returnType = (0..<4).map {_ in ILType.wasmi32}
+                wasmModule.addWasmFunction(with: [] => returnType) { function, label, args in
+                    let varA = function.constSimd128(value: [34, 23, 27, 124, 4, 123, 34, 23, 27, 124, 4, 123, 34, 23, 27, 124])
+                    let varB = function.constSimd128(value: [42, 24, 160, 35, 24, 28, 42, 24, 120, 35, 24, 28, 42, 24, 120, 35])
+                    let varC = function.constSimd128(value: [1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0]) // i32x4 vector in fact
+                    let result = function.wasmSimd128IntegerTernaryOp(varA, varB, varC, WasmSimd128Shape.i32x4, WasmSimd128IntegerTernaryOpKind.relaxed_dot_i8x16_i7x16_add_s)
+                    return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
+                }
+            },"(3728|10641),5522,11123,9564")
         ]
 
         let module = b.buildWasmModule { wasmModule in
@@ -2373,9 +2418,22 @@ class WasmFoundationTests: XCTestCase {
         }
 
         for (i, _) in testCases.enumerated() {
-            let res = b.callMethod(module.getExportedMethod(at: i), on: module.loadExports())
-            b.callFunction(b.createNamedVariable(forBuiltin: "output"),
-                withArgs: [b.callMethod("toString", on:res)])
+            let print = b.createNamedVariable(forBuiltin: "print")
+            let number = b.createNamedVariable(forBuiltin: "Number")
+
+            let setFormat = b.buildArrowFunction(with: .parameters(n: 1)) { args in
+                b.buildIfElse(b.callMethod("isInteger", on: number, withArgs: [args[0]])) {
+                    b.doReturn(args[0])
+                } elseBody: {
+                    b.doReturn(b.callMethod("toFixed", on: args[0], withArgs: [b.loadInt(2)]))
+                }
+            }
+
+            let rawValues = b.callMethod(module.getExportedMethod(at: i), on: module.loadExports())
+
+            b.callFunction(print, withArgs:
+                [b.callMethod("join", on: b.callMethod("map", on:rawValues, withArgs: [setFormat]))]
+            )
         }
 
         let jsProg = fuzzer.lifter.lift(b.finalize())

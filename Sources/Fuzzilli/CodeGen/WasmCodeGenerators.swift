@@ -1052,6 +1052,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmSimd128IntegerBinOp(lhs, rhs, shape, binOpKind)
     },
 
+    CodeGenerator("WasmSimd128IntegerTernaryOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128, .wasmSimd128, .wasmSimd128)) { b, left, mid, right in
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ $0.isFloat() } )
+        let ternaryOpKind = chooseUniform(from: WasmSimd128IntegerTernaryOpKind.allCases.filter{
+            $0.isValidForShape(shape: shape)
+        })
+
+        let function = b.currentWasmModule.currentWasmFunction;
+        function.wasmSimd128IntegerTernaryOp(left, mid, right, shape, ternaryOpKind)
+    },
+
     CodeGenerator("WasmSimd128FloatUnOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128)) { b, input in
         let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ $0.isFloat() })
         let unOpKind = chooseUniform(from: WasmSimd128FloatUnOpKind.allCases.filter{
@@ -1070,6 +1080,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
         let function = b.currentWasmModule.currentWasmFunction;
         function.wasmSimd128FloatBinOp(lhs, rhs, shape, binOpKind)
+    },
+
+    CodeGenerator("WasmSimd128FloatTernaryOpGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128, .wasmSimd128, .wasmSimd128)) { b, left, mid, right in
+        let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter{ $0.isFloat() } )
+        let ternaryOpKind = chooseUniform(from: WasmSimd128FloatTernaryOpKind.allCases.filter{
+            $0.isValidForShape(shape: shape)
+        })
+
+        let function = b.currentWasmModule.currentWasmFunction;
+        function.wasmSimd128FloatTernaryOp(left, mid, right, shape, ternaryOpKind)
     },
 
     CodeGenerator("WasmSimd128CompareGenerator", inContext: .wasmFunction, inputs: .required(.wasmSimd128, .wasmSimd128)) { b, lhs, rhs in
