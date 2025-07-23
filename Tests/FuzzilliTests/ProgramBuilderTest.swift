@@ -2744,4 +2744,104 @@ class ProgramBuilderTests: XCTestCase {
 
         XCTAssertEqual(typesB.count, 1)
     }
+
+    func testWasmGCSubtyping() {
+        let env = JavaScriptEnvironment()
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+
+        let typeGroupA = b.wasmDefineTypeGroup {
+            [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
+            b.wasmDefineStructType(fields: [.init(type: .wasmi64, mutability: false)], indexTypes: [])]
+        }
+        let arrayDefI32 = typeGroupA[0]
+        let structDef = typeGroupA[1]
+        let arrayDefI32B = b.wasmDefineTypeGroup {
+            [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+        }[0]
+
+        let arrayDefI32Type = b.type(of: arrayDefI32)
+        let structDefType = b.type(of: structDef)
+        let arrayDefI32BType = b.type(of: arrayDefI32B)
+
+        XCTAssert(arrayDefI32Type.Is(.wasmTypeDef()))
+        XCTAssert(structDefType.Is(.wasmTypeDef()))
+        XCTAssert(arrayDefI32BType.Is(.wasmTypeDef()))
+        // The type of a type definition may not be confused with the type of an instance of such
+        // struct / array.
+        XCTAssertFalse(arrayDefI32Type.Is(.wasmGenericRef))
+        XCTAssertFalse(structDefType.Is(.wasmGenericRef))
+        XCTAssertFalse(arrayDefI32BType.Is(.wasmGenericRef))
+
+        b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, label, args in
+                let arrayI32 = function.wasmArrayNewFixed(arrayType: arrayDefI32, elements: [])
+                let arrayI32Type = b.type(of: arrayI32)
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Index(), nullability: true)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Index(), nullability: false)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmArray), nullability: true)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmArray), nullability: false)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmEq), nullability: true)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmEq), nullability: false)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmAny), nullability: true)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmAny), nullability: false)))
+                XCTAssertFalse(arrayI32Type.Is(.wasmRef(.Abstract(.WasmStruct), nullability: true)))
+                XCTAssertFalse(arrayI32Type.Is(.wasmRef(.Abstract(.WasmStruct), nullability: false)))
+                XCTAssertFalse(arrayI32Type.Is(.wasmRef(.Abstract(.WasmExn), nullability: false)))
+
+                let arrayI32B = function.wasmArrayNewFixed(arrayType: arrayDefI32B, elements: [])
+                let arrayI32BType = b.type(of: arrayI32B)
+                XCTAssertFalse(arrayI32BType.Is(arrayI32Type))
+                XCTAssertFalse(arrayI32Type.Is(arrayI32BType))
+                let refArrayType = ILType.wasmRef(.Abstract(.WasmArray), nullability: false)
+                XCTAssertEqual(arrayI32Type.union(with: arrayI32BType), refArrayType)
+                XCTAssertEqual(arrayI32BType.union(with: arrayI32Type), refArrayType)
+                XCTAssertEqual(arrayI32Type.intersection(with: arrayI32BType), .nothing)
+                XCTAssertEqual(arrayI32BType.intersection(with: arrayI32Type), .nothing)
+
+                let structVar = function.wasmStructNewDefault(structType: structDef)
+                let structType = b.type(of: structVar)
+                XCTAssert(structType.Is(.wasmRef(.Index(), nullability: true)))
+                XCTAssert(structType.Is(.wasmRef(.Index(), nullability: false)))
+                XCTAssert(structType.Is(.wasmRef(.Abstract(.WasmStruct), nullability: false)))
+                XCTAssert(structType.Is(.wasmRef(.Abstract(.WasmEq), nullability: false)))
+                XCTAssert(structType.Is(.wasmRef(.Abstract(.WasmAny), nullability: false)))
+                XCTAssertFalse(structType.Is(.wasmRef(.Abstract(.WasmArray), nullability: true)))
+                XCTAssertFalse(structType.Is(.wasmRef(.Abstract(.WasmArray), nullability: false)))
+                XCTAssertFalse(structType.Is(.wasmRef(.Abstract(.WasmExn), nullability: false)))
+
+                let refEqType = ILType.wasmRef(.Abstract(.WasmEq), nullability: false)
+                XCTAssertEqual(structType.union(with: arrayI32Type), refEqType)
+                XCTAssertEqual(arrayI32Type.union(with: structType), refEqType)
+                XCTAssertEqual(structType.intersection(with: arrayI32Type), .nothing)
+                XCTAssertEqual(arrayI32Type.intersection(with: structType), .nothing)
+
+                let i31 = function.wasmRefI31(function.consti32(42))
+                let i31Type = b.type(of: i31)
+                XCTAssertFalse(i31Type.Is(.wasmRef(.Index(), nullability: true)))
+                XCTAssert(i31Type.Is(.wasmRef(.Abstract(.WasmEq), nullability: false)))
+                XCTAssert(i31Type.Is(.wasmRef(.Abstract(.WasmAny), nullability: false)))
+                XCTAssertFalse(i31Type.Is(.wasmRef(.Abstract(.WasmArray), nullability: false)))
+                XCTAssertFalse(i31Type.Is(.wasmRef(.Abstract(.WasmStruct), nullability: false)))
+                XCTAssertFalse(i31Type.Is(.wasmRef(.Abstract(.WasmExn), nullability: false)))
+
+                XCTAssertEqual(structType.union(with: i31Type), refEqType)
+                XCTAssertEqual(arrayI32Type.union(with: i31Type), refEqType)
+                XCTAssertEqual(i31Type.union(with: refEqType), refEqType)
+                XCTAssertEqual(refArrayType.union(with: i31Type), refEqType)
+                let refStructType = ILType.wasmRef(.Abstract(.WasmStruct), nullability: false)
+                XCTAssertEqual(i31Type.union(with: refStructType), refEqType)
+
+                XCTAssertEqual(i31Type.intersection(with: refEqType), i31Type)
+                XCTAssertEqual(refEqType.intersection(with: i31Type), i31Type)
+                let refNone = ILType.wasmRef(.Abstract(.WasmNone), nullability: false)
+                XCTAssertEqual(i31Type.intersection(with: refArrayType), refNone)
+                XCTAssertEqual(refStructType.intersection(with: i31Type), refNone)
+                XCTAssertEqual(i31Type.intersection(with: .wasmExnRef), .nothing)
+
+                return []
+            }
+        }
+    }
 }

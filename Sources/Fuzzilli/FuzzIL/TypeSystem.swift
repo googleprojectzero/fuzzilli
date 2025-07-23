@@ -241,9 +241,7 @@ public struct ILType: Hashable {
     }
 
     static func wasmSelfReference() -> ILType {
-        let type = wasmTypeDef()
-        type.wasmTypeDefinition!.description = .selfReference
-        return type
+        wasmTypeDef(description: .selfReference)
     }
 
     static func wasmRef(_ kind: WasmReferenceType.Kind, nullability: Bool) -> ILType {
@@ -252,7 +250,7 @@ public struct ILType: Hashable {
             wasmExt: WasmReferenceType(kind, nullability: nullability)))
     }
 
-    static func wasmIndexRef(_ desc: WasmTypeDescription?, nullability: Bool) -> ILType {
+    static func wasmIndexRef(_ desc: WasmTypeDescription, nullability: Bool) -> ILType {
         return wasmRef(.Index(UnownedWasmTypeDescription(desc)), nullability: nullability)
     }
 
@@ -1325,7 +1323,7 @@ public class WasmTypeDefinition: WasmTypeExtension {
 
     func getReferenceTypeTo(nullability: Bool) -> ILType {
         assert(description != nil)
-        return .wasmIndexRef(description, nullability: nullability)
+        return .wasmIndexRef(description!, nullability: nullability)
     }
 }
 
@@ -1455,23 +1453,72 @@ public class WasmReferenceType: WasmTypeExtension {
         case Index(UnownedWasmTypeDescription = UnownedWasmTypeDescription())
         case Abstract(WasmAbstractHeapType)
 
-        func subsumes(_ other: Kind) -> Bool {
+        func union(_ other: Self) -> Self? {
             switch self {
                 case .Index(let desc):
                     switch other {
                         case .Index(let otherDesc):
-                            return desc.get() == nil || desc.get() == otherDesc.get()
-                        case .Abstract(_):
-                            return false
+                            if desc.get() == nil || otherDesc.get() == nil {
+                                return .Index(.init())
+                            }
+                            if desc.get() == otherDesc.get() {
+                                return self
+                            }
+                            if let abstract = desc.get()?.abstractHeapSupertype,
+                               let otherAbstract = otherDesc.get()?.abstractHeapSupertype,
+                               let upperBound = abstract.union(otherAbstract) {
+                                return .Abstract(upperBound)
+                               }
+                        case .Abstract(let otherAbstract):
+                            if let abstractSuper = desc.get()?.abstractHeapSupertype,
+                               let upperBound = abstractSuper.union(otherAbstract) {
+                                return .Abstract(upperBound)
+                            }
                     }
                 case .Abstract(let heapType):
                     switch other {
-                        case .Index(_):
-                            return false
+                        case .Index(let otherDesc):
+                            if let otherAbstract = otherDesc.get()?.abstractHeapSupertype,
+                               let upperBound = heapType.union(otherAbstract) {
+                                return .Abstract(upperBound)
+                            }
                         case .Abstract(let otherHeapType):
-                            return heapType.subsumes(otherHeapType)
+                            if let upperBound = heapType.union(otherHeapType) {
+                                return .Abstract(upperBound)
+                            }
                     }
             }
+            return nil
+        }
+
+        func intersection(_ other: Self) -> Self? {
+            switch self {
+                case .Index(let desc):
+                    switch other {
+                        case .Index(let otherDesc):
+                            if desc.get() == otherDesc.get() || desc.get() == nil || otherDesc.get() == nil {
+                                return .Index(desc)
+                            }
+                        case .Abstract(let otherAbstract):
+                            if let abstractSuper = desc.get()?.abstractHeapSupertype,
+                               otherAbstract.subsumes(abstractSuper) {
+                                return self
+                            }
+                    }
+                case .Abstract(let heapType):
+                    switch other {
+                        case .Index(let otherDesc):
+                            if let otherAbstract = otherDesc.get()?.abstractHeapSupertype,
+                                heapType.subsumes(otherAbstract) {
+                                return other
+                            }
+                        case .Abstract(let otherHeapType):
+                            if let lowerBound = heapType.intersection(otherHeapType) {
+                                return .Abstract(lowerBound)
+                            }
+                    }
+            }
+            return nil
         }
     }
     var kind: Kind
@@ -1498,61 +1545,27 @@ public class WasmReferenceType: WasmTypeExtension {
 
     override func subsumes(_ other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmReferenceType else { return false }
-        return self.kind.subsumes(other.kind) && (self.nullability || !other.nullability)
+        return self.kind.union(other.kind) == self.kind && (self.nullability || !other.nullability)
     }
 
     override func union(_ other: WasmTypeExtension) -> WasmTypeExtension? {
         guard let other = other as? WasmReferenceType else { return nil }
-        // The union is nullable if either of the two types input types is nullable.
-        let nullability = self.nullability || other.nullability
-        // TODO(gc): Add subtyping between different index types, different abstract types and
-        // between index and abstract types.
-        switch self.kind {
-            case .Index(let desc):
-                switch other.kind {
-                    case .Index(let otherDesc):
-                        return desc.get() == otherDesc.get() ? WasmReferenceType(.Index(desc), nullability: nullability) : nil
-                    case .Abstract(_):
-                        return nil
-                }
-            case .Abstract(let heapType):
-                switch other.kind {
-                    case .Index(_):
-                        return nil
-                    case .Abstract(let otherHeapType):
-                        if let upperBound = heapType.union(otherHeapType) {
-                            return WasmReferenceType(.Abstract(upperBound), nullability: nullability)
-                        }
-                        return nil
-                }
+        if let kind = self.kind.union(other.kind) {
+            // The union is nullable if either of the two types input types is nullable.
+            let nullability = self.nullability || other.nullability
+            return WasmReferenceType(kind, nullability: nullability)
         }
+        return nil
     }
 
     override func intersection(_ other: WasmTypeExtension) -> WasmTypeExtension? {
         guard let other = other as? WasmReferenceType else { return nil }
-        // The intersection is nullable if both are nullable.
-        let nullability = self.nullability && other.nullability
-        // TODO(gc): Add subtyping between different index types, different abstract types and
-        // between index and abstract types.
-        switch self.kind {
-            case .Index(let desc):
-                switch other.kind {
-                    case .Index(let otherDesc):
-                        return desc.get() == otherDesc.get() ? WasmReferenceType(.Index(desc), nullability: nullability) : nil
-                    case .Abstract(_):
-                        return nil
-                }
-            case .Abstract(let heapType):
-                switch other.kind {
-                    case .Index(_):
-                        return nil
-                    case .Abstract(let otherHeapType):
-                        if let lowerBound = heapType.intersection(otherHeapType) {
-                            return WasmReferenceType(.Abstract(lowerBound), nullability: nullability)
-                        }
-                        return nil
-                }
+        if let kind = self.kind.intersection(other.kind) {
+            // The intersection is nullable if both are nullable.
+            let nullability = self.nullability && other.nullability
+            return WasmReferenceType(kind, nullability: nullability)
         }
+        return nil
     }
 
     override public func hash(into hasher: inout Hasher) {
@@ -1935,9 +1948,15 @@ func => (parameters: [ILType], returnTypes: [ILType]) -> WasmSignature {
 class WasmTypeDescription: Hashable {
     static let selfReference = WasmTypeDescription(typeGroupIndex: -1)
     public let typeGroupIndex: Int
+    // The "closest" super type that is an abstract type (.WasmArray for arrays, .WasmStruct for
+    // structs). It is nil for unresolved forward/self references for which the concrete abstract
+    // super type is still undecided.
+    public let abstractHeapSupertype: WasmAbstractHeapType?
 
-    init(typeGroupIndex: Int) {
+    // TODO(gc): We will also need to support subtyping of struct and array types at some point.
+    init(typeGroupIndex: Int, superType: WasmAbstractHeapType? = nil) {
         self.typeGroupIndex = typeGroupIndex
+        self.abstractHeapSupertype = superType
     }
 
     static func == (lhs: WasmTypeDescription, rhs: WasmTypeDescription) -> Bool {
@@ -1956,7 +1975,7 @@ class WasmArrayTypeDescription: WasmTypeDescription {
     init(elementType: ILType, mutability: Bool, typeGroupIndex: Int) {
         self.elementType = elementType
         self.mutability = mutability
-        super.init(typeGroupIndex: typeGroupIndex)
+        super.init(typeGroupIndex: typeGroupIndex, superType: .WasmArray)
     }
 }
 
@@ -1975,6 +1994,6 @@ class WasmStructTypeDescription: WasmTypeDescription {
 
     init(fields: [Field], typeGroupIndex: Int) {
         self.fields = fields
-        super.init(typeGroupIndex: typeGroupIndex)
+        super.init(typeGroupIndex: typeGroupIndex, superType: .WasmStruct)
     }
 }
