@@ -1332,7 +1332,10 @@ public class WasmTypeDefinition: WasmTypeExtension {
 // TODO: Add continuation types for core stack switching.
 // TODO: Add shared bit for shared-everything-threads.
 // TODO: Add internal string type for JS string builtins.
-enum WasmAbstractHeapType: CaseIterable {
+enum WasmAbstractHeapType: CaseIterable, Comparable {
+    // Note: The union, intersection, ... implementations are inspired by Binaryen's implementation,
+    // so when extending the type system, feel free to use that implemenation as an orientation.
+    // https://github.com/WebAssembly/binaryen/blob/main/src/wasm/wasm-type.cpp
     case WasmExtern
     case WasmFunc
     case WasmAny
@@ -1356,6 +1359,75 @@ enum WasmAbstractHeapType: CaseIterable {
             default:
                 return true
         }
+    }
+
+    func isBottom() -> Bool {
+        getBottom() == self
+    }
+
+    func getBottom() -> Self {
+        switch self {
+            case .WasmExtern, .WasmNoExtern:
+                return .WasmNoExtern
+            case .WasmFunc, .WasmNoFunc:
+                return .WasmNoFunc
+            case .WasmAny, .WasmEq, .WasmI31, .WasmStruct, .WasmArray, .WasmNone:
+                return .WasmNone
+            case .WasmExn, .WasmNoExn:
+                return .WasmNoExn
+        }
+    }
+
+    func inSameHierarchy(_ other: Self) -> Bool {
+        return getBottom() == other.getBottom()
+    }
+
+    func union(_ other: Self) -> Self? {
+        if self == other {
+            return self
+        }
+        if !self.inSameHierarchy(other) {
+            return nil  // Incompatible heap types.
+        }
+        if self.isBottom() {
+            return other
+        }
+        if other.isBottom() {
+            return self
+        }
+        // Let `a` be the lesser type.
+        let a = min(self, other)
+        let b = max(self, other)
+        return switch a {
+            case .WasmAny:
+                .WasmAny
+            case .WasmEq, .WasmI31, .WasmStruct:
+                .WasmEq
+            case .WasmArray:
+                .WasmAny
+            case .WasmExtern, .WasmFunc, .WasmExn, .WasmNone, .WasmNoExtern, .WasmNoFunc, .WasmNoExn:
+                fatalError("unhandled subtyping for a=\(a) b=\(b)")
+        }
+    }
+
+    func intersection(_ other: Self) -> Self? {
+        if self == other {
+            return self
+        }
+        if self.getBottom() != other.getBottom() {
+            return nil
+        }
+        if self.subsumes(other) {
+            return other
+        }
+        if other.subsumes(self) {
+            return self
+        }
+        return self.getBottom()
+    }
+
+    func subsumes(_ other: Self) -> Bool {
+        union(other) == self
     }
 }
 
@@ -1397,7 +1469,7 @@ public class WasmReferenceType: WasmTypeExtension {
                         case .Index(_):
                             return false
                         case .Abstract(let otherHeapType):
-                            return heapType == otherHeapType
+                            return heapType.subsumes(otherHeapType)
                     }
             }
         }
@@ -1448,7 +1520,10 @@ public class WasmReferenceType: WasmTypeExtension {
                     case .Index(_):
                         return nil
                     case .Abstract(let otherHeapType):
-                        return heapType == otherHeapType ? WasmReferenceType(.Abstract(heapType), nullability: nullability) : nil
+                        if let upperBound = heapType.union(otherHeapType) {
+                            return WasmReferenceType(.Abstract(upperBound), nullability: nullability)
+                        }
+                        return nil
                 }
         }
     }
@@ -1472,7 +1547,10 @@ public class WasmReferenceType: WasmTypeExtension {
                     case .Index(_):
                         return nil
                     case .Abstract(let otherHeapType):
-                        return heapType == otherHeapType ? WasmReferenceType(.Abstract(heapType), nullability: nullability) : nil
+                        if let lowerBound = heapType.intersection(otherHeapType) {
+                            return WasmReferenceType(.Abstract(lowerBound), nullability: nullability)
+                        }
+                        return nil
                 }
         }
     }
