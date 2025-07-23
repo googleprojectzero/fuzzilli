@@ -1539,8 +1539,6 @@ public class JavaScriptLifter: Lifter {
                 let LET = w.varKeyword
                 let types = op.parameterTypes.map {type in
                     switch(type) {
-                        case .wasmExternRef:
-                            return "\"externref\""
                         case .wasmf32:
                             return "\"f32\""
                         case .wasmf64:
@@ -1551,12 +1549,23 @@ public class JavaScriptLifter: Lifter {
                             return "\"i64\""
                         case .wasmSimd128:
                             return "\"v128\""
+                        case .wasmExternRef:
+                            return "\"externref\""
                         case .wasmFuncRef:
                             return "\"anyfunc\""
-                        case .wasmExnRef:
-                            return "\"exnref\""
+                        case .wasmAnyRef:
+                            return "\"anyref\""
+                        case .wasmEqRef:
+                            return "\"eqref\""
                         case .wasmI31Ref:
                             return "\"i31ref\""
+                        case .wasmStructRef:
+                            return "\"structref\""
+                        case .wasmArrayRef:
+                            return "\"arrayref\""
+                        case .wasmExnRef:
+                            return "\"exnref\""
+
                         default:
                             fatalError("Unhandled wasm type \(type)")
                     }

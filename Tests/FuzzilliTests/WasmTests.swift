@@ -3642,18 +3642,23 @@ class WasmFoundationTests: XCTestCase {
         try tagExportedToDifferentWasmModule(defineInWasm: false)
     }
 
-    // Test that defining a Wasm tag in JS with a funcref in its parameter types does not fail.
-    func testTagFuncRefInJS() throws {
+    // Test that defining a Wasm tag in JS with all supported abstract ref types does not fail.
+    func testTagAllRefTypesInJS() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
-        b.createWasmTag(parameterTypes: [.wasmFuncRef])
+        // Assumption: All types but the bottom (null) types are supported in the JS API.
+        let supportedTypes = WasmAbstractHeapType.allCases.filter {!$0.isBottom()}.map { heapType in
+            ILType.wasmRef(.Abstract(heapType), nullability:true)
+        }
+        b.createWasmTag(parameterTypes: supportedTypes)
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         // The "funcref" type name is only available with the reflection proposal. Otherwise the
         // name has to be "anyfunc".
         XCTAssert(jsProg.contains("\"anyfunc\""))
+        // We just expect the JS execution not throwing an exception.
         testForOutput(program: jsProg, runner: runner, outputString: "")
     }
 
