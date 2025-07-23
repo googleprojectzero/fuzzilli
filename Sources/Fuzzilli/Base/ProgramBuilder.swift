@@ -3877,12 +3877,7 @@ public class ProgramBuilder {
         // Generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.
         let dynamicOffsetValue = self.randomNonNegativeIndex(upTo: memSize)
         let dynamicOffset = function.memoryArgument(dynamicOffsetValue, memoryTypeInfo)
-        var staticOffset: Int64
-        if (dynamicOffsetValue == memSize) {
-            staticOffset = 0
-        } else {
-            staticOffset = self.randomNonNegativeIndex(upTo: memSize) % (memSize - dynamicOffsetValue)
-        }
+        let staticOffset = self.randomNonNegativeIndex(upTo: memSize - dynamicOffsetValue)
 
         return (dynamicOffset, staticOffset)
     }
