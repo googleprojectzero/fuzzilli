@@ -1323,7 +1323,7 @@ public class FuzzILLifter: Lifter {
     }
 
     public func lift(_ code: Code) -> String {
-        var w = ScriptWriter()
+        var w = ScriptWriter(maxLineLength: 300)
 
         for instr in code {
             lift(instr, with: &w)
