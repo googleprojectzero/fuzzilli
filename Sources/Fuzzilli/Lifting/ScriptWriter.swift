@@ -29,22 +29,53 @@ struct ScriptWriter {
     /// Whether to include line numbers in the output.
     private let includeLineNumbers: Bool
 
+    // Split lines after this length. Do not use this in combination with JavaScript as it might
+    // split line comments, string literals, ... across multiple lines which changes semantics.
+    private let maxLineLength: Int
+
     /// Current line, used when including line numbers in the output.
     public private(set) var currentLineNumber = 0
 
-    public init (stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4, initialIndentionLevel: Int = 0) {
+    public init (stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4, initialIndentionLevel: Int = 0, maxLineLength: Int = Int.max) {
         self.indent = String(repeating: " ", count: indent)
         self.currentIndention = String(repeating: " ", count: indent * initialIndentionLevel)
         self.stripComments = stripComments
         self.includeLineNumbers = includeLineNumbers
+        self.maxLineLength = maxLineLength
+    }
+
+    private mutating func emitImpl<S: StringProtocol>(_ line: S) {
+        currentLineNumber += 1
+        if includeLineNumbers { code += "\(String(format: "%3i", currentLineNumber)). " }
+        code += currentIndention + line + "\n"
     }
 
     /// Emit one line of code.
     mutating func emit<S: StringProtocol>(_ line: S) {
+        assert(maxLineLength > currentIndention.count)
+        let splitAt = maxLineLength - currentIndention.count
         assert(!line.contains("\n"))
-        currentLineNumber += 1
-        if includeLineNumbers { code += "\(String(format: "%3i", currentLineNumber)). " }
-        code += currentIndention + line + "\n"
+        var line = line.prefix(line.count)
+        while line.count > splitAt {
+            var lineToPrint = line.prefix(splitAt + 1)
+            if let spaceIndex = lineToPrint.lastIndex(of: " "),
+                spaceIndex != lineToPrint.startIndex {
+                // Only print the line if it contains non-space characters trimming all trailing
+                // spaces.
+                lineToPrint = lineToPrint.prefix(upTo: spaceIndex)
+                if let lastChar = (lineToPrint.lastIndex { $0 != " " }) {
+                    emitImpl(line.prefix(through: lastChar))
+                }
+                line = line.suffix(from: line.index(after: spaceIndex))
+            } else {
+                emitImpl(line.prefix(splitAt))
+                line = line.suffix(line.count - splitAt)
+            }
+            line = line.suffix(from: line.firstIndex {$0 != " "} ?? line.endIndex)
+        }
+        if !line.isEmpty {
+            emitImpl(line)
+        }
     }
 
     /// Emit a comment.
