@@ -1239,6 +1239,114 @@ public enum Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf.Enum, Swift.CaseIt
 
 }
 
+public enum Fuzzilli_Protobuf_WasmAtomicLoadType: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case i32Load // = 0
+  case i64Load // = 1
+  case i32Load8U // = 2
+  case i32Load16U // = 3
+  case i64Load8U // = 4
+  case i64Load16U // = 5
+  case i64Load32U // = 6
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .i32Load
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .i32Load
+    case 1: self = .i64Load
+    case 2: self = .i32Load8U
+    case 3: self = .i32Load16U
+    case 4: self = .i64Load8U
+    case 5: self = .i64Load16U
+    case 6: self = .i64Load32U
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .i32Load: return 0
+    case .i64Load: return 1
+    case .i32Load8U: return 2
+    case .i32Load16U: return 3
+    case .i64Load8U: return 4
+    case .i64Load16U: return 5
+    case .i64Load32U: return 6
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmAtomicLoadType] = [
+    .i32Load,
+    .i64Load,
+    .i32Load8U,
+    .i32Load16U,
+    .i64Load8U,
+    .i64Load16U,
+    .i64Load32U,
+  ]
+
+}
+
+public enum Fuzzilli_Protobuf_WasmAtomicStoreType: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case i32Store // = 0
+  case i64Store // = 1
+  case i32Store8 // = 2
+  case i32Store16 // = 3
+  case i64Store8 // = 4
+  case i64Store16 // = 5
+  case i64Store32 // = 6
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .i32Store
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .i32Store
+    case 1: self = .i64Store
+    case 2: self = .i32Store8
+    case 3: self = .i32Store16
+    case 4: self = .i64Store8
+    case 5: self = .i64Store16
+    case 6: self = .i64Store32
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .i32Store: return 0
+    case .i64Store: return 1
+    case .i32Store8: return 2
+    case .i32Store16: return 3
+    case .i64Store8: return 4
+    case .i64Store16: return 5
+    case .i64Store32: return 6
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmAtomicStoreType] = [
+    .i32Store,
+    .i64Store,
+    .i32Store8,
+    .i32Store16,
+    .i64Store8,
+    .i64Store16,
+    .i64Store32,
+  ]
+
+}
+
 /// Parameters used by function definitions, not an operation by itself.
 public struct Fuzzilli_Protobuf_Parameters: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -5438,6 +5546,34 @@ public struct Fuzzilli_Protobuf_WasmI31Get: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_WasmAtomicLoad: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var loadType: Fuzzilli_Protobuf_WasmAtomicLoadType = .i32Load
+
+  public var offset: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_WasmAtomicStore: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var storeType: Fuzzilli_Protobuf_WasmAtomicStoreType = .i32Store
+
+  public var offset: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"
@@ -5708,6 +5844,30 @@ extension Fuzzilli_Protobuf_WasmSimdLoadKind: SwiftProtobuf._ProtoNameProviding 
     10: .same(proto: "LOAD64SPLAT"),
     11: .same(proto: "LOAD32ZERO"),
     12: .same(proto: "LOAD64ZERO"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmAtomicLoadType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "I32_LOAD"),
+    1: .same(proto: "I64_LOAD"),
+    2: .same(proto: "I32_LOAD_8U"),
+    3: .same(proto: "I32_LOAD_16U"),
+    4: .same(proto: "I64_LOAD_8U"),
+    5: .same(proto: "I64_LOAD_16U"),
+    6: .same(proto: "I64_LOAD_32U"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmAtomicStoreType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "I32_STORE"),
+    1: .same(proto: "I64_STORE"),
+    2: .same(proto: "I32_STORE_8"),
+    3: .same(proto: "I32_STORE_16"),
+    4: .same(proto: "I64_STORE_8"),
+    5: .same(proto: "I64_STORE_16"),
+    6: .same(proto: "I64_STORE_32"),
   ]
 }
 
@@ -15198,6 +15358,82 @@ extension Fuzzilli_Protobuf_WasmI31Get: SwiftProtobuf.Message, SwiftProtobuf._Me
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmI31Get, rhs: Fuzzilli_Protobuf_WasmI31Get) -> Bool {
     if lhs.isSigned != rhs.isSigned {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmAtomicLoad: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmAtomicLoad"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "loadType"),
+    2: .same(proto: "offset"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.loadType) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.loadType != .i32Load {
+      try visitor.visitSingularEnumField(value: self.loadType, fieldNumber: 1)
+    }
+    if self.offset != 0 {
+      try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmAtomicLoad, rhs: Fuzzilli_Protobuf_WasmAtomicLoad) -> Bool {
+    if lhs.loadType != rhs.loadType {return false}
+    if lhs.offset != rhs.offset {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmAtomicStore: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmAtomicStore"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "storeType"),
+    2: .same(proto: "offset"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.storeType) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.storeType != .i32Store {
+      try visitor.visitSingularEnumField(value: self.storeType, fieldNumber: 1)
+    }
+    if self.offset != 0 {
+      try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmAtomicStore, rhs: Fuzzilli_Protobuf_WasmAtomicStore) -> Bool {
+    if lhs.storeType != rhs.storeType {return false}
+    if lhs.offset != rhs.offset {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

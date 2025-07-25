@@ -949,6 +949,70 @@ final class WasmMemorySize: WasmOperation {
     }
 }
 
+public enum WasmAtomicLoadType: UInt8, CaseIterable {
+    case i32Load = 0x10
+    case i64Load = 0x11
+    case i32Load8U = 0x12
+    case i32Load16U = 0x13
+    case i64Load8U = 0x14
+    case i64Load16U = 0x15
+    case i64Load32U = 0x16
+
+    func numberType() -> ILType {
+        switch self {
+        case .i32Load, .i32Load8U, .i32Load16U:
+            return .wasmi32
+        case .i64Load, .i64Load8U, .i64Load16U, .i64Load32U:
+            return .wasmi64
+        }
+    }
+
+    func naturalAlignment() -> Int64 {
+        switch self {
+        case .i32Load8U, .i64Load8U:
+            return 1
+        case .i32Load16U, .i64Load16U:
+            return 2
+        case .i32Load, .i64Load32U:
+            return 4
+        case .i64Load:
+            return 8
+        }
+    }
+}
+
+public enum WasmAtomicStoreType: UInt8, CaseIterable {
+    case i32Store = 0x17
+    case i64Store = 0x18
+    case i32Store8 = 0x19
+    case i32Store16 = 0x1a
+    case i64Store8 = 0x1b
+    case i64Store16 = 0x1c
+    case i64Store32 = 0x1d
+
+    func numberType() -> ILType {
+        switch self {
+        case .i32Store, .i32Store8, .i32Store16:
+            return .wasmi32
+        case .i64Store, .i64Store8, .i64Store16, .i64Store32:
+            return .wasmi64
+        }
+    }
+
+    func naturalAlignment() -> Int64 {
+        switch self {
+        case .i32Store8, .i64Store8:
+            return 1
+        case .i32Store16, .i64Store16:
+            return 2
+        case .i32Store, .i64Store32:
+            return 4
+        case .i64Store:
+            return 8
+        }
+    }
+}
+
 // Grows a memory by the provided amount of pages (each page being 64KB). Returns the old size of
 // the memory before growing. Returns -1 if growing would exceed the maximum size of that memory or
 // if resource allocation fails.
@@ -2028,5 +2092,39 @@ class WasmI31Get: WasmOperation {
     init(isSigned: Bool) {
         self.isSigned = isSigned
         super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
+/// An atomic load from Wasm memory.
+/// The accessed address is base + offset.
+final class WasmAtomicLoad: WasmOperation {
+    override var opcode: Opcode { .wasmAtomicLoad(self) }
+
+    /// The type of the loaded value.
+    let loadType: WasmAtomicLoadType
+    /// The static offset from the base address.
+    let offset: Int64
+
+    init(loadType: WasmAtomicLoadType, offset: Int64) {
+        self.loadType = loadType
+        self.offset = offset
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+/// An atomic store to Wasm memory.
+/// The accessed address is base + offset.
+final class WasmAtomicStore: WasmOperation {
+    override var opcode: Opcode { .wasmAtomicStore(self) }
+
+    /// The type of the stored value.
+    let storeType: WasmAtomicStoreType
+    /// The static offset from the base address.
+    let offset: Int64
+
+    init(storeType: WasmAtomicStoreType, offset: Int64) {
+        self.storeType = storeType
+        self.offset = offset
+        super.init(numInputs: 3, numOutputs: 0, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }

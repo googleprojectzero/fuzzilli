@@ -359,6 +359,20 @@ public class OperationMutator: BaseInstructionMutator {
             let newStoreType = chooseUniform(from: WasmMemoryStoreType.allCases.filter({$0.numberType() == op.storeType.numberType()}))
             let newStaticOffset = b.randomInt()
             newOp = WasmMemoryStore(storeType: newStoreType, staticOffset: newStaticOffset)
+        case .wasmAtomicLoad(let op):
+            let newLoadType = chooseUniform(from: WasmAtomicLoadType.allCases.filter({$0.numberType() == op.loadType.numberType()}))
+            let newStaticOffset = b.randomInt()
+            newOp = WasmAtomicLoad(
+                loadType: newLoadType,
+                offset: newStaticOffset
+            )
+        case .wasmAtomicStore(let op):
+            let newStoreType = chooseUniform(from: WasmAtomicStoreType.allCases.filter({$0.numberType() == op.storeType.numberType()}))
+            let newStaticOffset = b.randomInt()
+            newOp = WasmAtomicStore(
+                storeType: newStoreType,
+                offset: newStaticOffset
+            )
         case .constSimd128(_):
             newOp = ConstSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
         case .wasmSimd128IntegerUnOp(_):

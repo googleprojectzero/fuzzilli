@@ -339,6 +339,28 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("WasmAtomicLoadGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
+        let function = b.currentWasmModule.currentWasmFunction
+        let loadType = chooseUniform(from: WasmAtomicLoadType.allCases)
+        let alignment = loadType.naturalAlignment()
+
+        let (address, staticOffset) = b.generateAlignedMemoryIndexes(forMemory: memory, alignment: alignment)
+
+        function.wasmAtomicLoad(memory: memory, address: address, loadType: loadType, offset: staticOffset)
+    },
+
+    CodeGenerator("WasmAtomicStoreGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
+        let function = b.currentWasmModule.currentWasmFunction
+        let storeType = chooseUniform(from: WasmAtomicStoreType.allCases)
+        let alignment = storeType.naturalAlignment()
+
+        guard let value = b.randomVariable(ofType: storeType.numberType()) else { return }
+
+        let (address, staticOffset) = b.generateAlignedMemoryIndexes(forMemory: memory, alignment: alignment)
+
+        function.wasmAtomicStore(memory: memory, address: address, value: value, storeType: storeType, offset: staticOffset)
+    },
+
     CodeGenerator("WasmMemorySizeGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmMemorySize(memory: memory)

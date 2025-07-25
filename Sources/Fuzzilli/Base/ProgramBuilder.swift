@@ -3303,6 +3303,17 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        func wasmAtomicLoad(memory: Variable, address: Variable, loadType: WasmAtomicLoadType, offset: Int64) -> Variable {
+            let op = WasmAtomicLoad(loadType: loadType, offset: offset)
+            return b.emit(op, withInputs: [memory, address]).output
+        }
+
+        func wasmAtomicStore(memory: Variable, address: Variable, value: Variable, storeType: WasmAtomicStoreType, offset: Int64) {
+            let op = WasmAtomicStore(storeType: storeType, offset: offset)
+            b.emit(op, withInputs: [memory, address, value])
+        }
+
+        @discardableResult
         public func wasmMemorySize(memory: Variable) -> Variable {
             return b.emit(WasmMemorySize(), withInputs: [memory],
                 types: [.object(ofGroup: "WasmMemory")]).output
@@ -3869,17 +3880,37 @@ public class ProgramBuilder {
         return memoryTypeInfo.limits.min == 0
     }
 
+    // Returns 'dynamicOffset' and 'staticOffset' such that:
+    // 0 <= dynamicOffset + staticOffset <= memSize
+    //
+    // Note: In rare cases, the returned values may lead to an out-of-bounds memory access.
     func generateMemoryIndexes(forMemory memory: Variable) -> (Variable, Int64) {
+        return generateAlignedMemoryIndexes(forMemory: memory, alignment: 1)
+    }
+
+    // Returns 'dynamicOffset' and 'alignedStaticOffset' such that:
+    // 0 <= dynamicOffset + alignedStaticOffset <= memSize
+    // (dynamicOffset + alignedStaticOffset) % alignment == 0
+    //
+    // Note: In rare cases, the returned values may lead to an out-of-bounds memory access.
+    func generateAlignedMemoryIndexes(forMemory memory: Variable, alignment: Int64) -> (address: Variable, offset: Int64) {
         let memoryTypeInfo = self.type(of: memory).wasmMemoryType!
         let memSize = Int64(memoryTypeInfo.limits.min * WasmConstants.specWasmMemPageSize)
         let function = self.currentWasmModule.currentWasmFunction
+        assert(memSize >= alignment, "Memory size must be large enough to satisfy alignment")
+        assert(alignment > 0, "Alignment must be positive")
 
-        // Generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.
-        let dynamicOffsetValue = self.randomNonNegativeIndex(upTo: memSize)
+        // Generate an in-bounds offset (dynamicOffset + alignedStaticOffset) into the memory.
+        // The '+1' allows out-of-bounds access (dynamicOffset + alignedStaticOffset == memSize)
+        let dynamicOffsetValue = self.randomNonNegativeIndex(upTo: memSize - alignment + 1)
         let dynamicOffset = function.memoryArgument(dynamicOffsetValue, memoryTypeInfo)
-        let staticOffset = self.randomNonNegativeIndex(upTo: memSize - dynamicOffsetValue)
+        let staticOffset = self.randomNonNegativeIndex(upTo: memSize - alignment + 1 - dynamicOffsetValue)
 
-        return (dynamicOffset, staticOffset)
+        let currentAddress = dynamicOffsetValue + staticOffset
+        // Calculate the minimal value needed to make the total address aligned.
+        let adjustment = (alignment - (currentAddress % alignment)) % alignment
+        let alignedStaticOffset = staticOffset + adjustment
+        return (dynamicOffset, alignedStaticOffset)
     }
 
     public func randomWasmGlobal() -> WasmGlobal {
