@@ -283,6 +283,8 @@ enum Opcode {
     case wasmReturnCallIndirect(WasmReturnCallIndirect)
     case wasmMemoryLoad(WasmMemoryLoad)
     case wasmMemoryStore(WasmMemoryStore)
+    case wasmAtomicLoad(WasmAtomicLoad)
+    case wasmAtomicStore(WasmAtomicStore)
     case wasmMemorySize(WasmMemorySize)
     case wasmMemoryGrow(WasmMemoryGrow)
     case wasmMemoryFill(WasmMemoryFill)

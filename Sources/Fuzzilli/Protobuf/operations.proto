@@ -1529,3 +1529,33 @@ message WasmRefI31 {
 message WasmI31Get {
     bool isSigned = 1;
 }
+
+enum WasmAtomicLoadType {
+  I32_LOAD = 0;
+  I64_LOAD = 1;
+  I32_LOAD_8U = 2;
+  I32_LOAD_16U = 3;
+  I64_LOAD_8U = 4;
+  I64_LOAD_16U = 5;
+  I64_LOAD_32U = 6;
+}
+
+enum WasmAtomicStoreType {
+  I32_STORE = 0;
+  I64_STORE = 1;
+  I32_STORE_8 = 2;
+  I32_STORE_16 = 3;
+  I64_STORE_8 = 4;
+  I64_STORE_16 = 5;
+  I64_STORE_32 = 6;
+}
+
+message WasmAtomicLoad {
+  WasmAtomicLoadType loadType = 1;
+  int64 offset = 2;
+}
+
+message WasmAtomicStore {
+  WasmAtomicStoreType storeType = 1;
+  int64 offset = 2;
+}

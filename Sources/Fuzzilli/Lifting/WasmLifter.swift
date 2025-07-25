@@ -1517,11 +1517,25 @@ public class WasmLifter {
 
         throw WasmLifter.CompileError.failedIndexLookUp
     }
-
-    private func alignmentAndMemoryBytes(_ memory: Variable) throws -> Data {
-        // The memory immediate is either {align = 0, staticOffset} for memory 0, or {align = 0x40, memoryIdx, staticOffset}. Use signed encoding for potential bad (i.e. negative) offsets.
+    // The memory immediate argument, which encodes the alignment and memory index.
+    // For memory 0, this is just the alignment. For other memories, a flag is set
+    // and the memory index is also encoded.
+    // Memory zero: `[align]`.
+    // Multi-memory: `[align | 0x40] + [mem_idx]`.
+    private func alignmentAndMemoryBytes(_ memory: Variable, alignment: Int64 = 1) throws -> Data {
+        assert(alignment > 0 && (alignment & (alignment - 1)) == 0, "Alignment must be a power of two")
         let memoryIdx = try resolveIdx(ofType: .memory, for: memory)
-        return memoryIdx == 0 ? Data([0]) : (Data([0x40]) + Leb128.unsignedEncode(memoryIdx))
+
+
+        let alignmentLog2 = alignment.trailingZeroBitCount
+        assert(alignmentLog2 < 0x40, "Alignment \(alignment) is too large for multi-memory encoding")
+
+        if memoryIdx == 0 {
+            return Leb128.unsignedEncode(alignmentLog2)
+        } else {
+            let flags = UInt8(alignmentLog2) | 0x40
+            return Data([flags]) + Leb128.unsignedEncode(memoryIdx)
+        }
     }
 
     private func branchDepthFor(label: Variable) throws -> Int {
@@ -1731,6 +1745,15 @@ public class WasmLifter {
                 ? [op.storeType.rawValue]
                 : [Prefix.Simd.rawValue, op.storeType.rawValue])
             return opCode + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
+        case .wasmAtomicLoad(let op):
+            let opcode = [Prefix.Atomic.rawValue, op.loadType.rawValue]
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0), alignment: op.loadType.naturalAlignment())
+            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
+
+        case .wasmAtomicStore(let op):
+            let opcode = [Prefix.Atomic.rawValue, op.storeType.rawValue]
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0), alignment: op.storeType.naturalAlignment())
+            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
         case .wasmMemorySize(_):
             let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
             return Data([0x3F]) + Leb128.unsignedEncode(memoryIdx)
