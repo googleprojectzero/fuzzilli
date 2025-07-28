@@ -2955,6 +2955,7 @@ public class ProgramBuilder {
 
     @discardableResult
     public func createWasmMemory(minPages: Int, maxPages: Int? = nil, isShared: Bool = false, isMemory64: Bool = false) -> Variable {
+        assert(!isShared || maxPages != nil, "Shared memories must have a maximum size")
         return emit(CreateWasmMemory(limits: Limits(min: minPages, max: maxPages), isShared: isShared, isMemory64: isMemory64)).output
     }
 

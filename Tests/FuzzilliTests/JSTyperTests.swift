@@ -1508,7 +1508,7 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(ofProperty: "bla", on: object), .integer)
     }
 
-    func testDynamicObjectGroupTypingOfWasmModules() {
+    func dynamicObjectGroupTypingOfWasmModulesTestCase(isShared: Bool) {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -1520,7 +1520,8 @@ class JSTyperTests: XCTestCase {
         let wasmGlobalf64: Variable = b.createWasmGlobal(value: .wasmf64(1337), isMutable: false)
         XCTAssertEqual(b.type(of: wasmGlobalf64), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmf64, isMutable: false)))
 
-        let memory = b.createWasmMemory(minPages: 1)
+        let maxPages: Int? = isShared ? 4 : nil
+        let memory = b.createWasmMemory(minPages: 1, maxPages: maxPages, isShared: isShared)
         let jsTag = b.createWasmJSTag()
 
         let typeGroup = b.wasmDefineTypeGroup {
@@ -1540,7 +1541,7 @@ class JSTyperTests: XCTestCase {
             // Defines one global
             wasmModule.addGlobal(wasmGlobal: .wasmi64(1339), isMutable: true)
 
-            wasmModule.addMemory(minPages: 3)
+            wasmModule.addMemory(minPages: 3, maxPages: maxPages, isShared: isShared)
 
             wasmModule.addTag(parameterTypes: [.wasmi32])
 
@@ -1615,15 +1616,20 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: glob1), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: .wasmf64, isMutable: false)))
 
         let mem0 = b.getProperty("wm0", of: exports)
-        let memType = ILType.wasmMemory(limits: Limits(min: 3))
+        let memType = ILType.wasmMemory(limits: Limits(min: 3, max: maxPages), isShared: isShared)
         XCTAssertEqual(b.type(of: mem0), memType)
 
         let importedMem = b.getProperty("iwm0", of: exports)
-        let importedMemType = ILType.wasmMemory(limits: Limits(min: 1))
+        let importedMemType = ILType.wasmMemory(limits: Limits(min: 1, max: maxPages), isShared: isShared)
         XCTAssertEqual(b.type(of: importedMem), importedMemType)
 
         let reexportedJsTag = b.getProperty("iwex0", of: exports)
         XCTAssertEqual(b.type(of: reexportedJsTag), b.type(of: jsTag))
+    }
+
+    func testDynamicObjectGroupTypingOfWasmModules() {
+        dynamicObjectGroupTypingOfWasmModulesTestCase(isShared: false)
+        dynamicObjectGroupTypingOfWasmModulesTestCase(isShared: true)
     }
 
     func testBuiltinPrototypes() {

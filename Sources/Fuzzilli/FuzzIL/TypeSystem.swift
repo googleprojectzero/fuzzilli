@@ -1601,6 +1601,7 @@ public class WasmMemoryType: WasmTypeExtension {
     }
 
     init(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) {
+        assert(!isShared || limits.max != nil, "Shared memories must have a maximum size")
         self.limits = limits
         self.isShared = isShared
         self.isMemory64 = isMemory64

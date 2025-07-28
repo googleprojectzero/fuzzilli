@@ -1414,8 +1414,12 @@ public class JavaScriptLifter: Lifter {
                 if let maxPages = op.memType.limits.max {
                     maxPagesStr = ", maximum: \(maxPages)" + (isMemory64 ? "n" : "")
                 }
+                var sharedStr = ""
+                if op.memType.isShared {
+                    sharedStr = ", shared: true"
+                }
                 let addressType = isMemory64 ? "'i64'" : "'i32'"
-                w.emit("\(LET) \(V) = new WebAssembly.Memory({ initial: \(minPageStr)\(maxPagesStr), address: \(addressType) });")
+                w.emit("\(LET) \(V) = new WebAssembly.Memory({ initial: \(minPageStr)\(maxPagesStr)\(sharedStr), address: \(addressType) });")
 
             case .wrapSuspending(_):
                 let V = w.declare(instr.output)
