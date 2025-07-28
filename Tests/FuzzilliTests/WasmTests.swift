@@ -4337,6 +4337,52 @@ class WasmGCTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "42\n-42\n42,42\n-42,2147483606\n")
     }
+
+    func testExternAnyConversions() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmRefExtern]) { function, label, args in
+                // As ref.i31 produces a non null `ref i31`, the result of extern.convert_any is a
+                // non-nullable `ref extern`.
+                let result = function.wasmExternConvertAny(function.wasmRefI31(args[0]))
+                XCTAssertEqual(b.type(of: result), .wasmRefExtern)
+                return [result]
+            }
+
+            wasmModule.addWasmFunction(with: [.wasmRefExtern] => [.wasmRefAny]) { function, label, args in
+                let result = function.wasmAnyConvertExtern(args[0])
+                XCTAssertEqual(b.type(of: result), .wasmRefAny)
+                return [result]
+            }
+
+            wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, label, args in
+                let result = function.wasmExternConvertAny(function.wasmRefNull(type: .wasmNullRef))
+                XCTAssertEqual(b.type(of: result), .wasmExternRef)
+                return [result]
+            }
+
+            wasmModule.addWasmFunction(with: [] => [.wasmAnyRef]) { function, label, args in
+                let result = function.wasmAnyConvertExtern(function.wasmRefNull(type: .wasmNullExternRef))
+                XCTAssertEqual(b.type(of: result), .wasmAnyRef)
+                return [result]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        for i in 0..<4 {
+            let result = b.callMethod(module.getExportedMethod(at: i), on: exports, withArgs: [b.loadInt(42)])
+            b.callFunction(outputFunc, withArgs: [result])
+        }
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n42\nnull\nnull\n")
+    }
 }
 
 class WasmNumericalTests: XCTestCase {

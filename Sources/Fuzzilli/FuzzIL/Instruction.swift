@@ -1551,6 +1551,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmI31Get = Fuzzilli_Protobuf_WasmI31Get.with {
                     $0.isSigned = op.isSigned
                 }
+            case .wasmAnyConvertExtern(_):
+                $0.wasmAnyConvertExtern = Fuzzilli_Protobuf_WasmAnyConvertExtern()
+            case .wasmExternConvertAny(_):
+                $0.wasmExternConvertAny = Fuzzilli_Protobuf_WasmExternConvertAny()
             }
         }
 
@@ -2495,6 +2499,10 @@ extension Instruction: ProtobufConvertible {
             op = WasmAtomicLoad(loadType: try convertEnum(p.loadType, WasmAtomicLoadType.allCases), offset: p.offset)
         case .wasmAtomicStore(let p):
             op = WasmAtomicStore(storeType: try convertEnum(p.storeType, WasmAtomicStoreType.allCases), offset: p.offset)
+        case .wasmAnyConvertExtern(_):
+            op = WasmAnyConvertExtern()
+        case .wasmExternConvertAny(_):
+            op = WasmExternConvertAny()
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

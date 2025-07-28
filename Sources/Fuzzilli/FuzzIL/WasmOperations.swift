@@ -2095,6 +2095,22 @@ class WasmI31Get: WasmOperation {
     }
 }
 
+class WasmAnyConvertExtern: WasmOperation {
+    override var opcode: Opcode { .wasmAnyConvertExtern(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
+class WasmExternConvertAny: WasmOperation {
+    override var opcode: Opcode { .wasmExternConvertAny(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
 /// An atomic load from Wasm memory.
 /// The accessed address is base + offset.
 final class WasmAtomicLoad: WasmOperation {

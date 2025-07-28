@@ -2067,6 +2067,10 @@ public class WasmLifter {
         case .wasmI31Get(let op):
             let opCode: UInt8 = op.isSigned ? 0x1D : 0x1E
             return Data([Prefix.GC.rawValue, opCode])
+        case .wasmAnyConvertExtern(_):
+            return Data([Prefix.GC.rawValue, 0x1A])
+        case .wasmExternConvertAny(_):
+            return Data([Prefix.GC.rawValue, 0x1B])
 
         default:
              fatalError("unreachable")

@@ -2553,6 +2553,22 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmI31Get(newValue)}
   }
 
+  public var wasmAnyConvertExtern: Fuzzilli_Protobuf_WasmAnyConvertExtern {
+    get {
+      if case .wasmAnyConvertExtern(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmAnyConvertExtern()
+    }
+    set {operation = .wasmAnyConvertExtern(newValue)}
+  }
+
+  public var wasmExternConvertAny: Fuzzilli_Protobuf_WasmExternConvertAny {
+    get {
+      if case .wasmExternConvertAny(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmExternConvertAny()
+    }
+    set {operation = .wasmExternConvertAny(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable, Sendable {
@@ -2869,6 +2885,8 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmRefIsNull(Fuzzilli_Protobuf_WasmRefIsNull)
     case wasmRefI31(Fuzzilli_Protobuf_WasmRefI31)
     case wasmI31Get(Fuzzilli_Protobuf_WasmI31Get)
+    case wasmAnyConvertExtern(Fuzzilli_Protobuf_WasmAnyConvertExtern)
+    case wasmExternConvertAny(Fuzzilli_Protobuf_WasmExternConvertAny)
 
   }
 
@@ -3232,6 +3250,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     312: .same(proto: "wasmRefIsNull"),
     313: .same(proto: "wasmRefI31"),
     314: .same(proto: "wasmI31Get"),
+    315: .same(proto: "wasmAnyConvertExtern"),
+    316: .same(proto: "wasmExternConvertAny"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -7305,6 +7325,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmI31Get(v)
         }
       }()
+      case 315: try {
+        var v: Fuzzilli_Protobuf_WasmAnyConvertExtern?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmAnyConvertExtern(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmAnyConvertExtern(v)
+        }
+      }()
+      case 316: try {
+        var v: Fuzzilli_Protobuf_WasmExternConvertAny?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmExternConvertAny(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmExternConvertAny(v)
+        }
+      }()
       default: break
       }
     }
@@ -8570,6 +8616,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .wasmI31Get?: try {
       guard case .wasmI31Get(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 314)
+    }()
+    case .wasmAnyConvertExtern?: try {
+      guard case .wasmAnyConvertExtern(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 315)
+    }()
+    case .wasmExternConvertAny?: try {
+      guard case .wasmExternConvertAny(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 316)
     }()
     case nil: break
     }
