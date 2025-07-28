@@ -217,7 +217,7 @@ class LiveTests: XCTestCase {
             if result.isFailure {
                 var signature: String? = nil
 
-                for line in result.output.split(separator: "\n") {
+                for line in (result.output + result.error).split(separator: "\n") {
                     if line.contains("Error:") {
                         // Remove anything after a potential 2nd ":", which is usually testcase dependent content, e.g. "SyntaxError: Invalid regular expression: /ep{}[]Z7/: Incomplete quantifier"
                         signature = line.split(separator: ":")[0...1].joined(separator: ":")

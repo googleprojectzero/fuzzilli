@@ -39,7 +39,7 @@ func testForOutputRegex(program: String, runner: JavaScriptExecutor, outputPatte
 
 func testForErrorOutput(program: String, runner: JavaScriptExecutor, errorMessageContains errormsg: String) {
     let result = testExecuteScript(program: program, runner: runner)
-    XCTAssert(result.output.contains(errormsg), "Error messages don't match, got:\n" + result.output)
+    XCTAssert(result.output.contains(errormsg) || result.error.contains(errormsg), "Error messages don't match, got stdout:\n\(result.output)\nstderr:\n\(result.error)")
 }
 
 class WasmSignatureConversionTests: XCTestCase {
@@ -487,7 +487,7 @@ class WasmFoundationTests: XCTestCase {
     }
 
     func testGlobalExnRef() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--experimental-wasm-exnref"])
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -1021,7 +1021,7 @@ class WasmFoundationTests: XCTestCase {
         let wasmFunction = b.getProperty(module.getExportedMethod(at: 1), of: exports)
         let result = b.callFunction(wasmFunction, withArgs: [b.loadInt(42)])
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        b.callFunction(outputFunc, withArgs: [result])
+        b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(result)])
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
@@ -2418,7 +2418,7 @@ class WasmFoundationTests: XCTestCase {
         }
 
         for (i, _) in testCases.enumerated() {
-            let print = b.createNamedVariable(forBuiltin: "print")
+            let print = b.createNamedVariable(forBuiltin: "output")
             let number = b.createNamedVariable(forBuiltin: "Number")
 
             let setFormat = b.buildArrowFunction(with: .parameters(n: 1)) { args in
@@ -3468,7 +3468,7 @@ class WasmFoundationTests: XCTestCase {
     }
 
     func testTryTableNoCatch() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: ["--experimental-wasm-exnref"])
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
@@ -4263,7 +4263,7 @@ class WasmGCTests: XCTestCase {
     }
 
     func testRefNullAbstractTypes() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
@@ -4326,8 +4326,8 @@ class WasmGCTests: XCTestCase {
 
         let positiveResults = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [positiveI31])
         let negativeResults = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [negativeI31])
-        b.callFunction(outputFunc, withArgs: [positiveResults])
-        b.callFunction(outputFunc, withArgs: [negativeResults])
+        b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(positiveResults)])
+        b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(negativeResults)])
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
