@@ -3776,6 +3776,16 @@ public class ProgramBuilder {
         public func wasmI31Get(_ refI31: Variable, isSigned: Bool) -> Variable {
             return b.emit(WasmI31Get(isSigned: isSigned), withInputs: [refI31], types: [.wasmI31Ref]).output
         }
+
+        @discardableResult
+        public func wasmAnyConvertExtern(_ ref: Variable) -> Variable {
+            b.emit(WasmAnyConvertExtern(), withInputs: [ref], types: [.wasmExternRef]).output
+        }
+
+        @discardableResult
+        public func wasmExternConvertAny(_ ref: Variable) -> Variable {
+            b.emit(WasmExternConvertAny(), withInputs: [ref], types: [.wasmAnyRef]).output
+        }
     }
 
     public class WasmModule {

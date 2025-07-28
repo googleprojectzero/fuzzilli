@@ -351,4 +351,6 @@ enum Opcode {
     case wasmRefIsNull(WasmRefIsNull)
     case wasmRefI31(WasmRefI31)
     case wasmI31Get(WasmI31Get)
+    case wasmAnyConvertExtern(WasmAnyConvertExtern)
+    case wasmExternConvertAny(WasmExternConvertAny)
 }

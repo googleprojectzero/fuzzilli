@@ -338,6 +338,8 @@ message Instruction {
         WasmRefIsNull wasmRefIsNull = 312;
         WasmRefI31 wasmRefI31 = 313;
         WasmI31Get wasmI31Get = 314;
+        WasmAnyConvertExtern wasmAnyConvertExtern = 315;
+        WasmExternConvertAny wasmExternConvertAny = 316;
     }
 }
 

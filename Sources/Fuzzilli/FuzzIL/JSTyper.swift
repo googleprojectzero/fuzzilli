@@ -810,6 +810,14 @@ public struct JSTyper: Analyzer {
                 setType(of: instr.output, to: .wasmRefI31)
             case .wasmI31Get(_):
                 setType(of: instr.output, to: .wasmi32)
+            case .wasmAnyConvertExtern(_):
+                // any.convert_extern forwards the nullability bit from the input.
+                let null = type(of: instr.input(0)).wasmReferenceType!.nullability
+                setType(of: instr.output, to: .wasmRef(.Abstract(.WasmAny), nullability: null))
+            case .wasmExternConvertAny(_):
+                // extern.convert_any forwards the nullability bit from the input.
+                let null = type(of: instr.input(0)).wasmReferenceType!.nullability
+                setType(of: instr.output, to: .wasmRef(.Abstract(.WasmExtern), nullability: null))
             default:
                 if instr.numInnerOutputs + instr.numOutputs != 0 {
                     fatalError("Missing typing of outputs for \(instr.op.opcode)")

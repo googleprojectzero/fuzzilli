@@ -1698,7 +1698,9 @@ public class JavaScriptLifter: Lifter {
                  .wasmRefNull(_),
                  .wasmRefIsNull(_),
                  .wasmRefI31(_),
-                 .wasmI31Get(_):
+                 .wasmI31Get(_),
+                 .wasmAnyConvertExtern(_),
+                 .wasmExternConvertAny(_):
                  fatalError("unreachable")
             }
 
