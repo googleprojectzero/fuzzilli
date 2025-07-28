@@ -26,8 +26,8 @@ class WasmAtomicsTests: XCTestCase {
         var expectedOutput = ""
 
         let module = b.buildWasmModule { wasmModule in
-            let unsharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 1, isShared: false)
-            let sharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 1, isShared: true)
+            let unsharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: false)
+            let sharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: true)
 
             for memory in [unsharedMemory, sharedMemory] {
                 wasmModule.addWasmFunction(with: [] => [.wasmi32]) { f, _, _ in
@@ -83,8 +83,8 @@ class WasmAtomicsTests: XCTestCase {
 
         let module = b.buildWasmModule {
             wasmModule in
-            let unsharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 1, isShared: false)
-            let sharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 1, isShared: true)
+            let unsharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: false)
+            let sharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: true)
 
             for memory in [unsharedMemory, sharedMemory] {
                 wasmModule.addWasmFunction(with: [] => [.wasmi32]) { f, _, _ in
@@ -141,8 +141,8 @@ class WasmAtomicsTests: XCTestCase {
 
         let module = b.buildWasmModule {
             wasmModule in
-            let unsharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 1, isShared: false)
-            let sharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 1, isShared: true)
+            let unsharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: false)
+            let sharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: true)
 
             // Load operations
 

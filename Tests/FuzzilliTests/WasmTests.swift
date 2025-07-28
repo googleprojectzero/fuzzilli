@@ -1077,7 +1077,7 @@ class WasmFoundationTests: XCTestCase {
 
     // Test every memory testcase for both memory32 and memory64.
 
-    func importedMemoryTestCase(isMemory64: Bool) throws {
+    func importedMemoryTestCase(isShared: Bool, isMemory64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
@@ -1087,8 +1087,8 @@ class WasmFoundationTests: XCTestCase {
 
         let b = fuzzer.makeBuilder()
 
-        let wasmMemory: Variable = b.createWasmMemory(minPages: 10, maxPages: 20, isMemory64: isMemory64)
-        XCTAssertEqual(b.type(of: wasmMemory), .wasmMemory(limits: Limits(min: 10, max: 20), isShared: false, isMemory64: isMemory64))
+        let wasmMemory: Variable = b.createWasmMemory(minPages: 10, maxPages: 20, isShared: isShared, isMemory64: isMemory64)
+        XCTAssertEqual(b.type(of: wasmMemory), .wasmMemory(limits: Limits(min: 10, max: 20), isShared: isShared, isMemory64: isMemory64))
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _ in
@@ -1125,14 +1125,16 @@ class WasmFoundationTests: XCTestCase {
     }
 
     func testImportedMemory32() throws {
-        try importedMemoryTestCase(isMemory64: false)
+        try importedMemoryTestCase(isShared: false, isMemory64: false)
+        try importedMemoryTestCase(isShared: true, isMemory64: false)
     }
 
     func testImportedMemory64() throws {
-        try importedMemoryTestCase(isMemory64: true)
+        try importedMemoryTestCase(isShared: false, isMemory64: true)
+        try importedMemoryTestCase(isShared: true, isMemory64: true)
     }
 
-    func defineMemory(isMemory64: Bool) throws {
+    func defineMemory(isShared: Bool, isMemory64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
@@ -1143,7 +1145,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: isMemory64)
+            let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isShared: isShared, isMemory64: isMemory64)
             let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
 
             wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _ in
@@ -1164,11 +1166,13 @@ class WasmFoundationTests: XCTestCase {
     }
 
     func testDefineMemory32() throws {
-        try defineMemory(isMemory64: false)
+        try defineMemory(isShared: false, isMemory64: false)
+        try defineMemory(isShared: true, isMemory64: false)
     }
 
     func testDefineMemory64() throws {
-        try defineMemory(isMemory64: true)
+        try defineMemory(isShared: false, isMemory64: true)
+        try defineMemory(isShared: true, isMemory64: true)
     }
 
     func testMemory64Index() throws{
