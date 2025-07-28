@@ -4033,6 +4033,15 @@ public class ProgramBuilder {
         emit(WasmResolveForwardReference(), withInputs: [forwardReference, to])
     }
 
+    // Converts an array to a string separating elements by comma. This is used for testing only.
+    func arrayToStringForTesting(_ array: Variable) -> Variable {
+        let stringified = callMethod("map", on: array,
+                withArgs: [buildArrowFunction(with: .parameters(n: 1)) { args in
+            doReturn(callMethod("toString", on: args[0]))
+        }])
+        return callMethod("join", on: stringified, withArgs: [loadString(",")])
+    }
+
     /// Returns the next free variable.
     func nextVariable() -> Variable {
         assert(numVariables < Code.maxNumberOfVariables, "Too many variables")

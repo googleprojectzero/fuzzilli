@@ -63,7 +63,7 @@ class WasmAtomicsTests: XCTestCase {
         for (i, result) in expectedResults.enumerated() {
             let w = b.getProperty("w\(i)", of: exports)
             let r = b.callFunction(w)
-            b.callFunction(outputFunc, withArgs: [r])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: r)])
             expectedOutput += result + "\n"
         }
 
@@ -121,7 +121,7 @@ class WasmAtomicsTests: XCTestCase {
         for (i, result) in expectedResults.enumerated() {
             let w = b.getProperty("w\(i)", of: exports)
             let r = b.callFunction(w)
-            b.callFunction(outputFunc, withArgs: [r])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: r)])
             expectedOutput += result + "\n"
         }
 
