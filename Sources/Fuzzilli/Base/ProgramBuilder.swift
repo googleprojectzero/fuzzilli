@@ -3905,11 +3905,14 @@ public class ProgramBuilder {
     //
     // Note: In rare cases, the returned values may lead to an out-of-bounds memory access.
     func generateAlignedMemoryIndexes(forMemory memory: Variable, alignment: Int64) -> (address: Variable, offset: Int64) {
+        assert(alignment > 0, "Alignment must be positive")
         let memoryTypeInfo = self.type(of: memory).wasmMemoryType!
         let memSize = Int64(memoryTypeInfo.limits.min * WasmConstants.specWasmMemPageSize)
         let function = self.currentWasmModule.currentWasmFunction
-        assert(memSize >= alignment, "Memory size must be large enough to satisfy alignment")
-        assert(alignment > 0, "Alignment must be positive")
+        if memSize < alignment {
+            // We can't generate in-bounds accesses here, so simply return address 0.
+            return (function.memoryArgument(0, memoryTypeInfo), 0)
+        }
 
         // Generate an in-bounds offset (dynamicOffset + alignedStaticOffset) into the memory.
         // The '+1' allows out-of-bounds access (dynamicOffset + alignedStaticOffset == memSize)
