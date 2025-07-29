@@ -2844,4 +2844,35 @@ class ProgramBuilderTests: XCTestCase {
             }
         }
     }
+
+    func testEmptyMemoryGenerateMemoryIndices() {
+        let env = JavaScriptEnvironment()
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+        do {
+            let emptyMemory = b.createWasmMemory(minPages: 0)
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let (dynamicOffset, staticOffset) = b.generateAlignedMemoryIndexes(forMemory: emptyMemory, alignment: 1)
+                    return [function.wasmMemoryLoad(memory: emptyMemory,
+                        dynamicOffset: dynamicOffset, loadType: .I32LoadMem,
+                        staticOffset: staticOffset)]
+                }
+            }
+        }
+        let actual = b.finalize()
+        do {
+            let emptyMemory = b.createWasmMemory(minPages: 0)
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    return [function.wasmMemoryLoad(memory: emptyMemory,
+                        dynamicOffset: function.consti32(0), loadType: .I32LoadMem,
+                        staticOffset: 0)]
+                }
+            }
+        }
+        let expected = b.finalize()
+        XCTAssertEqual(actual, expected)
+    }
 }
