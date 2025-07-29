@@ -117,6 +117,10 @@ class LiveTests: XCTestCase {
                             return b.loadBigInt(123)
                         case .wasmFuncRef:
                             return jsFunction
+                        case .wasmNullExternRef, .wasmNullFuncRef, .wasmNullRef:
+                            return b.loadNull()
+                        case .wasmExternRef, .wasmAnyRef:
+                            return b.createObject(with: [:])
                         default:
                             return b.loadInt(321)
                     }

@@ -1111,14 +1111,14 @@ public class ProgramBuilder {
         } else if type.Is(.wasmFuncRef) {
             // TODO(cffsmith): refine this type with the signature if we can.
             return .function()
-        } else if type.Is(.wasmExternRef) {
-            return .jsAnything
-        } else if type.Is(.wasmExnRef) {
-            return .jsAnything
-        } else if type.Is(.wasmGenericRef) {
-            return .jsAnything
         } else if type.Is(.wasmI31Ref) {
             return .integer
+        } else if type.Is(.wasmNullRef) || type.Is(.wasmNullExternRef) || type.Is(.wasmNullFuncRef) {
+            // This is slightly imprecise: The null types only accept null, not undefined but
+            // Fuzzilli doesn't differentiate between null and undefined in its type system.
+            return .nullish
+        } else if type.Is(.wasmGenericRef) {
+            return .jsAnything
         } else {
             fatalError("Unexpected type encountered: \(type).")
         }
@@ -3950,9 +3950,17 @@ public class ProgramBuilder {
     }
 
     public func randomWasmSignature() -> WasmSignature {
-        // TODO: generalize this to support more types.
-        let returnTypes: [ILType] = (0..<Int.random(in: 0...3)).map {_ in chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64])}
-        let params: [ILType] = (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from: [.wasmi32, .wasmf32, .wasmf64])}
+        // TODO: generalize this to support more types. Also add support for simd128 and
+        // (null)exnref, note however that these types raise exceptions when used from JS.
+        let valueTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64]
+        let abstractRefTypes: [ILType] = [.wasmExternRef, .wasmAnyRef, .wasmI31Ref]
+        let nullTypes: [ILType] = [.wasmNullRef, .wasmNullExternRef, .wasmNullFuncRef]
+        let randomType = {
+            chooseUniform(
+                from: chooseBiased(from: [nullTypes, abstractRefTypes, valueTypes], factor: 1.5))
+        }
+        let returnTypes: [ILType] = (0..<Int.random(in: 0...3)).map {_ in randomType()}
+        let params: [ILType] = (0..<Int.random(in: 0...10)).map {_ in randomType()}
         return params => returnTypes
     }
 
