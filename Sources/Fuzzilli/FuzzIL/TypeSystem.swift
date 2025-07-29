@@ -234,6 +234,7 @@ public struct ILType: Hashable {
     public static let wasmRefAny = ILType.wasmRef(.Abstract(.WasmAny), nullability: false)
     public static let wasmNullRef = ILType.wasmRef(.Abstract(.WasmNone), nullability: true)
     public static let wasmNullExternRef = ILType.wasmRef(.Abstract(.WasmNoExtern), nullability: true)
+    public static let wasmNullFuncRef = ILType.wasmRef(.Abstract(.WasmNoFunc), nullability: true)
     public static let wasmEqRef = ILType.wasmRef(.Abstract(.WasmEq), nullability: true)
     public static let wasmStructRef = ILType.wasmRef(.Abstract(.WasmStruct), nullability: true)
     public static let wasmArrayRef = ILType.wasmRef(.Abstract(.WasmArray), nullability: true)
