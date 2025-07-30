@@ -2035,11 +2035,12 @@ class MinimizerTests: XCTestCase {
             }
 
             b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => []) { function, _ in
+                wasmModule.addWasmFunction(with: [] => []) { function, _, _ in
                     let constOne = function.consti32(1)
                     evaluator.nextInstructionIsImportant(in: b)
                     function.wasmArrayNewDefault(arrayType: typeGroupB[1], size: constOne)
                     function.wasmArrayNewDefault(arrayType: typeGroupB[0], size: constOne)
+                    return []
                 }
             }
         }
@@ -2055,9 +2056,10 @@ class MinimizerTests: XCTestCase {
             }
 
             b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => []) { function, _ in
+                wasmModule.addWasmFunction(with: [] => []) { function, _, _ in
                     let constOne = function.consti32(1)
                     function.wasmArrayNewDefault(arrayType: typeGroupB[0], size: constOne)
+                    return []
                 }
             }
         }

@@ -1226,7 +1226,7 @@ class JSTyperTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         b.buildWasmModule { m in
-            m.addWasmFunction(with: [] => []) { f, _ in
+            m.addWasmFunction(with: [] => []) { f, _, _ in
                 let ci32 = f.consti32(1337)
                 let ci64 = f.consti64(1338)
                 let cf32 = f.constf32(13.37)
@@ -1240,6 +1240,7 @@ class JSTyperTests: XCTestCase {
                 XCTAssertTrue(b.type(of: ci64).Is(.wasmPrimitive))
                 XCTAssertTrue(b.type(of: cf32).Is(.wasmPrimitive))
                 XCTAssertTrue(b.type(of: cf64).Is(.wasmPrimitive))
+                return []
             }
         }
     }
@@ -1546,7 +1547,7 @@ class JSTyperTests: XCTestCase {
             wasmModule.addTag(parameterTypes: [.wasmi32])
 
             // Function zero
-            wasmModule.addWasmFunction(with: [] => []) { function, _ in
+            wasmModule.addWasmFunction(with: [] => []) { function, _, _ in
                 // This forces an import of the wasmGlobalf64, second global
                 function.wasmLoadGlobal(globalVariable: wasmGlobalf64)
                 // This forces an import and a re-export of the jsTag.
@@ -1556,6 +1557,7 @@ class JSTyperTests: XCTestCase {
                     }
                 }
                 function.wasmUnreachable()
+                return []
             }
 
             // Function one

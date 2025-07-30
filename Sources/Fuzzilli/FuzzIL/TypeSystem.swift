@@ -1914,8 +1914,8 @@ public struct Signature: Hashable, CustomStringConvertible {
 }
 
 public struct WasmSignature: Hashable, CustomStringConvertible {
-    let parameterTypes: [ILType]
-    let outputTypes: [ILType]
+    public let parameterTypes: [ILType]
+    public let outputTypes: [ILType]
 
     init(expects parameters: [ILType], returns returnTypes: [ILType]) {
         self.parameterTypes = parameters
