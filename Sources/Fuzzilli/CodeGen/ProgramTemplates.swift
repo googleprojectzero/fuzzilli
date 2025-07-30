@@ -105,7 +105,7 @@ public let ProgramTemplates = [
         let wrapped = b.wrapSuspending(function: f!)
 
         let m = b.buildWasmModule { mod in
-            mod.addWasmFunction(with: [] => []) { fbuilder, _  in
+            mod.addWasmFunction(with: [] => []) { fbuilder, _, _  in
                 // This will create a bunch of locals, which should create large (>4KB) frames.
                 if probability(0.02) {
                     for _ in 0..<1000 {
@@ -120,6 +120,7 @@ public let ProgramTemplates = [
                     fbuilder.wasmJsCall(function: wrapped, withArgs: args, withWasmSignature: wasmSignature)
                 }
                 b.build(n: 4)
+                return []
             }
             if probability(0.2) {
                 b.build(n: 20)
@@ -156,7 +157,7 @@ public let ProgramTemplates = [
         let module = b.buildWasmModule { wasmModule in
             // Wasm function that throws a tag, catches a tag (the same or a different one) to
             // rethrow it again (or another exnref if present).
-            wasmModule.addWasmFunction(with: [] => []) { function, args in
+            wasmModule.addWasmFunction(with: [] => []) { function, label, args in
                 b.build(n: 10)
                 let caughtValues = function.wasmBuildBlockWithResults(with: [] => catchBlockOutputTypes, args: []) { catchRefLabel, _ in
                     // TODO(mliedtke): We should probably allow mutations of try_tables to make
@@ -173,6 +174,7 @@ public let ProgramTemplates = [
                 }
                 b.build(n: 10)
                 function.wasmBuildThrowRef(exception: b.randomVariable(ofType: .wasmExnRef)!)
+                return []
             }
         }
 

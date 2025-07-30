@@ -147,40 +147,44 @@ class WasmAtomicsTests: XCTestCase {
             // Load operations
 
             for memory in [unsharedMemory, sharedMemory] {
-                wasmModule.addWasmFunction(with: [] => []) { f, _ in
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
                     let address = f.consti32(1) // Unaligned for 4-byte access
                     // This should trap.
                     f.wasmAtomicLoad(memory: memory, address: address, loadType: .i32Load, offset: 0)
+                    return []
                 }
             }
 
             // memory64
             for memory in [unsharedMemory, sharedMemory] {
-                wasmModule.addWasmFunction(with: [] => []) { f, _ in
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
                     let address = f.consti32(4) // Unaligned for 8-byte access
                     // This should trap.
                     f.wasmAtomicLoad(memory: memory, address: address, loadType: .i64Load, offset: 0)
+                    return []
                 }
             }
 
             // Store operations
 
             for memory in [unsharedMemory, sharedMemory] {
-                wasmModule.addWasmFunction(with: [] => []) { f, _ in
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
                     let address = f.consti32(2) // Unaligned for 4-byte access
                     // This should trap.
                     let value = f.consti32(0x1337)
                     f.wasmAtomicStore(memory: memory, address: address, value: value, storeType: .i32Store, offset: 0)
+                    return []
                 }
             }
 
             // memory64
             for memory in [unsharedMemory, sharedMemory] {
-                wasmModule.addWasmFunction(with: [] => []) { f, _ in
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
                     let address = f.consti32(7) // Unaligned for 8-byte access
                     // This should trap.
                     let value = f.consti64(0xDEADBEEF)
                     f.wasmAtomicStore(memory: memory, address: address, value: value, storeType: .i64Store, offset: 0)
+                    return []
                 }
             }
         }

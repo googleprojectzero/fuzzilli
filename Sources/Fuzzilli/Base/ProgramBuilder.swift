@@ -3841,17 +3841,6 @@ public class ProgramBuilder {
 
         // TODO: distinguish between exported and non-exported functions
         @discardableResult
-        public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, [Variable]) -> ()) -> Variable {
-            let instr = b.emit(BeginWasmFunction(signature: signature))
-            // Ignore the label in this overload.
-            body(currentWasmFunction, Array(instr.innerOutputs.dropFirst()))
-            // TODO(mliedtke): Ideally we'd replace all overloads of this function to the new one
-            // expecting explicit return values.
-            let results = signature.outputTypes.map {b.randomVariable(ofType: $0) ?? currentWasmFunction.generateRandomWasmVar(ofType: $0)!}
-            return b.emit(EndWasmFunction(signature: signature), withInputs: results).output
-        }
-
-        @discardableResult
         public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, Variable, [Variable]) -> [Variable]) -> Variable {
             let instr = b.emit(BeginWasmFunction(signature: signature))
             let results = body(currentWasmFunction, instr.innerOutput(0), Array(instr.innerOutputs(1...)))

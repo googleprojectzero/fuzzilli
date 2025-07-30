@@ -3239,8 +3239,9 @@ class LifterTests: XCTestCase {
         b.reassign(table, to: table)
 
         b.buildWasmModule { m in
-            m.addWasmFunction(with: [] => []) { f, _ in
+            m.addWasmFunction(with: [] => []) { f, _, _ in
                 f.wasmCallIndirect(signature: [] => [], table: table, functionArgs: [], tableIndex: f.consti64(0))
+                return []
             }
         }
 
