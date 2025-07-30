@@ -79,7 +79,7 @@ FuzzIL has a number of properties:
 A number of mutations can then be performed on these programs:
 
 * [InputMutator](Sources/Fuzzilli/Mutators/InputMutator.swift): replaces input variables of instructions with different ones to mutate the dataflow of the program.
-* [CodeGenMutator](Sources/Fuzzilli/Mutators/CodeGenMutator.swift): generates code and inserts it somewhere in the mutated program. Code is generated either by running a [code generator](Sources/Fuzzilli/Core/CodeGenerators.swift) or by copying some instructions from another program in the corpus (splicing).
+* [CodeGenMutator](Sources/Fuzzilli/Mutators/CodeGenMutator.swift): generates code and inserts it somewhere in the mutated program. Code is generated either by running a [code generator](Sources/Fuzzilli/CodeGen/CodeGenerators.swift) or by copying some instructions from another program in the corpus (splicing).
 * [CombineMutator](Sources/Fuzzilli/Mutators/CombineMutator.swift): inserts a program from the corpus into a random position in the mutated program.
 * [OperationMutator](Sources/Fuzzilli/Mutators/OperationMutator.swift): mutates the parameters of operations, for example replacing an integer constant with a different one.
 * and more...
@@ -109,7 +109,7 @@ Furthermore, a number of modules are optionally available:
 * [ThreadSync](Sources/Fuzzilli/Modules/ThreadSync.swift): synchronize multiple instances within the same process.
 * [Storage](Sources/Fuzzilli/Modules/Storage.swift): stores crashing programs to disk.
 
-The fuzzer is event-driven, with most of the interactions between different classes happening through events. Events are dispatched e.g. as a result of a crash or an interesting program being found, a new program being executed, a log message being generated and so on. See [Events.swift](Sources/Fuzzilli/Core/Events.swift) for the full list of events. The event mechanism effectively decouples the various components of the fuzzer and makes it easy to implement additional modules.
+The fuzzer is event-driven, with most of the interactions between different classes happening through events. Events are dispatched e.g. as a result of a crash or an interesting program being found, a new program being executed, a log message being generated and so on. See [Events.swift](Sources/Fuzzilli/Base/Events.swift) for the full list of events. The event mechanism effectively decouples the various components of the fuzzer and makes it easy to implement additional modules.
 
 A FuzzIL program can be built up using a [ProgramBuilder](Sources/Fuzzilli/Base/ProgramBuilder.swift) instance. A ProgramBuilder provides methods to create and append new instructions, append instructions from another program, retrieve existing variables, query the execution context at the current position (e.g. whether it is inside a loop), and more.
 
