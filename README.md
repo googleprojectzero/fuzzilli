@@ -167,6 +167,8 @@ Special thanks to all users of Fuzzilli who have reported bugs found by it!
 * [CVE-2022-46696](https://bugs.webkit.org/show_bug.cgi?id=246942): Assertion failure due to missing exception check in JIT-compiled code
 * [CVE-2022-46699](https://bugs.webkit.org/show_bug.cgi?id=247420): Assertion failure due to incorrect caching of special properties in ICs
 * [CVE-2022-46700](https://bugs.webkit.org/show_bug.cgi?id=247562): Intl.Locale.prototype.hourCycles leaks empty JSValue to script
+* [CVE-2025-43214](https://bugs.webkit.org/show_bug.cgi?id=292621): Memory corruption during JSToWasmEntry when iterating over the stack
+* [CVE-2025-43213](https://bugs.webkit.org/show_bug.cgi?id=292916): Invalid typing of NewRegExpUntyped operation
 
 #### Gecko/Spidermonkey
 
