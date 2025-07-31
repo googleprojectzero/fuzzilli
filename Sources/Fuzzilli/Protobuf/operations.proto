@@ -1560,6 +1560,56 @@ message WasmAtomicStore {
   int64 offset = 2;
 }
 
+enum WasmAtomicRMWType {
+    I32_ADD = 0;
+    I64_ADD = 1;
+    I32_ADD_8U = 2;
+    I32_ADD_16U = 3;
+    I64_ADD_8U = 4;
+    I64_ADD_16U = 5;
+    I64_ADD_32U = 6;
+    I32_SUB = 7;
+    I64_SUB = 8;
+    I32_SUB_8U = 9;
+    I32_SUB_16U = 10;
+    I64_SUB_8U = 11;
+    I64_SUB_16U = 12;
+    I64_SUB_32U = 13;
+    I32_AND = 14;
+    I64_AND = 15;
+    I32_AND_8U = 16;
+    I32_AND_16U = 17;
+    I64_AND_8U = 18;
+    I64_AND_16U = 19;
+    I64_AND_32U = 20;
+    I32_OR = 21;
+    I64_OR = 22;
+    I32_OR_8U = 23;
+    I32_OR_16U = 24;
+    I64_OR_8U = 25;
+    I64_OR_16U = 26;
+    I64_OR_32U = 27;
+    I32_XOR = 28;
+    I64_XOR = 29;
+    I32_XOR_8U = 30;
+    I32_XOR_16U = 31;
+    I64_XOR_8U = 32;
+    I64_XOR_16U = 33;
+    I64_XOR_32U = 34;
+    I32_XCHG = 35;
+    I64_XCHG = 36;
+    I32_XCHG_8U = 37;
+    I32_XCHG_16U = 38;
+    I64_XCHG_8U = 39;
+    I64_XCHG_16U = 40;
+    I64_XCHG_32U = 41;
+}
+
+message WasmAtomicRMW {
+    WasmAtomicRMWType op = 1;
+    int64 offset = 2;
+}
+
 message WasmAnyConvertExtern {
 }
 

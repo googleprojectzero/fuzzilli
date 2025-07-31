@@ -1754,6 +1754,10 @@ public class WasmLifter {
             let opcode = [Prefix.Atomic.rawValue, op.storeType.rawValue]
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0), alignment: op.storeType.naturalAlignment())
             return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
+        case .wasmAtomicRMW(let op):
+            let opcode = [Prefix.Atomic.rawValue, op.op.rawValue]
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0), alignment: op.op.naturalAlignment())
+            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
         case .wasmMemorySize(_):
             let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
             return Data([0x3F]) + Leb128.unsignedEncode(memoryIdx)

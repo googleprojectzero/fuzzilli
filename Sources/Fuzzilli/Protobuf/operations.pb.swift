@@ -1347,6 +1347,200 @@ public enum Fuzzilli_Protobuf_WasmAtomicStoreType: SwiftProtobuf.Enum, Swift.Cas
 
 }
 
+public enum Fuzzilli_Protobuf_WasmAtomicRMWType: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case i32Add // = 0
+  case i64Add // = 1
+  case i32Add8U // = 2
+  case i32Add16U // = 3
+  case i64Add8U // = 4
+  case i64Add16U // = 5
+  case i64Add32U // = 6
+  case i32Sub // = 7
+  case i64Sub // = 8
+  case i32Sub8U // = 9
+  case i32Sub16U // = 10
+  case i64Sub8U // = 11
+  case i64Sub16U // = 12
+  case i64Sub32U // = 13
+  case i32And // = 14
+  case i64And // = 15
+  case i32And8U // = 16
+  case i32And16U // = 17
+  case i64And8U // = 18
+  case i64And16U // = 19
+  case i64And32U // = 20
+  case i32Or // = 21
+  case i64Or // = 22
+  case i32Or8U // = 23
+  case i32Or16U // = 24
+  case i64Or8U // = 25
+  case i64Or16U // = 26
+  case i64Or32U // = 27
+  case i32Xor // = 28
+  case i64Xor // = 29
+  case i32Xor8U // = 30
+  case i32Xor16U // = 31
+  case i64Xor8U // = 32
+  case i64Xor16U // = 33
+  case i64Xor32U // = 34
+  case i32Xchg // = 35
+  case i64Xchg // = 36
+  case i32Xchg8U // = 37
+  case i32Xchg16U // = 38
+  case i64Xchg8U // = 39
+  case i64Xchg16U // = 40
+  case i64Xchg32U // = 41
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .i32Add
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .i32Add
+    case 1: self = .i64Add
+    case 2: self = .i32Add8U
+    case 3: self = .i32Add16U
+    case 4: self = .i64Add8U
+    case 5: self = .i64Add16U
+    case 6: self = .i64Add32U
+    case 7: self = .i32Sub
+    case 8: self = .i64Sub
+    case 9: self = .i32Sub8U
+    case 10: self = .i32Sub16U
+    case 11: self = .i64Sub8U
+    case 12: self = .i64Sub16U
+    case 13: self = .i64Sub32U
+    case 14: self = .i32And
+    case 15: self = .i64And
+    case 16: self = .i32And8U
+    case 17: self = .i32And16U
+    case 18: self = .i64And8U
+    case 19: self = .i64And16U
+    case 20: self = .i64And32U
+    case 21: self = .i32Or
+    case 22: self = .i64Or
+    case 23: self = .i32Or8U
+    case 24: self = .i32Or16U
+    case 25: self = .i64Or8U
+    case 26: self = .i64Or16U
+    case 27: self = .i64Or32U
+    case 28: self = .i32Xor
+    case 29: self = .i64Xor
+    case 30: self = .i32Xor8U
+    case 31: self = .i32Xor16U
+    case 32: self = .i64Xor8U
+    case 33: self = .i64Xor16U
+    case 34: self = .i64Xor32U
+    case 35: self = .i32Xchg
+    case 36: self = .i64Xchg
+    case 37: self = .i32Xchg8U
+    case 38: self = .i32Xchg16U
+    case 39: self = .i64Xchg8U
+    case 40: self = .i64Xchg16U
+    case 41: self = .i64Xchg32U
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .i32Add: return 0
+    case .i64Add: return 1
+    case .i32Add8U: return 2
+    case .i32Add16U: return 3
+    case .i64Add8U: return 4
+    case .i64Add16U: return 5
+    case .i64Add32U: return 6
+    case .i32Sub: return 7
+    case .i64Sub: return 8
+    case .i32Sub8U: return 9
+    case .i32Sub16U: return 10
+    case .i64Sub8U: return 11
+    case .i64Sub16U: return 12
+    case .i64Sub32U: return 13
+    case .i32And: return 14
+    case .i64And: return 15
+    case .i32And8U: return 16
+    case .i32And16U: return 17
+    case .i64And8U: return 18
+    case .i64And16U: return 19
+    case .i64And32U: return 20
+    case .i32Or: return 21
+    case .i64Or: return 22
+    case .i32Or8U: return 23
+    case .i32Or16U: return 24
+    case .i64Or8U: return 25
+    case .i64Or16U: return 26
+    case .i64Or32U: return 27
+    case .i32Xor: return 28
+    case .i64Xor: return 29
+    case .i32Xor8U: return 30
+    case .i32Xor16U: return 31
+    case .i64Xor8U: return 32
+    case .i64Xor16U: return 33
+    case .i64Xor32U: return 34
+    case .i32Xchg: return 35
+    case .i64Xchg: return 36
+    case .i32Xchg8U: return 37
+    case .i32Xchg16U: return 38
+    case .i64Xchg8U: return 39
+    case .i64Xchg16U: return 40
+    case .i64Xchg32U: return 41
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmAtomicRMWType] = [
+    .i32Add,
+    .i64Add,
+    .i32Add8U,
+    .i32Add16U,
+    .i64Add8U,
+    .i64Add16U,
+    .i64Add32U,
+    .i32Sub,
+    .i64Sub,
+    .i32Sub8U,
+    .i32Sub16U,
+    .i64Sub8U,
+    .i64Sub16U,
+    .i64Sub32U,
+    .i32And,
+    .i64And,
+    .i32And8U,
+    .i32And16U,
+    .i64And8U,
+    .i64And16U,
+    .i64And32U,
+    .i32Or,
+    .i64Or,
+    .i32Or8U,
+    .i32Or16U,
+    .i64Or8U,
+    .i64Or16U,
+    .i64Or32U,
+    .i32Xor,
+    .i64Xor,
+    .i32Xor8U,
+    .i32Xor16U,
+    .i64Xor8U,
+    .i64Xor16U,
+    .i64Xor32U,
+    .i32Xchg,
+    .i64Xchg,
+    .i32Xchg8U,
+    .i32Xchg16U,
+    .i64Xchg8U,
+    .i64Xchg16U,
+    .i64Xchg32U,
+  ]
+
+}
+
 /// Parameters used by function definitions, not an operation by itself.
 public struct Fuzzilli_Protobuf_Parameters: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -5574,6 +5768,20 @@ public struct Fuzzilli_Protobuf_WasmAtomicStore: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_WasmAtomicRMW: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var op: Fuzzilli_Protobuf_WasmAtomicRMWType = .i32Add
+
+  public var offset: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_WasmAnyConvertExtern: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5888,6 +6096,53 @@ extension Fuzzilli_Protobuf_WasmAtomicStoreType: SwiftProtobuf._ProtoNameProvidi
     4: .same(proto: "I64_STORE_8"),
     5: .same(proto: "I64_STORE_16"),
     6: .same(proto: "I64_STORE_32"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmAtomicRMWType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "I32_ADD"),
+    1: .same(proto: "I64_ADD"),
+    2: .same(proto: "I32_ADD_8U"),
+    3: .same(proto: "I32_ADD_16U"),
+    4: .same(proto: "I64_ADD_8U"),
+    5: .same(proto: "I64_ADD_16U"),
+    6: .same(proto: "I64_ADD_32U"),
+    7: .same(proto: "I32_SUB"),
+    8: .same(proto: "I64_SUB"),
+    9: .same(proto: "I32_SUB_8U"),
+    10: .same(proto: "I32_SUB_16U"),
+    11: .same(proto: "I64_SUB_8U"),
+    12: .same(proto: "I64_SUB_16U"),
+    13: .same(proto: "I64_SUB_32U"),
+    14: .same(proto: "I32_AND"),
+    15: .same(proto: "I64_AND"),
+    16: .same(proto: "I32_AND_8U"),
+    17: .same(proto: "I32_AND_16U"),
+    18: .same(proto: "I64_AND_8U"),
+    19: .same(proto: "I64_AND_16U"),
+    20: .same(proto: "I64_AND_32U"),
+    21: .same(proto: "I32_OR"),
+    22: .same(proto: "I64_OR"),
+    23: .same(proto: "I32_OR_8U"),
+    24: .same(proto: "I32_OR_16U"),
+    25: .same(proto: "I64_OR_8U"),
+    26: .same(proto: "I64_OR_16U"),
+    27: .same(proto: "I64_OR_32U"),
+    28: .same(proto: "I32_XOR"),
+    29: .same(proto: "I64_XOR"),
+    30: .same(proto: "I32_XOR_8U"),
+    31: .same(proto: "I32_XOR_16U"),
+    32: .same(proto: "I64_XOR_8U"),
+    33: .same(proto: "I64_XOR_16U"),
+    34: .same(proto: "I64_XOR_32U"),
+    35: .same(proto: "I32_XCHG"),
+    36: .same(proto: "I64_XCHG"),
+    37: .same(proto: "I32_XCHG_8U"),
+    38: .same(proto: "I32_XCHG_16U"),
+    39: .same(proto: "I64_XCHG_8U"),
+    40: .same(proto: "I64_XCHG_16U"),
+    41: .same(proto: "I64_XCHG_32U"),
   ]
 }
 
@@ -15453,6 +15708,44 @@ extension Fuzzilli_Protobuf_WasmAtomicStore: SwiftProtobuf.Message, SwiftProtobu
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmAtomicStore, rhs: Fuzzilli_Protobuf_WasmAtomicStore) -> Bool {
     if lhs.storeType != rhs.storeType {return false}
+    if lhs.offset != rhs.offset {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmAtomicRMW: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmAtomicRMW"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "op"),
+    2: .same(proto: "offset"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.op != .i32Add {
+      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
+    }
+    if self.offset != 0 {
+      try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmAtomicRMW, rhs: Fuzzilli_Protobuf_WasmAtomicRMW) -> Bool {
+    if lhs.op != rhs.op {return false}
     if lhs.offset != rhs.offset {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

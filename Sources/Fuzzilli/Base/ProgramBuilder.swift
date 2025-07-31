@@ -3315,6 +3315,14 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        func wasmAtomicRMW(memory: Variable, lhs: Variable, rhs: Variable, op: WasmAtomicRMWType, offset: Int64) -> Variable {
+            let op = WasmAtomicRMW(op: op, offset: offset)
+            let anyInt: ILType = .wasmi32 | .wasmi64
+            let valueType = op.op.type
+            return b.emit(op, withInputs: [memory, lhs, rhs], types: [.object(ofGroup: "WasmMemory"), anyInt, valueType]).output
+        }
+
+        @discardableResult
         public func wasmMemorySize(memory: Variable) -> Variable {
             return b.emit(WasmMemorySize(), withInputs: [memory],
                 types: [.object(ofGroup: "WasmMemory")]).output

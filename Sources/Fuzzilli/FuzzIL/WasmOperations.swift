@@ -254,6 +254,105 @@ final class Wasmi64BinOp: WasmOperation {
     }
 }
 
+public enum WasmAtomicRMWType: UInt8, CaseIterable {
+    case i32Add = 0x1e
+    case i64Add = 0x1f
+    case i32Add8U = 0x20
+    case i32Add16U = 0x21
+    case i64Add8U = 0x22
+    case i64Add16U = 0x23
+    case i64Add32U = 0x24
+
+    case i32Sub = 0x25
+    case i64Sub = 0x26
+    case i32Sub8U = 0x27
+    case i32Sub16U = 0x28
+    case i64Sub8U = 0x29
+    case i64Sub16U = 0x2a
+    case i64Sub32U = 0x2b
+
+    case i32And = 0x2c
+    case i64And = 0x2d
+    case i32And8U = 0x2e
+    case i32And16U = 0x2f
+    case i64And8U = 0x30
+    case i64And16U = 0x31
+    case i64And32U = 0x32
+
+    case i32Or = 0x33
+    case i64Or = 0x34
+    case i32Or8U = 0x35
+    case i32Or16U = 0x36
+    case i64Or8U = 0x37
+    case i64Or16U = 0x38
+    case i64Or32U = 0x39
+
+    case i32Xor = 0x3a
+    case i64Xor = 0x3b
+    case i32Xor8U = 0x3c
+    case i32Xor16U = 0x3d
+    case i64Xor8U = 0x3e
+    case i64Xor16U = 0x3f
+    case i64Xor32U = 0x40
+
+    case i32Xchg = 0x41
+    case i64Xchg = 0x42
+    case i32Xchg8U = 0x43
+    case i32Xchg16U = 0x44
+    case i64Xchg8U = 0x45
+    case i64Xchg16U = 0x46
+    case i64Xchg32U = 0x47
+
+    var type: ILType {
+        switch self {
+        case .i32Add, .i32Add8U, .i32Add16U,
+             .i32Sub, .i32Sub8U, .i32Sub16U,
+             .i32And, .i32And8U, .i32And16U,
+             .i32Or, .i32Or8U, .i32Or16U,
+             .i32Xor, .i32Xor8U, .i32Xor16U,
+             .i32Xchg, .i32Xchg8U, .i32Xchg16U:
+            return .wasmi32
+        case .i64Add, .i64Add8U, .i64Add16U, .i64Add32U,
+             .i64Sub, .i64Sub8U, .i64Sub16U, .i64Sub32U,
+             .i64And, .i64And8U, .i64And16U, .i64And32U,
+             .i64Or, .i64Or8U, .i64Or16U, .i64Or32U,
+             .i64Xor, .i64Xor8U, .i64Xor16U, .i64Xor32U,
+             .i64Xchg, .i64Xchg8U, .i64Xchg16U, .i64Xchg32U:
+            return .wasmi64
+        }
+    }
+
+    func naturalAlignment() -> Int64 {
+        switch self {
+        case .i32Add8U, .i64Add8U,
+             .i32Sub8U, .i64Sub8U,
+             .i32And8U, .i64And8U,
+             .i32Or8U, .i64Or8U,
+             .i32Xor8U, .i64Xor8U,
+             .i32Xchg8U, .i64Xchg8U:
+            return 1
+        case .i32Add16U, .i64Add16U,
+             .i32Sub16U, .i64Sub16U,
+             .i32And16U, .i64And16U,
+             .i32Or16U, .i64Or16U,
+             .i32Xor16U, .i64Xor16U,
+             .i32Xchg16U, .i64Xchg16U:
+            return 2
+        case .i32Add, .i64Add32U,
+             .i32Sub, .i64Sub32U,
+             .i32And, .i64And32U,
+             .i32Or, .i64Or32U,
+             .i32Xor, .i64Xor32U,
+             .i32Xchg, .i64Xchg32U:
+            return 4
+        case .i64Add, .i64Sub,
+             .i64And, .i64Or,
+             .i64Xor, .i64Xchg:
+            return 8
+        }
+    }
+}
+
 final class Wasmi32UnOp: WasmOperation {
     override var opcode: Opcode { .wasmi32UnOp(self) }
     let unOpKind: WasmIntegerUnaryOpKind
@@ -2142,5 +2241,18 @@ final class WasmAtomicStore: WasmOperation {
         self.storeType = storeType
         self.offset = offset
         super.init(numInputs: 3, numOutputs: 0, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+final class WasmAtomicRMW: WasmOperation {
+    override var opcode: Opcode { .wasmAtomicRMW(self) }
+
+    let op: WasmAtomicRMWType
+    let offset: Int64
+
+    init(op: WasmAtomicRMWType, offset: Int64) {
+        self.op = op
+        self.offset = offset
+        super.init(numInputs: 3, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
