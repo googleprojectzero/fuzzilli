@@ -198,7 +198,16 @@ Special thanks to all users of Fuzzilli who have reported bugs found by it!
 * [CVE-2024-3855](https://bugzilla.mozilla.org/show_bug.cgi?id=1885828): JIT incorrectly optimized MSubstr operations, which led to out-of-bounds reads
 * [CVE-2024-3857](https://bugzilla.mozilla.org/show_bug.cgi?id=1886683): JIT generated incorrect code resulting in use-after-free during garbage collection
 * [CVE-2024-3858](https://bugzilla.mozilla.org/show_bug.cgi?id=1888892): Mutating a JavaScript object while GC tracing crashes the jitted code
-
+* [CVE-2024-6613](https://bugzilla.mozilla.org/show_bug.cgi?id=1900523): Incorrect listing of WASM stack frames
+* [CVE-2024-6614](https://bugzilla.mozilla.org/show_bug.cgi?id=1902983): Incorrect listing of WASM stack frames
+* [CVE-2024-7521](https://bugzilla.mozilla.org/show_bug.cgi?id=1904644): Incomplete WebAssembly exception handing
+* [CVE-2024-7652](https://bugzilla.mozilla.org/show_bug.cgi?id=1901411): Bug in the AsyncGeneratorPrototype Specification
+* [CVE-2024-8381](https://bugzilla.mozilla.org/show_bug.cgi?id=1912715): Type confusion when looking up a property name in a "with" block
+* [CVE-2024-9396](https://bugzilla.mozilla.org/show_bug.cgi?id=1912471): Potential memory corruption may occur when cloning certain objects
+* [CVE-2025-0240](https://bugzilla.mozilla.org/show_bug.cgi?id=1929623): Compartment mismatch when parsing JavaScript JSON module
+* [CVE-2025-0241](https://bugzilla.mozilla.org/show_bug.cgi?id=1933023): Memory corruption when using JavaScript Text Segmentation
+* [CVE-2025-1012](https://bugzilla.mozilla.org/show_bug.cgi?id=1939710): Use-after-free during concurrent delazification
+* [CVE-2025-1934](https://bugzilla.mozilla.org/show_bug.cgi?id=1942881): Unexpected GC during RegExp bailout processing
 
 #### Chromium/v8
 
