@@ -649,7 +649,7 @@ public struct ILType: Hashable {
         let commonProperties = self.properties.intersection(other.properties)
         let commonMethods = self.methods.intersection(other.methods)
         let signature = self.signature == other.signature ? self.signature : nil        // TODO: this is overly coarse, we could also see if one signature subsumes the other, then take the subsuming one.
-        let receiver = other.receiver != nil && other.receiver != nil ? self.receiver?.intersection(with: other.receiver!) : nil
+        let receiver = other.receiver != nil ? self.receiver?.intersection(with: other.receiver!) : nil
         var group = self.group == other.group ? self.group : nil
         let wasmExt = self.wasmType != nil && other.wasmType != nil ? self.wasmType!.union(other.wasmType!) : nil
         // Object groups are used to describe certain wasm types. If the WasmTypeExtension is lost,
@@ -740,7 +740,7 @@ public struct ILType: Hashable {
             return .nothing
         }
 
-        let receiver = self.receiver != nil && other.receiver != nil ? self.receiver?.union(with: other.receiver!) : self.receiver ?? other.receiver
+        let receiver = self.receiver != nil && other.receiver != nil ? self.receiver!.union(with: other.receiver!) : self.receiver ?? other.receiver
 
         // If either value is nil, the result is the non-nil value. If both are non-nil, the result
         // is their intersection if valid, otherwise .nothing is returned.
