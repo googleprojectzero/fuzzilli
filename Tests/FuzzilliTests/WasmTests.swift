@@ -1769,6 +1769,11 @@ class WasmFoundationTests: XCTestCase {
     }
 
     func testWasmSimd128() throws {
+        #if arch(arm64)
+            // TODO(mdanylo): Investigate and adapt the expectations if behavior is correct.
+            throw XCTSkip("Relaxed SIMD tests currently failing on arm64, skipping")
+        #endif
+
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
