@@ -24,8 +24,8 @@
 #include <string.h>
 #include <unistd.h>
 
-socket_t socket_listen(const char* address, uint16_t port) {
-    socket_t fd = socket(AF_INET, SOCK_STREAM, 0);
+libsocket_t socket_listen(const char* address, uint16_t port) {
+    libsocket_t fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
         return INVALID_SOCKET;
     }
@@ -54,8 +54,8 @@ socket_t socket_listen(const char* address, uint16_t port) {
     return fd;
 }
 
-socket_t socket_accept(socket_t fd) {
-    socket_t client_fd = accept(fd, NULL, 0);
+libsocket_t socket_accept(libsocket_t fd) {
+    libsocket_t client_fd = accept(fd, NULL, 0);
     if (client_fd < 0) {
         return INVALID_SOCKET;
     }
@@ -78,7 +78,7 @@ socket_t socket_accept(socket_t fd) {
     return client_fd;
 }
 
-socket_t socket_connect(const char* address, uint16_t port) {
+libsocket_t socket_connect(const char* address, uint16_t port) {
     struct addrinfo hint;
     memset(&hint, 0, sizeof(hint));
     hint.ai_family = AF_UNSPEC;
@@ -93,7 +93,7 @@ socket_t socket_connect(const char* address, uint16_t port) {
         return INVALID_SOCKET;
     }
 
-    socket_t fd;
+    libsocket_t fd;
     struct addrinfo* addr;
     for (addr = result; addr != NULL; addr = addr->ai_next) {
         fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
@@ -133,7 +133,7 @@ socket_t socket_connect(const char* address, uint16_t port) {
     return fd;
 }
 
-ssize_t socket_send(socket_t fd, const uint8_t* data, size_t length) {
+ssize_t socket_send(libsocket_t fd, const uint8_t* data, size_t length) {
     ssize_t remaining = length;
     while (remaining > 0) {
 #ifdef __APPLE__
@@ -154,15 +154,15 @@ ssize_t socket_send(socket_t fd, const uint8_t* data, size_t length) {
     return length;
 }
 
-ssize_t socket_recv(socket_t fd, uint8_t* data, size_t length) {
+ssize_t socket_recv(libsocket_t fd, uint8_t* data, size_t length) {
     return read(fd, data, length);
 }
 
-int socket_shutdown(socket_t socket) {
+int socket_shutdown(libsocket_t socket) {
     return shutdown(socket, SHUT_RDWR);
 }
 
-int socket_close(socket_t fd) {
+int socket_close(libsocket_t fd) {
     return close(fd);
 }
 

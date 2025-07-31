@@ -36,18 +36,18 @@ typedef __typeof__(_Generic((size_t)0,                                  \
                             unsigned char : (char)0)) ssize_t;
 #endif
 #else
-typedef int socket_t;
+typedef int libsocket_t;
 #define INVALID_SOCKET (-1)
 #endif
 
-socket_t socket_listen(const char* address, uint16_t port);
-socket_t socket_accept(socket_t socket);
-socket_t socket_connect(const char* address, uint16_t port);
+libsocket_t socket_listen(const char* address, uint16_t port);
+libsocket_t socket_accept(libsocket_t socket);
+libsocket_t socket_connect(const char* address, uint16_t port);
 
-ssize_t socket_send(socket_t socket, const uint8_t* data, size_t length);
-ssize_t socket_recv(socket_t socket, uint8_t* buffer, size_t length);
+ssize_t socket_send(libsocket_t socket, const uint8_t* data, size_t length);
+ssize_t socket_recv(libsocket_t socket, uint8_t* buffer, size_t length);
 
-int socket_shutdown(socket_t socket);
-int socket_close(socket_t socket);
+int socket_shutdown(libsocket_t socket);
+int socket_close(libsocket_t socket);
 
 #endif
