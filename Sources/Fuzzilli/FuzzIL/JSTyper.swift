@@ -408,6 +408,11 @@ public struct JSTyper: Analyzer {
         assert(dynamicObjectGroupManager.isEmpty)
     }
 
+    private mutating func registerWasmMemoryUse(for memory: Variable) {
+        let definingInstruction = defUseAnalyzer.definition(of: memory)
+        dynamicObjectGroupManager.addWasmMemory(withType: type(of: memory), forDefinition: definingInstruction, forVariable: memory)
+    }
+
     // Array for collecting type changes during instruction execution.
     // Not currently used, but could be used for example to validate the analysis by adding these as comments to programs.
     private var typeChanges = [(Variable, ILType)]()
@@ -659,7 +664,7 @@ public struct JSTyper: Analyzer {
                 }
             case .wasmDefineMemory(let op):
                 setType(of: instr.output, to: op.wasmMemory)
-                dynamicObjectGroupManager.addWasmMemory(withType: type(of: instr.output), forDefinition: instr, forVariable: instr.output)
+                registerWasmMemoryUse(for: instr.output)
             case .wasmDefineTag(let op):
                 setType(of: instr.output, to: .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameterTypes)))
                 dynamicObjectGroupManager.addWasmTag(withType: type(of: instr.output), forDefinition: instr, forVariable: instr.output)
@@ -681,28 +686,22 @@ public struct JSTyper: Analyzer {
                 let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
                 dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
             case .wasmMemoryStore(_):
-                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-                dynamicObjectGroupManager.addWasmMemory(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                registerWasmMemoryUse(for: instr.input(0))
             case .wasmMemoryLoad(let op):
-                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-                dynamicObjectGroupManager.addWasmMemory(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                registerWasmMemoryUse(for: instr.input(0))
                 setType(of: instr.output, to: op.loadType.numberType())
             case .wasmAtomicLoad(let op):
-                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-                dynamicObjectGroupManager.addWasmMemory(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                registerWasmMemoryUse(for: instr.input(0))
                 setType(of: instr.output, to: op.loadType.numberType())
             case .wasmAtomicStore(_):
-                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-                dynamicObjectGroupManager.addWasmMemory(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                registerWasmMemoryUse(for: instr.input(0))
             case .wasmAtomicRMW(let op):
-                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-                dynamicObjectGroupManager.addWasmMemory(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                registerWasmMemoryUse(for: instr.input(0))
                 setType(of: instr.output, to: op.op.type)
             case .wasmMemorySize(_),
                  .wasmMemoryGrow(_):
                 let isMemory64 = type(of: instr.input(0)).wasmMemoryType?.isMemory64 ?? false
-                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-                dynamicObjectGroupManager.addWasmMemory(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                registerWasmMemoryUse(for: instr.input(0))
                 setType(of: instr.output, to: isMemory64 ? .wasmi64 : .wasmi32)
             case .wasmJsCall(let op):
                 let sigOutputTypes = op.functionSignature.outputTypes
