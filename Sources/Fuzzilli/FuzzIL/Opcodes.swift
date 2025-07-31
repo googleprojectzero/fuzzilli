@@ -285,6 +285,7 @@ enum Opcode {
     case wasmMemoryStore(WasmMemoryStore)
     case wasmAtomicLoad(WasmAtomicLoad)
     case wasmAtomicStore(WasmAtomicStore)
+    case wasmAtomicRMW(WasmAtomicRMW)
     case wasmMemorySize(WasmMemorySize)
     case wasmMemoryGrow(WasmMemoryGrow)
     case wasmMemoryFill(WasmMemoryFill)

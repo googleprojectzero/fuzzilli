@@ -373,6 +373,10 @@ public class OperationMutator: BaseInstructionMutator {
                 storeType: newStoreType,
                 offset: newStaticOffset
             )
+        case .wasmAtomicRMW(let op):
+            let newOpType = chooseUniform(from: WasmAtomicRMWType.allCases.filter({ $0.type == op.op.type }))
+            let newOffset = b.randomInt()
+            newOp = WasmAtomicRMW(op: newOpType, offset: newOffset)
         case .constSimd128(_):
             newOp = ConstSimd128(value: (0 ..< 16).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
         case .wasmSimd128IntegerUnOp(_):

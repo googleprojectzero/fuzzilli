@@ -1305,6 +1305,11 @@ extension Instruction: ProtobufConvertible {
                     $0.storeType = convertEnum(op.storeType, WasmAtomicStoreType.allCases)
                     $0.offset = op.offset
                 }
+            case .wasmAtomicRMW(let op):
+                $0.wasmAtomicRmw = Fuzzilli_Protobuf_WasmAtomicRMW.with {
+                    $0.op = convertEnum(op.op, WasmAtomicRMWType.allCases)
+                    $0.offset = op.offset
+                }
             case .wasmMemorySize(_):
                 $0.wasmMemorySize = Fuzzilli_Protobuf_WasmMemorySize()
             case .wasmMemoryGrow(_):
@@ -2499,6 +2504,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmAtomicLoad(loadType: try convertEnum(p.loadType, WasmAtomicLoadType.allCases), offset: p.offset)
         case .wasmAtomicStore(let p):
             op = WasmAtomicStore(storeType: try convertEnum(p.storeType, WasmAtomicStoreType.allCases), offset: p.offset)
+        case .wasmAtomicRmw(let p):
+            op = WasmAtomicRMW(op: try convertEnum(p.op, WasmAtomicRMWType.allCases), offset: p.offset)
         case .wasmAnyConvertExtern(_):
             op = WasmAnyConvertExtern()
         case .wasmExternConvertAny(_):

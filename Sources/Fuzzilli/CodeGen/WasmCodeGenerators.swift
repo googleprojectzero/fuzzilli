@@ -371,6 +371,19 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmAtomicStore(memory: memory, address: address, value: value, storeType: storeType, offset: staticOffset)
     },
 
+    CodeGenerator("WasmAtomicRMWGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
+        let function = b.currentWasmModule.currentWasmFunction
+        let op = chooseUniform(from: WasmAtomicRMWType.allCases)
+        let valueType = op.type
+        let alignment = op.naturalAlignment()
+
+        let rhs = function.findOrGenerateWasmVar(ofType: valueType)
+
+        let (lhs, staticOffset) = b.generateAlignedMemoryIndexes(forMemory: memory, alignment: alignment)
+
+        function.wasmAtomicRMW(memory: memory, lhs: lhs, rhs: rhs, op: op, offset: staticOffset)
+    },
+
     CodeGenerator("WasmMemorySizeGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmMemorySize(memory: memory)

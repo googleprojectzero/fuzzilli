@@ -220,6 +220,7 @@ public let codeGeneratorWeights = [
     "WasmMemoryStoreGenerator":                 10,
     "WasmAtomicLoadGenerator":                  10,
     "WasmAtomicStoreGenerator":                 10,
+    "WasmAtomicRMWGenerator":                   10,
     "WasmMemorySizeGenerator":                  5,
     "WasmMemoryGrowGenerator":                  1,
     "WasmMemoryFillGenerator":                  5,

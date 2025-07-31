@@ -694,6 +694,10 @@ public struct JSTyper: Analyzer {
             case .wasmAtomicStore(_):
                 let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
                 dynamicObjectGroupManager.addWasmMemory(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+            case .wasmAtomicRMW(let op):
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmMemory(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                setType(of: instr.output, to: op.op.type)
             case .wasmMemorySize(_),
                  .wasmMemoryGrow(_):
                 let isMemory64 = type(of: instr.input(0)).wasmMemoryType?.isMemory64 ?? false
