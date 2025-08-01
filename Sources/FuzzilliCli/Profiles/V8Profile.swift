@@ -696,6 +696,39 @@ let v8Profile = Profile(
         }
 
         //
+        // A gc-stress session with some fairly expensive flags.
+        //
+        if probability(0.1) {
+            if probability(0.4) {
+                args.append("--stress-marking=\(Int.random(in: 1...100))")
+            }
+            if probability(0.4) {
+                args.append("--stress-scavenge=\(Int.random(in: 1...100))")
+            }
+            if probability(0.5) {
+                args.append("--stress-flush-code")
+                args.append("--flush-bytecode")
+            }
+            if probability(0.5) {
+                args.append("--wasm-code-gc")
+                args.append("--stress-wasm-code-gc")
+            }
+            if probability(0.4) {
+                args.append(chooseUniform(
+                    from: ["--gc-interval=\(Int.random(in: 100...10000))",
+                           "--random-gc-interval=\(Int.random(in: 1000...10000))"]))
+            }
+            if probability(0.4) {
+                args.append("--concurrent-recompilation-queue-length=\(Int.random(in: 4...64))")
+                args.append("--concurrent-recompilation-delay=\(Int.random(in: 1...500))")
+            }
+            if probability(0.6) {
+                args.append(chooseUniform(
+                    from: ["--stress-compaction", "--stress-compaction-random"]))
+            }
+        }
+
+        //
         // More exotic configuration changes.
         //
         if probability(0.05) {
