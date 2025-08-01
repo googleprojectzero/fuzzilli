@@ -14,63 +14,6 @@
 
 import Fuzzilli
 
-// TODO: move common parts (e.g. generators) into a V8CommonProfile.swift.
-
-fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJITCompilationThroughLoopGenerator", inputs: .required(.function())) { b, f in
-    assert(b.type(of: f).Is(.function()))
-    let arguments = b.randomArguments(forCalling: f)
-
-    b.buildRepeatLoop(n: 100) { _ in
-        b.callFunction(f, withArgs: arguments)
-    }
-}
-
-fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFanCompilationGenerator", inputs: .required(.function())) { b, f in
-    assert(b.type(of: f).Is(.function()))
-    let arguments = b.randomArguments(forCalling: f)
-
-    b.callFunction(f, withArgs: arguments)
-
-    b.eval("%PrepareFunctionForOptimization(%@)", with: [f]);
-
-    b.callFunction(f, withArgs: arguments)
-    b.callFunction(f, withArgs: arguments)
-
-    b.eval("%OptimizeFunctionOnNextCall(%@)", with: [f]);
-
-    b.callFunction(f, withArgs: arguments)
-}
-
-fileprivate let ForceMaglevCompilationGenerator = CodeGenerator("ForceMaglevCompilationGenerator", inputs: .required(.function())) { b, f in
-    assert(b.type(of: f).Is(.function()))
-    let arguments = b.randomArguments(forCalling: f)
-
-    b.callFunction(f, withArgs: arguments)
-
-    b.eval("%PrepareFunctionForOptimization(%@)", with: [f]);
-
-    b.callFunction(f, withArgs: arguments)
-    b.callFunction(f, withArgs: arguments)
-
-    b.eval("%OptimizeMaglevOnNextCall(%@)", with: [f]);
-
-    b.callFunction(f, withArgs: arguments)
-}
-
-// Insert random GC calls throughout our code.
-fileprivate let GcGenerator = CodeGenerator("GcGenerator") { b in
-    let gc = b.createNamedVariable(forBuiltin: "gc")
-
-    // Do minor GCs more frequently.
-    let type = b.loadString(probability(0.25) ? "major" : "minor")
-    // If the execution type is 'async', gc() returns a Promise, we currently
-    // do not really handle other than typing the return of gc to .undefined |
-    // .jsPromise. One could either chain a .then or create two wrapper
-    // functions that are differently typed such that fuzzilli always knows
-    // what the type of the return value is.
-    let execution = b.loadString(probability(0.5) ? "sync" : "async")
-    b.callFunction(gc, withArgs: [b.createObject(with: ["type": type, "execution": execution])])
-}
 
 // A post-processor that inserts calls to the `corrupt` function (defined in the prefix below) into the generated samples.
 fileprivate struct SandboxFuzzingPostProcessor: FuzzingPostProcessor {
@@ -539,7 +482,7 @@ let v8SandboxProfile = Profile(
         (ForceJITCompilationThroughLoopGenerator,  5),
         (ForceTurboFanCompilationGenerator,        5),
         (ForceMaglevCompilationGenerator,          5),
-        (GcGenerator,                             10),
+        (V8GcGenerator,                           10),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
