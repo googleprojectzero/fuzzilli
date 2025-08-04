@@ -856,6 +856,9 @@ public class FuzzILLifter: Lifter {
         case .wasmAtomicRMW(let op):
             w.emit("\(output()) <- WasmAtomicRMW \(input(0))[\(input(1)) + \(op.offset)] \(op.op) \(input(2))")
 
+        case .wasmAtomicCmpxchg(let op):
+            w.emit("\(output()) <- WasmAtomicCmpxchg \(input(0))[\(input(1)) + \(op.offset)], \(input(2)), \(input(3)) [\(op.op)]")
+
         case .wasmMemorySize(_):
             w.emit("\(output()) <- WasmMemorySize \(input(0))")
 

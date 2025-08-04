@@ -303,7 +303,7 @@ public enum WasmAtomicRMWType: UInt8, CaseIterable {
     case i64Xchg16U = 0x46
     case i64Xchg32U = 0x47
 
-    var type: ILType {
+    func type() -> ILType {
         switch self {
         case .i32Add, .i32Add8U, .i32Add16U,
              .i32Sub, .i32Sub8U, .i32Sub16U,
@@ -2256,3 +2256,49 @@ final class WasmAtomicRMW: WasmOperation {
         super.init(numInputs: 3, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
+
+public enum WasmAtomicCmpxchgType: UInt8, CaseIterable {
+    case i32Cmpxchg = 0x48
+    case i64Cmpxchg = 0x49
+    case i32Cmpxchg8U = 0x4a
+    case i32Cmpxchg16U = 0x4b
+    case i64Cmpxchg8U = 0x4c
+    case i64Cmpxchg16U = 0x4d
+    case i64Cmpxchg32U = 0x4e
+
+    func type() -> ILType {
+        switch self {
+        case .i32Cmpxchg, .i32Cmpxchg8U, .i32Cmpxchg16U:
+            return .wasmi32
+        case .i64Cmpxchg, .i64Cmpxchg8U, .i64Cmpxchg16U, .i64Cmpxchg32U:
+            return .wasmi64
+        }
+    }
+
+    func naturalAlignment() -> Int64 {
+        switch self {
+        case .i32Cmpxchg8U, .i64Cmpxchg8U:
+            return 1
+        case .i32Cmpxchg16U, .i64Cmpxchg16U:
+            return 2
+        case .i32Cmpxchg, .i64Cmpxchg32U:
+            return 4
+        case .i64Cmpxchg:
+            return 8
+        }
+    }
+}
+
+final class WasmAtomicCmpxchg: WasmOperation {
+    override var opcode: Opcode { .wasmAtomicCmpxchg(self) }
+
+    let op: WasmAtomicCmpxchgType
+    let offset: Int64
+
+    init(op: WasmAtomicCmpxchgType, offset: Int64) {
+        self.op = op
+        self.offset = offset
+        super.init(numInputs: 4, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+}
+

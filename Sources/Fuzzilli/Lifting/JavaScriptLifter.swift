@@ -1638,6 +1638,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmAtomicLoad(_),
                  .wasmAtomicStore(_),
                  .wasmAtomicRMW(_),
+                 .wasmAtomicCmpxchg(_),
                  .wasmMemorySize(_),
                  .wasmMemoryGrow(_),
                  .wasmMemoryFill(_),

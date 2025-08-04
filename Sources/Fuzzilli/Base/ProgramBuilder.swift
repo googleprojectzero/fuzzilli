@@ -3318,8 +3318,16 @@ public class ProgramBuilder {
         func wasmAtomicRMW(memory: Variable, lhs: Variable, rhs: Variable, op: WasmAtomicRMWType, offset: Int64) -> Variable {
             let op = WasmAtomicRMW(op: op, offset: offset)
             let anyInt: ILType = .wasmi32 | .wasmi64
-            let valueType = op.op.type
+            let valueType = op.op.type()
             return b.emit(op, withInputs: [memory, lhs, rhs], types: [.object(ofGroup: "WasmMemory"), anyInt, valueType]).output
+        }
+
+        @discardableResult
+        func wasmAtomicCmpxchg(memory: Variable, address: Variable, expected: Variable, replacement: Variable, op: WasmAtomicCmpxchgType, offset: Int64) -> Variable {
+            let op = WasmAtomicCmpxchg(op: op, offset: offset)
+            let anyInt: ILType = .wasmi32 | .wasmi64
+            let valueType = op.op.type()
+            return b.emit(op, withInputs: [memory, address, expected, replacement], types: [.object(ofGroup: "WasmMemory"), anyInt, valueType, valueType]).output
         }
 
         @discardableResult
