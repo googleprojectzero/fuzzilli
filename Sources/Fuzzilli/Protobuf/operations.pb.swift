@@ -1541,6 +1541,60 @@ public enum Fuzzilli_Protobuf_WasmAtomicRMWType: SwiftProtobuf.Enum, Swift.CaseI
 
 }
 
+public enum Fuzzilli_Protobuf_WasmAtomicCmpxchgType: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case i32Cmpxchg // = 0
+  case i64Cmpxchg // = 1
+  case i32Cmpxchg8U // = 2
+  case i32Cmpxchg16U // = 3
+  case i64Cmpxchg8U // = 4
+  case i64Cmpxchg16U // = 5
+  case i64Cmpxchg32U // = 6
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .i32Cmpxchg
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .i32Cmpxchg
+    case 1: self = .i64Cmpxchg
+    case 2: self = .i32Cmpxchg8U
+    case 3: self = .i32Cmpxchg16U
+    case 4: self = .i64Cmpxchg8U
+    case 5: self = .i64Cmpxchg16U
+    case 6: self = .i64Cmpxchg32U
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .i32Cmpxchg: return 0
+    case .i64Cmpxchg: return 1
+    case .i32Cmpxchg8U: return 2
+    case .i32Cmpxchg16U: return 3
+    case .i64Cmpxchg8U: return 4
+    case .i64Cmpxchg16U: return 5
+    case .i64Cmpxchg32U: return 6
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmAtomicCmpxchgType] = [
+    .i32Cmpxchg,
+    .i64Cmpxchg,
+    .i32Cmpxchg8U,
+    .i32Cmpxchg16U,
+    .i64Cmpxchg8U,
+    .i64Cmpxchg16U,
+    .i64Cmpxchg32U,
+  ]
+
+}
+
 /// Parameters used by function definitions, not an operation by itself.
 public struct Fuzzilli_Protobuf_Parameters: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -5782,6 +5836,20 @@ public struct Fuzzilli_Protobuf_WasmAtomicRMW: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_WasmAtomicCmpxchg: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var op: Fuzzilli_Protobuf_WasmAtomicCmpxchgType = .i32Cmpxchg
+
+  public var offset: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_WasmAnyConvertExtern: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -6143,6 +6211,18 @@ extension Fuzzilli_Protobuf_WasmAtomicRMWType: SwiftProtobuf._ProtoNameProviding
     39: .same(proto: "I64_XCHG_8U"),
     40: .same(proto: "I64_XCHG_16U"),
     41: .same(proto: "I64_XCHG_32U"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmAtomicCmpxchgType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "I32_CMPXCHG"),
+    1: .same(proto: "I64_CMPXCHG"),
+    2: .same(proto: "I32_CMPXCHG_8U"),
+    3: .same(proto: "I32_CMPXCHG_16U"),
+    4: .same(proto: "I64_CMPXCHG_8U"),
+    5: .same(proto: "I64_CMPXCHG_16U"),
+    6: .same(proto: "I64_CMPXCHG_32U"),
   ]
 }
 
@@ -15745,6 +15825,44 @@ extension Fuzzilli_Protobuf_WasmAtomicRMW: SwiftProtobuf.Message, SwiftProtobuf.
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmAtomicRMW, rhs: Fuzzilli_Protobuf_WasmAtomicRMW) -> Bool {
+    if lhs.op != rhs.op {return false}
+    if lhs.offset != rhs.offset {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmAtomicCmpxchg: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmAtomicCmpxchg"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "op"),
+    2: .same(proto: "offset"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.op != .i32Cmpxchg {
+      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
+    }
+    if self.offset != 0 {
+      try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmAtomicCmpxchg, rhs: Fuzzilli_Protobuf_WasmAtomicCmpxchg) -> Bool {
     if lhs.op != rhs.op {return false}
     if lhs.offset != rhs.offset {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}

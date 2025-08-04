@@ -1610,6 +1610,21 @@ message WasmAtomicRMW {
     int64 offset = 2;
 }
 
+enum WasmAtomicCmpxchgType {
+    I32_CMPXCHG = 0;
+    I64_CMPXCHG = 1;
+    I32_CMPXCHG_8U = 2;
+    I32_CMPXCHG_16U = 3;
+    I64_CMPXCHG_8U = 4;
+    I64_CMPXCHG_16U = 5;
+    I64_CMPXCHG_32U = 6;
+}
+
+message WasmAtomicCmpxchg {
+    WasmAtomicCmpxchgType op = 1;
+    int64 offset = 2;
+}
+
 message WasmAnyConvertExtern {
 }
 

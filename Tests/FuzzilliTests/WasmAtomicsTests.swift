@@ -291,4 +291,82 @@ class WasmAtomicsTests: XCTestCase {
 
         testForOutput(program: js, runner: runner, outputString: expectedOutput)
     }
+
+    func testAtomicCmpxchg() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+        var expectedOutput = ""
+        var expectedResults: [String] = []
+
+        let testCases: [(
+            op: WasmAtomicCmpxchgType,
+            storeType: WasmAtomicStoreType,
+            loadType: WasmAtomicLoadType,
+            valueType: ILType
+        )] = [
+            (.i32Cmpxchg, .i32Store, .i32Load, .wasmi32),
+            (.i32Cmpxchg8U, .i32Store8, .i32Load8U, .wasmi32),
+            (.i32Cmpxchg16U, .i32Store16, .i32Load16U, .wasmi32),
+            (.i64Cmpxchg, .i64Store, .i64Load, .wasmi64),
+            (.i64Cmpxchg8U, .i64Store8, .i64Load8U, .wasmi64),
+            (.i64Cmpxchg16U, .i64Store16, .i64Load16U, .wasmi64),
+            (.i64Cmpxchg32U, .i64Store32, .i64Load32U, .wasmi64),
+        ]
+
+        let initialValue: Int64 = 12
+        let replacement: Int64 = 10
+
+        let module = b.buildWasmModule { wasmModule in
+            let unsharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: false)
+            let sharedMemory = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: true)
+
+            for memory in [unsharedMemory, sharedMemory] {
+                for (op, storeType, loadType, valueType) in testCases {
+                    let returnType = valueType
+                    // Successful exchange
+                    wasmModule.addWasmFunction(with: [] => [returnType, returnType]) { f, _, _ in
+                        let valueToStore = (valueType == .wasmi32) ? f.consti32(Int32(initialValue)) : f.consti64(initialValue)
+                        let expected = valueToStore
+                        let replacement = (valueType == .wasmi32) ? f.consti32(Int32(replacement)) : f.consti64(replacement)
+                        let address = f.consti32(8)
+                        f.wasmAtomicStore(memory: memory, address: address, value: valueToStore, storeType: storeType, offset: 0)
+                        let originalValue = f.wasmAtomicCmpxchg(memory: memory, address: address, expected: expected, replacement: replacement, op: op, offset: 0)
+                        let finalValue = f.wasmAtomicLoad(memory: memory, address: address, loadType: loadType, offset: 0)
+                        return [originalValue, finalValue]
+                    }
+                    expectedResults.append("\(initialValue),\(replacement)\n")
+
+                    // Unsuccessful exchange
+                    wasmModule.addWasmFunction(with: [] => [returnType, returnType]) { f, _, _ in
+                        let valueToStore = (valueType == .wasmi32) ? f.consti32(Int32(initialValue)) : f.consti64(initialValue)
+                        let expected = (valueType == .wasmi32) ? f.consti32(Int32(initialValue - 1)) : f.consti64(initialValue - 1)
+                        let replacement = (valueType == .wasmi32) ? f.consti32(Int32(replacement)) : f.consti64(replacement)
+                        let address = f.consti32(8)
+                        f.wasmAtomicStore(memory: memory, address: address, value: valueToStore, storeType: storeType, offset: 0)
+                        let originalValue = f.wasmAtomicCmpxchg(memory: memory, address: address, expected: expected, replacement: replacement, op: op, offset: 0)
+                        let finalValue = f.wasmAtomicLoad(memory: memory, address: address, loadType: loadType, offset: 0)
+                        return [originalValue, finalValue]
+                    }
+                    expectedResults.append("\(initialValue),\(initialValue)\n")
+                }
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+        for (i, results) in expectedResults.enumerated() {
+            let w = b.getProperty("w\(i)", of: exports)
+            let r = b.callFunction(w)
+            b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(r)])
+            expectedOutput += results
+        }
+
+        let prog = b.finalize()
+        let js = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: js, runner: runner, outputString: expectedOutput)
+    }
 }

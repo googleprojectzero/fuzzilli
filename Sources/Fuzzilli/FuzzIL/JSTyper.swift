@@ -697,7 +697,10 @@ public struct JSTyper: Analyzer {
                 registerWasmMemoryUse(for: instr.input(0))
             case .wasmAtomicRMW(let op):
                 registerWasmMemoryUse(for: instr.input(0))
-                setType(of: instr.output, to: op.op.type)
+                setType(of: instr.output, to: op.op.type())
+            case .wasmAtomicCmpxchg(let op):
+                registerWasmMemoryUse(for: instr.input(0))
+                setType(of: instr.output, to: op.op.type())
             case .wasmMemorySize(_),
                  .wasmMemoryGrow(_):
                 let isMemory64 = type(of: instr.input(0)).wasmMemoryType?.isMemory64 ?? false
