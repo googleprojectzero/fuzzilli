@@ -1774,11 +1774,6 @@ class WasmFoundationTests: XCTestCase {
     }
 
     func testWasmSimd128() throws {
-        #if arch(arm64)
-            // TODO(mdanylo): Investigate and adapt the expectations if behavior is correct.
-            throw XCTSkip("Relaxed SIMD tests currently failing on arm64, skipping")
-        #endif
-
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -2081,7 +2076,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128IntegerBinOp(varA, varB, WasmSimd128Shape.i16x8, WasmSimd128IntegerBinOpKind.relaxed_dot_i8x16_i7x16_s)
                     return (0..<8).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I16x8S, result, $0)}
                 }
-            }, "50,(70|838),(-69|1436),(-50|1998),(290|1998),(150|2966),(-50|3534),(-21086|32767)"),
+            }, "50,(70|838),(-100|1436),(-50|1998),(290|1998),(150|2966),(-50|3534),(11938|32767)"),
             // Test extadd_pairwise_i8x16_s
             ({wasmModule in
                 let returnType = (0..<8).map {_ in ILType.wasmi32}
@@ -2411,7 +2406,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128IntegerTernaryOp(varA, varB, varC, WasmSimd128Shape.i8x16, WasmSimd128IntegerTernaryOpKind.relaxed_laneselect)
                     return (0..<16).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)}
                 }
-            },"34,24,(155|27),(37|164),(16|24),(122|28),34,24,(155|27),(37|164),(16|24),(122|28),34,24,(155|27),(37|164)"),
+            },"34,24,(32|27),(162|164),(12|24),(93|28),34,24,(32|27),(162|164),(12|24),(93|28),34,24,(32|27),(162|164)"),
             // Test relaxed_dot_i8x16_i7x16_add_s
             ({wasmModule in
                 let returnType = (0..<4).map {_ in ILType.wasmi32}
@@ -2422,7 +2417,7 @@ class WasmFoundationTests: XCTestCase {
                     let result = function.wasmSimd128IntegerTernaryOp(varA, varB, varC, WasmSimd128Shape.i32x4, WasmSimd128IntegerTernaryOpKind.relaxed_dot_i8x16_i7x16_add_s)
                     return (0..<4).map {function.wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind.I32x4, result, $0)}
                 }
-            },"(3728|10641),5522,11123,9564")
+            },"(3729|10641),5522,11123,9564")
         ]
 
         let module = b.buildWasmModule { wasmModule in
