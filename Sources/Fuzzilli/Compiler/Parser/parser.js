@@ -364,6 +364,63 @@ function parse(script, proto) {
                 switchCase.consequent = node.consequent.map(visitStatement);
                 return switchCase;
             }
+            case 'ImportDeclaration': {
+                if (node.specifiers?.length > 0) {
+                    const declarations = node.specifiers.map(spec => make('VariableDeclarator',{
+                        name: spec.local.name,
+                    }));
+                    return makeStatement('VariableDeclaration', {
+                        kind: 2, // make this const for now
+                        declarations,
+                  });
+                }
+                //fallback
+                return makeStatement('EmptyStatement', {});
+            }
+            case 'ExportNamedDeclaration': {
+                if (node.declaration) {
+                  return visitStatement(node.declaration);
+                }
+                
+                if (node.specifiers?.length > 0) {
+                  const declarations = node.specifiers.map(spec => make('VariableDeclarator',{
+                    name: spec.exported.name,
+                  }));
+                  return makeStatement('VariableDeclaration', {
+                    kind: 2,
+                    declarations,
+                  });
+                }
+                //fallback
+                return makeStatement('EmptyStatement', {});
+            }
+            case 'ExportDefaultDeclaration': {
+              const decl = node.declaration;
+              if (decl) {
+                  if (decl.type === 'FunctionDeclaration' ||
+                     decl.type === 'ClassDeclaration' ||
+                     decl.type === 'VariableDeclaration') {
+                     return visitStatement(node.declaration);
+                  }
+                  // treat as Expression
+                  return makeStatement('ExpressionStatement', {
+                      expression: visitExpression(decl),
+                  });
+                  }
+                  return makeStatement('EmptyStatement', {});
+            }
+            case 'ExportAllDeclaration': {
+              if (node.exported) {
+                const declarations = [make('VariableDeclarator', {
+                  name: node.exported.name
+                })];
+                return makeStatement('VariableDeclaration', {
+                  kind: 2,
+                  declarations,
+                })
+              }
+              return makeStatement('EmptyStatement', {});
+            }
             default: {
                 throw "Unhandled node type " + node.type;
             }
