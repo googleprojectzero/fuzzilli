@@ -110,6 +110,34 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("BuiltinObjectPrototypeCallGenerator") { b in
+        // TODO: It would be nice to type more prototypes and extend this list.
+        let builtinName = chooseUniform(from: [
+            "Promise", "Date", "Array", "ArrayBuffer", "SharedArrayBuffer", "String"])
+        let builtin = b.createNamedVariable(forBuiltin: builtinName)
+        let prototype = b.getProperty("prototype", of: builtin)
+        let prototypeType = b.type(of: prototype)
+        let choiceCount = prototypeType.numProperties + prototypeType.numMethods
+        guard choiceCount != 0 else {
+            fatalError("\(builtinName).prototype has no known properties or methods (type: \(prototypeType))")
+        }
+        let useProperty = Int.random(in: 0..<choiceCount) < prototypeType.numProperties
+        let fctName = (useProperty ? prototypeType.properties : prototypeType.methods).randomElement()!
+        let fct = b.getProperty(fctName, of: prototype)
+        let fctType = b.type(of: fct)
+        let arguments = b.randomArguments(forCalling: fct)
+        let receiverType = fctType.receiver ?? prototypeType
+        let desiredReceiverType = fctType.receiver ?? prototypeType
+        let receiver = b.randomVariable(forUseAs: desiredReceiverType)
+        let needGuard = (!fctType.Is(.function()) && !fctType.Is(.unboundFunction()))
+            || !b.type(of: receiver).Is(receiverType)
+        if Bool.random() {
+            b.callMethod("call", on: fct, withArgs: [receiver] + arguments, guard: needGuard)
+        } else {
+            b.callMethod("apply", on: fct, withArgs: [receiver, b.createArray(with: arguments)], guard: needGuard)
+        }
+    },
+
     ValueGenerator("TypedArrayGenerator") { b, n in
         for _ in 0..<n {
             let size = b.loadInt(b.randomSize(upTo: 0x1000))
