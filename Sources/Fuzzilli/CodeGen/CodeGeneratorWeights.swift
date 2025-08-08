@@ -31,6 +31,7 @@ public let codeGeneratorWeights = [
     "IntArrayGenerator":                        10,
     "TypedArrayGenerator":                      20,
     "BuiltinObjectInstanceGenerator":           10,
+    "BuiltinObjectPrototypeCallGenerator":      5,
     "ObjectBuilderFunctionGenerator":           10,
     "ObjectConstructorGenerator":               10,
     "ClassDefinitionGenerator":                 20,
