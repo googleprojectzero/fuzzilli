@@ -1060,6 +1060,13 @@ extension ILType: CustomStringConvertible {
                 if desc is WasmArrayTypeDescription {
                     return ".wasmTypeDef(Array)"
                 }
+                if desc is WasmStructTypeDescription {
+                    return ".wasmTypeDef(Struct)"
+                }
+                if desc == .selfReference {
+                    return ".wasmTypeDef(.selfReference)"
+                }
+                fatalError("Unknown wasm type definition description kind")
             }
             return ".wasmTypeDef(nil)"
         case .exceptionLabel:
