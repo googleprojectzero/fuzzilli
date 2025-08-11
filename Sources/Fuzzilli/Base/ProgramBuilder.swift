@@ -4059,6 +4059,7 @@ public class ProgramBuilder {
         assert(type(of: forwardReference).wasmTypeDefinition?.description == .selfReference)
         emit(WasmResolveForwardReference(), withInputs: [forwardReference, to])
     }
+
     // Converts an array to a string separating elements by comma. This is used for testing only.
     func arrayToStringForTesting(_ array: Variable) -> Variable {
         let stringified = callMethod("map", on: array,
@@ -4066,19 +4067,6 @@ public class ProgramBuilder {
             doReturn(callMethod("toString", on: args[0]))
         }])
         return callMethod("join", on: stringified, withArgs: [loadString(",")])
-    }
-
-    func wasmDefineAndResolveForwardReference(recursiveGenerator: () -> ()) {
-        let previousTypes = Set(scopes.elementsStartingAtTop().joined().filter {type(of: $0).Is(.wasmTypeDef())})
-        let ref = wasmDefineForwardOrSelfReference()
-        recursiveGenerator()
-        let newTypes = scopes.elementsStartingAtTop().joined().filter {
-            let t = type(of: $0)
-            return !previousTypes.contains($0) && t.Is(.wasmTypeDef()) && t.wasmTypeDefinition?.description != .selfReference
-        }
-        if !newTypes.isEmpty {
-            wasmResolveForwardReference(ref, to: chooseUniform(from: newTypes))
-        }
     }
 
     /// Returns the next free variable.

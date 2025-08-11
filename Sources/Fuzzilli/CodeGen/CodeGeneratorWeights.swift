@@ -326,8 +326,6 @@ public let codeGeneratorWeights = [
     "WasmRecursiveTypeGroupGenerator":          5,
     "WasmArrayTypeGenerator":                   5,
     "WasmStructTypeGenerator":                  5,
-    "WasmSelfReferenceGenerator":               5,
-    "WasmForwardReferenceGenerator":            5,
 
     // Wasm-gc generators
     "WasmArrayNewGenerator":                    5,

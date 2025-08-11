@@ -241,7 +241,6 @@ public struct ILType: Hashable {
     public static let wasmRefI31 = ILType.wasmRef(.Abstract(.WasmI31), nullability: false)
     public static let wasmSimd128 = ILType(definiteType: .wasmSimd128)
     public static let wasmGenericRef = ILType(definiteType: .wasmRef)
-    public static let wasmResolvedForwardReference = ILType(definiteType: .wasmResolvedForwardReference)
 
     static func wasmTypeDef(description: WasmTypeDescription? = nil) -> ILType {
         let typeDef = WasmTypeDefinition()
@@ -1127,17 +1126,16 @@ struct BaseType: OptionSet, Hashable {
     // The lifter will resolve this to the proper index when lifting.
     static let wasmSimd128     = BaseType(rawValue: 1 << 18)
     static let wasmFunctionDef = BaseType(rawValue: 1 << 19)
-    static let wasmResolvedForwardReference = BaseType(rawValue: 1 << 20)
 
     // Wasm-gc types
-    static let wasmRef = BaseType(rawValue: 1 << 21)
-    static let wasmTypeDef = BaseType(rawValue: 1 << 22)
+    static let wasmRef = BaseType(rawValue: 1 << 20)
+    static let wasmTypeDef = BaseType(rawValue: 1 << 21)
 
     // Wasm packed types. These types only exist as part of struct / array definitions. A wasm value
     // can never have the type i8 or i16 (they will always be extended to i32 by any operation
     // loading them.)
-    static let wasmPackedI8 = BaseType(rawValue: 1 << 23)
-    static let wasmPackedI16 = BaseType(rawValue: 1 << 24)
+    static let wasmPackedI8 = BaseType(rawValue: 1 << 22)
+    static let wasmPackedI16 = BaseType(rawValue: 1 << 23)
 
     static let jsAnything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .unboundFunction, .bigint, .regexp, .iterable])
 
