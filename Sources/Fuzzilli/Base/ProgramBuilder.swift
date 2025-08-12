@@ -3246,6 +3246,21 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func wasmTableSize(table: Variable) -> Variable {
+            return b.emit(WasmTableSize(), withInputs: [table],
+                types: [.object(ofGroup: "WasmTable")]).output
+        }
+
+        @discardableResult
+        public func wasmTableGrow(table: Variable, with initialValue: Variable, by delta: Variable) -> Variable {
+            let tableType = b.type(of: table)
+            let elementType = tableType.wasmTableType!.elementType
+            let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            return b.emit(WasmTableGrow(), withInputs: [table, initialValue, delta],
+                types: [.object(ofGroup: "WasmTable"), elementType, offsetType]).output
+        }
+
+        @discardableResult
         public func wasmCallIndirect(signature: WasmSignature, table: Variable, functionArgs: [Variable], tableIndex: Variable) -> [Variable] {
             let isTable64 = b.type(of: table).wasmTableType!.isTable64
             return Array(b.emit(WasmCallIndirect(signature: signature),

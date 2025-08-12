@@ -1722,6 +1722,14 @@ public class WasmLifter {
         case .wasmTableSet(_):
             let tableRef = wasmInstruction.input(0)
             return Data([0x26]) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
+        case .wasmTableSize(_):
+            let tableRef = wasmInstruction.input(0)
+            // Value 0x10 is table.size opcode
+            return Data([Prefix.Numeric.rawValue]) + Leb128.unsignedEncode(0x10) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
+        case .wasmTableGrow(_):
+            let tableRef = wasmInstruction.input(0)
+            // Value 0x0f is table.grow opcode
+            return Data([Prefix.Numeric.rawValue]) + Leb128.unsignedEncode(0x0f) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
         case .wasmCallIndirect(let op):
             let tableRef = wasmInstruction.input(0)
             let sigIndex = try getSignatureIndex(op.signature)

@@ -1319,6 +1319,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmMemorySize = Fuzzilli_Protobuf_WasmMemorySize()
             case .wasmMemoryGrow(_):
                 $0.wasmMemoryGrow = Fuzzilli_Protobuf_WasmMemoryGrow()
+            case .wasmTableSize(_):
+                $0.wasmTableSize = Fuzzilli_Protobuf_WasmTableSize()
+            case .wasmTableGrow(_):
+                $0.wasmTableGrow = Fuzzilli_Protobuf_WasmTableGrow()
             case .wasmMemoryFill(_):
                 $0.wasmMemoryFill = Fuzzilli_Protobuf_WasmMemoryFill()
             case .beginWasmFunction(let op):
@@ -2343,6 +2347,10 @@ extension Instruction: ProtobufConvertible {
             op = WasmMemorySize()
         case .wasmMemoryGrow(_):
             op = WasmMemoryGrow()
+        case .wasmTableSize(_):
+            op = WasmTableSize()
+        case .wasmTableGrow(_):
+            op = WasmTableGrow()
         case .wasmMemoryFill(_):
             op = WasmMemoryFill()
         case .beginWasmFunction(let p):

@@ -1138,6 +1138,12 @@ message WasmTableSet {
   bool isTable64 = 4;
 }
 
+message WasmTableSize {
+}
+
+message WasmTableGrow {
+}
+
 message WasmCallIndirect {
   repeated WasmILType parameterTypes = 1;
   repeated WasmILType outputTypes = 2;

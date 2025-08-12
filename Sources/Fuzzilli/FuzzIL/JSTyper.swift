@@ -696,6 +696,12 @@ public struct JSTyper: Analyzer {
             case .wasmTableSet(_):
                 let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
                 dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+            case .wasmTableSize(_),
+                 .wasmTableGrow(_):
+                let isTable64 = type(of: instr.input(0)).wasmTableType?.isTable64 ?? false
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                setType(of: instr.output, to: isTable64 ? .wasmi64 : .wasmi32)
             case .wasmMemoryStore(_):
                 registerWasmMemoryUse(for: instr.input(0))
             case .wasmMemoryLoad(let op):
