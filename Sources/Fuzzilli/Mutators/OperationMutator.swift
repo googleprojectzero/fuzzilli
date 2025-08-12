@@ -619,6 +619,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmMemorySize(_),
              .wasmMemoryGrow(_),
              .wasmMemoryFill(_),
+             .wasmTableSize(_),
+             .wasmTableGrow(_),
              .beginWasmFunction(_),
              .endWasmFunction(_),
              .wasmBeginBlock(_),

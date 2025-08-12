@@ -887,6 +887,22 @@ final class WasmTableSet: WasmOperation {
     }
 }
 
+final class WasmTableSize: WasmOperation {
+    override var opcode: Opcode { .wasmTableSize(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
+final class WasmTableGrow: WasmOperation {
+    override var opcode: Opcode { .wasmTableGrow(self) }
+
+    init() {
+        super.init(numInputs: 3, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmCallIndirect: WasmOperation {
     override var opcode: Opcode { .wasmCallIndirect(self) }
     let signature: WasmSignature

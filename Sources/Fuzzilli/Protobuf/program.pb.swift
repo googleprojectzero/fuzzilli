@@ -1993,6 +1993,22 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     set {operation = .wasmTableSet(newValue)}
   }
 
+  public var wasmTableSize: Fuzzilli_Protobuf_WasmTableSize {
+    get {
+      if case .wasmTableSize(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmTableSize()
+    }
+    set {operation = .wasmTableSize(newValue)}
+  }
+
+  public var wasmTableGrow: Fuzzilli_Protobuf_WasmTableGrow {
+    get {
+      if case .wasmTableGrow(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_WasmTableGrow()
+    }
+    set {operation = .wasmTableGrow(newValue)}
+  }
+
   public var wasmCallIndirect: Fuzzilli_Protobuf_WasmCallIndirect {
     get {
       if case .wasmCallIndirect(let v)? = operation {return v}
@@ -2831,6 +2847,8 @@ public struct Fuzzilli_Protobuf_Instruction: Sendable {
     case wasmStoreGlobal(Fuzzilli_Protobuf_WasmStoreGlobal)
     case wasmTableGet(Fuzzilli_Protobuf_WasmTableGet)
     case wasmTableSet(Fuzzilli_Protobuf_WasmTableSet)
+    case wasmTableSize(Fuzzilli_Protobuf_WasmTableSize)
+    case wasmTableGrow(Fuzzilli_Protobuf_WasmTableGrow)
     case wasmCallIndirect(Fuzzilli_Protobuf_WasmCallIndirect)
     case wasmCallDirect(Fuzzilli_Protobuf_WasmCallDirect)
     case wasmReturnCallDirect(Fuzzilli_Protobuf_WasmReturnCallDirect)
@@ -3198,80 +3216,82 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     242: .same(proto: "wasmStoreGlobal"),
     243: .same(proto: "wasmTableGet"),
     244: .same(proto: "wasmTableSet"),
-    245: .same(proto: "wasmCallIndirect"),
-    246: .same(proto: "wasmCallDirect"),
-    247: .same(proto: "wasmReturnCallDirect"),
-    248: .same(proto: "wasmReturnCallIndirect"),
-    249: .same(proto: "wasmMemoryLoad"),
-    250: .same(proto: "wasmMemoryStore"),
-    251: .same(proto: "wasmAtomicLoad"),
-    252: .same(proto: "wasmAtomicStore"),
-    253: .same(proto: "wasmAtomicRMW"),
-    254: .same(proto: "wasmAtomicCmpxchg"),
-    255: .same(proto: "wasmMemorySize"),
-    256: .same(proto: "wasmMemoryGrow"),
-    257: .same(proto: "wasmMemoryFill"),
-    258: .same(proto: "beginWasmFunction"),
-    259: .same(proto: "endWasmFunction"),
-    260: .same(proto: "wasmBeginBlock"),
-    261: .same(proto: "wasmEndBlock"),
-    262: .same(proto: "wasmBeginLoop"),
-    263: .same(proto: "wasmEndLoop"),
-    264: .same(proto: "wasmBranch"),
-    265: .same(proto: "wasmBranchIf"),
-    266: .same(proto: "wasmBranchTable"),
-    267: .same(proto: "wasmNop"),
-    268: .same(proto: "wasmBeginIf"),
-    269: .same(proto: "wasmBeginElse"),
-    270: .same(proto: "wasmEndIf"),
-    271: .same(proto: "wasmBeginTryTable"),
-    272: .same(proto: "wasmEndTryTable"),
-    273: .same(proto: "wasmBeginTry"),
-    274: .same(proto: "wasmBeginCatchAll"),
-    275: .same(proto: "wasmBeginCatch"),
-    276: .same(proto: "wasmEndTry"),
-    277: .same(proto: "wasmBeginTryDelegate"),
-    278: .same(proto: "wasmEndTryDelegate"),
-    279: .same(proto: "wasmThrow"),
-    280: .same(proto: "wasmRethrow"),
-    281: .same(proto: "wasmThrowRef"),
-    282: .same(proto: "wasmDefineTag"),
-    283: .same(proto: "constSimd128"),
-    284: .same(proto: "wasmSimd128Compare"),
-    285: .same(proto: "wasmSimd128IntegerUnOp"),
-    286: .same(proto: "wasmSimd128IntegerBinOp"),
-    287: .same(proto: "wasmSimd128IntegerTernaryOp"),
-    288: .same(proto: "wasmSimd128FloatUnOp"),
-    289: .same(proto: "wasmSimd128FloatBinOp"),
-    290: .same(proto: "wasmSimd128FloatTernaryOp"),
-    291: .same(proto: "wasmSimdSplat"),
-    292: .same(proto: "wasmSimdExtractLane"),
-    293: .same(proto: "wasmSimdReplaceLane"),
-    294: .same(proto: "wasmSimdStoreLane"),
-    295: .same(proto: "wasmSimdLoadLane"),
-    296: .same(proto: "wasmSimdLoad"),
-    297: .same(proto: "wasmUnreachable"),
-    298: .same(proto: "wasmSelect"),
-    299: .same(proto: "wasmBeginTypeGroup"),
-    300: .same(proto: "wasmEndTypeGroup"),
-    301: .same(proto: "wasmDefineArrayType"),
-    302: .same(proto: "wasmDefineStructType"),
-    303: .same(proto: "wasmDefineForwardOrSelfReference"),
-    304: .same(proto: "wasmResolveForwardReference"),
-    305: .same(proto: "wasmArrayNewFixed"),
-    306: .same(proto: "wasmArrayNewDefault"),
-    307: .same(proto: "wasmArrayLen"),
-    308: .same(proto: "wasmArrayGet"),
-    309: .same(proto: "wasmArraySet"),
-    310: .same(proto: "wasmStructNewDefault"),
-    311: .same(proto: "wasmStructGet"),
-    312: .same(proto: "wasmStructSet"),
-    313: .same(proto: "wasmRefNull"),
-    314: .same(proto: "wasmRefIsNull"),
-    315: .same(proto: "wasmRefI31"),
-    316: .same(proto: "wasmI31Get"),
-    317: .same(proto: "wasmAnyConvertExtern"),
-    318: .same(proto: "wasmExternConvertAny"),
+    245: .same(proto: "wasmTableSize"),
+    246: .same(proto: "wasmTableGrow"),
+    247: .same(proto: "wasmCallIndirect"),
+    248: .same(proto: "wasmCallDirect"),
+    249: .same(proto: "wasmReturnCallDirect"),
+    250: .same(proto: "wasmReturnCallIndirect"),
+    251: .same(proto: "wasmMemoryLoad"),
+    252: .same(proto: "wasmMemoryStore"),
+    253: .same(proto: "wasmAtomicLoad"),
+    254: .same(proto: "wasmAtomicStore"),
+    255: .same(proto: "wasmAtomicRMW"),
+    256: .same(proto: "wasmAtomicCmpxchg"),
+    257: .same(proto: "wasmMemorySize"),
+    258: .same(proto: "wasmMemoryGrow"),
+    259: .same(proto: "wasmMemoryFill"),
+    260: .same(proto: "beginWasmFunction"),
+    261: .same(proto: "endWasmFunction"),
+    262: .same(proto: "wasmBeginBlock"),
+    263: .same(proto: "wasmEndBlock"),
+    264: .same(proto: "wasmBeginLoop"),
+    265: .same(proto: "wasmEndLoop"),
+    266: .same(proto: "wasmBranch"),
+    267: .same(proto: "wasmBranchIf"),
+    268: .same(proto: "wasmBranchTable"),
+    269: .same(proto: "wasmNop"),
+    270: .same(proto: "wasmBeginIf"),
+    271: .same(proto: "wasmBeginElse"),
+    272: .same(proto: "wasmEndIf"),
+    273: .same(proto: "wasmBeginTryTable"),
+    274: .same(proto: "wasmEndTryTable"),
+    275: .same(proto: "wasmBeginTry"),
+    276: .same(proto: "wasmBeginCatchAll"),
+    277: .same(proto: "wasmBeginCatch"),
+    278: .same(proto: "wasmEndTry"),
+    279: .same(proto: "wasmBeginTryDelegate"),
+    280: .same(proto: "wasmEndTryDelegate"),
+    281: .same(proto: "wasmThrow"),
+    282: .same(proto: "wasmRethrow"),
+    283: .same(proto: "wasmThrowRef"),
+    284: .same(proto: "wasmDefineTag"),
+    285: .same(proto: "constSimd128"),
+    286: .same(proto: "wasmSimd128Compare"),
+    287: .same(proto: "wasmSimd128IntegerUnOp"),
+    288: .same(proto: "wasmSimd128IntegerBinOp"),
+    289: .same(proto: "wasmSimd128IntegerTernaryOp"),
+    290: .same(proto: "wasmSimd128FloatUnOp"),
+    291: .same(proto: "wasmSimd128FloatBinOp"),
+    292: .same(proto: "wasmSimd128FloatTernaryOp"),
+    293: .same(proto: "wasmSimdSplat"),
+    294: .same(proto: "wasmSimdExtractLane"),
+    295: .same(proto: "wasmSimdReplaceLane"),
+    296: .same(proto: "wasmSimdStoreLane"),
+    297: .same(proto: "wasmSimdLoadLane"),
+    298: .same(proto: "wasmSimdLoad"),
+    299: .same(proto: "wasmUnreachable"),
+    300: .same(proto: "wasmSelect"),
+    301: .same(proto: "wasmBeginTypeGroup"),
+    302: .same(proto: "wasmEndTypeGroup"),
+    303: .same(proto: "wasmDefineArrayType"),
+    304: .same(proto: "wasmDefineStructType"),
+    305: .same(proto: "wasmDefineForwardOrSelfReference"),
+    306: .same(proto: "wasmResolveForwardReference"),
+    307: .same(proto: "wasmArrayNewFixed"),
+    308: .same(proto: "wasmArrayNewDefault"),
+    309: .same(proto: "wasmArrayLen"),
+    310: .same(proto: "wasmArrayGet"),
+    311: .same(proto: "wasmArraySet"),
+    312: .same(proto: "wasmStructNewDefault"),
+    313: .same(proto: "wasmStructGet"),
+    314: .same(proto: "wasmStructSet"),
+    315: .same(proto: "wasmRefNull"),
+    316: .same(proto: "wasmRefIsNull"),
+    317: .same(proto: "wasmRefI31"),
+    318: .same(proto: "wasmI31Get"),
+    319: .same(proto: "wasmAnyConvertExtern"),
+    320: .same(proto: "wasmExternConvertAny"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6436,6 +6456,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 245: try {
+        var v: Fuzzilli_Protobuf_WasmTableSize?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmTableSize(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmTableSize(v)
+        }
+      }()
+      case 246: try {
+        var v: Fuzzilli_Protobuf_WasmTableGrow?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .wasmTableGrow(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .wasmTableGrow(v)
+        }
+      }()
+      case 247: try {
         var v: Fuzzilli_Protobuf_WasmCallIndirect?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6448,7 +6494,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmCallIndirect(v)
         }
       }()
-      case 246: try {
+      case 248: try {
         var v: Fuzzilli_Protobuf_WasmCallDirect?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6461,7 +6507,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmCallDirect(v)
         }
       }()
-      case 247: try {
+      case 249: try {
         var v: Fuzzilli_Protobuf_WasmReturnCallDirect?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6474,7 +6520,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmReturnCallDirect(v)
         }
       }()
-      case 248: try {
+      case 250: try {
         var v: Fuzzilli_Protobuf_WasmReturnCallIndirect?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6487,7 +6533,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmReturnCallIndirect(v)
         }
       }()
-      case 249: try {
+      case 251: try {
         var v: Fuzzilli_Protobuf_WasmMemoryLoad?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6500,7 +6546,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmMemoryLoad(v)
         }
       }()
-      case 250: try {
+      case 252: try {
         var v: Fuzzilli_Protobuf_WasmMemoryStore?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6513,7 +6559,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmMemoryStore(v)
         }
       }()
-      case 251: try {
+      case 253: try {
         var v: Fuzzilli_Protobuf_WasmAtomicLoad?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6526,7 +6572,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmAtomicLoad(v)
         }
       }()
-      case 252: try {
+      case 254: try {
         var v: Fuzzilli_Protobuf_WasmAtomicStore?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6539,7 +6585,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmAtomicStore(v)
         }
       }()
-      case 253: try {
+      case 255: try {
         var v: Fuzzilli_Protobuf_WasmAtomicRMW?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6552,7 +6598,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmAtomicRmw(v)
         }
       }()
-      case 254: try {
+      case 256: try {
         var v: Fuzzilli_Protobuf_WasmAtomicCmpxchg?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6565,7 +6611,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmAtomicCmpxchg(v)
         }
       }()
-      case 255: try {
+      case 257: try {
         var v: Fuzzilli_Protobuf_WasmMemorySize?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6578,7 +6624,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmMemorySize(v)
         }
       }()
-      case 256: try {
+      case 258: try {
         var v: Fuzzilli_Protobuf_WasmMemoryGrow?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6591,7 +6637,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmMemoryGrow(v)
         }
       }()
-      case 257: try {
+      case 259: try {
         var v: Fuzzilli_Protobuf_WasmMemoryFill?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6604,7 +6650,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmMemoryFill(v)
         }
       }()
-      case 258: try {
+      case 260: try {
         var v: Fuzzilli_Protobuf_BeginWasmFunction?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6617,7 +6663,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginWasmFunction(v)
         }
       }()
-      case 259: try {
+      case 261: try {
         var v: Fuzzilli_Protobuf_EndWasmFunction?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6630,7 +6676,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endWasmFunction(v)
         }
       }()
-      case 260: try {
+      case 262: try {
         var v: Fuzzilli_Protobuf_WasmBeginBlock?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6643,7 +6689,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBeginBlock(v)
         }
       }()
-      case 261: try {
+      case 263: try {
         var v: Fuzzilli_Protobuf_WasmEndBlock?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6656,7 +6702,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmEndBlock(v)
         }
       }()
-      case 262: try {
+      case 264: try {
         var v: Fuzzilli_Protobuf_WasmBeginLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6669,7 +6715,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBeginLoop(v)
         }
       }()
-      case 263: try {
+      case 265: try {
         var v: Fuzzilli_Protobuf_WasmEndLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6682,7 +6728,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmEndLoop(v)
         }
       }()
-      case 264: try {
+      case 266: try {
         var v: Fuzzilli_Protobuf_WasmBranch?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6695,7 +6741,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBranch(v)
         }
       }()
-      case 265: try {
+      case 267: try {
         var v: Fuzzilli_Protobuf_WasmBranchIf?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6708,7 +6754,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBranchIf(v)
         }
       }()
-      case 266: try {
+      case 268: try {
         var v: Fuzzilli_Protobuf_WasmBranchTable?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6721,7 +6767,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBranchTable(v)
         }
       }()
-      case 267: try {
+      case 269: try {
         var v: Fuzzilli_Protobuf_WasmNop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6734,7 +6780,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmNop(v)
         }
       }()
-      case 268: try {
+      case 270: try {
         var v: Fuzzilli_Protobuf_WasmBeginIf?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6747,7 +6793,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBeginIf(v)
         }
       }()
-      case 269: try {
+      case 271: try {
         var v: Fuzzilli_Protobuf_WasmBeginElse?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6760,7 +6806,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBeginElse(v)
         }
       }()
-      case 270: try {
+      case 272: try {
         var v: Fuzzilli_Protobuf_WasmEndIf?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6773,7 +6819,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmEndIf(v)
         }
       }()
-      case 271: try {
+      case 273: try {
         var v: Fuzzilli_Protobuf_WasmBeginTryTable?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6786,7 +6832,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBeginTryTable(v)
         }
       }()
-      case 272: try {
+      case 274: try {
         var v: Fuzzilli_Protobuf_WasmEndTryTable?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6799,7 +6845,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmEndTryTable(v)
         }
       }()
-      case 273: try {
+      case 275: try {
         var v: Fuzzilli_Protobuf_WasmBeginTry?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6812,7 +6858,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBeginTry(v)
         }
       }()
-      case 274: try {
+      case 276: try {
         var v: Fuzzilli_Protobuf_WasmBeginCatchAll?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6825,7 +6871,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBeginCatchAll(v)
         }
       }()
-      case 275: try {
+      case 277: try {
         var v: Fuzzilli_Protobuf_WasmBeginCatch?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6838,7 +6884,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBeginCatch(v)
         }
       }()
-      case 276: try {
+      case 278: try {
         var v: Fuzzilli_Protobuf_WasmEndTry?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6851,7 +6897,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmEndTry(v)
         }
       }()
-      case 277: try {
+      case 279: try {
         var v: Fuzzilli_Protobuf_WasmBeginTryDelegate?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6864,7 +6910,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBeginTryDelegate(v)
         }
       }()
-      case 278: try {
+      case 280: try {
         var v: Fuzzilli_Protobuf_WasmEndTryDelegate?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6877,7 +6923,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmEndTryDelegate(v)
         }
       }()
-      case 279: try {
+      case 281: try {
         var v: Fuzzilli_Protobuf_WasmThrow?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6890,7 +6936,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmThrow(v)
         }
       }()
-      case 280: try {
+      case 282: try {
         var v: Fuzzilli_Protobuf_WasmRethrow?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6903,7 +6949,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmRethrow(v)
         }
       }()
-      case 281: try {
+      case 283: try {
         var v: Fuzzilli_Protobuf_WasmThrowRef?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6916,7 +6962,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmThrowRef(v)
         }
       }()
-      case 282: try {
+      case 284: try {
         var v: Fuzzilli_Protobuf_WasmDefineTag?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6929,7 +6975,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmDefineTag(v)
         }
       }()
-      case 283: try {
+      case 285: try {
         var v: Fuzzilli_Protobuf_ConstSimd128?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6942,7 +6988,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .constSimd128(v)
         }
       }()
-      case 284: try {
+      case 286: try {
         var v: Fuzzilli_Protobuf_WasmSimd128Compare?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6955,7 +7001,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimd128Compare(v)
         }
       }()
-      case 285: try {
+      case 287: try {
         var v: Fuzzilli_Protobuf_WasmSimd128IntegerUnOp?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6968,7 +7014,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimd128IntegerUnOp(v)
         }
       }()
-      case 286: try {
+      case 288: try {
         var v: Fuzzilli_Protobuf_WasmSimd128IntegerBinOp?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6981,7 +7027,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimd128IntegerBinOp(v)
         }
       }()
-      case 287: try {
+      case 289: try {
         var v: Fuzzilli_Protobuf_WasmSimd128IntegerTernaryOp?
         var hadOneofValue = false
         if let current = self.operation {
@@ -6994,7 +7040,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimd128IntegerTernaryOp(v)
         }
       }()
-      case 288: try {
+      case 290: try {
         var v: Fuzzilli_Protobuf_WasmSimd128FloatUnOp?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7007,7 +7053,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimd128FloatUnOp(v)
         }
       }()
-      case 289: try {
+      case 291: try {
         var v: Fuzzilli_Protobuf_WasmSimd128FloatBinOp?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7020,7 +7066,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimd128FloatBinOp(v)
         }
       }()
-      case 290: try {
+      case 292: try {
         var v: Fuzzilli_Protobuf_WasmSimd128FloatTernaryOp?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7033,7 +7079,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimd128FloatTernaryOp(v)
         }
       }()
-      case 291: try {
+      case 293: try {
         var v: Fuzzilli_Protobuf_WasmSimdSplat?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7046,7 +7092,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimdSplat(v)
         }
       }()
-      case 292: try {
+      case 294: try {
         var v: Fuzzilli_Protobuf_WasmSimdExtractLane?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7059,7 +7105,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimdExtractLane(v)
         }
       }()
-      case 293: try {
+      case 295: try {
         var v: Fuzzilli_Protobuf_WasmSimdReplaceLane?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7072,7 +7118,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimdReplaceLane(v)
         }
       }()
-      case 294: try {
+      case 296: try {
         var v: Fuzzilli_Protobuf_WasmSimdStoreLane?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7085,7 +7131,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimdStoreLane(v)
         }
       }()
-      case 295: try {
+      case 297: try {
         var v: Fuzzilli_Protobuf_WasmSimdLoadLane?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7098,7 +7144,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimdLoadLane(v)
         }
       }()
-      case 296: try {
+      case 298: try {
         var v: Fuzzilli_Protobuf_WasmSimdLoad?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7111,7 +7157,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSimdLoad(v)
         }
       }()
-      case 297: try {
+      case 299: try {
         var v: Fuzzilli_Protobuf_WasmUnreachable?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7124,7 +7170,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmUnreachable(v)
         }
       }()
-      case 298: try {
+      case 300: try {
         var v: Fuzzilli_Protobuf_WasmSelect?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7137,7 +7183,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmSelect(v)
         }
       }()
-      case 299: try {
+      case 301: try {
         var v: Fuzzilli_Protobuf_WasmBeginTypeGroup?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7150,7 +7196,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmBeginTypeGroup(v)
         }
       }()
-      case 300: try {
+      case 302: try {
         var v: Fuzzilli_Protobuf_WasmEndTypeGroup?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7163,7 +7209,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmEndTypeGroup(v)
         }
       }()
-      case 301: try {
+      case 303: try {
         var v: Fuzzilli_Protobuf_WasmDefineArrayType?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7176,7 +7222,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmDefineArrayType(v)
         }
       }()
-      case 302: try {
+      case 304: try {
         var v: Fuzzilli_Protobuf_WasmDefineStructType?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7189,7 +7235,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmDefineStructType(v)
         }
       }()
-      case 303: try {
+      case 305: try {
         var v: Fuzzilli_Protobuf_WasmDefineForwardOrSelfReference?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7202,7 +7248,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmDefineForwardOrSelfReference(v)
         }
       }()
-      case 304: try {
+      case 306: try {
         var v: Fuzzilli_Protobuf_WasmResolveForwardReference?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7215,7 +7261,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmResolveForwardReference(v)
         }
       }()
-      case 305: try {
+      case 307: try {
         var v: Fuzzilli_Protobuf_WasmArrayNewFixed?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7228,7 +7274,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmArrayNewFixed(v)
         }
       }()
-      case 306: try {
+      case 308: try {
         var v: Fuzzilli_Protobuf_WasmArrayNewDefault?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7241,7 +7287,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmArrayNewDefault(v)
         }
       }()
-      case 307: try {
+      case 309: try {
         var v: Fuzzilli_Protobuf_WasmArrayLen?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7254,7 +7300,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmArrayLen(v)
         }
       }()
-      case 308: try {
+      case 310: try {
         var v: Fuzzilli_Protobuf_WasmArrayGet?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7267,7 +7313,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmArrayGet(v)
         }
       }()
-      case 309: try {
+      case 311: try {
         var v: Fuzzilli_Protobuf_WasmArraySet?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7280,7 +7326,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmArraySet(v)
         }
       }()
-      case 310: try {
+      case 312: try {
         var v: Fuzzilli_Protobuf_WasmStructNewDefault?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7293,7 +7339,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmStructNewDefault(v)
         }
       }()
-      case 311: try {
+      case 313: try {
         var v: Fuzzilli_Protobuf_WasmStructGet?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7306,7 +7352,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmStructGet(v)
         }
       }()
-      case 312: try {
+      case 314: try {
         var v: Fuzzilli_Protobuf_WasmStructSet?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7319,7 +7365,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmStructSet(v)
         }
       }()
-      case 313: try {
+      case 315: try {
         var v: Fuzzilli_Protobuf_WasmRefNull?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7332,7 +7378,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmRefNull(v)
         }
       }()
-      case 314: try {
+      case 316: try {
         var v: Fuzzilli_Protobuf_WasmRefIsNull?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7345,7 +7391,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmRefIsNull(v)
         }
       }()
-      case 315: try {
+      case 317: try {
         var v: Fuzzilli_Protobuf_WasmRefI31?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7358,7 +7404,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmRefI31(v)
         }
       }()
-      case 316: try {
+      case 318: try {
         var v: Fuzzilli_Protobuf_WasmI31Get?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7371,7 +7417,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmI31Get(v)
         }
       }()
-      case 317: try {
+      case 319: try {
         var v: Fuzzilli_Protobuf_WasmAnyConvertExtern?
         var hadOneofValue = false
         if let current = self.operation {
@@ -7384,7 +7430,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .wasmAnyConvertExtern(v)
         }
       }()
-      case 318: try {
+      case 320: try {
         var v: Fuzzilli_Protobuf_WasmExternConvertAny?
         var hadOneofValue = false
         if let current = self.operation {
@@ -8383,301 +8429,309 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .wasmTableSet(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 244)
     }()
+    case .wasmTableSize?: try {
+      guard case .wasmTableSize(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 245)
+    }()
+    case .wasmTableGrow?: try {
+      guard case .wasmTableGrow(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 246)
+    }()
     case .wasmCallIndirect?: try {
       guard case .wasmCallIndirect(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 245)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 247)
     }()
     case .wasmCallDirect?: try {
       guard case .wasmCallDirect(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 246)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 248)
     }()
     case .wasmReturnCallDirect?: try {
       guard case .wasmReturnCallDirect(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 247)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 249)
     }()
     case .wasmReturnCallIndirect?: try {
       guard case .wasmReturnCallIndirect(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 248)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 250)
     }()
     case .wasmMemoryLoad?: try {
       guard case .wasmMemoryLoad(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 249)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 251)
     }()
     case .wasmMemoryStore?: try {
       guard case .wasmMemoryStore(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 250)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 252)
     }()
     case .wasmAtomicLoad?: try {
       guard case .wasmAtomicLoad(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 251)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 253)
     }()
     case .wasmAtomicStore?: try {
       guard case .wasmAtomicStore(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 252)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 254)
     }()
     case .wasmAtomicRmw?: try {
       guard case .wasmAtomicRmw(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 253)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 255)
     }()
     case .wasmAtomicCmpxchg?: try {
       guard case .wasmAtomicCmpxchg(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 254)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 256)
     }()
     case .wasmMemorySize?: try {
       guard case .wasmMemorySize(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 255)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 257)
     }()
     case .wasmMemoryGrow?: try {
       guard case .wasmMemoryGrow(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 256)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 258)
     }()
     case .wasmMemoryFill?: try {
       guard case .wasmMemoryFill(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 257)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 259)
     }()
     case .beginWasmFunction?: try {
       guard case .beginWasmFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 258)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 260)
     }()
     case .endWasmFunction?: try {
       guard case .endWasmFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 259)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 261)
     }()
     case .wasmBeginBlock?: try {
       guard case .wasmBeginBlock(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 260)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 262)
     }()
     case .wasmEndBlock?: try {
       guard case .wasmEndBlock(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 261)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 263)
     }()
     case .wasmBeginLoop?: try {
       guard case .wasmBeginLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 262)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 264)
     }()
     case .wasmEndLoop?: try {
       guard case .wasmEndLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 263)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 265)
     }()
     case .wasmBranch?: try {
       guard case .wasmBranch(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 264)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 266)
     }()
     case .wasmBranchIf?: try {
       guard case .wasmBranchIf(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 265)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 267)
     }()
     case .wasmBranchTable?: try {
       guard case .wasmBranchTable(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 266)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 268)
     }()
     case .wasmNop?: try {
       guard case .wasmNop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 267)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 269)
     }()
     case .wasmBeginIf?: try {
       guard case .wasmBeginIf(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 268)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 270)
     }()
     case .wasmBeginElse?: try {
       guard case .wasmBeginElse(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 269)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 271)
     }()
     case .wasmEndIf?: try {
       guard case .wasmEndIf(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 270)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 272)
     }()
     case .wasmBeginTryTable?: try {
       guard case .wasmBeginTryTable(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 271)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 273)
     }()
     case .wasmEndTryTable?: try {
       guard case .wasmEndTryTable(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 272)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 274)
     }()
     case .wasmBeginTry?: try {
       guard case .wasmBeginTry(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 273)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 275)
     }()
     case .wasmBeginCatchAll?: try {
       guard case .wasmBeginCatchAll(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 274)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 276)
     }()
     case .wasmBeginCatch?: try {
       guard case .wasmBeginCatch(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 275)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 277)
     }()
     case .wasmEndTry?: try {
       guard case .wasmEndTry(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 276)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 278)
     }()
     case .wasmBeginTryDelegate?: try {
       guard case .wasmBeginTryDelegate(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 277)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 279)
     }()
     case .wasmEndTryDelegate?: try {
       guard case .wasmEndTryDelegate(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 278)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 280)
     }()
     case .wasmThrow?: try {
       guard case .wasmThrow(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 279)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 281)
     }()
     case .wasmRethrow?: try {
       guard case .wasmRethrow(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 280)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 282)
     }()
     case .wasmThrowRef?: try {
       guard case .wasmThrowRef(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 281)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 283)
     }()
     case .wasmDefineTag?: try {
       guard case .wasmDefineTag(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 282)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 284)
     }()
     case .constSimd128?: try {
       guard case .constSimd128(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 283)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 285)
     }()
     case .wasmSimd128Compare?: try {
       guard case .wasmSimd128Compare(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 284)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 286)
     }()
     case .wasmSimd128IntegerUnOp?: try {
       guard case .wasmSimd128IntegerUnOp(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 285)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 287)
     }()
     case .wasmSimd128IntegerBinOp?: try {
       guard case .wasmSimd128IntegerBinOp(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 286)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 288)
     }()
     case .wasmSimd128IntegerTernaryOp?: try {
       guard case .wasmSimd128IntegerTernaryOp(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 287)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 289)
     }()
     case .wasmSimd128FloatUnOp?: try {
       guard case .wasmSimd128FloatUnOp(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 288)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 290)
     }()
     case .wasmSimd128FloatBinOp?: try {
       guard case .wasmSimd128FloatBinOp(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 289)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 291)
     }()
     case .wasmSimd128FloatTernaryOp?: try {
       guard case .wasmSimd128FloatTernaryOp(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 290)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 292)
     }()
     case .wasmSimdSplat?: try {
       guard case .wasmSimdSplat(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 291)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 293)
     }()
     case .wasmSimdExtractLane?: try {
       guard case .wasmSimdExtractLane(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 292)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 294)
     }()
     case .wasmSimdReplaceLane?: try {
       guard case .wasmSimdReplaceLane(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 293)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 295)
     }()
     case .wasmSimdStoreLane?: try {
       guard case .wasmSimdStoreLane(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 294)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 296)
     }()
     case .wasmSimdLoadLane?: try {
       guard case .wasmSimdLoadLane(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 295)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 297)
     }()
     case .wasmSimdLoad?: try {
       guard case .wasmSimdLoad(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 296)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 298)
     }()
     case .wasmUnreachable?: try {
       guard case .wasmUnreachable(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 297)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 299)
     }()
     case .wasmSelect?: try {
       guard case .wasmSelect(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 298)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 300)
     }()
     case .wasmBeginTypeGroup?: try {
       guard case .wasmBeginTypeGroup(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 299)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 301)
     }()
     case .wasmEndTypeGroup?: try {
       guard case .wasmEndTypeGroup(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 300)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 302)
     }()
     case .wasmDefineArrayType?: try {
       guard case .wasmDefineArrayType(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 301)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 303)
     }()
     case .wasmDefineStructType?: try {
       guard case .wasmDefineStructType(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 302)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 304)
     }()
     case .wasmDefineForwardOrSelfReference?: try {
       guard case .wasmDefineForwardOrSelfReference(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 303)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 305)
     }()
     case .wasmResolveForwardReference?: try {
       guard case .wasmResolveForwardReference(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 304)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 306)
     }()
     case .wasmArrayNewFixed?: try {
       guard case .wasmArrayNewFixed(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 305)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 307)
     }()
     case .wasmArrayNewDefault?: try {
       guard case .wasmArrayNewDefault(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 306)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 308)
     }()
     case .wasmArrayLen?: try {
       guard case .wasmArrayLen(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 307)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 309)
     }()
     case .wasmArrayGet?: try {
       guard case .wasmArrayGet(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 308)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 310)
     }()
     case .wasmArraySet?: try {
       guard case .wasmArraySet(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 309)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 311)
     }()
     case .wasmStructNewDefault?: try {
       guard case .wasmStructNewDefault(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 310)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 312)
     }()
     case .wasmStructGet?: try {
       guard case .wasmStructGet(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 311)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 313)
     }()
     case .wasmStructSet?: try {
       guard case .wasmStructSet(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 312)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 314)
     }()
     case .wasmRefNull?: try {
       guard case .wasmRefNull(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 313)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 315)
     }()
     case .wasmRefIsNull?: try {
       guard case .wasmRefIsNull(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 314)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 316)
     }()
     case .wasmRefI31?: try {
       guard case .wasmRefI31(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 315)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 317)
     }()
     case .wasmI31Get?: try {
       guard case .wasmI31Get(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 316)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 318)
     }()
     case .wasmAnyConvertExtern?: try {
       guard case .wasmAnyConvertExtern(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 317)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 319)
     }()
     case .wasmExternConvertAny?: try {
       guard case .wasmExternConvertAny(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 318)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 320)
     }()
     case nil: break
     }

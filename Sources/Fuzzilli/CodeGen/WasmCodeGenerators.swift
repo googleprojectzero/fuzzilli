@@ -474,6 +474,19 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         module.addTable(elementType: elementType, minSize: minSize, maxSize: maxSize, definedEntries: definedEntries, definedEntryValues: definedEntryValues, isTable64: probability(0.5))
     },
 
+    CodeGenerator("WasmTableSizeGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmTable"))) { b, table in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmTableSize(table: table)
+    },
+
+    CodeGenerator("WasmTableGrowGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmTable"))) { b, table in
+        let function = b.currentWasmModule.currentWasmFunction
+        let tableType = b.type(of: table).wasmTableType!
+        let delta = tableType.isTable64 ? function.consti64(Int64.random(in: 0...10)) : function.consti32(Int32.random(in: 0...10))
+        let initialValue = function.findOrGenerateWasmVar(ofType: tableType.elementType)
+        function.wasmTableGrow(table: table, with: initialValue, by: delta)
+    },
+
     CodeGenerator("WasmCallIndirectGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmTable"))) { b, table in
         let tableType = b.type(of: table).wasmTableType!
         if !tableType.elementType.Is(.wasmFuncRef) { return }

@@ -841,6 +841,12 @@ public class FuzzILLifter: Lifter {
         case .wasmTableSet(_):
             w.emit("WasmTabletSet \(input(0))[\(input(1))] <- \(input(2))")
 
+        case .wasmTableSize(_):
+            w.emit("\(output()) <- WasmTableSize \(input(0))")
+
+        case .wasmTableGrow(_):
+            w.emit("\(output()) <- WasmTableGrow \(input(0)), \(input(1)), \(input(2))")
+
         case .wasmMemoryLoad(let op):
             w.emit("\(output()) <- WasmMemoryLoad '\(op.loadType)' \(input(0))[\(input(1)) + \(op.staticOffset)]")
 
