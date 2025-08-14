@@ -39,6 +39,8 @@ let workerdProfile = Profile(
 
         // Check that common crash types are detected.
         ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 3)", .shouldCrash),
     ],
 
     additionalCodeGenerators: [],
