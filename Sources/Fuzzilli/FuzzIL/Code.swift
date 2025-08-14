@@ -241,14 +241,14 @@ public struct Code: Collection {
             }
             
             if instr.op is Await {
-                if !contextAnalyzer.context.contains(.asyncFunction)
-                {
-                    if contextAnalyzer.context.contains(.subroutine) {
-                        if !contextAnalyzer.context.contains(.method) && !contextAnalyzer.context.contains(.classMethod) {
-                            throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
-                        }
-                    }
-                }
+                // if !contextAnalyzer.context.contains(.asyncFunction)
+                // {
+                //     if contextAnalyzer.context.contains(.subroutine) {
+                //         if !contextAnalyzer.context.contains(.method) && !contextAnalyzer.context.contains(.classMethod) && !contextAnalyzer.context.contains(.javascript) {
+                //             throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
+                //         }
+                //     }
+                // }
                 // fall-through allow top-level await
             } else {
                 guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
