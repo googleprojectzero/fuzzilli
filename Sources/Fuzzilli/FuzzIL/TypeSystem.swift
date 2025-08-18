@@ -1045,7 +1045,10 @@ extension ILType: CustomStringConvertible {
             switch refType.kind {
                 case .Abstract(let heapType):
                     return ".wasmRef(.Abstract(\(nullPrefix)\(heapType)))"
-                case .Index(_):
+                case .Index(let indexRef):
+                    if let desc = indexRef.get() {
+                        return ".wasmRef(\(nullPrefix)Index \(desc.format(abbreviate: abbreviate)))"
+                    }
                     return ".wasmRef(\(nullPrefix)Index)"
             }
         case .wasmFunctionDef:
@@ -1056,9 +1059,7 @@ extension ILType: CustomStringConvertible {
             }
         case .wasmTypeDef:
             if let desc = self.wasmTypeDefinition?.description {
-                if desc is WasmArrayTypeDescription {
-                    return ".wasmTypeDef(Array)"
-                }
+                return ".wasmTypeDef(\(desc))"
             }
             return ".wasmTypeDef(nil)"
         case .exceptionLabel:
@@ -1440,7 +1441,7 @@ enum WasmAbstractHeapType: CaseIterable, Comparable {
 
 // A wrapper around a WasmTypeDescription without owning the WasmTypeDescription.
 struct UnownedWasmTypeDescription : Hashable {
-    unowned var description: WasmTypeDescription?
+    private unowned var description: WasmTypeDescription?
 
     init(_ description: WasmTypeDescription? = nil) {
         self.description = description
@@ -1955,7 +1956,7 @@ func => (parameters: [ILType], returnTypes: [ILType]) -> WasmSignature {
     return WasmSignature(expects: parameters, returns: returnTypes)
 }
 
-class WasmTypeDescription: Hashable {
+class WasmTypeDescription: Hashable, CustomStringConvertible {
     static let selfReference = WasmTypeDescription(typeGroupIndex: -1)
     public let typeGroupIndex: Int
     // The "closest" super type that is an abstract type (.WasmArray for arrays, .WasmStruct for
@@ -1976,6 +1977,17 @@ class WasmTypeDescription: Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(ObjectIdentifier(self))
     }
+
+    func format(abbreviate: Bool) -> String {
+        if self == .selfReference {
+            return "selfReference"
+        }
+        return "\(typeGroupIndex)"
+    }
+
+    public var description: String {
+        return format(abbreviate: false)
+    }
 }
 
 class WasmArrayTypeDescription: WasmTypeDescription {
@@ -1987,16 +1999,28 @@ class WasmArrayTypeDescription: WasmTypeDescription {
         self.mutability = mutability
         super.init(typeGroupIndex: typeGroupIndex, superType: .WasmArray)
     }
+
+    override func format(abbreviate: Bool) -> String {
+        let abbreviated = "\(super.format(abbreviate: abbreviate)) Array"
+        if abbreviate {
+            return abbreviated
+        }
+        return "\(abbreviated)[\(mutability ? "mutable" : "immutable") \(elementType.abbreviated)]"
+    }
 }
 
 class WasmStructTypeDescription: WasmTypeDescription {
-    class Field {
+    class Field: CustomStringConvertible {
         var type: ILType
         let mutability: Bool
 
         init(type: ILType, mutability: Bool) {
             self.type = type
             self.mutability = mutability
+        }
+
+        var description: String {
+            return "\(mutability ? "mutable" : "immutable") \(type.abbreviated)"
         }
     }
 
@@ -2005,5 +2029,13 @@ class WasmStructTypeDescription: WasmTypeDescription {
     init(fields: [Field], typeGroupIndex: Int) {
         self.fields = fields
         super.init(typeGroupIndex: typeGroupIndex, superType: .WasmStruct)
+    }
+
+    override func format(abbreviate: Bool) -> String {
+        let abbreviated = "\(super.format(abbreviate: abbreviate)) Struct"
+        if abbreviate {
+            return abbreviated
+        }
+        return "\(abbreviated)[\(fields.map {$0.description}.joined(separator: ", "))]"
     }
 }

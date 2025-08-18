@@ -437,7 +437,14 @@ public struct JSTyper: Analyzer {
         let resolvedElementType: ILType
         if let elementRef = elementRef {
             let elementNullability = elementType.wasmReferenceType!.nullability
-            let elementDesc = type(of: elementRef).wasmTypeDefinition!.description!
+            let typeDefType = type(of: elementRef)
+            guard let elementDesc = typeDefType.wasmTypeDefinition?.description  else {
+                // TODO(mliedtke): Investigate. The `typeDefType` should be `.wasmTypeDef`, maybe it
+                // is `.wasmResolvedForwardReference`?
+                // The `elementType` should be `.wasmRef(.Index)`?
+                let missesDef = typeDefType.wasmTypeDefinition != nil
+                fatalError("Missing \(missesDef ? "definition" : "description") for type definition type \(typeDefType), elementType = \(elementType)")
+            }
             if elementDesc == .selfReference {
                 // Register a "resolver" callback that does one of the two:
                 // 1) If replacement == nil, it replaces the .selfReference with the "outer" array
@@ -474,7 +481,12 @@ public struct JSTyper: Analyzer {
             let (field, fieldTypeRef) = fieldWithInput
             if let fieldTypeRef {
                 let fieldNullability = field.type.wasmReferenceType!.nullability
-                let fieldTypeDesc = type(of: fieldTypeRef).wasmTypeDefinition!.description!
+                let typeDefType = type(of: fieldTypeRef)
+                guard let fieldTypeDesc = typeDefType.wasmTypeDefinition?.description  else {
+                    // TODO(mliedtke): Investigate.
+                    let missesDef = typeDefType.wasmTypeDefinition != nil
+                    fatalError("Missing \(missesDef ? "definition" : "description") for type definition type \(typeDefType), field.type = \(field.type)")
+                }
                 if fieldTypeDesc == .selfReference {
                     // Register a resolver callback. See `addArrayType` for details.
                     selfReferences[fieldTypeRef, default: []].append({typer, replacement in
