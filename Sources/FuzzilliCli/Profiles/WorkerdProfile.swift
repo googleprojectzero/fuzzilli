@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,8 @@
 import Fuzzilli
 
 let workerdProfile = Profile(
-    processArgs: { randomize in
-        ["--reprl-fuzzilli"]
-    },
+    processArgs: { randomize in ["fuzzilli"] },
+
 
     processEnv: [:],
 

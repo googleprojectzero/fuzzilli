@@ -431,6 +431,7 @@ public class Fuzzer {
         }
 
         let execution = execute(program, purpose: .programImport)
+
         var wasImported = false
         switch execution.outcome {
         case .crashed(let termsig):
@@ -672,15 +673,6 @@ public class Fuzzer {
         dispatchEvent(events.PreExecute, data: (program, purpose))
         let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
         dispatchEvent(events.PostExecute, data: execution)
-
-        //Stdout
-        // if !execution.stdout.isEmpty {
-        //     print(execution.stdout)
-        // }
-
-        // if !execution.stderr.isEmpty {
-        //     print(execution.stderr)
-        // }
 
         return execution
     }

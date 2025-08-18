@@ -43,7 +43,6 @@ public class JavaScriptParser {
         do {
             try runParserScript(withArguments: [])
         } catch {
-
             return nil
         }
     }

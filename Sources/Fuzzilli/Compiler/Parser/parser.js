@@ -34,7 +34,7 @@ function tryReadFile(path) {
 
 // Parse the given JavaScript script and return an AST compatible with Fuzzilli's protobuf-based AST format.
 function parse(script, proto) {
-    let ast = Parser.parse(script, { allowAwaitOutsideFunction: true, plugins: ["topLevelAwait","v8intrinsic"] });
+    let ast = Parser.parse(script, { plugins: ["v8intrinsic"] });
 
     function assertNoError(err) {
         if (err) throw err;

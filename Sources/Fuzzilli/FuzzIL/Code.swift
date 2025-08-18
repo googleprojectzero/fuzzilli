@@ -239,21 +239,9 @@ public struct Code: Collection {
                     throw FuzzilliError.codeVerificationError("variable \(input) is not visible anymore")
                 }
             }
-            
-            if instr.op is Await {
-                // if !contextAnalyzer.context.contains(.asyncFunction)
-                // {
-                //     if contextAnalyzer.context.contains(.subroutine) {
-                //         if !contextAnalyzer.context.contains(.method) && !contextAnalyzer.context.contains(.classMethod) && !contextAnalyzer.context.contains(.javascript) {
-                //             throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
-                //         }
-                //     }
-                // }
-                // fall-through allow top-level await
-            } else {
-                guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
-                    throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
-                }
+
+            guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
+                throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
             }
 
             // Ensure that the instruction exists in the right context

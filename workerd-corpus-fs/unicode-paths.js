@@ -1,2 +1,0 @@
-// Unicode and special character paths
-function unicode() {    let path = '/tmp/🚀test.txt'; fs.writeFileSync(path, 'emoji path'); fs.readFileSync(path); console.log(path); fs.unlinkSync(path); } unicode();
