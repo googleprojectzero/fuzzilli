@@ -1104,6 +1104,46 @@ class TypeSystemTests: XCTestCase {
         let nonNullAny = ILType.wasmRef(.Abstract(.WasmAny), nullability: false)
         XCTAssertEqual(nullExn.description, ".wasmRef(.Abstract(null WasmExn))")
         XCTAssertEqual(nonNullAny.description, ".wasmRef(.Abstract(WasmAny))")
+
+        let arrayDesc = WasmArrayTypeDescription(elementType: .wasmi32, mutability: false, typeGroupIndex: 0)
+        let arrayRef = ILType.wasmIndexRef(arrayDesc, nullability: true)
+        XCTAssertEqual(arrayRef.description, ".wasmRef(null Index 0 Array[immutable .wasmi32])")
+        let nullableSelfRef = ILType.wasmRef(.Index(.init(WasmTypeDescription.selfReference)), nullability: true)
+        let structDesc = WasmStructTypeDescription(fields: [
+            .init(type: .wasmf32, mutability: true),
+            .init(type: nullableSelfRef, mutability: false), // unresolved
+            .init(type: arrayRef, mutability: true)
+        ], typeGroupIndex: 1)
+        let structRef = ILType.wasmIndexRef(structDesc, nullability: false)
+        XCTAssertEqual(structRef.description,
+            ".wasmRef(Index 1 Struct[mutable .wasmf32, " +
+            "immutable .wasmRef(null Index selfReference), mutable .wasmRef(null Index 0 Array)])")
+        // Create a cycle (a "resolved" self reference) for an array element type.
+        arrayDesc.elementType = arrayRef
+        XCTAssertEqual(arrayRef.description,
+            ".wasmRef(null Index 0 Array[immutable .wasmRef(null Index 0 Array)])")
+        // Create a cycle for a struct field type.
+        structDesc.fields[1].type = .wasmIndexRef(structDesc, nullability: true)
+        XCTAssertEqual(structRef.description,
+            ".wasmRef(Index 1 Struct[mutable .wasmf32, " +
+            "immutable .wasmRef(null Index 1 Struct), mutable .wasmRef(null Index 0 Array)])")
+
+        // Type definitions print the same thing as references just with .wasmTypeDef instead of
+        // .wasmRef.
+        let arrayDef = ILType.wasmTypeDef(description: arrayDesc)
+        XCTAssertEqual(arrayDef.description,
+            ".wasmTypeDef(0 Array[immutable .wasmRef(null Index 0 Array)])")
+        let structDef = ILType.wasmTypeDef(description: structDesc)
+        XCTAssertEqual(structDef.description,
+            ".wasmTypeDef(1 Struct[mutable .wasmf32, " +
+            "immutable .wasmRef(null Index 1 Struct), mutable .wasmRef(null Index 0 Array)])")
+
+        // A generic index type without a type description.
+        // These are e.g. used by the element types for arrays and structs inside the operation as
+        // the operation doesn't know about the actual type definition inputs.
+        let nullableGenericIndexRef = ILType.wasmRef(.Index(), nullability: true)
+        XCTAssertEqual(nullableGenericIndexRef.description, ".wasmRef(null Index)")
+        XCTAssertEqual(ILType.anyNonNullableIndexRef.description, ".wasmRef(Index)")
     }
 
     func testWasmSubsumptionRules() {

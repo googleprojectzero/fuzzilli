@@ -3300,4 +3300,53 @@ class LifterTests: XCTestCase {
         """
         XCTAssertEqual(actual, expected)
     }
+
+    func testWasmGCTypeGroupILLifter() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let typeGroupArray = b.wasmDefineTypeGroup {
+            let forwardReference = b.wasmDefineForwardOrSelfReference()
+            // Note that index types use generic .Index() descriptions without a type
+            // description (as the operation doesn't know its inputs).
+            let arrayOfArrayi32 = b.wasmDefineArrayType(
+                elementType: .wasmRef(.Index(), nullability: true),
+                mutability: false,
+                indexType: forwardReference)
+            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+            b.wasmResolveForwardReference(forwardReference, to: arrayi32)
+            return [arrayOfArrayi32, arrayi32]
+        }
+
+        b.wasmDefineTypeGroup {
+            let selfReference = b.wasmDefineForwardOrSelfReference()
+            return [b.wasmDefineStructType(
+                fields: [
+                    // Note that index types use generic .Index() descriptions without a type
+                    // description (as the operation doesn't know its inputs).
+                    .init(type: .wasmRef(.Index(), nullability: false), mutability: false),
+                    .init(type: .wasmi32, mutability: true),
+                    .init(type: .wasmRef(.Index(), nullability: true), mutability: true),
+                ],
+                indexTypes: [typeGroupArray[0], selfReference])]
+        }
+
+        let program = b.finalize()
+        let actual = FuzzILLifter().lift(program)
+
+        let expected = """
+        WasmBeginTypeGroup
+            v0 <- WasmDefineForwardOrSelfReference
+            v1 <- WasmDefineArrayType .wasmRef(null Index) mutability=false v0
+            v2 <- WasmDefineArrayType .wasmi32 mutability=true
+            WasmResolveForwardReference [v0 => v2]
+        v3, v4 <- WasmEndTypeGroup [v1, v2]
+        WasmBeginTypeGroup
+            v5 <- WasmDefineForwardOrSelfReference
+            v6 <- WasmDefineStructType(.wasmRef(Index) mutability=false, .wasmi32 mutability=true, .wasmRef(null Index) mutability=true) [v3, v5]
+        v7 <- WasmEndTypeGroup [v6]
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
 }
