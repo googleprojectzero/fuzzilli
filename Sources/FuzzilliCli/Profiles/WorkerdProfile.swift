@@ -16,7 +16,7 @@ import Fuzzilli
 
 let workerdProfile = Profile(
     processArgs: { randomize in
-        ["--reprl-fuzzilli"]
+        ["fuzzilli","/home/mschwarzl/projects/workerd/samples/reprl/config-full.capnp","--experimental"]
     },
 
     processEnv: [:],

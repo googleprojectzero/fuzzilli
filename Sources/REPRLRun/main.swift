@@ -2,7 +2,6 @@ import Foundation
 import libreprl
 
 func convertToCArray(_ array: [String]) -> UnsafeMutablePointer<UnsafePointer<Int8>?> {
-    print("Converting array to C array: \(array)")
     let buffer = UnsafeMutablePointer<UnsafePointer<Int8>?>.allocate(capacity: array.count + 1)
     for (i, str) in array.enumerated() {
         buffer[i] = UnsafePointer(str.withCString(strdup))
@@ -29,7 +28,6 @@ if CommandLine.arguments.count < 2 {
     exit(0)
 }
 
-print("Creating REPRL context...")
 let ctx = libreprl.reprl_create_context()
 if ctx == nil {
     print("Failed to create REPRL context??")
@@ -39,7 +37,6 @@ if ctx == nil {
 let argv = convertToCArray(Array(CommandLine.arguments[1...]))
 let envp = convertToCArray([])
 
-print("Initializing REPRL context with argv: \(CommandLine.arguments[1...])")
 if reprl_initialize_context(ctx, argv, envp, /* capture_stdout: */ 1, /* capture stderr: */ 1) != 0 {
     print("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(ctx)))")
     printREPRLOutput(ctx)
@@ -86,11 +83,14 @@ func runREPRLTests() {
 
     expect_success("42")
     expect_failure("throw 42")
-
+    
+    // Verify that existing state is property reset between executions
     expect_success("globalProp = 42; Object.prototype.foo = \"bar\";")
     expect_success("if (typeof(globalProp) !== 'undefined') throw 'failure'")
     expect_success("if (typeof(({}).foo) !== 'undefined') throw 'failure'")
 
+    // Verify that rejected promises are properly reset between executions
+    // Only if async functions are available
     if execute("async function foo() {}").status == 0 {
         expect_failure("async function fail() { throw 42; }; fail()")
         expect_success("42")
@@ -105,15 +105,14 @@ func runREPRLTests() {
     }
 }
 
-print("Checking if REPRL works...")
+// Check whether REPRL works at all
 if execute("").status != 0 {
     print("Initial script execution failed, REPRL support does not appear to be working")
     printREPRLOutput(ctx)
     exit(1)
-} else {
-    print("Initial REPRL check passed.")
 }
 
+// Run a couple of tests now
 runREPRLTests()
 
 print("Enter code to run, then hit enter to execute it")
@@ -124,7 +123,6 @@ while true {
         break
     }
 
-    print("Executing user input code...")
     let (status, exec_time) = execute(code)
 
     if status < 0 {

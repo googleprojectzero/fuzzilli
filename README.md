@@ -248,6 +248,12 @@ Special thanks to all users of Fuzzilli who have reported bugs found by it!
 - [CVE-2020-1912](https://www.facebook.com/security/advisories/cve-2020-1912): Memory corruption when executing lazily compiled inner generator functions
 - [CVE-2020-1914](https://www.facebook.com/security/advisories/cve-2020-1914): Bytecode corruption when handling the SaveGeneratorLong instruction
 
+#### [Workerd](https://github.com/cloudflare/workerd)
+- [PR 4793](https://github.com/cloudflare/workerd/pull/4793): OOB write in writeSync due to missing bounds check
+- [PR 4845](https://github.com/cloudflare/workerd/pull/4845): UAF in VFS file clone handling
+- [PR 4828](https://github.com/cloudflare/workerd/pull/4828): Segmentation fault on undefined keys in DH crypto API.
+- [PR 4853](https://github.com/cloudflare/workerd/pull/4853): Workerd hits illegal instruction due to missing branch in FileSystemModule::setLastModified.
+
 ## Disclaimer
 
 This is not an officially supported Google product.
