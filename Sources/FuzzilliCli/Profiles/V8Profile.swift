@@ -618,12 +618,12 @@ let v8Profile = Profile(
             args.append("--turboshaft-typed-optimizations")
         }
 
-        if probability(0.1) {
+        if probability(0.5) {
             args.append("--turbolev")
         }
 
         if probability(0.1) {
-            args.append("--turboshaft_wasm_in_js_inlining")
+            args.append("--turboshaft-wasm-in-js-inlining")
         }
 
         if probability(0.1) {
