@@ -1619,6 +1619,11 @@ public class WasmTableType: WasmTypeExtension {
     public struct IndexInTableAndWasmSignature: Hashable {
         let indexInTable: Int
         let signature: WasmSignature
+
+        public init(indexInTable: Int, signature: WasmSignature) {
+            self.indexInTable = indexInTable
+            self.signature = signature
+        }
     }
 
     let elementType: ILType
@@ -1952,7 +1957,7 @@ public func => (parameters: [Parameter], returnType: ILType) -> Signature {
     return Signature(expects: ParameterList(parameters), returns: returnType)
 }
 
-func => (parameters: [ILType], returnTypes: [ILType]) -> WasmSignature {
+public func => (parameters: [ILType], returnTypes: [ILType]) -> WasmSignature {
     return WasmSignature(expects: parameters, returns: returnTypes)
 }
 

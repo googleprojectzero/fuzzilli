@@ -4021,14 +4021,14 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    func wasmDefineTypeGroup(typeGenerator: () -> [Variable]) -> [Variable] {
+    public func wasmDefineTypeGroup(typeGenerator: () -> [Variable]) -> [Variable] {
         emit(WasmBeginTypeGroup())
         let types = typeGenerator()
         return Array(emit(WasmEndTypeGroup(typesCount: types.count), withInputs: types).outputs)
     }
 
     @discardableResult
-    func wasmDefineTypeGroup(recursiveGenerator: () -> ()) -> [Variable] {
+    public func wasmDefineTypeGroup(recursiveGenerator: () -> ()) -> [Variable] {
         emit(WasmBeginTypeGroup())
         recursiveGenerator()
         // Make all type definitions visible.

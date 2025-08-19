@@ -450,6 +450,63 @@ fileprivate let LazyDeoptFuzzer = ProgramTemplate("LazyDeoptFuzzer") { b in
     b.callFunction(realFct, withArgs: args)
 }
 
+fileprivate let WasmDeoptFuzzer = WasmProgramTemplate("WasmDeoptFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 10)
+
+    let calleeSignature = b.randomWasmSignature()
+    // The main function takes the table slot index as an argument to call to a different callee one
+    // after the other.
+    let mainSignatureBase = b.randomWasmSignature()
+    let useTable64 = Bool.random()
+    let mainSignature = [useTable64 ? .wasmi64 : .wasmi32] + mainSignatureBase.parameterTypes
+        => mainSignatureBase.outputTypes
+    let numCallees = Int.random(in: 2...5)
+
+    // Emit a TypeGroup to increase the chance for interesting wasm-gc cases.
+    b.wasmDefineTypeGroup() {
+        b.build(n: 10)
+    }
+
+    let wasmModule = b.buildWasmModule { wasmModule in
+        b.build(n: 10)
+        // Emit the callees for the call_indirect
+        let callees = (0..<numCallees).map { _ in
+            wasmModule.addWasmFunction(with: calleeSignature) { function, label, args in
+                b.build(n: 10)
+                return calleeSignature.outputTypes.map(function.findOrGenerateWasmVar)
+            }
+        }
+
+        let table = wasmModule.addTable(
+            elementType: .wasmFuncRef,
+            minSize: numCallees,
+            definedEntries: (0..<numCallees).map {i in .init(indexInTable: i, signature: calleeSignature)},
+            definedEntryValues: callees,
+            isTable64: useTable64)
+
+        wasmModule.addWasmFunction(with: mainSignature) { function, label, args in
+            b.build(n: 10)
+            let callArgs = calleeSignature.parameterTypes.map(function.findOrGenerateWasmVar)
+            function.wasmCallIndirect(signature: calleeSignature, table: table, functionArgs: callArgs, tableIndex: args[0])
+            b.build(n: 10)
+            return mainSignature.outputTypes.map(function.findOrGenerateWasmVar)
+        }
+    }
+
+    let exports = wasmModule.loadExports()
+    let mainFctName = wasmModule.getExportedMethods().last!.0
+    let mainFct = b.getProperty(mainFctName, of: exports)
+    let mainSignatureJS = ProgramBuilder.convertWasmSignatureToJsSignature(mainSignature)
+    for index in (0..<numCallees).shuffled() {
+        var args = b.findOrGenerateArguments(forSignature: mainSignatureJS)
+        args[0] = useTable64 ? b.loadBigInt(Int64(index)) : b.loadInt(Int64(index))
+        b.callFunction(mainFct, withArgs: args)
+        b.eval("%WasmTierUpFunction(%@)", with: [mainFct])
+        b.callFunction(mainFct, withArgs: args)
+    }
+}
+
 public extension ILType {
     static let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
 
@@ -597,6 +654,14 @@ let v8Profile = Profile(
         // Note that this flag only affects WebAssembly.
         if probability(0.5) {
             args.append("--no-liftoff")
+        }
+
+        // This greatly helps the fuzzer to decide inlining wasm functions into each other when
+        // %WasmTierUpFunction() is used as in most cases the call counts will be way too low to
+        // align with V8's current inlining heuristics (which uses absolute call counts as a
+        // deciding factor).
+        if probability(0.5) {
+            args.append("--wasm-inlining-ignore-call-counts")
         }
 
         //
@@ -824,6 +889,7 @@ let v8Profile = Profile(
         (WasmFastCallFuzzer,     1),
         (FastApiCallFuzzer,      1),
         (LazyDeoptFuzzer,        1),
+        (WasmDeoptFuzzer,        1),
     ]),
 
     disabledCodeGenerators: [],
