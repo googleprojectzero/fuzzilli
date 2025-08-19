@@ -50,6 +50,9 @@ class ProgramSerializationTests: XCTestCase {
 
         for _ in 0..<10 {
             b.buildPrefix()
+            b.wasmDefineTypeGroup {
+                b.build(n: 20, by: .generating)
+            }
             b.buildWasmModule { wasmModule in
                 b.build(n: 50, by: .generating)
             }

@@ -439,8 +439,7 @@ public struct JSTyper: Analyzer {
             let elementNullability = elementType.wasmReferenceType!.nullability
             let typeDefType = type(of: elementRef)
             guard let elementDesc = typeDefType.wasmTypeDefinition?.description  else {
-                // TODO(mliedtke): Investigate. The `typeDefType` should be `.wasmTypeDef`, maybe it
-                // is `.wasmResolvedForwardReference`?
+                // TODO(mliedtke): Investigate. The `typeDefType` should be `.wasmTypeDef`.
                 // The `elementType` should be `.wasmRef(.Index)`?
                 let missesDef = typeDefType.wasmTypeDefinition != nil
                 fatalError("Missing \(missesDef ? "definition" : "description") for type definition type \(typeDefType), elementType = \(elementType)")
@@ -1814,17 +1813,11 @@ public struct JSTyper: Analyzer {
                 for resolve in resolvers {
                     resolve(&self, instr.input(1))
                 }
-                // Remove the resolvers as the usages have been updated.
-                selfReferences.removeValue(forKey: instr.input(0))
+                // Reset the resolvers as the usages have been updated. The self reference can now
+                // be used as a self reference again or resolved to a forward reference at a later
+                // point in time again.
+                selfReferences[instr.input(0)] = []
             }
-            // Invalidate the type of the forward reference. A ForwardOrSelfReference operation
-            // should not be used any more after being resolved.
-            // TODO(mliedtke): Replace this with a simple set and remove the assert that prevents
-            // using .nothing? Check this logic especially with respect to code generation and
-            // mutation: What happens if we insert a `ResolveForwardReference` via a mutator and
-            // there already is a `ResolveForwardReference` defined at a later point in the IL?
-            // set(instr.input(0), .nothing)
-            state.updateType(of: instr.input(0), to: .nothing)
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
