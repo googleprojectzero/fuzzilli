@@ -4165,12 +4165,6 @@ class WasmGCTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "12\n")
-
-        // TODO(mliedtke): Remove once we have proper serialization tests.
-        let proto = prog.asProtobuf()
-        let copy = try! Program(from: proto)
-        let jsProgFromProto = fuzzer.lifter.lift(copy, withOptions: [.includeComments])
-        testForOutput(program: jsProgFromProto, runner: runner, outputString: "12\n")
     }
 
     func testForwardReferenceType() throws {
@@ -4207,12 +4201,64 @@ class WasmGCTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
 
-        // TODO(mliedtke): Remove once we have proper serialization tests.
-        let proto = prog.asProtobuf()
-        let copy = try! Program(from: proto)
-        let jsProgFromProto = fuzzer.lifter.lift(copy, withOptions: [.includeComments])
-        testForOutput(program: jsProgFromProto, runner: runner, outputString: "42\n")
+    func testForwardOrSelfReferenceResolveMultipleTimes() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let typeGroup = b.wasmDefineTypeGroup {
+            let forwardReference = b.wasmDefineForwardOrSelfReference()
+            let arrayOfArrayi32 = b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: true), mutability: true, indexType: forwardReference)
+            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+            b.wasmResolveForwardReference(forwardReference, to: arrayi32)
+            let arrayOfArrayOfArrayi32 = b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: true), mutability: true, indexType: forwardReference)
+            b.wasmResolveForwardReference(forwardReference, to: arrayOfArrayi32)
+            // Here the forward reference acts as a self reference as we don't resolve it again.
+            let arraySelf = b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: true), mutability: true, indexType: forwardReference)
+
+            return [arrayOfArrayi32, arrayi32, arrayOfArrayOfArrayi32, arraySelf]
+        }
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                let arrayi32 = function.wasmArrayNewFixed(arrayType: typeGroup[1], elements: [function.consti32(42)])
+                let arrayOfArrayi32 = function.wasmArrayNewFixed(arrayType: typeGroup[0], elements: [arrayi32])
+                let arrayOfArrayOfArrayi32 = function.wasmArrayNewFixed(arrayType: typeGroup[2], elements: [arrayOfArrayi32])
+                let zero = function.consti32(0)
+                let result = function.wasmArrayGet(
+                        array: function.wasmArrayGet(array: function.wasmArrayGet(
+                                array: arrayOfArrayOfArrayi32,
+                                index: zero),
+                            index: zero),
+                        index: zero)
+                return [result]
+            }
+
+            // This function doesn't really do anything testable, so this test case only verifies
+            // that we produce valid Wasm (which means that the type group above was generated as
+            // desired.)
+            wasmModule.addWasmFunction(with: [] => []) { function, label, args in
+                let arraySelf = function.wasmArrayNewFixed(arrayType: typeGroup[3], elements: [
+                    function.wasmRefNull(typeDef: typeGroup[3])
+                ])
+                // We can also store the arraySelf as an element into iself as the forwardReference
+                // got reset to a selfReference after the wasmResolveForwardReference() operation.
+                function.wasmArraySet(array: arraySelf, index: function.consti32(0), element: arraySelf)
+                return []
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 
     func testDependentTypeGroups() throws {
