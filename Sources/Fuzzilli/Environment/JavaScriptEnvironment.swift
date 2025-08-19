@@ -356,6 +356,13 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.wasmTable)
         registerObjectGroup(.jsWasmTag)
         registerObjectGroup(.jsWasmSuspendingObject)
+        registerObjectGroup(.jsTemporalObject)
+        registerObjectGroup(.jsTemporalInstant)
+        registerObjectGroup(.jsTemporalInstantConstructor)
+        registerObjectGroup(.jsTemporalInstantPrototype)
+        registerObjectGroup(.jsTemporalDuration)
+        registerObjectGroup(.jsTemporalDurationConstructor)
+        registerObjectGroup(.jsTemporalDurationPrototype)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -409,6 +416,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("undefined", ofType: .jsUndefined)
         registerBuiltin("NaN", ofType: .jsNaN)
         registerBuiltin("Infinity", ofType: .jsInfinity)
+        registerBuiltin("Temporal", ofType: .jsTemporalObject)
 
         for (builtin, type) in additionalBuiltins {
             registerBuiltin(builtin, ofType: type)
@@ -888,6 +896,18 @@ public extension ILType {
 
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
+
+    // Temporal types
+    static let jsTemporalObject = ILType.object(ofGroup: "Temporal", withProperties: ["Instant", "Duration"])
+
+    static let jsTemporalInstant = ILType.object(ofGroup: "Temporal.Instant", withProperties: ["epochMilliseconds", "epochNanoseconds"], withMethods: ["add", "subtract", "until", "since", "round", "equals", "toString", "toJSON", "toLocaleString", "valueOf", "toZonedDateTimeISO"])
+
+    static let jsTemporalInstantConstructor = ILType.functionAndConstructor([.bigint] => .jsTemporalInstant) + .object(ofGroup: "TemporalInstantConstructor", withProperties: ["prototype"], withMethods: ["from", "fromEpochMilliseconds", "fromEpochNanoseconds", "compare"])
+
+    static let jsTemporalDuration = ILType.object(ofGroup: "Temporal.Duration", withProperties: ["years", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds", "nanoseconds", "sign", "blank"], withMethods: ["with", "negated", "abs", "add", "subtract", "round", "total", "toString", "toJSON", "toLocaleString", "valueOf"])
+
+    static let jsTemporalDurationConstructor = ILType.functionAndConstructor([.opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number)] => .jsTemporalDuration) + .object(ofGroup: "TemporalDurationConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
+
 }
 
 public extension ObjectGroup {
@@ -1687,4 +1707,156 @@ public extension ObjectGroup {
         properties: [:],
         methods: [:]
     )
+
+    // Temporal types
+
+    /// Object group modelling the JavaScript Temporal builtin
+    static let jsTemporalObject = ObjectGroup(
+        name: "Temporal",
+        instanceType: .jsTemporalObject,
+        properties: [
+            "Instant"  : .jsTemporalInstant,
+            "Duration"  : .jsTemporalDuration,
+        ],
+        methods: [:]
+    )
+    /// ObjectGroup modelling JavaScript Temporal.Instant objects
+    static let jsTemporalInstant = ObjectGroup(
+        name: "Temporal.Instant",
+        instanceType: .jsTemporalInstant,
+        properties: [
+            "epochMilliseconds": .number,
+            "epochNanoseconds": .bigint,
+        ],
+        methods: [
+            "add": [jsTemporalDurationLike] => .jsTemporalInstant,
+            "subtract": [jsTemporalDurationLike] => .jsTemporalInstant,
+            "until": [jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
+            "since": [jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
+            "round": [jsTemporalInstantRoundTo] => .jsTemporalInstant,
+            "equals": [jsTemporalInstantLike] => .boolean,
+            "toString": [.opt(jsTemporalToStringSettings)] => .string,
+            "toJSON": [] => .string,
+            "toLocaleString": [.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string,
+            "valueOf": [] => .undefined,
+            // TODO(manishearth, 439921647) return a ZonedDateTime when we can
+            "toZonedDateTimeISO": [jsTemporalTimeZoneLike] => .jsAnything,
+        ]
+    )
+
+    static let jsTemporalInstantPrototype = createPrototypeObjectGroup(jsTemporalInstant)
+
+    /// ObjectGroup modelling the JavaScript Temporal.Instant constructor
+    static let jsTemporalInstantConstructor = ObjectGroup(
+        name: "TemporalInstantConstructor",
+        instanceType: .jsTemporalInstantConstructor,
+        properties: [
+            "prototype" : jsTemporalInstantPrototype.instanceType
+        ],
+        methods: [
+            "from": [jsTemporalInstantLike] => .jsTemporalInstant,
+            "fromEpochMilliseconds": [.number] => .jsTemporalInstant,
+            "fromEpochNanoseconds": [.bigint] => .jsTemporalInstant,
+            "compare": [jsTemporalInstantLike, jsTemporalInstantLike] => .number,
+        ]
+    )
+    /// ObjectGroup modelling JavaScript Temporal.Duration objects
+    static let jsTemporalDuration = ObjectGroup(
+        name: "Temporal.Duration",
+        instanceType: .jsTemporalDuration,
+        properties: [
+            "years": .number,
+            "months": .number,
+            "weeks": .number,
+            "days": .number,
+            "hours": .number,
+            "minutes": .number,
+            "seconds": .number,
+            "milliseconds": .number,
+            "microseconds": .number,
+            "nanoseconds": .number,
+            "sign": .number,
+            "blank": .boolean,
+        ],
+        methods: [
+            "with": [jsTemporalDurationLike] => .jsTemporalDuration,
+            "negated": [] => .jsTemporalDuration,
+            "abs": [] => .jsTemporalDuration,
+            "add": [jsTemporalDurationLike] => .jsTemporalDuration,
+            "subtract": [jsTemporalDurationLike] => .jsTemporalDuration,
+            "round": [jsTemporalInstantRoundTo] => .jsTemporalDuration,
+            "total": [jsTemporalDurationTotalOf] => .jsTemporalDuration,
+            "toString": [.opt(jsTemporalToStringSettings)] => .string,
+            "toJSON": [] => .string,
+            "toLocaleString": [.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string,
+            "valueOf": [] => .undefined,
+        ]
+    )
+
+    static let jsTemporalDurationPrototype = createPrototypeObjectGroup(jsTemporalDuration)
+
+    /// ObjectGroup modelling the JavaScript Temporal.Duration constructor
+    static let jsTemporalDurationConstructor = ObjectGroup(
+        name: "TemporalDurationConstructor",
+        instanceType: .jsTemporalDurationConstructor,
+        properties: [
+            "prototype" : jsTemporalDurationPrototype.instanceType
+        ],
+        methods: [
+            "from": [jsTemporalDurationLike] => .jsTemporalDuration,
+            "compare": [jsTemporalDurationLike, jsTemporalDurationLike] => .number,
+        ]
+    )
+
+    // Temporal helpers
+
+    fileprivate static let jsTemporalDurationObject = ObjectGroup(
+        name: "TemporalDurationObject",
+        instanceType: .object(ofGroup: "TemporalDurationObject", withProperties: [
+            "years",
+            "months",
+            "weeks",
+            "days",
+            "hours",
+            "minutes",
+            "seconds",
+            "milliseconds",
+            "microseconds",
+            "nanoseconds",
+        ], withMethods: []),
+        properties: [
+            "years": .number | .undefined,
+            "months": .number | .undefined,
+            "weeks": .number | .undefined,
+            "days": .number | .undefined,
+            "hours": .number | .undefined,
+            "minutes": .number | .undefined,
+            "seconds": .number | .undefined,
+            "milliseconds": .number | .undefined,
+            "microseconds": .number | .undefined,
+            "nanoseconds": .number | .undefined,
+        ],
+        methods: [:])
+
+    // Temporal-object-like parameters (accepted by ToTemporalFoo)
+    // TODO(manishearth, 439921647) type unions just produce .object(),
+    // we should ideally do something cleverer here.
+
+    // TODO(manishearth, 439921647) support duration strings
+    fileprivate static let jsTemporalDurationLike = Parameter.plain(jsTemporalDurationObject.instanceType | .jsTemporalDuration | .string)
+    // TODO(manishearth, 439921647) support ZonedDateTime and instant strings
+    fileprivate static let jsTemporalInstantLike = Parameter.oneof(.jsTemporalInstant, .string)
+
+    // Stringy objects
+    // TODO(manishearth, 439921647) support stringy objects
+    fileprivate static let jsTemporalTimeZoneLike = Parameter.string
+
+    // Options objects
+    // TODO(manishearth, 439921647) fill in options objects
+    fileprivate static let jsTemporalDifferenceSettings = ILType.jsAnything
+    fileprivate static let jsTemporalInstantRoundTo = Parameter.jsAnything
+    fileprivate static let jsTemporalDurationRoundTo = Parameter.jsAnything
+    fileprivate static let jsTemporalDurationTotalOf = Parameter.jsAnything
+    fileprivate static let jsTemporalToLocaleStringSettings = ILType.jsAnything
+    fileprivate static let jsTemporalToStringSettings = ILType.jsAnything
 }
