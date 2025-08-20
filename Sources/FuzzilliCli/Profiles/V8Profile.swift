@@ -507,6 +507,39 @@ fileprivate let WasmDeoptFuzzer = WasmProgramTemplate("WasmDeoptFuzzer") { b in
     }
 }
 
+fileprivate let WasmTurbofanFuzzer = WasmProgramTemplate("WasmTurbofanFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 10)
+
+    let wasmSignature = b.randomWasmSignature()
+
+    // Emit a TypeGroup to increase the chance for interesting wasm-gc cases.
+    b.wasmDefineTypeGroup() {
+        b.build(n: 10)
+    }
+
+    let wasmModule = b.buildWasmModule { wasmModule in
+        // Have some budget for tables, globals, memories, other functions that can be called, ...
+        b.build(n: 30)
+
+        // Add the function that we are going to call and optimize from JS.
+        wasmModule.addWasmFunction(with: wasmSignature) { function, label, args in
+            b.build(n: 20)
+            return wasmSignature.outputTypes.map(function.findOrGenerateWasmVar)
+        }
+    }
+
+    let exports = wasmModule.loadExports()
+    let wasmFctName = wasmModule.getExportedMethods().last!.0
+    let wasmFct = b.getProperty(wasmFctName, of: exports)
+    let jsSignature = ProgramBuilder.convertWasmSignatureToJsSignature(wasmSignature)
+    var args = b.findOrGenerateArguments(forSignature: jsSignature)
+    b.callFunction(wasmFct, withArgs: args)
+    // Force tier-up (Turbofan compilation).
+    b.eval("%WasmTierUpFunction(%@)", with: [wasmFct])
+    b.callFunction(wasmFct, withArgs: args)
+}
+
 public extension ILType {
     static let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
 
@@ -889,6 +922,7 @@ let v8Profile = Profile(
         (FastApiCallFuzzer,      1),
         (LazyDeoptFuzzer,        1),
         (WasmDeoptFuzzer,        1),
+        (WasmTurbofanFuzzer,     1),
     ]),
 
     disabledCodeGenerators: [],
