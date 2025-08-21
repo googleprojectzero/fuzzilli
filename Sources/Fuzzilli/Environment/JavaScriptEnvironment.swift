@@ -351,6 +351,8 @@ public class JavaScriptEnvironment: ComponentBase {
         for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError", "SuppressedError"] {
             registerObjectGroup(.jsError(variant))
         }
+        registerObjectGroup(.jsWebAssemblyCompileOptions)
+        registerObjectGroup(.jsWebAssembly)
         registerObjectGroup(.jsWasmGlobal)
         registerObjectGroup(.jsWasmMemory)
         registerObjectGroup(.wasmTable)
@@ -662,22 +664,27 @@ public struct ObjectGroup {
     /// The type of instances of this group.
     public var instanceType: ILType
 
-    public init(name: String, instanceType: ILType, properties: [String: ILType], overloads: [String: [Signature]], parent: String? = nil) {
+    public init(name: String, instanceType: ILType?, properties: [String: ILType], overloads: [String: [Signature]], parent: String? = nil) {
         self.name = name
-        self.instanceType = instanceType
         self.properties = properties
         self.methods = overloads
         self.parent = parent
 
-        // We could also only assert set inclusion here to implement "shared" properties/methods.
-        // (which would then need some kind of fallback ObjectGroup that is consulted by the
-        // type lookup routines if the real group doesn't have the requested information).
-        assert(instanceType.group == name, "group name mismatch for group \(name)")
-        assert(instanceType.properties == Set(properties.keys), "inconsistent property information for object group \(name): \(Set(properties.keys).symmetricDifference(instanceType.properties))")
-        assert(instanceType.methods == Set(methods.keys), "inconsistent method information for object group \(name): \(Set(methods.keys).symmetricDifference(instanceType.methods))")
+        if let instanceType {
+            // We could also only assert set inclusion here to implement "shared" properties/methods.
+            // (which would then need some kind of fallback ObjectGroup that is consulted by the
+            // type lookup routines if the real group doesn't have the requested information).
+            assert(instanceType.group == name, "group name mismatch for group \(name)")
+            assert(instanceType.properties == Set(properties.keys), "inconsistent property information for object group \(name): \(Set(properties.keys).symmetricDifference(instanceType.properties))")
+            assert(instanceType.methods == Set(methods.keys), "inconsistent method information for object group \(name): \(Set(methods.keys).symmetricDifference(instanceType.methods))")
+            self.instanceType = instanceType
+        } else {
+            // Simply calculate the instance type based on the ObjectGroup information.
+            self.instanceType = .object(ofGroup: name, withProperties: Array(properties.keys), withMethods: Array(methods.keys))
+        }
     }
 
-    public init(name: String, instanceType: ILType, properties: [String: ILType], methods: [String: Signature], parent: String? = nil) {
+    public init(name: String, instanceType: ILType?, properties: [String: ILType], methods: [String: Signature], parent: String? = nil) {
        self.init(name: name, instanceType: instanceType, properties: properties, overloads: methods.mapValues({[$0]}), parent: parent)
     }
 
@@ -1652,6 +1659,48 @@ public extension ObjectGroup {
             ]
         )
     }
+
+    static let jsWebAssemblyCompileOptions = ObjectGroup(
+        name: "WebAssemblyCompileOptions",
+        instanceType: nil,
+        properties: [
+            "builtins": .jsArray,
+            "importedStringConstants": .jsString,
+        ],
+        methods: [:]
+    )
+
+    // Note: This supports all typed arrays, however, that would add a huge amount of overloads, so
+    // we only add a few selected typed arrays here.
+    static let wasmBufferTypes = [
+        ILType.jsArrayBuffer, .jsSharedArrayBuffer, .jsTypedArray("Int8Array"),
+        .jsTypedArray("Float32Array"), .jsTypedArray("BigUint64Array")]
+
+    static let jsWebAssembly = ObjectGroup(
+        name: "WebAssembly",
+        instanceType: nil,
+        properties: [
+            // TODO(mliedtke): Add properties like Global, Memory, ...
+            "JSTag": .object(ofGroup: "WasmTag"),
+        ],
+        overloads: [
+            "compile": wasmBufferTypes.map {
+                [.plain($0), .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise},
+            // TODO: The first parameter should be a Response which Fuzzilli doesn't know as it is
+            // mostly used by WebAPIs like fetch().
+            "compileStreaming": [
+                [.object(), .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise],
+            "instantiate": wasmBufferTypes.map {
+                [.plain($0), /*imports*/ .opt(.object()),
+                 .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise},
+            // TODO: Same as compileStreaming(), the first parameter has to be a Response.
+            "instantiateStreaming": [
+                [.object(), /*imports*/ .opt(.object()),
+                 .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise],
+            "validate": wasmBufferTypes.map {
+                [.plain($0), .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise},
+        ]
+    )
 
     /// ObjectGroup modelling JavaScript WebAssembly Global objects.
     static let jsWasmGlobal = ObjectGroup(
