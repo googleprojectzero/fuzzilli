@@ -352,6 +352,8 @@ public class JavaScriptEnvironment: ComponentBase {
             registerObjectGroup(.jsError(variant))
         }
         registerObjectGroup(.jsWebAssemblyCompileOptions)
+        registerObjectGroup(.jsWebAssemblyModuleConstructor)
+        registerObjectGroup(.jsWebAssemblyModule)
         registerObjectGroup(.jsWebAssembly)
         registerObjectGroup(.jsWasmGlobal)
         registerObjectGroup(.jsWasmMemory)
@@ -900,6 +902,15 @@ public extension ILType {
 
     /// Type of the JavaScript Infinity value.
     static let jsInfinity = ILType.float
+
+    static let jsWebAssemblyModule = ILType.object(ofGroup: "WebAssembly.Module")
+
+    /// Type of the WebAssembly.Module() constructor.
+    // TODO: The first constructor argument can also be any typed array and .jsSharedArrayBuffer.
+    static let jsWebAssemblyModuleConstructor =
+        ILType.constructor([.plain(.jsArrayBuffer)] => .jsWebAssemblyModule)
+        + .object(ofGroup: "WebAssemblyModuleConstructor", withProperties: [],
+            withMethods: ["customSections", "imports", "exports"])
 
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
@@ -1676,12 +1687,31 @@ public extension ObjectGroup {
         ILType.jsArrayBuffer, .jsSharedArrayBuffer, .jsTypedArray("Int8Array"),
         .jsTypedArray("Float32Array"), .jsTypedArray("BigUint64Array")]
 
+    static let jsWebAssemblyModule = ObjectGroup(
+        name: "WebAssembly.Module",
+        instanceType: .jsWebAssemblyModule,
+        properties: [:],
+        methods: [:]
+    )
+
+    static let jsWebAssemblyModuleConstructor = ObjectGroup(
+        name: "WebAssemblyModuleConstructor",
+        instanceType: .jsWebAssemblyModuleConstructor,
+        properties: [:],
+        methods: [
+            "customSections": [.plain(jsWebAssemblyModule.instanceType), .plain(.jsString)] => .jsArray,
+            "exports": [.plain(jsWebAssemblyModule.instanceType)] => .jsArray,
+            "imports": [.plain(jsWebAssemblyModule.instanceType)] => .jsArray,
+        ]
+    )
+
     static let jsWebAssembly = ObjectGroup(
         name: "WebAssembly",
         instanceType: nil,
         properties: [
             // TODO(mliedtke): Add properties like Global, Memory, ...
             "JSTag": .object(ofGroup: "WasmTag"),
+            "Module": .jsWebAssemblyModuleConstructor,
         ],
         overloads: [
             "compile": wasmBufferTypes.map {
