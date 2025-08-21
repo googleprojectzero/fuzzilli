@@ -1794,8 +1794,8 @@ public extension ObjectGroup {
         name: "Temporal",
         instanceType: .jsTemporalObject,
         properties: [
-            "Instant"  : .jsTemporalInstant,
-            "Duration"  : .jsTemporalDuration,
+            "Instant"  : .jsTemporalInstantConstructor,
+            "Duration"  : .jsTemporalDurationConstructor,
         ],
         methods: [:]
     )

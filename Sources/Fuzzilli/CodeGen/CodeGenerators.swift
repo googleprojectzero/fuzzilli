@@ -138,6 +138,56 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("BuiltinTemporalGenerator") { b in
+        let temporal = b.createNamedVariable(forBuiltin: "Temporal")
+        // Whether to generate code for new Temporal.Foo() or Temporal.Foo.from()
+        let constructorOrFrom = Bool.random()
+
+        let createInstant = {
+            let constructor = b.getProperty("Instant", of: temporal)
+            if constructorOrFrom {
+                let nanoseconds = b.randomVariable(forUseAs: .bigint)
+                b.construct(constructor, withArgs: [nanoseconds])
+
+            } else {
+                let from = b.getProperty("from", of: constructor)
+                // TODO(manishearth, 439921647) Generate Temporal-like strings
+                let string = b.randomVariable(forUseAs: .string)
+                b.callFunction(from, withArgs: [string])
+            }
+
+        }
+        let createDuration = {
+            let constructor = b.getProperty("Duration", of: temporal)
+            if constructorOrFrom {
+                // Constructor takes between 0 and 10 integer args
+                let numArgs = Int.random(in: 0...10)
+                let args = (0...numArgs).map { _ in b.randomVariable(forUseAs: .number) }
+                b.construct(constructor, withArgs: args)
+            } else {
+                let from = b.getProperty("from", of: constructor)
+                // Whether to pass a Temporal-like object or a string
+                if Bool.random() {
+                    // Durations are simple, they accept an object with optional integer fields for each duration field
+                    var dict: [String : Variable] = [:]
+                    for field in ["years", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds", "nanoseconds"] {
+                        if Bool.random() {
+                            dict[field] = b.randomVariable(forUseAs: .number)
+                        }
+                    }
+                    b.callFunction(from, withArgs: [ b.createObject(with: dict) ] )
+                } else {
+                    // TODO(manishearth, 439921647) Generate Temporal-like strings
+                    let string = b.randomVariable(forUseAs: .string)
+                    b.callFunction(from, withArgs: [string])
+
+                }
+            }
+        }
+
+        chooseUniform(from: [createInstant, createDuration])()
+    },
+
     ValueGenerator("TypedArrayGenerator") { b, n in
         for _ in 0..<n {
             let size = b.loadInt(b.randomSize(upTo: 0x1000))
