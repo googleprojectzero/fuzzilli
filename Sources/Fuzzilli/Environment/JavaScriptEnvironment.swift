@@ -424,6 +424,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("NaN", ofType: .jsNaN)
         registerBuiltin("Infinity", ofType: .jsInfinity)
         registerBuiltin("Temporal", ofType: .jsTemporalObject)
+        registerBuiltin("WebAssembly", ofType: ObjectGroup.jsWebAssembly.instanceType)
 
         for (builtin, type) in additionalBuiltins {
             registerBuiltin(builtin, ofType: type)
