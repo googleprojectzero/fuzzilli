@@ -1699,4 +1699,16 @@ class JSTyperTests: XCTestCase {
 
 
     }
+
+    func testWebAssemblyBuiltins() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let wasm = b.createNamedVariable(forBuiltin: "WebAssembly")
+        XCTAssert(b.type(of: wasm).Is(.object(ofGroup: "WebAssembly")))
+        let wasmModuleConstructor = b.getProperty("Module", of: wasm)
+        XCTAssert(b.type(of: wasmModuleConstructor).Is(.object(ofGroup: "WebAssemblyModuleConstructor")))
+        let wasmModule = b.construct(wasmModuleConstructor) // In theory this needs arguments.
+        XCTAssert(b.type(of: wasmModule).Is(.object(ofGroup: "WebAssembly.Module")))
+    }
 }
