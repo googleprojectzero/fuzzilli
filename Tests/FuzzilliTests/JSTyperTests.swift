@@ -1679,5 +1679,24 @@ class JSTyperTests: XCTestCase {
         XCTAssert(b.type(of: sharedArrayBufferProto).Is(.object(ofGroup: "SharedArrayBuffer.prototype")))
         let grow = b.getProperty("grow", of: sharedArrayBufferProto)
         XCTAssertEqual(b.type(of: grow), .unboundFunction([.number] => .undefined, receiver: .jsSharedArrayBuffer))
+
+        // Temporal objects
+        let temporalBuiltin = b.createNamedVariable(forBuiltin: "Temporal")
+        XCTAssert(b.type(of: temporalBuiltin).Is(.object(ofGroup: "Temporal")))
+        let instantBuiltin = b.getProperty("Instant", of: temporalBuiltin)
+        XCTAssert(b.type(of: instantBuiltin).Is(.object(ofGroup: "TemporalInstantConstructor")))
+        let instantProto = b.getProperty("prototype", of: instantBuiltin)
+        XCTAssert(b.type(of: instantProto).Is(.object(ofGroup: "Temporal.Instant.prototype")))
+        // We don't test Instant's prototype, since Instant only has nontrivial methods that
+        // use options bag types that are still in flux.
+
+        let durationBuiltin = b.getProperty("Duration", of: temporalBuiltin)
+        XCTAssert(b.type(of: durationBuiltin).Is(.object(ofGroup: "TemporalDurationConstructor")))
+        let durationProto = b.getProperty("prototype", of: durationBuiltin)
+        XCTAssert(b.type(of: durationProto).Is(.object(ofGroup: "Temporal.Duration.prototype")))
+        let negated = b.getProperty("negated", of: durationProto)
+        XCTAssertEqual(b.type(of: negated), .unboundFunction([] => .jsTemporalDuration, receiver: .jsTemporalDuration))
+
+
     }
 }
