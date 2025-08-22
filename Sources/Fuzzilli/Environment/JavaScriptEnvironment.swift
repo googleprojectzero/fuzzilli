@@ -367,6 +367,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsTemporalDuration)
         registerObjectGroup(.jsTemporalDurationConstructor)
         registerObjectGroup(.jsTemporalDurationPrototype)
+        registerObjectGroup(.jsTemporalPlainTime)
+        registerObjectGroup(.jsTemporalPlainTimeConstructor)
+        registerObjectGroup(.jsTemporalPlainTimePrototype)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -916,7 +919,7 @@ public extension ILType {
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
 
     // Temporal types
-    static let jsTemporalObject = ILType.object(ofGroup: "Temporal", withProperties: ["Instant", "Duration"])
+    static let jsTemporalObject = ILType.object(ofGroup: "Temporal", withProperties: ["Instant", "Duration", "PlainTime"])
 
     static let jsTemporalInstant = ILType.object(ofGroup: "Temporal.Instant", withProperties: ["epochMilliseconds", "epochNanoseconds"], withMethods: ["add", "subtract", "until", "since", "round", "equals", "toString", "toJSON", "toLocaleString", "valueOf", "toZonedDateTimeISO"])
 
@@ -926,6 +929,9 @@ public extension ILType {
 
     static let jsTemporalDurationConstructor = ILType.functionAndConstructor([.opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number)] => .jsTemporalDuration) + .object(ofGroup: "TemporalDurationConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
 
+    static let jsTemporalPlainTime = ILType.object(ofGroup: "Temporal.PlainTime", withProperties: ["hour", "minute", "second", "millisecond", "microsecond", "nanosecond"], withMethods: ["add", "subtract", "with", "until", "since", "round", "equals", "toString", "toLocaleString", "toJSON", "valueOf"])
+
+    static let jsTemporalPlainTimeConstructor = ILType.functionAndConstructor([.opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number)] => .jsTemporalPlainTime) + .object(ofGroup: "TemporalPlainTimeConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
 }
 
 public extension ObjectGroup {
@@ -1796,6 +1802,7 @@ public extension ObjectGroup {
         properties: [
             "Instant"  : .jsTemporalInstantConstructor,
             "Duration"  : .jsTemporalDurationConstructor,
+            "PlainTime"  : .jsTemporalPlainTimeConstructor,
         ],
         methods: [:]
     )
@@ -1812,7 +1819,7 @@ public extension ObjectGroup {
             "subtract": [jsTemporalDurationLike] => .jsTemporalInstant,
             "until": [jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
             "since": [jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "round": [jsTemporalInstantRoundTo] => .jsTemporalInstant,
+            "round": [jsTemporalRoundTo] => .jsTemporalInstant,
             "equals": [jsTemporalInstantLike] => .boolean,
             "toString": [.opt(jsTemporalToStringSettings)] => .string,
             "toJSON": [] => .string,
@@ -1858,12 +1865,12 @@ public extension ObjectGroup {
             "blank": .boolean,
         ],
         methods: [
-            "with": [jsTemporalDurationLike] => .jsTemporalDuration,
+            "with": [.plain(jsTemporalDurationLikeObject.instanceType)] => .jsTemporalDuration,
             "negated": [] => .jsTemporalDuration,
             "abs": [] => .jsTemporalDuration,
             "add": [jsTemporalDurationLike] => .jsTemporalDuration,
             "subtract": [jsTemporalDurationLike] => .jsTemporalDuration,
-            "round": [jsTemporalInstantRoundTo] => .jsTemporalDuration,
+            "round": [jsTemporalRoundTo] => .jsTemporalDuration,
             "total": [jsTemporalDurationTotalOf] => .jsTemporalDuration,
             "toString": [.opt(jsTemporalToStringSettings)] => .string,
             "toJSON": [] => .string,
@@ -1887,22 +1894,51 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsTemporalPlainTime = ObjectGroup(
+        name: "Temporal.PlainTime",
+        instanceType: .jsTemporalPlainTime,
+        properties: [
+            "hour": .number,
+            "minute": .number,
+            "second": .number,
+            "millisecond": .number,
+            "microsecond": .number,
+            "nanosecond": .number,        ],
+        methods: [
+            "add": [jsTemporalDurationLike] => .jsTemporalPlainTime,
+            "subtract": [jsTemporalDurationLike] => .jsTemporalPlainTime,
+            "with": [.plain(jsTemporalPlainTimeLikeObject.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainTime,
+            "until": [jsTemporalPlainTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
+            "since": [jsTemporalPlainTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
+            "round": [jsTemporalRoundTo] => .jsTemporalPlainTime,
+            "equals": [jsTemporalPlainTimeLike] => .boolean,
+            "toString": [.opt(jsTemporalToStringSettings)] => .string,
+            "toJSON": [] => .string,
+            "toLocaleString": [.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string,
+            "valueOf": [] => .undefined,
+        ]
+    )
+
+    static let jsTemporalPlainTimePrototype = createPrototypeObjectGroup(jsTemporalPlainTime)
+
+    /// ObjectGroup modelling the JavaScript Temporal.PlainTime constructor
+    static let jsTemporalPlainTimeConstructor = ObjectGroup(
+        name: "TemporalPlainTimeConstructor",
+        instanceType: .jsTemporalPlainTimeConstructor,
+        properties: [
+            "prototype" : jsTemporalPlainTimePrototype.instanceType
+        ],
+        methods: [
+            "from": [jsTemporalPlainTimeLike] => .jsTemporalPlainTime,
+            "compare": [jsTemporalPlainTimeLike, jsTemporalPlainTimeLike] => .number,
+        ]
+    )
+
     // Temporal helpers
 
-    fileprivate static let jsTemporalDurationObject = ObjectGroup(
-        name: "TemporalDurationObject",
-        instanceType: .object(ofGroup: "TemporalDurationObject", withProperties: [
-            "years",
-            "months",
-            "weeks",
-            "days",
-            "hours",
-            "minutes",
-            "seconds",
-            "milliseconds",
-            "microseconds",
-            "nanoseconds",
-        ], withMethods: []),
+    fileprivate static let jsTemporalDurationLikeObject = ObjectGroup(
+        name: "TemporalDurationLikeObject",
+        instanceType: nil,
         properties: [
             "years": .number | .undefined,
             "months": .number | .undefined,
@@ -1917,14 +1953,29 @@ public extension ObjectGroup {
         ],
         methods: [:])
 
+    fileprivate static let jsTemporalPlainTimeLikeObject = ObjectGroup(
+        name: "TemporalPlainTimeLikeObject",
+        instanceType: nil,
+        properties: [
+            "hour": .number | .undefined,
+            "minute": .number | .undefined,
+            "second": .number | .undefined,
+            "millisecond": .number | .undefined,
+            "microsecond": .number | .undefined,
+            "nanosecond": .number | .undefined,
+        ],
+        methods: [:])
+
     // Temporal-object-like parameters (accepted by ToTemporalFoo)
     // TODO(manishearth, 439921647) type unions just produce .object(),
     // we should ideally do something cleverer here.
 
     // TODO(manishearth, 439921647) support duration strings
-    fileprivate static let jsTemporalDurationLike = Parameter.plain(jsTemporalDurationObject.instanceType | .jsTemporalDuration | .string)
+    fileprivate static let jsTemporalDurationLike = Parameter.plain(jsTemporalDurationLikeObject.instanceType | .jsTemporalDuration | .string)
     // TODO(manishearth, 439921647) support ZonedDateTime and instant strings
     fileprivate static let jsTemporalInstantLike = Parameter.oneof(.jsTemporalInstant, .string)
+    // TODO(manishearth, 439921647) support ZDT/DateTime and instant strings
+    fileprivate static let jsTemporalPlainTimeLike = Parameter.plain(jsTemporalPlainTimeLikeObject.instanceType | .jsTemporalPlainTime | .string)
 
     // Stringy objects
     // TODO(manishearth, 439921647) support stringy objects
@@ -1933,9 +1984,10 @@ public extension ObjectGroup {
     // Options objects
     // TODO(manishearth, 439921647) fill in options objects
     fileprivate static let jsTemporalDifferenceSettings = ILType.jsAnything
-    fileprivate static let jsTemporalInstantRoundTo = Parameter.jsAnything
+    fileprivate static let jsTemporalRoundTo = Parameter.jsAnything
     fileprivate static let jsTemporalDurationRoundTo = Parameter.jsAnything
     fileprivate static let jsTemporalDurationTotalOf = Parameter.jsAnything
     fileprivate static let jsTemporalToLocaleStringSettings = ILType.jsAnything
     fileprivate static let jsTemporalToStringSettings = ILType.jsAnything
+    fileprivate static let jsTemporalOverflowSettings = ILType.jsAnything
 }
