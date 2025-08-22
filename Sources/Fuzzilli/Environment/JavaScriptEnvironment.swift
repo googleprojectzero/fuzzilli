@@ -353,6 +353,7 @@ public class JavaScriptEnvironment: ComponentBase {
         }
         registerObjectGroup(.jsWebAssemblyCompileOptions)
         registerObjectGroup(.jsWebAssemblyModuleConstructor)
+        registerObjectGroup(.jsWebAssemblyGlobalConstructor)
         registerObjectGroup(.jsWebAssemblyModule)
         registerObjectGroup(.jsWebAssembly)
         registerObjectGroup(.jsWasmGlobal)
@@ -918,6 +919,13 @@ public extension ILType {
         ILType.constructor([.plain(.jsArrayBuffer)] => .jsWebAssemblyModule)
         + .object(ofGroup: "WebAssemblyModuleConstructor", withProperties: [],
             withMethods: ["customSections", "imports", "exports"])
+
+    static let jsWasmGlobal = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"],
+        withMethods: ["valueOf"])
+
+    static let jsWebAssemblyGlobalConstructor =
+        ILType.constructor([.plain(.object()), .jsAnything] => .jsWasmGlobal)
+        + .object(ofGroup: "WebAssemblyGlobalConstructor", withProperties: [], withMethods: [])
 
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
@@ -1730,6 +1738,13 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsWebAssemblyGlobalConstructor = ObjectGroup(
+        name: "WebAssemblyGlobalConstructor",
+        instanceType: .jsWebAssemblyGlobalConstructor,
+        properties: [:],
+        methods: [:]
+    )
+
     static let jsWebAssembly = ObjectGroup(
         name: "WebAssembly",
         instanceType: nil,
@@ -1737,6 +1752,7 @@ public extension ObjectGroup {
             // TODO(mliedtke): Add properties like Global, Memory, ...
             "JSTag": .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef], isJSTag: true)),
             "Module": .jsWebAssemblyModuleConstructor,
+            "Global": .jsWebAssemblyGlobalConstructor,
         ],
         overloads: [
             "compile": wasmBufferTypes.map {
@@ -1760,12 +1776,12 @@ public extension ObjectGroup {
     /// ObjectGroup modelling JavaScript WebAssembly Global objects.
     static let jsWasmGlobal = ObjectGroup(
         name: "WasmGlobal",
-        instanceType: .object(ofGroup: "WasmGlobal", withProperties: ["value"]),
+        instanceType: .jsWasmGlobal,
         properties: [
             // TODO: Try using precise JS types based on the global's underlying valuetype (e.g. float for f32 and f64).
             "value" : .jsAnything
         ],
-        methods: [:]
+        methods: ["valueOf": [] => .jsAnything]
     )
 
     /// ObjectGroup modelling JavaScript WebAssembly Memory objects.
