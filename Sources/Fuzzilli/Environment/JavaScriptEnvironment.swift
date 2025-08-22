@@ -354,6 +354,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWebAssemblyCompileOptions)
         registerObjectGroup(.jsWebAssemblyModuleConstructor)
         registerObjectGroup(.jsWebAssemblyGlobalConstructor)
+        registerObjectGroup(.jsWebAssemblyInstanceConstructor)
+        registerObjectGroup(.jsWebAssemblyInstance)
         registerObjectGroup(.jsWebAssemblyModule)
         registerObjectGroup(.jsWebAssembly)
         registerObjectGroup(.jsWasmGlobal)
@@ -926,6 +928,13 @@ public extension ILType {
     static let jsWebAssemblyGlobalConstructor =
         ILType.constructor([.plain(.object()), .jsAnything] => .jsWasmGlobal)
         + .object(ofGroup: "WebAssemblyGlobalConstructor", withProperties: [], withMethods: [])
+
+    static let jsWebAssemblyInstance = ILType.object(ofGroup: "WebAssembly.Instance",
+        withProperties: ["exports"])
+
+    static let jsWebAssemblyInstanceConstructor =
+        ILType.constructor([.plain(.jsWebAssemblyModule), .plain(.object())] => .jsWebAssemblyInstance)
+        + .object(ofGroup: "WebAssemblyInstanceConstructor", withProperties: ["prototype"], withMethods: [])
 
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
@@ -1704,6 +1713,8 @@ public extension ObjectGroup {
         )
     }
 
+    // TODO(mliedtke): We need to construct these to make code generators be able to provide
+    // somewhat reasonable compile options.
     static let jsWebAssemblyCompileOptions = ObjectGroup(
         name: "WebAssemblyCompileOptions",
         instanceType: nil,
@@ -1745,6 +1756,24 @@ public extension ObjectGroup {
         methods: [:]
     )
 
+    static let jsWebAssemblyInstanceConstructor = ObjectGroup(
+        name: "WebAssemblyInstanceConstructor",
+        instanceType: .jsWebAssemblyInstanceConstructor,
+        properties: [
+            "prototype": .object(),
+        ],
+        methods: [:]
+    )
+
+    static let jsWebAssemblyInstance = ObjectGroup(
+        name: "WebAssembly.Instance",
+        instanceType: .jsWebAssemblyInstance,
+        properties: [
+            "exports": .object(),
+        ],
+        methods: [:]
+    )
+
     static let jsWebAssembly = ObjectGroup(
         name: "WebAssembly",
         instanceType: nil,
@@ -1753,6 +1782,7 @@ public extension ObjectGroup {
             "JSTag": .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef], isJSTag: true)),
             "Module": .jsWebAssemblyModuleConstructor,
             "Global": .jsWebAssemblyGlobalConstructor,
+            "Instance": .jsWebAssemblyInstanceConstructor,
         ],
         overloads: [
             "compile": wasmBufferTypes.map {
