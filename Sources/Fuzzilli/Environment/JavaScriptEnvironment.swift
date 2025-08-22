@@ -289,8 +289,14 @@ public class JavaScriptEnvironment: ComponentBase {
     public private(set) var builtinProperties = Set<String>()
     public private(set) var builtinMethods = Set<String>()
 
+
+    // Something that can generate a variable
+    public typealias EnvironmentValueGenerator = (ProgramBuilder) -> Variable
+
     private var builtinTypes: [String: ILType] = [:]
     private var groups: [String: ObjectGroup] = [:]
+    // Producing generators, keyed on `type.group`
+    private var producingGenerators: [String: EnvironmentValueGenerator] = [:]
     private var producingMethods: [ILType: [(group: String, method: String)]] = [:]
     private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
     private var subtypes: [ILType: [ILType]] = [:]
@@ -381,6 +387,9 @@ public class JavaScriptEnvironment: ComponentBase {
             registerObjectGroup(group)
         }
 
+        registerOptionsBag(.jsTemporalDifferenceSettingOrRoundTo)
+        registerOptionsBag(.jsTemporalToStringSettings)
+        registerOptionsBag(.jsTemporalOverflowSettings)
 
         // Register builtins that should be available for fuzzing.
         // Here it is easy to selectively disable/enable some APIs for fuzzing by
@@ -494,6 +503,14 @@ public class JavaScriptEnvironment: ComponentBase {
         return self.groups.keys.contains(name)
     }
 
+    // Add a generator that produces an object of the provided `type`.
+    //
+    // This is for groups that are never generated as return types of other objects; so we register
+    // a generator that can be called.
+    public func addProducingGenerator(forType type: ILType, with generator: @escaping EnvironmentValueGenerator) {
+        producingGenerators[type.group!] = generator
+    }
+
     private func addProducingMethod(forType type: ILType, by method: String, on group: String) {
         if producingMethods[type] == nil {
         producingMethods[type] = []
@@ -587,6 +604,11 @@ public class JavaScriptEnvironment: ComponentBase {
             }
     }
 
+    public func registerOptionsBag(_ bag: OptionsBag) {
+        registerObjectGroup(bag.group)
+        addProducingGenerator(forType: bag.group.instanceType, with: { b in b.createOptionsBag(bag) })
+    }
+
     public func type(ofBuiltin builtinName: String) -> ILType {
         if let type = builtinTypes[builtinName] {
             return type
@@ -645,6 +667,12 @@ public class JavaScriptEnvironment: ComponentBase {
         return array
     }
 
+    // For ObjectGroups, get a generator that is registered as being able to produce this
+    // ObjectGroup.
+    public func getProducingGenerator(ofType type: ILType) -> EnvironmentValueGenerator? {
+        type.group.flatMap {producingGenerators[$0]}
+    }
+
     public func getProducingProperties(ofType type: ILType) -> [(group: String, property: String)] {
         guard let array = producingProperties[type] else {
             return []
@@ -700,6 +728,27 @@ public struct ObjectGroup {
        self.init(name: name, instanceType: instanceType, properties: properties, overloads: methods.mapValues({[$0]}), parent: parent)
     }
 
+}
+
+// Some APIs take an "options bag", a list of options like {foo: "something", bar: "something", baz: 1}
+//
+// It is useful to be able to represent simple options bags so that we can efficiently codegen them
+public struct OptionsBag {
+    // The type of each property, not including `| .undefined`.
+    // We may extend this once we start supporting more complex bags
+    public var properties: [String: ILType]
+    // An ObjectGroup representing this bag
+    public var group: ObjectGroup
+
+    public init(name: String, properties: [String: ILType]) {
+        self.properties = properties
+        let properties = properties.mapValues {
+            // This list can be expanded over time as long as OptionsBagGenerator supports this
+            assert($0.isEnumeration || $0.Is(.number) || $0.Is(.integer), "Found unsupported option type \($0) in options bag \(name)")
+            return $0 | .undefined;
+        }
+        self.group = ObjectGroup(name: name, instanceType: nil, properties: properties, overloads: [:])
+    }
 }
 
 // Types of builtin objects, functions, and values.
@@ -1886,7 +1935,7 @@ public extension ObjectGroup {
             "subtract": [jsTemporalDurationLike] => .jsTemporalInstant,
             "until": [jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
             "since": [jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "round": [jsTemporalRoundTo] => .jsTemporalInstant,
+            "round": [.plain(jsTemporalRoundTo)] => .jsTemporalInstant,
             "equals": [jsTemporalInstantLike] => .boolean,
             "toString": [.opt(jsTemporalToStringSettings)] => .string,
             "toJSON": [] => .string,
@@ -1936,7 +1985,7 @@ public extension ObjectGroup {
             "abs": [] => .jsTemporalDuration,
             "add": [jsTemporalDurationLike] => .jsTemporalDuration,
             "subtract": [jsTemporalDurationLike] => .jsTemporalDuration,
-            "round": [jsTemporalRoundTo] => .jsTemporalDuration,
+            "round": [jsTemporalDurationRoundTo] => .jsTemporalDuration,
             "total": [jsTemporalDurationTotalOf] => .jsTemporalDuration,
             "toString": [.opt(jsTemporalToStringSettings)] => .string,
             "toJSON": [] => .string,
@@ -1975,7 +2024,7 @@ public extension ObjectGroup {
             "with": [.plain(jsTemporalPlainTimeLikeObject.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainTime,
             "until": [.plain(jsTemporalPlainTimeLike), .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
             "since": [.plain(jsTemporalPlainTimeLike), .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "round": [jsTemporalRoundTo] => .jsTemporalPlainTime,
+            "round": [.plain(jsTemporalRoundTo)] => .jsTemporalPlainTime,
             "equals": [.plain(jsTemporalPlainTimeLike)] => .boolean,
             "toString": [.opt(jsTemporalToStringSettings)] => .string,
             "toJSON": [] => .string,
@@ -2117,12 +2166,77 @@ public extension ObjectGroup {
     fileprivate static let jsTemporalTimeZoneLike = Parameter.string
 
     // Options objects
-    // TODO(manishearth, 439921647) fill in options objects
-    fileprivate static let jsTemporalDifferenceSettings = ILType.jsAnything
-    fileprivate static let jsTemporalRoundTo = Parameter.jsAnything
+    fileprivate static let jsTemporalDifferenceSettings = OptionsBag.jsTemporalDifferenceSettingOrRoundTo.group.instanceType
+    // roundTo accepts a subset of fields compared to differenceSettings; we merge the two bag types but retain separate
+    // variables for clarity in the signatures above.
+    fileprivate static let jsTemporalRoundTo = OptionsBag.jsTemporalDifferenceSettingOrRoundTo.group.instanceType
+    fileprivate static let jsTemporalToStringSettings = OptionsBag.jsTemporalToStringSettings.group.instanceType
+    fileprivate static let jsTemporalOverflowSettings = OptionsBag.jsTemporalOverflowSettings.group.instanceType
+    // TODO(manishearth, 439921647) These are tricky and need other Temporal types
     fileprivate static let jsTemporalDurationRoundTo = Parameter.jsAnything
     fileprivate static let jsTemporalDurationTotalOf = Parameter.jsAnything
+    // This is huge and comes from Intl, not Temporal
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters
     fileprivate static let jsTemporalToLocaleStringSettings = ILType.jsAnything
-    fileprivate static let jsTemporalToStringSettings = ILType.jsAnything
-    fileprivate static let jsTemporalOverflowSettings = ILType.jsAnything
+}
+
+extension OptionsBag {
+    // Individual enums
+    fileprivate static let jsTemporalUnitEnum = ILType.enumeration(ofName: "temporalUnit", withValues: ["auto", "year", "month", "week", "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond", "auto", "years", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds", "nanoseconds"])
+    fileprivate static let jsTemporalRoundingModeEnum = ILType.enumeration(ofName: "temporalRoundingMode", withValues: ["ceil", "floor", "expand", "trunc", "halfCeil", "halfFloor", "halfExpand", "halfTrunc", "halfEven"])
+    fileprivate static let jsTemporalShowCalendarEnum = ILType.enumeration(ofName: "temporalShowCalendar", withValues: ["auto", "always", "never", "critical"])
+    fileprivate static let jsTemporalShowOffsetEnum = ILType.enumeration(ofName: "temporalShowOffset", withValues: ["auto", "never"])
+    fileprivate static let jsTemporalShowTimeZoneEnum = ILType.enumeration(ofName: "temporalShowOfTimeZone", withValues: ["auto", "never", "critical"])
+
+    // differenceSettings and roundTo are mostly the same, with differenceSettings accepting an additional largestUnit
+    // note that the Duration roundTo option is different
+    static let jsTemporalDifferenceSettingOrRoundTo = OptionsBag(
+        name: "TemporalDifferenceSettingsObject",
+        properties: [
+            "smallestUnit": jsTemporalUnitEnum,
+            "largestUnit": jsTemporalUnitEnum,
+            "roundingMode": jsTemporalRoundingModeEnum,
+            "roundingIncrement": .integer,
+        ])
+
+    // Technically some of these parameters are only read by ZonedDateTime; but they're
+    // otherwise largely shared
+    static let jsTemporalToStringSettings = OptionsBag(
+        name: "TemporalToStringSettingsObject",
+        properties: [
+            "calendarName": jsTemporalShowCalendarEnum,
+            "fractionalSecondDigits": .number,
+            "offset": jsTemporalShowOffsetEnum,
+            "timeZoneName": jsTemporalShowTimeZoneEnum,
+            "roundingMode": jsTemporalRoundingModeEnum,
+            "smallestUnit": jsTemporalUnitEnum,
+        ])
+
+    static let jsTemporalOverflowSettings = OptionsBag(
+        name: "jsTemporalOverflowSettingsObject",
+        properties: [
+            "overflow": ILType.enumeration(ofName: "temporalOverflow", withValues: ["constrain", "reject"]),
+        ])
+}
+
+// Some APIs accept ObjectGroups that are not produced by other APIs,
+// so we instead register a generator that allows the fuzzer a greater chance of generating
+// one when needed.
+//
+// These can be registered on the environment with addProducingGenerator()
+
+fileprivate extension ProgramBuilder {
+    @discardableResult
+    func createOptionsBag(_ bag: OptionsBag) -> Variable {
+        // We run .filter() to pick a subset of fields, but we generally want to set as many as possible
+        // and let the mutator prune things
+        let dict: [String : Variable] = bag.properties.filter {_ in probability(0.8)}.mapValues {
+            if $0.isEnumeration {
+                return loadString(chooseUniform(from: $0.enumValues))
+            } else {
+                return findOrGenerateType($0)
+            }
+        }
+        return createObject(with: dict)
+    }
 }

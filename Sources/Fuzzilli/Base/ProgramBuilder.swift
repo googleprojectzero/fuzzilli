@@ -691,6 +691,13 @@ public class ProgramBuilder {
                     }
                 }
 
+                // If we have a producing generator, we aren't going to get this type from elsewhere
+                // so try and generate it using the generator in most cases
+                let producingGenerator = self.fuzzer.environment.getProducingGenerator(ofType: type);
+                if let producingGenerator {
+                    return producingGenerator(self)
+                }
+
                 let producingMethods = self.fuzzer.environment.getProducingMethods(ofType: type)
                 let producingProperties = self.fuzzer.environment.getProducingProperties(ofType: type)
                 let globalProperties = producingProperties.filter() {(group: String, property: String) in
