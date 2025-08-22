@@ -1718,4 +1718,41 @@ class JSTyperTests: XCTestCase {
         let wasmModule = b.construct(wasmModuleConstructor) // In theory this needs arguments.
         XCTAssert(b.type(of: wasmModule).Is(.object(ofGroup: "WebAssembly.Module")))
     }
+
+    func testProducingGenerators() {
+        // Make a simple object
+        let mockEnum = ILType.enumeration(ofName: "mockField", withValues: ["mockValue"]);
+        let mockObject = ObjectGroup(
+            name: "MockObject",
+            instanceType: nil,
+            properties: [
+                "mockField" : mockEnum
+            ],
+            methods: [:]
+        )
+
+        // Some things to keep track of how the generator was called
+        var callCount = 0
+        var returnedVar: Variable? = nil
+        // A simple generator
+        func generate(builder: ProgramBuilder) -> Variable {
+            callCount += 1
+            let val = builder.loadString("mockValue")
+            let variable = builder.createObject(with: ["mockField": val])
+            returnedVar = variable
+            return variable
+        }
+        let fuzzer = makeMockFuzzer()
+        fuzzer.environment.registerObjectGroup(mockObject)
+        fuzzer.environment.addProducingGenerator(forType: mockObject.instanceType, with: generate)
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+
+        // Try to get it to invoke the generator
+        let variable = b.findOrGenerateType(mockObject.instanceType)
+        // Test that the generator was invoked
+        XCTAssertEqual(callCount, 1)
+        // Test that the returned variable matches the generated one
+        XCTAssertEqual(variable, returnedVar)
+    }
 }
