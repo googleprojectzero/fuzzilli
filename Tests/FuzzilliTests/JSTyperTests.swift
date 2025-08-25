@@ -1717,6 +1717,21 @@ class JSTyperTests: XCTestCase {
         XCTAssert(b.type(of: wasmModuleConstructor).Is(.object(ofGroup: "WebAssemblyModuleConstructor")))
         let wasmModule = b.construct(wasmModuleConstructor) // In theory this needs arguments.
         XCTAssert(b.type(of: wasmModule).Is(.object(ofGroup: "WebAssembly.Module")))
+
+        let wasmGlobalConstructor = b.getProperty("Global", of: wasm)
+        XCTAssert(b.type(of: wasmGlobalConstructor).Is(.object(ofGroup: "WebAssemblyGlobalConstructor")))
+        let wasmGlobal = b.construct(wasmGlobalConstructor) // In theory this needs arguments.
+        // We do not type the constructed value as globals as the "WasmGlobal" object group expects
+        // to have a WasmTypeExtension.
+        XCTAssertFalse(b.type(of: wasmGlobal).Is(.object(ofGroup: "WasmGlobal")))
+        // The high-level IL instruction produces properly typed wasm globals.
+        let realWasmGlobal = b.createWasmGlobal(value: .wasmi32(1), isMutable: true)
+        XCTAssert(b.type(of: realWasmGlobal).Is(.object(ofGroup: "WasmGlobal")))
+        // The properly typed wasm globals can be used in conjunction with the
+        // WebAssembly.Global.prototype.valueOf() function.
+        let globalPrototype = b.getProperty("prototype", of: wasmGlobalConstructor)
+        let valueOf = b.getProperty("valueOf", of: globalPrototype)
+        XCTAssertEqual(b.type(of: valueOf), .unboundFunction([] => .jsAnything, receiver: .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"])))
     }
 
     func testProducingGenerators() {
