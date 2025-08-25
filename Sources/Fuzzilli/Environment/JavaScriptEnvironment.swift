@@ -360,6 +360,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWebAssemblyCompileOptions)
         registerObjectGroup(.jsWebAssemblyModuleConstructor)
         registerObjectGroup(.jsWebAssemblyGlobalConstructor)
+        registerObjectGroup(.jsWebAssemblyGlobalPrototype)
         registerObjectGroup(.jsWebAssemblyInstanceConstructor)
         registerObjectGroup(.jsWebAssemblyInstance)
         registerObjectGroup(.jsWebAssemblyModule)
@@ -971,15 +972,16 @@ public extension ILType {
     // TODO: The first constructor argument can also be any typed array and .jsSharedArrayBuffer.
     static let jsWebAssemblyModuleConstructor =
         ILType.constructor([.plain(.jsArrayBuffer)] => .jsWebAssemblyModule)
-        + .object(ofGroup: "WebAssemblyModuleConstructor", withProperties: [],
+        + .object(ofGroup: "WebAssemblyModuleConstructor", withProperties: ["prototype"],
             withMethods: ["customSections", "imports", "exports"])
 
-    static let jsWasmGlobal = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"],
-        withMethods: ["valueOf"])
-
     static let jsWebAssemblyGlobalConstructor =
-        ILType.constructor([.plain(.object()), .jsAnything] => .jsWasmGlobal)
-        + .object(ofGroup: "WebAssemblyGlobalConstructor", withProperties: [], withMethods: [])
+        // We do not type the result as being part of the ObjectGroup "WasmGlobal" as that would
+        // require to also add a WasmTypeExtension to its type. This is fine as the proper
+        // construction of globals is done via the high-level Wasm operations and these builtins
+        // only serve the purpose of fuzzing the API.
+        ILType.constructor([.plain(.object()), .jsAnything] => .object(withProperties: ["value"], withMethods: ["valueOf"]))
+        + .object(ofGroup: "WebAssemblyGlobalConstructor", withProperties: ["prototype"], withMethods: [])
 
     static let jsWebAssemblyInstance = ILType.object(ofGroup: "WebAssembly.Instance",
         withProperties: ["exports"])
@@ -1801,7 +1803,9 @@ public extension ObjectGroup {
     static let jsWebAssemblyModuleConstructor = ObjectGroup(
         name: "WebAssemblyModuleConstructor",
         instanceType: .jsWebAssemblyModuleConstructor,
-        properties: [:],
+        properties: [
+            "prototype": .object()
+        ],
         methods: [
             "customSections": [.plain(jsWebAssemblyModule.instanceType), .plain(.jsString)] => .jsArray,
             "exports": [.plain(jsWebAssemblyModule.instanceType)] => .jsArray,
@@ -1809,10 +1813,14 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsWebAssemblyGlobalPrototype = createPrototypeObjectGroup(jsWasmGlobal)
+
     static let jsWebAssemblyGlobalConstructor = ObjectGroup(
         name: "WebAssemblyGlobalConstructor",
         instanceType: .jsWebAssemblyGlobalConstructor,
-        properties: [:],
+        properties: [
+            "prototype": jsWebAssemblyGlobalPrototype.instanceType,
+        ],
         methods: [:]
     )
 
@@ -1866,7 +1874,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling JavaScript WebAssembly Global objects.
     static let jsWasmGlobal = ObjectGroup(
         name: "WasmGlobal",
-        instanceType: .jsWasmGlobal,
+        instanceType: nil,
         properties: [
             // TODO: Try using precise JS types based on the global's underlying valuetype (e.g. float for f32 and f64).
             "value" : .jsAnything
