@@ -660,7 +660,7 @@ public struct JSTyper: Analyzer {
             case .wasmSimdExtractLane(let op):
                 setType(of: instr.output, to: op.kind.laneType())
             case .wasmDefineGlobal(let op):
-                let type = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable))
+                let type = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable))
                 dynamicObjectGroupManager.addWasmGlobal(withType: type, forDefinition: instr, forVariable: instr.output)
                 setType(of: instr.output, to: type)
             case .wasmDefineTable(let op):
@@ -1734,7 +1734,7 @@ public struct JSTyper: Analyzer {
 
         // TODO: also add other macro instructions here.
         case .createWasmGlobal(let op):
-            set(instr.output, .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: op.value.toType(), isMutable: op.isMutable)))
+            set(instr.output, .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: op.value.toType(), isMutable: op.isMutable)))
 
         case .createWasmMemory(let op):
             set(instr.output, .wasmMemory(limits: op.memType.limits, isShared: op.memType.isShared, isMemory64: op.memType.isMemory64))

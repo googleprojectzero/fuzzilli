@@ -1519,7 +1519,7 @@ class JSTyperTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let wasmGlobalf64: Variable = b.createWasmGlobal(value: .wasmf64(1337), isMutable: false)
-        XCTAssertEqual(b.type(of: wasmGlobalf64), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmf64, isMutable: false)))
+        XCTAssertEqual(b.type(of: wasmGlobalf64), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmf64, isMutable: false)))
 
         let maxPages: Int? = isShared ? 4 : nil
         let memory = b.createWasmMemory(minPages: 1, maxPages: maxPages, isShared: isShared)
@@ -1612,10 +1612,10 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(reexportedFunction, [[] => .object(ofGroup: "_fuzz_Object0")])
 
         let glob0 = b.getProperty("wg0", of: exports)
-        XCTAssertEqual(b.type(of: glob0), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: .wasmi64, isMutable: true)))
+        XCTAssertEqual(b.type(of: glob0), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: .wasmi64, isMutable: true)))
 
         let glob1 = b.getProperty("iwg0", of: exports)
-        XCTAssertEqual(b.type(of: glob1), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: .wasmf64, isMutable: false)))
+        XCTAssertEqual(b.type(of: glob1), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: .wasmf64, isMutable: false)))
 
         let mem0 = b.getProperty("wm0", of: exports)
         let memType = ILType.wasmMemory(limits: Limits(min: 3, max: maxPages), isShared: isShared)
@@ -1727,11 +1727,23 @@ class JSTyperTests: XCTestCase {
         // The high-level IL instruction produces properly typed wasm globals.
         let realWasmGlobal = b.createWasmGlobal(value: .wasmi32(1), isMutable: true)
         XCTAssert(b.type(of: realWasmGlobal).Is(.object(ofGroup: "WasmGlobal")))
+        XCTAssert(b.type(of: realWasmGlobal).Is(ObjectGroup.jsWasmGlobal.instanceType))
         // The properly typed wasm globals can be used in conjunction with the
         // WebAssembly.Global.prototype.valueOf() function.
         let globalPrototype = b.getProperty("prototype", of: wasmGlobalConstructor)
         let valueOf = b.getProperty("valueOf", of: globalPrototype)
         XCTAssertEqual(b.type(of: valueOf), .unboundFunction([] => .jsAnything, receiver: .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"])))
+
+        let wasmMemoryConstructor = b.getProperty("Memory", of: wasm)
+        let wasmMemory = b.construct(wasmMemoryConstructor) // In theory this needs arguments.
+        XCTAssertFalse(b.type(of: wasmMemory).Is(.object(ofGroup: "WasmMemory")))
+        let realWasmMemory = b.createWasmMemory(minPages: 1, maxPages: 1, isShared: false)
+        XCTAssert(b.type(of: realWasmMemory).Is(.object(ofGroup: "WasmMemory")))
+        XCTAssert(b.type(of: realWasmMemory).Is(ObjectGroup.jsWasmMemory.instanceType))
+        let memoryPrototype = b.getProperty("prototype", of: wasmMemoryConstructor)
+        let grow = b.getProperty("grow", of: memoryPrototype)
+        XCTAssert(b.type(of: grow).Is(.unboundFunction([.number] => .number, receiver: .object(ofGroup: "WasmMemory"))))
+
     }
 
     func testProducingGenerators() {
