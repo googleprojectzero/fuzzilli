@@ -18,6 +18,6 @@ import XCTest
 class Leb128Tests: XCTestCase {
     func testUnsignedEncode() {
         let encoded = Leb128.unsignedEncode(624485);
-        XCTAssert(encoded.map({ String(format: "%02hhx", $0)}).joined() == "e58e26")
+        XCTAssertEqual(encoded.map({ String(format: "%02hhx", $0)}).joined(), "e58e26")
     }
 }

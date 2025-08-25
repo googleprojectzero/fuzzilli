@@ -42,13 +42,13 @@ class MutatorTests: XCTestCase {
             instr.op is WasmEndTypeGroup
         }
 
-        XCTAssert(originalEndTypeGroupInstructions.count == 1)
-        XCTAssert(originalEndTypeGroupInstructions[0].numInputs == 1)
+        XCTAssertEqual(originalEndTypeGroupInstructions.count, 1)
+        XCTAssertEqual(originalEndTypeGroupInstructions[0].numInputs, 1)
 
         let spliceMutator = SpliceMutator()
 
         let candidates = prog.code.filter { instr in spliceMutator.canMutate(instr) == true }
-        XCTAssert(candidates.count == 1)
+        XCTAssertEqual(candidates.count, 1)
 
         let mutatedProg = spliceMutator.mutate(prog, using: b, for: fuzzer)!
 
@@ -56,8 +56,8 @@ class MutatorTests: XCTestCase {
             instr.op is WasmEndTypeGroup
         }
 
-        XCTAssert(newEndTypeGroupInstructions.count == 1)
-        XCTAssert(newEndTypeGroupInstructions[0].numInputs > 1)
+        XCTAssertEqual(newEndTypeGroupInstructions.count, 1)
+        XCTAssertGreaterThan(newEndTypeGroupInstructions[0].numInputs, 1)
     }
 
     func testCodeGenMutatorWasmTypeGroups() {
@@ -80,13 +80,13 @@ class MutatorTests: XCTestCase {
             instr.op is WasmEndTypeGroup
         }
 
-        XCTAssert(originalEndTypeGroupInstructions.count == 1)
-        XCTAssert(originalEndTypeGroupInstructions[0].numInputs == 1)
+        XCTAssertEqual(originalEndTypeGroupInstructions.count, 1)
+        XCTAssertEqual(originalEndTypeGroupInstructions[0].numInputs, 1)
 
         let codeGenMutator = CodeGenMutator()
 
         let candidates = prog.code.filter { instr in codeGenMutator.canMutate(instr) == true }
-        XCTAssert(candidates.count == 1)
+        XCTAssertEqual(candidates.count, 1)
 
         let mutatedProg = codeGenMutator.mutate(prog, using: b, for: fuzzer)!
 
@@ -94,7 +94,7 @@ class MutatorTests: XCTestCase {
             instr.op is WasmEndTypeGroup
         }
 
-        XCTAssert(newEndTypeGroupInstructions.count == 1)
-        XCTAssert(newEndTypeGroupInstructions[0].numInputs > 1)
+        XCTAssertEqual(newEndTypeGroupInstructions.count, 1)
+        XCTAssertGreaterThan(newEndTypeGroupInstructions[0].numInputs, 1)
     }
 }

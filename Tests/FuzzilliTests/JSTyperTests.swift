@@ -1263,17 +1263,17 @@ class JSTyperTests: XCTestCase {
             XCTAssertFalse(b.type(of: structType).Is(b.type(of: structType2)))
             XCTAssertFalse(b.type(of: structType2).Is(b.type(of: structType)))
             let desc = b.type(of: structType).wasmTypeDefinition!.description! as! WasmStructTypeDescription
-            XCTAssert(desc.fields.count == 2)
-            XCTAssert(desc.fields[0].type == .wasmi32)
-            XCTAssert(desc.fields[1].type == .wasmi64)
+            XCTAssertEqual(desc.fields.count, 2)
+            XCTAssertEqual(desc.fields[0].type, .wasmi32)
+            XCTAssertEqual(desc.fields[1].type, .wasmi64)
             return [structType, structType2]
         }[0]
 
         XCTAssert(b.type(of: structType).Is(.wasmTypeDef()))
         let desc = b.type(of: structType).wasmTypeDefinition!.description! as! WasmStructTypeDescription
-        XCTAssert(desc.fields.count == 2)
-        XCTAssert(desc.fields[0].type == .wasmi32)
-        XCTAssert(desc.fields[1].type == .wasmi64)
+        XCTAssertEqual(desc.fields.count, 2)
+        XCTAssertEqual(desc.fields[0].type, .wasmi32)
+        XCTAssertEqual(desc.fields[1].type, .wasmi64)
     }
 
     func testTypingOfDeletedMethods() {

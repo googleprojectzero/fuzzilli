@@ -20,20 +20,27 @@ class VariableMapTests: XCTestCase {
         var m = VariableMap<Int>()
         XCTAssert(m.isEmpty)
 
-        XCTAssert(!m.contains(v(0)) && m[v(0)] == nil)
+        XCTAssertFalse(m.contains(v(0)))
+        XCTAssertNil(m[v(0)])
 
         m[v(42)] = 42
-        XCTAssert(m.contains(v(42)) && m[v(42)] == 42)
+        XCTAssert(m.contains(v(42)))
+        XCTAssertEqual(m[v(42)], 42)
 
         m[v(0)] = 0
-        XCTAssert(m.contains(v(0)) && m[v(0)] == 0)
-        XCTAssert(!m.contains(v(1)) && m[v(1)] == nil)
+        XCTAssert(m.contains(v(0)))
+        XCTAssertEqual(m[v(0)], 0)
+        XCTAssertFalse(m.contains(v(1)))
+        XCTAssertNil(m[v(1)])
         m[v(1)] = 1
-        XCTAssert(m.contains(v(1)) && m[v(1)] == 1)
+        XCTAssert(m.contains(v(1)))
+        XCTAssertEqual(m[v(1)], 1)
 
         m.removeValue(forKey: v(1))
-        XCTAssert(!m.contains(v(1)) && m[v(1)] == nil)
-        XCTAssert(m.contains(v(0)) && m[v(0)] == 0)
+        XCTAssertFalse(m.contains(v(1)))
+        XCTAssertNil(m[v(1)])
+        XCTAssert(m.contains(v(0)))
+        XCTAssertEqual(m[v(0)], 0)
 
         m.removeAll()
         XCTAssertEqual(m, VariableMap<Int>())
