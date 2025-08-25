@@ -188,10 +188,10 @@ class WasmFoundationTests: XCTestCase {
 
         // This test tests whether re-exported imports and module defined globals are re-ordered from the typer.
         let wasmGlobali32: Variable = b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
-        XCTAssertEqual(b.type(of: wasmGlobali32), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)))
+        XCTAssertEqual(b.type(of: wasmGlobali32), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)))
 
         let wasmGlobalf32: Variable = b.createWasmGlobal(value: .wasmf32(42.0), isMutable: false)
-        XCTAssertEqual(b.type(of: wasmGlobalf32), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmf32, isMutable: false)))
+        XCTAssertEqual(b.type(of: wasmGlobalf32), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmf32, isMutable: false)))
 
         let module = b.buildWasmModule { wasmModule in
             // Imports are always before internal globals, this breaks the logic if we add a global and then import a global.
@@ -429,7 +429,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let wasmGlobali64: Variable = b.createWasmGlobal(value: .wasmi64(1337), isMutable: true)
-        XCTAssertEqual(b.type(of: wasmGlobali64), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmi64, isMutable: true)))
+        XCTAssertEqual(b.type(of: wasmGlobali64), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmi64, isMutable: true)))
 
         let module = b.buildWasmModule { wasmModule in
             let global = wasmModule.addGlobal(wasmGlobal: .wasmi64(1339), isMutable: true)
@@ -499,7 +499,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             // Note that globals of exnref can only be defined in wasm, not in JS.
             let global = wasmModule.addGlobal(wasmGlobal: .exnref, isMutable: true)
-            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmExnRef, isMutable: true)))
+            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmExnRef, isMutable: true)))
 
             wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
                 let value = function.wasmLoadGlobal(globalVariable: global)
@@ -586,7 +586,7 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             let global = wasmModule.addGlobal(wasmGlobal: .externref, isMutable: true)
-            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
+            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
 
             wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, label, args in
                 [function.wasmLoadGlobal(globalVariable: global)]
@@ -626,7 +626,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let global: Variable = b.createWasmGlobal(value: .externref, isMutable: true)
-        XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
+        XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         // The initial value is "undefined" (because we didn't provide an explicit initialization).
@@ -651,7 +651,7 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             let global = wasmModule.addGlobal(wasmGlobal: .i31ref, isMutable: true)
-            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmI31Ref, isMutable: true)))
+            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmI31Ref, isMutable: true)))
 
             wasmModule.addWasmFunction(with: [] => [.wasmI31Ref]) { function, label, args in
                 [function.wasmLoadGlobal(globalVariable: global)]
@@ -690,7 +690,7 @@ class WasmFoundationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let global: Variable = b.createWasmGlobal(value: .i31ref, isMutable: true)
-        XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmI31Ref, isMutable: true)))
+        XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmI31Ref, isMutable: true)))
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         // The initial value is "null" (because we didn't provide an explicit initialization).
@@ -6268,7 +6268,7 @@ class WasmJSPITests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let wasmGlobali64: Variable = b.createWasmGlobal(value: .wasmi64(1337), isMutable: true)
-        XCTAssertEqual(b.type(of: wasmGlobali64), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: ILType.wasmi64, isMutable: true)))
+        XCTAssertEqual(b.type(of: wasmGlobali64), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmi64, isMutable: true)))
 
         let module = b.buildWasmModule { wasmModule in
             // Function 0, modifies the imported global.

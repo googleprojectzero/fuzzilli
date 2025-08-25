@@ -364,6 +364,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWebAssemblyInstanceConstructor)
         registerObjectGroup(.jsWebAssemblyInstance)
         registerObjectGroup(.jsWebAssemblyModule)
+        registerObjectGroup(.jsWebAssemblyMemoryPrototype)
+        registerObjectGroup(.jsWebAssemblyMemoryConstructor)
         registerObjectGroup(.jsWebAssembly)
         registerObjectGroup(.jsWasmGlobal)
         registerObjectGroup(.jsWasmMemory)
@@ -989,6 +991,11 @@ public extension ILType {
     static let jsWebAssemblyInstanceConstructor =
         ILType.constructor([.plain(.jsWebAssemblyModule), .plain(.object())] => .jsWebAssemblyInstance)
         + .object(ofGroup: "WebAssemblyInstanceConstructor", withProperties: ["prototype"], withMethods: [])
+
+    // Similarly to Wasm globals, we do not type the results as being part of an object group as the
+    // result type doesn't have a valid WasmTypeExtension.
+    static let jsWebAssemblyMemoryConstructor = ILType.constructor([.plain(.object(withProperties: ["initial"]))] => .object(withProperties: ["buffer"], withMethods: ["grow", "toResizableBuffer", "toFixedLengthBuffer"]))
+        + .object(ofGroup: "WebAssemblyMemoryConstructor", withProperties: ["prototype"])
 
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
@@ -1842,6 +1849,17 @@ public extension ObjectGroup {
         methods: [:]
     )
 
+    static let jsWebAssemblyMemoryPrototype = createPrototypeObjectGroup(jsWasmMemory)
+
+    static let jsWebAssemblyMemoryConstructor = ObjectGroup(
+        name: "WebAssemblyMemoryConstructor",
+        instanceType: .jsWebAssemblyMemoryConstructor,
+        properties: [
+            "prototype": jsWebAssemblyMemoryPrototype.instanceType,
+        ],
+        methods: [:]
+    )
+
     static let jsWebAssembly = ObjectGroup(
         name: "WebAssembly",
         instanceType: nil,
@@ -1851,6 +1869,7 @@ public extension ObjectGroup {
             "Module": .jsWebAssemblyModuleConstructor,
             "Global": .jsWebAssemblyGlobalConstructor,
             "Instance": .jsWebAssemblyInstanceConstructor,
+            "Memory": .jsWebAssemblyMemoryConstructor,
         ],
         overloads: [
             "compile": wasmBufferTypes.map {
@@ -2038,7 +2057,8 @@ public extension ObjectGroup {
             "second": .number,
             "millisecond": .number,
             "microsecond": .number,
-            "nanosecond": .number,        ],
+            "nanosecond": .number,
+        ],
         methods: [
             "add": [jsTemporalDurationLike] => .jsTemporalPlainTime,
             "subtract": [jsTemporalDurationLike] => .jsTemporalPlainTime,
