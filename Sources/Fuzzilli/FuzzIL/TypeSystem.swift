@@ -203,7 +203,7 @@ public struct ILType: Hashable {
 
     public static func wasmMemory(limits: Limits, isShared: Bool = false, isMemory64: Bool = false) -> ILType {
         let wasmMemExt = WasmMemoryType(limits: limits, isShared: isShared, isMemory64: isMemory64)
-        return .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow", "toResizableBuffer", "ToFixedLengthBuffer"], withWasmType: wasmMemExt)
+        return .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow", "toResizableBuffer", "toFixedLengthBuffer"], withWasmType: wasmMemExt)
     }
 
     public static func wasmTable(wasmTableType: WasmTableType) -> ILType {
