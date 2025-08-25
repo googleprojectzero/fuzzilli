@@ -54,7 +54,7 @@ public struct Fuzzilli_Protobuf_LogMessage: Sendable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_FuzzerState: @unchecked Sendable {
+public struct Fuzzilli_Protobuf_FuzzerState: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -190,12 +190,7 @@ fileprivate let _protobuf_package = "fuzzilli.protobuf"
 
 extension Fuzzilli_Protobuf_LogMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LogMessage"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "origin"),
-    2: .same(proto: "level"),
-    3: .same(proto: "label"),
-    4: .same(proto: "content"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}origin\0\u{1}level\0\u{1}label\0\u{1}content\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -240,11 +235,7 @@ extension Fuzzilli_Protobuf_LogMessage: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FuzzerState"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "corpus"),
-    2: .same(proto: "evaluatorState"),
-    3: .same(proto: "isWasmEnabled"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}corpus\0\u{1}evaluatorState\0\u{1}isWasmEnabled\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -284,25 +275,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Statistics"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "totalSamples"),
-    2: .same(proto: "validSamples"),
-    3: .same(proto: "interestingSamples"),
-    4: .same(proto: "timedOutSamples"),
-    5: .same(proto: "crashingSamples"),
-    6: .same(proto: "totalExecs"),
-    7: .same(proto: "avgCorpusSize"),
-    8: .same(proto: "avgProgramSize"),
-    9: .same(proto: "avgCorpusProgramSize"),
-    10: .same(proto: "avgExecutionTime"),
-    11: .same(proto: "execsPerSecond"),
-    12: .same(proto: "fuzzerOverhead"),
-    13: .same(proto: "minimizationOverhead"),
-    14: .same(proto: "numChildNodes"),
-    15: .same(proto: "coverage"),
-    16: .same(proto: "correctnessRate"),
-    17: .same(proto: "timeoutRate"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}totalSamples\0\u{1}validSamples\0\u{1}interestingSamples\0\u{1}timedOutSamples\0\u{1}crashingSamples\0\u{1}totalExecs\0\u{1}avgCorpusSize\0\u{1}avgProgramSize\0\u{1}avgCorpusProgramSize\0\u{1}avgExecutionTime\0\u{1}execsPerSecond\0\u{1}fuzzerOverhead\0\u{1}minimizationOverhead\0\u{1}numChildNodes\0\u{1}coverage\0\u{1}correctnessRate\0\u{1}timeoutRate\0")
 
   fileprivate class _StorageClass {
     var _totalSamples: UInt64 = 0
