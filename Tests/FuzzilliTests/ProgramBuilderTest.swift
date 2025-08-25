@@ -2521,10 +2521,12 @@ class ProgramBuilderTests: XCTestCase {
 
         // Check that the intermediate variables were generated as part of the recursion.
         let d8 = b.randomVariable(ofType: jsD8)
-        XCTAssert(d8 != nil && b.type(of: d8!).Is(jsD8))
+        XCTAssertNotNil(d8)
+        XCTAssert(b.type(of: d8!).Is(jsD8))
 
         let d8Test = b.randomVariable(ofType: jsD8Test)
-        XCTAssert(d8Test != nil && b.type(of: d8Test!).Is(jsD8Test))
+        XCTAssertNotNil(d8Test)
+        XCTAssert(b.type(of: d8Test!).Is(jsD8Test))
     }
 
     func testFindOrGenerateTypeWithGlobalConstructor() {
@@ -2611,10 +2613,10 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert(b.type(of: var3).Is(type3))
         // Get a random variable and then change the type
         let var1 = b.randomVariable(ofTypeOrSubtype: type1)
-        XCTAssert(var1 != nil)
-        XCTAssert(var1 == var3)
+        XCTAssertNotNil(var1)
+        XCTAssertEqual(var1, var3)
         let var4 = b.randomVariable(ofTypeOrSubtype: type4)
-        XCTAssert(var4 == nil)
+        XCTAssertNil(var4)
     }
 
     func testFindOrGenerateTypeWithSubtype() {
@@ -2721,7 +2723,7 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         b.buildPrefix()
 
-        XCTAssert(b.randomVariable(ofTypeOrSubtype: type1) == nil)
+        XCTAssertNil(b.randomVariable(ofTypeOrSubtype: type1))
         let obj = b.findOrGenerateType(type1)
         XCTAssert(b.type(of: obj).Is(type1))
     }

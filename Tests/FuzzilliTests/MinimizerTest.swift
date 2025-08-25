@@ -30,7 +30,7 @@ class MinimizerTests: XCTestCase {
             let limit = 0.1
 
             let result = minimize(preMinimization, with: fuzzer, limit: limit)
-            XCTAssert(result.size >= Int(Double(preMinimization.size) * limit))
+            XCTAssertGreaterThanOrEqual(result.size, Int(Double(preMinimization.size) * limit))
         }
     }
 
