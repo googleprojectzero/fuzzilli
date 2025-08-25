@@ -2356,27 +2356,16 @@ public struct Compiler_Protobuf_Expression: @unchecked Sendable {
 fileprivate let _protobuf_package = "compiler.protobuf"
 
 extension Compiler_Protobuf_VariableDeclarationKind: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    0: .same(proto: "VAR"),
-    1: .same(proto: "LET"),
-    2: .same(proto: "CONST"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0VAR\0\u{1}LET\0\u{1}CONST\0")
 }
 
 extension Compiler_Protobuf_FunctionType: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    0: .same(proto: "PLAIN"),
-    1: .same(proto: "GENERATOR"),
-    2: .same(proto: "ASYNC"),
-    3: .same(proto: "ASYNC_GENERATOR"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PLAIN\0\u{1}GENERATOR\0\u{1}ASYNC\0\u{1}ASYNC_GENERATOR\0")
 }
 
 extension Compiler_Protobuf_AST: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AST"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "statements"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}statements\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2406,9 +2395,7 @@ extension Compiler_Protobuf_AST: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
 
 extension Compiler_Protobuf_Parameter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Parameter"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2457,9 +2444,7 @@ extension Compiler_Protobuf_EmptyStatement: SwiftProtobuf.Message, SwiftProtobuf
 
 extension Compiler_Protobuf_BlockStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BlockStatement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2489,10 +2474,7 @@ extension Compiler_Protobuf_BlockStatement: SwiftProtobuf.Message, SwiftProtobuf
 
 extension Compiler_Protobuf_VariableDeclarator: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".VariableDeclarator"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "value"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}value\0")
 
   fileprivate class _StorageClass {
     var _name: String = String()
@@ -2569,10 +2551,7 @@ extension Compiler_Protobuf_VariableDeclarator: SwiftProtobuf.Message, SwiftProt
 
 extension Compiler_Protobuf_VariableDeclaration: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".VariableDeclaration"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "kind"),
-    2: .same(proto: "declarations"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}declarations\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2607,12 +2586,7 @@ extension Compiler_Protobuf_VariableDeclaration: SwiftProtobuf.Message, SwiftPro
 
 extension Compiler_Protobuf_FunctionDeclaration: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FunctionDeclaration"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "type"),
-    3: .same(proto: "parameters"),
-    4: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}type\0\u{1}parameters\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2657,13 +2631,7 @@ extension Compiler_Protobuf_FunctionDeclaration: SwiftProtobuf.Message, SwiftPro
 
 extension Compiler_Protobuf_ClassProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassProperty"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "index"),
-    3: .same(proto: "expression"),
-    4: .same(proto: "isStatic"),
-    5: .same(proto: "value"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}index\0\u{1}expression\0\u{1}isStatic\0\u{1}value\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2747,10 +2715,7 @@ extension Compiler_Protobuf_ClassProperty: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Compiler_Protobuf_ClassConstructor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassConstructor"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "parameters"),
-    2: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}parameters\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2785,12 +2750,7 @@ extension Compiler_Protobuf_ClassConstructor: SwiftProtobuf.Message, SwiftProtob
 
 extension Compiler_Protobuf_ClassMethod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassMethod"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "isStatic"),
-    3: .same(proto: "parameters"),
-    4: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}isStatic\0\u{1}parameters\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2835,11 +2795,7 @@ extension Compiler_Protobuf_ClassMethod: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Compiler_Protobuf_ClassGetter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassGetter"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "isStatic"),
-    3: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}isStatic\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2879,12 +2835,7 @@ extension Compiler_Protobuf_ClassGetter: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Compiler_Protobuf_ClassSetter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassSetter"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "isStatic"),
-    3: .same(proto: "parameter"),
-    4: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}isStatic\0\u{1}parameter\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2933,9 +2884,7 @@ extension Compiler_Protobuf_ClassSetter: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Compiler_Protobuf_ClassStaticInitializer: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassStaticInitializer"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2965,14 +2914,7 @@ extension Compiler_Protobuf_ClassStaticInitializer: SwiftProtobuf.Message, Swift
 
 extension Compiler_Protobuf_ClassField: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassField"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "property"),
-    2: .same(proto: "ctor"),
-    3: .same(proto: "method"),
-    4: .same(proto: "getter"),
-    5: .same(proto: "setter"),
-    6: .same(proto: "staticInitializer"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}property\0\u{1}ctor\0\u{1}method\0\u{1}getter\0\u{1}setter\0\u{1}staticInitializer\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3107,11 +3049,7 @@ extension Compiler_Protobuf_ClassField: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Compiler_Protobuf_ClassDeclaration: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassDeclaration"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "superClass"),
-    3: .same(proto: "fields"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}superClass\0\u{1}fields\0")
 
   fileprivate class _StorageClass {
     var _name: String = String()
@@ -3195,11 +3133,7 @@ extension Compiler_Protobuf_ClassDeclaration: SwiftProtobuf.Message, SwiftProtob
 
 extension Compiler_Protobuf_ClassExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "superClass"),
-    3: .same(proto: "fields"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}superClass\0\u{1}fields\0")
 
   fileprivate class _StorageClass {
     var _name: String = String()
@@ -3283,9 +3217,7 @@ extension Compiler_Protobuf_ClassExpression: SwiftProtobuf.Message, SwiftProtobu
 
 extension Compiler_Protobuf_ReturnStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ReturnStatement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "argument"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}argument\0")
 
   fileprivate class _StorageClass {
     var _argument: Compiler_Protobuf_Expression? = nil
@@ -3355,9 +3287,7 @@ extension Compiler_Protobuf_ReturnStatement: SwiftProtobuf.Message, SwiftProtobu
 
 extension Compiler_Protobuf_DirectiveStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DirectiveStatement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "content"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}content\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3387,9 +3317,7 @@ extension Compiler_Protobuf_DirectiveStatement: SwiftProtobuf.Message, SwiftProt
 
 extension Compiler_Protobuf_ExpressionStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ExpressionStatement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "expression"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}expression\0")
 
   fileprivate class _StorageClass {
     var _expression: Compiler_Protobuf_Expression? = nil
@@ -3459,11 +3387,7 @@ extension Compiler_Protobuf_ExpressionStatement: SwiftProtobuf.Message, SwiftPro
 
 extension Compiler_Protobuf_IfStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".IfStatement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "test"),
-    2: .same(proto: "ifBody"),
-    3: .same(proto: "elseBody"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}test\0\u{1}ifBody\0\u{1}elseBody\0")
 
   fileprivate class _StorageClass {
     var _test: Compiler_Protobuf_Expression? = nil
@@ -3547,10 +3471,7 @@ extension Compiler_Protobuf_IfStatement: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Compiler_Protobuf_WhileLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WhileLoop"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "test"),
-    2: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}test\0\u{1}body\0")
 
   fileprivate class _StorageClass {
     var _test: Compiler_Protobuf_Expression? = nil
@@ -3627,10 +3548,7 @@ extension Compiler_Protobuf_WhileLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Compiler_Protobuf_DoWhileLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DoWhileLoop"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "test"),
-    2: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}test\0\u{1}body\0")
 
   fileprivate class _StorageClass {
     var _test: Compiler_Protobuf_Expression? = nil
@@ -3707,13 +3625,7 @@ extension Compiler_Protobuf_DoWhileLoop: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Compiler_Protobuf_ForLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ForLoop"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "declaration"),
-    2: .same(proto: "expression"),
-    3: .same(proto: "condition"),
-    4: .same(proto: "afterthought"),
-    5: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}declaration\0\u{1}expression\0\u{1}condition\0\u{1}afterthought\0\u{1}body\0")
 
   fileprivate class _StorageClass {
     var _initializer: Compiler_Protobuf_ForLoop.OneOf_Initializer?
@@ -3837,11 +3749,7 @@ extension Compiler_Protobuf_ForLoop: SwiftProtobuf.Message, SwiftProtobuf._Messa
 
 extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ForInLoop"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "left"),
-    2: .same(proto: "right"),
-    3: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}left\0\u{1}right\0\u{1}body\0")
 
   fileprivate class _StorageClass {
     var _left: Compiler_Protobuf_VariableDeclarator? = nil
@@ -3925,11 +3833,7 @@ extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ForOfLoop"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "left"),
-    2: .same(proto: "right"),
-    3: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}left\0\u{1}right\0\u{1}body\0")
 
   fileprivate class _StorageClass {
     var _left: Compiler_Protobuf_VariableDeclarator? = nil
@@ -4051,10 +3955,7 @@ extension Compiler_Protobuf_ContinueStatement: SwiftProtobuf.Message, SwiftProto
 
 extension Compiler_Protobuf_CatchClause: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CatchClause"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "parameter"),
-    2: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}parameter\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4093,9 +3994,7 @@ extension Compiler_Protobuf_CatchClause: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Compiler_Protobuf_FinallyClause: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FinallyClause"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    3: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{3}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4125,11 +4024,7 @@ extension Compiler_Protobuf_FinallyClause: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Compiler_Protobuf_TryStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TryStatement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "body"),
-    2: .same(proto: "catch"),
-    3: .same(proto: "finally"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}body\0\u{1}catch\0\u{1}finally\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4173,9 +4068,7 @@ extension Compiler_Protobuf_TryStatement: SwiftProtobuf.Message, SwiftProtobuf._
 
 extension Compiler_Protobuf_ThrowStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ThrowStatement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "argument"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}argument\0")
 
   fileprivate class _StorageClass {
     var _argument: Compiler_Protobuf_Expression? = nil
@@ -4245,10 +4138,7 @@ extension Compiler_Protobuf_ThrowStatement: SwiftProtobuf.Message, SwiftProtobuf
 
 extension Compiler_Protobuf_WithStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WithStatement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "object"),
-    2: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}object\0\u{1}body\0")
 
   fileprivate class _StorageClass {
     var _object: Compiler_Protobuf_Expression? = nil
@@ -4325,10 +4215,7 @@ extension Compiler_Protobuf_WithStatement: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Compiler_Protobuf_SwitchStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SwitchStatement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "discriminant"),
-    2: .same(proto: "cases"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}discriminant\0\u{1}cases\0")
 
   fileprivate class _StorageClass {
     var _discriminant: Compiler_Protobuf_Expression? = nil
@@ -4405,10 +4292,7 @@ extension Compiler_Protobuf_SwitchStatement: SwiftProtobuf.Message, SwiftProtobu
 
 extension Compiler_Protobuf_SwitchCase: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SwitchCase"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "test"),
-    2: .same(proto: "consequent"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}test\0\u{1}consequent\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4447,28 +4331,7 @@ extension Compiler_Protobuf_SwitchCase: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Statement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "emptyStatement"),
-    2: .same(proto: "blockStatement"),
-    3: .same(proto: "variableDeclaration"),
-    4: .same(proto: "functionDeclaration"),
-    5: .same(proto: "classDeclaration"),
-    6: .same(proto: "returnStatement"),
-    7: .same(proto: "directiveStatement"),
-    8: .same(proto: "expressionStatement"),
-    9: .same(proto: "ifStatement"),
-    10: .same(proto: "whileLoop"),
-    11: .same(proto: "doWhileLoop"),
-    12: .same(proto: "forLoop"),
-    13: .same(proto: "forInLoop"),
-    14: .same(proto: "forOfLoop"),
-    15: .same(proto: "breakStatement"),
-    16: .same(proto: "continueStatement"),
-    17: .same(proto: "tryStatement"),
-    18: .same(proto: "throwStatement"),
-    19: .same(proto: "withStatement"),
-    20: .same(proto: "switchStatement"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}emptyStatement\0\u{1}blockStatement\0\u{1}variableDeclaration\0\u{1}functionDeclaration\0\u{1}classDeclaration\0\u{1}returnStatement\0\u{1}directiveStatement\0\u{1}expressionStatement\0\u{1}ifStatement\0\u{1}whileLoop\0\u{1}doWhileLoop\0\u{1}forLoop\0\u{1}forInLoop\0\u{1}forOfLoop\0\u{1}breakStatement\0\u{1}continueStatement\0\u{1}tryStatement\0\u{1}throwStatement\0\u{1}withStatement\0\u{1}switchStatement\0")
 
   fileprivate class _StorageClass {
     var _statement: Compiler_Protobuf_Statement.OneOf_Statement?
@@ -4877,9 +4740,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Compiler_Protobuf_Identifier: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Identifier"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4909,9 +4770,7 @@ extension Compiler_Protobuf_Identifier: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Compiler_Protobuf_NumberLiteral: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NumberLiteral"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "value"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}value\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4941,9 +4800,7 @@ extension Compiler_Protobuf_NumberLiteral: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Compiler_Protobuf_BigIntLiteral: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BigIntLiteral"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "value"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}value\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4973,9 +4830,7 @@ extension Compiler_Protobuf_BigIntLiteral: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Compiler_Protobuf_StringLiteral: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".StringLiteral"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "value"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}value\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5005,10 +4860,7 @@ extension Compiler_Protobuf_StringLiteral: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Compiler_Protobuf_TemplateLiteral: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TemplateLiteral"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "parts"),
-    2: .same(proto: "expressions"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}parts\0\u{1}expressions\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5043,10 +4895,7 @@ extension Compiler_Protobuf_TemplateLiteral: SwiftProtobuf.Message, SwiftProtobu
 
 extension Compiler_Protobuf_RegExpLiteral: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RegExpLiteral"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "pattern"),
-    2: .same(proto: "flags"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}pattern\0\u{1}flags\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5081,9 +4930,7 @@ extension Compiler_Protobuf_RegExpLiteral: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Compiler_Protobuf_BooleanLiteral: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BooleanLiteral"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "value"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}value\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5151,11 +4998,7 @@ extension Compiler_Protobuf_ThisExpression: SwiftProtobuf.Message, SwiftProtobuf
 
 extension Compiler_Protobuf_AssignmentExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AssignmentExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "operator"),
-    2: .same(proto: "lhs"),
-    3: .same(proto: "rhs"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}operator\0\u{1}lhs\0\u{1}rhs\0")
 
   fileprivate class _StorageClass {
     var _operator: String = String()
@@ -5239,12 +5082,7 @@ extension Compiler_Protobuf_AssignmentExpression: SwiftProtobuf.Message, SwiftPr
 
 extension Compiler_Protobuf_ObjectProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ObjectProperty"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "index"),
-    3: .same(proto: "expression"),
-    4: .same(proto: "value"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}index\0\u{1}expression\0\u{1}value\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5323,13 +5161,7 @@ extension Compiler_Protobuf_ObjectProperty: SwiftProtobuf.Message, SwiftProtobuf
 
 extension Compiler_Protobuf_ObjectMethod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ObjectMethod"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "expression"),
-    3: .same(proto: "type"),
-    4: .same(proto: "parameters"),
-    5: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}expression\0\u{1}type\0\u{1}parameters\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5406,11 +5238,7 @@ extension Compiler_Protobuf_ObjectMethod: SwiftProtobuf.Message, SwiftProtobuf._
 
 extension Compiler_Protobuf_ObjectGetter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ObjectGetter"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "expression"),
-    3: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}expression\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5477,12 +5305,7 @@ extension Compiler_Protobuf_ObjectGetter: SwiftProtobuf.Message, SwiftProtobuf._
 
 extension Compiler_Protobuf_ObjectSetter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ObjectSetter"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "expression"),
-    3: .same(proto: "parameter"),
-    4: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}expression\0\u{1}parameter\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5554,12 +5377,7 @@ extension Compiler_Protobuf_ObjectSetter: SwiftProtobuf.Message, SwiftProtobuf._
 
 extension Compiler_Protobuf_ObjectField: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ObjectField"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "property"),
-    2: .same(proto: "method"),
-    3: .same(proto: "getter"),
-    4: .same(proto: "setter"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}property\0\u{1}method\0\u{1}getter\0\u{1}setter\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5660,9 +5478,7 @@ extension Compiler_Protobuf_ObjectField: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Compiler_Protobuf_ObjectExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ObjectExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "fields"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}fields\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5692,9 +5508,7 @@ extension Compiler_Protobuf_ObjectExpression: SwiftProtobuf.Message, SwiftProtob
 
 extension Compiler_Protobuf_ArrayExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ArrayExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "elements"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elements\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5724,12 +5538,7 @@ extension Compiler_Protobuf_ArrayExpression: SwiftProtobuf.Message, SwiftProtobu
 
 extension Compiler_Protobuf_FunctionExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FunctionExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "type"),
-    3: .same(proto: "parameters"),
-    4: .same(proto: "body"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}type\0\u{1}parameters\0\u{1}body\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5774,12 +5583,7 @@ extension Compiler_Protobuf_FunctionExpression: SwiftProtobuf.Message, SwiftProt
 
 extension Compiler_Protobuf_ArrowFunctionExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ArrowFunctionExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "type"),
-    2: .same(proto: "parameters"),
-    3: .same(proto: "block"),
-    4: .same(proto: "expression"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}type\0\u{1}parameters\0\u{1}block\0\u{1}expression\0")
 
   fileprivate class _StorageClass {
     var _type: Compiler_Protobuf_FunctionType = .plain
@@ -5896,11 +5700,7 @@ extension Compiler_Protobuf_ArrowFunctionExpression: SwiftProtobuf.Message, Swif
 
 extension Compiler_Protobuf_CallExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CallExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "callee"),
-    2: .same(proto: "arguments"),
-    3: .same(proto: "isOptional"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}callee\0\u{1}arguments\0\u{1}isOptional\0")
 
   fileprivate class _StorageClass {
     var _callee: Compiler_Protobuf_Expression? = nil
@@ -5984,10 +5784,7 @@ extension Compiler_Protobuf_CallExpression: SwiftProtobuf.Message, SwiftProtobuf
 
 extension Compiler_Protobuf_NewExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NewExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "callee"),
-    2: .same(proto: "arguments"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}callee\0\u{1}arguments\0")
 
   fileprivate class _StorageClass {
     var _callee: Compiler_Protobuf_Expression? = nil
@@ -6064,12 +5861,7 @@ extension Compiler_Protobuf_NewExpression: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Compiler_Protobuf_MemberExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".MemberExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "object"),
-    2: .same(proto: "name"),
-    3: .same(proto: "expression"),
-    4: .same(proto: "isOptional"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}object\0\u{1}name\0\u{1}expression\0\u{1}isOptional\0")
 
   fileprivate class _StorageClass {
     var _object: Compiler_Protobuf_Expression? = nil
@@ -6181,10 +5973,7 @@ extension Compiler_Protobuf_MemberExpression: SwiftProtobuf.Message, SwiftProtob
 
 extension Compiler_Protobuf_UnaryExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UnaryExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "operator"),
-    2: .same(proto: "argument"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}operator\0\u{1}argument\0")
 
   fileprivate class _StorageClass {
     var _operator: String = String()
@@ -6261,11 +6050,7 @@ extension Compiler_Protobuf_UnaryExpression: SwiftProtobuf.Message, SwiftProtobu
 
 extension Compiler_Protobuf_BinaryExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BinaryExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "operator"),
-    2: .same(proto: "lhs"),
-    3: .same(proto: "rhs"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}operator\0\u{1}lhs\0\u{1}rhs\0")
 
   fileprivate class _StorageClass {
     var _operator: String = String()
@@ -6349,11 +6134,7 @@ extension Compiler_Protobuf_BinaryExpression: SwiftProtobuf.Message, SwiftProtob
 
 extension Compiler_Protobuf_UpdateExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "operator"),
-    2: .same(proto: "isPrefix"),
-    3: .same(proto: "argument"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}operator\0\u{1}isPrefix\0\u{1}argument\0")
 
   fileprivate class _StorageClass {
     var _operator: String = String()
@@ -6437,9 +6218,7 @@ extension Compiler_Protobuf_UpdateExpression: SwiftProtobuf.Message, SwiftProtob
 
 extension Compiler_Protobuf_YieldExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".YieldExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "argument"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}argument\0")
 
   fileprivate class _StorageClass {
     var _argument: Compiler_Protobuf_Expression? = nil
@@ -6509,9 +6288,7 @@ extension Compiler_Protobuf_YieldExpression: SwiftProtobuf.Message, SwiftProtobu
 
 extension Compiler_Protobuf_SpreadElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SpreadElement"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "argument"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}argument\0")
 
   fileprivate class _StorageClass {
     var _argument: Compiler_Protobuf_Expression? = nil
@@ -6581,9 +6358,7 @@ extension Compiler_Protobuf_SpreadElement: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Compiler_Protobuf_SequenceExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SequenceExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "expressions"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}expressions\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6613,9 +6388,7 @@ extension Compiler_Protobuf_SequenceExpression: SwiftProtobuf.Message, SwiftProt
 
 extension Compiler_Protobuf_V8IntrinsicIdentifier: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".V8IntrinsicIdentifier"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6645,11 +6418,7 @@ extension Compiler_Protobuf_V8IntrinsicIdentifier: SwiftProtobuf.Message, SwiftP
 
 extension Compiler_Protobuf_TernaryExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TernaryExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "condition"),
-    2: .same(proto: "consequent"),
-    3: .same(proto: "alternate"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}condition\0\u{1}consequent\0\u{1}alternate\0")
 
   fileprivate class _StorageClass {
     var _condition: Compiler_Protobuf_Expression? = nil
@@ -6733,9 +6502,7 @@ extension Compiler_Protobuf_TernaryExpression: SwiftProtobuf.Message, SwiftProto
 
 extension Compiler_Protobuf_AwaitExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AwaitExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "argument"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}argument\0")
 
   fileprivate class _StorageClass {
     var _argument: Compiler_Protobuf_Expression? = nil
@@ -6805,11 +6572,7 @@ extension Compiler_Protobuf_AwaitExpression: SwiftProtobuf.Message, SwiftProtobu
 
 extension Compiler_Protobuf_SuperMemberExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SuperMemberExpression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "expression"),
-    3: .same(proto: "isOptional"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}expression\0\u{1}isOptional\0")
 
   fileprivate class _StorageClass {
     var _property: Compiler_Protobuf_SuperMemberExpression.OneOf_Property?
@@ -6914,10 +6677,7 @@ extension Compiler_Protobuf_SuperMemberExpression: SwiftProtobuf.Message, SwiftP
 
 extension Compiler_Protobuf_CallSuperConstructor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CallSuperConstructor"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "arguments"),
-    2: .same(proto: "isOptional"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}arguments\0\u{1}isOptional\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6952,37 +6712,7 @@ extension Compiler_Protobuf_CallSuperConstructor: SwiftProtobuf.Message, SwiftPr
 
 extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Expression"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "identifier"),
-    2: .same(proto: "numberLiteral"),
-    3: .same(proto: "bigIntLiteral"),
-    4: .same(proto: "stringLiteral"),
-    5: .same(proto: "templateLiteral"),
-    6: .same(proto: "regExpLiteral"),
-    7: .same(proto: "booleanLiteral"),
-    8: .same(proto: "nullLiteral"),
-    9: .same(proto: "thisExpression"),
-    10: .same(proto: "assignmentExpression"),
-    11: .same(proto: "objectExpression"),
-    12: .same(proto: "arrayExpression"),
-    13: .same(proto: "functionExpression"),
-    14: .same(proto: "arrowFunctionExpression"),
-    15: .same(proto: "callExpression"),
-    16: .same(proto: "newExpression"),
-    17: .same(proto: "memberExpression"),
-    18: .same(proto: "unaryExpression"),
-    19: .same(proto: "binaryExpression"),
-    20: .same(proto: "updateExpression"),
-    21: .same(proto: "yieldExpression"),
-    22: .same(proto: "spreadElement"),
-    23: .same(proto: "sequenceExpression"),
-    24: .same(proto: "v8IntrinsicIdentifier"),
-    25: .same(proto: "ternaryExpression"),
-    26: .same(proto: "awaitExpression"),
-    27: .same(proto: "superMemberExpression"),
-    28: .same(proto: "callSuperConstructor"),
-    29: .same(proto: "classExpression"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}identifier\0\u{1}numberLiteral\0\u{1}bigIntLiteral\0\u{1}stringLiteral\0\u{1}templateLiteral\0\u{1}regExpLiteral\0\u{1}booleanLiteral\0\u{1}nullLiteral\0\u{1}thisExpression\0\u{1}assignmentExpression\0\u{1}objectExpression\0\u{1}arrayExpression\0\u{1}functionExpression\0\u{1}arrowFunctionExpression\0\u{1}callExpression\0\u{1}newExpression\0\u{1}memberExpression\0\u{1}unaryExpression\0\u{1}binaryExpression\0\u{1}updateExpression\0\u{1}yieldExpression\0\u{1}spreadElement\0\u{1}sequenceExpression\0\u{1}v8IntrinsicIdentifier\0\u{1}ternaryExpression\0\u{1}awaitExpression\0\u{1}superMemberExpression\0\u{1}callSuperConstructor\0\u{1}classExpression\0")
 
   fileprivate class _StorageClass {
     var _expression: Compiler_Protobuf_Expression.OneOf_Expression?
