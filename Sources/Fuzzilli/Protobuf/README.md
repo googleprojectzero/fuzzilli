@@ -6,7 +6,7 @@ Install the protoc compiler and the swift plugin:
 
 Then generate the swift files:
 
-    protoc --swift_opt=Visibility=Public --swift_out=. program.proto operations.proto sync.proto
+    protoc --swift_opt=Visibility=Public --swift_out=. program.proto operations.proto sync.proto ast.proto
 
 If you have added a new IL operation in Sources/Fuzzilli/FuzzIL/Opcodes.swift,
 you can use the `gen_programproto.py` file to auto-generate the `program.proto`
