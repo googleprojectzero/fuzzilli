@@ -325,6 +325,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         module.addMemory(minPages: minPages, maxPages: maxPages, isShared: isShared, isMemory64: isMemory64)
     },
 
+    CodeGenerator("WasmDefineDataSegmentGenerator", inContext: .wasm) { b in
+        let dataSegment = b.randomBytes()
+        b.currentWasmModule.addDataSegment(segment: dataSegment)
+    },
+
     CodeGenerator("WasmMemoryLoadGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
         if (b.hasZeroPages(memory: memory)) { return }
 
@@ -420,7 +425,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
         let function = b.currentWasmModule.currentWasmFunction
         let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
-        let memSize = Int64(b.type(of: memory).wasmMemoryType!.limits.min * WasmConstants.specWasmMemPageSize)
+        let memSize = Int64(memoryTypeInfo.limits.min * WasmConstants.specWasmMemPageSize)
 
         let offsetValue = b.randomNonNegativeIndex(upTo: memSize)
         let offset = function.memoryArgument(offsetValue, memoryTypeInfo)
@@ -428,6 +433,30 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let nrOfBytesToUpdate = function.memoryArgument(Int64.random(in: 0...(memSize - offsetValue)) + 1, memoryTypeInfo)
 
         function.wasmMemoryFill(memory: memory, offset: offset, byteToSet: byteToSet, nrOfBytesToUpdate: nrOfBytesToUpdate)
+    },
+
+    CodeGenerator("WasmMemoryInitGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"), .wasmDataSegment())) { b, memory, dataSegment in
+        if (b.hasZeroPages(memory: memory) || b.type(of: dataSegment).wasmDataSegmentType!.isDropped) { return }
+
+        let function = b.currentWasmModule.currentWasmFunction
+
+        let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
+        let memSize = Int64(memoryTypeInfo.limits.min * WasmConstants.specWasmMemPageSize)
+        let memoryOffsetValue = b.randomNonNegativeIndex(upTo: memSize)
+        let memoryOffset = function.memoryArgument(memoryOffsetValue, memoryTypeInfo)
+
+        let dataSegmentTypeInfo = b.type(of: dataSegment).wasmDataSegmentType!
+        let dataSegmentOffsetValue = b.randomSize(upTo: Int64(dataSegmentTypeInfo.segmentLength))
+        let dataSegmentOffset = function.consti32(Int32(dataSegmentOffsetValue))
+
+        let maxNrOfBytesToUpdate = min(memSize - memoryOffsetValue, Int64(dataSegmentTypeInfo.segmentLength) - dataSegmentOffsetValue)
+        let nrOfBytesToUpdate = function.consti32(Int32(b.randomSize(upTo: maxNrOfBytesToUpdate)))
+
+        function.wasmMemoryInit(dataSegment: dataSegment, memory: memory, memoryOffset: memoryOffset, dataSegmentOffset: dataSegmentOffset, nrOfBytesToUpdate: nrOfBytesToUpdate)
+    },
+
+    CodeGenerator("WasmDropDataSegmentGenerator", inContext: .wasmFunction, inputs: .required(.wasmDataSegment())) { b, dataSegment in
+        b.currentWasmFunction.wasmDropDataSegment(dataSegment: dataSegment)
     },
 
     // Global Generators

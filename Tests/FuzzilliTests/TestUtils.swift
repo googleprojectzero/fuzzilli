@@ -60,3 +60,29 @@ func GetJavaScriptExecutorOrSkipTest(type: JavaScriptExecutor.ExecutorType, with
     }
     return runner
 }
+
+
+func buildAndLiftProgram(withLiftingOptions: LiftingOptions, buildFunc: (ProgramBuilder) -> ()) -> String {
+    let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+    // We have to use the proper JavaScriptEnvironment here.
+    // This ensures that we use the available builtins.
+    let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+    let b = fuzzer.makeBuilder()
+
+    buildFunc(b)
+
+    // AssertThat prog == Deserialize(Serilize(prog))
+    let prog = b.finalize()
+    let serializedBytes = try! prog.asProtobuf().serializedData()
+    let deserialized = try! Program(from: Fuzzilli_Protobuf_Program(serializedBytes: serializedBytes))
+    XCTAssertEqual(prog, deserialized)
+
+    return fuzzer.lifter.lift(prog, withOptions: withLiftingOptions)
+}
+
+// TODO(pawkra): use it in the whole WasmTests.swift file.
+func buildAndLiftProgram(buildFunc: (ProgramBuilder) -> ()) -> String {
+    return buildAndLiftProgram(withLiftingOptions: [], buildFunc: buildFunc)
+}
+

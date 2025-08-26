@@ -825,6 +825,17 @@ final class WasmDefineMemory: WasmOperation {
     }
 }
 
+final class WasmDefineDataSegment: WasmOperation {
+    override var opcode: Opcode { .wasmDefineDataSegment(self) }
+
+    public let segment: [UInt8]
+
+    init(segment: [UInt8]) {
+        self.segment = segment
+        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasm])
+    }
+}
+
 final class WasmDefineTag: WasmOperation {
     override var opcode: Opcode { .wasmDefineTag(self) }
     public let parameterTypes: [ILType]
@@ -1145,6 +1156,24 @@ class WasmMemoryFill: WasmOperation {
     init() {
         super.init(
             numInputs: 4, numOutputs: 0, requiredContext: [.wasmFunction])
+    }
+}
+
+class WasmMemoryInit: WasmOperation {
+    override var opcode: Opcode { .wasmMemoryInit(self) }
+
+    init() {
+        super.init(
+            numInputs: 5, numOutputs: 0, requiredContext: [.wasmFunction])
+    }
+
+}
+
+final class WasmDropDataSegment: WasmOperation {
+    override var opcode: Opcode { .wasmDropDataSegment(self) }
+
+    init() {
+        super.init(numInputs: 1, requiredContext: [.wasmFunction])
     }
 }
 

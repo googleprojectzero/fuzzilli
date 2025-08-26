@@ -1636,3 +1636,13 @@ message WasmAnyConvertExtern {
 
 message WasmExternConvertAny {
 }
+
+message WasmDefineDataSegment {
+  bytes segment = 1;
+}
+
+message WasmDropDataSegment {
+}
+
+message WasmMemoryInit {
+}

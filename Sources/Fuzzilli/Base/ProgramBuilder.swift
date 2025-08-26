@@ -350,6 +350,15 @@ public class ProgramBuilder {
         })
     }
 
+    public func randomBytes() -> [UInt8] {
+        let size = withProbability(0.9) {
+            Int.random(in: 0...127)
+        } else: {
+            Int.random(in:128...1024)
+        }
+        return (0..<size).map {_ in UInt8.random(in: UInt8.min ... UInt8.max)}
+    }
+
     func randomRegExpPattern(compatibleWithFlags flags: RegExpFlags) -> String {
         // Generate a "base" regexp
         var regex = ""
@@ -3364,6 +3373,16 @@ public class ProgramBuilder {
                 types: [.object(ofGroup: "WasmMemory"), addrType, .wasmi32, addrType])
         }
 
+        public func wasmMemoryInit(dataSegment: Variable, memory: Variable, memoryOffset: Variable, dataSegmentOffset: Variable, nrOfBytesToUpdate: Variable) {
+            let addrType = b.type(of: memory).wasmMemoryType!.addrType
+            b.emit(WasmMemoryInit(), withInputs: [dataSegment, memory, memoryOffset, dataSegmentOffset, nrOfBytesToUpdate],
+                types: [.wasmDataSegment(), .object(ofGroup: "WasmMemory"), addrType, .wasmi32, .wasmi32])
+        }
+
+        public func wasmDropDataSegment(dataSegment: Variable) {
+            b.emit(WasmDropDataSegment(), withInputs: [dataSegment], types: [.wasmDataSegment()])
+        }
+
         public func wasmReassign(variable: Variable, to: Variable) {
             assert(b.type(of: variable) == b.type(of: to))
             b.emit(WasmReassign(variableType: b.type(of: variable)), withInputs: [variable, to])
@@ -3894,6 +3913,11 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func addDataSegment(segment: [UInt8]) -> Variable {
+            return b.emit(WasmDefineDataSegment(segment: segment)).output
+        }
+
+        @discardableResult
         public func addTag(parameterTypes: [ILType]) -> Variable {
             return b.emit(WasmDefineTag(parameterTypes: parameterTypes)).output
         }
@@ -4250,7 +4274,8 @@ public class ProgramBuilder {
             activeWasmModule!.methods.append("w\(activeWasmModule!.methods.count)")
         case .wasmDefineGlobal(_),
              .wasmDefineTable(_),
-             .wasmDefineMemory(_):
+             .wasmDefineMemory(_),
+             .wasmDefineDataSegment(_):
             break
         case .wasmDefineTag(_):
             break

@@ -287,6 +287,8 @@ public class WasmLifter {
     // The order here matches the order of the exports as seen by the ProgramBuilder, this is necessary so that we use the correct indices when emitting instructions.
     private var exports: [Export] = []
 
+    private var dataSegments: [Instruction] = []
+
 //    // The tags associated with this module.
 //    private var tags: VariableMap<[ILType]> = VariableMap()
 
@@ -496,8 +498,12 @@ public class WasmLifter {
         // Build element segments for defined tables.
         try self.buildElementSection()
 
+        try self.buildDataCountSection()
+
         // The actual bytecode of the functions.
         try self.buildCodeSection(self.instructionBuffer)
+
+        try self.buildDataSection()
 
         // Write the bytecode as file to the given path for debugging purposes.
         if let path = path {
@@ -977,6 +983,47 @@ public class WasmLifter {
         }
     }
 
+    private func buildDataSection() throws {
+        self.bytecode += [WasmSection.data.rawValue]
+
+        var temp = Data()
+        temp += Leb128.unsignedEncode(self.dataSegments.count)
+
+        for instruction in self.dataSegments {
+            let segment = (instruction.op as! WasmDefineDataSegment).segment
+            temp += Data([0x01]) // mode = passive
+            temp += Leb128.unsignedEncode(segment.count)
+            temp += Data(segment)
+        }
+
+        self.bytecode.append(Leb128.unsignedEncode(temp.count))
+        self.bytecode.append(temp)
+
+        if verbose {
+            print("data section is")
+            for byte in temp {
+                print(String(format: "%02X ", byte))
+            }
+        }
+    }
+
+    private func buildDataCountSection() throws {
+        self.bytecode += [WasmSection.datacount.rawValue]
+
+        var temp = Data()
+        temp += Leb128.unsignedEncode(self.dataSegments.count)
+
+        self.bytecode.append(Leb128.unsignedEncode(temp.count))
+        self.bytecode.append(temp)
+
+        if verbose {
+            print("data count section is")
+            for byte in temp {
+                print(String(format: "%02X ", byte))
+            }
+        }
+    }
+
     private func buildGlobalSection() throws {
         self.bytecode += [WasmSection.global.rawValue]
 
@@ -1064,7 +1111,6 @@ public class WasmLifter {
                 print(String(format: "%02X ", byte))
             }
         }
-
     }
 
     private func buildTagSection() throws {
@@ -1241,6 +1287,8 @@ public class WasmLifter {
             assert(self.exports.contains(where: {
                 $0.isMemory && $0.getDefInstr()!.output == instr.output
             }))
+        case .wasmDefineDataSegment(_):
+            self.dataSegments.append(instr)
         case .wasmJsCall(_):
             return true
         case .wasmThrow(_):
@@ -1517,6 +1565,11 @@ public class WasmLifter {
 
         throw WasmLifter.CompileError.failedIndexLookUp
     }
+
+    func resolveDataSegmentIdx(for input: Variable) -> Int {
+        dataSegments.firstIndex {$0.output == input}!
+    }
+
     // The memory immediate argument, which encodes the alignment and memory index.
     // For memory 0, this is just the alignment. For other memories, a flag is set
     // and the memory index is also encoded.
@@ -1779,6 +1832,13 @@ public class WasmLifter {
         case .wasmMemoryFill(_):
             let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
             return Data([0xFC, 0x0b]) + Leb128.unsignedEncode(memoryIdx)
+        case .wasmMemoryInit(_):
+            let dataSegmentIdx = resolveDataSegmentIdx(for: wasmInstruction.input(0))
+            let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(1))
+            return Data([0xFC, 0x08]) + Leb128.unsignedEncode(dataSegmentIdx) + Leb128.unsignedEncode(memoryIdx)
+        case .wasmDropDataSegment(_):
+            let dataSegmentIdx = resolveDataSegmentIdx(for: wasmInstruction.input(0))
+            return Data([0xFC, 0x09]) + Leb128.unsignedEncode(dataSegmentIdx)
         case .wasmJsCall(let op):
             // We filter first, such that we get the index of functions only.
             let wasmSignature = op.functionSignature
