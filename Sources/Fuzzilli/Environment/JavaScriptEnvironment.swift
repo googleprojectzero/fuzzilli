@@ -388,6 +388,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsTemporalPlainDateTime)
         registerObjectGroup(.jsTemporalPlainDateTimeConstructor)
         registerObjectGroup(.jsTemporalPlainDateTimePrototype)
+        registerObjectGroup(.jsTemporalZonedDateTime)
+        registerObjectGroup(.jsTemporalZonedDateTimeConstructor)
+        registerObjectGroup(.jsTemporalZonedDateTimePrototype)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -397,6 +400,17 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsTemporalToStringSettings)
         registerOptionsBag(.jsTemporalOverflowSettings)
         registerOptionsBag(.jsTemporalZonedInterpretationSettings)
+
+        registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
+        registerTemporalFieldsObject(.jsTemporalPlainDateLikeObject, forWith: false, dateFields: true, timeFields: false, zonedFields: false)
+        registerTemporalFieldsObject(.jsTemporalPlainDateLikeObjectForWith, forWith: true, dateFields: true, timeFields: false, zonedFields: false)
+        registerTemporalFieldsObject(.jsTemporalPlainDateTimeLikeObject, forWith: false, dateFields: true, timeFields: true, zonedFields: false)
+        registerTemporalFieldsObject(.jsTemporalPlainDateTimeLikeObjectForWith, forWith: true, dateFields: true, timeFields: true, zonedFields: false)
+        registerTemporalFieldsObject(.jsTemporalZonedDateTimeLikeObject, forWith: false, dateFields: true, timeFields: true, zonedFields: true)
+        registerTemporalFieldsObject(.jsTemporalZonedDateTimeLikeObjectForWith, forWith: true, dateFields: true, timeFields: true, zonedFields: true)
+
+        registerObjectGroup(.jsTemporalDurationLikeObject)
+        addProducingGenerator(forType: ObjectGroup.jsTemporalDurationLikeObject.instanceType, with: { b in b.createTemporalDurationFieldsObject() })
 
         // Register builtins that should be available for fuzzing.
         // Here it is easy to selectively disable/enable some APIs for fuzzing by
@@ -593,6 +607,16 @@ public class JavaScriptEnvironment: ComponentBase {
                 }
             }
         }
+    }
+
+    // Temporal has a large number of "fields" object (aka "partial temporal objects" or "temporal-like objects")
+    // which have a number of datetime-like fields. These are never produced as a result from any JS APIs, so we cannot
+    // expect instances of them to already exist in scope. Instead, we generate them ourselves when requested.
+    public func registerTemporalFieldsObject(_ group: ObjectGroup, forWith: Bool, dateFields: Bool, timeFields: Bool, zonedFields: Bool) {
+        registerObjectGroup(group)
+        addProducingGenerator(forType: group.instanceType, with: { b in
+            b.createTemporalFieldsObject(forWith: forWith, dateFields: dateFields, timeFields: timeFields, zonedFields: zonedFields)
+        })
     }
 
     public func registerBuiltin(_ name: String, ofType type: ILType) {
@@ -2115,7 +2139,7 @@ public extension ObjectGroup {
             "toPlainMonthDay": [[] => .jsAnything],
             "add": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
             "subtract": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
-            "with":  [[jsTemporalPlainDateLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
+            "with":  [[.plain(jsTemporalPlainDateLikeObjectForWith.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
             "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalPlainDate],
             "until": [[jsTemporalPlainDateLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
             "since": [[jsTemporalPlainDateLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
@@ -2148,7 +2172,7 @@ public extension ObjectGroup {
         instanceType: .jsTemporalPlainDateTime,
         properties: mergeFields(jsTemporalPlainDate.properties, jsTemporalPlainTime.properties),
         overloads: [
-            "with":  [[jsTemporalPlainDateTimeLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
+            "with":  [[.plain(jsTemporalPlainDateTimeLikeObjectForWith.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
             "withPlainTime": [[.opt(jsTemporalPlainTimeLike)] => .jsTemporalPlainDateTime],
             "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalPlainDateTime],
             "add": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
@@ -2160,6 +2184,7 @@ public extension ObjectGroup {
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
+
             // TODO(manishearth, 439921647) return the right types when we can
             "toZonedDateTime": [[.string, .opt(OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType)] => .jsAnything],
             "toPlainDate": [[] => .jsTemporalPlainDate],
@@ -2194,7 +2219,7 @@ public extension ObjectGroup {
             "offset": .string,
         ]),
         overloads: [
-            "with":  [[jsTemporalZonedDateTimeLike, .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime],
+            "with":  [[.plain(jsTemporalZonedDateTimeLikeObjectForWith.instanceType), .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime],
             "withPlainTime": [[.opt(jsTemporalPlainTimeLike)] => .jsTemporalZonedDateTime],
             "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalZonedDateTime],
             "withTimeZone": [[.string] => .jsTemporalZonedDateTime],
@@ -2233,6 +2258,10 @@ public extension ObjectGroup {
 
     // Temporal helpers
 
+    // Temporal-like objects
+    // These are objects like {years: 1, days: 2} that have similar fields to a Temporal type
+    // and can be used for constructing them.
+
     fileprivate static let jsTemporalDurationLikeObject = ObjectGroup(
         name: "TemporalDurationLikeObject",
         instanceType: nil,
@@ -2259,17 +2288,16 @@ public extension ObjectGroup {
             "nanosecond": .number | .undefined,
     ]
 
-    private static let jsTemporalDateLikeFields : [String: ILType] = [
+    private static let jsTemporalCalendarField : [String: ILType] = [
             "calendar": .jsTemporalCalendarEnum | .undefined,
+    ]
+
+    private static let jsTemporalDateLikeFields : [String: ILType] = [
             "era": .string | .undefined,
             "eraYear": .number | .undefined,
             "month": .number | .undefined,
             "monthCode": .string | .undefined,
             "day": .number | .undefined,
-    ]
-    private static let jsTemporalZoneLikeFields : [String: ILType] = [
-            "timeZone": .string | .undefined,
-            "offset": .string | .undefined,
     ]
 
     private static func mergeFields(_ fields: [String: ILType]...) -> [String: ILType] {
@@ -2289,21 +2317,42 @@ public extension ObjectGroup {
     fileprivate static let jsTemporalPlainDateLikeObject = ObjectGroup(
         name: "TemporalPlainDateLikeObject",
         instanceType: nil,
-        properties: jsTemporalDateLikeFields,
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalCalendarField),
         methods: [:])
 
     fileprivate static let jsTemporalPlainDateTimeLikeObject = ObjectGroup(
         name: "TemporalPlainDateTimeLikeObject",
         instanceType: nil,
-        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields),
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields, jsTemporalCalendarField),
         methods: [:])
 
     fileprivate static let jsTemporalZonedDateTimeLikeObject = ObjectGroup(
         name: "TemporalZonedDateTimeLikeObject",
         instanceType: nil,
-        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields, jsTemporalZoneLikeFields),
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields,
+                                ["timeZone": .string | .undefined, "offset": .string | .undefined],
+                                jsTemporalCalendarField),
         methods: [:])
 
+    // with() takes a reduced set of fields: it cannot have a calendar or timeZone,
+    // and will error if you give it these fields.
+    fileprivate static let jsTemporalPlainDateLikeObjectForWith = ObjectGroup(
+        name: "TemporalPlainDateLikeObjectForWith",
+        instanceType: nil,
+        properties: mergeFields(jsTemporalDateLikeFields),
+        methods: [:])
+
+    fileprivate static let jsTemporalPlainDateTimeLikeObjectForWith = ObjectGroup(
+        name: "TemporalPlainDateTimeLikeObjectForWith",
+        instanceType: nil,
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields),
+        methods: [:])
+
+    fileprivate static let jsTemporalZonedDateTimeLikeObjectForWith = ObjectGroup(
+        name: "TemporalZonedDateTimeLikeObjectForWith",
+        instanceType: nil,
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields, ["offset": .string | .undefined]),
+        methods: [:])
 
     // Temporal-object-like parameters (accepted by ToTemporalFoo)
     // TODO(manishearth, 439921647) type unions just produce .object(),
@@ -2391,26 +2440,4 @@ extension OptionsBag {
             "disambiguation": jsTemporalDisambiguationEnum,
             "offset": jsTemporalOffsetEnum,
         ])
-}
-
-// Some APIs accept ObjectGroups that are not produced by other APIs,
-// so we instead register a generator that allows the fuzzer a greater chance of generating
-// one when needed.
-//
-// These can be registered on the environment with addProducingGenerator()
-
-fileprivate extension ProgramBuilder {
-    @discardableResult
-    func createOptionsBag(_ bag: OptionsBag) -> Variable {
-        // We run .filter() to pick a subset of fields, but we generally want to set as many as possible
-        // and let the mutator prune things
-        let dict: [String : Variable] = bag.properties.filter {_ in probability(0.8)}.mapValues {
-            if $0.isEnumeration {
-                return loadString(chooseUniform(from: $0.enumValues))
-            } else {
-                return findOrGenerateType($0)
-            }
-        }
-        return createObject(with: dict)
-    }
 }

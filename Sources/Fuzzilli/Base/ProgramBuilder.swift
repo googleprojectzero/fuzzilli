@@ -4326,4 +4326,182 @@ public class ProgramBuilder {
             break
         }
     }
+
+    // Some APIs accept ObjectGroups that are not produced by other APIs,
+    // so we instead register a generator that allows the fuzzer a greater chance of generating
+    // one when needed.
+    //
+    // These can be registered on the JavaScriptEnvironment with addProducingGenerator()
+    @discardableResult
+    func createOptionsBag(_ bag: OptionsBag) -> Variable {
+        // We run .filter() to pick a subset of fields, but we generally want to set as many as possible
+        // and let the mutator prune things
+        let dict: [String : Variable] = bag.properties.filter {_ in probability(0.8)}.mapValues {
+            if $0.isEnumeration {
+                return loadString(chooseUniform(from: $0.enumValues))
+            } else {
+                return findOrGenerateType($0)
+            }
+        }
+        return createObject(with: dict)
+    }
+
+    // Generate a Temporal.Duration object
+    @discardableResult
+    func createTemporalDurationFieldsObject() -> Variable {
+        var properties: [String : Variable] = [:]
+        // Durations are simple, they accept an object with optional integer fields for each duration field.
+        for field in ["years", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds", "nanoseconds"] {
+            if Bool.random() {
+                properties[field] = randomVariable(forUseAs: .number)
+            }
+        }
+        return createObject(with: properties)
+    }
+
+    // Generate an object with fields from
+    // https://tc39.es/proposal-temporal/#table-temporal-calendar-fields-record-fields
+    //
+    // with() will error when given a calendar; so we allow control over omitting
+    // a `calendar` field.
+    @discardableResult
+    func createTemporalFieldsObject(forWith: Bool, dateFields: Bool, timeFields: Bool, zonedFields: Bool) -> Variable {
+        var properties: [String : Variable] = [:]
+
+        if dateFields {
+            var chosenCalendar: String? = nil
+
+            // The "calendar" field is forbidden for `with`
+            // and will produce an early error
+            if !forWith && Bool.random() {
+                // TODO(Manishearth) share code with PlainDate once https://chrome-internal-review.googlesource.com/c/v8/fuzzilli/+/8534116/
+                // lands
+                chosenCalendar = chooseUniform(from: [
+                    "buddhist", "chinese", "coptic", "dangi", "ethioaa", "ethiopic",
+                    "ethiopic-amete-alem", "gregory", "hebrew", "indian", "islamic-civil",
+                    "islamic-tbla", "islamic-umalqura", "islamicc", "iso8601", "japanese",
+                    "persian", "roc"])
+                properties["calendar"] = loadString(chosenCalendar!)
+            }
+
+            if probability(0.8) {
+                properties["year"] = randomVariable(forUseAs: .integer)
+            }
+
+            // If the "year" is set, reduce the chance of emitting an "eraYear" which in most cases
+            // would contradict.
+            let eraProbability = properties["year"] == nil ? 0.8 : 0.2;
+            if probability(eraProbability) {
+                properties["eraYear"] = randomVariable(forUseAs: .integer)
+                // https://tc39.es/proposal-intl-era-monthcode/#table-eras
+                let gregoryEras = ["ce", "bce", "ad", "bc"]
+                let japaneseEras = ["reiwa", "heisei", "showa", "taisho", "meiji"]
+                let rocEras = ["roc", "broc", "minguo", "before-roc", "minguo-qian"]
+                // If we know the calendar, we should choose from the list of valid eras.
+                let eras = switch chosenCalendar {
+                    case "buddhist":
+                        ["be"]
+                    case "coptic":
+                        ["am"]
+                    case "ethioaa", "ethiopic":
+                        ["aa", "am", "mundi", "incar"]
+                    case "gregory":
+                        gregoryEras
+                    case "indian":
+                        ["shaka"]
+                    case "islamic-civil", "islamicc", "islamic-umalqura", "islamic-tbla":
+                        ["ah", "bh"]
+                    case "japanese":
+                        gregoryEras + japaneseEras
+                    case "persian":
+                        ["ap"]
+                    case "roc":
+                        rocEras
+                    default:
+                        ["be", "am", "aa", "mundi", "incar", "shaka", "ah", "bh", "ap"] + gregoryEras + japaneseEras + rocEras
+                }
+                properties["era"] = loadString(chooseUniform(from: eras))
+            }
+
+
+            if probability(0.8) {
+                // Sometimes generates out of range values to test "constrain"
+                // behavior.
+                properties["month"] = loadInt(Int64.random(in: 0...14))
+            }
+
+            // We don't wish to have clashing month/monthCode
+            // *most* of the time, but we still wish to also test those codepaths.
+            let monthCodeProbability = properties["month"] == nil ? 0.8 : 0.2;
+            if probability(monthCodeProbability) {
+                // Month codes go from M00 to M13.
+                var code = String(format: "M%02d", Int.random(in: 0...13))
+                if probability(0.3) || code == "M00" {
+                    // leap months have an L
+                    code += "L"
+                }
+                properties["monthCode"] = loadString(code)
+            }
+
+            if probability(0.8) {
+                properties["day"] = loadInt(Int64.random(in: 0...35))
+            }
+        }
+
+        // These are occasionally generated to be out of range to test "constrain"
+        // behavior.
+        if timeFields {
+            if probability(0.8) {
+                properties["hour"] = loadInt(Int64.random(in: 0..<26))
+            }
+            if probability(0.8) {
+                properties["minute"] = loadInt(Int64.random(in: 0..<65))
+            }
+            if probability(0.8) {
+                properties["second"] = loadInt(Int64.random(in: 0..<65))
+            }
+            if probability(0.8) {
+                properties["millisecond"] = loadInt(Int64.random(in: 0..<1010))
+            }
+            if probability(0.8) {
+                properties["microsecond"] = loadInt(Int64.random(in: 0..<1010))
+            }
+            if probability(0.8) {
+                properties["nanosecond"] = loadInt(Int64.random(in: 0..<1010))
+            }
+
+        }
+        // timeZone
+        if zonedFields {
+            // TODO: write generator for timezone strings
+            if (!forWith) {
+                // ZonedDateTime needs a timeZone property
+                properties["timeZone"] = randomVariable(forUseAs: .string)
+            }
+
+            // Most of the time this will cause uninteresting errors
+            // (it needs to match with the offset), so
+            // we generate this with a lower probability
+            if probability(0.3) {
+                let hours = Int.random(in: 0..<24)
+                let minutes = Int.random(in: 0..<60)
+                let plusminus = Bool.random() ? "+" : "-";
+                var offset = String(format: "%s%02d:%02d", plusminus, hours, minutes)
+                if probability(0.3) {
+                    offset += ":"
+                    let seconds = Int.random(in: 0..<60)
+                    offset += "\(seconds)"
+                    if probability(0.3) {
+                        offset += "."
+                        offset += String(format: "%09d", Int.random(in: 0...999999999))
+                    }
+
+                    offset += ""
+                }
+                properties["offset"] = loadString(offset)
+            }
+        }
+        return createObject(with: properties)
+
+    }
 }
