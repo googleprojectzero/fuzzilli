@@ -27,6 +27,8 @@
 ///     }
 ///
 /// This is both efficient, as only an integer value needs to be switched on, and type-safe, as it avoids type casts entirely.
+///
+/// Please append new Opcodes at the end to preserve the existing protobuf encoding.
 enum Opcode {
     case nop(Nop)
     case loadInteger(LoadInteger)
@@ -217,16 +219,12 @@ enum Opcode {
     case wrapSuspending(WrapSuspending)
     case bindMethod(BindMethod)
     case bindFunction(BindFunction)
-
-    // Wasm opcodes
     case consti64(Consti64)
     case consti32(Consti32)
     case constf32(Constf32)
     case constf64(Constf64)
     case wasmReturn(WasmReturn)
     case wasmJsCall(WasmJsCall)
-
-    // Numerical Operations
     case wasmi32CompareOp(Wasmi32CompareOp)
     case wasmi64CompareOp(Wasmi64CompareOp)
     case wasmf32CompareOp(Wasmf32CompareOp)
@@ -241,8 +239,6 @@ enum Opcode {
     case wasmf64BinOp(Wasmf64BinOp)
     case wasmf32UnOp(Wasmf32UnOp)
     case wasmf64UnOp(Wasmf64UnOp)
-
-    // Numerical Conversion / Truncation operations
     case wasmWrapi64Toi32(WasmWrapi64Toi32)
     case wasmTruncatef32Toi32(WasmTruncatef32Toi32)
     case wasmTruncatef64Toi32(WasmTruncatef64Toi32)
@@ -268,7 +264,6 @@ enum Opcode {
     case wasmTruncateSatf64Toi32(WasmTruncateSatf64Toi32)
     case wasmTruncateSatf32Toi64(WasmTruncateSatf32Toi64)
     case wasmTruncateSatf64Toi64(WasmTruncateSatf64Toi64)
-
     case wasmReassign(WasmReassign)
     case wasmDefineGlobal(WasmDefineGlobal)
     case wasmDefineTable(WasmDefineTable)
@@ -320,7 +315,6 @@ enum Opcode {
     case wasmRethrow(WasmRethrow)
     case wasmThrowRef(WasmThrowRef)
     case wasmDefineTag(WasmDefineTag)
-
     case constSimd128(ConstSimd128)
     case wasmSimd128Compare(WasmSimd128Compare)
     case wasmSimd128IntegerUnOp(WasmSimd128IntegerUnOp)
@@ -335,17 +329,14 @@ enum Opcode {
     case wasmSimdStoreLane(WasmSimdStoreLane)
     case wasmSimdLoadLane(WasmSimdLoadLane)
     case wasmSimdLoad(WasmSimdLoad)
-
     case wasmUnreachable(WasmUnreachable)
     case wasmSelect(WasmSelect)
-
     case wasmBeginTypeGroup(WasmBeginTypeGroup)
     case wasmEndTypeGroup(WasmEndTypeGroup)
     case wasmDefineArrayType(WasmDefineArrayType)
     case wasmDefineStructType(WasmDefineStructType)
     case wasmDefineForwardOrSelfReference(WasmDefineForwardOrSelfReference)
     case wasmResolveForwardReference(WasmResolveForwardReference)
-
     case wasmArrayNewFixed(WasmArrayNewFixed)
     case wasmArrayNewDefault(WasmArrayNewDefault)
     case wasmArrayLen(WasmArrayLen)
