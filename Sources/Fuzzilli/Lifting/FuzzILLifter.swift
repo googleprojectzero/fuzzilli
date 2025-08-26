@@ -829,6 +829,9 @@ public class FuzzILLifter: Lifter {
             let sharedStr = mem.isShared ? " shared" : ""
             w.emit("\(output()) <- WasmDefineMemory [\(mem.limits.min),\(maxPagesStr)],\(isMem64Str)\(sharedStr)")
 
+        case .wasmDefineDataSegment(_):
+            w.emit("\(output()) <- WasmDefineDataSegment [...]")
+
         case .wasmDefineTag(let op):
             w.emit("\(output()) <- WasmDefineTag \(op.parameterTypes)")
 
@@ -872,7 +875,13 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- WasmMemoryGrow \(input(0)), \(input(1))")
 
         case .wasmMemoryFill(_):
-            w.emit("WasmMemoryFill \(input(0))")
+            w.emit("WasmMemoryFill \(input(0)), \(input(1)), \(input(2)), \(input(3))")
+
+        case .wasmMemoryInit(_):
+            w.emit("WasmMemoryInit \(input(0)), \(input(1)), \(input(2)), \(input(3)) \(input(4))")
+
+        case .wasmDropDataSegment(_):
+            w.emit("WasmDropDataSegment \(input(0))")
 
         case .wasmStoreGlobal(_):
             w.emit("WasmStoreGlobal \(input(0)) <- \(input(1))")

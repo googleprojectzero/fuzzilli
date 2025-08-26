@@ -351,6 +351,8 @@ public class OperationMutator: BaseInstructionMutator {
             let newMaxPages = probability(0.5) ? nil : Int.random(in: isMemory64 ? newMinPages...WasmConstants.specMaxWasmMem64Pages
                                                                                  : newMinPages...WasmConstants.specMaxWasmMem32Pages)
             newOp = WasmDefineMemory(limits: Limits(min: newMinPages, max: newMaxPages), isMemory64: isMemory64)
+        case.wasmDefineDataSegment(_):
+            newOp = WasmDefineDataSegment(segment: b.randomBytes())
         case .wasmMemoryLoad(let op):
             let newLoadType = chooseUniform(from: WasmMemoryLoadType.allCases.filter({$0.numberType() == op.loadType.numberType()}))
             let newStaticOffset = b.randomInt()
@@ -621,6 +623,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmMemoryFill(_),
              .wasmTableSize(_),
              .wasmTableGrow(_),
+             .wasmMemoryInit(_),
+             .wasmDropDataSegment(_),
              .beginWasmFunction(_),
              .endWasmFunction(_),
              .wasmBeginBlock(_),

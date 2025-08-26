@@ -1178,6 +1178,208 @@ class WasmFoundationTests: XCTestCase {
         try defineMemory(isShared: true, isMemory64: true)
     }
 
+    func simpleDataSegmentInit(isMemory64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            let module = b.buildWasmModule { wasmModule in
+                let memory = wasmModule.addMemory(minPages: 5, maxPages: 12, isMemory64: isMemory64)
+                let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
+                let segment = wasmModule.addDataSegment(segment: [UInt8]("---AAAABBBB".utf8))
+
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in
+                    let i32 = f.consti32
+                    let memIdx: (Int64) -> Variable = { v in f.memoryArgument(v, memoryTypeInfo) }
+                    f.wasmMemoryInit(dataSegment: segment, memory: memory, memoryOffset: memIdx(16), dataSegmentOffset: i32(3), nrOfBytesToUpdate: i32(8))
+                    return [f.wasmMemoryLoad(memory: memory, dynamicOffset: memIdx(16), loadType: .I64LoadMem, staticOffset: 0)]
+
+                }
+            }
+
+            let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res0)])
+        }
+
+        // "AAAABBBB" -> 0x4242424241414141
+        testForOutput(program: jsProg, runner: runner, outputString: "4774451407296217409\n")
+    }
+
+    func testDataSegmentWithMemory32() throws {
+        try simpleDataSegmentInit(isMemory64: false)
+    }
+
+    func testDataSegmentWithMemory64() throws {
+        try simpleDataSegmentInit(isMemory64: true)
+    }
+
+    func testDropDataSegment() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            b.buildWasmModule { wasmModule in
+                let segment = wasmModule.addDataSegment(segment: [0xAA])
+
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
+                    f.wasmDropDataSegment(dataSegment: segment)
+                    return []
+                }
+            }
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "")
+    }
+
+    func testDropDataSegmentTwoTimes() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            b.buildWasmModule { wasmModule in
+                let segment = wasmModule.addDataSegment(segment: [0xAA])
+
+                wasmModule.addWasmFunction(with: [] => []) {
+                    f, _, _ in
+                    f.wasmDropDataSegment(dataSegment: segment)
+                    f.wasmDropDataSegment(dataSegment: segment)
+                    return []
+                }
+            }
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "")
+    }
+
+    func testInitSingleMemoryFromTwoSegments(isMemory64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            let module = b.buildWasmModule { wasmModule in
+                let memory = wasmModule.addMemory(minPages: 1, isMemory64: isMemory64)
+                let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
+                let segment1 = wasmModule.addDataSegment(segment: [UInt8]("AAAA".utf8))
+                let segment2 = wasmModule.addDataSegment(segment: [UInt8]("BBBB".utf8))
+
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in
+                    let i32 = f.consti32
+                    let memIdx: (Int64) -> Variable = { v in f.memoryArgument(v, memoryTypeInfo) }
+                    f.wasmMemoryInit(dataSegment: segment1, memory: memory, memoryOffset: memIdx(0), dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(4))
+                    f.wasmMemoryInit(dataSegment: segment2, memory: memory, memoryOffset: memIdx(4), dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(4))
+                    return [f.wasmMemoryLoad(memory: memory, dynamicOffset: memIdx(0), loadType: .I64LoadMem, staticOffset: 0)]
+                }
+            }
+
+            let res = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res)])
+        }
+
+        // "AAAABBBB" -> 0x4242424241414141
+        testForOutput(program: jsProg, runner: runner, outputString: "4774451407296217409\n")
+    }
+
+    func testInitSingleMemoryFromTwoSegments32() throws {
+        try testInitSingleMemoryFromTwoSegments(isMemory64: false)
+    }
+
+    func testInitSingleMemoryFromTwoSegments64() throws {
+        try testInitSingleMemoryFromTwoSegments(isMemory64: true)
+    }
+
+    func testInitTwoMemoriesFromOneSegment(isMemory64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            let module = b.buildWasmModule { wasmModule in
+                let memory1 = wasmModule.addMemory(minPages: 1, isMemory64: isMemory64)
+                let memoryTypeInfo = b.type(of: memory1).wasmMemoryType!
+                let memory2 = wasmModule.addMemory(minPages: 1, isMemory64: isMemory64)
+                let segment = wasmModule.addDataSegment(segment: [UInt8]("AAAABBBB".utf8))
+
+                wasmModule.addWasmFunction(with: [] => [.wasmi64, .wasmi64]) { f, _, _ in
+                    let i32 = f.consti32
+                    let memIdx: (Int64) -> Variable = { v in f.memoryArgument(v, memoryTypeInfo) }
+                    f.wasmMemoryInit(dataSegment: segment, memory: memory1, memoryOffset: memIdx(0), dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(8))
+                    f.wasmMemoryInit(dataSegment: segment, memory: memory2, memoryOffset: memIdx(0), dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(8))
+                    let val1 = f.wasmMemoryLoad(memory: memory1, dynamicOffset: memIdx(0), loadType: .I64LoadMem, staticOffset: 0)
+                    let val2 = f.wasmMemoryLoad(memory: memory2, dynamicOffset: memIdx(0), loadType: .I64LoadMem, staticOffset: 0)
+                    return [val1, val2]
+                }
+            }
+
+            let res = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res)])
+        }
+
+        // "AAAABBBB" -> 0x4242424241414141
+        testForOutput(program: jsProg, runner: runner, outputString: "4774451407296217409,4774451407296217409\n")
+    }
+
+    func testInitTwoMemoriesFromOneSegment32() throws {
+        try testInitTwoMemoriesFromOneSegment(isMemory64: false)
+    }
+
+    func testInitTwoMemoriesFromOneSegment64() throws {
+        try testInitTwoMemoriesFromOneSegment(isMemory64: true)
+    }
+
+    func testMemoryInitOutOfBoundsMemory(isMemory64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            let module = b.buildWasmModule { wasmModule in
+                let memory = wasmModule.addMemory(minPages: 1, isMemory64: isMemory64)
+                let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
+                let segment = wasmModule.addDataSegment(segment: [0xAA])
+
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
+                    // Memory size is one page (65536 bytes), so this should be out of bounds.
+                    let i32 = f.consti32
+                    let memIdx: (Int64) -> Variable = { v in f.memoryArgument(v, memoryTypeInfo) }
+                    f.wasmMemoryInit(dataSegment: segment, memory: memory, memoryOffset: memIdx(65536), dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(1))
+                    return []
+                }
+            }
+            b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+        }
+
+        testForErrorOutput(program: jsProg, runner: runner, errorMessageContains: "RuntimeError: memory access out of bounds")
+    }
+
+    func testMemoryInitOutOfBoundsMemory32() throws {
+        try testMemoryInitOutOfBoundsMemory(isMemory64: false)
+    }
+
+    func testMemoryInitOutOfBoundsMemory64() throws {
+        try testMemoryInitOutOfBoundsMemory(isMemory64: true)
+    }
+
+    func testMemoryInitOutOfBoundsSegment(isMemory64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            let module = b.buildWasmModule { wasmModule in
+                let memory = wasmModule.addMemory(minPages: 1, isMemory64: isMemory64)
+                let memoryTypeInfo = b.type(of: memory).wasmMemoryType!
+                let segment = wasmModule.addDataSegment(segment: [0xAA])
+
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
+                    // Data segment size is 1, so this should be out of bounds.
+                    let i32 = f.consti32
+                    let memIdx: (Int64) -> Variable = { v in f.memoryArgument(v, memoryTypeInfo) }
+                    f.wasmMemoryInit(dataSegment: segment, memory: memory, memoryOffset: memIdx(0), dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(2))
+                    return []
+                }
+            }
+            b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+        }
+
+        testForErrorOutput(program: jsProg, runner: runner, errorMessageContains: "RuntimeError: memory access out of bounds")
+    }
+
+    func testMemoryInitOutOfBoundsSegment32() throws {
+        try testMemoryInitOutOfBoundsSegment(isMemory64: false)
+    }
+
+    func testMemoryInitOutOfBoundsSegment64() throws {
+        try testMemoryInitOutOfBoundsSegment(isMemory64: true)
+    }
+
     func testMemory64Index() throws{
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

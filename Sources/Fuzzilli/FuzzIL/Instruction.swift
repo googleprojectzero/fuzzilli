@@ -1239,6 +1239,11 @@ extension Instruction: ProtobufConvertible {
                     $0.wasmMemory.isShared = mem.isShared
                     $0.wasmMemory.isMemory64 = mem.isMemory64
                 }
+
+            case .wasmDefineDataSegment(let op):
+                $0.wasmDefineDataSegment = Fuzzilli_Protobuf_WasmDefineDataSegment.with {
+                    $0.segment = Data(op.segment)
+                }
             case .wasmLoadGlobal(let op):
                 $0.wasmLoadGlobal = Fuzzilli_Protobuf_WasmLoadGlobal.with {
                     $0.globalType = ILTypeToWasmTypeEnum(op.globalType)
@@ -1325,6 +1330,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmTableGrow = Fuzzilli_Protobuf_WasmTableGrow()
             case .wasmMemoryFill(_):
                 $0.wasmMemoryFill = Fuzzilli_Protobuf_WasmMemoryFill()
+            case .wasmMemoryInit(_):
+                $0.wasmMemoryInit = Fuzzilli_Protobuf_WasmMemoryInit()
+            case .wasmDropDataSegment(_):
+                $0.wasmDropDataSegment = Fuzzilli_Protobuf_WasmDropDataSegment()
             case .beginWasmFunction(let op):
                 $0.beginWasmFunction = Fuzzilli_Protobuf_BeginWasmFunction.with {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
@@ -2311,6 +2320,8 @@ extension Instruction: ProtobufConvertible {
         case .wasmDefineMemory(let p):
             let maxPages = p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil
             op = WasmDefineMemory(limits: Limits(min: Int(p.wasmMemory.minPages), max: maxPages), isShared: p.wasmMemory.isShared, isMemory64: p.wasmMemory.isMemory64)
+        case .wasmDefineDataSegment(let p):
+            op = WasmDefineDataSegment(segment: [UInt8](p.segment))
         case .wasmLoadGlobal(let p):
             op = WasmLoadGlobal(globalType: WasmTypeEnumToILType(p.globalType))
         case .wasmStoreGlobal(let p):
@@ -2353,6 +2364,10 @@ extension Instruction: ProtobufConvertible {
             op = WasmTableGrow()
         case .wasmMemoryFill(_):
             op = WasmMemoryFill()
+        case .wasmMemoryInit(_):
+            op = WasmMemoryInit()
+        case .wasmDropDataSegment(_):
+            op = WasmDropDataSegment()
         case .beginWasmFunction(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)

@@ -676,6 +676,10 @@ public struct JSTyper: Analyzer {
             case .wasmDefineMemory(let op):
                 setType(of: instr.output, to: op.wasmMemory)
                 registerWasmMemoryUse(for: instr.output)
+            case .wasmDefineDataSegment(let op):
+                setType(of: instr.output, to: .wasmDataSegment(segmentLength: op.segment.count))
+            case .wasmDropDataSegment(_):
+                type(of: instr.input(0)).wasmDataSegmentType!.markAsDropped()
             case .wasmDefineTag(let op):
                 setType(of: instr.output, to: .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameterTypes)))
                 dynamicObjectGroupManager.addWasmTag(withType: type(of: instr.output), forDefinition: instr, forVariable: instr.output)

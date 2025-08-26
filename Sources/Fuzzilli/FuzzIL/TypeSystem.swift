@@ -206,6 +206,12 @@ public struct ILType: Hashable {
         return .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow", "toResizableBuffer", "toFixedLengthBuffer"], withWasmType: wasmMemExt)
     }
 
+    public static func  wasmDataSegment(segmentLength: Int? = nil) -> ILType {
+        let maybeWasmExtention = segmentLength.map { WasmDataSegmentType(segmentLength: $0) }
+        let typeExtension = TypeExtension(group: "WasmDataSegment", properties: Set(), methods: Set(), signature: nil, wasmExt: maybeWasmExtention)
+        return ILType(definiteType: .wasmDataSegment, ext: typeExtension)
+    }
+
     public static func wasmTable(wasmTableType: WasmTableType) -> ILType {
         return .object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"], withWasmType: wasmTableType)
     }
@@ -502,6 +508,16 @@ public struct ILType: Hashable {
     public var isWasmMemoryType: Bool {
         return wasmMemoryType != nil && ext?.group == "WasmMemory"
     }
+
+
+    public var wasmDataSegmentType: WasmDataSegmentType? {
+        return ext?.wasmExt as? WasmDataSegmentType
+    }
+
+    public var isWasmDataSegmentType: Bool {
+        return wasmDataSegmentType != nil
+    }
+
 
     public var wasmTableType: WasmTableType? {
         return ext?.wasmExt as? WasmTableType
@@ -1064,6 +1080,8 @@ extension ILType: CustomStringConvertible {
             return ".wasmTypeDef(nil)"
         case .exceptionLabel:
             return ".exceptionLabel"
+        case .wasmDataSegment:
+            return ".wasmDataSegment"
         default:
             break
         }
@@ -1137,6 +1155,8 @@ struct BaseType: OptionSet, Hashable {
     // loading them.)
     static let wasmPackedI8 = BaseType(rawValue: 1 << 22)
     static let wasmPackedI16 = BaseType(rawValue: 1 << 23)
+
+    static let wasmDataSegment = BaseType(rawValue: 1 << 24)
 
     static let jsAnything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .unboundFunction, .bigint, .regexp, .iterable])
 
@@ -1612,6 +1632,30 @@ public class WasmMemoryType: WasmTypeExtension {
         self.isShared = isShared
         self.isMemory64 = isMemory64
         self.addrType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
+    }
+}
+
+public class WasmDataSegmentType: WasmTypeExtension {
+    let segmentLength: Int
+    private(set) var isDropped: Bool
+
+    override func isEqual(to other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmDataSegmentType else { return false }
+        return self.segmentLength == other.segmentLength && self.isDropped == other.isDropped
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine(segmentLength)
+        hasher.combine(isDropped)
+    }
+
+    init(segmentLength: Int) {
+        self.segmentLength = segmentLength
+        self.isDropped = false
+    }
+
+    public func markAsDropped() {
+        self.isDropped = true
     }
 }
 
