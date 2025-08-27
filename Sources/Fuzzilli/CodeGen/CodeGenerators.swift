@@ -1014,14 +1014,14 @@ public let CodeGenerators: [CodeGenerator] = [
             b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomJsVariable()))
         }, {
             guard let getterFunc = b.randomVariable(ofType: .function()) else { return }
-            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .getter(getterFunc))
+            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.randomWithoutWritable(), as: .getter(getterFunc))
         }, {
             guard let setterFunc = b.randomVariable(ofType: .function()) else { return }
-            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .setter(setterFunc))
+            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.randomWithoutWritable(), as: .setter(setterFunc))
         }, {
             guard let getterFunc = b.randomVariable(ofType: .function()) else { return }
             guard let setterFunc = b.randomVariable(ofType: .function()) else { return }
-            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .getterSetter(getterFunc, setterFunc))
+            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.randomWithoutWritable(), as: .getterSetter(getterFunc, setterFunc))
         })
     },
 
@@ -1056,14 +1056,14 @@ public let CodeGenerators: [CodeGenerator] = [
             b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomJsVariable()))
         }, {
             guard let getterFunc = b.randomVariable(ofType: .function()) else { return }
-            b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .getter(getterFunc))
+            b.configureElement(index, of: obj, usingFlags: PropertyFlags.randomWithoutWritable(), as: .getter(getterFunc))
         }, {
             guard let setterFunc = b.randomVariable(ofType: .function()) else { return }
-            b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .setter(setterFunc))
+            b.configureElement(index, of: obj, usingFlags: PropertyFlags.randomWithoutWritable(), as: .setter(setterFunc))
         }, {
             guard let getterFunc = b.randomVariable(ofType: .function()) else { return }
             guard let setterFunc = b.randomVariable(ofType: .function()) else { return }
-            b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .getterSetter(getterFunc, setterFunc))
+            b.configureElement(index, of: obj, usingFlags: PropertyFlags.randomWithoutWritable(), as: .getterSetter(getterFunc, setterFunc))
         })
     },
 
@@ -1098,14 +1098,14 @@ public let CodeGenerators: [CodeGenerator] = [
             b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomJsVariable()))
         }, {
             guard let getterFunc = b.randomVariable(ofType: .function()) else { return }
-            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .getter(getterFunc))
+            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.randomWithoutWritable(), as: .getter(getterFunc))
         }, {
             guard let setterFunc = b.randomVariable(ofType: .function()) else { return }
-            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .setter(setterFunc))
+            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.randomWithoutWritable(), as: .setter(setterFunc))
         }, {
             guard let getterFunc = b.randomVariable(ofType: .function()) else { return }
             guard let setterFunc = b.randomVariable(ofType: .function()) else { return }
-            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .getterSetter(getterFunc, setterFunc))
+            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.randomWithoutWritable(), as: .getterSetter(getterFunc, setterFunc))
         })
     },
 
