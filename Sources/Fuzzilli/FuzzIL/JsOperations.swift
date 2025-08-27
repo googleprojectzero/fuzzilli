@@ -1061,6 +1061,10 @@ public struct PropertyFlags: OptionSet {
     public static func random() -> PropertyFlags {
         return PropertyFlags(rawValue: UInt8.random(in: 0..<8))
     }
+
+    public static func randomWithoutWritable() -> PropertyFlags {
+        return PropertyFlags(rawValue: UInt8.random(in: 0..<8) & 0b1111_1110)
+    }
 }
 
 enum PropertyType: CaseIterable {
