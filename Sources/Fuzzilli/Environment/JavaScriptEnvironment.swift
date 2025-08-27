@@ -1717,7 +1717,7 @@ public extension ObjectGroup {
         instanceType: nil,
         properties: [
             // TODO(mliedtke): Add properties like Global, Memory, ...
-            "JSTag": .object(ofGroup: "WasmTag"),
+            "JSTag": .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef], isJSTag: true)),
             "Module": .jsWebAssemblyModuleConstructor,
         ],
         overloads: [
