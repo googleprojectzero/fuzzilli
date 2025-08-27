@@ -1556,7 +1556,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    RecursiveCodeGenerator("ForOfLoopGenerator", inputs: .preferred(.iterable)) { b, obj in
+    RecursiveCodeGenerator("ForOfLoopGenerator", inputs: .required(.iterable)) { b, obj in
         b.buildForOfLoop(obj) { _ in
             b.buildRecursive()
         }
