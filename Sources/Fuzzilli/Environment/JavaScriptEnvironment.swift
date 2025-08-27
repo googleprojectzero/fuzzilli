@@ -992,7 +992,7 @@ public extension ILType {
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
 
     // Temporal types
-    static let jsTemporalObject = ILType.object(ofGroup: "Temporal", withProperties: ["Instant", "Duration", "PlainTime", "PlainDate", "PlainDateTime"])
+    static let jsTemporalObject = ILType.object(ofGroup: "Temporal", withProperties: ["Instant", "Duration", "PlainTime", "PlainDate", "PlainDateTime", "ZonedDateTime"])
 
     // TODO(mliedtke): Can we stop documenting Object.prototype methods? It doesn't make much sense that half of the ObjectGroups register a toString method,
     // the other half doesn't and not a single one registers e.g. propertyIsEnumerable or isPrototypeOf.`?
@@ -1025,6 +1025,9 @@ public extension ILType {
 
     static let jsTemporalPlainDateTimeConstructor = ILType.functionAndConstructor([.number, .number, .number, .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.jsTemporalCalendarEnum)] => .jsTemporalPlainDateTime) + .object(ofGroup: "TemporalPlainDateTimeConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
 
+    static let jsTemporalZonedDateTime = ILType.object(ofGroup: "Temporal.ZonedDateTime", withProperties: dateProperties + timeProperties + ["timeZoneId", "epochMilliseconds", "epochNanoseconds", "offsetNanoseconds", "offset"], withMethods: ["with", "withPlainTime", "withTimeZone", "withCalendar", "add", "subtract", "until", "since", "round", "equals", "startOfDay", "getTimeZoneTransition", "toInstant", "toPlainDate", "toPlainTime", "toPlainDateTime"] + commonStringifierMethods)
+
+    static let jsTemporalZonedDateTimeConstructor = ILType.functionAndConstructor([.bigint, .string, .opt(.jsTemporalCalendarEnum)] => .jsTemporalZonedDateTime) + .object(ofGroup: "TemporalZonedDateTimeConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
 }
 
 public extension ObjectGroup {
@@ -1927,6 +1930,7 @@ public extension ObjectGroup {
             "PlainTime"  : .jsTemporalPlainTimeConstructor,
             "PlainDate"  : .jsTemporalPlainDateConstructor,
             "PlainDateTime"  : .jsTemporalPlainDateTimeConstructor,
+            "ZonedDateTime"  : .jsTemporalZonedDateTimeConstructor,
         ],
         methods: [:]
     )
@@ -2151,6 +2155,55 @@ public extension ObjectGroup {
     )
 
 
+    static let jsTemporalZonedDateTime = ObjectGroup(
+        name: "Temporal.ZonedDateTime",
+        instanceType: .jsTemporalZonedDateTime,
+        properties: mergeFields(jsTemporalPlainDate.properties, jsTemporalPlainTime.properties, [
+            "timeZoneId": .string,
+            "epochMilliseconds": .integer,
+            "epochNanoseconds": .bigint,
+            "offsetNanoseconds": .integer,
+            "offset": .string,
+        ]),
+        methods: [
+            "with":  [jsTemporalZonedDateTimeLike, .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime,
+            "withPlainTime": [.opt(jsTemporalPlainTimeLike)] => .jsTemporalZonedDateTime,
+            "withCalendar": [.plain(.jsTemporalCalendarEnum)] => .jsTemporalZonedDateTime,
+            "withTimeZone": [.string] => .jsTemporalZonedDateTime,
+            "add": [jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalZonedDateTime,
+            "subtract": [jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalZonedDateTime,
+            "until": [jsTemporalZonedDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
+            "since": [jsTemporalZonedDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
+            "round": [.plain(jsTemporalRoundTo)] => .jsTemporalZonedDateTime,
+            "equals": [jsTemporalZonedDateTimeLike] => .boolean,
+            "toString": [.opt(jsTemporalToStringSettings)] => .string,
+            "toJSON": [] => .string,
+            "toLocaleString": [.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string,
+            "startOfDay": [] => .jsTemporalZonedDateTime,
+            "getTimeZoneTransition": [.plain(jsTemporalDirectionParam)] => .jsTemporalZonedDateTime,
+            "toInstant": [] => .jsTemporalInstant,
+            "toPlainDate": [] => .jsTemporalPlainDate,
+            "toPlainTime": [] => .jsTemporalPlainTime,
+            "toPlainDateTime": [] => .jsTemporalPlainDateTime,
+
+        ]
+    )
+
+    static let jsTemporalZonedDateTimePrototype = createPrototypeObjectGroup(jsTemporalZonedDateTime)
+
+    /// ObjectGroup modelling the JavaScript Temporal.ZonedDateTime constructor
+    static let jsTemporalZonedDateTimeConstructor = ObjectGroup(
+        name: "TemporalZonedDateTimeConstructor",
+        instanceType: .jsTemporalZonedDateTimeConstructor,
+        properties: [
+            "prototype" : jsTemporalZonedDateTimePrototype.instanceType
+        ],
+        methods: [
+            "from": [jsTemporalZonedDateTimeLike, .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime,
+            "compare": [jsTemporalZonedDateTimeLike, jsTemporalZonedDateTimeLike] => .number,
+        ]
+    )
+
     // Temporal helpers
 
     fileprivate static let jsTemporalDurationLikeObject = ObjectGroup(
@@ -2187,6 +2240,10 @@ public extension ObjectGroup {
             "monthCode": .string | .undefined,
             "day": .number | .undefined,
     ]
+    private static let jsTemporalZoneLikeFields : [String: ILType] = [
+            "timeZone": .string | .undefined,
+            "offset": .string | .undefined,
+    ]
 
     private static func mergeFields(_ fields: [String: ILType]...) -> [String: ILType] {
       fields.reduce([:]) {
@@ -2214,20 +2271,28 @@ public extension ObjectGroup {
         properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields),
         methods: [:])
 
+    fileprivate static let jsTemporalZonedDateTimeLikeObject = ObjectGroup(
+        name: "TemporalZonedDateTimeLikeObject",
+        instanceType: nil,
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields, jsTemporalZoneLikeFields),
+        methods: [:])
+
+
     // Temporal-object-like parameters (accepted by ToTemporalFoo)
     // TODO(manishearth, 439921647) type unions just produce .object(),
     // we should ideally do something cleverer here.
 
     // TODO(manishearth, 439921647) support duration strings
     fileprivate static let jsTemporalDurationLike = Parameter.plain(jsTemporalDurationLikeObject.instanceType | .jsTemporalDuration | .string)
-    // TODO(manishearth, 439921647) support ZonedDateTime and instant strings
-    fileprivate static let jsTemporalInstantLike = Parameter.oneof(.jsTemporalInstant, .string)
-    // TODO(manishearth, 439921647) support ZDT and instant strings
-    fileprivate static let jsTemporalPlainTimeLike = jsTemporalPlainTimeLikeObject.instanceType | .jsTemporalPlainTime | .jsTemporalPlainDateTime | .string
-    // TODO(manishearth, 439921647) support ZDT and instant strings
-    fileprivate static let jsTemporalPlainDateLike = Parameter.plain(jsTemporalPlainDateLikeObject.instanceType | .jsTemporalPlainDate | .jsTemporalPlainDateTime | .string)
-    // TODO(manishearth, 439921647) support ZDT and instant strings
-    fileprivate static let  jsTemporalPlainDateTimeLike = Parameter.plain(jsTemporalPlainDateTimeLikeObject.instanceType | .jsTemporalPlainDate | .jsTemporalPlainDateTime | .string)
+    // TODO(manishearth, 439921647) support instant strings
+    fileprivate static let jsTemporalInstantLike = Parameter.plain(.jsTemporalInstant | .jsTemporalZonedDateTime | .string)
+    // TODO(manishearth, 439921647) support instant strings
+    fileprivate static let jsTemporalPlainTimeLike = jsTemporalPlainTimeLikeObject.instanceType | .jsTemporalPlainTime | .jsTemporalPlainDateTime | .jsTemporalZonedDateTime | .string
+    // TODO(manishearth, 439921647) support instant strings
+    fileprivate static let jsTemporalPlainDateLike = Parameter.plain(jsTemporalPlainDateLikeObject.instanceType | .jsTemporalPlainDate | .jsTemporalPlainDateTime | .jsTemporalZonedDateTime | .string)
+    // TODO(manishearth, 439921647) support instant strings
+    fileprivate static let jsTemporalPlainDateTimeLike = Parameter.plain(jsTemporalPlainDateTimeLikeObject.instanceType | .jsTemporalPlainDate | .jsTemporalPlainDateTime | .jsTemporalZonedDateTime | .string)
+    fileprivate static let jsTemporalZonedDateTimeLike = Parameter.plain(jsTemporalZonedDateTimeLikeObject.instanceType  | .string)
 
     // Stringy objects
     // TODO(manishearth, 439921647) support stringy objects
@@ -2240,6 +2305,8 @@ public extension ObjectGroup {
     fileprivate static let jsTemporalRoundTo = OptionsBag.jsTemporalDifferenceSettingOrRoundTo.group.instanceType
     fileprivate static let jsTemporalToStringSettings = OptionsBag.jsTemporalToStringSettings.group.instanceType
     fileprivate static let jsTemporalOverflowSettings = OptionsBag.jsTemporalOverflowSettings.group.instanceType
+    fileprivate static let jsTemporalZonedInterpretationSettings = OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType
+    fileprivate static let jsTemporalDirectionParam = ILType.enumeration(ofName: "directionParam", withValues: ["previous", "next"])
     // TODO(manishearth, 439921647) These are tricky and need other Temporal types
     fileprivate static let jsTemporalDurationRoundTo = Parameter.jsAnything
     fileprivate static let jsTemporalDurationTotalOf = Parameter.jsAnything
