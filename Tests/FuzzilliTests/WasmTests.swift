@@ -1627,6 +1627,53 @@ class WasmFoundationTests: XCTestCase {
         try memoryBulkOperations(isMemory64: true)
     }
 
+    func memoryCopy(isMemory64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            let module = b.buildWasmModule { wasmModule in
+                let mem1 = wasmModule.addMemory(minPages: 1, maxPages: 2, isMemory64: isMemory64)
+                let mem2 = wasmModule.addMemory(minPages: 1, maxPages: 2, isMemory64: isMemory64)
+                let memTypeInfo = b.type(of: mem1).wasmMemoryType!
+
+                wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32, .wasmi32]) { function, _, _ in
+                    let setValueAtOffset = { (value: Int32, offsetValue: Int64) -> () in
+                        let valToSet = function.consti32(value)
+                        let offset = function.memoryArgument(offsetValue, memTypeInfo)
+                        function.wasmMemoryStore(memory: mem1, dynamicOffset: offset, value: valToSet, storeType: .I32StoreMem, staticOffset: 0)
+                    }
+                    setValueAtOffset(111, 4)
+                    setValueAtOffset(222, 8)
+                    setValueAtOffset(333, 12)
+
+                    let dstOffset = function.memoryArgument(128, memTypeInfo)
+                    let srcOffset = function.memoryArgument(8, memTypeInfo)
+                    let size = function.memoryArgument(4, memTypeInfo)
+                    function.wasmMemoryCopy(dstMemory: mem2, srcMemory: mem1, dstOffset: dstOffset, srcOffset: srcOffset, size: size)
+
+                    let loadAtOffset = { (offsetValue: Int64) -> Variable in
+                        let dynamicOffset = function.memoryArgument(offsetValue, memTypeInfo)
+                        return function.wasmMemoryLoad(memory: mem2, dynamicOffset: dynamicOffset, loadType: .I32LoadMem, staticOffset: 0)
+                    }
+                    return [loadAtOffset(124), loadAtOffset(128), loadAtOffset(132)]
+                }
+            }
+
+            let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports())
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.callMethod("toString", on: res0)])
+        }
+
+        testForOutput(program: jsProg, runner: runner, outputString: "0,222,0\n")
+    }
+
+    func testMemoryCopy32() throws {
+        try memoryCopy(isMemory64: false)
+    }
+
+    func testMemoryCopy64() throws {
+        try memoryCopy(isMemory64: true)
+    }
+
     func wasmSimdLoadStore(isMemory64: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

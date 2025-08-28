@@ -1331,6 +1331,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmTableSize = Fuzzilli_Protobuf_WasmTableSize()
             case .wasmTableGrow(_):
                 $0.wasmTableGrow = Fuzzilli_Protobuf_WasmTableGrow()
+            case .wasmMemoryCopy(_):
+                $0.wasmMemoryCopy = Fuzzilli_Protobuf_WasmMemoryCopy()
             case .wasmMemoryFill(_):
                 $0.wasmMemoryFill = Fuzzilli_Protobuf_WasmMemoryFill()
             case .wasmMemoryInit(_):
@@ -2365,6 +2367,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmTableSize()
         case .wasmTableGrow(_):
             op = WasmTableGrow()
+        case .wasmMemoryCopy(_):
+            op = WasmMemoryCopy()
         case .wasmMemoryFill(_):
             op = WasmMemoryFill()
         case .wasmMemoryInit(_):

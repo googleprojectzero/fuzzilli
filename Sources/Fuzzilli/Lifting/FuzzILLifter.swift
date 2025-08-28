@@ -878,8 +878,11 @@ public class FuzzILLifter: Lifter {
         case .wasmMemoryFill(_):
             w.emit("WasmMemoryFill \(input(0)), \(input(1)), \(input(2)), \(input(3))")
 
+        case .wasmMemoryCopy(_):
+            w.emit("WasmMemoryCopy \(input(0)), \(input(1)), \(input(2)), \(input(3)), \(input(4))")
+
         case .wasmMemoryInit(_):
-            w.emit("WasmMemoryInit \(input(0)), \(input(1)), \(input(2)), \(input(3)) \(input(4))")
+            w.emit("WasmMemoryInit \(input(0)), \(input(1)), \(input(2)), \(input(3)), \(input(4))")
 
         case .wasmDropDataSegment(_):
             w.emit("WasmDropDataSegment \(input(0))")

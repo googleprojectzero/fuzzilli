@@ -1159,6 +1159,15 @@ class WasmMemoryFill: WasmOperation {
     }
 }
 
+class WasmMemoryCopy: WasmOperation {
+    override var opcode: Opcode { .wasmMemoryCopy(self) }
+
+    init() {
+        super.init(
+            numInputs: 5, numOutputs: 0, requiredContext: [.wasmFunction])
+    }
+}
+
 class WasmMemoryInit: WasmOperation {
     override var opcode: Opcode { .wasmMemoryInit(self) }
 

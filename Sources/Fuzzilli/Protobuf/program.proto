@@ -347,6 +347,7 @@ message Instruction {
         WasmI31Get wasmI31Get = 321;
         WasmAnyConvertExtern wasmAnyConvertExtern = 322;
         WasmExternConvertAny wasmExternConvertAny = 323;
+        WasmMemoryCopy wasmMemoryCopy = 324;
     }
 }
 
