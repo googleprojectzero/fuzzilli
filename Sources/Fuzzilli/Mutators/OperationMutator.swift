@@ -620,6 +620,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmSignExtend32Intoi64(_),
              .wasmMemorySize(_),
              .wasmMemoryGrow(_),
+             .wasmMemoryCopy(_),
              .wasmMemoryFill(_),
              .wasmTableSize(_),
              .wasmTableGrow(_),

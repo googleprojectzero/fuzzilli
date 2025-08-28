@@ -3367,6 +3367,16 @@ public class ProgramBuilder {
                 types: [.object(ofGroup: "WasmMemory"), addrType]).output
         }
 
+        public func wasmMemoryCopy(dstMemory: Variable, srcMemory: Variable,  dstOffset: Variable, srcOffset: Variable, size: Variable) {
+            let dstMemoryType = b.type(of: dstMemory).wasmMemoryType!
+            let srcMemoryType = b.type(of: srcMemory).wasmMemoryType!
+            assert(dstMemoryType.isMemory64 == srcMemoryType.isMemory64)
+
+            let addrType = dstMemoryType.addrType
+            b.emit(WasmMemoryCopy(), withInputs: [dstMemory, srcMemory, dstOffset, srcOffset, size],
+                types: [.object(ofGroup: "WasmMemory"), .object(ofGroup: "WasmMemory"), addrType, addrType, addrType])
+        }
+
         public func wasmMemoryFill(memory: Variable, offset: Variable, byteToSet: Variable, nrOfBytesToUpdate: Variable) {
             let addrType = b.type(of: memory).wasmMemoryType!.addrType
             b.emit(WasmMemoryFill(), withInputs: [memory, offset, byteToSet, nrOfBytesToUpdate],

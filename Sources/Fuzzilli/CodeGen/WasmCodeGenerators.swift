@@ -420,6 +420,31 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmMemoryGrow(memory: memory, growByPages: growBy)
     },
 
+    CodeGenerator("WasmMemoryCopyGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, srcMemory in
+        let function = b.currentWasmModule.currentWasmFunction
+        let srcMemoryTypeInfo = b.type(of: srcMemory).wasmMemoryType!
+        let dstMemory = b.findVariable {v in
+          let type = b.type(of: v)
+          return type.Is(.object(ofGroup: "WasmMemory"))
+              && type.wasmMemoryType!.isMemory64 == srcMemoryTypeInfo.isMemory64
+        }!
+        let dstMemoryTypeInfo = b.type(of: srcMemory).wasmMemoryType!
+        let memArg = {v in function.memoryArgument(v, dstMemoryTypeInfo)}
+
+        let srcMemSize = srcMemoryTypeInfo.limits.min * WasmConstants.specWasmMemPageSize
+        let dstMemSize = dstMemoryTypeInfo.limits.min * WasmConstants.specWasmMemPageSize
+        let srcOffsetValue = b.randomNonNegativeIndex(upTo: Int64(srcMemSize))
+        let srcOffset = memArg(srcOffsetValue)
+        let dstOffsetValue = b.randomNonNegativeIndex(upTo: Int64(dstMemSize))
+        let dstOffset = memArg(dstOffsetValue)
+
+        let maxCopySize = min(Int64(srcMemSize) - srcOffsetValue, Int64(dstMemSize) - dstOffsetValue)
+        let copySizeValue = b.randomSize(upTo:maxCopySize)
+        let copySize = memArg(copySizeValue)
+
+        function.wasmMemoryCopy(dstMemory: dstMemory, srcMemory: srcMemory, dstOffset: dstOffset, srcOffset: srcOffset, size: copySize)
+    },
+
     CodeGenerator("WasmMemoryFillGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmMemory"))) { b, memory in
         if (b.hasZeroPages(memory: memory)) { return }
 
@@ -446,7 +471,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let memoryOffset = function.memoryArgument(memoryOffsetValue, memoryTypeInfo)
 
         let dataSegmentTypeInfo = b.type(of: dataSegment).wasmDataSegmentType!
-        let dataSegmentOffsetValue = b.randomSize(upTo: Int64(dataSegmentTypeInfo.segmentLength))
+        let dataSegmentOffsetValue = b.randomNonNegativeIndex(upTo: Int64(dataSegmentTypeInfo.segmentLength))
         let dataSegmentOffset = function.consti32(Int32(dataSegmentOffsetValue))
 
         let maxNrOfBytesToUpdate = min(memSize - memoryOffsetValue, Int64(dataSegmentTypeInfo.segmentLength) - dataSegmentOffsetValue)

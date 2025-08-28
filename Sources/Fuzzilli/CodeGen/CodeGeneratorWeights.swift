@@ -228,6 +228,7 @@ public let codeGeneratorWeights = [
     "WasmAtomicCmpxchgGenerator":               10,
     "WasmMemorySizeGenerator":                  5,
     "WasmMemoryGrowGenerator":                  1,
+    "WasmMemoryCopyGenerator":                  5,
     "WasmMemoryFillGenerator":                  5,
     "WasmMemoryInitGenerator":                  5,
     "WasmDefineGlobalGenerator":                2,

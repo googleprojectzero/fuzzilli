@@ -1647,3 +1647,6 @@ message WasmDropDataSegment {
 
 message WasmMemoryInit {
 }
+
+message WasmMemoryCopy {
+}

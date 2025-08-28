@@ -1829,6 +1829,10 @@ public class WasmLifter {
         case .wasmMemoryGrow(_):
             let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
             return Data([0x40]) + Leb128.unsignedEncode(memoryIdx)
+        case .wasmMemoryCopy(_):
+            let dstMemIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
+            let srcMemIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(1))
+            return Data([0xFC, 0x0a]) + Leb128.unsignedEncode(dstMemIdx) + Leb128.unsignedEncode(srcMemIdx)
         case .wasmMemoryFill(_):
             let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
             return Data([0xFC, 0x0b]) + Leb128.unsignedEncode(memoryIdx)

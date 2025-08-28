@@ -1644,6 +1644,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmAtomicCmpxchg(_),
                  .wasmMemorySize(_),
                  .wasmMemoryGrow(_),
+                 .wasmMemoryCopy(_),
                  .wasmMemoryFill(_),
                  .wasmMemoryInit(_),
                  .wasmDropDataSegment(_),
