@@ -952,6 +952,11 @@ public class Fuzzer {
             b.eval(test)
             execution = execute(b.finalize(), purpose: .startup)
 
+            if execution.outcome == .timedOut {
+                logger.fatal("Testcase \"\(test)\" timed out, the configured timeout threshold "
+                + "(\(config.timeout)ms) might be too low")
+            }
+
             switch expectedResult {
             case .shouldSucceed where execution.outcome != .succeeded:
                 logger.fatal("Testcase \"\(test)\" did not execute successfully")
