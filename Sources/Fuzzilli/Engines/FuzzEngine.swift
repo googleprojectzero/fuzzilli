@@ -15,7 +15,7 @@
 import Foundation
 
 public class FuzzEngine: ComponentBase {
-    private var postProcessor: FuzzingPostProcessor? = nil
+    private(set) var postProcessor: FuzzingPostProcessor? = nil
 
     override init(name: String) {
         super.init(name: name)

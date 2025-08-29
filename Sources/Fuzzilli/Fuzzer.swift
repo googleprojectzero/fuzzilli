@@ -178,6 +178,11 @@ public class Fuzzer {
         self.minimizer = minimizer
         self.logger = Logger(withLabel: "Fuzzer")
 
+        // Pass-through any postprocessor to the generative engine.
+        if let postProcessor = engine.postProcessor {
+            corpusGenerationEngine.registerPostProcessor(postProcessor)
+        }
+
         // Register this fuzzer instance with its queue so that it is possible to
         // obtain a reference to the Fuzzer instance when running on its queue.
         // This creates a reference cycle, but Fuzzer instances aren't expected
@@ -804,7 +809,7 @@ public class Fuzzer {
         case .none:
             break
         case .iterationsPerformed(let maxIterations):
-            if iterations > maxIterations {
+            if iterations >= maxIterations {
                 return shutdown(reason: .finished)
             }
         case .timeFuzzed(let maxRuntime):
@@ -959,11 +964,13 @@ public class Fuzzer {
 
             switch expectedResult {
             case .shouldSucceed where execution.outcome != .succeeded:
-                logger.fatal("Testcase \"\(test)\" did not execute successfully")
+                logger.fatal("Testcase \"\(test)\" did not execute successfully" +
+                    "\nstdout:\n\(execution.stdout)\nstderr:\n\(execution.stderr)")
             case .shouldCrash where !execution.outcome.isCrash():
                 logger.fatal("Testcase \"\(test)\" did not crash")
             case .shouldNotCrash where execution.outcome.isCrash():
-                logger.fatal("Testcase \"\(test)\" unexpectedly crashed")
+                logger.fatal("Testcase \"\(test)\" unexpectedly crashed" +
+                    "\nstdout:\n\(execution.stdout)\nstderr:\n\(execution.stderr)")
             default:
                 // Test passed
                 break
