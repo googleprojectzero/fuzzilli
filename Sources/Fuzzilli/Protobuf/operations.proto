@@ -261,6 +261,7 @@ message GetProperty {
 
 message SetProperty {
     string propertyName = 1;
+    bool isGuarded = 2;
 }
 
 message UpdateProperty {

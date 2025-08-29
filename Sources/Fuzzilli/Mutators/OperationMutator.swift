@@ -117,8 +117,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = CreateArrayWithSpread(spreads: spreads)
         case .getProperty(let op):
             newOp = GetProperty(propertyName: b.randomPropertyName(), isGuarded: op.isGuarded)
-        case .setProperty(_):
-            newOp = SetProperty(propertyName: b.randomPropertyName())
+        case .setProperty(let op):
+            newOp = SetProperty(propertyName: b.randomPropertyName(), isGuarded: op.isGuarded)
         case .updateProperty(_):
             newOp = UpdateProperty(propertyName: b.randomPropertyName(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .deleteProperty(let op):

@@ -708,7 +708,10 @@ extension Instruction: ProtobufConvertible {
                     $0.isGuarded = op.isGuarded
                 }
             case .setProperty(let op):
-                $0.setProperty = Fuzzilli_Protobuf_SetProperty.with { $0.propertyName = op.propertyName }
+                $0.setProperty = Fuzzilli_Protobuf_SetProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.isGuarded = op.isGuarded
+                }
             case .updateProperty(let op):
                 $0.updateProperty = Fuzzilli_Protobuf_UpdateProperty.with {
                     $0.propertyName = op.propertyName
@@ -1920,7 +1923,7 @@ extension Instruction: ProtobufConvertible {
         case .getProperty(let p):
             op = GetProperty(propertyName: p.propertyName, isGuarded: p.isGuarded)
         case .setProperty(let p):
-            op = SetProperty(propertyName: p.propertyName)
+            op = SetProperty(propertyName: p.propertyName, isGuarded: p.isGuarded)
         case .updateProperty(let p):
             op = UpdateProperty(propertyName: p.propertyName, operator: try convertEnum(p.op, BinaryOperator.allCases))
         case .deleteProperty(let p):
