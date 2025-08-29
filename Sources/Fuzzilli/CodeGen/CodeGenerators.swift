@@ -1639,7 +1639,8 @@ public let CodeGenerators: [CodeGenerator] = [
         b.hide(Symbol)
         let name = chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols)
         let propertyName = b.getProperty(name, of: Symbol)
-        b.getComputedProperty(propertyName, of: obj)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.getComputedProperty(propertyName, of: obj, guard: needGuard)
     },
 
     CodeGenerator("WellKnownPropertyStoreGenerator", inputs: .preferred(.object())) { b, obj in
@@ -1652,7 +1653,8 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("PrototypeAccessGenerator", inputs: .preferred(.object())) { b, obj in
-        b.getProperty("__proto__", of: obj)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.getProperty("__proto__", of: obj, guard: needGuard)
     },
 
     CodeGenerator("PrototypeOverwriteGenerator", inputs: .preferred(.object(), .object())) { b, obj, proto in
