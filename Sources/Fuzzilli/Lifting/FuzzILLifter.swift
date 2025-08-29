@@ -328,7 +328,8 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- \(opcode) \(input(0)), '\(op.propertyName)'")
 
         case .setProperty(let op):
-            w.emit("SetProperty \(input(0)), '\(op.propertyName)', \(input(1))")
+            let opcode = op.isGuarded ? "SetProperty (guarded)" : "SetProperty"
+            w.emit("\(opcode) \(input(0)), '\(op.propertyName)', \(input(1))")
 
         case .updateProperty(let op):
             w.emit("UpdateProperty \(input(0)), '\(op.op.token)', \(input(1))")

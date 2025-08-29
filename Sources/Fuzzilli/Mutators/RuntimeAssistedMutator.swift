@@ -335,12 +335,11 @@ extension RuntimeAssistedMutator.Action {
                 b.getComputedProperty(property, of: o, guard: isGuarded)
             }
         case .SetProperty:
-            assert(!isGuarded)
             let o = try translateInput(0)
             let v = try translateInput(2)
             switch try getInput(1) {
             case .string(let propertyName):
-                b.setProperty(propertyName, of: o, to: v)
+                b.setProperty(propertyName, of: o, to: v, guard: isGuarded)
             case .int(let index):
                 b.setElement(index, of: o, to: v)
             default:

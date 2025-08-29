@@ -147,6 +147,9 @@ public class FixupMutator: RuntimeAssistedMutator {
             case .deleteProperty(let op):
                 maybeFixup(instr, performing: .DeleteProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .string(value: op.propertyName)], with: b)
 
+            case .setProperty(let op):
+                maybeFixup(instr, performing: .SetProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .string(value: op.propertyName)], with: b)
+
             case .getElement(let op):
                 maybeFixup(instr, performing: .GetProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .int(value: op.index)], with: b)
 

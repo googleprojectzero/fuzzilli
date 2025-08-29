@@ -980,8 +980,9 @@ public let CodeGenerators: [CodeGenerator] = [
         assert(propertyType == .jsAnything || b.type(of: obj).properties.contains(propertyName))
         let value = b.randomVariable(forUseAs: propertyType)
 
-        // TODO: (here and below) maybe wrap in try catch if obj may be nullish?
-        b.setProperty(propertyName, of: obj, to: value)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+
+        b.setProperty(propertyName, of: obj, to: value, guard: needGuard)
     },
 
     CodeGenerator("PropertyUpdateGenerator", inputs: .preferred(.object())) { b, obj in
@@ -1655,13 +1656,15 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("PrototypeOverwriteGenerator", inputs: .preferred(.object(), .object())) { b, obj, proto in
-        b.setProperty("__proto__", of: obj, to: proto)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.setProperty("__proto__", of: obj, to: proto, guard: needGuard)
     },
 
     CodeGenerator("CallbackPropertyGenerator", inputs: .preferred(.object(), .function())) { b, obj, callback in
         // TODO add new callbacks like Symbol.toPrimitive?
         let propertyName = chooseUniform(from: ["valueOf", "toString"])
-        b.setProperty(propertyName, of: obj, to: callback)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.setProperty(propertyName, of: obj, to: callback, guard: needGuard)
     },
 
     CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: .preferred(.object(), .object())) { b, obj, this in
@@ -1724,7 +1727,9 @@ public let CodeGenerators: [CodeGenerator] = [
             // (Probably) grow
             newLength = b.loadInt(b.randomIndex())
         }
-        b.setProperty("length", of: obj, to: newLength)
+
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.setProperty("length", of: obj, to: newLength, guard: needGuard)
     },
 
     // Tries to change the element kind of an array

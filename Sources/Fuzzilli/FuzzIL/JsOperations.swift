@@ -69,6 +69,8 @@ class GuardableOperation: JsOperation {
             return GetProperty(propertyName: op.propertyName, isGuarded: true)
         case .deleteProperty(let op):
             return DeleteProperty(propertyName: op.propertyName, isGuarded: true)
+        case .setProperty(let op):
+            return SetProperty(propertyName: op.propertyName, isGuarded: true)
         case .getElement(let op):
             return GetElement(index: op.index, isGuarded: true)
         case .deleteElement(let op):
@@ -111,6 +113,8 @@ class GuardableOperation: JsOperation {
             return GetProperty(propertyName: op.propertyName, isGuarded: false)
         case .deleteProperty(let op):
             return DeleteProperty(propertyName: op.propertyName, isGuarded: false)
+        case .setProperty(let op):
+            return SetProperty(propertyName: op.propertyName, isGuarded: false)
         case .getElement(let op):
             return GetElement(index: op.index, isGuarded: false)
         case .deleteElement(let op):
@@ -1012,14 +1016,14 @@ final class GetProperty: GuardableOperation {
     }
 }
 
-final class SetProperty: JsOperation {
+final class SetProperty: GuardableOperation {
     override var opcode: Opcode { .setProperty(self) }
 
     let propertyName: String
 
-    init(propertyName: String) {
+    init(propertyName: String, isGuarded: Bool) {
         self.propertyName = propertyName
-        super.init(numInputs: 2, attributes: .isMutable)
+        super.init(isGuarded: isGuarded, numInputs: 2, attributes: .isMutable)
     }
 }
 

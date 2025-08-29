@@ -2314,8 +2314,8 @@ public class ProgramBuilder {
         return emit(GetProperty(propertyName: name, isGuarded: isGuarded), withInputs: [object]).output
     }
 
-    public func setProperty(_ name: String, of object: Variable, to value: Variable) {
-        emit(SetProperty(propertyName: name), withInputs: [object, value])
+    public func setProperty(_ name: String, of object: Variable, to value: Variable, guard isGuarded: Bool = false) {
+        emit(SetProperty(propertyName: name, isGuarded: isGuarded), withInputs: [object, value])
     }
 
     public func updateProperty(_ name: String, of object: Variable, with value: Variable, using op: BinaryOperator) {

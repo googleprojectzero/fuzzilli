@@ -691,7 +691,7 @@ public class JavaScriptCompiler {
                     if let op = assignmentOperator {
                         emit(UpdateProperty(propertyName: name, operator: op), withInputs: [object, rhs])
                     } else {
-                        emit(SetProperty(propertyName: name), withInputs: [object, rhs])
+                        emit(SetProperty(propertyName: name, isGuarded: memberExpression.isOptional), withInputs: [object, rhs])
                     }
                 case .expression(let expr):
                     if case .numberLiteral(let literal) = expr.expression, let index = Int64(exactly: literal.value) {
