@@ -2005,6 +2005,36 @@ public extension ObjectGroup {
 
     // Temporal types
 
+    // Helpers for constructing common signatures
+    private static func temporalAddSubtractSignature(forType: ILType, needsOverflow: Bool) -> [Signature] {
+        if needsOverflow {
+            return jsTemporalDurationLikeParameters.map { [.plain($0), .opt(jsTemporalOverflowSettings)] => forType }
+        } else {
+            return jsTemporalDurationLikeParameters.map { [.plain($0)] => forType }
+        }
+    }
+    private static func temporalUntilSinceSignature(possibleParams: [ILType]) -> [Signature] {
+        return possibleParams.map { [.plain($0), .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration }
+    }
+    private static func temporalFromSignature(forType: ILType, possibleParams: [ILType], settingsArg: ILType? = nil) -> [Signature] {
+        if let settingsArg {
+            return possibleParams.map { [.plain($0), .opt(settingsArg)] => forType }
+        } else {
+            return possibleParams.map { [.plain($0), .opt(jsTemporalDifferenceSettings)] => forType }
+        }
+    }
+    private static func temporalCompareSignature(possibleParams: [ILType]) -> [Signature] {
+        possibleParams.flatMap { param1 in
+            return possibleParams.map { param2 in
+                return [.plain(param1), .plain(param2)] => .number
+            }
+        }
+    }
+
+    private static func temporalEqualsSignature(possibleParams: [ILType]) -> [Signature] {
+        return possibleParams.map { [.plain($0)] => .boolean }
+    }
+
     /// Object group modelling the JavaScript Temporal builtin
     static let jsTemporalObject = ObjectGroup(
         name: "Temporal",
@@ -2029,12 +2059,12 @@ public extension ObjectGroup {
             "epochNanoseconds": .bigint,
         ],
         overloads: [
-            "add": [[jsTemporalDurationLike] => .jsTemporalInstant],
-            "subtract": [[jsTemporalDurationLike] => .jsTemporalInstant],
-            "until": [[jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
-            "since": [[jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalInstant, needsOverflow: false),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalInstant, needsOverflow: false),
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalInstantLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalInstantLikeParameters),
             "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalInstant],
-            "equals": [[jsTemporalInstantLike] => .boolean],
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalInstantLikeParameters),
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
@@ -2053,10 +2083,10 @@ public extension ObjectGroup {
             "prototype" : jsTemporalInstantPrototype.instanceType
         ],
         overloads: [
-            "from": [[jsTemporalInstantLike] => .jsTemporalInstant],
+            "from": temporalFromSignature(forType: .jsTemporalInstant, possibleParams: jsTemporalInstantLikeParameters),
             "fromEpochMilliseconds": [[.number] => .jsTemporalInstant],
             "fromEpochNanoseconds": [[.bigint] => .jsTemporalInstant],
-            "compare": [[jsTemporalInstantLike, jsTemporalInstantLike] => .number],
+            "compare": temporalCompareSignature(possibleParams: jsTemporalInstantLikeParameters),
         ]
     )
     /// ObjectGroup modelling JavaScript Temporal.Duration objects
@@ -2081,8 +2111,8 @@ public extension ObjectGroup {
             "with": [[.plain(jsTemporalDurationLikeObject.instanceType)] => .jsTemporalDuration],
             "negated": [[] => .jsTemporalDuration],
             "abs": [[] => .jsTemporalDuration],
-            "add": [[jsTemporalDurationLike] => .jsTemporalDuration],
-            "subtract": [[jsTemporalDurationLike] => .jsTemporalDuration],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalDuration, needsOverflow: false),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalDuration, needsOverflow: false),
             "round": [[jsTemporalDurationRoundTo] => .jsTemporalDuration],
             "total": [[jsTemporalDurationTotalOf] => .jsTemporalDuration],
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
@@ -2101,8 +2131,8 @@ public extension ObjectGroup {
             "prototype" : jsTemporalDurationPrototype.instanceType
         ],
         overloads: [
-            "from": [[jsTemporalDurationLike] => .jsTemporalDuration],
-            "compare": [[jsTemporalDurationLike, jsTemporalDurationLike] => .number],
+            "from": temporalFromSignature(forType: .jsTemporalDuration, possibleParams: jsTemporalDurationLikeParameters),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalDurationLikeParameters),
         ]
     )
 
@@ -2118,13 +2148,13 @@ public extension ObjectGroup {
             "nanosecond": .number,
         ],
         overloads: [
-            "add": [[jsTemporalDurationLike] => .jsTemporalPlainTime],
-            "subtract": [[jsTemporalDurationLike] => .jsTemporalPlainTime],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalPlainTime, needsOverflow: false),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalPlainTime, needsOverflow: false),
             "with": [[.plain(jsTemporalPlainTimeLikeObject.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainTime],
-            "until": [[.plain(jsTemporalPlainTimeLike), .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
-            "since": [[.plain(jsTemporalPlainTimeLike), .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalPlainTimeLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalPlainTimeLikeParameters),
             "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalPlainTime],
-            "equals": [[.plain(jsTemporalPlainTimeLike)] => .boolean],
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalPlainTimeLikeParameters),
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
@@ -2141,8 +2171,8 @@ public extension ObjectGroup {
             "prototype" : jsTemporalPlainTimePrototype.instanceType
         ],
         overloads: [
-            "from": [[.plain(jsTemporalPlainTimeLike)] => .jsTemporalPlainTime],
-            "compare": [[.plain(jsTemporalPlainTimeLike), .plain(jsTemporalPlainTimeLike)] => .number],
+            "from": temporalFromSignature(forType: .jsTemporalPlainTime, possibleParams: jsTemporalPlainTimeLikeParameters),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalPlainTimeLikeParameters),
         ]
     )
 
@@ -2171,14 +2201,14 @@ public extension ObjectGroup {
             // TODO(manishearth, 439921647) return the right types when we can
             "toPlainYearMonth": [[] => .jsAnything],
             "toPlainMonthDay": [[] => .jsAnything],
-            "add": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
-            "subtract": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalPlainDate, needsOverflow: true),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalPlainDate, needsOverflow: true),
             "with":  [[.plain(jsTemporalPlainDateLikeObjectForWith.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
             "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalPlainDate],
-            "until": [[jsTemporalPlainDateLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
-            "since": [[jsTemporalPlainDateLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
-            "equals": [[jsTemporalPlainDateLike] => .boolean],
-            "toPlainDateTime": [[.opt(jsTemporalPlainTimeLike)] => .jsTemporalPlainDateTime],
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalPlainDateLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalPlainDateLikeParameters),
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalPlainDateLikeParameters),
+            "toPlainDateTime": jsTemporalPlainTimeLikeParameters.map {[.opt($0)] => .jsTemporalPlainDateTime},
             "toZonedDateTime": [[.jsAnything] => .jsAnything],
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
@@ -2196,8 +2226,8 @@ public extension ObjectGroup {
             "prototype" : jsTemporalPlainDatePrototype.instanceType
         ],
         overloads: [
-            "from": [[jsTemporalPlainDateLike] => .jsTemporalPlainDate],
-            "compare": [[jsTemporalPlainDateLike, jsTemporalPlainDateLike] => .number],
+            "from": temporalFromSignature(forType: .jsTemporalPlainDate, possibleParams: jsTemporalPlainDateLikeParameters),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalPlainDateLikeParameters),
         ]
     )
 
@@ -2207,14 +2237,14 @@ public extension ObjectGroup {
         properties: mergeFields(jsTemporalPlainDate.properties, jsTemporalPlainTime.properties),
         overloads: [
             "with":  [[.plain(jsTemporalPlainDateTimeLikeObjectForWith.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
-            "withPlainTime": [[.opt(jsTemporalPlainTimeLike)] => .jsTemporalPlainDateTime],
+            "withPlainTime": jsTemporalPlainTimeLikeParameters.map {[.opt($0)] => .jsTemporalPlainDateTime},
             "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalPlainDateTime],
-            "add": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
-            "subtract": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
-            "until": [[jsTemporalPlainDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
-            "since": [[jsTemporalPlainDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalPlainDateTime, needsOverflow: true),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalPlainDateTime, needsOverflow: true),
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalPlainDateTimeLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalPlainDateTimeLikeParameters),
             "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalPlainDateTime],
-            "equals": [[jsTemporalPlainDateTimeLike] => .boolean],
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalPlainDateTimeLikeParameters),
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
@@ -2236,8 +2266,8 @@ public extension ObjectGroup {
             "prototype" : jsTemporalPlainDateTimePrototype.instanceType
         ],
         overloads: [
-            "from": [[jsTemporalPlainDateTimeLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
-            "compare": [[jsTemporalPlainDateTimeLike, jsTemporalPlainDateTimeLike] => .number],
+            "from": temporalFromSignature(forType: .jsTemporalPlainDateTime, possibleParams: jsTemporalPlainDateTimeLikeParameters, settingsArg: jsTemporalOverflowSettings),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalPlainDateTimeLikeParameters),
         ]
     )
 
@@ -2254,15 +2284,15 @@ public extension ObjectGroup {
         ]),
         overloads: [
             "with":  [[.plain(jsTemporalZonedDateTimeLikeObjectForWith.instanceType), .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime],
-            "withPlainTime": [[.opt(jsTemporalPlainTimeLike)] => .jsTemporalZonedDateTime],
+            "withPlainTime": jsTemporalPlainTimeLikeParameters.map {[.opt($0)] => .jsTemporalZonedDateTime},
             "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalZonedDateTime],
             "withTimeZone": [[.string] => .jsTemporalZonedDateTime],
-            "add": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalZonedDateTime],
-            "subtract": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalZonedDateTime],
-            "until": [[jsTemporalZonedDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
-            "since": [[jsTemporalZonedDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalZonedDateTime, needsOverflow: true),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalZonedDateTime, needsOverflow: true),
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalZonedDateTimeLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalZonedDateTimeLikeParameters),
             "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalZonedDateTime],
-            "equals": [[jsTemporalZonedDateTimeLike] => .boolean],
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalZonedDateTimeLikeParameters),
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
@@ -2285,8 +2315,8 @@ public extension ObjectGroup {
             "prototype" : jsTemporalZonedDateTimePrototype.instanceType
         ],
         overloads: [
-            "from": [[jsTemporalZonedDateTimeLike, .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime],
-            "compare": [[jsTemporalZonedDateTimeLike, jsTemporalZonedDateTimeLike] => .number],
+            "from": temporalFromSignature(forType: .jsTemporalPlainDateTime, possibleParams: jsTemporalPlainDateTimeLikeParameters, settingsArg: jsTemporalZonedInterpretationSettings),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalZonedDateTimeLikeParameters),
         ]
     )
 
@@ -2389,20 +2419,15 @@ public extension ObjectGroup {
         methods: [:])
 
     // Temporal-object-like parameters (accepted by ToTemporalFoo)
-    // TODO(manishearth, 439921647) type unions just produce .object(),
-    // we should ideally do something cleverer here.
-
-    // TODO(manishearth, 439921647) support duration strings
-    fileprivate static let jsTemporalDurationLike = Parameter.plain(jsTemporalDurationLikeObject.instanceType | .jsTemporalDuration | .string)
-    // TODO(manishearth, 439921647) support instant strings
-    fileprivate static let jsTemporalInstantLike = Parameter.plain(.jsTemporalInstant | .jsTemporalZonedDateTime | .string)
-    // TODO(manishearth, 439921647) support instant strings
-    fileprivate static let jsTemporalPlainTimeLike = jsTemporalPlainTimeLikeObject.instanceType | .jsTemporalPlainTime | .jsTemporalPlainDateTime | .jsTemporalZonedDateTime | .string
-    // TODO(manishearth, 439921647) support instant strings
-    fileprivate static let jsTemporalPlainDateLike = Parameter.plain(jsTemporalPlainDateLikeObject.instanceType | .jsTemporalPlainDate | .jsTemporalPlainDateTime | .jsTemporalZonedDateTime | .string)
-    // TODO(manishearth, 439921647) support instant strings
-    fileprivate static let jsTemporalPlainDateTimeLike = Parameter.plain(jsTemporalPlainDateTimeLikeObject.instanceType | .jsTemporalPlainDate | .jsTemporalPlainDateTime | .jsTemporalZonedDateTime | .string)
-    fileprivate static let jsTemporalZonedDateTimeLike = Parameter.plain(jsTemporalZonedDateTimeLikeObject.instanceType  | .string)
+    // ToTemporalFoo, and APIs based on it (from, compare, until, since, equals, occasionally withFoo/toFoo) accept
+    // a Temporal-like object, a Temporal object that is a superset of the type, or a string representation.
+    // TODO(manishearth, 439921647) Most of the stringy types here are with a specific format, we should consider generating them
+    private static let jsTemporalDurationLikeParameters: [ILType] = [jsTemporalDurationLikeObject.instanceType, .jsTemporalDuration, .string]
+    private static let jsTemporalInstantLikeParameters: [ILType] = [.jsTemporalInstant, .jsTemporalZonedDateTime, .string]
+    private static let jsTemporalPlainTimeLikeParameters: [ILType] = [jsTemporalPlainTimeLikeObject.instanceType, .jsTemporalPlainTime, .jsTemporalPlainDateTime, .jsTemporalZonedDateTime, .string]
+    private static let jsTemporalPlainDateLikeParameters: [ILType] = [jsTemporalPlainDateLikeObject.instanceType, .jsTemporalPlainDate, .jsTemporalPlainDateTime, .jsTemporalZonedDateTime, .string]
+    private static let jsTemporalPlainDateTimeLikeParameters: [ILType] = [jsTemporalPlainDateTimeLikeObject.instanceType, .jsTemporalPlainDate, .jsTemporalPlainDateTime, .jsTemporalZonedDateTime, .string]
+    private static let jsTemporalZonedDateTimeLikeParameters: [ILType] = [jsTemporalZonedDateTimeLikeObject.instanceType, .string]
 
     // Stringy objects
     // TODO(manishearth, 439921647) support stringy objects

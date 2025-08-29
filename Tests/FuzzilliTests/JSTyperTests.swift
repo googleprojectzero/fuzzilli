@@ -1687,8 +1687,9 @@ class JSTyperTests: XCTestCase {
         XCTAssert(b.type(of: instantBuiltin).Is(.object(ofGroup: "TemporalInstantConstructor")))
         let instantProto = b.getProperty("prototype", of: instantBuiltin)
         XCTAssert(b.type(of: instantProto).Is(.object(ofGroup: "Temporal.Instant.prototype")))
-        let instantFrom = b.getProperty("from", of: instantBuiltin)
-        XCTAssert(b.type(of: instantFrom).Is(.unboundFunction([.plain(.string | .object())] => ILType.jsTemporalInstant, receiver: .jsTemporalInstantConstructor)))
+        let instantRound = b.getProperty("round", of: instantProto)
+        XCTAssert(b.type(of: instantRound).Is(.unboundFunction([.plain(OptionsBag.jsTemporalDifferenceSettingOrRoundTo.group.instanceType)] => ILType.jsTemporalInstant,
+                                              receiver: .jsTemporalInstant)))
         let randomString = b.randomVariable(forUseAs: .string)
         let fromCall = b.callMethod("from", on: instantBuiltin, withArgs: [randomString])
         XCTAssert(b.type(of: fromCall).Is(.jsTemporalInstant))
