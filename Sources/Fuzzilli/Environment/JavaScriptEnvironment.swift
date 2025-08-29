@@ -1970,18 +1970,18 @@ public extension ObjectGroup {
             "epochMilliseconds": .number,
             "epochNanoseconds": .bigint,
         ],
-        methods: [
-            "add": [jsTemporalDurationLike] => .jsTemporalInstant,
-            "subtract": [jsTemporalDurationLike] => .jsTemporalInstant,
-            "until": [jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "since": [jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "round": [.plain(jsTemporalRoundTo)] => .jsTemporalInstant,
-            "equals": [jsTemporalInstantLike] => .boolean,
-            "toString": [.opt(jsTemporalToStringSettings)] => .string,
-            "toJSON": [] => .string,
-            "toLocaleString": [.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string,
+        overloads: [
+            "add": [[jsTemporalDurationLike] => .jsTemporalInstant],
+            "subtract": [[jsTemporalDurationLike] => .jsTemporalInstant],
+            "until": [[jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "since": [[jsTemporalInstantLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalInstant],
+            "equals": [[jsTemporalInstantLike] => .boolean],
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
             // TODO(manishearth, 439921647) return a ZonedDateTime when we can
-            "toZonedDateTimeISO": [jsTemporalTimeZoneLike] => .jsAnything,
+            "toZonedDateTimeISO": [[jsTemporalTimeZoneLike] => .jsAnything],
         ]
     )
 
@@ -1994,11 +1994,11 @@ public extension ObjectGroup {
         properties: [
             "prototype" : jsTemporalInstantPrototype.instanceType
         ],
-        methods: [
-            "from": [jsTemporalInstantLike] => .jsTemporalInstant,
-            "fromEpochMilliseconds": [.number] => .jsTemporalInstant,
-            "fromEpochNanoseconds": [.bigint] => .jsTemporalInstant,
-            "compare": [jsTemporalInstantLike, jsTemporalInstantLike] => .number,
+        overloads: [
+            "from": [[jsTemporalInstantLike] => .jsTemporalInstant],
+            "fromEpochMilliseconds": [[.number] => .jsTemporalInstant],
+            "fromEpochNanoseconds": [[.bigint] => .jsTemporalInstant],
+            "compare": [[jsTemporalInstantLike, jsTemporalInstantLike] => .number],
         ]
     )
     /// ObjectGroup modelling JavaScript Temporal.Duration objects
@@ -2019,17 +2019,17 @@ public extension ObjectGroup {
             "sign": .number,
             "blank": .boolean,
         ],
-        methods: [
-            "with": [.plain(jsTemporalDurationLikeObject.instanceType)] => .jsTemporalDuration,
-            "negated": [] => .jsTemporalDuration,
-            "abs": [] => .jsTemporalDuration,
-            "add": [jsTemporalDurationLike] => .jsTemporalDuration,
-            "subtract": [jsTemporalDurationLike] => .jsTemporalDuration,
-            "round": [jsTemporalDurationRoundTo] => .jsTemporalDuration,
-            "total": [jsTemporalDurationTotalOf] => .jsTemporalDuration,
-            "toString": [.opt(jsTemporalToStringSettings)] => .string,
-            "toJSON": [] => .string,
-            "toLocaleString": [.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string,
+        overloads: [
+            "with": [[.plain(jsTemporalDurationLikeObject.instanceType)] => .jsTemporalDuration],
+            "negated": [[] => .jsTemporalDuration],
+            "abs": [[] => .jsTemporalDuration],
+            "add": [[jsTemporalDurationLike] => .jsTemporalDuration],
+            "subtract": [[jsTemporalDurationLike] => .jsTemporalDuration],
+            "round": [[jsTemporalDurationRoundTo] => .jsTemporalDuration],
+            "total": [[jsTemporalDurationTotalOf] => .jsTemporalDuration],
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
         ]
     )
 
@@ -2042,9 +2042,9 @@ public extension ObjectGroup {
         properties: [
             "prototype" : jsTemporalDurationPrototype.instanceType
         ],
-        methods: [
-            "from": [jsTemporalDurationLike] => .jsTemporalDuration,
-            "compare": [jsTemporalDurationLike, jsTemporalDurationLike] => .number,
+        overloads: [
+            "from": [[jsTemporalDurationLike] => .jsTemporalDuration],
+            "compare": [[jsTemporalDurationLike, jsTemporalDurationLike] => .number],
         ]
     )
 
@@ -2059,17 +2059,17 @@ public extension ObjectGroup {
             "microsecond": .number,
             "nanosecond": .number,
         ],
-        methods: [
-            "add": [jsTemporalDurationLike] => .jsTemporalPlainTime,
-            "subtract": [jsTemporalDurationLike] => .jsTemporalPlainTime,
-            "with": [.plain(jsTemporalPlainTimeLikeObject.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainTime,
-            "until": [.plain(jsTemporalPlainTimeLike), .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "since": [.plain(jsTemporalPlainTimeLike), .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "round": [.plain(jsTemporalRoundTo)] => .jsTemporalPlainTime,
-            "equals": [.plain(jsTemporalPlainTimeLike)] => .boolean,
-            "toString": [.opt(jsTemporalToStringSettings)] => .string,
-            "toJSON": [] => .string,
-            "toLocaleString": [.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string,
+        overloads: [
+            "add": [[jsTemporalDurationLike] => .jsTemporalPlainTime],
+            "subtract": [[jsTemporalDurationLike] => .jsTemporalPlainTime],
+            "with": [[.plain(jsTemporalPlainTimeLikeObject.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainTime],
+            "until": [[.plain(jsTemporalPlainTimeLike), .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "since": [[.plain(jsTemporalPlainTimeLike), .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalPlainTime],
+            "equals": [[.plain(jsTemporalPlainTimeLike)] => .boolean],
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
         ]
     )
 
@@ -2082,9 +2082,9 @@ public extension ObjectGroup {
         properties: [
             "prototype" : jsTemporalPlainTimePrototype.instanceType
         ],
-        methods: [
-            "from": [.plain(jsTemporalPlainTimeLike)] => .jsTemporalPlainTime,
-            "compare": [.plain(jsTemporalPlainTimeLike), .plain(jsTemporalPlainTimeLike)] => .number,
+        overloads: [
+            "from": [[.plain(jsTemporalPlainTimeLike)] => .jsTemporalPlainTime],
+            "compare": [[.plain(jsTemporalPlainTimeLike), .plain(jsTemporalPlainTimeLike)] => .number],
         ]
     )
 
@@ -2109,22 +2109,22 @@ public extension ObjectGroup {
             "monthsInYear": .integer,
             "inLeapYear": .boolean,
         ],
-        methods: [
+        overloads: [
             // TODO(manishearth, 439921647) return the right types when we can
-            "toPlainYearMonth": [] => .jsAnything,
-            "toPlainMonthDay": [] => .jsAnything,
-            "add": [jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate,
-            "subtract": [jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate,
-            "with":  [jsTemporalPlainDateLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate,
-            "withCalendar": [.plain(.jsTemporalCalendarEnum)] => .jsTemporalPlainDate,
-            "until": [jsTemporalPlainDateLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "since": [jsTemporalPlainDateLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "equals": [jsTemporalPlainDateLike] => .boolean,
-            "toPlainDateTime": [.opt(jsTemporalPlainTimeLike)] => .jsTemporalPlainDateTime,
-            "toZonedDateTime": [.jsAnything] => .jsAnything,
-            "toString": [.opt(jsTemporalToStringSettings)] => .string,
-            "toJSON": [] => .string,
-            "toLocaleString": [.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string,
+            "toPlainYearMonth": [[] => .jsAnything],
+            "toPlainMonthDay": [[] => .jsAnything],
+            "add": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
+            "subtract": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
+            "with":  [[jsTemporalPlainDateLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
+            "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalPlainDate],
+            "until": [[jsTemporalPlainDateLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "since": [[jsTemporalPlainDateLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "equals": [[jsTemporalPlainDateLike] => .boolean],
+            "toPlainDateTime": [[.opt(jsTemporalPlainTimeLike)] => .jsTemporalPlainDateTime],
+            "toZonedDateTime": [[.jsAnything] => .jsAnything],
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
         ]
     )
 
@@ -2137,9 +2137,9 @@ public extension ObjectGroup {
         properties: [
             "prototype" : jsTemporalPlainDatePrototype.instanceType
         ],
-        methods: [
-            "from": [jsTemporalPlainDateLike] => .jsTemporalPlainDate,
-            "compare": [jsTemporalPlainDateLike, jsTemporalPlainDateLike] => .number,
+        overloads: [
+            "from": [[jsTemporalPlainDateLike] => .jsTemporalPlainDate],
+            "compare": [[jsTemporalPlainDateLike, jsTemporalPlainDateLike] => .number],
         ]
     )
 
@@ -2147,23 +2147,23 @@ public extension ObjectGroup {
         name: "Temporal.PlainDateTime",
         instanceType: .jsTemporalPlainDateTime,
         properties: mergeFields(jsTemporalPlainDate.properties, jsTemporalPlainTime.properties),
-        methods: [
-            "with":  [jsTemporalPlainDateTimeLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime,
-            "withPlainTime": [.opt(jsTemporalPlainTimeLike)] => .jsTemporalPlainDateTime,
-            "withCalendar": [.plain(.jsTemporalCalendarEnum)] => .jsTemporalPlainDateTime,
-            "add": [jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime,
-            "subtract": [jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime,
-            "until": [jsTemporalPlainDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "since": [jsTemporalPlainDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "round": [.plain(jsTemporalRoundTo)] => .jsTemporalPlainDateTime,
-            "equals": [jsTemporalPlainDateTimeLike] => .boolean,
-            "toString": [.opt(jsTemporalToStringSettings)] => .string,
-            "toJSON": [] => .string,
-            "toLocaleString": [.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string,
+        overloads: [
+            "with":  [[jsTemporalPlainDateTimeLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
+            "withPlainTime": [[.opt(jsTemporalPlainTimeLike)] => .jsTemporalPlainDateTime],
+            "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalPlainDateTime],
+            "add": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
+            "subtract": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
+            "until": [[jsTemporalPlainDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "since": [[jsTemporalPlainDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalPlainDateTime],
+            "equals": [[jsTemporalPlainDateTimeLike] => .boolean],
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
             // TODO(manishearth, 439921647) return the right types when we can
-            "toZonedDateTime": [.string, .opt(OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType)] => .jsAnything,
-            "toPlainDate": [] => .jsTemporalPlainDate,
-            "toPlainTime": [] => .jsTemporalPlainTime,
+            "toZonedDateTime": [[.string, .opt(OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType)] => .jsAnything],
+            "toPlainDate": [[] => .jsTemporalPlainDate],
+            "toPlainTime": [[] => .jsTemporalPlainTime],
         ]
     )
 
@@ -2176,9 +2176,9 @@ public extension ObjectGroup {
         properties: [
             "prototype" : jsTemporalPlainDateTimePrototype.instanceType
         ],
-        methods: [
-            "from": [jsTemporalPlainDateTimeLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime,
-            "compare": [jsTemporalPlainDateTimeLike, jsTemporalPlainDateTimeLike] => .number,
+        overloads: [
+            "from": [[jsTemporalPlainDateTimeLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
+            "compare": [[jsTemporalPlainDateTimeLike, jsTemporalPlainDateTimeLike] => .number],
         ]
     )
 
@@ -2193,27 +2193,26 @@ public extension ObjectGroup {
             "offsetNanoseconds": .integer,
             "offset": .string,
         ]),
-        methods: [
-            "with":  [jsTemporalZonedDateTimeLike, .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime,
-            "withPlainTime": [.opt(jsTemporalPlainTimeLike)] => .jsTemporalZonedDateTime,
-            "withCalendar": [.plain(.jsTemporalCalendarEnum)] => .jsTemporalZonedDateTime,
-            "withTimeZone": [.string] => .jsTemporalZonedDateTime,
-            "add": [jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalZonedDateTime,
-            "subtract": [jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalZonedDateTime,
-            "until": [jsTemporalZonedDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "since": [jsTemporalZonedDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration,
-            "round": [.plain(jsTemporalRoundTo)] => .jsTemporalZonedDateTime,
-            "equals": [jsTemporalZonedDateTimeLike] => .boolean,
-            "toString": [.opt(jsTemporalToStringSettings)] => .string,
-            "toJSON": [] => .string,
-            "toLocaleString": [.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string,
-            "startOfDay": [] => .jsTemporalZonedDateTime,
-            "getTimeZoneTransition": [.plain(jsTemporalDirectionParam)] => .jsTemporalZonedDateTime,
-            "toInstant": [] => .jsTemporalInstant,
-            "toPlainDate": [] => .jsTemporalPlainDate,
-            "toPlainTime": [] => .jsTemporalPlainTime,
-            "toPlainDateTime": [] => .jsTemporalPlainDateTime,
-
+        overloads: [
+            "with":  [[jsTemporalZonedDateTimeLike, .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime],
+            "withPlainTime": [[.opt(jsTemporalPlainTimeLike)] => .jsTemporalZonedDateTime],
+            "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalZonedDateTime],
+            "withTimeZone": [[.string] => .jsTemporalZonedDateTime],
+            "add": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalZonedDateTime],
+            "subtract": [[jsTemporalDurationLike, .opt(jsTemporalOverflowSettings)] => .jsTemporalZonedDateTime],
+            "until": [[jsTemporalZonedDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "since": [[jsTemporalZonedDateTimeLike, .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration],
+            "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalZonedDateTime],
+            "equals": [[jsTemporalZonedDateTimeLike] => .boolean],
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
+            "startOfDay": [[] => .jsTemporalZonedDateTime],
+            "getTimeZoneTransition": [[.plain(jsTemporalDirectionParam)] => .jsTemporalZonedDateTime],
+            "toInstant": [[] => .jsTemporalInstant],
+            "toPlainDate": [[] => .jsTemporalPlainDate],
+            "toPlainTime": [[] => .jsTemporalPlainTime],
+            "toPlainDateTime": [[] => .jsTemporalPlainDateTime],
         ]
     )
 
@@ -2226,9 +2225,9 @@ public extension ObjectGroup {
         properties: [
             "prototype" : jsTemporalZonedDateTimePrototype.instanceType
         ],
-        methods: [
-            "from": [jsTemporalZonedDateTimeLike, .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime,
-            "compare": [jsTemporalZonedDateTimeLike, jsTemporalZonedDateTimeLike] => .number,
+        overloads: [
+            "from": [[jsTemporalZonedDateTimeLike, .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime],
+            "compare": [[jsTemporalZonedDateTimeLike, jsTemporalZonedDateTimeLike] => .number],
         ]
     )
 
