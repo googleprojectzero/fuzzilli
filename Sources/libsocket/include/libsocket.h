@@ -22,7 +22,7 @@
 #endif
 
 #if defined(_WIN32)
-typedef SOCKET socket_t;
+typedef SOCKET libsocket_t;
 
 // We need C11 or newer due to the use of `_Generic`.  Windows does not have a
 // signed size type, so we construct the equivalent type by inspecting the type
