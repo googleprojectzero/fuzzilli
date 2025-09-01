@@ -1753,6 +1753,15 @@ class JSTyperTests: XCTestCase {
         let tablePrototype = b.getProperty("prototype", of: wasmTableConstructor)
         let tableGrow = b.getProperty("grow", of: tablePrototype)
         XCTAssert(b.type(of: tableGrow).Is(.unboundFunction([.number, .opt(.jsAnything)] => .number, receiver: .object(ofGroup: "WasmTable"))))
+
+        let wasmTagConstructor = b.getProperty("Tag", of: wasm)
+        let wasmTag = b.construct(wasmTagConstructor) // In theory this needs arguments.
+        XCTAssertFalse(b.type(of: wasmTag).Is(.object(ofGroup: "WasmTag")))
+        let realWasmTag = b.createWasmTag(parameterTypes: [.wasmi32])
+        XCTAssert(b.type(of: realWasmTag).Is(.object(ofGroup: "WasmTag")))
+        let tagPrototype = b.getProperty("prototype", of: wasmTagConstructor)
+        // WebAssembly.Tag.prototype doesn't have any properties or methods.
+        XCTAssertEqual(b.type(of: tagPrototype), .object(ofGroup: "WasmTag.prototype"))
     }
 
     func testProducingGenerators() {
