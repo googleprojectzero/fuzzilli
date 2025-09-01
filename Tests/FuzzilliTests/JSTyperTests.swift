@@ -1744,6 +1744,15 @@ class JSTyperTests: XCTestCase {
         let grow = b.getProperty("grow", of: memoryPrototype)
         XCTAssert(b.type(of: grow).Is(.unboundFunction([.number] => .number, receiver: .object(ofGroup: "WasmMemory"))))
 
+        let wasmTableConstructor = b.getProperty("Table", of: wasm)
+        let wasmTable = b.construct(wasmTableConstructor) // In theory this needs arguments.
+        XCTAssertFalse(b.type(of: wasmTable).Is(.object(ofGroup: "WasmTable")))
+        let realWasmTable = b.createWasmTable(elementType: .wasmAnyRef, limits: .init(min: 0), isTable64: false)
+        XCTAssert(b.type(of: realWasmTable).Is(.object(ofGroup: "WasmTable")))
+        XCTAssert(b.type(of: realWasmTable).Is(ObjectGroup.wasmTable.instanceType))
+        let tablePrototype = b.getProperty("prototype", of: wasmTableConstructor)
+        let tableGrow = b.getProperty("grow", of: tablePrototype)
+        XCTAssert(b.type(of: tableGrow).Is(.unboundFunction([.number, .opt(.jsAnything)] => .number, receiver: .object(ofGroup: "WasmTable"))))
     }
 
     func testProducingGenerators() {

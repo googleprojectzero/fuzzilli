@@ -366,6 +366,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWebAssemblyModule)
         registerObjectGroup(.jsWebAssemblyMemoryPrototype)
         registerObjectGroup(.jsWebAssemblyMemoryConstructor)
+        registerObjectGroup(.jsWebAssemblyTablePrototype)
+        registerObjectGroup(.jsWebAssemblyTableConstructor)
         registerObjectGroup(.jsWebAssembly)
         registerObjectGroup(.jsWasmGlobal)
         registerObjectGroup(.jsWasmMemory)
@@ -1020,6 +1022,9 @@ public extension ILType {
     // result type doesn't have a valid WasmTypeExtension.
     static let jsWebAssemblyMemoryConstructor = ILType.constructor([.plain(.object(withProperties: ["initial"]))] => .object(withProperties: ["buffer"], withMethods: ["grow", "toResizableBuffer", "toFixedLengthBuffer"]))
         + .object(ofGroup: "WebAssemblyMemoryConstructor", withProperties: ["prototype"])
+
+    static let jsWebAssemblyTableConstructor = ILType.constructor([.plain(.object(withProperties: ["initial"]))] => object(withProperties: ["length"], withMethods: ["get", "grow", "set"]))
+        + .object(ofGroup: "WebAssemblyTableConstructor", withProperties: ["prototype"])
 
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
@@ -1884,6 +1889,17 @@ public extension ObjectGroup {
         methods: [:]
     )
 
+    static let jsWebAssemblyTablePrototype = createPrototypeObjectGroup(wasmTable)
+
+    static let jsWebAssemblyTableConstructor = ObjectGroup(
+        name: "WebAssemblyTableConstructor",
+        instanceType: .jsWebAssemblyTableConstructor,
+        properties: [
+            "prototype": jsWebAssemblyTablePrototype.instanceType,
+        ],
+        methods: [:]
+    )
+
     static let jsWebAssembly = ObjectGroup(
         name: "WebAssembly",
         instanceType: nil,
@@ -1894,6 +1910,7 @@ public extension ObjectGroup {
             "Global": .jsWebAssemblyGlobalConstructor,
             "Instance": .jsWebAssemblyInstanceConstructor,
             "Memory": .jsWebAssemblyMemoryConstructor,
+            "Table": .jsWebAssemblyTableConstructor,
         ],
         overloads: [
             "compile": wasmBufferTypes.map {
