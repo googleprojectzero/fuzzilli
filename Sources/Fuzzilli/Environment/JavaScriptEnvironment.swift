@@ -368,6 +368,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWebAssemblyMemoryConstructor)
         registerObjectGroup(.jsWebAssemblyTablePrototype)
         registerObjectGroup(.jsWebAssemblyTableConstructor)
+        registerObjectGroup(.jsWebAssemblyTagPrototype)
+        registerObjectGroup(.jsWebAssemblyTagConstructor)
         registerObjectGroup(.jsWebAssembly)
         registerObjectGroup(.jsWasmGlobal)
         registerObjectGroup(.jsWasmMemory)
@@ -1025,6 +1027,9 @@ public extension ILType {
 
     static let jsWebAssemblyTableConstructor = ILType.constructor([.plain(.object(withProperties: ["initial"]))] => object(withProperties: ["length"], withMethods: ["get", "grow", "set"]))
         + .object(ofGroup: "WebAssemblyTableConstructor", withProperties: ["prototype"])
+
+    static let jsWebAssemblyTagConstructor = ILType.constructor([.plain(.object(withProperties: ["parameters"]))] => object(withMethods: []))
+        + .object(ofGroup: "WebAssemblyTagConstructor", withProperties: ["prototype"])
 
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
@@ -1900,6 +1905,17 @@ public extension ObjectGroup {
         methods: [:]
     )
 
+    static let jsWebAssemblyTagPrototype = createPrototypeObjectGroup(jsWasmTag)
+
+    static let jsWebAssemblyTagConstructor = ObjectGroup(
+        name: "WebAssemblyTagConstructor",
+        instanceType: .jsWebAssemblyTagConstructor,
+        properties: [
+            "prototype": jsWebAssemblyTagPrototype.instanceType,
+        ],
+        methods: [:]
+    )
+
     static let jsWebAssembly = ObjectGroup(
         name: "WebAssembly",
         instanceType: nil,
@@ -1911,6 +1927,7 @@ public extension ObjectGroup {
             "Instance": .jsWebAssemblyInstanceConstructor,
             "Memory": .jsWebAssemblyMemoryConstructor,
             "Table": .jsWebAssemblyTableConstructor,
+            "Tag": .jsWebAssemblyTagConstructor,
         ],
         overloads: [
             "compile": wasmBufferTypes.map {
@@ -1960,7 +1977,7 @@ public extension ObjectGroup {
     // same object group. When split, we can register the type() prototype method.
     static let jsWasmTag = ObjectGroup(
         name: "WasmTag",
-        instanceType: .object(ofGroup: "WasmTag"),
+        instanceType: nil, // inferred
         properties: [:],
         methods: [:]
     )
