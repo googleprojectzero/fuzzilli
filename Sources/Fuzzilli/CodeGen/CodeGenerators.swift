@@ -1658,7 +1658,8 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("PrototypeOverwriteGenerator", inputs: .preferred(.object(), .object())) { b, obj, proto in
-        let needGuard = b.type(of: obj).MayBe(.nullish)
+        // Check for obj == proto to reduce the chance of cyclic prototype chains.
+        let needGuard = b.type(of: obj).MayBe(.nullish) || obj == proto
         b.setProperty("__proto__", of: obj, to: proto, guard: needGuard)
     },
 
