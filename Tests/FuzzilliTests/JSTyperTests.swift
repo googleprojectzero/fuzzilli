@@ -1708,6 +1708,45 @@ class JSTyperTests: XCTestCase {
 
     }
 
+    func testTemporalRelativeTo() {
+        var foundZDT = false
+        var foundDT = false
+        var foundDate = false
+        var foundString = false
+        // Test that relativeTo arguments are correctly generated
+        // Annoyingly, we may generate undefined/.jsAnything here since the field may not exist. Instead
+        // we try a large number of times and ensure all the generators get called *eventually*
+        for _ in 1..<100 {
+            let fuzzer = makeMockFuzzer()
+            let b = fuzzer.makeBuilder()
+            let temporalBuiltin = b.createNamedVariable(forBuiltin: "Temporal")
+            let durationBuiltin = b.getProperty("Duration", of: temporalBuiltin)
+            let duration = b.callMethod("from", on: durationBuiltin, withArgs: [b.loadString("P10D")])
+            XCTAssert(b.type(of: duration).Is(.jsTemporalDuration))
+            let signature = chooseUniform(from: b.methodSignatures(of: "round", on: duration))
+            let args = b.findOrGenerateArguments(forSignature: signature)
+            let relativeTo = b.getProperty("relativeTo", of: args[0])
+            let type = b.type(of: relativeTo)
+            if type.Is(.string) {
+                foundString = true
+            } else if type.Is(.jsTemporalZonedDateTime) {
+                XCTAssertEqual(type.group, "Temporal.ZonedDateTime")
+                foundZDT = true
+            } else if type.Is(.jsTemporalPlainDateTime) {
+                XCTAssertEqual(type.group, "Temporal.PlainDateTime")
+                foundDT = true
+            } else if type.Is(.jsTemporalPlainDate) {
+                XCTAssertEqual(type.group, "Temporal.PlainDate")
+                foundDate = true
+            }
+
+            if foundZDT && foundString && foundDate && foundDT {
+                break
+            }
+        }
+        XCTAssert(foundZDT && foundString && foundDate && foundDT)
+    }
+
     func testWebAssemblyBuiltins() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

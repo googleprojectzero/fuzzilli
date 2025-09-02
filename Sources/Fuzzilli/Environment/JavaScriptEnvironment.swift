@@ -415,6 +415,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsTemporalToStringSettings)
         registerOptionsBag(.jsTemporalOverflowSettings)
         registerOptionsBag(.jsTemporalZonedInterpretationSettings)
+        registerOptionsBag(.jsTemporalDurationRoundToSettings)
+        registerOptionsBag(.jsTemporalDurationTotalOfSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
         registerTemporalFieldsObject(.jsTemporalPlainDateLikeObject, forWith: false, dateFields: true, timeFields: false, zonedFields: false)
@@ -790,7 +792,7 @@ public struct OptionsBag {
         self.properties = properties
         let properties = properties.mapValues {
             // This list can be expanded over time as long as OptionsBagGenerator supports this
-            assert($0.isEnumeration || $0.Is(.number) || $0.Is(.integer), "Found unsupported option type \($0) in options bag \(name)")
+            assert($0.isEnumeration || $0.Is(.number) || $0.Is(.integer) || $0.Is(OptionsBag.jsTemporalRelativeTo), "Found unsupported option type \($0) in options bag \(name)")
             return $0 | .undefined;
         }
         self.group = ObjectGroup(name: name, instanceType: nil, properties: properties, overloads: [:])
@@ -2089,10 +2091,14 @@ public extension ObjectGroup {
             return possibleParams.map { [.plain($0), .opt(jsTemporalDifferenceSettings)] => forType }
         }
     }
-    private static func temporalCompareSignature(possibleParams: [ILType]) -> [Signature] {
+    private static func temporalCompareSignature(possibleParams: [ILType], settingsArg: ILType? = nil) -> [Signature] {
         possibleParams.flatMap { param1 in
             return possibleParams.map { param2 in
-                return [.plain(param1), .plain(param2)] => .number
+                if let settingsArg {
+                    return [.plain(param1), .plain(param2), .opt(settingsArg)] => .number
+                } else {
+                    return [.plain(param1), .plain(param2)] => .number
+                }
             }
         }
     }
@@ -2196,8 +2202,8 @@ public extension ObjectGroup {
             "abs": [[] => .jsTemporalDuration],
             "add": temporalAddSubtractSignature(forType: .jsTemporalDuration, needsOverflow: false),
             "subtract": temporalAddSubtractSignature(forType: .jsTemporalDuration, needsOverflow: false),
-            "round": [[jsTemporalDurationRoundTo] => .jsTemporalDuration],
-            "total": [[jsTemporalDurationTotalOf] => .jsTemporalDuration],
+            "round": [[.plain(jsTemporalDurationRoundToSettings)] => .jsTemporalDuration],
+            "total": [[.plain(jsTemporalDurationTotalOfSettings)] => .jsTemporalDuration],
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
@@ -2215,7 +2221,7 @@ public extension ObjectGroup {
         ],
         overloads: [
             "from": temporalFromSignature(forType: .jsTemporalDuration, possibleParams: jsTemporalDurationLikeParameters),
-            "compare": temporalCompareSignature(possibleParams: jsTemporalDurationLikeParameters),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalDurationLikeParameters, settingsArg: jsTemporalDurationCompareSettings),
         ]
     )
 
@@ -2592,9 +2598,9 @@ public extension ObjectGroup {
     fileprivate static let jsTemporalOverflowSettings = OptionsBag.jsTemporalOverflowSettings.group.instanceType
     fileprivate static let jsTemporalZonedInterpretationSettings = OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType
     fileprivate static let jsTemporalDirectionParam = ILType.enumeration(ofName: "directionParam", withValues: ["previous", "next"])
-    // TODO(manishearth, 439921647) These are tricky and need other Temporal types
-    fileprivate static let jsTemporalDurationRoundTo = Parameter.jsAnything
-    fileprivate static let jsTemporalDurationTotalOf = Parameter.jsAnything
+    fileprivate static let jsTemporalDurationRoundToSettings = OptionsBag.jsTemporalDurationRoundToSettings.group.instanceType
+    fileprivate static let jsTemporalDurationTotalOfSettings = OptionsBag.jsTemporalDurationTotalOfSettings.group.instanceType
+    fileprivate static let jsTemporalDurationCompareSettings = OptionsBag.jsTemporalDurationCompareSettings.group.instanceType
     // This is huge and comes from Intl, not Temporal
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters
     fileprivate static let jsTemporalToLocaleStringSettings = ILType.jsAnything
@@ -2611,6 +2617,8 @@ extension OptionsBag {
     fileprivate static let jsTemporalOverflowEnum = ILType.enumeration(ofName: "temporalOverflow", withValues: ["constrain", "reject"])
     fileprivate static let jsTemporalDisambiguationEnum = ILType.enumeration(ofName: "temporalDisambiguation", withValues: ["compatible", "earlier", "later", "reject"])
     fileprivate static let jsTemporalOffsetEnum = ILType.enumeration(ofName: "temporalOffset", withValues: ["prefer", "use", "ignore", "reject"])
+
+    static let jsTemporalRelativeTo = ILType.jsTemporalZonedDateTime | ILType.jsTemporalPlainDateTime | ILType.jsTemporalPlainDate | .string
 
     // differenceSettings and roundTo are mostly the same, with differenceSettings accepting an additional largestUnit
     // note that the Duration roundTo option is different
@@ -2649,4 +2657,28 @@ extension OptionsBag {
             "disambiguation": jsTemporalDisambiguationEnum,
             "offset": jsTemporalOffsetEnum,
         ])
+
+    static let jsTemporalDurationRoundToSettings =  OptionsBag(
+        name: "TemporalDurationRoundToSettingsObject",
+        properties: [
+            "largestUnit": OptionsBag.jsTemporalUnitEnum,
+            "roundingMode": OptionsBag.jsTemporalRoundingModeEnum,
+            "roundingIncrement": .integer,
+            "relativeTo": jsTemporalRelativeTo,
+            "smallestUnit": OptionsBag.jsTemporalUnitEnum,
+        ]
+    )
+    static let jsTemporalDurationTotalOfSettings =  OptionsBag(
+        name: "TemporalDurationTotalOfSettingsObject",
+        properties: [
+            "relativeTo": jsTemporalRelativeTo,
+            "unit": OptionsBag.jsTemporalUnitEnum,
+        ]
+    )
+    static let jsTemporalDurationCompareSettings =  OptionsBag(
+        name: "TemporalDurationCompareSettingsObject",
+        properties: [
+            "relativeTo": jsTemporalRelativeTo,
+        ]
+    )
 }
