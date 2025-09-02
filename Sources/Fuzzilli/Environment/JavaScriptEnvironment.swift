@@ -377,6 +377,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWasmTag)
         registerObjectGroup(.jsWasmSuspendingObject)
         registerObjectGroup(.jsTemporalObject)
+        registerObjectGroup(.jsTemporalNow)
         registerObjectGroup(.jsTemporalInstant)
         registerObjectGroup(.jsTemporalInstantConstructor)
         registerObjectGroup(.jsTemporalInstantPrototype)
@@ -1041,7 +1042,7 @@ public extension ILType {
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
 
     // Temporal types
-    static let jsTemporalObject = ILType.object(ofGroup: "Temporal", withProperties: ["Instant", "Duration", "PlainTime", "PlainYearMonth", "PlainMonthDay", "PlainDate", "PlainDateTime", "ZonedDateTime"])
+    static let jsTemporalObject = ILType.object(ofGroup: "Temporal", withProperties: ["Instant", "Duration", "PlainTime", "PlainYearMonth", "PlainMonthDay", "PlainDate", "PlainDateTime", "ZonedDateTime", "Now"])
 
     // TODO(mliedtke): Can we stop documenting Object.prototype methods? It doesn't make much sense that half of the ObjectGroups register a toString method,
     // the other half doesn't and not a single one registers e.g. propertyIsEnumerable or isPrototypeOf.`?
@@ -1088,6 +1089,8 @@ public extension ILType {
     static let jsTemporalZonedDateTime = ILType.object(ofGroup: "Temporal.ZonedDateTime", withProperties: dateProperties + timeProperties + ["timeZoneId", "epochMilliseconds", "epochNanoseconds", "offsetNanoseconds", "offset"], withMethods: ["with", "withPlainTime", "withTimeZone", "withCalendar", "add", "subtract", "until", "since", "round", "equals", "startOfDay", "getTimeZoneTransition", "toInstant", "toPlainDate", "toPlainTime", "toPlainDateTime"] + commonStringifierMethods)
 
     static let jsTemporalZonedDateTimeConstructor = ILType.functionAndConstructor([.bigint, .string, .opt(.jsTemporalCalendarEnum)] => .jsTemporalZonedDateTime) + .object(ofGroup: "TemporalZonedDateTimeConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
+
+    static let jsTemporalNow = ILType.object(ofGroup: "Temporal.Now", withProperties: [], withMethods: ["timeZoneId", "instant", "plainDateTimeISO", "zonedDateTimeISO", "plainDateISO", "plainTimeISO"])
 }
 
 public extension ObjectGroup {
@@ -2065,8 +2068,24 @@ public extension ObjectGroup {
             "PlainDate"  : .jsTemporalPlainDateConstructor,
             "PlainDateTime"  : .jsTemporalPlainDateTimeConstructor,
             "ZonedDateTime"  : .jsTemporalZonedDateTimeConstructor,
+            "Now": .jsTemporalNow,
         ],
         methods: [:]
+    )
+
+    static let jsTemporalNow = ObjectGroup(
+        name: "Temporal.Now",
+        instanceType: .jsTemporalNow,
+        properties: [:],
+        methods: [
+            "timeZoneId": [] => .string,
+            "instant": [] => .jsTemporalInstant,
+            // TODO(manishearth, 439921647) Potentially hint to the generator that these are timezone-like
+            "plainDateTimeISO": [.opt(.string)] => .jsTemporalPlainDateTime,
+            "zonedDateTimeISO": [.opt(.string)] => .jsTemporalZonedDateTime,
+            "plainDateISO": [.opt(.string)] => .jsTemporalPlainDate,
+            "plainTimeISO": [.opt(.string)] => .jsTemporalPlainTime,
+        ]
     )
 
     /// ObjectGroup modelling JavaScript Temporal.Instant objects
