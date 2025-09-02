@@ -150,10 +150,9 @@ public let CodeGenerators: [CodeGenerator] = [
                 b.construct(constructor, withArgs: [nanoseconds])
 
             } else {
-                let from = b.getProperty("from", of: constructor)
                 // TODO(manishearth, 439921647) Generate Temporal-like strings
                 let string = b.randomVariable(forUseAs: .string)
-                b.callFunction(from, withArgs: [string])
+                b.callMethod("from", on: constructor, withArgs: [string])
             }
 
         }
@@ -165,7 +164,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 let args = (0...numArgs).map { _ in b.randomVariable(forUseAs: .number) }
                 b.construct(constructor, withArgs: args)
             } else {
-                let from = b.getProperty("from", of: constructor)
                 // Whether to pass a Temporal-like object or a string
                 if Bool.random() {
                     // Durations are simple, they accept an object with optional integer fields for each duration field
@@ -175,11 +173,11 @@ public let CodeGenerators: [CodeGenerator] = [
                             dict[field] = b.randomVariable(forUseAs: .number)
                         }
                     }
-                    b.callFunction(from, withArgs: [ b.createObject(with: dict) ] )
+                    b.callMethod("from", on: constructor, withArgs: [ b.createObject(with: dict) ] )
                 } else {
                     // TODO(manishearth, 439921647) Generate Temporal-like strings
                     let string = b.randomVariable(forUseAs: .string)
-                    b.callFunction(from, withArgs: [string])
+                    b.callMethod("from", on: constructor, withArgs: [string])
 
                 }
             }
