@@ -4339,6 +4339,10 @@ public class ProgramBuilder {
         let dict: [String : Variable] = bag.properties.filter {_ in probability(0.8)}.mapValues {
             if $0.isEnumeration {
                 return loadString(chooseUniform(from: $0.enumValues))
+            // relativeTo doesn't have an ObjectGroup so we cannot just register a producingGenerator for it
+            } else if $0.Is(OptionsBag.jsTemporalRelativeTo) {
+                return findOrGenerateType(chooseUniform(from: [.jsTemporalZonedDateTime, .jsTemporalPlainDateTime,
+                                          .jsTemporalPlainDate, .string]))
             } else {
                 return findOrGenerateType($0)
             }
