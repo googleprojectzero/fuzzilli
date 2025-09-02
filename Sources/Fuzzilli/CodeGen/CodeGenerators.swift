@@ -208,6 +208,19 @@ public let CodeGenerators: [CodeGenerator] = [
                 b.construct(constructor, withArgs: args)
             }
         }
+        let createYearMonth = {
+            createTemporalType(b, type: "PlainYearMonth", dateFields: true, timeFields: false, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+                // The constructor takes 3 int args, an optional calendar, and an optional reference day.
+                var args = (0..<3).map {_ in b.randomVariable(forUseAs: .integer) }
+                if Bool.random() {
+                    args.append(b.randomVariable(forUseAs: .jsTemporalCalendarEnum))
+                    if Bool.random() {
+                        args.append(b.randomVariable(forUseAs: .integer))
+                    }
+                }
+                b.construct(constructor, withArgs: args)
+            }
+        }
         let createDate = {
             createTemporalType(b, type: "PlainDate", dateFields: true, timeFields: false, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
                 // The constructor takes 3 int args and an optional calendar.
@@ -241,7 +254,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 b.construct(constructor, withArgs: args)
             }
         }
-        chooseUniform(from: [createInstant, createDuration, createTime, createDate, createDateTime, createZonedDateTime])()
+        chooseUniform(from: [createInstant, createDuration, createTime, createYearMonth, createDate, createDateTime, createZonedDateTime])()
     },
     ValueGenerator("TypedArrayGenerator") { b, n in
         for _ in 0..<n {
