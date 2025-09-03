@@ -370,6 +370,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWebAssemblyTableConstructor)
         registerObjectGroup(.jsWebAssemblyTagPrototype)
         registerObjectGroup(.jsWebAssemblyTagConstructor)
+        registerObjectGroup(.jsWebAssemblyException)
+        registerObjectGroup(.jsWebAssemblyExceptionPrototype)
+        registerObjectGroup(.jsWebAssemblyExceptionConstructor)
         registerObjectGroup(.jsWebAssembly)
         registerObjectGroup(.jsWasmGlobal)
         registerObjectGroup(.jsWasmMemory)
@@ -1037,6 +1040,9 @@ public extension ILType {
 
     static let jsWebAssemblyTagConstructor = ILType.constructor([.plain(.object(withProperties: ["parameters"]))] => object(withMethods: []))
         + .object(ofGroup: "WebAssemblyTagConstructor", withProperties: ["prototype"])
+
+    static let jsWebAssemblyExceptionConstructor = ILType.constructor([.plain(ObjectGroup.jsWasmTag.instanceType), .plain(.jsArray), .opt(.object(withProperties: ["traceStack"]))] => ObjectGroup.jsWebAssemblyException.instanceType)
+        + .object(ofGroup: "WebAssemblyExceptionConstructor", withProperties: ["prototype"])
 
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
@@ -1937,11 +1943,39 @@ public extension ObjectGroup {
         methods: [:]
     )
 
+    static let jsWebAssemblyException = ObjectGroup(
+        name: "WebAssembly.Exception",
+        instanceType: nil,
+        properties: [
+            "stack": .string | .undefined,
+        ],
+        methods: [
+            "getArg": [.plain(jsWasmTag.instanceType), .plain(.integer)] => .jsAnything,
+            "is": [.plain(jsWasmTag.instanceType)] => .boolean,
+        ]
+    )
+
+    static let jsWebAssemblyExceptionPrototype = createPrototypeObjectGroup(jsWebAssemblyException)
+
+    static let jsWebAssemblyExceptionConstructor = ObjectGroup(
+        name: "WebAssemblyExceptionConstructor",
+        instanceType: .jsWebAssemblyExceptionConstructor,
+        properties: [
+            "prototype": jsWebAssemblyExceptionPrototype.instanceType,
+        ],
+        methods: [:]
+    )
+
+    // WebAssembly.CompileError, .LinkError, .RuntimeError don't offer anything interesting but a
+    // constructor.
+    fileprivate static let webAssemblyErrorConstructorType =
+        ILType.constructor([.opt(.string), .opt(.object() | .string), .opt(.string)] => .object())
+        + .object(withProperties: ["prototype"])
+
     static let jsWebAssembly = ObjectGroup(
         name: "WebAssembly",
         instanceType: nil,
         properties: [
-            // TODO(mliedtke): Add properties like Global, Memory, ...
             "JSTag": .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef], isJSTag: true)),
             "Module": .jsWebAssemblyModuleConstructor,
             "Global": .jsWebAssemblyGlobalConstructor,
@@ -1949,6 +1983,10 @@ public extension ObjectGroup {
             "Memory": .jsWebAssemblyMemoryConstructor,
             "Table": .jsWebAssemblyTableConstructor,
             "Tag": .jsWebAssemblyTagConstructor,
+            "Exception": .jsWebAssemblyExceptionConstructor,
+            "CompileError": webAssemblyErrorConstructorType,
+            "LinkError": webAssemblyErrorConstructorType,
+            "RuntimeError": webAssemblyErrorConstructorType,
         ],
         overloads: [
             "compile": wasmBufferTypes.map {
