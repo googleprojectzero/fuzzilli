@@ -1971,6 +1971,7 @@ public extension ObjectGroup {
     fileprivate static let webAssemblyErrorConstructorType =
         ILType.constructor([.opt(.string), .opt(.object() | .string), .opt(.string)] => .object())
         + .object(withProperties: ["prototype"])
+    fileprivate static let webAssemblySuspendingConstructorType = ILType.constructor([.plain(.function())] => .object())
 
     static let jsWebAssembly = ObjectGroup(
         name: "WebAssembly",
@@ -1987,6 +1988,8 @@ public extension ObjectGroup {
             "CompileError": webAssemblyErrorConstructorType,
             "LinkError": webAssemblyErrorConstructorType,
             "RuntimeError": webAssemblyErrorConstructorType,
+            "SuspendError": webAssemblyErrorConstructorType,
+            "Suspending": webAssemblySuspendingConstructorType,
         ],
         overloads: [
             "compile": wasmBufferTypes.map {
@@ -2004,6 +2007,9 @@ public extension ObjectGroup {
                  .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise],
             "validate": wasmBufferTypes.map {
                 [.plain($0), .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise},
+            // The argument needs to be an exported Wasm function. Fuzzilli's type system does not
+            // distinguish between Wasm and JS functions, so we can't express this precisely.
+            "promising": [[.function()] => .function()]
         ]
     )
 
