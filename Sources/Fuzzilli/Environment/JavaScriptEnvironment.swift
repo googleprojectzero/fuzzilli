@@ -295,6 +295,7 @@ public class JavaScriptEnvironment: ComponentBase {
 
     private var builtinTypes: [String: ILType] = [:]
     private var groups: [String: ObjectGroup] = [:]
+
     // Producing generators, keyed on `type.group`
     private var producingGenerators: [String: EnvironmentValueGenerator] = [:]
     private var producingMethods: [ILType: [(group: String, method: String)]] = [:]
@@ -438,9 +439,10 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("Symbol", ofType: .jsSymbolConstructor)
         registerBuiltin("BigInt", ofType: .jsBigIntConstructor)
         registerBuiltin("RegExp", ofType: .jsRegExpConstructor)
-        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError", "SuppressedError"] {
+        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError", "SuppressedError"] {
             registerBuiltin(variant, ofType: .jsErrorConstructor(variant))
         }
+        registerBuiltin("AggregateError", ofType: .functionAndConstructor([.plain(.iterable), .opt(.string), .opt(.object())] => .jsError("AggregateError")))
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
         registerBuiltin("SharedArrayBuffer", ofType: .jsSharedArrayBufferConstructor)
         for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
@@ -953,7 +955,7 @@ public extension ILType {
     static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
 
     /// Type of the JavaScript Date object
-    static let jsDate = ILType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "now", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString", "toTemporalInstant"])
+    static let jsDate = ILType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString", "toTemporalInstant"])
 
     /// Type of the JavaScript Date constructor builtin
     static let jsDateConstructor = ILType.functionAndConstructor([.opt(.string | .number)] => .jsDate) + .object(ofGroup: "DateConstructor", withProperties: ["prototype"], withMethods: ["UTC", "now", "parse"])
@@ -1545,7 +1547,6 @@ public extension ObjectGroup {
             "getUTCMilliseconds"    : [] => .number,
             "getTimezoneOffset"     : [] => .number,
             "getYear"               : [] => .number,
-            "now"                   : [] => .number,
             "setTime"               : [.number] => .jsDate,
             "setMilliseconds"       : [.number] => .jsDate,
             "setUTCMilliseconds"    : [.number] => .jsDate,
@@ -2109,7 +2110,7 @@ public extension ObjectGroup {
             "Duration"  : .jsTemporalDurationConstructor,
             "PlainTime"  : .jsTemporalPlainTimeConstructor,
             "PlainYearMonth"  : .jsTemporalPlainYearMonthConstructor,
-            "PlainMonthDay"  : .jsTemporalPlainMonthDay,
+            "PlainMonthDay"  : .jsTemporalPlainMonthDayConstructor,
             "PlainDate"  : .jsTemporalPlainDateConstructor,
             "PlainDateTime"  : .jsTemporalPlainDateTimeConstructor,
             "ZonedDateTime"  : .jsTemporalZonedDateTimeConstructor,

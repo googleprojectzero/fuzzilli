@@ -32,6 +32,7 @@ let v8Profile = Profile(
             "--wasm-fast-api",
             "--expose-fast-api",
             "--experimental-wasm-rab-integration",
+            "--wasm-test-streaming", // WebAssembly.compileStreaming & WebAssembly.instantiateStreaming()
         ]
 
         guard randomize else { return args }
