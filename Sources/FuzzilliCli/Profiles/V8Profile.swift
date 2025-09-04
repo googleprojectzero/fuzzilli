@@ -716,8 +716,10 @@ let v8Profile = Profile(
             args.append("--turboshaft-typed-optimizations")
         }
 
-        if probability(0.5) {
+        if probability(0.4) {
             args.append("--turbolev")
+        } else if probability(0.15) {
+            args.append("--turbolev-future")
         }
 
         if probability(0.1) {
