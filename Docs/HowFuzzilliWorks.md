@@ -187,7 +187,7 @@ CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, r
 
 This generator emits a comparison instruction (e.g. `==`) comparing two existing variables (of arbitrary type).
 
-The default code generators can be found in [CodeGenerators.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/CodeGen/CodeGenerators.swift) while custom code generators can be added for specific engines, for example to [trigger different levels of JITing](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/Profiles/JSCProfile.swift).
+The default code generators can be found in [CodeGenerators.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/CodeGen/CodeGenerators.swift) while custom code generators can be added for specific Javascript engines, for example to [trigger different levels of JITing](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/Profiles/JSCProfile.swift).
 
 Code generators are stored in a weighted list and are thus selected with different, currently [manually chosen weights](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/CodeGen/CodeGeneratorWeights.swift). This allows some degree of control over the distribution of the generated code, for example roughly how often arithmetic operations or method calls are performed, or how much control flow (if-else, loops, ...) is generated relative to data flow. Furthermore, CodeGenerators provide a simple way to steer Fuzzilli towards certain bug types by adding CodeGenerators that generate code fragments that have frequently resulted in bugs in the past, such as prototype changes, custom type conversion callbacks (e.g. valueOf), or indexed accessors.
 
@@ -256,7 +256,7 @@ Up to this point, a code generator is a simple function that fetches zero or mor
 
 ```swift
 CodeGenerator("FunctionCallGenerator") { b in
-    let function = b.randomJsVariable()
+    let f = b.randomVariable()
     let arguments = [b.randomJsVariable(), b.randomJsVariable(), b.randomJsVariable()]
     b.callFunction(f, with: arguments)
 }
@@ -309,8 +309,8 @@ With type information available, the CodeGenerator from above can now request a 
 
 ```swift
 CodeGenerator("FunctionCallGenerator") { b in
-    let function = b.randomVariable(ofType: .function())
-    let arguments = b.randomArguments(forCalling: function)
+    let f = b.randomVariable(ofType: .function())
+    let arguments = b.randomArguments(forCalling: f)
     b.callFunction(f, with: arguments)
 }
 ```
@@ -716,7 +716,7 @@ CodeGenerator("ComputedPropertyAssignmentGenerator", inputs: .preferred(.object(
 },
 ```
 
-When running the first generator, the `ProgramBuilder.randomBuiltin` API will consult the static environment model to find an available builtin. In this case, the environment model may contain the following builtin: `bar: .function([] => .anything)`, which is then choosen. Next, code generation may select the  `FunctionCallGenerator`. As it states that it would like a `.function()` as argument, the ProgramBuilder would (likely) select the previously loaded builtin. As its signature is known, no argument values are selected for the call and the return value is typed as `.anything`. Finally, code generation may pick the `ComputedPropertyAssignmentGenerator`. As there is currently no value of type `.object()` available, the return value of the function call would (likely) be selected as it has type `.anything`. This way, there is al least a chance that the value will be an object at runtime. As it cannot be ruled out that the value is not "nullish" (`null` or `undefined`), in which case a runtime exception would be raised, the code generator marks the operation as guarded. Putting everything together, the following code is generated for the function:
+When running the first generator, the `ProgramBuilder.randomBuiltin` API will consult the static environment model to find an available builtin. In this case, the environment model may contain the following builtin: `bar: .function([] => .anything)`, which is then choosen. Next, code generation may select the  `FunctionCallGenerator`. As it states that it would like a `.function()` as argument, the ProgramBuilder would (likely) select the previously loaded builtin. As its signature is known, no argument values are selected for the call and the return value is typed as `.anything`. Finally, code generation may pick the `ComputedPropertyAssignmentGenerator`. As there is currently no value of type `.object()` available, the return value of the function call would (likely) be selected as it has type `.anything`. This way, there is at least a chance that the value will be an object at runtime. As it cannot be ruled out that the value is not "nullish" (`null` or `undefined`), in which case a runtime exception would be raised, the code generator marks the operation as guarded. Putting everything together, the following code is generated for the function:
 
 ```
 v4 <- BeginPlainFunction -> v5, v6
@@ -738,7 +738,7 @@ function f4(a5, a6) {
     return v8;
 }
 for (let v9 = 0; v9 < 100; v9++) {
-    f6("foo", 42 * 1337);
+    f4("foo", 42 * 1337);
 }
 ```
 
@@ -751,16 +751,16 @@ function f4(a5, a6) {
     return v8;
 }
 for (let v9 = 0; v9 < 100; v9++) {
-    f6("foo", 42 * 1337);
+    f4("foo", 42 * 1337);
 }
 ```
 
 The subsequent mutations may then change the generated program in all sorts of interesting (and less interesting) ways.
 
 ### Code Generation + Mutations: The HybridEngine
-The HybridEngine combines the code generation engine with the existing mutators. For that, it first selects a random ProgramTemplate, then generates a program from it, using the code generation engine as discussed previously. If the generated program is valid, it is further mutated a few times, using the algorithm that is also used by the Mutationengine.
+The HybridEngine combines the code generation engine with the existing mutators. For that, it first selects a random ProgramTemplate, then generates a program from it, using the code generation engine as discussed previously. If the generated program is valid, it is further mutated a few times, using the algorithm that is also used by the MutationEngine.
 
-The high-level algorithm used by the hybrid engine is summarized by the image below.
+The high-level algorithm used by the HybridEngine is summarized by the image below.
 
 ![Hybrid Fuzzing Algorithm](images/hybrid_engine.png)
 
