@@ -61,6 +61,22 @@ public struct Configuration {
     /// also appended as a comment in the footer of crashing samples.
     public let tag: String?
 
+    // Whether the fuzzer is running with wasm features or without. If false,
+    // this disables all wasm-related code generators.
+    public let isWasmEnabled: Bool
+
+    // The directory in which the corpus and additional diagnostics files are stored.
+    public let storagePath: String?
+
+    // Advises the fuzzer to generate cases that are more suitable for differential fuzzing.
+    // Right now this only leads to the JavaScriptLifter emitting more local variables which
+    // differential fuzzers can inspect (via mutating the JS program to print defined variables).
+    public let forDifferentialFuzzing: Bool
+
+    // The subdirectory in {config.storagePath} at which all programs are stored which could not
+    // be imported due to disabled wasm capabilities in the fuzzer.
+    public static let excludedWasmDirectory = "excluded_wasm_programs"
+
     public init(arguments: [String] = [],
                 timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
@@ -72,7 +88,10 @@ public struct Configuration {
                 enableDiagnostics: Bool = false,
                 enableInspection: Bool = false,
                 staticCorpus: Bool = false,
-                tag: String? = nil) {
+                tag: String? = nil,
+                isWasmEnabled: Bool = false,
+                storagePath: String? = nil,
+                forDifferentialFuzzing: Bool = false) {
         self.arguments = arguments
         self.timeout = timeout
         self.logLevel = logLevel
@@ -84,6 +103,9 @@ public struct Configuration {
         self.enableInspection = enableDiagnostics || enableInspection
         self.staticCorpus = staticCorpus
         self.tag = tag
+        self.isWasmEnabled = isWasmEnabled
+        self.storagePath = storagePath
+        self.forDifferentialFuzzing = forDifferentialFuzzing
     }
 }
 

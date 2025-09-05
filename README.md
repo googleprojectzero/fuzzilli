@@ -79,7 +79,7 @@ FuzzIL has a number of properties:
 A number of mutations can then be performed on these programs:
 
 * [InputMutator](Sources/Fuzzilli/Mutators/InputMutator.swift): replaces input variables of instructions with different ones to mutate the dataflow of the program.
-* [CodeGenMutator](Sources/Fuzzilli/Mutators/CodeGenMutator.swift): generates code and inserts it somewhere in the mutated program. Code is generated either by running a [code generator](Sources/Fuzzilli/Core/CodeGenerators.swift) or by copying some instructions from another program in the corpus (splicing).
+* [CodeGenMutator](Sources/Fuzzilli/Mutators/CodeGenMutator.swift): generates code and inserts it somewhere in the mutated program. Code is generated either by running a [code generator](Sources/Fuzzilli/CodeGen/CodeGenerators.swift) or by copying some instructions from another program in the corpus (splicing).
 * [CombineMutator](Sources/Fuzzilli/Mutators/CombineMutator.swift): inserts a program from the corpus into a random position in the mutated program.
 * [OperationMutator](Sources/Fuzzilli/Mutators/OperationMutator.swift): mutates the parameters of operations, for example replacing an integer constant with a different one.
 * and more...
@@ -109,7 +109,7 @@ Furthermore, a number of modules are optionally available:
 * [ThreadSync](Sources/Fuzzilli/Modules/ThreadSync.swift): synchronize multiple instances within the same process.
 * [Storage](Sources/Fuzzilli/Modules/Storage.swift): stores crashing programs to disk.
 
-The fuzzer is event-driven, with most of the interactions between different classes happening through events. Events are dispatched e.g. as a result of a crash or an interesting program being found, a new program being executed, a log message being generated and so on. See [Events.swift](Sources/Fuzzilli/Core/Events.swift) for the full list of events. The event mechanism effectively decouples the various components of the fuzzer and makes it easy to implement additional modules.
+The fuzzer is event-driven, with most of the interactions between different classes happening through events. Events are dispatched e.g. as a result of a crash or an interesting program being found, a new program being executed, a log message being generated and so on. See [Events.swift](Sources/Fuzzilli/Base/Events.swift) for the full list of events. The event mechanism effectively decouples the various components of the fuzzer and makes it easy to implement additional modules.
 
 A FuzzIL program can be built up using a [ProgramBuilder](Sources/Fuzzilli/Base/ProgramBuilder.swift) instance. A ProgramBuilder provides methods to create and append new instructions, append instructions from another program, retrieve existing variables, query the execution context at the current position (e.g. whether it is inside a loop), and more.
 
@@ -167,6 +167,8 @@ Special thanks to all users of Fuzzilli who have reported bugs found by it!
 * [CVE-2022-46696](https://bugs.webkit.org/show_bug.cgi?id=246942): Assertion failure due to missing exception check in JIT-compiled code
 * [CVE-2022-46699](https://bugs.webkit.org/show_bug.cgi?id=247420): Assertion failure due to incorrect caching of special properties in ICs
 * [CVE-2022-46700](https://bugs.webkit.org/show_bug.cgi?id=247562): Intl.Locale.prototype.hourCycles leaks empty JSValue to script
+* [CVE-2025-43214](https://bugs.webkit.org/show_bug.cgi?id=292621): Memory corruption during JSToWasmEntry when iterating over the stack
+* [CVE-2025-43213](https://bugs.webkit.org/show_bug.cgi?id=292916): Invalid typing of NewRegExpUntyped operation
 
 #### Gecko/Spidermonkey
 
@@ -196,7 +198,16 @@ Special thanks to all users of Fuzzilli who have reported bugs found by it!
 * [CVE-2024-3855](https://bugzilla.mozilla.org/show_bug.cgi?id=1885828): JIT incorrectly optimized MSubstr operations, which led to out-of-bounds reads
 * [CVE-2024-3857](https://bugzilla.mozilla.org/show_bug.cgi?id=1886683): JIT generated incorrect code resulting in use-after-free during garbage collection
 * [CVE-2024-3858](https://bugzilla.mozilla.org/show_bug.cgi?id=1888892): Mutating a JavaScript object while GC tracing crashes the jitted code
-
+* [CVE-2024-6613](https://bugzilla.mozilla.org/show_bug.cgi?id=1900523): Incorrect listing of WASM stack frames
+* [CVE-2024-6614](https://bugzilla.mozilla.org/show_bug.cgi?id=1902983): Incorrect listing of WASM stack frames
+* [CVE-2024-7521](https://bugzilla.mozilla.org/show_bug.cgi?id=1904644): Incomplete WebAssembly exception handing
+* [CVE-2024-7652](https://bugzilla.mozilla.org/show_bug.cgi?id=1901411): Bug in the AsyncGeneratorPrototype Specification
+* [CVE-2024-8381](https://bugzilla.mozilla.org/show_bug.cgi?id=1912715): Type confusion when looking up a property name in a "with" block
+* [CVE-2024-9396](https://bugzilla.mozilla.org/show_bug.cgi?id=1912471): Potential memory corruption may occur when cloning certain objects
+* [CVE-2025-0240](https://bugzilla.mozilla.org/show_bug.cgi?id=1929623): Compartment mismatch when parsing JavaScript JSON module
+* [CVE-2025-0241](https://bugzilla.mozilla.org/show_bug.cgi?id=1933023): Memory corruption when using JavaScript Text Segmentation
+* [CVE-2025-1012](https://bugzilla.mozilla.org/show_bug.cgi?id=1939710): Use-after-free during concurrent delazification
+* [CVE-2025-1934](https://bugzilla.mozilla.org/show_bug.cgi?id=1942881): Unexpected GC during RegExp bailout processing
 
 #### Chromium/v8
 

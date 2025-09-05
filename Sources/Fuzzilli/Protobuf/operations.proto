@@ -118,6 +118,7 @@ message EndObjectLiteral {
 
 message BeginClassDefinition {
     bool hasSuperclass = 1;
+    bool isExpression = 2;
 }
 
 message BeginClassConstructor {
@@ -260,6 +261,7 @@ message GetProperty {
 
 message SetProperty {
     string propertyName = 1;
+    bool isGuarded = 2;
 }
 
 message UpdateProperty {
@@ -817,13 +819,14 @@ message CreateWasmTable {
   WasmILType elementType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
+  bool isTable64 = 4;
 }
 
 message CreateWasmJSTag {
 }
 
 message CreateWasmTag {
-    repeated WasmILType parameters = 1;
+    repeated WasmILType parameterTypes = 1;
 }
 
 message WrapSuspending {
@@ -834,6 +837,9 @@ message WrapPromising {
 
 message BindMethod {
     string methodName = 1;
+}
+
+message BindFunction {
 }
 
 // Wasm Operations
@@ -855,32 +861,64 @@ message Constf64 {
 }
 
 message WasmReturn {
-  WasmILType returnType = 1;
+  repeated WasmILType returnTypes = 1;
 }
 
 // We only serialize the wasm types as the rest would be overkill and are not needed.
-enum WasmILType {
-  CONSTi32 = 0;
-  CONSTi64 = 1;
-  CONSTf32 = 2;
-  CONSTf64 = 3;
-  EXTERNREF = 4;
-  FUNCREF = 5;
+enum WasmValueType {
+  I32 = 0;
+  I64 = 1;
+  F32 = 2;
+  F64 = 3;
+  PACKED_I8 = 4;
+  PACKED_I16 = 5;
   SIMD128 = 6;
-  NOTHING = 7;
+  // Fuzzilli-specific types
+  FUNCTIONDEF = 7;  // Stands for the type of a funcref table with function indices.
+  NOTHING = 8;
+}
+
+enum WasmReferenceTypeKind {
+  INDEX = 0;
+  EXTERNREF = 1;
+  FUNCREF = 2;
+  EXNREF = 3;
+  I31REF = 4;
+  ANYREF = 5;
+  EQREF = 6;
+  STRUCTREF = 7;
+  ARRAYREF = 8;
+  NONEREF = 9;
+  NOEXTERNREF = 10;
+  NOFUNCREF = 11;
+  NOEXNREF = 12;
+}
+
+message WasmReferenceType {
+  WasmReferenceTypeKind kind = 1;
+  bool nullability = 2;
+}
+
+message WasmILType {
+  oneof Type {
+    WasmValueType valueType = 1;
+    WasmReferenceType refType = 2;
+  }
 }
 
 message BeginWasmFunction {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message EndWasmFunction {
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmJsCall {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message Wasmi32CompareOp {
@@ -1039,7 +1077,7 @@ message WasmGlobal {
     int64 valuei64 = 3;
     float valuef32 = 4;
     double valuef64 = 5;
-    int64 nullref = 6;
+    WasmReferenceTypeKind nullref = 6;
     int64 funcref = 7;
     WasmILType imported = 8;
   }
@@ -1056,11 +1094,22 @@ message WasmDefineGlobal {
    WasmGlobal wasmGlobal = 1;
 }
 
+message WasmSignature {
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
+}
+
+message IndexedWasmSignature {
+  int64 index = 1;
+  WasmSignature signature = 2;
+}
+
 message WasmDefineTable {
   WasmILType elementType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
-  repeated int64 definedEntryIndices = 4;
+  repeated IndexedWasmSignature definedEntries = 4;
+  bool isTable64 = 5;
 }
 
 message WasmDefineMemory {
@@ -1080,12 +1129,40 @@ message WasmTableGet {
   WasmILType elementType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
+  bool isTable64 = 4;
 }
 
 message WasmTableSet {
   WasmILType elementType = 1;
   int64 minSize = 2;
   optional int64 maxSize = 3;
+  bool isTable64 = 4;
+}
+
+message WasmTableSize {
+}
+
+message WasmTableGrow {
+}
+
+message WasmCallIndirect {
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
+}
+
+message WasmCallDirect {
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
+}
+
+message WasmReturnCallDirect {
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
+}
+
+message WasmReturnCallIndirect {
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 enum WasmMemoryLoadType {
@@ -1108,7 +1185,6 @@ enum WasmMemoryLoadType {
 message WasmMemoryLoad {
   WasmMemoryLoadType loadType = 1;
   int64 staticOffset = 2;
-  bool isMemory64 = 3;
 }
 
 enum WasmMemoryStoreType {
@@ -1121,75 +1197,117 @@ enum WasmMemoryStoreType {
   I64_STOREMEM_8 = 6;
   I64_STOREMEM_16 = 7;
   I64_STOREMEM_32 = 8;
+  S128_STOREMEM = 9;
 }
 
 message WasmMemoryStore {
   WasmMemoryStoreType storeType = 1;
   int64 staticOffset = 2;
-  bool isMemory64 = 3;
+}
+
+message WasmMemorySize {
+}
+
+message WasmMemoryGrow {
+}
+
+message WasmMemoryFill {
 }
 
 message WasmBeginBlock {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmEndBlock {
-  WasmILType returnType = 1;
+  repeated WasmILType outputTypes = 1;
 }
 
 message WasmBeginLoop {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmEndLoop {
-  WasmILType returnType = 1;
+  repeated WasmILType outputTypes = 1;
+}
+
+enum WasmCatchKind {
+  NO_REF = 0;
+  REF = 1;
+  ALL_NO_REF = 2;
+  ALL_REF = 3;
+}
+
+message WasmBeginTryTable {
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
+  repeated WasmCatchKind catches = 3;
+}
+
+message WasmEndTryTable {
+  repeated WasmILType outputTypes = 1;
 }
 
 message WasmBeginTry {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmBeginCatchAll {
-  WasmILType returnType = 2;
+  repeated WasmILType inputTypes = 1;
 }
 
 message WasmBeginCatch {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmEndTry {
-  WasmILType returnType = 1;
+  repeated WasmILType outputTypes = 1;
 }
 
 message WasmBeginTryDelegate {
-  repeated WasmILType parameters = 1;
-  WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmEndTryDelegate {
+  repeated WasmILType outputTypes = 1;
 }
 
 message WasmThrow {
-  repeated WasmILType parameters = 1;
+  repeated WasmILType parameterTypes = 1;
+}
+
+message WasmThrowRef {
 }
 
 message WasmRethrow {
 }
 
 message WasmDefineTag {
-  repeated WasmILType parameters = 1;
+  repeated WasmILType parameterTypes = 1;
 }
 
 message WasmBranch {
   repeated WasmILType parameters = 1;
 }
 
+enum WasmBranchHint {
+    BRANCHHINT_NONE = 0;
+    BRANCHHINT_LIKELY = 1;
+    BRANCHHINT_UNLIKELY = 2;
+}
+
 message WasmBranchIf {
   repeated WasmILType parameters = 1;
+  WasmBranchHint hint = 2;
+}
+
+message WasmBranchTable {
+  repeated WasmILType parameters = 1;
+  uint32 valueCount = 2;
 }
 
 message WasmReassign {
@@ -1197,17 +1315,19 @@ message WasmReassign {
 }
 
 message WasmBeginIf {
-    repeated WasmILType parameters = 1;
-    WasmILType returnType = 2;
+  repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
+  bool inverted = 3;
+  WasmBranchHint hint = 4;
 }
 
 message WasmBeginElse {
-    repeated WasmILType parameters = 1;
-    WasmILType returnType = 2;
+    repeated WasmILType parameterTypes = 1;
+  repeated WasmILType outputTypes = 2;
 }
 
 message WasmEndIf {
-    WasmILType returnType = 1;
+    repeated WasmILType outputTypes = 1;
 }
 
 message WasmNop {
@@ -1217,7 +1337,6 @@ message WasmUnreachable {
 }
 
 message WasmSelect {
-    WasmILType type = 1;
 }
 
 message ConstSimd128 {
@@ -1239,6 +1358,11 @@ message WasmSimd128IntegerBinOp {
     int32 binaryOperator = 2;
 }
 
+message WasmSimd128IntegerTernaryOp {
+    uint32 shape = 1;
+    int32 opcode = 2;
+}
+
 message WasmSimd128FloatUnOp {
     uint32 shape = 1;
     int32 unaryOperator = 2;
@@ -1249,10 +1373,78 @@ message WasmSimd128FloatBinOp {
     int32 binaryOperator = 2;
 }
 
-message WasmI64x2Splat {
+message WasmSimd128FloatTernaryOp {
+    uint32 shape = 1;
+    int32 opcode = 2;
 }
 
-message WasmI64x2ExtractLane {
+enum WasmSimdSplatKind {
+    I8x16 = 0;
+    I16x8 = 1;
+    I32x4 = 2;
+    I64x2 = 3;
+    F32x4 = 4;
+    F64x2 = 5;
+}
+
+message WasmSimdSplat {
+    WasmSimdSplatKind kind = 1;
+}
+
+enum WasmSimdExtractLaneKind {
+    EXTRACTI8x16S = 0;
+    EXTRACTI8x16U = 1;
+    EXTRACTI16x8S = 2;
+    EXTRACTI16x8U = 3;
+    EXTRACTI32x4 = 4;
+    EXTRACTI64x2 = 5;
+    EXTRACTF32x4 = 6;
+    EXTRACTF64x2 = 7;
+}
+
+message WasmSimdExtractLane {
+    WasmSimdExtractLaneKind kind = 1;
+    uint32 lane = 2;
+}
+
+enum WasmSimdReplaceLaneKind {
+    REPLACEI8x16 = 0;
+    REPLACEI16x8 = 1;
+    REPLACEI32x4 = 2;
+    REPLACEI64x2 = 3;
+    REPLACEF32x4 = 4;
+    REPLACEF64x2 = 5;
+}
+
+message WasmSimdReplaceLane {
+    WasmSimdReplaceLaneKind kind = 1;
+    uint32 lane = 2;
+}
+
+enum WasmSimdStoreLaneKind {
+  STORE8 = 0;
+  STORE16 = 1;
+  STORE32 = 2;
+  STORE64 = 3;
+}
+
+message WasmSimdStoreLane {
+  WasmSimdStoreLaneKind kind = 1;
+  int64 staticOffset = 2;
+  uint32 lane = 3;
+}
+
+enum WasmSimdLoadLaneKind {
+  LOAD8 = 0;
+  LOAD16 = 1;
+  LOAD32 = 2;
+  LOAD64 = 3;
+}
+
+message WasmSimdLoadLane {
+  WasmSimdLoadLaneKind kind = 1;
+  int64 staticOffset = 2;
+  uint32 lane = 3;
 }
 
 enum WasmSimdLoadKind {
@@ -1267,10 +1459,194 @@ enum WasmSimdLoadKind {
   LOAD16SPLAT = 8;
   LOAD32SPLAT = 9;
   LOAD64SPLAT = 10;
+  LOAD32ZERO = 11;
+  LOAD64ZERO = 12;
 }
 
 message WasmSimdLoad {
   WasmSimdLoadKind kind = 1;
   int64 staticOffset = 2;
-  bool isMemory64 = 3;
+}
+
+
+message WasmBeginTypeGroup {
+}
+
+message WasmEndTypeGroup {
+}
+
+message WasmDefineArrayType {
+    WasmILType elementType = 1;
+    bool mutability = 2;
+}
+
+message WasmStructField {
+    WasmILType type = 1;
+    bool mutability = 2;
+}
+
+message WasmDefineStructType {
+    repeated WasmStructField fields = 1;
+}
+
+message WasmDefineForwardOrSelfReference {
+}
+
+message WasmResolveForwardReference {
+}
+
+message WasmArrayNewFixed {
+}
+
+message WasmArrayNewDefault {
+}
+
+message WasmArrayLen {
+}
+
+message WasmArrayGet {
+    bool isSigned = 1;
+}
+
+message WasmArraySet {
+}
+
+message WasmStructNewDefault {
+}
+
+message WasmStructGet {
+    int32 fieldIndex = 1;
+    bool isSigned = 2;
+}
+
+message WasmStructSet {
+    int32 fieldIndex = 1;
+}
+
+message WasmRefNull {
+    optional WasmILType type = 1;
+}
+
+message WasmRefIsNull {
+}
+
+message WasmRefI31 {
+}
+
+message WasmI31Get {
+    bool isSigned = 1;
+}
+
+enum WasmAtomicLoadType {
+  I32_LOAD = 0;
+  I64_LOAD = 1;
+  I32_LOAD_8U = 2;
+  I32_LOAD_16U = 3;
+  I64_LOAD_8U = 4;
+  I64_LOAD_16U = 5;
+  I64_LOAD_32U = 6;
+}
+
+enum WasmAtomicStoreType {
+  I32_STORE = 0;
+  I64_STORE = 1;
+  I32_STORE_8 = 2;
+  I32_STORE_16 = 3;
+  I64_STORE_8 = 4;
+  I64_STORE_16 = 5;
+  I64_STORE_32 = 6;
+}
+
+message WasmAtomicLoad {
+  WasmAtomicLoadType loadType = 1;
+  int64 offset = 2;
+}
+
+message WasmAtomicStore {
+  WasmAtomicStoreType storeType = 1;
+  int64 offset = 2;
+}
+
+enum WasmAtomicRMWType {
+    I32_ADD = 0;
+    I64_ADD = 1;
+    I32_ADD_8U = 2;
+    I32_ADD_16U = 3;
+    I64_ADD_8U = 4;
+    I64_ADD_16U = 5;
+    I64_ADD_32U = 6;
+    I32_SUB = 7;
+    I64_SUB = 8;
+    I32_SUB_8U = 9;
+    I32_SUB_16U = 10;
+    I64_SUB_8U = 11;
+    I64_SUB_16U = 12;
+    I64_SUB_32U = 13;
+    I32_AND = 14;
+    I64_AND = 15;
+    I32_AND_8U = 16;
+    I32_AND_16U = 17;
+    I64_AND_8U = 18;
+    I64_AND_16U = 19;
+    I64_AND_32U = 20;
+    I32_OR = 21;
+    I64_OR = 22;
+    I32_OR_8U = 23;
+    I32_OR_16U = 24;
+    I64_OR_8U = 25;
+    I64_OR_16U = 26;
+    I64_OR_32U = 27;
+    I32_XOR = 28;
+    I64_XOR = 29;
+    I32_XOR_8U = 30;
+    I32_XOR_16U = 31;
+    I64_XOR_8U = 32;
+    I64_XOR_16U = 33;
+    I64_XOR_32U = 34;
+    I32_XCHG = 35;
+    I64_XCHG = 36;
+    I32_XCHG_8U = 37;
+    I32_XCHG_16U = 38;
+    I64_XCHG_8U = 39;
+    I64_XCHG_16U = 40;
+    I64_XCHG_32U = 41;
+}
+
+message WasmAtomicRMW {
+    WasmAtomicRMWType op = 1;
+    int64 offset = 2;
+}
+
+enum WasmAtomicCmpxchgType {
+    I32_CMPXCHG = 0;
+    I64_CMPXCHG = 1;
+    I32_CMPXCHG_8U = 2;
+    I32_CMPXCHG_16U = 3;
+    I64_CMPXCHG_8U = 4;
+    I64_CMPXCHG_16U = 5;
+    I64_CMPXCHG_32U = 6;
+}
+
+message WasmAtomicCmpxchg {
+    WasmAtomicCmpxchgType op = 1;
+    int64 offset = 2;
+}
+
+message WasmAnyConvertExtern {
+}
+
+message WasmExternConvertAny {
+}
+
+message WasmDefineDataSegment {
+  bytes segment = 1;
+}
+
+message WasmDropDataSegment {
+}
+
+message WasmMemoryInit {
+}
+
+message WasmMemoryCopy {
 }

@@ -55,9 +55,9 @@ public class HybridEngine: FuzzEngine {
                 let nameMaxLength = self.fuzzer.programTemplates.map({ $0.name.count }).max()!
                 for template in self.fuzzer.programTemplates {
                     let name = template.name.rightPadded(toLength: nameMaxLength)
-                    let correctnessRate = String(format: "%.2f%%", template.correctnessRate * 100).leftPadded(toLength: 7)
-                    let interestingSamplesRate = String(format: "%.2f%%", template.interestingSamplesRate * 100).leftPadded(toLength: 7)
-                    let timeoutRate = String(format: "%.2f%%", template.timeoutRate * 100).leftPadded(toLength: 6)
+                    let correctnessRate = Statistics.percentageOrNa(template.correctnessRate, 7)
+                    let interestingSamplesRate = Statistics.percentageOrNa(template.interestingSamplesRate, 7)
+                    let timeoutRate = Statistics.percentageOrNa(template.timeoutRate, 6)
                     let avgInstructionsAdded = String(format: "%.2f", template.avgNumberOfInstructionsGenerated).leftPadded(toLength: 5)
                     let samplesGenerated = template.totalSamples
                     self.logger.verbose("    \(name) : Correctness rate: \(correctnessRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions generated: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated)")

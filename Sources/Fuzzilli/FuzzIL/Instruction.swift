@@ -330,24 +330,18 @@ extension Instruction: ProtobufConvertible {
             }
         }
 
-        func convertParametersToWasmTypeEnums(_ parameters: ParameterList) -> [Fuzzilli_Protobuf_WasmILType] {
-            var plainParams: [ILType] = []
-            for param in parameters {
-                switch param {
-                case .plain(let p):
-                    plainParams.append(p)
-                default:
-                    fatalError("Only plain parameters are expected.")
-                }
-            }
-            return plainParams.map { ILTypeToWasmTypeEnum($0) }
-        }
-
         func ILTypeToWasmTypeEnum(_ wasmType: ILType) -> Fuzzilli_Protobuf_WasmILType {
             var underlyingWasmType = wasmType
             if underlyingWasmType == .nothing {
                 // This is used as sentinel for function signatures that don't have a return value
-                return Fuzzilli_Protobuf_WasmILType.nothing
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.nothing
+                }
+            }
+            if (underlyingWasmType.Is(.wasmFunctionDef())) {
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.functiondef
+                }
             }
             // In case of Wasm globals, the underlying valuetype is stored in the Wasm extension.
             if underlyingWasmType.isWasmGlobalType {
@@ -357,20 +351,79 @@ extension Instruction: ProtobufConvertible {
 
             switch underlyingWasmType {
             case .wasmi32:
-                return .consti32
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.i32
+                }
             case .wasmi64:
-                return .consti64
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.i64
+                }
             case .wasmf32:
-                return .constf32
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.f32
+                }
             case .wasmf64:
-                return .constf64
-            case .wasmExternRef:
-                return .externref
-            case .wasmFuncRef:
-                return .funcref
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.f64
+                }
+            case .wasmPackedI8:
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.packedI8
+                }
+            case .wasmPackedI16:
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.packedI16
+                }
             case .wasmSimd128:
-                return .simd128
+                return Fuzzilli_Protobuf_WasmILType.with {
+                    $0.valueType = Fuzzilli_Protobuf_WasmValueType.simd128
+                }
             default:
+                if underlyingWasmType <= .wasmGenericRef {
+                    switch underlyingWasmType.wasmReferenceType!.kind {
+                        case .Index(_):
+                            return Fuzzilli_Protobuf_WasmILType.with {
+                                $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
+                                    $0.kind = Fuzzilli_Protobuf_WasmReferenceTypeKind.index
+                                    $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                                }
+                            }
+                        case .Abstract(let heapType):
+                            let kind = switch heapType {
+                                case .WasmExn:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.exnref
+                                case .WasmI31:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.i31Ref
+                                case .WasmFunc:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.funcref
+                                case .WasmExtern:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.externref
+                                case .WasmAny:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.anyref
+                                case .WasmEq:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.eqref
+                                case .WasmStruct:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.structref
+                                case .WasmArray:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.arrayref
+                                case .WasmNone:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.noneref
+                                case .WasmNoExtern:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.noexternref
+                                case .WasmNoFunc:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.nofuncref
+                                case .WasmNoExn:
+                                    Fuzzilli_Protobuf_WasmReferenceTypeKind.noexnref
+
+                            }
+                            return Fuzzilli_Protobuf_WasmILType.with {
+                                $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
+                                    $0.kind = kind
+                                    $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                                }
+                            }
+                    }
+                }
                 fatalError("Can not serialize a non-wasm type \(underlyingWasmType) into a Protobuf_WasmILType! for instruction \(self)")
             }
         }
@@ -428,33 +481,8 @@ extension Instruction: ProtobufConvertible {
                     return .i64Storemem16
                 case .I64StoreMem32:
                     return .i64Storemem32
-            }
-        }
-
-        func convertWasmSimdLoadKind(_ loadKind: WasmSimdLoad.Kind) -> Fuzzilli_Protobuf_WasmSimdLoadKind {
-            switch loadKind {
-                case .LoadS128:
-                    return .loads128
-                case .Load8x8S:
-                    return .load8X8S
-                case .Load8x8U:
-                    return .load8X8U
-                case .Load16x4S:
-                    return .load16X4S
-                case .Load16x4U:
-                    return .load16X4U
-                case .Load32x2S:
-                    return .load32X2S
-                case .Load32x2U:
-                    return .load32X2U
-                case .Load8Splat:
-                    return .load8Splat
-                case .Load16Splat:
-                    return .load16Splat
-                case .Load32Splat:
-                    return .load32Splat
-                case .Load64Splat:
-                    return .load64Splat
+                case .S128StoreMem:
+                    return .s128Storemem
             }
         }
 
@@ -470,10 +498,34 @@ extension Instruction: ProtobufConvertible {
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.valuef64(val)
             case .refFunc(let val):
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.funcref(Int64(val))
-            case .refNull:
-                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(0)
+            case .externref:
+                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.externref)
+            case .exnref:
+                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.exnref)
+            case .i31ref:
+                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.i31Ref)
             case .imported(let ilType):
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.imported(ILTypeToWasmTypeEnum(ilType))
+            }
+        }
+
+        func convertWasmCatch(catchKind: WasmBeginTryTable.CatchKind) -> Fuzzilli_Protobuf_WasmCatchKind {
+            switch catchKind {
+            case .NoRef:
+                return .noRef
+            case .Ref:
+                return .ref
+            case .AllNoRef:
+                return .allNoRef
+            case .AllRef:
+                return .allRef
+            }
+        }
+
+        func WasmSignatureToProto(_ signature: WasmSignature) -> Fuzzilli_Protobuf_WasmSignature {
+            return Fuzzilli_Protobuf_WasmSignature.with {
+                $0.parameterTypes = signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                $0.outputTypes = signature.outputTypes.map(ILTypeToWasmTypeEnum)
             }
         }
 
@@ -548,7 +600,10 @@ extension Instruction: ProtobufConvertible {
             case .endObjectLiteral:
                 $0.endObjectLiteral = Fuzzilli_Protobuf_EndObjectLiteral()
             case .beginClassDefinition(let op):
-                $0.beginClassDefinition = Fuzzilli_Protobuf_BeginClassDefinition.with { $0.hasSuperclass_p = op.hasSuperclass }
+                $0.beginClassDefinition = Fuzzilli_Protobuf_BeginClassDefinition.with {
+                    $0.hasSuperclass_p = op.hasSuperclass
+                    $0.isExpression = op.isExpression
+                }
             case .beginClassConstructor(let op):
                 $0.beginClassConstructor = Fuzzilli_Protobuf_BeginClassConstructor.with { $0.parameters = convertParameters(op.parameters) }
             case .endClassConstructor:
@@ -653,7 +708,10 @@ extension Instruction: ProtobufConvertible {
                     $0.isGuarded = op.isGuarded
                 }
             case .setProperty(let op):
-                $0.setProperty = Fuzzilli_Protobuf_SetProperty.with { $0.propertyName = op.propertyName }
+                $0.setProperty = Fuzzilli_Protobuf_SetProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.isGuarded = op.isGuarded
+                }
             case .updateProperty(let op):
                 $0.updateProperty = Fuzzilli_Protobuf_UpdateProperty.with {
                     $0.propertyName = op.propertyName
@@ -1017,12 +1075,13 @@ extension Instruction: ProtobufConvertible {
                     if let maxSize = op.tableType.limits.max {
                         $0.maxSize = Int64(maxSize)
                     }
+                    $0.isTable64 = op.tableType.isTable64
                 }
             case .createWasmJSTag(_):
                 $0.createWasmJstag = Fuzzilli_Protobuf_CreateWasmJSTag()
             case .createWasmTag(let op):
                 $0.createWasmTag = Fuzzilli_Protobuf_CreateWasmTag.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
+                    $0.parameterTypes = op.parameterTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wrapPromising(_):
                 $0.wrapPromising = Fuzzilli_Protobuf_WrapPromising()
@@ -1030,6 +1089,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wrapSuspending = Fuzzilli_Protobuf_WrapSuspending()
             case .bindMethod(let op):
                 $0.bindMethod = Fuzzilli_Protobuf_BindMethod.with { $0.methodName = op.methodName }
+            case .bindFunction(_):
+                $0.bindFunction = Fuzzilli_Protobuf_BindFunction()
             case .print(_):
                 fatalError("Print operations should not be serialized")
             // Wasm Operations
@@ -1042,11 +1103,13 @@ extension Instruction: ProtobufConvertible {
             case .constf32(let op):
                 $0.constf32 = Fuzzilli_Protobuf_Constf32.with { $0.value = op.value }
             case .wasmReturn(let op):
-                $0.wasmReturn = Fuzzilli_Protobuf_WasmReturn.with { $0.returnType = ILTypeToWasmTypeEnum(op.returnType) }
+                $0.wasmReturn = Fuzzilli_Protobuf_WasmReturn.with {
+                    $0.returnTypes = op.returnTypes.map(ILTypeToWasmTypeEnum)
+                }
             case .wasmJsCall(let op):
                 $0.wasmJsCall = Fuzzilli_Protobuf_WasmJsCall.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.functionSignature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.functionSignature.outputType)
+                    $0.parameterTypes = op.functionSignature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.functionSignature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmi32CompareOp(let op):
                 $0.wasmi32CompareOp = Fuzzilli_Protobuf_Wasmi32CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.rawValue) }
@@ -1155,12 +1218,18 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmDefineTable(let op):
                 $0.wasmDefineTable = Fuzzilli_Protobuf_WasmDefineTable.with {
-                    $0.elementType = ILTypeToWasmTypeEnum(op.tableType.elementType)
-                    $0.minSize = Int64(op.tableType.limits.min)
-                    if let maxSize = op.tableType.limits.max {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
+                    $0.minSize = Int64(op.limits.min)
+                    if let maxSize = op.limits.max {
                         $0.maxSize = Int64(maxSize)
                     }
-                    $0.definedEntryIndices = op.definedEntryIndices.map { Int64($0) }
+                    $0.definedEntries = op.definedEntries.map { entry in
+                        Fuzzilli_Protobuf_IndexedWasmSignature.with {
+                            $0.index = Int64(entry.indexInTable)
+                            $0.signature = WasmSignatureToProto(entry.signature)
+                        }
+                    }
+                    $0.isTable64 = op.isTable64
                 }
             case .wasmDefineMemory(let op):
                 assert(op.wasmMemory.isWasmMemoryType)
@@ -1172,6 +1241,11 @@ extension Instruction: ProtobufConvertible {
                     }
                     $0.wasmMemory.isShared = mem.isShared
                     $0.wasmMemory.isMemory64 = mem.isMemory64
+                }
+
+            case .wasmDefineDataSegment(let op):
+                $0.wasmDefineDataSegment = Fuzzilli_Protobuf_WasmDefineDataSegment.with {
+                    $0.segment = Data(op.segment)
                 }
             case .wasmLoadGlobal(let op):
                 $0.wasmLoadGlobal = Fuzzilli_Protobuf_WasmLoadGlobal.with {
@@ -1188,6 +1262,7 @@ extension Instruction: ProtobufConvertible {
                     if let max = op.tableType.limits.max {
                         $0.maxSize = Int64(max)
                     }
+                    $0.isTable64 = op.tableType.isTable64
                 }
             case .wasmTableSet(let op):
                 $0.wasmTableSet = Fuzzilli_Protobuf_WasmTableSet.with {
@@ -1196,78 +1271,150 @@ extension Instruction: ProtobufConvertible {
                     if let max = op.tableType.limits.max {
                         $0.maxSize = Int64(max)
                     }
+                    $0.isTable64 = op.tableType.isTable64
+                }
+            case .wasmCallIndirect(let op):
+                $0.wasmCallIndirect = Fuzzilli_Protobuf_WasmCallIndirect.with {
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
+            case .wasmCallDirect(let op):
+                $0.wasmCallDirect = Fuzzilli_Protobuf_WasmCallDirect.with {
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
+            case .wasmReturnCallDirect(let op):
+                $0.wasmReturnCallDirect = Fuzzilli_Protobuf_WasmReturnCallDirect.with {
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
+            case .wasmReturnCallIndirect(let op):
+                $0.wasmReturnCallIndirect = Fuzzilli_Protobuf_WasmReturnCallIndirect.with {
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmMemoryLoad(let op):
                 $0.wasmMemoryLoad = Fuzzilli_Protobuf_WasmMemoryLoad.with {
                     $0.loadType = convertWasmMemoryLoadType(op.loadType);
                     $0.staticOffset = op.staticOffset
-                    $0.isMemory64 = op.isMemory64
                 }
             case .wasmMemoryStore(let op):
                 $0.wasmMemoryStore = Fuzzilli_Protobuf_WasmMemoryStore.with {
                     $0.storeType = convertWasmMemoryStoreType(op.storeType);
                     $0.staticOffset = op.staticOffset
-                    $0.isMemory64 = op.isMemory64
                 }
+            case .wasmAtomicLoad(let op):
+                $0.wasmAtomicLoad = Fuzzilli_Protobuf_WasmAtomicLoad.with {
+                    $0.loadType = convertEnum(op.loadType, WasmAtomicLoadType.allCases)
+                    $0.offset = op.offset
+                }
+            case .wasmAtomicStore(let op):
+                $0.wasmAtomicStore = Fuzzilli_Protobuf_WasmAtomicStore.with {
+                    $0.storeType = convertEnum(op.storeType, WasmAtomicStoreType.allCases)
+                    $0.offset = op.offset
+                }
+            case .wasmAtomicRMW(let op):
+                $0.wasmAtomicRmw = Fuzzilli_Protobuf_WasmAtomicRMW.with {
+                    $0.op = convertEnum(op.op, WasmAtomicRMWType.allCases)
+                    $0.offset = op.offset
+                }
+            case .wasmAtomicCmpxchg(let op):
+                $0.wasmAtomicCmpxchg = Fuzzilli_Protobuf_WasmAtomicCmpxchg.with {
+                    $0.op = convertEnum(op.op, WasmAtomicCmpxchgType.allCases)
+                    $0.offset = op.offset
+                }
+            case .wasmMemorySize(_):
+                $0.wasmMemorySize = Fuzzilli_Protobuf_WasmMemorySize()
+            case .wasmMemoryGrow(_):
+                $0.wasmMemoryGrow = Fuzzilli_Protobuf_WasmMemoryGrow()
+            case .wasmTableSize(_):
+                $0.wasmTableSize = Fuzzilli_Protobuf_WasmTableSize()
+            case .wasmTableGrow(_):
+                $0.wasmTableGrow = Fuzzilli_Protobuf_WasmTableGrow()
+            case .wasmMemoryCopy(_):
+                $0.wasmMemoryCopy = Fuzzilli_Protobuf_WasmMemoryCopy()
+            case .wasmMemoryFill(_):
+                $0.wasmMemoryFill = Fuzzilli_Protobuf_WasmMemoryFill()
+            case .wasmMemoryInit(_):
+                $0.wasmMemoryInit = Fuzzilli_Protobuf_WasmMemoryInit()
+            case .wasmDropDataSegment(_):
+                $0.wasmDropDataSegment = Fuzzilli_Protobuf_WasmDropDataSegment()
             case .beginWasmFunction(let op):
                 $0.beginWasmFunction = Fuzzilli_Protobuf_BeginWasmFunction.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
-            case .endWasmFunction(_):
-                $0.endWasmFunction = Fuzzilli_Protobuf_EndWasmFunction()
+            case .endWasmFunction(let op):
+                $0.endWasmFunction = Fuzzilli_Protobuf_EndWasmFunction.with {
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
             case .wasmBeginBlock(let op):
                 $0.wasmBeginBlock = Fuzzilli_Protobuf_WasmBeginBlock.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmEndBlock(let op):
                 $0.wasmEndBlock = Fuzzilli_Protobuf_WasmEndBlock.with {
-                    $0.returnType = ILTypeToWasmTypeEnum(op.outputType)
+                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBeginLoop(let op):
                 $0.wasmBeginLoop = Fuzzilli_Protobuf_WasmBeginLoop.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmEndLoop(let op):
                 $0.wasmEndLoop = Fuzzilli_Protobuf_WasmEndLoop.with {
-                    $0.returnType = ILTypeToWasmTypeEnum(op.outputType)
+                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
+            case .wasmBeginTryTable(let op):
+                $0.wasmBeginTryTable = Fuzzilli_Protobuf_WasmBeginTryTable.with {
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.catches = op.catches.map(convertWasmCatch)
+                }
+            case .wasmEndTryTable(let op):
+                $0.wasmEndTryTable = Fuzzilli_Protobuf_WasmEndTryTable.with {
+                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBeginTry(let op):
                 $0.wasmBeginTry = Fuzzilli_Protobuf_WasmBeginTry.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBeginCatchAll(let op):
                 $0.wasmBeginCatchAll = Fuzzilli_Protobuf_WasmBeginCatchAll.with {
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.inputTypes = op.inputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBeginCatch(let op):
                 $0.wasmBeginCatch = Fuzzilli_Protobuf_WasmBeginCatch.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmEndTry(let op):
                 $0.wasmEndTry = Fuzzilli_Protobuf_WasmEndTry.with {
-                    $0.returnType = ILTypeToWasmTypeEnum(op.outputType)
+                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBeginTryDelegate(let op):
                 $0.wasmBeginTryDelegate = Fuzzilli_Protobuf_WasmBeginTryDelegate.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
-            case .wasmEndTryDelegate(_):
-                $0.wasmEndTryDelegate = Fuzzilli_Protobuf_WasmEndTryDelegate()
+            case .wasmEndTryDelegate(let op):
+                $0.wasmEndTryDelegate = Fuzzilli_Protobuf_WasmEndTryDelegate.with {
+                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
             case .wasmThrow(let op):
                 $0.wasmThrow = Fuzzilli_Protobuf_WasmThrow.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
+                    $0.parameterTypes = op.parameterTypes.map(ILTypeToWasmTypeEnum)
                 }
+            case .wasmThrowRef(_):
+                $0.wasmThrowRef = Fuzzilli_Protobuf_WasmThrowRef()
             case .wasmRethrow(_):
                 $0.wasmRethrow = Fuzzilli_Protobuf_WasmRethrow()
             case .wasmDefineTag(let op):
                 $0.wasmDefineTag = Fuzzilli_Protobuf_WasmDefineTag.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.parameters)
+                    $0.parameterTypes = op.parameterTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmBranch(let op):
                 $0.wasmBranch = Fuzzilli_Protobuf_WasmBranch.with {
@@ -1276,29 +1423,35 @@ extension Instruction: ProtobufConvertible {
             case .wasmBranchIf(let op):
                 $0.wasmBranchIf = Fuzzilli_Protobuf_WasmBranchIf.with {
                     $0.parameters = op.labelTypes.map(ILTypeToWasmTypeEnum)
+                    $0.hint = convertEnum(op.hint, WasmBranchHint.allCases)
+                }
+            case .wasmBranchTable(let op):
+                $0.wasmBranchTable = Fuzzilli_Protobuf_WasmBranchTable.with {
+                    $0.parameters = op.labelTypes.map(ILTypeToWasmTypeEnum)
+                    $0.valueCount = UInt32(op.valueCount)
                 }
             case .wasmBeginIf(let op):
                 $0.wasmBeginIf = Fuzzilli_Protobuf_WasmBeginIf.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.inverted = op.inverted
+                    $0.hint = convertEnum(op.hint, WasmBranchHint.allCases)
                 }
             case .wasmBeginElse(let op):
                 $0.wasmBeginElse = Fuzzilli_Protobuf_WasmBeginElse.with {
-                    $0.parameters = convertParametersToWasmTypeEnums(op.signature.parameters)
-                    $0.returnType = ILTypeToWasmTypeEnum(op.signature.outputType)
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmEndIf(let op):
                 $0.wasmEndIf = Fuzzilli_Protobuf_WasmEndIf.with {
-                    $0.returnType = ILTypeToWasmTypeEnum(op.outputType)
+                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
                 }
             case .wasmNop(_):
                 fatalError("Should never be serialized")
             case .wasmUnreachable(_):
                 $0.wasmUnreachable = Fuzzilli_Protobuf_WasmUnreachable()
-            case .wasmSelect(let op):
-                $0.wasmSelect = Fuzzilli_Protobuf_WasmSelect.with {
-                    $0.type = ILTypeToWasmTypeEnum(op.type)
-                }
+            case .wasmSelect(_):
+                $0.wasmSelect = Fuzzilli_Protobuf_WasmSelect()
             case .constSimd128(let op):
                 $0.constSimd128 = Fuzzilli_Protobuf_ConstSimd128.with { $0.value = op.value.map{ UInt32($0) } }
             case .wasmSimd128IntegerUnOp(let op):
@@ -1311,6 +1464,11 @@ extension Instruction: ProtobufConvertible {
                     $0.shape = UInt32(op.shape.rawValue)
                     $0.binaryOperator = Int32(op.binOpKind.rawValue)
                 }
+            case .wasmSimd128IntegerTernaryOp(let op):
+                $0.wasmSimd128IntegerTernaryOp = Fuzzilli_Protobuf_WasmSimd128IntegerTernaryOp.with {
+                    $0.shape = UInt32(op.shape.rawValue)
+                    $0.opcode = Int32(op.ternaryOpKind.rawValue)
+                }
             case .wasmSimd128FloatUnOp(let op):
                 $0.wasmSimd128FloatUnOp = Fuzzilli_Protobuf_WasmSimd128FloatUnOp.with {
                     $0.shape = UInt32(op.shape.rawValue)
@@ -1321,21 +1479,110 @@ extension Instruction: ProtobufConvertible {
                     $0.shape = UInt32(op.shape.rawValue)
                     $0.binaryOperator = Int32(op.binOpKind.rawValue)
                 }
+            case .wasmSimd128FloatTernaryOp(let op):
+                $0.wasmSimd128FloatTernaryOp = Fuzzilli_Protobuf_WasmSimd128FloatTernaryOp.with {
+                    $0.shape = UInt32(op.shape.rawValue)
+                    $0.opcode = Int32(op.ternaryOpKind.rawValue)
+                }
             case .wasmSimd128Compare(let op):
                 $0.wasmSimd128Compare = Fuzzilli_Protobuf_WasmSimd128Compare.with {
                     $0.shape = UInt32(op.shape.rawValue)
                     $0.compareOperator = UInt32(op.compareOpKind.toInt())
                 }
-            case .wasmI64x2Splat(_):
-                $0.wasmI64X2Splat = Fuzzilli_Protobuf_WasmI64x2Splat()
-            case .wasmI64x2ExtractLane(_):
-                $0.wasmI64X2ExtractLane = Fuzzilli_Protobuf_WasmI64x2ExtractLane()
+            case .wasmSimdSplat(let op):
+                $0.wasmSimdSplat = Fuzzilli_Protobuf_WasmSimdSplat.with {
+                    $0.kind = convertEnum(op.kind, WasmSimdSplat.Kind.allCases)
+                }
+            case .wasmSimdExtractLane(let op):
+                $0.wasmSimdExtractLane = Fuzzilli_Protobuf_WasmSimdExtractLane.with {
+                    $0.kind = convertEnum(op.kind, WasmSimdExtractLane.Kind.allCases)
+                    $0.lane = UInt32(op.lane)
+                }
+            case .wasmSimdReplaceLane(let op):
+                $0.wasmSimdReplaceLane = Fuzzilli_Protobuf_WasmSimdReplaceLane.with {
+                    $0.kind = convertEnum(op.kind, WasmSimdReplaceLane.Kind.allCases)
+                    $0.lane = UInt32(op.lane)
+                }
             case .wasmSimdLoad(let op):
                 $0.wasmSimdLoad = Fuzzilli_Protobuf_WasmSimdLoad.with {
-                    $0.kind = convertWasmSimdLoadKind(op.kind)
+                    $0.kind = convertEnum(op.kind, WasmSimdLoad.Kind.allCases)
                     $0.staticOffset = op.staticOffset
-                    $0.isMemory64 = op.isMemory64
                 }
+            case .wasmSimdLoadLane(let op):
+                $0.wasmSimdLoadLane = Fuzzilli_Protobuf_WasmSimdLoadLane.with {
+                    $0.kind = convertEnum(op.kind, WasmSimdLoadLane.Kind.allCases)
+                    $0.staticOffset = op.staticOffset
+                    $0.lane = UInt32(op.lane)
+                }
+            case .wasmSimdStoreLane(let op):
+                $0.wasmSimdStoreLane = Fuzzilli_Protobuf_WasmSimdStoreLane.with {
+                    $0.kind = convertEnum(op.kind, WasmSimdStoreLane.Kind.allCases)
+                    $0.staticOffset = op.staticOffset
+                    $0.lane = UInt32(op.lane)
+                }
+            case .wasmBeginTypeGroup(_):
+                $0.wasmBeginTypeGroup = Fuzzilli_Protobuf_WasmBeginTypeGroup()
+            case .wasmEndTypeGroup(_):
+                $0.wasmEndTypeGroup = Fuzzilli_Protobuf_WasmEndTypeGroup()
+            case .wasmDefineArrayType(let op):
+                $0.wasmDefineArrayType = Fuzzilli_Protobuf_WasmDefineArrayType.with {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
+                    $0.mutability = op.mutability
+                }
+            case .wasmDefineStructType(let op):
+                $0.wasmDefineStructType = Fuzzilli_Protobuf_WasmDefineStructType.with {
+                    $0.fields = op.fields.map { field in
+                        return Fuzzilli_Protobuf_WasmStructField.with {
+                            $0.type = ILTypeToWasmTypeEnum(field.type)
+                            $0.mutability = field.mutability
+                        }
+                    }
+                }
+            case .wasmDefineForwardOrSelfReference(_):
+                $0.wasmDefineForwardOrSelfReference = Fuzzilli_Protobuf_WasmDefineForwardOrSelfReference()
+            case .wasmResolveForwardReference(_):
+                $0.wasmResolveForwardReference = Fuzzilli_Protobuf_WasmResolveForwardReference()
+            case .wasmArrayNewFixed(_):
+                $0.wasmArrayNewFixed = Fuzzilli_Protobuf_WasmArrayNewFixed()
+            case .wasmArrayNewDefault(_):
+                $0.wasmArrayNewDefault = Fuzzilli_Protobuf_WasmArrayNewDefault()
+            case .wasmArrayLen(_):
+                $0.wasmArrayLen = Fuzzilli_Protobuf_WasmArrayLen()
+            case .wasmArrayGet(let op):
+                $0.wasmArrayGet = Fuzzilli_Protobuf_WasmArrayGet.with {
+                    $0.isSigned = op.isSigned
+                }
+            case .wasmArraySet(_):
+                $0.wasmArraySet = Fuzzilli_Protobuf_WasmArraySet()
+            case .wasmStructNewDefault(_):
+                $0.wasmStructNewDefault = Fuzzilli_Protobuf_WasmStructNewDefault()
+            case .wasmStructGet(let op):
+                $0.wasmStructGet = Fuzzilli_Protobuf_WasmStructGet.with {
+                    $0.fieldIndex = Int32(op.fieldIndex)
+                    $0.isSigned = op.isSigned
+                }
+            case .wasmStructSet(let op):
+                $0.wasmStructSet = Fuzzilli_Protobuf_WasmStructSet.with {
+                    $0.fieldIndex = Int32(op.fieldIndex)
+                }
+            case .wasmRefNull(let op):
+                $0.wasmRefNull = Fuzzilli_Protobuf_WasmRefNull.with {
+                    if op.type != nil {
+                        $0.type = ILTypeToWasmTypeEnum(op.type!)
+                    }
+                }
+            case .wasmRefIsNull(_):
+                $0.wasmRefIsNull = Fuzzilli_Protobuf_WasmRefIsNull()
+            case .wasmRefI31(_):
+                $0.wasmRefI31 = Fuzzilli_Protobuf_WasmRefI31()
+            case .wasmI31Get(let op):
+                $0.wasmI31Get = Fuzzilli_Protobuf_WasmI31Get.with {
+                    $0.isSigned = op.isSigned
+                }
+            case .wasmAnyConvertExtern(_):
+                $0.wasmAnyConvertExtern = Fuzzilli_Protobuf_WasmAnyConvertExtern()
+            case .wasmExternConvertAny(_):
+                $0.wasmExternConvertAny = Fuzzilli_Protobuf_WasmExternConvertAny()
             }
         }
 
@@ -1367,25 +1614,64 @@ extension Instruction: ProtobufConvertible {
 
         // Converts to the Wasm world global type
         func WasmTypeEnumToILType(_ wasmType: Fuzzilli_Protobuf_WasmILType) -> ILType {
-            switch wasmType {
-            case .constf32:
-                return .wasmf32
-            case .constf64:
-                return .wasmf64
-            case .consti32:
-                return .wasmi32
-            case .consti64:
-                return .wasmi64
-            case .externref:
-                return .wasmExternRef
-            case .funcref:
-                return .wasmFuncRef
-            case .simd128:
-                return .wasmSimd128
-            case .nothing:
-                return .nothing
-            case .UNRECOGNIZED(let value):
-                fatalError("Unrecognized WasmILType enum value \(value)")
+            switch wasmType.type {
+            case .valueType(_):
+                switch wasmType.valueType {
+                case .f32:
+                    return .wasmf32
+                case .f64:
+                    return .wasmf64
+                case .i32:
+                    return .wasmi32
+                case .i64:
+                    return .wasmi64
+                case .packedI8:
+                    return .wasmPackedI8
+                case .packedI16:
+                    return .wasmPackedI16
+                case .simd128:
+                    return .wasmSimd128
+                case .functiondef:
+                    return .wasmFunctionDef()
+                case .nothing:
+                    return .nothing
+                case .UNRECOGNIZED(let value):
+                    fatalError("Unrecognized wasm value type \(value)")
+                }
+            case .refType(_):
+                let refKind: WasmReferenceType.Kind = switch wasmType.refType.kind {
+                case .index:
+                    .Index()
+                case .externref:
+                    .Abstract(.WasmExtern)
+                case .funcref:
+                    .Abstract(.WasmFunc)
+                case .exnref:
+                    .Abstract(.WasmExn)
+                case .i31Ref:
+                    .Abstract(.WasmI31)
+                case .anyref:
+                    .Abstract(.WasmAny)
+                case .eqref:
+                    .Abstract(.WasmEq)
+                case .structref:
+                    .Abstract(.WasmStruct)
+                case .arrayref:
+                    .Abstract(.WasmArray)
+                case .noneref:
+                    .Abstract(.WasmNone)
+                case .noexternref:
+                    .Abstract(.WasmNoExtern)
+                case .nofuncref:
+                    .Abstract(.WasmNoFunc)
+                case .noexnref:
+                    .Abstract(.WasmNoExn)
+                case .UNRECOGNIZED(let value):
+                    fatalError("Unrecognized wasm reference type \(value)")
+                }
+                return .wasmRef(refKind, nullability: wasmType.refType.nullability)
+            case .none:
+                fatalError("Absent wasm type")
             }
         }
 
@@ -1444,44 +1730,26 @@ extension Instruction: ProtobufConvertible {
                     return .I64StoreMem16
                 case .i64Storemem32:
                     return .I64StoreMem32
+                case .s128Storemem:
+                    return .S128StoreMem
                 default:
                     fatalError("Wrong WasmMemoryStoreType")
             }
         }
 
-        func convertProtoWasmSimdLoadKind(_ loadKind: Fuzzilli_Protobuf_WasmSimdLoadKind) -> WasmSimdLoad.Kind {
-            switch loadKind {
-                case .loads128:
-                    return .LoadS128
-                case .load8X8S:
-                    return .Load8x8S
-                case .load8X8U:
-                    return .Load8x8U
-                case .load16X4S:
-                    return .Load16x4S
-                case .load16X4U:
-                    return .Load16x4U
-                case .load32X2S:
-                    return .Load32x2S
-                case .load32X2U:
-                    return .Load32x2U
-                case .load8Splat:
-                    return .Load8Splat
-                case .load16Splat:
-                    return .Load16Splat
-                case .load32Splat:
-                    return .Load32Splat
-                case .load64Splat:
-                    return .Load64Splat
-                case .UNRECOGNIZED(let i):
-                    fatalError("Invalid WasmSimdLoadKind \(i)")
-            }
-        }
-
         func convertWasmGlobal(_ proto: Fuzzilli_Protobuf_WasmGlobal) -> WasmGlobal {
             switch proto.wasmGlobal {
-            case .nullref(_):
-                return .refNull
+            case .nullref(let val):
+                switch val {
+                case .externref:
+                    return .externref
+                case .exnref:
+                    return .exnref
+                case .i31Ref:
+                    return .i31ref
+                default:
+                    fatalError("Unrecognized global wasm reference type \(val)")
+                }
             case .funcref(let val):
                 return .refFunc(Int(val))
             case .valuei64(let val):
@@ -1499,8 +1767,28 @@ extension Instruction: ProtobufConvertible {
             }
         }
 
+        func convertProtoWasmCatchKind(_ catchKind: Fuzzilli_Protobuf_WasmCatchKind) -> WasmBeginTryTable.CatchKind {
+            switch catchKind {
+                case .noRef:
+                    return .NoRef
+                case .ref:
+                    return .Ref
+                case .allNoRef:
+                    return .AllNoRef
+                case .allRef:
+                    return .AllRef
+                case .UNRECOGNIZED(let i):
+                    fatalError("Invalid WasmCatchKind \(i)")
+            }
+        }
+
         guard let operation = proto.operation else {
             throw FuzzilliError.instructionDecodingError("missing operation for instruction")
+        }
+
+        func WasmSignatureFromProto(_ signature: Fuzzilli_Protobuf_WasmSignature) -> WasmSignature {
+            return WasmSignature(expects: signature.parameterTypes.map(WasmTypeEnumToILType),
+                                 returns: signature.outputTypes.map(WasmTypeEnumToILType))
         }
 
         let op: Operation
@@ -1565,7 +1853,7 @@ extension Instruction: ProtobufConvertible {
         case .endObjectLiteral:
             op = EndObjectLiteral()
         case .beginClassDefinition(let p):
-            op = BeginClassDefinition(hasSuperclass: p.hasSuperclass_p)
+            op = BeginClassDefinition(hasSuperclass: p.hasSuperclass_p, isExpression: p.isExpression)
         case .beginClassConstructor(let p):
             op = BeginClassConstructor(parameters: convertParameters(p.parameters))
         case .endClassConstructor:
@@ -1637,7 +1925,7 @@ extension Instruction: ProtobufConvertible {
         case .getProperty(let p):
             op = GetProperty(propertyName: p.propertyName, isGuarded: p.isGuarded)
         case .setProperty(let p):
-            op = SetProperty(propertyName: p.propertyName)
+            op = SetProperty(propertyName: p.propertyName, isGuarded: p.isGuarded)
         case .updateProperty(let p):
             op = UpdateProperty(propertyName: p.propertyName, operator: try convertEnum(p.op, BinaryOperator.allCases))
         case .deleteProperty(let p):
@@ -1904,17 +2192,19 @@ extension Instruction: ProtobufConvertible {
             } else {
                 maxSize = nil
             }
-            op = CreateWasmTable(elementType: WasmTypeEnumToILType(p.elementType), limits: Limits(min: Int(p.minSize), max: maxSize))
+            op = CreateWasmTable(elementType: WasmTypeEnumToILType(p.elementType), limits: Limits(min: Int(p.minSize), max: maxSize), isTable64: p.isTable64)
         case .createWasmJstag(_):
             op = CreateWasmJSTag()
         case .createWasmTag(let p):
-            op = CreateWasmTag(parameters: p.parameters.map { Parameter.plain(WasmTypeEnumToILType($0)) })
+            op = CreateWasmTag(parameterTypes: p.parameterTypes.map(WasmTypeEnumToILType))
         case .wrapPromising(_):
             op = WrapPromising()
         case .wrapSuspending(_):
             op = WrapSuspending()
         case .bindMethod(let p):
             op = BindMethod(methodName: p.methodName)
+        case .bindFunction(_):
+            op = BindFunction(numInputs: inouts.count - 1)
         case .print(_):
             fatalError("Should not deserialize a Print instruction!")
 
@@ -1932,12 +2222,11 @@ extension Instruction: ProtobufConvertible {
         case .constf64(let p):
             op = Constf64(value: Float64(p.value))
         case .wasmReturn(let p):
-            op = WasmReturn(returnType: WasmTypeEnumToILType(p.returnType))
+            op = WasmReturn(returnTypes: p.returnTypes.map(WasmTypeEnumToILType))
         case .wasmJsCall(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmJsCall(signature: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmJsCall(signature: parameters => outputs)
 
         // Wasm Numerical Operations
         case .wasmi32CompareOp(let p):
@@ -2029,10 +2318,15 @@ extension Instruction: ProtobufConvertible {
         case .wasmDefineTable(let p):
             op = WasmDefineTable(elementType: WasmTypeEnumToILType(p.elementType),
                                  limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil),
-                                 definedEntryIndices: p.definedEntryIndices.map { Int($0) })
+                                 definedEntries: p.definedEntries.map { entry in
+                                     WasmTableType.IndexInTableAndWasmSignature(indexInTable: Int(entry.index), signature: WasmSignatureFromProto(entry.signature))
+                                 },
+                                 isTable64: p.isTable64)
         case .wasmDefineMemory(let p):
             let maxPages = p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil
             op = WasmDefineMemory(limits: Limits(min: Int(p.wasmMemory.minPages), max: maxPages), isShared: p.wasmMemory.isShared, isMemory64: p.wasmMemory.isMemory64)
+        case .wasmDefineDataSegment(let p):
+            op = WasmDefineDataSegment(segment: [UInt8](p.segment))
         case .wasmLoadGlobal(let p):
             op = WasmLoadGlobal(globalType: WasmTypeEnumToILType(p.globalType))
         case .wasmStoreGlobal(let p):
@@ -2040,86 +2334,122 @@ extension Instruction: ProtobufConvertible {
         case .wasmTableGet(let p):
             op = WasmTableGet(tableType: .wasmTable(wasmTableType:
                 WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
-                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil))))
+                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [])))
         case .wasmTableSet(let p):
             op = WasmTableSet(tableType: .wasmTable(wasmTableType:
                 WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
-                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil))))
+                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [])))
+        case .wasmCallIndirect(let p):
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmCallIndirect(signature: parameters => outputs)
+        case .wasmCallDirect(let p):
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmCallDirect(signature: parameters => outputs)
+        case .wasmReturnCallDirect(let p):
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmReturnCallDirect(signature: parameters => outputs)
+        case .wasmReturnCallIndirect(let p):
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmReturnCallIndirect(signature: parameters => outputs)
         case .wasmMemoryLoad(let p):
-            op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
+            op = WasmMemoryLoad(loadType: convertProtoWasmMemoryLoadType(p.loadType), staticOffset: p.staticOffset)
         case .wasmMemoryStore(let p):
-            op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
+            op = WasmMemoryStore(storeType: convertProtoWasmMemoryStoreType(p.storeType), staticOffset: p.staticOffset)
+        case .wasmMemorySize(_):
+            op = WasmMemorySize()
+        case .wasmMemoryGrow(_):
+            op = WasmMemoryGrow()
+        case .wasmTableSize(_):
+            op = WasmTableSize()
+        case .wasmTableGrow(_):
+            op = WasmTableGrow()
+        case .wasmMemoryCopy(_):
+            op = WasmMemoryCopy()
+        case .wasmMemoryFill(_):
+            op = WasmMemoryFill()
+        case .wasmMemoryInit(_):
+            op = WasmMemoryInit()
+        case .wasmDropDataSegment(_):
+            op = WasmDropDataSegment()
         case .beginWasmFunction(let p):
-            op = BeginWasmFunction(parameterTypes: p.parameters.map { WasmTypeEnumToILType($0) }, returnType: WasmTypeEnumToILType(p.returnType))
-        case .endWasmFunction(_):
-            op = EndWasmFunction()
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = BeginWasmFunction(signature: parameters => outputs)
+        case .endWasmFunction(let p):
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = EndWasmFunction(signature: parameters => outputs)
         case .wasmBeginBlock(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginBlock(with: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginBlock(with: parameters => outputs)
         case .wasmEndBlock(let p):
-            op = WasmEndBlock(outputType: WasmTypeEnumToILType(p.returnType))
+            op = WasmEndBlock(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginLoop(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginLoop(with: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginLoop(with: parameters => outputs)
         case .wasmEndLoop(let p):
-            op = WasmEndLoop(outputType: WasmTypeEnumToILType(p.returnType))
+            op = WasmEndLoop(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
+        case .wasmBeginTryTable(let p):
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            let catches = p.catches.map(convertProtoWasmCatchKind)
+            op = WasmBeginTryTable(with: parameters => outputs, catches: catches)
+        case .wasmEndTryTable(let p):
+            op = WasmEndTryTable(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginTry(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginTry(with: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginTry(with: parameters => outputs)
         case .wasmBeginCatchAll(let p):
-            op = WasmBeginCatchAll(with: [] => WasmTypeEnumToILType(p.returnType))
+            op = WasmBeginCatchAll(inputTypes: p.inputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginCatch(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginCatch(with: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginCatch(with: parameters => outputs)
         case .wasmEndTry(let p):
-            op = WasmEndTry(outputType: WasmTypeEnumToILType(p.returnType))
+            op = WasmEndTry(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmBeginTryDelegate(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginTryDelegate(with: parameters => WasmTypeEnumToILType(p.returnType))
-        case .wasmEndTryDelegate(_):
-            op = WasmEndTryDelegate()
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginTryDelegate(with: parameters => outputs)
+        case .wasmEndTryDelegate(let p):
+            op = WasmEndTryDelegate(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmThrow(let p):
-            op = WasmThrow(parameters: p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            }))
+            op = WasmThrow(parameterTypes: p.parameterTypes.map(WasmTypeEnumToILType))
+        case .wasmThrowRef(_):
+            op = WasmThrowRef()
         case .wasmRethrow(_):
             op = WasmRethrow()
         case .wasmDefineTag(let p):
-            op = WasmDefineTag(parameters: p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            }))
+            op = WasmDefineTag(parameterTypes: p.parameterTypes.map(WasmTypeEnumToILType))
         case .wasmBranch(let p):
             op = WasmBranch(labelTypes: p.parameters.map(WasmTypeEnumToILType))
         case .wasmBranchIf(let p):
-            op = WasmBranchIf(labelTypes: p.parameters.map(WasmTypeEnumToILType))
+            op = WasmBranchIf(labelTypes: p.parameters.map(WasmTypeEnumToILType), hint: try convertEnum(p.hint, WasmBranchHint.allCases))
+        case .wasmBranchTable(let p):
+            op = WasmBranchTable(labelTypes: p.parameters.map(WasmTypeEnumToILType), valueCount: Int(p.valueCount))
         case .wasmBeginIf(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginIf(with: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginIf(with: parameters => outputs, hint: try convertEnum(p.hint, WasmBranchHint.allCases), inverted: p.inverted)
         case .wasmBeginElse(let p):
-            let parameters: [Parameter] = p.parameters.map({ param in
-                Parameter.plain(WasmTypeEnumToILType(param))
-            })
-            op = WasmBeginElse(with: parameters => WasmTypeEnumToILType(p.returnType))
+            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
+            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
+            op = WasmBeginElse(with: parameters => outputs)
         case .wasmEndIf(let p):
-            op = WasmEndIf(outputType: WasmTypeEnumToILType(p.returnType))
+            op = WasmEndIf(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmNop(_):
             fatalError("Should never be deserialized!")
         case .wasmUnreachable(_):
             op = WasmUnreachable()
-        case .wasmSelect(let p):
-            op = WasmSelect(type: WasmTypeEnumToILType(p.type))
+        case .wasmSelect(_):
+            op = WasmSelect()
         case .constSimd128(let p):
             op = ConstSimd128(value: p.value.map{ UInt8($0) })
         case .wasmSimd128IntegerUnOp(let p):
@@ -2130,6 +2460,10 @@ extension Instruction: ProtobufConvertible {
             let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
             let binOpKind = WasmSimd128IntegerBinOpKind(rawValue: Int(p.binaryOperator))!
             op = WasmSimd128IntegerBinOp(shape: shape, binOpKind: binOpKind)
+        case .wasmSimd128IntegerTernaryOp(let p):
+            let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
+            let ternaryOpKind = WasmSimd128IntegerTernaryOpKind(rawValue: Int(p.opcode))!
+            op = WasmSimd128IntegerTernaryOp(shape: shape, ternaryOpKind: ternaryOpKind)
         case .wasmSimd128FloatUnOp(let p):
             let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
             let unOpKind = WasmSimd128FloatUnOpKind(rawValue: Int(p.unaryOperator))!
@@ -2138,6 +2472,10 @@ extension Instruction: ProtobufConvertible {
             let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
             let binOpKind = WasmSimd128FloatBinOpKind(rawValue: Int(p.binaryOperator))!
             op = WasmSimd128FloatBinOp(shape: shape, binOpKind: binOpKind)
+        case .wasmSimd128FloatTernaryOp(let p):
+            let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
+            let ternaryOpKind = WasmSimd128FloatTernaryOpKind(rawValue: Int(p.opcode))!
+            op = WasmSimd128FloatTernaryOp(shape: shape, ternaryOpKind: ternaryOpKind)
         case .wasmSimd128Compare(let p):
             let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
             let compareOpKind = if shape.isFloat() {
@@ -2146,12 +2484,69 @@ extension Instruction: ProtobufConvertible {
                 WasmSimd128CompareOpKind.iKind(value: WasmIntegerCompareOpKind(rawValue: UInt8(p.compareOperator))!)
             }
             op = WasmSimd128Compare(shape: shape, compareOpKind: compareOpKind)
-        case .wasmI64X2Splat(_):
-            op = WasmI64x2Splat()
-        case .wasmI64X2ExtractLane(_):
-            op = WasmI64x2ExtractLane(lane: 0)
+        case .wasmSimdSplat(let p):
+            op = WasmSimdSplat(try convertEnum(p.kind, WasmSimdSplat.Kind.allCases))
+        case .wasmSimdExtractLane(let p):
+            op = WasmSimdExtractLane(kind: try convertEnum(p.kind, WasmSimdExtractLane.Kind.allCases), lane: Int(p.lane))
+        case .wasmSimdReplaceLane(let p):
+            op = WasmSimdReplaceLane(kind: try convertEnum(p.kind, WasmSimdReplaceLane.Kind.allCases), lane: Int(p.lane))
         case .wasmSimdLoad(let p):
-            op = WasmSimdLoad(kind: convertProtoWasmSimdLoadKind(p.kind), staticOffset: p.staticOffset, isMemory64: p.isMemory64)
+            op = WasmSimdLoad(kind: try convertEnum(p.kind, WasmSimdLoad.Kind.allCases), staticOffset: p.staticOffset)
+        case .wasmSimdLoadLane(let p):
+            op = WasmSimdLoadLane(kind: try convertEnum(p.kind, WasmSimdLoadLane.Kind.allCases), staticOffset: p.staticOffset, lane: Int(p.lane))
+        case .wasmSimdStoreLane(let p):
+            op = WasmSimdStoreLane(kind: try convertEnum(p.kind, WasmSimdStoreLane.Kind.allCases), staticOffset: p.staticOffset, lane: Int(p.lane))
+        case .wasmBeginTypeGroup(_):
+            op = WasmBeginTypeGroup()
+        case .wasmEndTypeGroup(_):
+            assert(inouts.count % 2 == 0)
+            op = WasmEndTypeGroup(typesCount: inouts.count / 2)
+        case .wasmDefineArrayType(let p):
+            op = WasmDefineArrayType(elementType: WasmTypeEnumToILType(p.elementType), mutability: p.mutability)
+        case .wasmDefineStructType(let p):
+            op = WasmDefineStructType(fields: p.fields.map { field in
+                return WasmDefineStructType.Field(type: WasmTypeEnumToILType(field.type), mutability: field.mutability)
+            })
+        case .wasmDefineForwardOrSelfReference(_):
+            op = WasmDefineForwardOrSelfReference()
+        case .wasmResolveForwardReference(_):
+            op = WasmResolveForwardReference()
+        case .wasmArrayNewFixed(_):
+            op = WasmArrayNewFixed(size: inouts.count - 2)
+        case .wasmArrayNewDefault(_):
+            op = WasmArrayNewDefault()
+        case .wasmArrayLen(_):
+            op = WasmArrayLen()
+        case .wasmArrayGet(let p):
+            op = WasmArrayGet(isSigned: p.isSigned)
+        case .wasmArraySet(_):
+            op = WasmArraySet()
+        case .wasmStructNewDefault(_):
+            op = WasmStructNewDefault()
+        case .wasmStructGet(let p):
+            op = WasmStructGet(fieldIndex: Int(p.fieldIndex), isSigned: p.isSigned)
+        case .wasmStructSet(let p):
+            op = WasmStructSet(fieldIndex: Int(p.fieldIndex))
+        case .wasmRefNull(let p):
+            op = p.hasType ? WasmRefNull(type: WasmTypeEnumToILType(p.type)) : WasmRefNull(type: nil)
+        case .wasmRefIsNull(_):
+            op = WasmRefIsNull()
+        case .wasmRefI31(_):
+            op = WasmRefI31()
+        case .wasmI31Get(let p):
+            op = WasmI31Get(isSigned: p.isSigned)
+        case .wasmAtomicLoad(let p):
+            op = WasmAtomicLoad(loadType: try convertEnum(p.loadType, WasmAtomicLoadType.allCases), offset: p.offset)
+        case .wasmAtomicStore(let p):
+            op = WasmAtomicStore(storeType: try convertEnum(p.storeType, WasmAtomicStoreType.allCases), offset: p.offset)
+        case .wasmAtomicRmw(let p):
+            op = WasmAtomicRMW(op: try convertEnum(p.op, WasmAtomicRMWType.allCases), offset: p.offset)
+        case .wasmAtomicCmpxchg(let p):
+            op = WasmAtomicCmpxchg(op: try convertEnum(p.op, WasmAtomicCmpxchgType.allCases), offset: p.offset)
+        case .wasmAnyConvertExtern(_):
+            op = WasmAnyConvertExtern()
+        case .wasmExternConvertAny(_):
+            op = WasmExternConvertAny()
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

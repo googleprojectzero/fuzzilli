@@ -26,12 +26,29 @@ public class SpliceMutator: BaseInstructionMutator {
 
     public override func canMutate(_ instr: Instruction) -> Bool {
         deadCodeAnalyzer.analyze(instr)
+
+        // Same as for the CodeGenMutator: We do not splice directly into the
+        // TypeGroup, rather we splice onto the EndTypeGroup instruction, we
+        // therefore don't return the instructions inside a TypeGroup as
+        // candidates. This collapses the candidates that we can splice into
+        // into the EndTypeGroup instruction, which then insures that we
+        // actually update that instruction to make spliced type definitions
+        // available.
+        if (instr.op.requiredContext.contains(.wasmTypeGroup) && !(instr.op is WasmEndTypeGroup))
+            || (instr.op is WasmBeginTypeGroup) {
+            return false
+        }
         // It only makes sense to copy code if we're not currently in dead code.
         return !deadCodeAnalyzer.currentlyInDeadCode
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
-        b.adopt(instr)
-        b.build(n: defaultCodeGenerationAmount, by: .splicing)
+        switch instr.op.opcode {
+        case .wasmEndTypeGroup:
+            b.buildIntoTypeGroup(endTypeGroupInstr: instr, by: .splicing)
+        default:
+            b.adopt(instr)
+            b.build(n: defaultCodeGenerationAmount, by: .splicing)
+        }
     }
 }

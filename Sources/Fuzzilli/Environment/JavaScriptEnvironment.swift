@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-public class JavaScriptEnvironment: ComponentBase, Environment {
+public class JavaScriptEnvironment: ComponentBase {
     // Possible return values of the 'typeof' operator.
     public static let jsTypeNames = ["undefined", "boolean", "number", "string", "symbol", "function", "object", "bigint"]
 
@@ -279,18 +279,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 
     public let interestingRegExpQuantifiers = ["*", "+", "?"]
 
-    public let intType = ILType.integer
-    public let bigIntType = ILType.bigint
-    public let floatType = ILType.float
-    public let booleanType = ILType.boolean
-    public let regExpType = ILType.jsRegExp
-    public let stringType = ILType.jsString
-    public let emptyObjectType = ILType.object()
-    public let arrayType = ILType.jsArray
-    public let argumentsType = ILType.jsArguments
-    public let generatorType = ILType.jsGenerator
-    public let promiseType = ILType.jsPromise
-
     /// Identifiers that should be used for custom properties and methods.
     public static let CustomPropertyNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
     public static let CustomMethodNames = ["m", "n", "o", "p", "valueOf", "toString"]
@@ -301,8 +289,14 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public private(set) var builtinProperties = Set<String>()
     public private(set) var builtinMethods = Set<String>()
 
+
+    // Something that can generate a variable
+    public typealias EnvironmentValueGenerator = (ProgramBuilder) -> Variable
+
     private var builtinTypes: [String: ILType] = [:]
     private var groups: [String: ObjectGroup] = [:]
+    // Producing generators, keyed on `type.group`
+    private var producingGenerators: [String: EnvironmentValueGenerator] = [:]
     private var producingMethods: [ILType: [(group: String, method: String)]] = [:]
     private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
     private var subtypes: [ILType: [ILType]] = [:]
@@ -342,8 +336,10 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 
         registerObjectGroup(.jsObjectConstructor)
         registerObjectGroup(.jsPromiseConstructor)
+        registerObjectGroup(.jsPromisePrototype)
         registerObjectGroup(.jsArrayConstructor)
         registerObjectGroup(.jsStringConstructor)
+        registerObjectGroup(.jsStringPrototype)
         registerObjectGroup(.jsSymbolConstructor)
         registerObjectGroup(.jsBigIntConstructor)
         registerObjectGroup(.jsBooleanConstructor)
@@ -351,22 +347,81 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsMathObject)
         registerObjectGroup(.jsDate)
         registerObjectGroup(.jsDateConstructor)
+        registerObjectGroup(.jsDatePrototype)
         registerObjectGroup(.jsJSONObject)
         registerObjectGroup(.jsReflectObject)
         registerObjectGroup(.jsArrayBufferConstructor)
+        registerObjectGroup(.jsArrayBufferPrototype)
         registerObjectGroup(.jsSharedArrayBufferConstructor)
+        registerObjectGroup(.jsSharedArrayBufferPrototype)
         for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError", "SuppressedError"] {
             registerObjectGroup(.jsError(variant))
         }
+        registerObjectGroup(.jsWebAssemblyCompileOptions)
+        registerObjectGroup(.jsWebAssemblyModuleConstructor)
+        registerObjectGroup(.jsWebAssemblyGlobalConstructor)
+        registerObjectGroup(.jsWebAssemblyGlobalPrototype)
+        registerObjectGroup(.jsWebAssemblyInstanceConstructor)
+        registerObjectGroup(.jsWebAssemblyInstance)
+        registerObjectGroup(.jsWebAssemblyModule)
+        registerObjectGroup(.jsWebAssemblyMemoryPrototype)
+        registerObjectGroup(.jsWebAssemblyMemoryConstructor)
+        registerObjectGroup(.jsWebAssemblyTablePrototype)
+        registerObjectGroup(.jsWebAssemblyTableConstructor)
+        registerObjectGroup(.jsWebAssemblyTagPrototype)
+        registerObjectGroup(.jsWebAssemblyTagConstructor)
+        registerObjectGroup(.jsWebAssembly)
         registerObjectGroup(.jsWasmGlobal)
         registerObjectGroup(.jsWasmMemory)
         registerObjectGroup(.wasmTable)
         registerObjectGroup(.jsWasmTag)
+        registerObjectGroup(.jsWasmSuspendingObject)
+        registerObjectGroup(.jsTemporalObject)
+        registerObjectGroup(.jsTemporalNow)
+        registerObjectGroup(.jsTemporalInstant)
+        registerObjectGroup(.jsTemporalInstantConstructor)
+        registerObjectGroup(.jsTemporalInstantPrototype)
+        registerObjectGroup(.jsTemporalDuration)
+        registerObjectGroup(.jsTemporalDurationConstructor)
+        registerObjectGroup(.jsTemporalDurationPrototype)
+        registerObjectGroup(.jsTemporalPlainTime)
+        registerObjectGroup(.jsTemporalPlainTimeConstructor)
+        registerObjectGroup(.jsTemporalPlainTimePrototype)
+        registerObjectGroup(.jsTemporalPlainYearMonth)
+        registerObjectGroup(.jsTemporalPlainYearMonthConstructor)
+        registerObjectGroup(.jsTemporalPlainYearMonthPrototype)
+        registerObjectGroup(.jsTemporalPlainMonthDay)
+        registerObjectGroup(.jsTemporalPlainMonthDayConstructor)
+        registerObjectGroup(.jsTemporalPlainMonthDayPrototype)
+        registerObjectGroup(.jsTemporalPlainDate)
+        registerObjectGroup(.jsTemporalPlainDateConstructor)
+        registerObjectGroup(.jsTemporalPlainDatePrototype)
+        registerObjectGroup(.jsTemporalPlainDateTime)
+        registerObjectGroup(.jsTemporalPlainDateTimeConstructor)
+        registerObjectGroup(.jsTemporalPlainDateTimePrototype)
+        registerObjectGroup(.jsTemporalZonedDateTime)
+        registerObjectGroup(.jsTemporalZonedDateTimeConstructor)
+        registerObjectGroup(.jsTemporalZonedDateTimePrototype)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
         }
 
+        registerOptionsBag(.jsTemporalDifferenceSettingOrRoundTo)
+        registerOptionsBag(.jsTemporalToStringSettings)
+        registerOptionsBag(.jsTemporalOverflowSettings)
+        registerOptionsBag(.jsTemporalZonedInterpretationSettings)
+
+        registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
+        registerTemporalFieldsObject(.jsTemporalPlainDateLikeObject, forWith: false, dateFields: true, timeFields: false, zonedFields: false)
+        registerTemporalFieldsObject(.jsTemporalPlainDateLikeObjectForWith, forWith: true, dateFields: true, timeFields: false, zonedFields: false)
+        registerTemporalFieldsObject(.jsTemporalPlainDateTimeLikeObject, forWith: false, dateFields: true, timeFields: true, zonedFields: false)
+        registerTemporalFieldsObject(.jsTemporalPlainDateTimeLikeObjectForWith, forWith: true, dateFields: true, timeFields: true, zonedFields: false)
+        registerTemporalFieldsObject(.jsTemporalZonedDateTimeLikeObject, forWith: false, dateFields: true, timeFields: true, zonedFields: true)
+        registerTemporalFieldsObject(.jsTemporalZonedDateTimeLikeObjectForWith, forWith: true, dateFields: true, timeFields: true, zonedFields: true)
+
+        registerObjectGroup(.jsTemporalDurationLikeObject)
+        addProducingGenerator(forType: ObjectGroup.jsTemporalDurationLikeObject.instanceType, with: { b in b.createTemporalDurationFieldsObject() })
 
         // Register builtins that should be available for fuzzing.
         // Here it is easy to selectively disable/enable some APIs for fuzzing by
@@ -415,6 +470,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("undefined", ofType: .jsUndefined)
         registerBuiltin("NaN", ofType: .jsNaN)
         registerBuiltin("Infinity", ofType: .jsInfinity)
+        registerBuiltin("Temporal", ofType: .jsTemporalObject)
+        registerBuiltin("WebAssembly", ofType: ObjectGroup.jsWebAssembly.instanceType)
 
         for (builtin, type) in additionalBuiltins {
             registerBuiltin(builtin, ofType: type)
@@ -453,7 +510,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             "Boolean",        // returns .boolean
             "Number",         // returns .number
             "Object",         // returns plain .object
-            "Proxy",          // returns .anything
+            "Proxy",          // returns .jsAnything
         ]
         for builtin in builtins where type(ofBuiltin: builtin).Is(.constructor()) {
             if knownExceptions.contains(builtin) { continue }
@@ -476,6 +533,14 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 
     public func hasGroup(_ name: String) -> Bool {
         return self.groups.keys.contains(name)
+    }
+
+    // Add a generator that produces an object of the provided `type`.
+    //
+    // This is for groups that are never generated as return types of other objects; so we register
+    // a generator that can be called.
+    public func addProducingGenerator(forType type: ILType, with generator: @escaping EnvironmentValueGenerator) {
+        producingGenerators[type.group!] = generator
     }
 
     private func addProducingMethod(forType type: ILType, by method: String, on group: String) {
@@ -555,6 +620,16 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         }
     }
 
+    // Temporal has a large number of "fields" object (aka "partial temporal objects" or "temporal-like objects")
+    // which have a number of datetime-like fields. These are never produced as a result from any JS APIs, so we cannot
+    // expect instances of them to already exist in scope. Instead, we generate them ourselves when requested.
+    public func registerTemporalFieldsObject(_ group: ObjectGroup, forWith: Bool, dateFields: Bool, timeFields: Bool, zonedFields: Bool) {
+        registerObjectGroup(group)
+        addProducingGenerator(forType: group.instanceType, with: { b in
+            b.createTemporalFieldsObject(forWith: forWith, dateFields: dateFields, timeFields: timeFields, zonedFields: zonedFields)
+        })
+    }
+
     public func registerBuiltin(_ name: String, ofType type: ILType) {
         assert(builtinTypes[name] == nil)
         builtinTypes[name] = type
@@ -571,12 +646,17 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             }
     }
 
+    public func registerOptionsBag(_ bag: OptionsBag) {
+        registerObjectGroup(bag.group)
+        addProducingGenerator(forType: bag.group.instanceType, with: { b in b.createOptionsBag(bag) })
+    }
+
     public func type(ofBuiltin builtinName: String) -> ILType {
         if let type = builtinTypes[builtinName] {
             return type
         } else {
             logger.warning("Missing type for builtin \(builtinName)")
-            return .anything
+            return .jsAnything
         }
     }
 
@@ -585,7 +665,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             return type
         } else {
             logger.warning("Missing type for group \(groupName)")
-            return .anything
+            return .jsAnything
         }
     }
 
@@ -595,13 +675,16 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
                 if let type = group.properties[propertyName] {
                     return type
                 }
+                if let signatures = group.methods[propertyName] {
+                    return .unboundFunction(signatures.first, receiver: baseType)
+                }
             } else {
                 // This shouldn't happen, probably forgot to register the object group
                 logger.warning("No type information for object group \(groupName) available")
             }
         }
 
-        return .anything
+        return .jsAnything
     }
 
     public func signatures(ofMethod methodName: String, on baseType: ILType) -> [Signature] {
@@ -624,6 +707,12 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             return []
         }
         return array
+    }
+
+    // For ObjectGroups, get a generator that is registered as being able to produce this
+    // ObjectGroup.
+    public func getProducingGenerator(ofType type: ILType) -> EnvironmentValueGenerator? {
+        type.group.flatMap {producingGenerators[$0]}
     }
 
     public func getProducingProperties(ofType type: ILType) -> [(group: String, property: String)] {
@@ -650,32 +739,57 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 /// A struct to encapsulate property and method type information for a group of related objects.
 public struct ObjectGroup {
     public let name: String
-    public let properties: [String: ILType]
-    public let methods: [String: [Signature]]
+    public var properties: [String: ILType]
+    public var methods: [String: [Signature]]
     public let parent: String?
 
     /// The type of instances of this group.
-    public let instanceType: ILType
+    public var instanceType: ILType
 
-    public init(name: String, instanceType: ILType, properties: [String: ILType], overloads: [String: [Signature]], parent: String? = nil) {
+    public init(name: String, instanceType: ILType?, properties: [String: ILType], overloads: [String: [Signature]], parent: String? = nil) {
         self.name = name
-        self.instanceType = instanceType
         self.properties = properties
         self.methods = overloads
         self.parent = parent
 
-        // We could also only assert set inclusion here to implement "shared" properties/methods.
-        // (which would then need some kind of fallback ObjectGroup that is consulted by the
-        // type lookup routines if the real group doesn't have the requested information).
-        assert(instanceType.group == name, "group name mismatch for group \(name)")
-        assert(instanceType.properties == Set(properties.keys), "inconsistent property information for object group \(name): \(Set(properties.keys).symmetricDifference(instanceType.properties))")
-        assert(instanceType.methods == Set(methods.keys), "inconsistent method information for object group \(name): \(Set(methods.keys).symmetricDifference(instanceType.methods))")
+        if let instanceType {
+            // We could also only assert set inclusion here to implement "shared" properties/methods.
+            // (which would then need some kind of fallback ObjectGroup that is consulted by the
+            // type lookup routines if the real group doesn't have the requested information).
+            assert(instanceType.group == name, "group name mismatch for group \(name)")
+            assert(instanceType.properties == Set(properties.keys), "inconsistent property information for object group \(name): \(Set(properties.keys).symmetricDifference(instanceType.properties))")
+            assert(instanceType.methods == Set(methods.keys), "inconsistent method information for object group \(name): \(Set(methods.keys).symmetricDifference(instanceType.methods))")
+            self.instanceType = instanceType
+        } else {
+            // Simply calculate the instance type based on the ObjectGroup information.
+            self.instanceType = .object(ofGroup: name, withProperties: Array(properties.keys), withMethods: Array(methods.keys))
+        }
     }
 
-    public init(name: String, instanceType: ILType, properties: [String: ILType], methods: [String: Signature], parent: String? = nil) {
+    public init(name: String, instanceType: ILType?, properties: [String: ILType], methods: [String: Signature], parent: String? = nil) {
        self.init(name: name, instanceType: instanceType, properties: properties, overloads: methods.mapValues({[$0]}), parent: parent)
     }
+}
 
+// Some APIs take an "options bag", a list of options like {foo: "something", bar: "something", baz: 1}
+//
+// It is useful to be able to represent simple options bags so that we can efficiently codegen them
+public struct OptionsBag {
+    // The type of each property, not including `| .undefined`.
+    // We may extend this once we start supporting more complex bags
+    public var properties: [String: ILType]
+    // An ObjectGroup representing this bag
+    public var group: ObjectGroup
+
+    public init(name: String, properties: [String: ILType]) {
+        self.properties = properties
+        let properties = properties.mapValues {
+            // This list can be expanded over time as long as OptionsBagGenerator supports this
+            assert($0.isEnumeration || $0.Is(.number) || $0.Is(.integer), "Found unsupported option type \($0) in options bag \(name)")
+            return $0 | .undefined;
+        }
+        self.group = ObjectGroup(name: name, instanceType: nil, properties: properties, overloads: [:])
+    }
 }
 
 // Types of builtin objects, functions, and values.
@@ -687,8 +801,8 @@ public struct ObjectGroup {
 //
 // As such, one rule of thumb here is that each object type should only contain the properties and methods that are specific to this type
 // and not shared with other, unrelated objects.
-// Another rule of thumb is that the type information should either be complete or missing entirely. I.e. it is better to have a field be .anything
-// or .anythingObject instead of only specifying a subset of its properties for example. Partial type information is usually bad as
+// Another rule of thumb is that the type information should either be complete or missing entirely. I.e. it is better to have a field be .jsAnything
+// or .jsAnythingObject instead of only specifying a subset of its properties for example. Partial type information is usually bad as
 // only the available parts will be used by e.g. CodeGenerators while for example the ExplorationMutator will believe that type information is
 // complete and so it does not need to explore this value.
 //
@@ -757,7 +871,7 @@ public extension ILType {
     }
 
     /// Type of the JavaScript Object constructor builtin.
-    static let jsObjectConstructor = .functionAndConstructor([.anything...] => .object()) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
+    static let jsObjectConstructor = .functionAndConstructor([.jsAnything...] => .object()) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
 
     /// Type of the JavaScript Array constructor builtin.
     static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "of", "isArray"])
@@ -766,13 +880,13 @@ public extension ILType {
     static let jsFunctionConstructor = ILType.constructor([.string] => .jsFunction(Signature.forUnknownFunction))
 
     /// Type of the JavaScript String constructor builtin.
-    static let jsStringConstructor = ILType.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
+    static let jsStringConstructor = ILType.functionAndConstructor([.jsAnything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
 
     /// Type of the JavaScript Boolean constructor builtin.
-    static let jsBooleanConstructor = ILType.functionAndConstructor([.anything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
+    static let jsBooleanConstructor = ILType.functionAndConstructor([.jsAnything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
 
     /// Type of the JavaScript Number constructor builtin.
-    static let jsNumberConstructor = ILType.functionAndConstructor([.anything] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
+    static let jsNumberConstructor = ILType.functionAndConstructor([.jsAnything] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
 
     /// Type of the JavaScript Symbol constructor builtin.
     static let jsSymbolConstructor = ILType.function([.string] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: JavaScriptEnvironment.wellKnownSymbols, withMethods: ["for", "keyFor"])
@@ -812,7 +926,7 @@ public extension ILType {
     static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled"])
 
     /// Type of the JavaScript Proxy constructor builtin.
-    static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .anything)
+    static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .jsAnything)
 
     /// Type of the JavaScript Map constructor builtin.
     static let jsMapConstructor = ILType.constructor([.object()] => .jsMap)
@@ -848,31 +962,31 @@ public extension ILType {
     static let jsReflectObject = ILType.object(ofGroup: "Reflect", withMethods: ["apply", "construct", "defineProperty", "deleteProperty", "get", "getOwnPropertyDescriptor", "getPrototypeOf", "has", "isExtensible", "ownKeys", "preventExtensions", "set", "setPrototypeOf"])
 
     /// Type of the JavaScript isNaN builtin function.
-    static let jsIsNaNFunction = ILType.function([.anything] => .boolean)
+    static let jsIsNaNFunction = ILType.function([.jsAnything] => .boolean)
 
     /// Type of the JavaScript isFinite builtin function.
-    static let jsIsFiniteFunction = ILType.function([.anything] => .boolean)
+    static let jsIsFiniteFunction = ILType.function([.jsAnything] => .boolean)
 
     /// Type of the JavaScript escape builtin function.
-    static let jsEscapeFunction = ILType.function([.anything] => .jsString)
+    static let jsEscapeFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript unescape builtin function.
-    static let jsUnescapeFunction = ILType.function([.anything] => .jsString)
+    static let jsUnescapeFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript decodeURI builtin function.
-    static let jsDecodeURIFunction = ILType.function([.anything] => .jsString)
+    static let jsDecodeURIFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript decodeURIComponent builtin function.
-    static let jsDecodeURIComponentFunction = ILType.function([.anything] => .jsString)
+    static let jsDecodeURIComponentFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript encodeURI builtin function.
-    static let jsEncodeURIFunction = ILType.function([.anything] => .jsString)
+    static let jsEncodeURIFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript encodeURIComponent builtin function.
-    static let jsEncodeURIComponentFunction = ILType.function([.anything] => .jsString)
+    static let jsEncodeURIComponentFunction = ILType.function([.jsAnything] => .jsString)
 
     /// Type of the JavaScript eval builtin function.
-    static let jsEvalFunction = ILType.function([.string] => .anything)
+    static let jsEvalFunction = ILType.function([.string] => .jsAnything)
 
     /// Type of the JavaScript parseInt builtin function.
     static let jsParseIntFunction = ILType.function([.string] => .integer)
@@ -889,8 +1003,116 @@ public extension ILType {
     /// Type of the JavaScript Infinity value.
     static let jsInfinity = ILType.float
 
+    static let jsWebAssemblyModule = ILType.object(ofGroup: "WebAssembly.Module")
+
+    /// Type of the WebAssembly.Module() constructor.
+    // TODO: The first constructor argument can also be any typed array and .jsSharedArrayBuffer.
+    static let jsWebAssemblyModuleConstructor =
+        ILType.constructor([.plain(.jsArrayBuffer)] => .jsWebAssemblyModule)
+        + .object(ofGroup: "WebAssemblyModuleConstructor", withProperties: ["prototype"],
+            withMethods: ["customSections", "imports", "exports"])
+
+    static let jsWebAssemblyGlobalConstructor =
+        // We do not type the result as being part of the ObjectGroup "WasmGlobal" as that would
+        // require to also add a WasmTypeExtension to its type. This is fine as the proper
+        // construction of globals is done via the high-level Wasm operations and these builtins
+        // only serve the purpose of fuzzing the API.
+        ILType.constructor([.plain(.object()), .jsAnything] => .object(withProperties: ["value"], withMethods: ["valueOf"]))
+        + .object(ofGroup: "WebAssemblyGlobalConstructor", withProperties: ["prototype"], withMethods: [])
+
+    static let jsWebAssemblyInstance = ILType.object(ofGroup: "WebAssembly.Instance",
+        withProperties: ["exports"])
+
+    static let jsWebAssemblyInstanceConstructor =
+        ILType.constructor([.plain(.jsWebAssemblyModule), .plain(.object())] => .jsWebAssemblyInstance)
+        + .object(ofGroup: "WebAssemblyInstanceConstructor", withProperties: ["prototype"], withMethods: [])
+
+    // Similarly to Wasm globals, we do not type the results as being part of an object group as the
+    // result type doesn't have a valid WasmTypeExtension.
+    static let jsWebAssemblyMemoryConstructor = ILType.constructor([.plain(.object(withProperties: ["initial"]))] => .object(withProperties: ["buffer"], withMethods: ["grow", "toResizableBuffer", "toFixedLengthBuffer"]))
+        + .object(ofGroup: "WebAssemblyMemoryConstructor", withProperties: ["prototype"])
+
+    static let jsWebAssemblyTableConstructor = ILType.constructor([.plain(.object(withProperties: ["initial"]))] => object(withProperties: ["length"], withMethods: ["get", "grow", "set"]))
+        + .object(ofGroup: "WebAssemblyTableConstructor", withProperties: ["prototype"])
+
+    static let jsWebAssemblyTagConstructor = ILType.constructor([.plain(.object(withProperties: ["parameters"]))] => object(withMethods: []))
+        + .object(ofGroup: "WebAssemblyTagConstructor", withProperties: ["prototype"])
+
     // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
     static let wasmTable = ILType.object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"])
+
+    // Temporal types
+    static let jsTemporalObject = ILType.object(ofGroup: "Temporal", withProperties: ["Instant", "Duration", "PlainTime", "PlainYearMonth", "PlainMonthDay", "PlainDate", "PlainDateTime", "ZonedDateTime", "Now"])
+
+    // TODO(mliedtke): Can we stop documenting Object.prototype methods? It doesn't make much sense that half of the ObjectGroups register a toString method,
+    // the other half doesn't and not a single one registers e.g. propertyIsEnumerable or isPrototypeOf.`?
+    //
+    // Note that Temporal toString accepts additional parameters
+    private static let commonStringifierMethods = ["toString", "toJSON", "toLocaleString"]
+
+    static let jsTemporalInstant = ILType.object(ofGroup: "Temporal.Instant", withProperties: ["epochMilliseconds", "epochNanoseconds"], withMethods: ["add", "subtract", "until", "since", "round", "equals", "toZonedDateTimeISO"] + commonStringifierMethods)
+
+    static let jsTemporalInstantConstructor = ILType.functionAndConstructor([.bigint] => .jsTemporalInstant) + .object(ofGroup: "TemporalInstantConstructor", withProperties: ["prototype"], withMethods: ["from", "fromEpochMilliseconds", "fromEpochNanoseconds", "compare"])
+
+    static let jsTemporalDuration = ILType.object(ofGroup: "Temporal.Duration", withProperties: ["years", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds", "nanoseconds", "sign", "blank"], withMethods: ["with", "negated", "abs", "add", "subtract", "round", "total"] + commonStringifierMethods)
+
+    static let jsTemporalDurationConstructor = ILType.functionAndConstructor([.opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number)] => .jsTemporalDuration) + .object(ofGroup: "TemporalDurationConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
+
+    fileprivate static let timeProperties = ["hour", "minute", "second", "millisecond", "microsecond", "nanosecond"]
+    static let jsTemporalPlainTime = ILType.object(ofGroup: "Temporal.PlainTime", withProperties: timeProperties, withMethods: ["add", "subtract", "with", "until", "since", "round", "equals"] + commonStringifierMethods)
+
+    static let jsTemporalPlainTimeConstructor = ILType.functionAndConstructor([.opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number)] => .jsTemporalPlainTime) + .object(ofGroup: "TemporalPlainTimeConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
+
+    static let jsTemporalCalendarEnum = ILType.enumeration(ofName: "temporalCalendar", withValues: ["buddhist", "chinese", "coptic", "dangi", "ethioaa", "ethiopic", "ethiopic-amete-alem", "gregory", "hebrew", "indian", "islamic-civil", "islamic-tbla", "islamic-umalqura", "islamicc", "iso8601", "japanese", "persian", "roc"])
+
+    fileprivate static let yearMonthProperties = ["calendarId", "era", "eraYear", "year", "month", "monthCode", "daysInMonth", "daysInYear", "monthsInYear", "inLeapYear"]
+
+    static let jsTemporalPlainYearMonth = ILType.object(ofGroup: "Temporal.PlainYearMonth", withProperties: yearMonthProperties, withMethods: ["with", "add", "subtract", "until", "since", "equals", "toPlainDate"] + commonStringifierMethods)
+
+    static let jsTemporalPlainYearMonthConstructor = ILType.functionAndConstructor([.integer, .integer, .opt(.jsTemporalCalendarEnum), .opt(.integer)] => .jsTemporalPlainYearMonth) + .object(ofGroup: "TemporalPlainYearMonthConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
+
+    static let jsTemporalPlainMonthDay = ILType.object(ofGroup: "Temporal.PlainMonthDay", withProperties: ["calendarId", "monthCode", "day"], withMethods: ["with", "equals", "toPlainDate"] + commonStringifierMethods)
+
+    static let jsTemporalPlainMonthDayConstructor = ILType.functionAndConstructor([.integer, .integer, .opt(.jsTemporalCalendarEnum), .opt(.integer)] => .jsTemporalPlainMonthDay) + .object(ofGroup: "TemporalPlainMonthDayConstructor", withProperties: ["prototype"], withMethods: ["from"])
+
+    fileprivate static let dateProperties = yearMonthProperties + ["day", "dayOfYear", "dayOfWeek", "weekOfYear", "yearOfWeek", "daysInWeek"]
+
+    static let jsTemporalPlainDate = ILType.object(ofGroup: "Temporal.PlainDate", withProperties: dateProperties, withMethods: ["toPlainYearMonth", "toPlainMonthDay", "add", "subtract", "with", "withCalendar", "until", "since", "equals", "toPlainDateTime", "toZonedDateTime"] + commonStringifierMethods)
+
+    static let jsTemporalPlainDateConstructor = ILType.functionAndConstructor([.number, .number, .number, .opt(.jsTemporalCalendarEnum)] => .jsTemporalPlainDate) + .object(ofGroup: "TemporalPlainDateConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
+
+
+    static let jsTemporalPlainDateTime = ILType.object(ofGroup: "Temporal.PlainDateTime", withProperties: dateProperties + timeProperties, withMethods: ["with", "withPlainTime", "withCalendar", "add", "subtract", "until", "since", "round", "equals", "toZonedDateTime", "toPlainDate", "toPlainTime"] + commonStringifierMethods)
+
+    static let jsTemporalPlainDateTimeConstructor = ILType.functionAndConstructor([.number, .number, .number, .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.jsTemporalCalendarEnum)] => .jsTemporalPlainDateTime) + .object(ofGroup: "TemporalPlainDateTimeConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
+
+    static let jsTemporalZonedDateTime = ILType.object(ofGroup: "Temporal.ZonedDateTime", withProperties: dateProperties + timeProperties + ["timeZoneId", "epochMilliseconds", "epochNanoseconds", "offsetNanoseconds", "offset"], withMethods: ["with", "withPlainTime", "withTimeZone", "withCalendar", "add", "subtract", "until", "since", "round", "equals", "startOfDay", "getTimeZoneTransition", "toInstant", "toPlainDate", "toPlainTime", "toPlainDateTime"] + commonStringifierMethods)
+
+    static let jsTemporalZonedDateTimeConstructor = ILType.functionAndConstructor([.bigint, .string, .opt(.jsTemporalCalendarEnum)] => .jsTemporalZonedDateTime) + .object(ofGroup: "TemporalZonedDateTimeConstructor", withProperties: ["prototype"], withMethods: ["from", "compare"])
+
+    static let jsTemporalNow = ILType.object(ofGroup: "Temporal.Now", withProperties: [], withMethods: ["timeZoneId", "instant", "plainDateTimeISO", "zonedDateTimeISO", "plainDateISO", "plainTimeISO"])
+}
+
+public extension ObjectGroup {
+    // Creates an object group representing a "prototype" object on a built-in, like Date.prototype.
+    // These objects are somewhat special in JavaScript as they describe an object which has
+    // methods on them for which you shall not call them with the bound this as a receiver, e.g.
+    // `Date.prototype.getTime()` fails as `Date.prototype` is not a `Date`.
+    // Therefore the methods are registered as properties, so Fuzzilli doesn't generate calls for
+    // them. Instead Fuzzilli generates GetProperty operations for them which will then be typed as
+    // an `ILType.unboundFunction` which knows the required receiver type (in the example `Date`),
+    // so Fuzzilli can generate sequences like `Date.prototype.getTime.call(new Date())`.
+    static func createPrototypeObjectGroup(_ receiver: ObjectGroup) -> ObjectGroup {
+        let name = receiver.name + ".prototype"
+        let properties = Dictionary(uniqueKeysWithValues: receiver.methods.map {
+            ($0.0, ILType.unboundFunction($0.1.first, receiver: receiver.instanceType)) })
+        return ObjectGroup(
+            name: name,
+            instanceType: .object(ofGroup: name, withProperties: properties.map {$0.0}, withMethods: []),
+            properties: properties,
+            methods: [:]
+        )
+    }
 }
 
 // Type information for the object groups that we use to model the JavaScript runtime environment.
@@ -909,11 +1131,11 @@ public extension ObjectGroup {
             "charAt"      : [.integer] => .jsString,
             "charCodeAt"  : [.integer] => .integer,
             "codePointAt" : [.integer] => .integer,
-            "concat"      : [.anything...] => .jsString,
-            "includes"    : [.anything, .opt(.integer)] => .boolean,
+            "concat"      : [.jsAnything...] => .jsString,
+            "includes"    : [.jsAnything, .opt(.integer)] => .boolean,
             "endsWith"    : [.string, .opt(.integer)] => .boolean,
-            "indexOf"     : [.anything, .opt(.integer)] => .integer,
-            "lastIndexOf" : [.anything, .opt(.integer)] => .integer,
+            "indexOf"     : [.jsAnything, .opt(.integer)] => .integer,
+            "lastIndexOf" : [.jsAnything, .opt(.integer)] => .integer,
             "match"       : [.regexp] => .jsString,
             "matchAll"    : [.regexp] => .jsString,
             "normalize"   : [] => .jsString,  // the first parameter must be a specific string value, so we have a CodeGenerator for that instead
@@ -970,44 +1192,44 @@ public extension ObjectGroup {
             "length"      : .integer,
         ],
         methods: [
-            "at"             : [.integer] => .anything,
+            "at"             : [.integer] => .jsAnything,
             "copyWithin"     : [.integer, .integer, .opt(.integer)] => .jsArray,
             "entries"        : [] => .jsArray,
             "every"          : [.function(), .opt(.object())] => .boolean,
-            "fill"           : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
-            "find"           : [.function(), .opt(.object())] => .anything,
+            "fill"           : [.jsAnything, .opt(.integer), .opt(.integer)] => .undefined,
+            "find"           : [.function(), .opt(.object())] => .jsAnything,
             "findIndex"      : [.function(), .opt(.object())] => .integer,
-            "findLast"       : [.function(), .opt(.object())] => .anything,
+            "findLast"       : [.function(), .opt(.object())] => .jsAnything,
             "findLastIndex"  : [.function(), .opt(.object())] => .integer,
             "forEach"        : [.function(), .opt(.object())] => .undefined,
-            "includes"       : [.anything, .opt(.integer)] => .boolean,
-            "indexOf"        : [.anything, .opt(.integer)] => .integer,
+            "includes"       : [.jsAnything, .opt(.integer)] => .boolean,
+            "indexOf"        : [.jsAnything, .opt(.integer)] => .integer,
             "join"           : [.string] => .jsString,
             "keys"           : [] => .object(),          // returns an array iterator
-            "lastIndexOf"    : [.anything, .opt(.integer)] => .integer,
-            "reduce"         : [.function(), .opt(.anything)] => .anything,
-            "reduceRight"    : [.function(), .opt(.anything)] => .anything,
+            "lastIndexOf"    : [.jsAnything, .opt(.integer)] => .integer,
+            "reduce"         : [.function(), .opt(.jsAnything)] => .jsAnything,
+            "reduceRight"    : [.function(), .opt(.jsAnything)] => .jsAnything,
             "reverse"        : [] => .undefined,
-            "some"           : [.function(), .opt(.anything)] => .boolean,
+            "some"           : [.function(), .opt(.jsAnything)] => .boolean,
             "sort"           : [.function()] => .undefined,
             "values"         : [] => .object(),
-            "pop"            : [] => .anything,
-            "push"           : [.anything...] => .integer,
-            "shift"          : [] => .anything,
-            "splice"         : [.integer, .opt(.integer), .anything...] => .jsArray,
-            "unshift"        : [.anything...] => .integer,
-            "concat"         : [.anything...] => .jsArray,
+            "pop"            : [] => .jsAnything,
+            "push"           : [.jsAnything...] => .integer,
+            "shift"          : [] => .jsAnything,
+            "splice"         : [.integer, .opt(.integer), .jsAnything...] => .jsArray,
+            "unshift"        : [.jsAnything...] => .integer,
+            "concat"         : [.jsAnything...] => .jsArray,
             "filter"         : [.function(), .opt(.object())] => .jsArray,
             "map"            : [.function(), .opt(.object())] => .jsArray,
             "slice"          : [.opt(.integer), .opt(.integer)] => .jsArray,
             "flat"           : [.opt(.integer)] => .jsArray,
-            "flatMap"        : [.function(), .opt(.anything)] => .jsArray,
+            "flatMap"        : [.function(), .opt(.jsAnything)] => .jsArray,
             "toString"       : [] => .jsString,
             "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
             "toReversed"     : [] => .jsArray,
             "toSorted"       : [.opt(.function())] => .jsArray,
-            "toSpliced"      : [.integer, .opt(.integer), .anything...] => .jsArray,
-            "with"           : [.integer, .anything] => .jsArray,
+            "toSpliced"      : [.integer, .opt(.integer), .jsAnything...] => .jsArray,
+            "with"           : [.integer, .jsAnything] => .jsArray,
         ]
     )
 
@@ -1023,9 +1245,9 @@ public extension ObjectGroup {
             "name"        : .jsString,
         ],
         methods: [
-            "apply" : [.object(), .object()] => .anything,
-            "call"  : [.object(), .anything...] => .anything,
-            "bind"  : [.object(), .anything...] => .anything,
+            "apply" : [.object(), .object()] => .jsAnything,
+            "call"  : [.object(), .jsAnything...] => .jsAnything,
+            "bind"  : [.object(), .jsAnything...] => .jsAnything,
         ]
     )
 
@@ -1055,9 +1277,9 @@ public extension ObjectGroup {
         instanceType: .jsGenerator,
         properties: [:],
         methods: [
-            "next"   : [.opt(.anything)] => .object(withProperties: ["done", "value"]),
-            "return" : [.opt(.anything)] => .object(withProperties: ["done", "value"]),
-            "throw"  : [.opt(.anything)] => .object(withProperties: ["done", "value"])
+            "next"   : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
+            "return" : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
+            "throw"  : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"])
         ]
     )
 
@@ -1082,13 +1304,13 @@ public extension ObjectGroup {
         ],
         methods: [
             "clear"   : [] => .undefined,
-            "delete"  : [.anything] => .boolean,
+            "delete"  : [.jsAnything] => .boolean,
             "entries" : [] => .object(),
             "forEach" : [.function(), .opt(.object())] => .undefined,
-            "get"     : [.anything] => .anything,
-            "has"     : [.anything] => .boolean,
+            "get"     : [.jsAnything] => .jsAnything,
+            "has"     : [.jsAnything] => .boolean,
             "keys"    : [] => .object(),
-            "set"     : [.anything, .anything] => .jsMap,
+            "set"     : [.jsAnything, .jsAnything] => .jsMap,
             "values"  : [] => .object(),
         ]
     )
@@ -1099,10 +1321,10 @@ public extension ObjectGroup {
         instanceType: .jsWeakMap,
         properties: [:],
         methods: [
-            "delete" : [.anything] => .boolean,
-            "get"    : [.anything] => .anything,
-            "has"    : [.anything] => .boolean,
-            "set"    : [.anything, .anything] => .jsWeakMap,
+            "delete" : [.jsAnything] => .boolean,
+            "get"    : [.jsAnything] => .jsAnything,
+            "has"    : [.jsAnything] => .boolean,
+            "set"    : [.jsAnything, .jsAnything] => .jsWeakMap,
         ]
     )
 
@@ -1114,12 +1336,12 @@ public extension ObjectGroup {
             "size"      : .integer
         ],
         methods: [
-            "add"     : [.anything] => .jsSet,
+            "add"     : [.jsAnything] => .jsSet,
             "clear"   : [] => .undefined,
-            "delete"  : [.anything] => .boolean,
+            "delete"  : [.jsAnything] => .boolean,
             "entries" : [] => .object(),
             "forEach" : [.function(), .opt(.object())] => .undefined,
-            "has"     : [.anything] => .boolean,
+            "has"     : [.jsAnything] => .boolean,
             "keys"    : [] => .object(),
             "values"  : [] => .object(),
         ]
@@ -1131,9 +1353,9 @@ public extension ObjectGroup {
         instanceType: .jsWeakSet,
         properties: [:],
         methods: [
-            "add"    : [.anything] => .jsWeakSet,
-            "delete" : [.anything] => .boolean,
-            "has"    : [.anything] => .boolean,
+            "add"    : [.jsAnything] => .jsWeakSet,
+            "delete" : [.jsAnything] => .boolean,
+            "has"    : [.jsAnything] => .boolean,
         ]
     )
 
@@ -1153,8 +1375,8 @@ public extension ObjectGroup {
         instanceType: .jsFinalizationRegistry,
         properties: [:],
         methods: [
-            "register"   : [.object(), .anything, .opt(.object())] => .object(),
-            "unregister" : [.anything] => .undefined,
+            "register"   : [.object(), .jsAnything, .opt(.object())] => .object(),
+            "unregister" : [.jsAnything] => .undefined,
         ]
     )
 
@@ -1201,26 +1423,26 @@ public extension ObjectGroup {
                 "length"      : .integer
             ],
             methods: [
-                "at"          : [.integer] => .anything,
+                "at"          : [.integer] => .jsAnything,
                 "copyWithin"  : [.integer, .integer, .opt(.integer)] => .undefined,
                 "entries"     : [] => .jsArray,
                 "every"       : [.function(), .opt(.object())] => .boolean,
-                "fill"        : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
-                "find"        : [.function(), .opt(.object())] => .anything,
+                "fill"        : [.jsAnything, .opt(.integer), .opt(.integer)] => .undefined,
+                "find"        : [.function(), .opt(.object())] => .jsAnything,
                 "findIndex"   : [.function(), .opt(.object())] => .integer,
-                "findLast"    : [.function(), .opt(.object())] => .anything,
+                "findLast"    : [.function(), .opt(.object())] => .jsAnything,
                 "findLastIndex"  : [.function(), .opt(.object())] => .integer,
                 "forEach"     : [.function(), .opt(.object())] => .undefined,
-                "includes"    : [.anything, .opt(.integer)] => .boolean,
-                "indexOf"     : [.anything, .opt(.integer)] => .integer,
+                "includes"    : [.jsAnything, .opt(.integer)] => .boolean,
+                "indexOf"     : [.jsAnything, .opt(.integer)] => .integer,
                 "join"        : [.string] => .jsString,
                 "keys"        : [] => .object(),          // returns an array iterator
-                "lastIndexOf" : [.anything, .opt(.integer)] => .integer,
-                "reduce"      : [.function(), .opt(.anything)] => .anything,
-                "reduceRight" : [.function(), .opt(.anything)] => .anything,
+                "lastIndexOf" : [.jsAnything, .opt(.integer)] => .integer,
+                "reduce"      : [.function(), .opt(.jsAnything)] => .jsAnything,
+                "reduceRight" : [.function(), .opt(.jsAnything)] => .jsAnything,
                 "reverse"     : [] => .undefined,
                 "set"         : [.object(), .opt(.integer)] => .undefined,
-                "some"        : [.function(), .opt(.anything)] => .boolean,
+                "some"        : [.function(), .opt(.jsAnything)] => .boolean,
                 "sort"        : [.function()] => .undefined,
                 "values"      : [] => .object(),
                 "filter"      : [.function(), .opt(.object())] => .jsTypedArray(variant),
@@ -1231,7 +1453,7 @@ public extension ObjectGroup {
                 "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
                 "toReversed"     : [] => .jsTypedArray(variant),
                 "toSorted"       : [.opt(.function())] => .jsTypedArray(variant),
-                "with"           : [.integer, .anything] => .jsTypedArray(variant),
+                "with"           : [.integer, .jsAnything] => .jsTypedArray(variant),
             ]
         )
     }
@@ -1267,16 +1489,18 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsPromisePrototype = createPrototypeObjectGroup(jsPromises)
+
     /// ObjectGroup modelling the JavaScript Promise constructor builtin
     static let jsPromiseConstructor = ObjectGroup(
         name: "PromiseConstructor",
         instanceType: .jsPromiseConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsPromisePrototype.instanceType
         ],
         methods: [
-            "resolve"    : [.anything] => .jsPromise,
-            "reject"     : [.anything] => .jsPromise,
+            "resolve"    : [.jsAnything] => .jsPromise,
+            "reject"     : [.jsAnything] => .jsPromise,
             "all"        : [.jsPromise...] => .jsPromise,
             "any"        : [.jsPromise...] => .jsPromise,
             "race"       : [.jsPromise...] => .jsPromise,
@@ -1338,12 +1562,14 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsDatePrototype = createPrototypeObjectGroup(jsDate)
+
     /// ObjectGroup modelling the JavaScript Date constructor
     static let jsDateConstructor = ObjectGroup(
         name: "DateConstructor",
         instanceType: .jsDateConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsDatePrototype.instanceType
         ],
         methods: [
             "UTC"   : [.number, .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number)] => .jsDate,
@@ -1389,46 +1615,53 @@ public extension ObjectGroup {
         name: "ArrayConstructor",
         instanceType: .jsArrayConstructor,
         properties: [
-            "prototype" : .object()
+            // This might seem wrong, note however that `Array.isArray(Array.prototype)` is true.
+            "prototype" : .jsArray,
         ],
         methods: [
-            "from"    : [.anything, .opt(.function()), .opt(.object())] => .jsArray,
-            "isArray" : [.anything] => .boolean,
-            "of"      : [.anything...] => .jsArray,
+            "from"    : [.jsAnything, .opt(.function()), .opt(.object())] => .jsArray,
+            "isArray" : [.jsAnything] => .boolean,
+            "of"      : [.jsAnything...] => .jsArray,
         ]
     )
+
+    static let jsArrayBufferPrototype = createPrototypeObjectGroup(jsArrayBuffers)
 
     static let jsArrayBufferConstructor = ObjectGroup(
         name: "ArrayBufferConstructor",
         instanceType: .jsArrayBufferConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsArrayBufferPrototype.instanceType
         ],
         methods: [
-            "isView" : [.anything] => .boolean
+            "isView" : [.jsAnything] => .boolean
         ]
     )
+
+    static let jsSharedArrayBufferPrototype = createPrototypeObjectGroup(jsSharedArrayBuffers)
 
     static let jsSharedArrayBufferConstructor = ObjectGroup(
         name: "SharedArrayBufferConstructor",
         instanceType: .jsSharedArrayBufferConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsSharedArrayBufferPrototype.instanceType
         ],
         methods: [:]
     )
+
+    static let jsStringPrototype = createPrototypeObjectGroup(jsStrings)
 
     /// Object group modelling the JavaScript String constructor builtin
     static let jsStringConstructor = ObjectGroup(
         name: "StringConstructor",
         instanceType: .jsStringConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsStringPrototype.instanceType
         ],
         methods: [
-            "fromCharCode"  : [.anything...] => .jsString,
-            "fromCodePoint" : [.anything...] => .jsString,
-            "raw"           : [.anything...] => .jsString
+            "fromCharCode"  : [.jsAnything...] => .jsString,
+            "fromCodePoint" : [.jsAnything...] => .jsString,
+            "raw"           : [.jsAnything...] => .jsString
         ]
     )
 
@@ -1499,10 +1732,10 @@ public extension ObjectGroup {
             "POSITIVE_INFINITY" : .number,
         ],
         methods: [
-            "isNaN"         : [.anything] => .boolean,
-            "isFinite"      : [.anything] => .boolean,
-            "isInteger"     : [.anything] => .boolean,
-            "isSafeInteger" : [.anything] => .boolean,
+            "isNaN"         : [.jsAnything] => .boolean,
+            "isFinite"      : [.jsAnything] => .boolean,
+            "isInteger"     : [.jsAnything] => .boolean,
+            "isSafeInteger" : [.jsAnything] => .boolean,
         ]
     )
 
@@ -1515,41 +1748,41 @@ public extension ObjectGroup {
             "PI" : .number
         ],
         methods: [
-            "abs"    : [.anything] => .number,
-            "acos"   : [.anything] => .number,
-            "acosh"  : [.anything] => .number,
-            "asin"   : [.anything] => .number,
-            "asinh"  : [.anything] => .number,
-            "atan"   : [.anything] => .number,
-            "atanh"  : [.anything] => .number,
-            "atan2"  : [.anything, .anything] => .number,
-            "cbrt"   : [.anything] => .number,
-            "ceil"   : [.anything] => .number,
-            "clz32"  : [.anything] => .number,
-            "cos"    : [.anything] => .number,
-            "cosh"   : [.anything] => .number,
-            "exp"    : [.anything] => .number,
-            "expm1"  : [.anything] => .number,
-            "floor"  : [.anything] => .number,
-            "fround" : [.anything] => .number,
-            "hypot"  : [.anything...] => .number,
-            "imul"   : [.anything, .anything] => .integer,
-            "log"    : [.anything] => .number,
-            "log1p"  : [.anything] => .number,
-            "log10"  : [.anything] => .number,
-            "log2"   : [.anything] => .number,
-            "max"    : [.anything...] => .anything,
-            "min"    : [.anything...] => .anything,
-            "pow"    : [.anything, .anything] => .number,
+            "abs"    : [.jsAnything] => .number,
+            "acos"   : [.jsAnything] => .number,
+            "acosh"  : [.jsAnything] => .number,
+            "asin"   : [.jsAnything] => .number,
+            "asinh"  : [.jsAnything] => .number,
+            "atan"   : [.jsAnything] => .number,
+            "atanh"  : [.jsAnything] => .number,
+            "atan2"  : [.jsAnything, .jsAnything] => .number,
+            "cbrt"   : [.jsAnything] => .number,
+            "ceil"   : [.jsAnything] => .number,
+            "clz32"  : [.jsAnything] => .number,
+            "cos"    : [.jsAnything] => .number,
+            "cosh"   : [.jsAnything] => .number,
+            "exp"    : [.jsAnything] => .number,
+            "expm1"  : [.jsAnything] => .number,
+            "floor"  : [.jsAnything] => .number,
+            "fround" : [.jsAnything] => .number,
+            "hypot"  : [.jsAnything...] => .number,
+            "imul"   : [.jsAnything, .jsAnything] => .integer,
+            "log"    : [.jsAnything] => .number,
+            "log1p"  : [.jsAnything] => .number,
+            "log10"  : [.jsAnything] => .number,
+            "log2"   : [.jsAnything] => .number,
+            "max"    : [.jsAnything...] => .jsAnything,
+            "min"    : [.jsAnything...] => .jsAnything,
+            "pow"    : [.jsAnything, .jsAnything] => .number,
             "random" : [] => .number,
-            "round"  : [.anything] => .number,
-            "sign"   : [.anything] => .number,
-            "sin"    : [.anything] => .number,
-            "sinh"   : [.anything] => .number,
-            "sqrt"   : [.anything] => .number,
-            "tan"    : [.anything] => .number,
-            "tanh"   : [.anything] => .number,
-            "trunc"  : [.anything] => .number,
+            "round"  : [.jsAnything] => .number,
+            "sign"   : [.jsAnything] => .number,
+            "sin"    : [.jsAnything] => .number,
+            "sinh"   : [.jsAnything] => .number,
+            "sqrt"   : [.jsAnything] => .number,
+            "tan"    : [.jsAnything] => .number,
+            "tanh"   : [.jsAnything] => .number,
+            "trunc"  : [.jsAnything] => .number,
         ]
     )
 
@@ -1559,8 +1792,8 @@ public extension ObjectGroup {
         instanceType: .jsJSONObject,
         properties: [:],
         methods: [
-            "parse"     : [.string, .opt(.function())] => .anything,
-            "stringify" : [.anything, .opt(.function()), .opt(.number | .string)] => .jsString,
+            "parse"     : [.string, .opt(.function())] => .jsAnything,
+            "stringify" : [.jsAnything, .opt(.function()), .opt(.number | .string)] => .jsString,
         ]
     )
 
@@ -1570,18 +1803,18 @@ public extension ObjectGroup {
         instanceType: .jsReflectObject,
         properties: [:],
         methods: [
-            "apply"                    : [.function(), .anything, .object()] => .anything,
-            "construct"                : [.constructor(), .object(), .opt(.object())] => .anything,
+            "apply"                    : [.function(), .jsAnything, .object()] => .jsAnything,
+            "construct"                : [.constructor(), .object(), .opt(.object())] => .jsAnything,
             "defineProperty"           : [.object(), .string, .object()] => .boolean,
             "deleteProperty"           : [.object(), .string] => .boolean,
-            "get"                      : [.object(), .string, .opt(.object())] => .anything,
-            "getOwnPropertyDescriptor" : [.object(), .string] => .anything,
-            "getPrototypeOf"           : [.anything] => .anything,
+            "get"                      : [.object(), .string, .opt(.object())] => .jsAnything,
+            "getOwnPropertyDescriptor" : [.object(), .string] => .jsAnything,
+            "getPrototypeOf"           : [.jsAnything] => .jsAnything,
             "has"                      : [.object(), .string] => .boolean,
-            "isExtensible"             : [.anything] => .boolean,
-            "ownKeys"                  : [.anything] => .jsArray,
+            "isExtensible"             : [.jsAnything] => .boolean,
+            "ownKeys"                  : [.jsAnything] => .jsArray,
             "preventExtensions"        : [.object()] => .boolean,
-            "set"                      : [.object(), .string, .anything, .opt(.object())] => .boolean,
+            "set"                      : [.object(), .string, .jsAnything, .opt(.object())] => .boolean,
             "setPrototypeOf"           : [.object(), .object()] => .boolean,
         ]
     )
@@ -1594,7 +1827,7 @@ public extension ObjectGroup {
             properties: [
                 "message"     : .jsString,
                 "name"        : .jsString,
-                "cause"       : .anything,
+                "cause"       : .jsAnything,
                 "stack"       : .jsString,
             ],
             methods: [
@@ -1603,26 +1836,160 @@ public extension ObjectGroup {
         )
     }
 
+    // TODO(mliedtke): We need to construct these to make code generators be able to provide
+    // somewhat reasonable compile options.
+    static let jsWebAssemblyCompileOptions = ObjectGroup(
+        name: "WebAssemblyCompileOptions",
+        instanceType: nil,
+        properties: [
+            "builtins": .jsArray,
+            "importedStringConstants": .jsString,
+        ],
+        methods: [:]
+    )
+
+    // Note: This supports all typed arrays, however, that would add a huge amount of overloads, so
+    // we only add a few selected typed arrays here.
+    static let wasmBufferTypes = [
+        ILType.jsArrayBuffer, .jsSharedArrayBuffer, .jsTypedArray("Int8Array"),
+        .jsTypedArray("Float32Array"), .jsTypedArray("BigUint64Array")]
+
+    static let jsWebAssemblyModule = ObjectGroup(
+        name: "WebAssembly.Module",
+        instanceType: .jsWebAssemblyModule,
+        properties: [:],
+        methods: [:]
+    )
+
+    static let jsWebAssemblyModuleConstructor = ObjectGroup(
+        name: "WebAssemblyModuleConstructor",
+        instanceType: .jsWebAssemblyModuleConstructor,
+        properties: [
+            "prototype": .object()
+        ],
+        methods: [
+            "customSections": [.plain(jsWebAssemblyModule.instanceType), .plain(.jsString)] => .jsArray,
+            "exports": [.plain(jsWebAssemblyModule.instanceType)] => .jsArray,
+            "imports": [.plain(jsWebAssemblyModule.instanceType)] => .jsArray,
+        ]
+    )
+
+    static let jsWebAssemblyGlobalPrototype = createPrototypeObjectGroup(jsWasmGlobal)
+
+    static let jsWebAssemblyGlobalConstructor = ObjectGroup(
+        name: "WebAssemblyGlobalConstructor",
+        instanceType: .jsWebAssemblyGlobalConstructor,
+        properties: [
+            "prototype": jsWebAssemblyGlobalPrototype.instanceType,
+        ],
+        methods: [:]
+    )
+
+    static let jsWebAssemblyInstanceConstructor = ObjectGroup(
+        name: "WebAssemblyInstanceConstructor",
+        instanceType: .jsWebAssemblyInstanceConstructor,
+        properties: [
+            "prototype": .object(),
+        ],
+        methods: [:]
+    )
+
+    static let jsWebAssemblyInstance = ObjectGroup(
+        name: "WebAssembly.Instance",
+        instanceType: .jsWebAssemblyInstance,
+        properties: [
+            "exports": .object(),
+        ],
+        methods: [:]
+    )
+
+    static let jsWebAssemblyMemoryPrototype = createPrototypeObjectGroup(jsWasmMemory)
+
+    static let jsWebAssemblyMemoryConstructor = ObjectGroup(
+        name: "WebAssemblyMemoryConstructor",
+        instanceType: .jsWebAssemblyMemoryConstructor,
+        properties: [
+            "prototype": jsWebAssemblyMemoryPrototype.instanceType,
+        ],
+        methods: [:]
+    )
+
+    static let jsWebAssemblyTablePrototype = createPrototypeObjectGroup(wasmTable)
+
+    static let jsWebAssemblyTableConstructor = ObjectGroup(
+        name: "WebAssemblyTableConstructor",
+        instanceType: .jsWebAssemblyTableConstructor,
+        properties: [
+            "prototype": jsWebAssemblyTablePrototype.instanceType,
+        ],
+        methods: [:]
+    )
+
+    static let jsWebAssemblyTagPrototype = createPrototypeObjectGroup(jsWasmTag)
+
+    static let jsWebAssemblyTagConstructor = ObjectGroup(
+        name: "WebAssemblyTagConstructor",
+        instanceType: .jsWebAssemblyTagConstructor,
+        properties: [
+            "prototype": jsWebAssemblyTagPrototype.instanceType,
+        ],
+        methods: [:]
+    )
+
+    static let jsWebAssembly = ObjectGroup(
+        name: "WebAssembly",
+        instanceType: nil,
+        properties: [
+            // TODO(mliedtke): Add properties like Global, Memory, ...
+            "JSTag": .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef], isJSTag: true)),
+            "Module": .jsWebAssemblyModuleConstructor,
+            "Global": .jsWebAssemblyGlobalConstructor,
+            "Instance": .jsWebAssemblyInstanceConstructor,
+            "Memory": .jsWebAssemblyMemoryConstructor,
+            "Table": .jsWebAssemblyTableConstructor,
+            "Tag": .jsWebAssemblyTagConstructor,
+        ],
+        overloads: [
+            "compile": wasmBufferTypes.map {
+                [.plain($0), .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise},
+            // TODO: The first parameter should be a Response which Fuzzilli doesn't know as it is
+            // mostly used by WebAPIs like fetch().
+            "compileStreaming": [
+                [.object(), .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise],
+            "instantiate": wasmBufferTypes.map {
+                [.plain($0), /*imports*/ .opt(.object()),
+                 .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise},
+            // TODO: Same as compileStreaming(), the first parameter has to be a Response.
+            "instantiateStreaming": [
+                [.object(), /*imports*/ .opt(.object()),
+                 .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise],
+            "validate": wasmBufferTypes.map {
+                [.plain($0), .opt(jsWebAssemblyCompileOptions.instanceType)] => .jsPromise},
+        ]
+    )
+
     /// ObjectGroup modelling JavaScript WebAssembly Global objects.
     static let jsWasmGlobal = ObjectGroup(
         name: "WasmGlobal",
-        instanceType: .object(ofGroup: "WasmGlobal", withProperties: ["value"]),
+        instanceType: nil,
         properties: [
             // TODO: Try using precise JS types based on the global's underlying valuetype (e.g. float for f32 and f64).
-            "value" : .anything
+            "value" : .jsAnything
         ],
-        methods: [:]
+        methods: ["valueOf": [] => .jsAnything]
     )
 
     /// ObjectGroup modelling JavaScript WebAssembly Memory objects.
     static let jsWasmMemory = ObjectGroup(
         name: "WasmMemory",
-        instanceType: .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow"]),
+        instanceType: .object(ofGroup: "WasmMemory", withProperties: ["buffer"], withMethods: ["grow", "toResizableBuffer", "toFixedLengthBuffer"]),
         properties: [
             "buffer" : .jsArrayBuffer | .jsSharedArrayBuffer
         ],
         methods: [
-            "grow" : [.number] => .number
+            "grow" : [.number] => .number,
+            "toResizableBuffer" : [] => (.jsArrayBuffer | .jsSharedArrayBuffer),
+            "toFixedLengthBuffer" : [] => (.jsArrayBuffer | .jsSharedArrayBuffer),
         ]
     )
 
@@ -1630,7 +1997,7 @@ public extension ObjectGroup {
     // same object group. When split, we can register the type() prototype method.
     static let jsWasmTag = ObjectGroup(
         name: "WasmTag",
-        instanceType: .object(ofGroup: "WasmTag"),
+        instanceType: nil, // inferred
         properties: [:],
         methods: [:]
     )
@@ -1643,9 +2010,597 @@ public extension ObjectGroup {
             "length": .number
         ],
         methods: [
-            "get": [.number] => .anything,
-            "grow": [.number, .opt(.anything)] => .number,
-            "set": [.number, .anything] => .undefined,
+            "get": [.number] => .jsAnything,
+            "grow": [.number, .opt(.jsAnything)] => .number,
+            "set": [.number, .jsAnything] => .undefined,
         ]
     )
+
+    static let jsWasmSuspendingObject = ObjectGroup(
+        name: "WasmSuspendingObject",
+        instanceType: .object(ofGroup: "WasmSuspendingObject"),
+        properties: [:],
+        methods: [:]
+    )
+
+    // Temporal types
+
+    // Helpers for constructing common signatures
+    private static func temporalAddSubtractSignature(forType: ILType, needsOverflow: Bool) -> [Signature] {
+        if needsOverflow {
+            return jsTemporalDurationLikeParameters.map { [.plain($0), .opt(jsTemporalOverflowSettings)] => forType }
+        } else {
+            return jsTemporalDurationLikeParameters.map { [.plain($0)] => forType }
+        }
+    }
+    private static func temporalUntilSinceSignature(possibleParams: [ILType]) -> [Signature] {
+        return possibleParams.map { [.plain($0), .opt(jsTemporalDifferenceSettings)] => .jsTemporalDuration }
+    }
+    private static func temporalFromSignature(forType: ILType, possibleParams: [ILType], settingsArg: ILType? = nil) -> [Signature] {
+        if let settingsArg {
+            return possibleParams.map { [.plain($0), .opt(settingsArg)] => forType }
+        } else {
+            return possibleParams.map { [.plain($0), .opt(jsTemporalDifferenceSettings)] => forType }
+        }
+    }
+    private static func temporalCompareSignature(possibleParams: [ILType]) -> [Signature] {
+        possibleParams.flatMap { param1 in
+            return possibleParams.map { param2 in
+                return [.plain(param1), .plain(param2)] => .number
+            }
+        }
+    }
+
+    private static func temporalEqualsSignature(possibleParams: [ILType]) -> [Signature] {
+        return possibleParams.map { [.plain($0)] => .boolean }
+    }
+
+    /// Object group modelling the JavaScript Temporal builtin
+    static let jsTemporalObject = ObjectGroup(
+        name: "Temporal",
+        instanceType: .jsTemporalObject,
+        properties: [
+            "Instant"  : .jsTemporalInstantConstructor,
+            "Duration"  : .jsTemporalDurationConstructor,
+            "PlainTime"  : .jsTemporalPlainTimeConstructor,
+            "PlainYearMonth"  : .jsTemporalPlainYearMonthConstructor,
+            "PlainMonthDay"  : .jsTemporalPlainMonthDay,
+            "PlainDate"  : .jsTemporalPlainDateConstructor,
+            "PlainDateTime"  : .jsTemporalPlainDateTimeConstructor,
+            "ZonedDateTime"  : .jsTemporalZonedDateTimeConstructor,
+            "Now": .jsTemporalNow,
+        ],
+        methods: [:]
+    )
+
+    static let jsTemporalNow = ObjectGroup(
+        name: "Temporal.Now",
+        instanceType: .jsTemporalNow,
+        properties: [:],
+        methods: [
+            "timeZoneId": [] => .string,
+            "instant": [] => .jsTemporalInstant,
+            // TODO(manishearth, 439921647) Potentially hint to the generator that these are timezone-like
+            "plainDateTimeISO": [.opt(.string)] => .jsTemporalPlainDateTime,
+            "zonedDateTimeISO": [.opt(.string)] => .jsTemporalZonedDateTime,
+            "plainDateISO": [.opt(.string)] => .jsTemporalPlainDate,
+            "plainTimeISO": [.opt(.string)] => .jsTemporalPlainTime,
+        ]
+    )
+
+    /// ObjectGroup modelling JavaScript Temporal.Instant objects
+    static let jsTemporalInstant = ObjectGroup(
+        name: "Temporal.Instant",
+        instanceType: .jsTemporalInstant,
+        properties: [
+            "epochMilliseconds": .number,
+            "epochNanoseconds": .bigint,
+        ],
+        overloads: [
+            "add": temporalAddSubtractSignature(forType: .jsTemporalInstant, needsOverflow: false),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalInstant, needsOverflow: false),
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalInstantLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalInstantLikeParameters),
+            "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalInstant],
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalInstantLikeParameters),
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
+            "toZonedDateTimeISO": [[jsTemporalTimeZoneLike] => .jsTemporalZonedDateTime],
+        ]
+    )
+
+    static let jsTemporalInstantPrototype = createPrototypeObjectGroup(jsTemporalInstant)
+
+    /// ObjectGroup modelling the JavaScript Temporal.Instant constructor
+    static let jsTemporalInstantConstructor = ObjectGroup(
+        name: "TemporalInstantConstructor",
+        instanceType: .jsTemporalInstantConstructor,
+        properties: [
+            "prototype" : jsTemporalInstantPrototype.instanceType
+        ],
+        overloads: [
+            "from": temporalFromSignature(forType: .jsTemporalInstant, possibleParams: jsTemporalInstantLikeParameters),
+            "fromEpochMilliseconds": [[.number] => .jsTemporalInstant],
+            "fromEpochNanoseconds": [[.bigint] => .jsTemporalInstant],
+            "compare": temporalCompareSignature(possibleParams: jsTemporalInstantLikeParameters),
+        ]
+    )
+    /// ObjectGroup modelling JavaScript Temporal.Duration objects
+    static let jsTemporalDuration = ObjectGroup(
+        name: "Temporal.Duration",
+        instanceType: .jsTemporalDuration,
+        properties: [
+            "years": .number,
+            "months": .number,
+            "weeks": .number,
+            "days": .number,
+            "hours": .number,
+            "minutes": .number,
+            "seconds": .number,
+            "milliseconds": .number,
+            "microseconds": .number,
+            "nanoseconds": .number,
+            "sign": .number,
+            "blank": .boolean,
+        ],
+        overloads: [
+            "with": [[.plain(jsTemporalDurationLikeObject.instanceType)] => .jsTemporalDuration],
+            "negated": [[] => .jsTemporalDuration],
+            "abs": [[] => .jsTemporalDuration],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalDuration, needsOverflow: false),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalDuration, needsOverflow: false),
+            "round": [[jsTemporalDurationRoundTo] => .jsTemporalDuration],
+            "total": [[jsTemporalDurationTotalOf] => .jsTemporalDuration],
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
+        ]
+    )
+
+    static let jsTemporalDurationPrototype = createPrototypeObjectGroup(jsTemporalDuration)
+
+    /// ObjectGroup modelling the JavaScript Temporal.Duration constructor
+    static let jsTemporalDurationConstructor = ObjectGroup(
+        name: "TemporalDurationConstructor",
+        instanceType: .jsTemporalDurationConstructor,
+        properties: [
+            "prototype" : jsTemporalDurationPrototype.instanceType
+        ],
+        overloads: [
+            "from": temporalFromSignature(forType: .jsTemporalDuration, possibleParams: jsTemporalDurationLikeParameters),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalDurationLikeParameters),
+        ]
+    )
+
+    static let jsTemporalPlainTime = ObjectGroup(
+        name: "Temporal.PlainTime",
+        instanceType: .jsTemporalPlainTime,
+        properties: [
+            "hour": .number,
+            "minute": .number,
+            "second": .number,
+            "millisecond": .number,
+            "microsecond": .number,
+            "nanosecond": .number,
+        ],
+        overloads: [
+            "add": temporalAddSubtractSignature(forType: .jsTemporalPlainTime, needsOverflow: false),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalPlainTime, needsOverflow: false),
+            "with": [[.plain(jsTemporalPlainTimeLikeObject.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainTime],
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalPlainTimeLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalPlainTimeLikeParameters),
+            "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalPlainTime],
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalPlainTimeLikeParameters),
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
+        ]
+    )
+
+    static let jsTemporalPlainTimePrototype = createPrototypeObjectGroup(jsTemporalPlainTime)
+
+    /// ObjectGroup modelling the JavaScript Temporal.PlainTime constructor
+    static let jsTemporalPlainTimeConstructor = ObjectGroup(
+        name: "TemporalPlainTimeConstructor",
+        instanceType: .jsTemporalPlainTimeConstructor,
+        properties: [
+            "prototype" : jsTemporalPlainTimePrototype.instanceType
+        ],
+        overloads: [
+            "from": temporalFromSignature(forType: .jsTemporalPlainTime, possibleParams: jsTemporalPlainTimeLikeParameters),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalPlainTimeLikeParameters),
+        ]
+    )
+
+    private static let jsTemporalPlainYearMonthProperties = [
+        "calendarId": .string,
+        "era": .string | .undefined,
+        "eraYear": .integer | .undefined,
+        "year": .integer,
+        "month": .integer,
+        "monthCode": .string | .undefined,
+        "daysInMonth": .integer,
+        "daysInYear": .integer,
+        "monthsInYear": .integer,
+        "inLeapYear": .boolean,
+    ];
+
+    static let jsTemporalPlainYearMonth = ObjectGroup(
+        name: "Temporal.PlainYearMonth",
+        instanceType: .jsTemporalPlainYearMonth,
+        properties: jsTemporalPlainYearMonthProperties,
+        overloads: [
+            "with":  [[.plain(jsTemporalPlainDateLikeObjectForWith.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainYearMonth],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalPlainYearMonth, needsOverflow: true),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalPlainYearMonth, needsOverflow: true),
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalPlainYearMonthLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalPlainYearMonthLikeParameters),
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalPlainYearMonthLikeParameters),
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
+            "toPlainDate": [[.plain(jsTemporalPlainDateLikeObject.instanceType)] => .jsTemporalPlainDate],
+        ]
+    )
+
+    static let jsTemporalPlainYearMonthPrototype = createPrototypeObjectGroup(jsTemporalPlainYearMonth)
+
+    /// ObjectGroup modelling the JavaScript Temporal.PlainYearMonth constructor
+    static let jsTemporalPlainYearMonthConstructor = ObjectGroup(
+        name: "TemporalPlainYearMonthConstructor",
+        instanceType: .jsTemporalPlainYearMonthConstructor,
+        properties: [
+            "prototype" : jsTemporalPlainYearMonthPrototype.instanceType
+        ],
+        overloads: [
+            "from": temporalFromSignature(forType: .jsTemporalPlainYearMonth, possibleParams: jsTemporalPlainYearMonthLikeParameters),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalPlainYearMonthLikeParameters),
+        ]
+    )
+
+    static let jsTemporalPlainMonthDay = ObjectGroup(
+        name: "Temporal.PlainMonthDay",
+        instanceType: .jsTemporalPlainMonthDay,
+        properties: [
+            "calendarId": .string,
+            "monthCode": .string,
+            "day": .integer,
+        ],
+        overloads: [
+            "with":  [[.plain(jsTemporalPlainDateLikeObjectForWith.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainYearMonth],
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalPlainYearMonthLikeParameters),
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
+            "toPlainDate": [[.plain(jsTemporalPlainDateLikeObject.instanceType)] => .jsTemporalPlainDate],
+        ]
+    )
+
+    static let jsTemporalPlainMonthDayPrototype = createPrototypeObjectGroup(jsTemporalPlainMonthDay)
+
+    /// ObjectGroup modelling the JavaScript Temporal.PlainMonthDay constructor.
+    static let jsTemporalPlainMonthDayConstructor = ObjectGroup(
+        name: "TemporalPlainMonthDayConstructor",
+        instanceType: .jsTemporalPlainMonthDayConstructor,
+        properties: [
+            "prototype" : jsTemporalPlainMonthDayPrototype.instanceType
+        ],
+        overloads: [
+            "from": temporalFromSignature(forType: .jsTemporalPlainMonthDay, possibleParams: jsTemporalPlainMonthDayLikeParameters),
+        ]
+    )
+
+    static let jsTemporalPlainDate = ObjectGroup(
+        name: "Temporal.PlainDate",
+        instanceType: .jsTemporalPlainDate,
+        properties: mergeFields(jsTemporalPlainYearMonthProperties, [
+            "day": .integer,
+            "dayOfWeek": .integer,
+            "dayOfYear": .integer,
+            "weekOfYear": .integer,
+            "yearOfWeek": .integer,
+            "daysInWeek": .integer,
+        ]),
+        overloads: [
+            "toPlainYearMonth": [[] => .jsTemporalPlainYearMonth],
+            "toPlainMonthDay": [[] => .jsTemporalPlainMonthDay],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalPlainDate, needsOverflow: true),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalPlainDate, needsOverflow: true),
+            "with":  [[.plain(jsTemporalPlainDateLikeObjectForWith.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDate],
+            "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalPlainDate],
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalPlainDateLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalPlainDateLikeParameters),
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalPlainDateLikeParameters),
+            "toPlainDateTime": jsTemporalPlainTimeLikeParameters.map {[.opt($0)] => .jsTemporalPlainDateTime},
+            "toZonedDateTime": [[.jsAnything] => .jsAnything],
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
+        ]
+    )
+
+    static let jsTemporalPlainDatePrototype = createPrototypeObjectGroup(jsTemporalPlainDate)
+
+    /// ObjectGroup modelling the JavaScript Temporal.PlainDate constructor
+    static let jsTemporalPlainDateConstructor = ObjectGroup(
+        name: "TemporalPlainDateConstructor",
+        instanceType: .jsTemporalPlainDateConstructor,
+        properties: [
+            "prototype" : jsTemporalPlainDatePrototype.instanceType
+        ],
+        overloads: [
+            "from": temporalFromSignature(forType: .jsTemporalPlainDate, possibleParams: jsTemporalPlainDateLikeParameters),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalPlainDateLikeParameters),
+        ]
+    )
+
+    static let jsTemporalPlainDateTime = ObjectGroup(
+        name: "Temporal.PlainDateTime",
+        instanceType: .jsTemporalPlainDateTime,
+        properties: mergeFields(jsTemporalPlainDate.properties, jsTemporalPlainTime.properties),
+        overloads: [
+            "with":  [[.plain(jsTemporalPlainDateTimeLikeObjectForWith.instanceType), .opt(jsTemporalOverflowSettings)] => .jsTemporalPlainDateTime],
+            "withPlainTime": jsTemporalPlainTimeLikeParameters.map {[.opt($0)] => .jsTemporalPlainDateTime},
+            "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalPlainDateTime],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalPlainDateTime, needsOverflow: true),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalPlainDateTime, needsOverflow: true),
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalPlainDateTimeLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalPlainDateTimeLikeParameters),
+            "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalPlainDateTime],
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalPlainDateTimeLikeParameters),
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
+            "toZonedDateTime": [[.string, .opt(OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType)] => .jsTemporalZonedDateTime],
+            "toPlainDate": [[] => .jsTemporalPlainDate],
+            "toPlainTime": [[] => .jsTemporalPlainTime],
+        ]
+    )
+
+    static let jsTemporalPlainDateTimePrototype = createPrototypeObjectGroup(jsTemporalPlainDateTime)
+
+    /// ObjectGroup modelling the JavaScript Temporal.PlainDateTime constructor
+    static let jsTemporalPlainDateTimeConstructor = ObjectGroup(
+        name: "TemporalPlainDateTimeConstructor",
+        instanceType: .jsTemporalPlainDateTimeConstructor,
+        properties: [
+            "prototype" : jsTemporalPlainDateTimePrototype.instanceType
+        ],
+        overloads: [
+            "from": temporalFromSignature(forType: .jsTemporalPlainDateTime, possibleParams: jsTemporalPlainDateTimeLikeParameters, settingsArg: jsTemporalOverflowSettings),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalPlainDateTimeLikeParameters),
+        ]
+    )
+
+
+    static let jsTemporalZonedDateTime = ObjectGroup(
+        name: "Temporal.ZonedDateTime",
+        instanceType: .jsTemporalZonedDateTime,
+        properties: mergeFields(jsTemporalPlainDate.properties, jsTemporalPlainTime.properties, [
+            "timeZoneId": .string,
+            "epochMilliseconds": .integer,
+            "epochNanoseconds": .bigint,
+            "offsetNanoseconds": .integer,
+            "offset": .string,
+        ]),
+        overloads: [
+            "with":  [[.plain(jsTemporalZonedDateTimeLikeObjectForWith.instanceType), .opt(jsTemporalZonedInterpretationSettings)] => .jsTemporalZonedDateTime],
+            "withPlainTime": jsTemporalPlainTimeLikeParameters.map {[.opt($0)] => .jsTemporalZonedDateTime},
+            "withCalendar": [[.plain(.jsTemporalCalendarEnum)] => .jsTemporalZonedDateTime],
+            "withTimeZone": [[.string] => .jsTemporalZonedDateTime],
+            "add": temporalAddSubtractSignature(forType: .jsTemporalZonedDateTime, needsOverflow: true),
+            "subtract": temporalAddSubtractSignature(forType: .jsTemporalZonedDateTime, needsOverflow: true),
+            "until": temporalUntilSinceSignature(possibleParams: jsTemporalZonedDateTimeLikeParameters),
+            "since": temporalUntilSinceSignature(possibleParams: jsTemporalZonedDateTimeLikeParameters),
+            "round": [[.plain(jsTemporalRoundTo)] => .jsTemporalZonedDateTime],
+            "equals": temporalEqualsSignature(possibleParams: jsTemporalZonedDateTimeLikeParameters),
+            "toString": [[.opt(jsTemporalToStringSettings)] => .string],
+            "toJSON": [[] => .string],
+            "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
+            "startOfDay": [[] => .jsTemporalZonedDateTime],
+            "getTimeZoneTransition": [[.plain(jsTemporalDirectionParam)] => .jsTemporalZonedDateTime],
+            "toInstant": [[] => .jsTemporalInstant],
+            "toPlainDate": [[] => .jsTemporalPlainDate],
+            "toPlainTime": [[] => .jsTemporalPlainTime],
+            "toPlainDateTime": [[] => .jsTemporalPlainDateTime],
+        ]
+    )
+
+    static let jsTemporalZonedDateTimePrototype = createPrototypeObjectGroup(jsTemporalZonedDateTime)
+
+    /// ObjectGroup modelling the JavaScript Temporal.ZonedDateTime constructor
+    static let jsTemporalZonedDateTimeConstructor = ObjectGroup(
+        name: "TemporalZonedDateTimeConstructor",
+        instanceType: .jsTemporalZonedDateTimeConstructor,
+        properties: [
+            "prototype" : jsTemporalZonedDateTimePrototype.instanceType
+        ],
+        overloads: [
+            "from": temporalFromSignature(forType: .jsTemporalPlainDateTime, possibleParams: jsTemporalPlainDateTimeLikeParameters, settingsArg: jsTemporalZonedInterpretationSettings),
+            "compare": temporalCompareSignature(possibleParams: jsTemporalZonedDateTimeLikeParameters),
+        ]
+    )
+
+    // Temporal helpers
+
+    // Temporal-like objects
+    // These are objects like {years: 1, days: 2} that have similar fields to a Temporal type
+    // and can be used for constructing them.
+
+    fileprivate static let jsTemporalDurationLikeObject = ObjectGroup(
+        name: "TemporalDurationLikeObject",
+        instanceType: nil,
+        properties: [
+            "years": .number | .undefined,
+            "months": .number | .undefined,
+            "weeks": .number | .undefined,
+            "days": .number | .undefined,
+            "hours": .number | .undefined,
+            "minutes": .number | .undefined,
+            "seconds": .number | .undefined,
+            "milliseconds": .number | .undefined,
+            "microseconds": .number | .undefined,
+            "nanoseconds": .number | .undefined,
+        ],
+        methods: [:])
+
+    private static let jsTemporalTimeLikeFields : [String: ILType] = [
+            "hour": .number | .undefined,
+            "minute": .number | .undefined,
+            "second": .number | .undefined,
+            "millisecond": .number | .undefined,
+            "microsecond": .number | .undefined,
+            "nanosecond": .number | .undefined,
+    ]
+
+    private static let jsTemporalCalendarField : [String: ILType] = [
+            "calendar": .jsTemporalCalendarEnum | .undefined,
+    ]
+
+    private static let jsTemporalDateLikeFields : [String: ILType] = [
+            "era": .string | .undefined,
+            "eraYear": .number | .undefined,
+            "month": .number | .undefined,
+            "monthCode": .string | .undefined,
+            "day": .number | .undefined,
+    ]
+
+    private static func mergeFields(_ fields: [String: ILType]...) -> [String: ILType] {
+      fields.reduce([:]) {
+        $0.merging($1) { _, _ in
+          fatalError("Duplicate field in \(fields)")
+        }
+      }
+    }
+
+    fileprivate static let jsTemporalPlainTimeLikeObject = ObjectGroup(
+        name: "TemporalPlainTimeLikeObject",
+        instanceType: nil,
+        properties: jsTemporalTimeLikeFields,
+        methods: [:])
+
+    fileprivate static let jsTemporalPlainDateLikeObject = ObjectGroup(
+        name: "TemporalPlainDateLikeObject",
+        instanceType: nil,
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalCalendarField),
+        methods: [:])
+
+    fileprivate static let jsTemporalPlainDateTimeLikeObject = ObjectGroup(
+        name: "TemporalPlainDateTimeLikeObject",
+        instanceType: nil,
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields, jsTemporalCalendarField),
+        methods: [:])
+
+    fileprivate static let jsTemporalZonedDateTimeLikeObject = ObjectGroup(
+        name: "TemporalZonedDateTimeLikeObject",
+        instanceType: nil,
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields,
+                                ["timeZone": .string | .undefined, "offset": .string | .undefined],
+                                jsTemporalCalendarField),
+        methods: [:])
+
+    // with() takes a reduced set of fields: it cannot have a calendar or timeZone,
+    // and will error if you give it these fields.
+    fileprivate static let jsTemporalPlainDateLikeObjectForWith = ObjectGroup(
+        name: "TemporalPlainDateLikeObjectForWith",
+        instanceType: nil,
+        properties: mergeFields(jsTemporalDateLikeFields),
+        methods: [:])
+
+    fileprivate static let jsTemporalPlainDateTimeLikeObjectForWith = ObjectGroup(
+        name: "TemporalPlainDateTimeLikeObjectForWith",
+        instanceType: nil,
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields),
+        methods: [:])
+
+    fileprivate static let jsTemporalZonedDateTimeLikeObjectForWith = ObjectGroup(
+        name: "TemporalZonedDateTimeLikeObjectForWith",
+        instanceType: nil,
+        properties: mergeFields(jsTemporalDateLikeFields, jsTemporalTimeLikeFields, ["offset": .string | .undefined]),
+        methods: [:])
+
+    // Temporal-object-like parameters (accepted by ToTemporalFoo)
+    // ToTemporalFoo, and APIs based on it (from, compare, until, since, equals, occasionally withFoo/toFoo) accept
+    // a Temporal-like object, a Temporal object that is a superset of the type, or a string representation.
+    // TODO(manishearth, 439921647) Most of the stringy types here are with a specific format, we should consider generating them
+    private static let jsTemporalDurationLikeParameters: [ILType] = [jsTemporalDurationLikeObject.instanceType, .jsTemporalDuration, .string]
+    private static let jsTemporalInstantLikeParameters: [ILType] = [.jsTemporalInstant, .jsTemporalZonedDateTime, .string]
+    private static let jsTemporalPlainTimeLikeParameters: [ILType] = [jsTemporalPlainTimeLikeObject.instanceType, .jsTemporalPlainTime, .jsTemporalPlainDateTime, .jsTemporalZonedDateTime, .string]
+    private static let jsTemporalPlainYearMonthLikeParameters: [ILType] = [jsTemporalPlainDateLikeObject.instanceType, .jsTemporalPlainYearMonth, .string]
+    private static let jsTemporalPlainMonthDayLikeParameters: [ILType] = [jsTemporalPlainDateLikeObject.instanceType, .jsTemporalPlainMonthDay, .string]
+    private static let jsTemporalPlainDateLikeParameters: [ILType] = [jsTemporalPlainDateLikeObject.instanceType, .jsTemporalPlainDate, .jsTemporalPlainDateTime, .jsTemporalZonedDateTime, .string]
+    private static let jsTemporalPlainDateTimeLikeParameters: [ILType] = [jsTemporalPlainDateTimeLikeObject.instanceType, .jsTemporalPlainDate, .jsTemporalPlainDateTime, .jsTemporalZonedDateTime, .string]
+    private static let jsTemporalZonedDateTimeLikeParameters: [ILType] = [jsTemporalZonedDateTimeLikeObject.instanceType, .string]
+
+    // Stringy objects
+    // TODO(manishearth, 439921647) support stringy objects
+    fileprivate static let jsTemporalTimeZoneLike = Parameter.string
+
+    // Options objects
+    fileprivate static let jsTemporalDifferenceSettings = OptionsBag.jsTemporalDifferenceSettingOrRoundTo.group.instanceType
+    // roundTo accepts a subset of fields compared to differenceSettings; we merge the two bag types but retain separate
+    // variables for clarity in the signatures above.
+    fileprivate static let jsTemporalRoundTo = OptionsBag.jsTemporalDifferenceSettingOrRoundTo.group.instanceType
+    fileprivate static let jsTemporalToStringSettings = OptionsBag.jsTemporalToStringSettings.group.instanceType
+    fileprivate static let jsTemporalOverflowSettings = OptionsBag.jsTemporalOverflowSettings.group.instanceType
+    fileprivate static let jsTemporalZonedInterpretationSettings = OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType
+    fileprivate static let jsTemporalDirectionParam = ILType.enumeration(ofName: "directionParam", withValues: ["previous", "next"])
+    // TODO(manishearth, 439921647) These are tricky and need other Temporal types
+    fileprivate static let jsTemporalDurationRoundTo = Parameter.jsAnything
+    fileprivate static let jsTemporalDurationTotalOf = Parameter.jsAnything
+    // This is huge and comes from Intl, not Temporal
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters
+    fileprivate static let jsTemporalToLocaleStringSettings = ILType.jsAnything
+    fileprivate static let jsTemporalZonedOptions = ILType.jsAnything
+}
+
+extension OptionsBag {
+    // Individual enums
+    fileprivate static let jsTemporalUnitEnum = ILType.enumeration(ofName: "temporalUnit", withValues: ["auto", "year", "month", "week", "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond", "auto", "years", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds", "nanoseconds"])
+    fileprivate static let jsTemporalRoundingModeEnum = ILType.enumeration(ofName: "temporalRoundingMode", withValues: ["ceil", "floor", "expand", "trunc", "halfCeil", "halfFloor", "halfExpand", "halfTrunc", "halfEven"])
+    fileprivate static let jsTemporalShowCalendarEnum = ILType.enumeration(ofName: "temporalShowCalendar", withValues: ["auto", "always", "never", "critical"])
+    fileprivate static let jsTemporalShowOffsetEnum = ILType.enumeration(ofName: "temporalShowOffset", withValues: ["auto", "never"])
+    fileprivate static let jsTemporalShowTimeZoneEnum = ILType.enumeration(ofName: "temporalShowOfTimeZone", withValues: ["auto", "never", "critical"])
+    fileprivate static let jsTemporalOverflowEnum = ILType.enumeration(ofName: "temporalOverflow", withValues: ["constrain", "reject"])
+    fileprivate static let jsTemporalDisambiguationEnum = ILType.enumeration(ofName: "temporalDisambiguation", withValues: ["compatible", "earlier", "later", "reject"])
+    fileprivate static let jsTemporalOffsetEnum = ILType.enumeration(ofName: "temporalOffset", withValues: ["prefer", "use", "ignore", "reject"])
+
+    // differenceSettings and roundTo are mostly the same, with differenceSettings accepting an additional largestUnit
+    // note that the Duration roundTo option is different
+    static let jsTemporalDifferenceSettingOrRoundTo = OptionsBag(
+        name: "TemporalDifferenceSettingsObject",
+        properties: [
+            "smallestUnit": jsTemporalUnitEnum,
+            "largestUnit": jsTemporalUnitEnum,
+            "roundingMode": jsTemporalRoundingModeEnum,
+            "roundingIncrement": .integer,
+        ])
+
+    // Technically some of these parameters are only read by ZonedDateTime; but they're
+    // otherwise largely shared
+    static let jsTemporalToStringSettings = OptionsBag(
+        name: "TemporalToStringSettingsObject",
+        properties: [
+            "calendarName": jsTemporalShowCalendarEnum,
+            "fractionalSecondDigits": .number,
+            "offset": jsTemporalShowOffsetEnum,
+            "timeZoneName": jsTemporalShowTimeZoneEnum,
+            "roundingMode": jsTemporalRoundingModeEnum,
+            "smallestUnit": jsTemporalUnitEnum,
+        ])
+
+    static let jsTemporalOverflowSettings = OptionsBag(
+        name: "jsTemporalOverflowSettingsObject",
+        properties: [
+            "overflow": jsTemporalOverflowEnum,
+        ])
+
+    static let jsTemporalZonedInterpretationSettings = OptionsBag(
+        name: "TemporalZonedInterpretationSettingsObject",
+        properties: [
+            "overflow": jsTemporalOverflowEnum,
+            "disambiguation": jsTemporalDisambiguationEnum,
+            "offset": jsTemporalOffsetEnum,
+        ])
 }

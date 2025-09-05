@@ -7,21 +7,20 @@ on:
     branches: [ main ]
 
 jobs:
-  macOS:
-    runs-on: macos-latest
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Build
-        run: swift build -v
-      - name: Run tests
-        run: swift test -v
-
-  linux:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: swift-actions/setup-swift@v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25-nightly
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0.3"
       - name: Swift Version
         run: swift --version
       - uses: actions/checkout@v2

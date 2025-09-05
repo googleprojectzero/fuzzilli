@@ -30,7 +30,7 @@ class MinimizerTests: XCTestCase {
             let limit = 0.1
 
             let result = minimize(preMinimization, with: fuzzer, limit: limit)
-            XCTAssert(result.size >= Int(Double(preMinimization.size) * limit))
+            XCTAssertGreaterThanOrEqual(result.size, Int(Double(preMinimization.size) * limit))
         }
     }
 
@@ -1401,7 +1401,488 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(numGuardedOperationsAfter, 0)
     }
 
+    func runWasmMinimization(program: (MinimizerTests.EvaluatorForMinimizationTests, ProgramBuilder) -> ProgramBuilder.WasmModule, minified: (ProgramBuilder) -> ProgramBuilder.WasmModule) throws {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        let originalModule = program(evaluator, b)
+        evaluator.nextInstructionIsImportant(in: b)
+        let exports = originalModule.loadExports()
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callMethod(originalModule.getExportedMethod(at: 0), on: exports)
+        let originalProgram = b.finalize()
+
+        let minifiedModule = minified(b)
+        let minifiedExports = minifiedModule.loadExports()
+        b.callMethod(minifiedModule.getExportedMethod(at: 0), on: minifiedExports)
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram,
+            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n" +
+            "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+    }
+
+    // Test removing unneeded WasmBeginCatchAll blocks.
     func testWasmCatchAllMinimization() throws {
+        try runWasmMinimization { evaluator, b in
+            return b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _, _ in
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
+                        let val = function.consti64(42)
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.wasmReturn(val)
+                    } catchAllBody: { label in
+                        function.wasmReturn(function.consti64(-1))
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+
+        } minified: { b in
+            return b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
+                        function.wasmReturn(function.consti64(42))
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+        }
+    }
+
+    // Test removing unneeded WasmBeginCatch blocks.
+    func testWasmCatchMinimization() throws {
+        try runWasmMinimization { evaluator, b in
+            return b.buildWasmModule { wasmModule in
+                let tag = wasmModule.addTag(parameterTypes: [])
+                let irrelevantTag = wasmModule.addTag(parameterTypes: [])
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _, _ in
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.WasmBuildThrow(tag: tag, inputs: [])
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
+                            let val = function.consti64(42)
+                            evaluator.nextInstructionIsImportant(in: b)
+                            function.wasmReturn(val)
+                        }
+                        function.WasmBuildLegacyCatch(tag: irrelevantTag) { label, exception, args in
+                        }
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+
+        } minified: { b in
+            return b.buildWasmModule { wasmModule in
+                let tag = wasmModule.addTag(parameterTypes: [])
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
+                        function.WasmBuildThrow(tag: tag, inputs: [])
+                        function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
+                            function.wasmReturn(function.consti64(42))
+                        }
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+        }
+    }
+
+    // Test removing the try block but keeping its inner instructions (the return statement here).
+    func testWasmTryMinimizationKeepBody() throws {
+        try runWasmMinimization { evaluator, b in
+            return b.buildWasmModule { wasmModule in
+                let tag = wasmModule.addTag(parameterTypes: [])
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
+                        let val = function.consti64(42)
+                            evaluator.nextInstructionIsImportant(in: b)
+                            function.wasmReturn(val)
+                        function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
+                            function.wasmUnreachable()
+                        }
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+
+        } minified: { b in
+            return b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _, _ in
+                        function.wasmReturn(function.consti64(42))
+                        return [function.consti32(-1)]
+                }
+            }
+        }
+    }
+
+    // Test removing the whole try-catch block including all statements.
+    func testWasmTryMinimizationAll() throws {
+        try runWasmMinimization { evaluator, b in
+            return b.buildWasmModule { wasmModule in
+                let tag = wasmModule.addTag(parameterTypes: [])
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _, _ in
+                    function.wasmBuildLegacyTry(with: [] => [], args: []) { label, _ in
+                            function.wasmReturn(function.consti64(123))
+                        function.WasmBuildLegacyCatch(tag: tag) { label, exception, args in
+                            function.wasmUnreachable()
+                        }
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [function.consti64(42)]
+                }
+            }
+
+        } minified: { b in
+            return b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _, _ in
+                    return [function.consti64(42)]
+                }
+            }
+        }
+    }
+
+    func testWasmIfElseMinimizationVoidRemoveIfElseKeepContents() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, label, args in
+                    function.wasmBuildIfElse(args[0], hint: .None) {
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.consti64(43)
+                    } elseBody: {
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.consti64(42)
+                    }
+                    return []
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, label, args in
+                    function.consti64(43)
+                    function.consti64(42)
+                    return []
+                }
+            }
+        }
+    }
+
+    func testWasmIfElseMinimizationVoidRemoveElse() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: false) { label, ifArgs in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let sum = function.wasmi32BinOp(args[0], ifArgs[0], binOpKind: .Add)
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.wasmReturn(sum)
+                    } elseBody: { label, elseArgs in
+                        function.wasmUnreachable()
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: false) { label, ifArgs in
+                        let sum = function.wasmi32BinOp(args[0], ifArgs[0], binOpKind: .Add)
+                        function.wasmReturn(sum)
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+        }
+    }
+
+    func testWasmIfElseMinimizationVoidRemoveIfKeepElse() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    evaluator.operationIsImportant(WasmBeginIf.self)
+                    function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: false) { _, _ in
+                        function.wasmUnreachable()
+                    } elseBody: { label, elseArgs in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let sum = function.wasmi32BinOp(args[0], elseArgs[0], binOpKind: .Add)
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.wasmReturn(sum)
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    function.wasmBuildIfElse(args[0], signature: [.wasmi32] => [], args: args, inverted: true) { label, ifArgs in
+                        let sum = function.wasmi32BinOp(args[0], ifArgs[0], binOpKind: .Add)
+                        function.wasmReturn(sum)
+                    }
+                    return [function.consti32(-1)]
+                }
+            }
+        }
+    }
+
+    func testWasmIfElseMinimizationWithResult() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildIfElseWithResult(args[0], signature: [.wasmi32] => [.wasmi32], args: [function.consti32(10)]) { label, args in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let a = function.consti32(42)
+                        evaluator.nextInstructionIsImportant(in: b)
+                        return [function.wasmi32BinOp(a, args[0], binOpKind: .Add)]
+                    } elseBody: { label, args in
+                        return [function.consti32(123)]
+                    }
+                    return results
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let b = function.consti32(10)
+                    let a = function.consti32(42)
+                    return [function.wasmi32BinOp(a, b, binOpKind: .Add)]
+                }
+            }
+        }
+    }
+
+    func testWasmIfElseMinimizationWithResultKeepElse() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildIfElseWithResult(args[0], signature: [.wasmi32] => [.wasmi32], args: [function.consti32(10)]) { label, args in
+                        return [function.consti32(123)]
+                    } elseBody: { label, args in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let a = function.consti32(42)
+                        evaluator.nextInstructionIsImportant(in: b)
+                        return [function.wasmi32BinOp(a, args[0], binOpKind: .Add)]
+                    }
+                    return results
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let b = function.consti32(10)
+                    let a = function.consti32(42)
+                    return [function.wasmi32BinOp(a, b, binOpKind: .Add)]
+                }
+            }
+        }
+    }
+
+    // Test that we don't remove an if-else if the label is used.
+    func testWasmIfElseMinimizationWithResultButLabelUsedInIf() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildIfElseWithResult(args[0], signature: [.wasmi32] => [.wasmi32], args: [function.consti32(10)]) { label, args in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.wasmBranch(to: label, args: args)
+                        return [args[0]]
+                    } elseBody: { label, args in
+                        return [function.consti32(123)]
+                    }
+                    return results
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildIfElseWithResult(args[0], signature: [.wasmi32] => [.wasmi32], args: [function.consti32(10)]) { label, args in
+                        function.wasmBranch(to: label, args: args)
+                        return [args[0]]
+                    } elseBody: { label, args in
+                        return [function.consti32(123)]
+                    }
+                    return results
+                }
+            }
+        }
+    }
+
+    // Test that we don't remove an if-else if the label is used.
+    func testWasmIfElseMinimizationWithResultButLabelUsedInElse() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildIfElseWithResult(args[0], signature: [.wasmi32] => [.wasmi32], args: [function.consti32(10)]) { label, args in
+                        return [function.consti32(123)]
+                    } elseBody: { label, args in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.wasmBranch(to: label, args: args)
+                        return [args[0]]
+                    }
+                    return results
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildIfElseWithResult(args[0], signature: [.wasmi32] => [.wasmi32], args: [function.consti32(10)]) { label, args in
+                        return [function.consti32(123)]
+                    } elseBody: { label, args in
+                        function.wasmBranch(to: label, args: args)
+                        return [args[0]]
+                    }
+                    return results
+                }
+            }
+        }
+    }
+
+    func testWasmIfElseMinimizationWithResultPassingThroughInputInIf() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildIfElseWithResult(args[0], signature: [.wasmi32] => [.wasmi32, .wasmi32], args: [function.consti32(10)]) { label, args in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        return [args[0], function.consti32(123)]
+                    } elseBody: { label, args in
+                        return [args[0], args[0]]
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [function.wasmi32BinOp(results[0], results[1], binOpKind: .Add)]
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let a = function.consti32(10)
+                    let b = function.consti32(123)
+                    return [function.wasmi32BinOp(a, b, binOpKind: .Add)]
+                }
+            }
+        }
+    }
+
+    func testWasmIfElseMinimizationWithResultPassingThroughInputInElse() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildIfElseWithResult(args[0], signature: [.wasmi32] => [.wasmi32, .wasmi32], args: [function.consti32(10)]) { label, args in
+                        return [args[0], args[0]]
+                    } elseBody: { label, args in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        return [args[0], function.consti32(123)]
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [function.wasmi32BinOp(results[0], results[1], binOpKind: .Add)]
+                }
+            }
+
+        } minified: { b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let a = function.consti32(10)
+                    let b = function.consti32(123)
+                    return [function.wasmi32BinOp(a, b, binOpKind: .Add)]
+                }
+            }
+        }
+    }
+
+    func testWasmBlockMinimization() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildBlockWithResults(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32], args: [args[0], function.consti32(10)]) { label, blockArgs in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let sum = function.wasmi32BinOp(blockArgs[0], blockArgs[1], binOpKind: .Add)
+                        return [sum, blockArgs[1]]
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [function.wasmi32BinOp(results[0], results[1], binOpKind: .Mul)]
+                }
+            }
+
+        } minified: { b in
+             b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                let const10 = function.consti32(10)
+                    let sum = function.wasmi32BinOp(args[0], const10, binOpKind: .Add)
+                    return [function.wasmi32BinOp(sum, const10, binOpKind: .Mul)]
+                }
+            }
+        }
+    }
+
+    // Don't minimize the block fi the label is used by an important instruction.
+    func testWasmBlockMinimizationLabelUsed() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildBlockWithResults(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32], args: [args[0], function.consti32(10)]) { label, blockArgs in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        function.wasmBranch(to: label, args: blockArgs)
+                        return blockArgs
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [function.wasmi32BinOp(results[0], results[1], binOpKind: .Mul)]
+                }
+            }
+
+        } minified: { b in
+             b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildBlockWithResults(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32], args: [args[0], function.consti32(10)]) { label, blockArgs in
+                        function.wasmBranch(to: label, args: blockArgs)
+                        return blockArgs
+                    }
+                    return [function.wasmi32BinOp(results[0], results[1], binOpKind: .Mul)]
+                }
+            }
+        }
+    }
+
+    func testWasmLoopMinimization() throws {
+        try runWasmMinimization { evaluator, b in
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    let results = function.wasmBuildLoop(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32], args: [args[0], function.consti32(10)]) { label, blockArgs in
+                        evaluator.nextInstructionIsImportant(in: b)
+                        let sum = function.wasmi32BinOp(blockArgs[0], blockArgs[1], binOpKind: .Add)
+                        return [sum, blockArgs[1]]
+                    }
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [function.wasmi32BinOp(results[0], results[1], binOpKind: .Mul)]
+                }
+            }
+
+        } minified: { b in
+             b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                let const10 = function.consti32(10)
+                    let sum = function.wasmi32BinOp(args[0], const10, binOpKind: .Add)
+                    return [function.wasmi32BinOp(sum, const10, binOpKind: .Mul)]
+                }
+            }
+        }
+    }
+
+    func testWasmDataflowMinimization() throws {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
         let b = fuzzer.makeBuilder()
@@ -1409,18 +1890,22 @@ class MinimizerTests: XCTestCase {
         // Build input program to be minimized.
         do {
             let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, label, args in
                     evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
-                        evaluator.nextInstructionIsImportant(in: b)
-                        let val = function.consti64(42)
-                        evaluator.nextInstructionIsImportant(in: b)
-                        function.wasmReturn(val)
-                    } catchAllBody: { label in
-                        function.wasmReturn(function.consti64(-1))
-                    }
+                    let val = function.consti64(42)
+                    // We would expect this to be removed by the DataflowSimplifier
+                    let absVal = function.wasmi64UnOp(val, unOpKind: .Clz)
                     evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmUnreachable()
+                    return [absVal]
+                }
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let valA = function.consti64(42)
+                    let valB = function.consti64(43)
+                    // We cannot remove this with the DataflowSimplifier as the input types don't match the output type.
+                    let testVal = function.wasmi64CompareOp(valA, valB, using: .Eq)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [testVal]
                 }
             }
 
@@ -1434,14 +1919,14 @@ class MinimizerTests: XCTestCase {
         // Build expected output program.
         do {
             let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                    function.wasmBuildLegacyTry(with: [] => .nothing, args: []) { label, _ in
-                        function.wasmReturn(function.consti64(42))
-                    // TODO(mliedtke): The catchAllBody should be removed!
-                    // TODO(mliedtke): Also add a test for catch blocks and support reduction of them.
-                    } catchAllBody: { label in
-                    }
-                    function.wasmUnreachable()
+                wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, label, args in
+                    return [function.consti64(42)]
+                }
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let valA = function.consti64(42)
+                    let valB = function.consti64(43)
+                    let testVal = function.wasmi64CompareOp(valA, valB, using: .Eq)
+                    return [testVal]
                 }
             }
 
@@ -1455,58 +1940,128 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram,
             "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n" +
             "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+
     }
 
-    func testWasmDataflowMinimization() throws {
+    func testWasmTypeGroupUnusedType() throws {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
         let b = fuzzer.makeBuilder()
 
         // Build input program to be minimized.
         do {
-            let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                    evaluator.nextInstructionIsImportant(in: b)
-                    let val = function.consti64(42)
-                    // We would expect this to be removed by the DataflowSimplifier
-                    let absVal = function.wasmi64UnOp(val, unOpKind: .Clz)
-                    evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmReturn(absVal)
-                }
-                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                    evaluator.nextInstructionIsImportant(in: b)
-                    let valA = function.consti64(42)
-                    let valB = function.consti64(43)
-                    // We cannot remove this with the DataflowSimplifier as the input types don't match the output type.
-                    let testVal = function.wasmi64CompareOp(valA, valB, using: .Eq)
-                    evaluator.nextInstructionIsImportant(in: b)
-                    function.wasmReturn(testVal)
-                }
+            let typeGroup = b.wasmDefineTypeGroup {
+                return [
+                    b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
+                    b.wasmDefineArrayType(elementType: .wasmi64, mutability: true),
+                ]
             }
 
-            evaluator.nextInstructionIsImportant(in: b)
-            let exports = module.loadExports()
-            evaluator.nextInstructionIsImportant(in: b)
-            b.callMethod(module.getExportedMethod(at: 0), on: exports)
+            // This unused type group should also get removed.
+            b.wasmDefineTypeGroup {
+                return [
+                    b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                ]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let constOne = function.consti32(1)
+                    let constZero = function.consti32(0)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let array = function.wasmArrayNewDefault(arrayType: typeGroup[0], size: constOne)
+                    // Not important array, this should make the second type unused and then being
+                    // removed from the type group.
+                    let _ = function.wasmArrayNewDefault(arrayType: typeGroup[1], size: constOne)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let element = function.wasmArrayGet(array: array, index: constZero)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [element]
+                }
+            }
         }
         let originalProgram = b.finalize()
 
         // Build expected output program.
         do {
-            let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => .wasmi64) { function, _ in
-                    function.wasmReturn(function.consti64(42))
-                }
-                wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
-                    let valA = function.consti64(42)
-                    let valB = function.consti64(43)
-                    let testVal = function.wasmi64CompareOp(valA, valB, using: .Eq)
-                    function.wasmReturn(testVal)
-                }
+            let typeGroup = b.wasmDefineTypeGroup {
+                return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
             }
 
-            let exports = module.loadExports()
-            b.callMethod(module.getExportedMethod(at: 0), on: exports)
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let constOne = function.consti32(1)
+                    let constZero = function.consti32(0)
+                    let array = function.wasmArrayNewDefault(arrayType: typeGroup[0], size: constOne)
+                    let element = function.wasmArrayGet(array: array, index: constZero)
+                    return [element]
+                }
+            }
+        }
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram,
+            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n" +
+            "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+
+    }
+
+    func testWasmTypeGroupNestedTypesAndTypeGroupDependencies() throws {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        do {
+            let typeGroupA = b.wasmDefineTypeGroup {
+                return [
+                    // Not used at all.
+                    b.wasmDefineArrayType(elementType: .wasmf64, mutability: true),
+                    // Used by typeGroupB in type that is used in important instruction.
+                    b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
+                    // Used by typeGroupB for a type that is not used in an important instruction.
+                    b.wasmDefineArrayType(elementType: .wasmi64, mutability: true),
+                ]
+            }
+            let typeGroupB = b.wasmDefineTypeGroup {
+                return [
+                    // Only used by an unimportant instruction.
+                    b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: false), mutability: false, indexType: typeGroupA[2]),
+                    // Needed for an important instruction, shall not be removed.
+                    b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: true), mutability: true, indexType: typeGroupA[1]),
+                ]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => []) { function, _, _ in
+                    let constOne = function.consti32(1)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    function.wasmArrayNewDefault(arrayType: typeGroupB[1], size: constOne)
+                    function.wasmArrayNewDefault(arrayType: typeGroupB[0], size: constOne)
+                    return []
+                }
+            }
+        }
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        do {
+            let typeGroupA = b.wasmDefineTypeGroup {
+                return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+            }
+            let typeGroupB = b.wasmDefineTypeGroup {
+                return [b.wasmDefineArrayType(elementType: .wasmRef(.Index(), nullability: true), mutability: true, indexType: typeGroupA[0])]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => []) { function, _, _ in
+                    let constOne = function.consti32(1)
+                    function.wasmArrayNewDefault(arrayType: typeGroupB[0], size: constOne)
+                    return []
+                }
+            }
         }
         let expectedProgram = b.finalize()
 

@@ -23,7 +23,12 @@ import Foundation
 /// * Blocks are balanced and the opening and closing operations match (e.g. BeginIf is closed by EndIf)
 /// * The outputs of an instruction are always new variables and never overwrite an existing variable
 ///
-public final class Program {
+public final class Program: CustomStringConvertible {
+    /// Convenience function to quickly print a Program.
+    public var description: String {
+        FuzzILLifter().lift(self, withOptions: [.includeComments, .includeLineNumbers])
+    }
+
     /// The immutable code of this program.
     public let code: Code
 

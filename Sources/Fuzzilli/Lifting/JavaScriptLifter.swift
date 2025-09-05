@@ -34,10 +34,13 @@ public class JavaScriptLifter: Lifter {
     let version: ECMAScriptVersion
 
     /// This environment is used if we need to re-type a program before we compile Wasm code.
-    private var environment: Environment?
+    private var environment: JavaScriptEnvironment?
 
     /// Counter to assist the lifter in detecting nested CodeStrings
     private var codeStringNestingLevel = 0
+
+    /// Force emission of variables even if the result is unused.
+    private let alwaysEmitVariables: Bool
 
     /// Stack of for-loop header parts. A for-loop's header consists of three different blocks (initializer, condition, afterthought), which
     /// are lifted independently but should then typically be combined into a single line. This helper stack makes that possible.
@@ -64,12 +67,14 @@ public class JavaScriptLifter: Lifter {
     public init(prefix: String = "",
                 suffix: String = "",
                 ecmaVersion: ECMAScriptVersion,
-                environment: Environment? = nil) {
+                environment: JavaScriptEnvironment? = nil,
+                alwaysEmitVariables: Bool = false) {
         self.prefix = prefix
         self.suffix = suffix
         self.version = ecmaVersion
         self.environment = environment
         self.logger = Logger(withLabel: "JavaScriptLifter")
+        self.alwaysEmitVariables = alwaysEmitVariables
     }
 
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
@@ -84,7 +89,7 @@ public class JavaScriptLifter: Lifter {
         // This typer is shared across WasmLifters and a WasmLifter is only valid for a single WasmModule.
         var typer: JSTyper? = nil
         // The currently active WasmLifter, we can only have one of them.
-        var wasmLifter: WasmLifter? = nil
+        var wasmInstructions = Code()
         for instr in program.code {
             analyzer.analyze(instr)
             if instr.op is Explore { needToSupportExploration = true }
@@ -99,9 +104,10 @@ public class JavaScriptLifter: Lifter {
             typer = JSTyper(for: environment!)
         }
 
-        var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers))
+        var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers), alwaysEmitVariables: alwaysEmitVariables)
 
         var wasmCodeStarts: Int? = nil
+        var wasmTypeGroupStarts: Int? = nil
 
         if options.contains(.includeComments), let header = program.comments.at(.header) {
             w.emitComment(header)
@@ -172,11 +178,24 @@ public class JavaScriptLifter: Lifter {
             }
 
             // Pass Wasm instructions to the WasmLifter
-            if (instr.op as? WasmOperation) != nil {
+            if instr.op is WasmOperation {
                 // Forward all the Wasm related instructions to the WasmLifter,
                 // they will be emitted once we see the end of the module.
-                wasmLifter!.addInstruction(instr)
-                continue;
+                wasmInstructions.append(instr)
+                continue
+            }
+
+            if instr.op is WasmTypeOperation {
+                if instr.op is WasmBeginTypeGroup {
+                    assert(wasmTypeGroupStarts == nil)
+                    wasmTypeGroupStarts = instr.index
+                } else if instr.op is WasmEndTypeGroup {
+                    w.emitComment("Wasm type group:")
+                    let code = Code(program.code[wasmTypeGroupStarts!...instr.index])
+                    wasmTypeGroupStarts = nil
+                    w.emitComment(FuzzILLifter().lift(code))
+                }
+                continue
             }
 
             // Handling of guarded operations, part 1: unless we have special handling (e.g. for guarded property loads we use `o?.foo`),
@@ -210,7 +229,11 @@ public class JavaScriptLifter: Lifter {
             // for more details.
             // We also have some lightweight checking logic to ensure that the input expressions are retrieved in the correct order.
             // This does not guarantee that they will also _evaluate_ in that order at runtime, but it's probably a decent approximation.
-            let inputs = w.retrieve(expressionsFor: instr.inputs)!
+            guard let inputs = w.retrieve(expressionsFor: instr.inputs) else {
+                fatalError("Missing one or more expressions for inputs \(instr.inputs) of \(instr).\n" +
+                           "Program is \(FuzzILLifter().lift(program, withOptions: .includeComments))\n" +
+                           "Dying now.")
+            }
             var nextExpressionToFetch = 0
             func input(_ i: Int) -> Expression {
                 assert(i == nextExpressionToFetch)
@@ -409,15 +432,18 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case .beginClassDefinition(let op):
-                // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreLifting code to detect constructors works correctly (see shouldTreatAsConstructor).
-                let NAME = "C\(instr.output.number)"
-                w.declare(instr.output, as: NAME)
-                var declaration = "class \(NAME)"
-                if op.hasSuperclass {
-                    declaration += " extends \(input(0))"
+                let EXTENDS = op.hasSuperclass ? " extends \(input(0))" : ""
+                if op.isExpression {
+                    // TODO(https://crbug.com/428620828): Enable inlining of class expressions.
+                    let LET = w.declarationKeyword(for: instr.output)
+                    let V = w.declare(instr.output)
+                    w.emit("\(LET) \(V) = class\(EXTENDS) {")
+                } else {
+                    // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreLifting code to detect constructors works correctly (see shouldTreatAsConstructor).
+                    let NAME = "C\(instr.output.number)"
+                    w.declare(instr.output, as: NAME)
+                    w.emit("class \(NAME)\(EXTENDS) {")
                 }
-                declaration += " {"
-                w.emit(declaration)
                 w.enterNewBlock()
 
             case .beginClassConstructor(let op):
@@ -1376,11 +1402,7 @@ public class JavaScriptLifter: Lifter {
                 let V = w.declare(instr.output)
                 let LET = w.varKeyword
                 let type = op.value.typeString()
-                var value = op.value.valueToString()
-                // TODO: make this nicer? if we create an i64, we need a bigint.
-                if type == "i64" {
-                    value = value + "n"
-                }
+                let value = op.value.valueToString()
                 w.emit("\(LET) \(V) = new WebAssembly.Global({ value: \"\(type)\", mutable: \(op.isMutable) }, \(value));")
 
             case .createWasmMemory(let op):
@@ -1392,8 +1414,12 @@ public class JavaScriptLifter: Lifter {
                 if let maxPages = op.memType.limits.max {
                     maxPagesStr = ", maximum: \(maxPages)" + (isMemory64 ? "n" : "")
                 }
+                var sharedStr = ""
+                if op.memType.isShared {
+                    sharedStr = ", shared: true"
+                }
                 let addressType = isMemory64 ? "'i64'" : "'i32'"
-                w.emit("\(LET) \(V) = new WebAssembly.Memory({ initial: \(minPageStr)\(maxPagesStr), address: \(addressType) });")
+                w.emit("\(LET) \(V) = new WebAssembly.Memory({ initial: \(minPageStr)\(maxPagesStr)\(sharedStr), address: \(addressType) });")
 
             case .wrapSuspending(_):
                 let V = w.declare(instr.output)
@@ -1413,9 +1439,15 @@ public class JavaScriptLifter: Lifter {
                 let LET = w.varKeyword
                 w.emit("\(LET) \(V) = Function.prototype.call.bind(\(OBJECT).\(op.methodName));")
 
+            case .bindFunction(_):
+                let V = w.declare(instr.output)
+                let function = input(0)
+                let args = inputs.dropFirst()
+                w.emit("\(w.varKeyword) \(V) = \(function).bind(\(liftCallArguments(args)));")
+
             case .beginWasmModule:
                 wasmCodeStarts = instr.index
-                wasmLifter = WasmLifter(withTyper: typer!)
+                assert(wasmInstructions.isEmpty)
 
             case .endWasmModule:
                 // Lift the FuzzILCode of this Block first.
@@ -1428,7 +1460,7 @@ public class JavaScriptLifter: Lifter {
                 let V = w.declare(instr.output, as: "v\(instr.output.number)")
                 // TODO: support a better diagnostics mode which stores the .wasm binary file alongside the samples.
                 do {
-                    let (bytecode, importRefs) = try wasmLifter!.lift()
+                    let (bytecode, importRefs) = try WasmLifter(withTyper: typer!, withWasmCode: wasmInstructions).lift()
                     // Get and check that we have the imports here as expressions and fail otherwise.
                     let imports: [(Variable, Expression)] = try importRefs.map { ref in
                         if let expr = w.retrieve(expressionsFor: [ref]) {
@@ -1457,6 +1489,8 @@ public class JavaScriptLifter: Lifter {
                         w.leaveCurrentBlock()
                         w.emit("} });")
                     }
+                } catch WasmLifter.CompileError.fatalError(let errorMsg) {
+                    fatalError("\(errorMsg)\nFor program:\n\(FuzzILLifter().lift(program, withOptions: [.includeComments]))\nWith contributors: \(program.contributors.map {$0.name})")
                 } catch {
                     wasmLiftingFailures += 1
                     logger.warning("WasmLifting failed with error \(error), current failure count:  \(wasmLiftingFailures) (failure rate: \(String(format: "%.5f", Double(wasmLiftingFailures) / Double(liftedSamples) * 100.0))%)")
@@ -1473,7 +1507,7 @@ public class JavaScriptLifter: Lifter {
                     // Emit a throwing operation such that we don't keep this sample.
                     w.emit("throw \"Wasmlifting failed\";")
                 }
-                wasmLifter = nil
+                wasmInstructions.removeAll()
 
             case .createWasmTable(let op):
                 let V = w.declare(instr.output)
@@ -1484,16 +1518,20 @@ public class JavaScriptLifter: Lifter {
                     type = "externref"
                 case .wasmFuncRef:
                     type = "anyfunc"
+                // TODO(mliedtke): add tables for i31ref.
                 default:
                     fatalError("Unknown table type")
                 }
 
+                let isTable64: Bool = op.tableType.isTable64
+                let minSizeStr = String(op.tableType.limits.min) + (isTable64 ? "n" : "")
                 var maxSizeStr = ""
                 if let maxSize = op.tableType.limits.max {
-                    maxSizeStr = ", maximum: \(maxSize)"
+                    maxSizeStr = ", maximum: \(maxSize)" + (isTable64 ? "n" : "")
                 }
+                let addressType = isTable64 ? "'i64'" : "'i32'"
 
-                w.emit("\(LET) \(V) = new WebAssembly.Table({ element: \"\(type)\", initial: \(op.tableType.limits.min)\(maxSizeStr) });")
+                w.emit("\(LET) \(V) = new WebAssembly.Table({ element: \"\(type)\", initial: \(minSizeStr)\(maxSizeStr), address: \(addressType) });")
 
             case .createWasmJSTag(_):
                 let V = w.declare(instr.output)
@@ -1503,10 +1541,8 @@ public class JavaScriptLifter: Lifter {
             case .createWasmTag(let op):
                 let V = w.declare(instr.output)
                 let LET = w.varKeyword
-                let types = op.parameters.map {type in
+                let types = op.parameterTypes.map {type in
                     switch(type) {
-                        case .wasmExternRef:
-                            return "\"externref\""
                         case .wasmf32:
                             return "\"f32\""
                         case .wasmf64:
@@ -1515,6 +1551,25 @@ public class JavaScriptLifter: Lifter {
                             return "\"i32\""
                         case .wasmi64:
                             return "\"i64\""
+                        case .wasmSimd128:
+                            return "\"v128\""
+                        case .wasmExternRef:
+                            return "\"externref\""
+                        case .wasmFuncRef:
+                            return "\"anyfunc\""
+                        case .wasmAnyRef:
+                            return "\"anyref\""
+                        case .wasmEqRef:
+                            return "\"eqref\""
+                        case .wasmI31Ref:
+                            return "\"i31ref\""
+                        case .wasmStructRef:
+                            return "\"structref\""
+                        case .wasmArrayRef:
+                            return "\"arrayref\""
+                        case .wasmExnRef:
+                            return "\"exnref\""
+
                         default:
                             fatalError("Unhandled wasm type \(type)")
                     }
@@ -1570,18 +1625,37 @@ public class JavaScriptLifter: Lifter {
                  .wasmDefineGlobal(_),
                  .wasmDefineTable(_),
                  .wasmDefineMemory(_),
+                 .wasmDefineDataSegment(_),
                  .wasmLoadGlobal(_),
                  .wasmStoreGlobal(_),
                  .wasmTableGet(_),
                  .wasmTableSet(_),
+                 .wasmTableSize(_),
+                 .wasmTableGrow(_),
+                 .wasmCallIndirect(_),
+                 .wasmCallDirect(_),
+                 .wasmReturnCallDirect(_),
+                 .wasmReturnCallIndirect(_),
                  .wasmMemoryLoad(_),
                  .wasmMemoryStore(_),
+                 .wasmAtomicLoad(_),
+                 .wasmAtomicStore(_),
+                 .wasmAtomicRMW(_),
+                 .wasmAtomicCmpxchg(_),
+                 .wasmMemorySize(_),
+                 .wasmMemoryGrow(_),
+                 .wasmMemoryCopy(_),
+                 .wasmMemoryFill(_),
+                 .wasmMemoryInit(_),
+                 .wasmDropDataSegment(_),
                  .beginWasmFunction(_),
                  .endWasmFunction(_),
                  .wasmBeginBlock(_),
                  .wasmEndBlock(_),
                  .wasmBeginLoop(_),
                  .wasmEndLoop(_),
+                 .wasmBeginTryTable(_),
+                 .wasmEndTryTable(_),
                  .wasmBeginTry(_),
                  .wasmBeginCatchAll(_),
                  .wasmBeginCatch(_),
@@ -1589,10 +1663,12 @@ public class JavaScriptLifter: Lifter {
                  .wasmBeginTryDelegate(_),
                  .wasmEndTryDelegate(_),
                  .wasmThrow(_),
+                 .wasmThrowRef(_),
                  .wasmRethrow(_),
                  .wasmDefineTag(_),
                  .wasmBranch(_),
                  .wasmBranchIf(_),
+                 .wasmBranchTable(_),
                  .wasmBeginIf(_),
                  .wasmBeginElse(_),
                  .wasmEndIf(_),
@@ -1602,12 +1678,37 @@ public class JavaScriptLifter: Lifter {
                  .constSimd128(_),
                  .wasmSimd128IntegerUnOp(_),
                  .wasmSimd128IntegerBinOp(_),
+                 .wasmSimd128IntegerTernaryOp(_),
                  .wasmSimd128FloatUnOp(_),
                  .wasmSimd128FloatBinOp(_),
+                 .wasmSimd128FloatTernaryOp(_),
                  .wasmSimd128Compare(_),
-                 .wasmI64x2Splat(_),
-                 .wasmI64x2ExtractLane(_),
-                 .wasmSimdLoad(_):
+                 .wasmSimdSplat(_),
+                 .wasmSimdExtractLane(_),
+                 .wasmSimdReplaceLane(_),
+                 .wasmSimdStoreLane(_),
+                 .wasmSimdLoadLane(_),
+                 .wasmSimdLoad(_),
+                 .wasmBeginTypeGroup(_),
+                 .wasmEndTypeGroup(_),
+                 .wasmDefineArrayType(_),
+                 .wasmDefineStructType(_),
+                 .wasmDefineForwardOrSelfReference(_),
+                 .wasmResolveForwardReference(_),
+                 .wasmArrayNewFixed(_),
+                 .wasmArrayNewDefault(_),
+                 .wasmArrayLen(_),
+                 .wasmArrayGet(_),
+                 .wasmArraySet(_),
+                 .wasmStructNewDefault(_),
+                 .wasmStructGet(_),
+                 .wasmStructSet(_),
+                 .wasmRefNull(_),
+                 .wasmRefIsNull(_),
+                 .wasmRefI31(_),
+                 .wasmI31Get(_),
+                 .wasmAnyConvertExtern(_),
+                 .wasmExternConvertAny(_):
                  fatalError("unreachable")
             }
 
@@ -1834,6 +1935,9 @@ public class JavaScriptLifter: Lifter {
         let varKeyword: String
         let constKeyword: String
 
+        // Forces the writer to also emit variables for unused expressions.
+        let alwaysEmitVariables: Bool
+
         /// Code can be emitted into a temporary buffer instead of into the final script. This is mainly useful for inlining entire blocks.
         /// The typical way to use this would be to call pushTemporaryOutputBuffer() when handling a BeginXYZBlock, then calling
         /// popTemporaryOutputBuffer() when handling the corresponding EndXYZBlock and then either inlining the block's body
@@ -1861,11 +1965,12 @@ public class JavaScriptLifter: Lifter {
         // See `reassign()` for more details about reassignment inlining.
         private var inlinedReassignments = VariableMap<Expression>()
 
-        init(analyzer: DefUseAnalyzer, version: ECMAScriptVersion, stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4) {
+        init(analyzer: DefUseAnalyzer, version: ECMAScriptVersion, stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4, alwaysEmitVariables: Bool = false) {
             self.writer = ScriptWriter(stripComments: stripComments, includeLineNumbers: includeLineNumbers, indent: indent)
             self.analyzer = analyzer
             self.varKeyword = version == .es6 ? "let" : "var"
             self.constKeyword = version == .es6 ? "const" : "var"
+            self.alwaysEmitVariables = alwaysEmitVariables
         }
 
         /// Assign a JavaScript expression to a FuzzIL variable.
@@ -1889,7 +1994,7 @@ public class JavaScriptLifter: Lifter {
                 // The expression cannot be inlined. Now decide whether to define the output variable or not. The output variable can be omitted if:
                 //  * It is not used by any following instructions, and
                 //  * It is not an Object literal, as that would not be valid syntax (it would mistakenly be interpreted as a block statement)
-                if analyzer.numUses(of: v) == 0 && expr.type !== ObjectLiteral {
+                if analyzer.numUses(of: v) == 0 && expr.type !== ObjectLiteral && !alwaysEmitVariables {
                     emit("\(expr);")
                 } else {
                     let LET = declarationKeyword(for: v)
@@ -2187,7 +2292,7 @@ public class JavaScriptLifter: Lifter {
                 // Pending expressions with no uses are allowed and are for example necessary to be able to
                 // combine multiple expressions into a single comma-expression for e.g. a loop header.
                 // See the loop header lifting code and tests for examples.
-                if EXPR.type === ObjectLiteral {
+                if EXPR.type === ObjectLiteral || alwaysEmitVariables {
                     // Special case: we cannot just emit these as expression statements as they would
                     // not be distinguishable from block statements. So create a dummy variable.
                     let LET = constKeyword

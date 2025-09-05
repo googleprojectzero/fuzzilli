@@ -37,15 +37,20 @@ extension Analyzer {
 struct DefUseAnalyzer: Analyzer {
     private var assignments = VariableMap<[Int]>()
     private var uses = VariableMap<[Int]>()
-    private let code: Code
+    private var code = Code()
+    private var isRunning = true
     private var analysisDone = false
 
     init(for program: Program) {
         self.code = program.code
+        self.isRunning = false
     }
+
+    init() {}
 
     mutating func finishAnalysis() {
         analysisDone = true
+        isRunning = false
     }
 
     mutating func analyze() {
@@ -54,6 +59,9 @@ struct DefUseAnalyzer: Analyzer {
     }
 
     mutating func analyze(_ instr: Instruction) {
+        if isRunning {
+            code.append(instr)
+        }
         assert(code[instr.index].op === instr.op)    // Must be operating on the program passed in during construction
         assert(!analysisDone)
         for v in instr.allOutputs {
@@ -180,13 +188,13 @@ struct ContextAnalyzer: Analyzer {
 
                 newContext.formUnion(contextStack.secondToTop)
             }
-            
+
             // If we are in a loop, we don't want to propagate the switch context and vice versa. Otherwise we couldn't determine which break operation to emit.
             // TODO Make this generic for similar logic cases as well. E.g. by using a instr.op.contextClosed list.
             if (instr.op.contextOpened.contains(.switchBlock) || instr.op.contextOpened.contains(.switchCase)) {
                 newContext.remove(.loop)
             } else if (instr.op.contextOpened.contains(.loop)) {
-                newContext.remove(.switchBlock) 
+                newContext.remove(.switchBlock)
                 newContext.remove(.switchCase)
             }
             contextStack.push(newContext)

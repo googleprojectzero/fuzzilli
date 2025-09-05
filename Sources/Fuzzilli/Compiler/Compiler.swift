@@ -17,6 +17,7 @@ import Foundation
 /// Compiles a JavaScript AST into a FuzzIL program.
 public class JavaScriptCompiler {
     public typealias AST = Compiler_Protobuf_AST
+    typealias ClassFieldNode = Compiler_Protobuf_ClassField
     typealias StatementNode = Compiler_Protobuf_Statement
     typealias ExpressionNode = Compiler_Protobuf_Expression
 
@@ -65,6 +66,178 @@ public class JavaScriptCompiler {
         nextVariable += 1
         return v
     }
+
+    @discardableResult
+    private func compileClass(_ name : String, superClass: ExpressionNode?, fields : [ClassFieldNode], isExpression : Bool) throws -> Variable {
+        // The expressions for property values and computed properties need to be emitted before the class declaration is opened.
+        var propertyValues = [Variable]()
+        var computedPropertyKeys = [Variable]()
+        for field in fields {
+            guard let field = field.field else {
+                throw CompilerError.invalidNodeError("missing concrete field in class declaration")
+            }
+            if case .property(let property) = field {
+                if property.hasValue {
+                    propertyValues.append(try compileExpression(property.value))
+                }
+                if case .expression(let key) = property.key {
+                    computedPropertyKeys.append(try compileExpression(key))
+                }
+            }
+        }
+
+        // Reverse the arrays since we'll remove the elements in FIFO order.
+        propertyValues.reverse()
+        computedPropertyKeys.reverse()
+
+        let classDecl: Instruction
+        if let superClass = superClass {
+            let superClass = try compileExpression(superClass)
+            classDecl = emit(BeginClassDefinition(hasSuperclass: true, isExpression: isExpression), withInputs: [superClass])
+        } else {
+            classDecl = emit(BeginClassDefinition(hasSuperclass: false, isExpression: isExpression))
+        }
+        if !isExpression {
+            map(name, to: classDecl.output)
+        }
+
+        for field in fields {
+            switch field.field! {
+            case .property(let property):
+                guard let key = property.key else {
+                    throw CompilerError.invalidNodeError("Missing key in class property")
+                }
+
+                let op: Operation
+                var inputs = [Variable]()
+                switch key {
+                case .name(let name):
+                    if property.isStatic {
+                        op = ClassAddStaticProperty(propertyName: name, hasValue: property.hasValue)
+                    } else {
+                        op = ClassAddInstanceProperty(propertyName: name, hasValue: property.hasValue)
+                    }
+                case .index(let index):
+                    if property.isStatic {
+                        op = ClassAddStaticElement(index: index, hasValue: property.hasValue)
+                    } else {
+                        op = ClassAddInstanceElement(index: index, hasValue: property.hasValue)
+                    }
+                case .expression:
+                    inputs.append(computedPropertyKeys.removeLast())
+                    if property.isStatic {
+                        op = ClassAddStaticComputedProperty(hasValue: property.hasValue)
+                    } else {
+                        op = ClassAddInstanceComputedProperty(hasValue: property.hasValue)
+                    }
+                }
+                if property.hasValue {
+                    inputs.append(propertyValues.removeLast())
+                }
+                emit(op, withInputs: inputs)
+
+            case .ctor(let constructor):
+                let parameters = convertParameters(constructor.parameters)
+                let head = emit(BeginClassConstructor(parameters: parameters))
+
+                try enterNewScope {
+                    var parameters = head.innerOutputs
+                    map("this", to: parameters.removeFirst())
+                    mapParameters(constructor.parameters, to: parameters)
+                    for statement in constructor.body {
+                        try compileStatement(statement)
+                    }
+                }
+
+                emit(EndClassConstructor())
+
+            case .method(let method):
+                let parameters = convertParameters(method.parameters)
+                let head: Instruction
+                if method.isStatic {
+                    head = emit(BeginClassStaticMethod(methodName: method.name, parameters: parameters))
+                } else {
+                    head = emit(BeginClassInstanceMethod(methodName: method.name, parameters: parameters))
+                }
+
+                try enterNewScope {
+                    var parameters = head.innerOutputs
+                    map("this", to: parameters.removeFirst())
+                    mapParameters(method.parameters, to: parameters)
+                    for statement in method.body {
+                        try compileStatement(statement)
+                    }
+                }
+
+                if method.isStatic {
+                    emit(EndClassStaticMethod())
+                } else {
+                    emit(EndClassInstanceMethod())
+                }
+
+            case .getter(let getter):
+                let head: Instruction
+                if getter.isStatic {
+                    head = emit(BeginClassStaticGetter(propertyName: getter.name))
+                } else {
+                    head = emit(BeginClassInstanceGetter(propertyName: getter.name))
+                }
+
+                try enterNewScope {
+                    map("this", to: head.innerOutput)
+                    for statement in getter.body {
+                        try compileStatement(statement)
+                    }
+                }
+
+                if getter.isStatic {
+                    emit(EndClassStaticGetter())
+                } else {
+                    emit(EndClassInstanceGetter())
+                }
+
+            case .setter(let setter):
+                let head: Instruction
+                if setter.isStatic {
+                    head = emit(BeginClassStaticSetter(propertyName: setter.name))
+                } else {
+                    head = emit(BeginClassInstanceSetter(propertyName: setter.name))
+                }
+
+                try enterNewScope {
+                    var parameters = head.innerOutputs
+                    map("this", to: parameters.removeFirst())
+                    mapParameters([setter.parameter], to: parameters)
+                    for statement in setter.body {
+                        try compileStatement(statement)
+                    }
+                }
+
+                if setter.isStatic {
+                    emit(EndClassStaticSetter())
+                } else {
+                    emit(EndClassInstanceSetter())
+                }
+
+            case .staticInitializer(let staticInitializer):
+                let head = emit(BeginClassStaticInitializer())
+
+                try enterNewScope {
+                    map("this", to: head.innerOutput)
+                    for statement in staticInitializer.body {
+                        try compileStatement(statement)
+                    }
+                }
+
+                emit(EndClassStaticInitializer())
+            }
+        }
+
+        emit(EndClassDefinition())
+
+        return classDecl.output
+    }
+
 
     private func compileStatement(_ node: StatementNode) throws {
         guard let stmt = node.statement else {
@@ -146,169 +319,8 @@ public class JavaScriptCompiler {
             emit(functionEnd)
 
         case .classDeclaration(let classDeclaration):
-            // The expressions for property values and computed properties need to be emitted before the class declaration is opened.
-            var propertyValues = [Variable]()
-            var computedPropertyKeys = [Variable]()
-            for field in classDeclaration.fields {
-                guard let field = field.field else {
-                    throw CompilerError.invalidNodeError("missing concrete field in class declaration")
-                }
-                if case .property(let property) = field {
-                    if property.hasValue {
-                        propertyValues.append(try compileExpression(property.value))
-                    }
-                    if case .expression(let key) = property.key {
-                        computedPropertyKeys.append(try compileExpression(key))
-                    }
-                }
-            }
-
-            // Reverse the arrays since we'll remove the elements in FIFO order.
-            propertyValues.reverse()
-            computedPropertyKeys.reverse()
-
-            let classDecl: Instruction
-            if classDeclaration.hasSuperClass {
-                let superClass = try compileExpression(classDeclaration.superClass)
-                classDecl = emit(BeginClassDefinition(hasSuperclass: true), withInputs: [superClass])
-            } else {
-                classDecl = emit(BeginClassDefinition(hasSuperclass: false))
-            }
-            map(classDeclaration.name, to: classDecl.output)
-
-            for field in classDeclaration.fields {
-                switch field.field! {
-                case .property(let property):
-                    guard let key = property.key else {
-                        throw CompilerError.invalidNodeError("Missing key in class property")
-                    }
-
-                    let op: Operation
-                    var inputs = [Variable]()
-                    switch key {
-                    case .name(let name):
-                        if property.isStatic {
-                            op = ClassAddStaticProperty(propertyName: name, hasValue: property.hasValue)
-                        } else {
-                            op = ClassAddInstanceProperty(propertyName: name, hasValue: property.hasValue)
-                        }
-                    case .index(let index):
-                        if property.isStatic {
-                            op = ClassAddStaticElement(index: index, hasValue: property.hasValue)
-                        } else {
-                            op = ClassAddInstanceElement(index: index, hasValue: property.hasValue)
-                        }
-                    case .expression:
-                        inputs.append(computedPropertyKeys.removeLast())
-                        if property.isStatic {
-                            op = ClassAddStaticComputedProperty(hasValue: property.hasValue)
-                        } else {
-                            op = ClassAddInstanceComputedProperty(hasValue: property.hasValue)
-                        }
-                    }
-                    if property.hasValue {
-                        inputs.append(propertyValues.removeLast())
-                    }
-                    emit(op, withInputs: inputs)
-
-                case .ctor(let constructor):
-                    let parameters = convertParameters(constructor.parameters)
-                    let head = emit(BeginClassConstructor(parameters: parameters))
-
-                    try enterNewScope {
-                        var parameters = head.innerOutputs
-                        map("this", to: parameters.removeFirst())
-                        mapParameters(constructor.parameters, to: parameters)
-                        for statement in constructor.body {
-                            try compileStatement(statement)
-                        }
-                    }
-
-                    emit(EndClassConstructor())
-
-                case .method(let method):
-                    let parameters = convertParameters(method.parameters)
-                    let head: Instruction
-                    if method.isStatic {
-                        head = emit(BeginClassStaticMethod(methodName: method.name, parameters: parameters))
-                    } else {
-                        head = emit(BeginClassInstanceMethod(methodName: method.name, parameters: parameters))
-                    }
-
-                    try enterNewScope {
-                        var parameters = head.innerOutputs
-                        map("this", to: parameters.removeFirst())
-                        mapParameters(method.parameters, to: parameters)
-                        for statement in method.body {
-                            try compileStatement(statement)
-                        }
-                    }
-
-                    if method.isStatic {
-                        emit(EndClassStaticMethod())
-                    } else {
-                        emit(EndClassInstanceMethod())
-                    }
-
-                case .getter(let getter):
-                    let head: Instruction
-                    if getter.isStatic {
-                        head = emit(BeginClassStaticGetter(propertyName: getter.name))
-                    } else {
-                        head = emit(BeginClassInstanceGetter(propertyName: getter.name))
-                    }
-
-                    try enterNewScope {
-                        map("this", to: head.innerOutput)
-                        for statement in getter.body {
-                            try compileStatement(statement)
-                        }
-                    }
-
-                    if getter.isStatic {
-                        emit(EndClassStaticGetter())
-                    } else {
-                        emit(EndClassInstanceGetter())
-                    }
-
-                case .setter(let setter):
-                    let head: Instruction
-                    if setter.isStatic {
-                        head = emit(BeginClassStaticSetter(propertyName: setter.name))
-                    } else {
-                        head = emit(BeginClassInstanceSetter(propertyName: setter.name))
-                    }
-
-                    try enterNewScope {
-                        var parameters = head.innerOutputs
-                        map("this", to: parameters.removeFirst())
-                        mapParameters([setter.parameter], to: parameters)
-                        for statement in setter.body {
-                            try compileStatement(statement)
-                        }
-                    }
-
-                    if setter.isStatic {
-                        emit(EndClassStaticSetter())
-                    } else {
-                        emit(EndClassInstanceSetter())
-                    }
-
-                case .staticInitializer(let staticInitializer):
-                    let head = emit(BeginClassStaticInitializer())
-
-                    try enterNewScope {
-                        map("this", to: head.innerOutput)
-                        for statement in staticInitializer.body {
-                            try compileStatement(statement)
-                        }
-                    }
-
-                    emit(EndClassStaticInitializer())
-                }
-            }
-
-            emit(EndClassDefinition())
+            let superClass = classDeclaration.hasSuperClass ? classDeclaration.superClass : nil
+            try compileClass(classDeclaration.name, superClass: superClass, fields: classDeclaration.fields, isExpression: false)
 
         case .returnStatement(let returnStatement):
             if returnStatement.hasArgument {
@@ -556,6 +568,10 @@ public class JavaScriptCompiler {
 
         switch expr {
 
+        case .classExpression(let classExpression):
+            let superClass = classExpression.hasSuperClass ? classExpression.superClass : nil
+            return try compileClass(classExpression.name, superClass: superClass, fields: classExpression.fields, isExpression: true)
+
         case .ternaryExpression(let ternaryExpression):
             let condition = try compileExpression(ternaryExpression.condition)
             let consequent = try compileExpression(ternaryExpression.consequent)
@@ -675,7 +691,7 @@ public class JavaScriptCompiler {
                     if let op = assignmentOperator {
                         emit(UpdateProperty(propertyName: name, operator: op), withInputs: [object, rhs])
                     } else {
-                        emit(SetProperty(propertyName: name), withInputs: [object, rhs])
+                        emit(SetProperty(propertyName: name, isGuarded: memberExpression.isOptional), withInputs: [object, rhs])
                     }
                 case .expression(let expr):
                     if case .numberLiteral(let literal) = expr.expression, let index = Int64(exactly: literal.value) {

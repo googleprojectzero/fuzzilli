@@ -68,10 +68,10 @@ public class ExplorationMutator: RuntimeAssistedMutator {
 
             // TODO: we currently don't want to explore anything in the wasm world.
             // We might want to change this to explore the functions that the Wasm module emits.
-            guard !(instr.op is WasmOperation) else { continue }
+            guard !(instr.op is WasmOperation || instr.op is WasmTypeOperation) else { continue }
 
             for v in instr.allOutputs {
-                if b.type(of: v) == .anything || b.type(of: v) == .unknownObject {
+                if b.type(of: v) == .jsAnything || b.type(of: v) == .unknownObject {
                     untypedVariables.append(v)
                 } else {
                     typedVariables.append(v)
@@ -95,7 +95,7 @@ public class ExplorationMutator: RuntimeAssistedMutator {
 
         // Helper function for inserting the Explore operation.
         func explore(_ v: Variable) {
-            let args = b.randomVariables(upTo: 5)
+            let args = b.randomJsVariables(upTo: 5)
             assert(args.count > 0)
             b.explore(v, id: v.identifier, withArgs: args)
         }

@@ -16,16 +16,13 @@ import XCTest
 @testable import Fuzzilli
 
 func testAndCompareSerialization(program: Program) {
-    var proto1 = program.asProtobuf()
-    var proto2 = program.asProtobuf()
-    XCTAssertEqual(proto1, proto2)
+    let data1 = try! program.asProtobuf().serializedData()
+    let data2 = try! program.asProtobuf().serializedData()
+    // We need to compare on a binary level as the Protobuf datastructure can contain floats for i.e. LoadFloat and Constf64 instructions. If those contain a NaN, they won't be equal to one another although we only care about their binary representation being equal.
+    XCTAssertEqual(data1, data2)
 
-    let data1 = try! proto1.serializedData()
-    let data2 = try! proto2.serializedData()
-
-    proto1 = try! Fuzzilli_Protobuf_Program(serializedBytes: data1)
-    proto2 = try! Fuzzilli_Protobuf_Program(serializedBytes: data2)
-    XCTAssertEqual(proto1, proto2)
+    let proto1 = try! Fuzzilli_Protobuf_Program(serializedBytes: data1)
+    let proto2 = try! Fuzzilli_Protobuf_Program(serializedBytes: data2)
 
     let copy1 = try! Program(from: proto1)
     let copy2 = try! Program(from: proto2)
@@ -53,6 +50,9 @@ class ProgramSerializationTests: XCTestCase {
 
         for _ in 0..<10 {
             b.buildPrefix()
+            b.wasmDefineTypeGroup {
+                b.build(n: 20, by: .generating)
+            }
             b.buildWasmModule { wasmModule in
                 b.build(n: 50, by: .generating)
             }

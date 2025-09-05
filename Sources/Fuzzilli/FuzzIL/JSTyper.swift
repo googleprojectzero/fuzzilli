@@ -20,50 +20,370 @@ public struct JSTyper: Analyzer {
     //    only the first singular operation is executed at runtime)
 
     // The environment model from which to obtain various pieces of type information.
-    private let environment: Environment
+    private let environment: JavaScriptEnvironment
 
     // The current state
     private var state = AnalyzerState()
+
+    private var defUseAnalyzer = DefUseAnalyzer()
 
     // Parameter types for subroutines defined in the analyzed program.
     // These are keyed by the index of the start of the subroutine definition.
     private var signatures = [Int: ParameterList]()
 
+    // Tracks the wasm recursive type groups and their contained types.
+    private var typeGroups: [[Variable]] = []
+    // Tracks the direct and transitive dependencies of each type group index to the respective
+    // type group indices.
+    private var typeGroupDependencies: [Int:Set<Int>] = [:]
+    private var selfReferences: [Variable: [(inout JSTyper, Variable?) -> ()]] = [:]
+    private var isWithinTypeGroup = false
+
     // Tracks the active function definitions and contains the instruction that started the function.
     private var activeFunctionDefinitions = Stack<Instruction>()
 
-    public var activeWasmModuleDefinition: WasmModuleDefinition? = nil
+    /// This tracks program local object groups of various types (WasmModules, JS Classes and Object literals).
+    private var dynamicObjectGroupManager = ObjectGroupManager()
 
-    public struct WasmModuleDefinition {
-        var activeFunctionSignature: Signature? = nil
-        // The invariant here is that we never reassign these variables, therefore these signatures are "set in stone" and they are always valid for the lifetime of the module.
-        // The signatures are immutable and they are never changed.
-        // TODO(cffsmith): Add something in `Code.check()` that makes sure that this is actually upheld for programs.
-        var methodSignatures: [(variable: Variable, signature: Signature)] = [(Variable, Signature)]()
+    public class ObjectGroupManager {
+        /// The finalized object groups that we can query through the Typer.
+        var finalizedObjectGroups = [ObjectGroup]()
 
-        // Stores the globals this module accesses, this is just used below, where we get the correct exports type.
-        var globals: [Variable] = []
+        struct SeenWasmVariables {
+            var globalImports: [Variable] = []
+            var globalDefines: [Variable] = []
+            var tableImports: [Variable] = []
+            var tableDefines: [Variable] = []
+            var tagImports: [Variable] = []
+            var tagDefines: [Variable] = []
+            var memoryImports: [Variable] = []
+            var memoryDefines: [Variable] = []
+            // For function imports we also need to discriminate on their signature as we can have multiple different callsites with different Signatures for a single function outside of Wasm.
+            var functionImports: [(Variable, Signature)] = []
+            var functionDefines: [Variable] = []
 
-        var tables: [Variable] = []
+            var globals : [Variable] {
+                return globalImports + globalDefines
+            }
 
-        public func getExportsType() -> ILType {
-            return .object(withProperties: self.globals.enumerated().map { "wg\($0.0)"} + self.tables.enumerated().map { "wt\($0.0)" }, withMethods: self.methodSignatures.enumerated().map { "w\($0.0)" })
+            var tables: [Variable] {
+                return tableImports + tableDefines
+            }
+
+            var tags: [Variable] {
+                return tagImports + tagDefines
+            }
+
+            var memories: [Variable] {
+                return memoryImports + memoryDefines
+            }
         }
-    }
 
-    // Stack of active object literals. Each entry contains the current type of the object created by the literal.
-    // This must be a stack as object literals can be nested (e.g. an object literal inside the method of another one).
-    private var activeObjectLiterals = Stack<ILType>()
+        var seenWasmVars = SeenWasmVariables()
 
-    // Stack of active class definitions. As class definitions can be nested, this has to be a stack.
-    private var activeClassDefinitions = Stack<ClassDefinition>()
-    struct ClassDefinition {
-        let output: Variable
-        var constructorParameters: ParameterList = []
-        let superType: ILType
-        let superConstructorType: ILType
-        var instanceType: ILType
-        var classType: ILType
+        /// These are the different types of program local object groups this typer can track.
+        /// TODO(cffsmith): We could also track WasmGlobals here.
+        public enum ObjectGroupType: CaseIterable {
+            case wasmModule
+            case wasmExports
+            case objectLiteral
+            case jsClass
+        }
+
+        public var top: ObjectGroup {
+            return activeObjectGroups.top
+        }
+
+        private var numObjectGroups: Int {
+            return finalizedObjectGroups.count + activeObjectGroups.count
+        }
+
+        public var numActiveClasses: Int {
+            return activeClasses.count
+        }
+
+        public var isEmpty: Bool {
+            return numObjectGroups == 0
+        }
+
+        /// This stack has different object group types
+        var activeObjectGroups = Stack<ObjectGroup>()
+
+        public struct ClassDefinition {
+            var output: Variable
+            // Tracks the objectGroup describing the class, i.e. signatures and types of static properties / methods.
+            var objectGroup: ObjectGroup
+            var constructorParameters: ParameterList = []
+            let superType: ILType
+            let superConstructorType: ILType
+        }
+
+        // Stack of active class definitions. As class definitions can be nested, this has to be a stack.
+        var activeClasses = Stack<ClassDefinition>()
+
+        public func getGroup(withName name: String) -> ObjectGroup? {
+            if let group = activeObjectGroups.elementsStartingAtTop().first(where: {group in group.name == name}) {
+                return group
+            } else if let cls = activeClasses.elementsStartingAtTop().first(where: {cls in cls.objectGroup.name == name}) {
+                return cls.objectGroup
+            } else {
+                return self.finalizedObjectGroups.first(where: {group in group.name == name})
+            }
+        }
+
+        /// Finalizes the most recently opened ObjectGroup of this type.
+        private func finalize(type: ObjectGroupType) -> ILType {
+            let group = activeObjectGroups.pop()
+            // Make sure that we don't already have such a named group in our finalizedObjectGroups
+            assert(!finalizedObjectGroups.contains(where: { group.name == $0.name }))
+            finalizedObjectGroups.append(group)
+            let instanceType = group.instanceType
+            return instanceType
+        }
+
+        public func finalizeClass() -> (ILType, ClassDefinition) {
+            let instanceType = finalize(type: .jsClass)
+            let classDefinition = activeClasses.pop()
+            // This is the ObjectGroup tracking the constructor.
+            let group = classDefinition.objectGroup
+            // Make sure that we don't already have such a named group in our finalizedObjectGroups
+            assert(!finalizedObjectGroups.contains(where: { group.name == $0.name }))
+            finalizedObjectGroups.append(group)
+            return (instanceType, classDefinition)
+        }
+
+        public func finalizeObjectLiteral() -> ILType {
+            finalize(type: .objectLiteral)
+        }
+
+        public func finalizeWasmModule() -> ILType {
+            // Get the instance type of the exports
+            let exportsInstanceType = finalize(type: .wasmExports)
+
+            addProperty(propertyName: "exports")
+            updatePropertyType(propertyName: "exports", type: exportsInstanceType)
+
+            // Clear the seenWasmVariables
+            seenWasmVars = SeenWasmVariables()
+            return finalize(type: .wasmModule)
+        }
+
+        public func createNewWasmModule() {
+            let instanceName = "_fuzz_WasmModule\(numObjectGroups)"
+
+            let instanceType = ILType.object(ofGroup: instanceName, withProperties: ["exports"], withMethods: [])
+
+            let instanceNameExports = "_fuzz_WasmExports\(numObjectGroups)"
+            let instanceTypeExports = ILType.object(ofGroup: instanceNameExports, withProperties: [], withMethods: [])
+
+            // This ObjectGroup tracking the Module itself is basically finished as it only has the `.exports` property
+            // which we track, the rest is tracked on the ObjectGroup tracking the `.exports` field of this Module.
+            // The ObjectGroup tracking the `.exports` field will be further modified to track exported functions and other properties.
+            let objectGroupModule = ObjectGroup(name: instanceName, instanceType: instanceType, properties: ["exports": instanceTypeExports], methods: [:])
+            activeObjectGroups.push(objectGroupModule)
+
+            let objectGroupModuleExports = ObjectGroup(name: instanceNameExports, instanceType: instanceTypeExports, properties: [:], methods: [:])
+            activeObjectGroups.push(objectGroupModuleExports)
+        }
+
+        func createNewObjectLiteral() {
+            let instanceName = "_fuzz_Object\(numObjectGroups)"
+            let instanceType: ILType = .object(ofGroup: instanceName, withProperties: [], withMethods: [])
+
+            // This is the dynamic object group.
+            let objectGroup = ObjectGroup(name: instanceName, instanceType: instanceType, properties: [:], methods: [:])
+            activeObjectGroups.push(objectGroup)
+        }
+
+        func createNewClass(withSuperType superType: ILType, propertyMap: [String: ILType], methodMap: [String: [Signature]], superConstructorType: ILType, forOutput output: Variable) {
+
+            let numGroups = numObjectGroups
+            let instanceName = "_fuzz_Class\(numGroups)"
+
+            // This type and the object group will be updated dynamically
+            let instanceType: ILType = .object(ofGroup: instanceName, withProperties: Array(superType.properties), withMethods: Array(superType.methods))
+
+            // This is the wip object group.
+            let objectGroup = ObjectGroup(name: instanceName, instanceType: instanceType, properties: propertyMap, overloads: methodMap)
+            activeObjectGroups.push(objectGroup)
+
+            let classInstanceName = "_fuzz_Constructor\(numGroups)"
+            let classObjectGroup = ObjectGroup(name: classInstanceName, instanceType: .object(ofGroup: classInstanceName), properties: [:], overloads: [:])
+
+            let classDefinition = ClassDefinition(output: output, objectGroup: classObjectGroup, superType: superType, superConstructorType: superConstructorType)
+            activeClasses.push(classDefinition)
+        }
+
+        public func setConstructorParameters(parameters: ParameterList) {
+            activeClasses.top.constructorParameters = parameters
+        }
+
+        public func addClassStaticProperty(propertyName: String) {
+            let classType = activeClasses.top.objectGroup.instanceType
+            let newType = ILType.object(ofGroup: classType.group, withProperties: [propertyName]) + classType
+            assert(newType != .nothing)
+            activeClasses.top.objectGroup.properties[propertyName] = .jsAnything
+            activeClasses.top.objectGroup.instanceType = newType
+        }
+
+        public func updateClassStaticPropertyType(propertyName: String, type: ILType) {
+            assert(activeClasses.top.objectGroup.instanceType.properties.contains(propertyName))
+            assert(activeClasses.top.objectGroup.properties.contains(where: {k, v in k == propertyName}))
+            activeClasses.top.objectGroup.properties[propertyName] = type
+        }
+
+        public func addClassStaticMethod(methodName: String) {
+            let classType = activeClasses.top.objectGroup.instanceType
+            let newType = ILType.object(ofGroup: classType.group, withMethods: [methodName]) + classType
+            assert(newType != .nothing)
+            activeClasses.top.objectGroup.instanceType = newType
+
+            activeClasses.top.objectGroup.methods[methodName] = activeClasses.top.objectGroup.methods[methodName] ?? [] + [Signature.forUnknownFunction]
+            activeClasses.top.objectGroup.instanceType = newType
+        }
+
+        public func updateClassStaticMethodSignature(methodName: String, signature: Signature) {
+            assert(activeClasses.top.objectGroup.instanceType.methods.contains(methodName))
+            activeClasses.top.objectGroup.methods[methodName]!.append(signature)
+        }
+
+        // For all of the functions below the following holds which is why we can check the required context on an instruction.
+        //
+        // module A {
+        //   globalA = ...                                <- goes out of scope.
+        // }
+        //
+        // globalA = loadProperty "wg0" moduleA.exports   <- Source of the global is here now.
+        //
+        // module B {
+        //   functionA = {
+        //     WasmGlobalGet input=globalA                <- globalA seems to come from "JS"
+        //    }
+        // }
+        //
+        // This works because the definition of the import is always the result of
+        // a "getProperty" instruction in JS. In a way it is similar to the TypeGroups.
+        // globalA ceases to exist after module A ends, yet we can access it through the getProperty instruction,
+        // as such "defined in Wasm" (i.e. requiredContext contains wasm) below means "defined in this module".
+        // This is a feature as the module doesn't care as these imports always have to come from JS.
+
+        public func addWasmFunction(withSignature signature: Signature, forDefinition instr: Instruction, forVariable variable: Variable) {
+            // The instruction might have multiple outputs, i.e. a DestructObject, which is why we cannot know which output variable the correct one is.
+
+            let haveFunction = seenWasmVars.functionImports.contains(where: {
+                $0.0 == variable && $0.1 == signature
+            }) || seenWasmVars.functionDefines.contains(variable)
+
+            if !haveFunction {
+                if instr.op.requiredContext.inWasm {
+                    let methodName = "w\(seenWasmVars.functionDefines.count)"
+                    seenWasmVars.functionDefines.append(variable)
+                    addMethod(methodName: methodName, of: .wasmExports)
+                    updateMethodSignature(methodName: methodName, signature: signature)
+                } else {
+                    let methodName = "iw\(seenWasmVars.functionImports.count)"
+                    seenWasmVars.functionImports.append((variable, signature))
+                    addMethod(methodName: methodName, of: .wasmExports)
+                    updateMethodSignature(methodName: methodName, signature: signature)
+                }
+            }
+        }
+
+        public func addWasmGlobal(withType type: ILType, forDefinition instr: Instruction, forVariable variable: Variable) {
+            // The instruction might have multiple outputs, i.e. a DestructObject, which is why we cannot know which output variable the correct one is.
+            // Add this property only if we have not seen it before
+            if !seenWasmVars.globals.contains(variable) {
+                // Check where this global comes from, i.e. if it is imported or internally defined.
+                var propertyName: String
+                if instr.op.requiredContext.inWasm {
+                    propertyName = "wg\(seenWasmVars.globalDefines.count)"
+                    seenWasmVars.globalDefines.append(variable)
+                } else {
+                    propertyName = "iwg\(seenWasmVars.globalImports.count)"
+                    seenWasmVars.globalImports.append(variable)
+                }
+                addProperty(propertyName: propertyName, withType: type)
+            }
+        }
+
+        public func addWasmTable(withType type: ILType, forDefinition instr: Instruction, forVariable variable: Variable) {
+            // The instruction might have multiple outputs, i.e. a DestructObject, which is why we cannot know which output variable the correct one is.
+            // Add this property only if we have not seen it before
+            var propertyName: String
+            if !seenWasmVars.tables.contains(variable) {
+                if instr.op.requiredContext.inWasm {
+                    propertyName = "wt\(seenWasmVars.tableDefines.count)"
+                    seenWasmVars.tableDefines.append(variable)
+                } else {
+                    propertyName = "iwt\(seenWasmVars.tableImports.count)"
+                    seenWasmVars.tableImports.append(variable)
+                }
+                addProperty(propertyName: propertyName, withType: type)
+            }
+        }
+
+        public func addWasmMemory(withType type: ILType, forDefinition instr: Instruction, forVariable variable: Variable) {
+            // The instruction might have multiple outputs, i.e. a DestructObject, which is why we cannot know which output variable the correct one is.
+            // Add this property only if we have not seen it before
+            var propertyName: String
+            if !seenWasmVars.memories.contains(variable) {
+                if instr.op.requiredContext.inWasm {
+                    propertyName = "wm\(seenWasmVars.memoryDefines.count)"
+                    seenWasmVars.memoryDefines.append(variable)
+                } else {
+                    propertyName = "iwm\(seenWasmVars.memoryImports.count)"
+                    seenWasmVars.memoryImports.append(variable)
+                }
+                addProperty(propertyName: propertyName, withType: type)
+            }
+        }
+
+        public func addWasmTag(withType type: ILType, forDefinition instr: Instruction, forVariable variable: Variable) {
+            // The instruction might have multiple outputs, i.e. a DestructObject, which is why we cannot know which output variable the correct one is.
+            // Add this property only if we have not seen it before
+            var propertyName: String
+            if !seenWasmVars.tags.contains(variable) {
+                if instr.op.requiredContext.inWasm {
+                    propertyName = "wex\(seenWasmVars.tagDefines.count)"
+                    seenWasmVars.tagDefines.append(variable)
+                } else {
+                    propertyName = "iwex\(seenWasmVars.tagImports.count)"
+                    seenWasmVars.tagImports.append(variable)
+                }
+                addProperty(propertyName: propertyName, withType: type)
+            }
+        }
+
+        public func addMethod(methodName: String, of groupType: ObjectGroupType) {
+            let topGroup = activeObjectGroups.top
+            let newType = ILType.object(ofGroup: topGroup.name, withMethods: [methodName]) + topGroup.instanceType
+            assert(newType != .nothing)
+            activeObjectGroups.top.instanceType = newType
+            activeObjectGroups.top.methods[methodName] = []
+        }
+
+        public func updateMethodSignature(methodName: String, signature: Signature) {
+            assert(activeObjectGroups.top.instanceType.methods.contains(methodName))
+            activeObjectGroups.top.methods[methodName]!.append(signature)
+        }
+
+        public func addProperty(propertyName: String, withType type: ILType) {
+            addProperty(propertyName: propertyName)
+            updatePropertyType(propertyName: propertyName, type: type)
+        }
+
+        public func addProperty(propertyName: String) {
+            let topGroup = activeObjectGroups.top
+            let newType = ILType.object(ofGroup: topGroup.name, withProperties: [propertyName]) + topGroup.instanceType
+            assert(newType != .nothing)
+            activeObjectGroups.top.instanceType = newType
+        }
+
+        public func updatePropertyType(propertyName: String, type: ILType) {
+            let topGroup = activeObjectGroups.top
+            assert(topGroup.instanceType.properties.contains(propertyName))
+            activeObjectGroups.top.properties[propertyName] = type
+        }
     }
 
     // A stack for active for loops containing the types of the loop variables.
@@ -72,7 +392,7 @@ public struct JSTyper: Analyzer {
     // The index of the last instruction that was processed. Just used for debug assertions.
     private var indexOfLastInstruction = -1
 
-    init(for environ: Environment) {
+    init(for environ: JavaScriptEnvironment) {
         self.environment = environ
     }
 
@@ -80,72 +400,455 @@ public struct JSTyper: Analyzer {
         indexOfLastInstruction = -1
         state.reset()
         signatures.removeAll()
+        typeGroups.removeAll()
+        defUseAnalyzer = DefUseAnalyzer()
+        isWithinTypeGroup = false
+        dynamicObjectGroupManager = ObjectGroupManager()
         assert(activeFunctionDefinitions.isEmpty)
-        assert(activeObjectLiterals.isEmpty)
-        assert(activeClassDefinitions.isEmpty)
+        assert(dynamicObjectGroupManager.isEmpty)
+    }
+
+    private mutating func registerWasmMemoryUse(for memory: Variable) {
+        let definingInstruction = defUseAnalyzer.definition(of: memory)
+        dynamicObjectGroupManager.addWasmMemory(withType: type(of: memory), forDefinition: definingInstruction, forVariable: memory)
     }
 
     // Array for collecting type changes during instruction execution.
     // Not currently used, but could be used for example to validate the analysis by adding these as comments to programs.
     private var typeChanges = [(Variable, ILType)]()
 
+    mutating func registerTypeGroupDependency(from: Int, to: Int) {
+        // If the element type originates from another recursive type group, add a dependency.
+        if to != -1 && to != from {
+            // Dependencies to other type groups can only refer to previous type groups.
+            // This is implicitly guaranteed by the FuzzIL as later type groups' types aren't
+            // visible yet.
+            assert(to < from)
+            if typeGroupDependencies[from, default: []].insert(to).inserted {
+                // For simplicity also duplicate all dependencies, so that each set contains
+                // all dependent groups including transitive dependencies.
+                typeGroupDependencies[from]!.formUnion(typeGroupDependencies[to] ?? [])
+            }
+        }
+    }
+
+    mutating func addArrayType(def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil) {
+        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+        let resolvedElementType: ILType
+        if let elementRef = elementRef {
+            let elementNullability = elementType.wasmReferenceType!.nullability
+            let typeDefType = type(of: elementRef)
+            guard let elementDesc = typeDefType.wasmTypeDefinition?.description  else {
+                // TODO(mliedtke): Investigate. The `typeDefType` should be `.wasmTypeDef`.
+                // The `elementType` should be `.wasmRef(.Index)`?
+                let missesDef = typeDefType.wasmTypeDefinition != nil
+                fatalError("Missing \(missesDef ? "definition" : "description") for type definition type \(typeDefType), elementType = \(elementType)")
+            }
+            if elementDesc == .selfReference {
+                // Register a "resolver" callback that does one of the two:
+                // 1) If replacement == nil, it replaces the .selfReference with the "outer" array
+                //    type (`def`), so the elementType's ILType is now the same as the outer
+                //    ILType.
+                // 2) If replacement != nil, it replaces the .selfReference with the replacement
+                //    for which we now have a "resolved" ILType that we can embed into the
+                //    elementType. This can lead to cyclic / recursive ILTypes as well.
+                // This callback will be called either when using a WasmResolveForwardReferenceType
+                // operation (triggering case 2) or when reaching the wasmEndTypeGroup of the
+                // current type group (case 1).
+                selfReferences[elementRef, default: []].append({typer, replacement in
+                    (typer.type(of: def).wasmTypeDefinition!.description as! WasmArrayTypeDescription).elementType
+                        = typer.type(of: replacement ?? def).wasmTypeDefinition!.getReferenceTypeTo(nullability: elementNullability)
+                })
+            }
+            resolvedElementType = type(of: elementRef).wasmTypeDefinition!.getReferenceTypeTo(nullability: elementNullability)
+            registerTypeGroupDependency(from: tgIndex, to: elementDesc.typeGroupIndex)
+        } else {
+            resolvedElementType = elementType
+        }
+        set(def, .wasmTypeDef(description: WasmArrayTypeDescription(
+            elementType: resolvedElementType,
+            mutability: mutability,
+            typeGroupIndex: tgIndex)))
+        if isWithinTypeGroup {
+            typeGroups[typeGroups.count - 1].append(def)
+        }
+    }
+
+    mutating func addStructType(def: Variable, fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)]) {
+        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+        let resolvedFields = fieldsWithRefs.enumerated().map { (fieldIndex, fieldWithInput) in
+            let (field, fieldTypeRef) = fieldWithInput
+            if let fieldTypeRef {
+                let fieldNullability = field.type.wasmReferenceType!.nullability
+                let typeDefType = type(of: fieldTypeRef)
+                guard let fieldTypeDesc = typeDefType.wasmTypeDefinition?.description  else {
+                    // TODO(mliedtke): Investigate.
+                    let missesDef = typeDefType.wasmTypeDefinition != nil
+                    fatalError("Missing \(missesDef ? "definition" : "description") for type definition type \(typeDefType), field.type = \(field.type)")
+                }
+                if fieldTypeDesc == .selfReference {
+                    // Register a resolver callback. See `addArrayType` for details.
+                    selfReferences[fieldTypeRef, default: []].append({typer, replacement in
+                        (typer.type(of: def).wasmTypeDefinition!.description! as! WasmStructTypeDescription).fields[fieldIndex].type =
+                            typer.type(of: replacement ?? def).wasmTypeDefinition!.getReferenceTypeTo(nullability: fieldNullability)
+                    })
+                }
+
+                registerTypeGroupDependency(from: tgIndex, to: fieldTypeDesc.typeGroupIndex)
+
+                return WasmStructTypeDescription.Field(
+                    type: type(of: fieldTypeRef).wasmTypeDefinition!.getReferenceTypeTo(nullability: fieldNullability),
+                    mutability: field.mutability)
+            } else {
+                return field
+            }
+        }
+
+        set(def, .wasmTypeDef(description: WasmStructTypeDescription(
+            fields: resolvedFields, typeGroupIndex: tgIndex)))
+        if (isWithinTypeGroup) {
+            typeGroups[typeGroups.count - 1].append(def)
+        }
+    }
+
+    func getTypeGroup(_ index: Int) -> [Variable] {
+        return typeGroups[index]
+    }
+
+    func getTypeGroupCount() -> Int {
+        return typeGroups.count
+    }
+
+    func getTypeGroupDependencies(typeGroupIndex: Int) -> Set<Int> {
+        return typeGroupDependencies[typeGroupIndex] ?? []
+    }
+
+    mutating func startTypeGroup() {
+        assert(!isWithinTypeGroup)
+        assert(selfReferences.count == 0)
+        isWithinTypeGroup = true
+        typeGroups.append([])
+    }
+
+    mutating func finishTypeGroup() {
+        assert(isWithinTypeGroup)
+        for (_, resolvers) in selfReferences {
+            for resolve in resolvers {
+                resolve(&self, nil)
+            }
+        }
+        selfReferences.removeAll()
+
+        isWithinTypeGroup = false
+    }
+
+    mutating func setReferenceType(of: Variable, typeDef: Variable, nullability: Bool) {
+        setType(of: of, to: type(of: typeDef).wasmTypeDefinition!.getReferenceTypeTo(nullability: nullability))
+    }
+
+    // Returns the type description for the provided variable which has to be either a type
+    // definition or an instance (wasm reference) of the wasm type.
+    func getTypeDescription(of variable: Variable) -> WasmTypeDescription {
+        let varType = type(of: variable)
+        if case .Index(let desc) = varType.wasmReferenceType?.kind {
+            return desc.get()!
+        }
+        return varType.wasmTypeDefinition!.description!
+    }
+
+    // Helper function to type a "regular" wasm begin block (block, if, try).
+    mutating func wasmTypeBeginBlock(_ instr: Instruction, _ signature: WasmSignature) {
+        setType(of: instr.innerOutputs.first!, to: .label(signature.outputTypes))
+        for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), signature.parameterTypes) {
+            setType(of: innerOutput, to: paramType)
+        }
+    }
+
+    // Helper function to type a "regular" wasm end block.
+    mutating func wasmTypeEndBlock(_ instr: Instruction, _ outputTypes: [ILType]) {
+        for (output, outputType) in zip(instr.outputs, outputTypes) {
+            setType(of: output, to: outputType)
+        }
+    }
+
     /// Analyze the given instruction, thus updating type information.
     public mutating func analyze(_ instr: Instruction) {
         assert(instr.index == indexOfLastInstruction + 1)
         indexOfLastInstruction += 1
+        defUseAnalyzer.analyze(instr)
 
         // This typer is currently "Outside" of the wasm module, we just type
         // the instructions here such that we can set the type of the module at
         // the end. Figure out how we can set the correct type at the end?
-        if instr.op is WasmOperation {
+        if (instr.op is WasmOperation) {
             switch instr.op.opcode {
-            case .beginWasmFunction(let op):
-                activeWasmModuleDefinition?.activeFunctionSignature = op.signature
-                // Type all the innerOutputs
-                for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmOperation).innerOutputTypes) {
-                    setType(of: innerOutput, to: paramType)
+            case .consti64(_):
+                setType(of: instr.output, to: .wasmi64)
+            case .consti32(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .constf64(_):
+                setType(of: instr.output, to: .wasmf64)
+            case .constf32(_):
+                setType(of: instr.output, to: .wasmf32)
+            case .wasmi32CompareOp(_),
+                 .wasmi64CompareOp(_),
+                 .wasmf32CompareOp(_),
+                 .wasmf64CompareOp(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .wasmi32EqualZero(_),
+                 .wasmi64EqualZero(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .wasmi32BinOp(_),
+                 .wasmi32UnOp(_),
+                 .wasmWrapi64Toi32(_),
+                 .wasmTruncatef32Toi32(_),
+                 .wasmTruncatef64Toi32(_),
+                 .wasmReinterpretf32Asi32(_),
+                 .wasmSignExtend8Intoi32(_),
+                 .wasmSignExtend16Intoi32(_),
+                 .wasmTruncateSatf32Toi32(_),
+                 .wasmTruncateSatf64Toi32(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .wasmi64BinOp(_),
+                 .wasmi64UnOp(_),
+                 .wasmExtendi32Toi64(_),
+                 .wasmTruncatef32Toi64(_),
+                 .wasmTruncatef64Toi64(_),
+                 .wasmReinterpretf64Asi64(_),
+                 .wasmSignExtend8Intoi64(_),
+                 .wasmSignExtend16Intoi64(_),
+                 .wasmSignExtend32Intoi64(_),
+                 .wasmTruncateSatf32Toi64(_),
+                 .wasmTruncateSatf64Toi64(_):
+                setType(of: instr.output, to: .wasmi64)
+            case .wasmf32BinOp(_),
+                 .wasmf32UnOp(_),
+                 .wasmConverti32Tof32(_),
+                 .wasmConverti64Tof32(_),
+                 .wasmDemotef64Tof32(_),
+                 .wasmReinterpreti32Asf32(_):
+                setType(of: instr.output, to: .wasmf32)
+            case .wasmf64BinOp(_),
+                 .wasmf64UnOp(_),
+                 .wasmConverti32Tof64(_),
+                 .wasmConverti64Tof64(_),
+                 .wasmPromotef32Tof64(_),
+                 .wasmReinterpreti64Asf64(_):
+                setType(of: instr.output, to: .wasmf64)
+            case .constSimd128(_),
+                 .wasmSimd128Compare(_),
+                 .wasmSimd128IntegerBinOp(_),
+                 .wasmSimd128IntegerTernaryOp(_),
+                 .wasmSimd128FloatUnOp(_),
+                 .wasmSimd128FloatBinOp(_),
+                 .wasmSimd128FloatTernaryOp(_),
+                 .wasmSimdSplat(_),
+                 .wasmSimdLoad(_),
+                 .wasmSimdLoadLane(_),
+                 .wasmSimdReplaceLane(_):
+                setType(of: instr.output, to: .wasmSimd128)
+            case .wasmSimd128IntegerUnOp(let op):
+                var outputType: ILType = .wasmSimd128
+                switch op.unOpKind {
+                case .all_true, .bitmask:
+                    // Tests and bitmasks produce a boolean i32 result
+                    outputType = .wasmi32
+                default:
+                    break
                 }
-            case .endWasmFunction(_):
-                let signature = activeWasmModuleDefinition!.activeFunctionSignature!
-                activeWasmModuleDefinition!.activeFunctionSignature = nil
-                activeWasmModuleDefinition!.methodSignatures.append((instr.output, signature))
-            case .wasmBeginBlock(_),
-                 .wasmBeginLoop(_),
-                 .wasmBeginIf(_),
-                 .wasmBeginElse(_),
-                 .wasmBeginTry(_),
-                 .wasmBeginCatch(_),
-                 .wasmBeginCatchAll(_),
-                 .wasmBeginTryDelegate(_):
-                // Type all the innerOutputs
-                for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmOperation).innerOutputTypes) {
-                    setType(of: innerOutput, to: paramType)
+                setType(of: instr.output, to: outputType)
+            case .wasmSimdExtractLane(let op):
+                setType(of: instr.output, to: op.kind.laneType())
+            case .wasmDefineGlobal(let op):
+                let type = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: op.wasmGlobal.toType(), isMutable: op.isMutable))
+                dynamicObjectGroupManager.addWasmGlobal(withType: type, forDefinition: instr, forVariable: instr.output)
+                setType(of: instr.output, to: type)
+            case .wasmDefineTable(let op):
+                setType(of: instr.output, to: .wasmTable(wasmTableType: WasmTableType(elementType: op.elementType, limits: op.limits, isTable64: op.isTable64, knownEntries: op.definedEntries)))
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.output), forDefinition: instr, forVariable: instr.output)
+                // Also re-export all functions that we now import through the activeElementSection
+                for (idx, entry) in op.definedEntries.enumerated() {
+                    let definingInstruction = defUseAnalyzer.definition(of: instr.input(idx))
+                    // TODO(cffsmith): Once we change the way we track signatures, we should also store the JS Signature here if we have one. The table might contain JS functions but we lose that signature in the entries. Which is why we convert back into JS Signatures here.
+                    let jsSignature = ProgramBuilder.convertWasmSignatureToJsSignature(entry.signature)
+                    dynamicObjectGroupManager.addWasmFunction(withSignature: jsSignature, forDefinition: definingInstruction, forVariable: instr.input(idx))
                 }
-            case .wasmDefineGlobal(_):
-                activeWasmModuleDefinition!.globals.append(instr.output)
-            case .wasmDefineTable(_):
-                activeWasmModuleDefinition!.tables.append(instr.output)
-            case .wasmLoadGlobal(_):
-                if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
-                    activeWasmModuleDefinition!.globals.append(instr.input(0))
-                }
-            case .wasmTableGet(_), .wasmTableSet(_):
-                if !activeWasmModuleDefinition!.tables.contains(instr.input(0)) {
-                    activeWasmModuleDefinition!.tables.append(instr.input(0))
-                }
+            case .wasmDefineMemory(let op):
+                setType(of: instr.output, to: op.wasmMemory)
+                registerWasmMemoryUse(for: instr.output)
+            case .wasmDefineDataSegment(let op):
+                setType(of: instr.output, to: .wasmDataSegment(segmentLength: op.segment.count))
+            case .wasmDropDataSegment(_):
+                type(of: instr.input(0)).wasmDataSegmentType!.markAsDropped()
+            case .wasmDefineTag(let op):
+                setType(of: instr.output, to: .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameterTypes)))
+                dynamicObjectGroupManager.addWasmTag(withType: type(of: instr.output), forDefinition: instr, forVariable: instr.output)
+            case .wasmThrow(_):
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmTag(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+            case .wasmLoadGlobal(let op):
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                setType(of: instr.output, to: op.globalType)
             case .wasmStoreGlobal(_):
-                if !activeWasmModuleDefinition!.globals.contains(instr.input(0)) {
-                    activeWasmModuleDefinition!.globals.append(instr.input(0))
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+            case .wasmTableGet(let op):
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                setType(of: instr.output, to: op.tableType.elementType)
+            case .wasmTableSet(_):
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+            case .wasmTableSize(_),
+                 .wasmTableGrow(_):
+                let isTable64 = type(of: instr.input(0)).wasmTableType?.isTable64 ?? false
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                setType(of: instr.output, to: isTable64 ? .wasmi64 : .wasmi32)
+            case .wasmMemoryStore(_):
+                registerWasmMemoryUse(for: instr.input(0))
+            case .wasmMemoryLoad(let op):
+                registerWasmMemoryUse(for: instr.input(0))
+                setType(of: instr.output, to: op.loadType.numberType())
+            case .wasmAtomicLoad(let op):
+                registerWasmMemoryUse(for: instr.input(0))
+                setType(of: instr.output, to: op.loadType.numberType())
+            case .wasmAtomicStore(_):
+                registerWasmMemoryUse(for: instr.input(0))
+            case .wasmAtomicRMW(let op):
+                registerWasmMemoryUse(for: instr.input(0))
+                setType(of: instr.output, to: op.op.type())
+            case .wasmAtomicCmpxchg(let op):
+                registerWasmMemoryUse(for: instr.input(0))
+                setType(of: instr.output, to: op.op.type())
+            case .wasmMemorySize(_),
+                 .wasmMemoryGrow(_):
+                let isMemory64 = type(of: instr.input(0)).wasmMemoryType?.isMemory64 ?? false
+                registerWasmMemoryUse(for: instr.input(0))
+                setType(of: instr.output, to: isMemory64 ? .wasmi64 : .wasmi32)
+            case .wasmJsCall(let op):
+                let sigOutputTypes = op.functionSignature.outputTypes
+                assert(sigOutputTypes.count < 2, "multi-return js calls are not supported")
+                if !sigOutputTypes.isEmpty {
+                    setType(of: instr.output, to: sigOutputTypes[0])
                 }
-            default:
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                // Here we query the typer for the signature of the instruction as that is the correct "JS" Signature instead of taking the call-site specific converted wasm signature.
+                dynamicObjectGroupManager.addWasmFunction(withSignature: type(of: instr.input(0)).signature ?? Signature.forUnknownFunction, forDefinition: definingInstruction, forVariable: instr.input(0))
+            case .beginWasmFunction(let op):
+                wasmTypeBeginBlock(instr, op.signature)
+            case .endWasmFunction(let op):
+                setType(of: instr.output, to: .wasmFunctionDef(op.signature))
+                dynamicObjectGroupManager.addWasmFunction(withSignature: ProgramBuilder.convertWasmSignatureToJsSignature(op.signature), forDefinition: instr, forVariable: instr.output)
+            case .wasmSelect(_):
+                setType(of: instr.output, to: type(of: instr.input(0)))
+            case .wasmBeginBlock(let op):
+                wasmTypeBeginBlock(instr, op.signature)
+            case .wasmEndBlock(let op):
+                wasmTypeEndBlock(instr, op.outputTypes)
+            case .wasmBeginIf(let op):
+                wasmTypeBeginBlock(instr, op.signature)
+            case .wasmBeginElse(let op):
+                // The else block is both end and begin block.
+                wasmTypeEndBlock(instr, op.signature.outputTypes)
+                wasmTypeBeginBlock(instr, op.signature)
+            case .wasmEndIf(let op):
+                wasmTypeEndBlock(instr, op.outputTypes)
+            case .wasmBeginLoop(let op):
+                // Note that different to all other blocks the loop's label parameters are the input types
+                // of the block, not the result types (because a branch to a loop label jumps to the
+                // beginning of the loop block instead of the end.)
+                setType(of: instr.innerOutputs.first!, to: .label(op.signature.parameterTypes))
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+            case .wasmEndLoop(let op):
+                wasmTypeEndBlock(instr, op.outputTypes)
+            case .wasmBeginTryTable(let op):
+                wasmTypeBeginBlock(instr, op.signature)
+                instr.inputs.forEach { input in
+                    if type(of: input).isWasmTagType {
+                        let definingInstruction = defUseAnalyzer.definition(of: input)
+                        dynamicObjectGroupManager.addWasmTag(withType: type(of: input), forDefinition: definingInstruction, forVariable: input)
+                    }
+                }
+            case .wasmEndTryTable(let op):
+                wasmTypeEndBlock(instr, op.outputTypes)
+            case .wasmBeginTry(let op):
+                wasmTypeBeginBlock(instr, op.signature)
+            case .wasmBeginCatchAll(let op):
+                setType(of: instr.innerOutputs.first!, to: .label(op.inputTypes))
+            case .wasmBeginCatch(let op):
+                let tagType = ILType.label(op.signature.outputTypes)
+                setType(of: instr.innerOutput(0), to: tagType)
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmTag(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                setType(of: instr.innerOutput(1), to: .exceptionLabel)
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(2), op.signature.parameterTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+                for (output, outputType) in zip(instr.outputs, op.signature.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
+            case .wasmEndTry(let op):
+                wasmTypeEndBlock(instr, op.outputTypes)
+            case .wasmBeginTryDelegate(let op):
+                wasmTypeBeginBlock(instr, op.signature)
+            case .wasmEndTryDelegate(let op):
+                wasmTypeEndBlock(instr, op.outputTypes)
+            case .wasmCallDirect(let op):
+                for (output, outputType) in zip(instr.outputs, op.signature.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
+                // We don't need to update the DynamicObjectGroupManager, as all functions that can be called here are .wasmFunctionDef types, this means we have already added them when we saw the EndWasmFunction instruction.
+            case .wasmCallIndirect(let op):
+                for (output, outputType) in zip(instr.outputs, op.signature.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
+                // Functions that can be called through a table are also already added by the wasmDefineTable instruction.
+                // No need to analyze this and add them to the DynamicObjectGroupManager.
+            case .wasmArrayNewFixed(_),
+                 .wasmArrayNewDefault(_):
+                setReferenceType(of: instr.output, typeDef: instr.input(0), nullability: false)
+            case .wasmArrayLen(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .wasmArrayGet(_):
+                let typeDesc = getTypeDescription(of: instr.input(0)) as! WasmArrayTypeDescription
+                setType(of: instr.output, to: typeDesc.elementType.unpacked())
+            case .wasmArraySet(_):
                 break
-            }
-
-            if instr.numOutputs > 0 {
-                if instr.numOutputs > 1 {
-                    fatalError("More than one output for a wasm instruction!")
+            case .wasmStructNewDefault(_):
+                setReferenceType(of: instr.output, typeDef: instr.input(0), nullability: false)
+            case .wasmStructGet(let op):
+                let typeDesc = getTypeDescription(of: instr.input(0)) as! WasmStructTypeDescription
+                setType(of: instr.output, to: typeDesc.fields[op.fieldIndex].type.unpacked())
+            case .wasmStructSet(_):
+                break;
+            case .wasmRefNull(let op):
+                if instr.hasInputs {
+                    setReferenceType(of: instr.output, typeDef: instr.input(0), nullability: true)
+                } else {
+                    setType(of: instr.output, to: op.type!)
                 }
-                setType(of: instr.output, to: (instr.op as! WasmOperation).outputType)
+            case .wasmRefIsNull(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .wasmRefI31(_):
+                setType(of: instr.output, to: .wasmRefI31)
+            case .wasmI31Get(_):
+                setType(of: instr.output, to: .wasmi32)
+            case .wasmAnyConvertExtern(_):
+                // any.convert_extern forwards the nullability bit from the input.
+                let null = type(of: instr.input(0)).wasmReferenceType!.nullability
+                setType(of: instr.output, to: .wasmRef(.Abstract(.WasmAny), nullability: null))
+            case .wasmExternConvertAny(_):
+                // extern.convert_any forwards the nullability bit from the input.
+                let null = type(of: instr.input(0)).wasmReferenceType!.nullability
+                setType(of: instr.output, to: .wasmRef(.Abstract(.WasmExtern), nullability: null))
+            default:
+                if instr.numInnerOutputs + instr.numOutputs != 0 {
+                    fatalError("Missing typing of outputs for \(instr.op.opcode)")
+                }
             }
         }
 
@@ -160,13 +863,10 @@ public struct JSTyper: Analyzer {
 
         switch instr.op.opcode {
         case .beginWasmModule(_):
-            assert(activeWasmModuleDefinition == nil, "We already have an active WasmModuleDefinition")
-            activeWasmModuleDefinition = WasmModuleDefinition()
+            dynamicObjectGroupManager.createNewWasmModule()
         case .endWasmModule(_):
-            // TODO(cffsmith): use more precise type information.
-            // Type this as an object for now with the `exports` property.
-            setType(of: instr.output, to: .object(withProperties: ["exports"]))
-            activeWasmModuleDefinition = nil
+            let instanceType = dynamicObjectGroupManager.finalizeWasmModule()
+            setType(of: instr.output, to: instanceType)
         default:
             break
         }
@@ -176,32 +876,32 @@ public struct JSTyper: Analyzer {
         // No JS output should be .nothing
         assert(instr.allOutputs.allSatisfy { !type(of: $0).Is(.nothing) })
 
-        // More sanity checking: the outputs of guarded operation should be typed as .anything.
+        // More sanity checking: the outputs of guarded operation should be typed as .jsAnything.
         if let op = instr.op as? GuardableOperation, op.isGuarded {
-            assert(instr.allOutputs.allSatisfy({ type(of: $0).Is(.anything) }))
+            assert(instr.allOutputs.allSatisfy({ type(of: $0).Is(.jsAnything) }))
         }
     }
 
     /// Returns the type of the 'super' binding at the current position
     public func currentSuperType() -> ILType {
         // Access to |super| is also allowed in e.g. object methods, but there we can't know the super type.
-        if activeClassDefinitions.count > 0 {
-            return activeClassDefinitions.top.superType
+        if dynamicObjectGroupManager.numActiveClasses > 0 {
+            return dynamicObjectGroupManager.activeClasses.top.superType
         } else {
-            return .anything
+            return .jsAnything
         }
     }
 
     /// Returns the type of the 'super' binding at the current position
     public func currentSuperConstructorType() -> ILType {
         // Access to |super| is also allowed in e.g. object methods, but there we can't know the super type.
-        if activeClassDefinitions.count > 0 {
+        if dynamicObjectGroupManager.numActiveClasses > 0 {
             // If the superConstructorType is .nothing it means that the current class does not extend anything.
             // In that case, accessing the super constructor type is considered a bug.
-            assert(activeClassDefinitions.top.superConstructorType != .nothing)
-            return activeClassDefinitions.top.superConstructorType
+            assert(dynamicObjectGroupManager.activeClasses.top.superConstructorType != .nothing)
+            return dynamicObjectGroupManager.activeClasses.top.superConstructorType
         } else {
-            return .anything
+            return .jsAnything
         }
     }
 
@@ -213,6 +913,18 @@ public struct JSTyper: Analyzer {
     }
 
     public func inferMethodSignatures(of methodName: String, on objType: ILType) -> [Signature] {
+        // Do lookup on our local type information first.
+        if let groupName = objType.group {
+            if let group = dynamicObjectGroupManager.getGroup(withName: groupName) {
+                if let signatures = group.methods[methodName], !signatures.isEmpty, objType.methods.contains(methodName) {
+                    return signatures
+                } else {
+                    // This means the objectGroup doesn't have the function but we did see the objectGroup.
+                    return [Signature.forUnknownFunction]
+                }
+            }
+        }
+
         return environment.signatures(ofMethod: methodName, on: objType)
     }
 
@@ -223,6 +935,35 @@ public struct JSTyper: Analyzer {
 
     /// Attempts to infer the type of the given property on the given object type.
     public func inferPropertyType(of propertyName: String, on objType: ILType) -> ILType {
+        // Do lookup on our local type information first.
+        if let groupName = objType.group {
+            if let group = dynamicObjectGroupManager.getGroup(withName: groupName) {
+                // Check if we have it in the group and on the actual passed in ILType as it might've been deleted.
+                if let type = group.properties[propertyName], objType.properties.contains(propertyName) {
+                    return type
+                } else if let type = group.methods[propertyName], objType.methods.contains(propertyName) {
+                    // If no property is present, look up the name in the methods instead.
+                    // Retrieving a method "as a property" results in a variable that is a function
+                    // with the method's signature. However, it loses the this-binding:
+                    //   let x = {val: 5, method: function() { return this.val; }};
+                    //   console.log(x.method()); // prints 5
+                    //   let y = x.method;
+                    //   console.log(y());        // prints undefined
+                    // So this is not 100% precise (parameter types will still be consistent)
+                    // but the usage of this inside the function might be "wrong" and the result
+                    // type might be off as also shown in the example above.
+
+                    // While a method can have multiple signatures, when converting to an ILType,
+                    // we need to pick one, so we just pick the first here (if present).
+                    // TODO: Would it be useful to expose all available signatures to the
+                    // .function() type? (E.g. a code generator could then randomly pick one.)
+                    return .function(type.first)
+                } else {
+                    // This means the objectGroup doesn't have the property but we did see the objectGroup.
+                    return .jsAnything
+                }
+            }
+        }
         return environment.type(ofProperty: propertyName, on: objType)
     }
 
@@ -233,7 +974,7 @@ public struct JSTyper: Analyzer {
 
     /// Attempts to infer the constructed type of the given constructor.
     public func inferConstructedType(of constructor: Variable) -> ILType {
-        if let signature = state.type(of: constructor).constructorSignature, signature.outputType != .anything {
+        if let signature = state.type(of: constructor).constructorSignature, signature.outputType != .jsAnything {
             return signature.outputType
         }
         return .object()
@@ -244,7 +985,7 @@ public struct JSTyper: Analyzer {
         if let signature = state.type(of: function).functionSignature {
             return signature.outputType
         }
-        return .anything
+        return .jsAnything
     }
 
     public mutating func setType(of v: Variable, to t: ILType) {
@@ -257,7 +998,7 @@ public struct JSTyper: Analyzer {
     }
 
     /// Attempts to infer the parameter types of the given subroutine definition.
-    /// If parameter types have been added for this function, they are returned, otherwise generic parameter types (i.e. .anything parameters) for the parameters specified in the operation are generated.
+    /// If parameter types have been added for this function, they are returned, otherwise generic parameter types (i.e. .jsAnything parameters) for the parameters specified in the operation are generated.
     private func inferSubroutineParameterList(of op: BeginAnySubroutine, at index: Int) -> ParameterList {
         return signatures[index] ?? ParameterList(numParameters: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
     }
@@ -285,19 +1026,20 @@ public struct JSTyper: Analyzer {
         case .beginPlainFunction(let op):
             // Plain functions can also be used as constructors.
             // The return value type will only be known after fully processing the function definitions.
-            set(instr.output, .functionAndConstructor(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
+            set(instr.output, .functionAndConstructor(inferSubroutineParameterList(of: op, at: instr.index) => .jsAnything))
         case .beginArrowFunction(let op as BeginAnyFunction),
              .beginGeneratorFunction(let op as BeginAnyFunction),
              .beginAsyncFunction(let op as BeginAnyFunction),
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
              .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
-            set(instr.output, .function(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
+            set(instr.output, .function(inferSubroutineParameterList(of: op, at: instr.index) => .jsAnything))
         case .beginConstructor(let op):
-            set(instr.output, .constructor(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
+            set(instr.output, .constructor(inferSubroutineParameterList(of: op, at: instr.index) => .jsAnything))
         case .beginCodeString:
-            set(instr.output, .string)
+            set(instr.output, .jsString)
         case .beginClassDefinition(let op):
-            var superType = environment.emptyObjectType
+            // The empty object type.
+            var superType = ILType.object()
             var superConstructorType: ILType = .nothing
             if op.hasSuperclass {
                 superConstructorType = state.type(of: instr.input(0))
@@ -309,31 +1051,23 @@ public struct JSTyper: Analyzer {
                     superType = constructorReturnType
                 }
             }
-            let classDefiniton = ClassDefinition(output: instr.output, superType: superType, superConstructorType: superConstructorType, instanceType: superType, classType: environment.emptyObjectType)
-            activeClassDefinitions.push(classDefiniton)
-            set(instr.output, .anything)         // Treat the class variable as unknown until we have fully analyzed the class definition
+            let propertySuperTypeMap = Dictionary(uniqueKeysWithValues: superType.properties.map { name in
+                (name, inferPropertyType(of: name, on: superType))
+            })
+            let methodSuperTypeMap = Dictionary(uniqueKeysWithValues: superType.methods.map { name in
+                (name, inferMethodSignatures(of: name, on: superType))
+            })
+
+            dynamicObjectGroupManager.createNewClass(withSuperType: superType, propertyMap: propertySuperTypeMap, methodMap: methodSuperTypeMap, superConstructorType: superConstructorType, forOutput: instr.output)
+
+            set(instr.output, .jsAnything)         // Treat the class variable as unknown until we have fully analyzed the class definition
         case .endClassDefinition:
-            let cls = activeClassDefinitions.pop()
-            // Can now compute the full type of the class variable
-            set(cls.output, cls.classType + .constructor(cls.constructorParameters => cls.instanceType))
+            let (instanceType, classDefinition) = dynamicObjectGroupManager.finalizeClass()
+            set(classDefinition.output, classDefinition.objectGroup.instanceType + .constructor(classDefinition.constructorParameters => instanceType))
         default:
             // Only instructions starting a block with output variables should be handled here.
             assert(instr.numOutputs == 0 || !instr.isBlockStart)
         }
-    }
-
-    /// Returns a known function Signature iff it is an internally defined function
-    public func wasmSignature(ofFunction variable: Variable) -> Signature? {
-        precondition(activeWasmModuleDefinition != nil, "We don't have an active WasmModule! Only call this from within .wasm context.")
-
-        let module = activeWasmModuleDefinition!
-
-        // If we have not seen this variable as an output of a function definition we don't have a signature.
-        guard module.methodSignatures.contains(where: { $0.variable == variable }) else {
-            return nil
-        }
-
-        return module.methodSignatures.filter({ $0.variable == variable })[0].signature
     }
 
     private mutating func processScopeChanges(_ instr: Instruction) {
@@ -477,15 +1211,60 @@ public struct JSTyper: Analyzer {
                     switch begin.op.opcode {
                     case .beginGeneratorFunction,
                          .beginAsyncGeneratorFunction:
-                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => environment.generatorType))
+                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => .jsGenerator))
                     case .beginAsyncFunction,
                          .beginAsyncArrowFunction:
-                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => environment.promiseType))
+                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => .jsPromise))
                     default:
                         setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => returnValueType))
                     }
                 }
             }
+
+            // TODO(cffsmith): this is probably the wrong place to do this.
+            // Update the dynamic object group to correctly reflect the signature of objects of this type.
+            switch instr.op.opcode {
+            case .endClassInstanceMethod(_):
+                assert(begin.op is BeginClassInstanceMethod)
+                let beginOp = begin.op as! BeginClassInstanceMethod
+                dynamicObjectGroupManager.updateMethodSignature(methodName: beginOp.methodName, signature: inferSubroutineParameterList(of: beginOp, at: begin.index) => returnValueType)
+            case .endClassInstanceGetter(_):
+                assert(begin.op is BeginClassInstanceGetter)
+                let beginOp = begin.op as! BeginClassInstanceGetter
+                dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endClassInstanceSetter(_):
+                assert(begin.op is BeginClassInstanceSetter)
+                let beginOp = begin.op as! BeginClassInstanceSetter
+                dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endClassStaticGetter(_):
+                assert(begin.op is BeginClassStaticGetter)
+                let beginOp = begin.op as! BeginClassStaticGetter
+                dynamicObjectGroupManager.updateClassStaticPropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endClassStaticMethod(_):
+                assert(begin.op is BeginClassStaticMethod)
+                let beginOp = begin.op as! BeginClassStaticMethod
+                dynamicObjectGroupManager.updateClassStaticMethodSignature(methodName: beginOp.methodName, signature: inferSubroutineParameterList(of: beginOp, at: begin.index) => returnValueType)
+            case .endClassStaticSetter(_):
+                assert(begin.op is BeginClassStaticSetter)
+                let beginOp = begin.op as! BeginClassStaticSetter
+                dynamicObjectGroupManager.updateClassStaticPropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endObjectLiteralMethod(_):
+                assert(begin.op is BeginObjectLiteralMethod)
+                let beginOp = begin.op as! BeginObjectLiteralMethod
+                dynamicObjectGroupManager.updateMethodSignature(methodName: beginOp.methodName, signature: inferSubroutineParameterList(of: beginOp, at: begin.index) => returnValueType)
+            case .endObjectLiteralGetter(_):
+                assert(begin.op is BeginObjectLiteralGetter)
+                let beginOp = begin.op as! BeginObjectLiteralGetter
+                dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endObjectLiteralSetter(_):
+                assert(begin.op is BeginObjectLiteralSetter)
+                let beginOp = begin.op as! BeginObjectLiteralSetter
+                dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            default:
+                break
+            }
+
+
         case .beginTry,
              .beginCatch,
              .beginFinally,
@@ -497,6 +1276,9 @@ public struct JSTyper: Analyzer {
         case .beginBlockStatement,
              .endBlockStatement:
             break
+        case .wasmBeginTypeGroup,
+             .wasmEndTypeGroup:
+             break
         default:
             assert(instr.isSimple)
         }
@@ -559,30 +1341,30 @@ public struct JSTyper: Analyzer {
             var allInputsAreBigint = true
             for i in 0..<instr.numInputs {
                 if type(ofInput: i).MayBe(.bigint) {
-                    outputType |= environment.bigIntType
+                    outputType |= .bigint
                 }
                 if !type(ofInput: i).Is(.bigint) {
                     allInputsAreBigint = false
                 }
             }
-            return allInputsAreBigint ? environment.bigIntType : outputType
+            return allInputsAreBigint ? .bigint : outputType
         }
 
         switch instr.op.opcode {
         case .loadInteger:
-            set(instr.output, environment.intType)
+            set(instr.output, .integer)
 
         case .loadBigInt:
-            set(instr.output, environment.bigIntType)
+            set(instr.output, .bigint)
 
         case .loadFloat:
-            set(instr.output, environment.floatType)
+            set(instr.output, .float)
 
         case .loadString:
-            set(instr.output, environment.stringType)
+            set(instr.output, .jsString)
 
         case .loadBoolean:
-            set(instr.output, environment.booleanType)
+            set(instr.output, .boolean)
 
         case .loadUndefined:
             set(instr.output, .undefined)
@@ -594,7 +1376,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, .object())
 
         case .loadArguments:
-            set(instr.output, environment.argumentsType)
+            set(instr.output, .jsArguments)
 
         case .createNamedVariable(let op):
             if op.hasInitialValue {
@@ -602,7 +1384,7 @@ public struct JSTyper: Analyzer {
             } else if (environment.hasBuiltin(op.variableName)) {
                 set(instr.output, environment.type(ofBuiltin: op.variableName))
             } else {
-                set(instr.output, .anything)
+                set(instr.output, .jsAnything)
             }
 
         case .loadDisposableVariable:
@@ -615,13 +1397,13 @@ public struct JSTyper: Analyzer {
             set(instr.output, .function() | .undefined)
 
         case .loadRegExp:
-            set(instr.output, environment.regExpType)
+            set(instr.output, .jsRegExp)
 
         case .beginObjectLiteral:
-            activeObjectLiterals.push(environment.emptyObjectType)
+            dynamicObjectGroupManager.createNewObjectLiteral()
 
         case .objectLiteralAddProperty(let op):
-            activeObjectLiterals.top.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName, withType: type(ofInput: 0))
 
         case .objectLiteralAddElement,
              .objectLiteralAddComputedProperty,
@@ -631,106 +1413,107 @@ public struct JSTyper: Analyzer {
 
         case .beginObjectLiteralMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeObjectLiterals.top)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeObjectLiterals.top.add(method: op.methodName)
+            dynamicObjectGroupManager.addMethod(methodName: op.methodName, of: .objectLiteral)
 
         case .beginObjectLiteralComputedMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeObjectLiterals.top)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .beginObjectLiteralGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeObjectLiterals.top)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             assert(instr.numInnerOutputs == 1)
-            activeObjectLiterals.top.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
 
         case .beginObjectLiteralSetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeObjectLiterals.top)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             assert(instr.numInnerOutputs == 2)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeObjectLiterals.top.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
 
         case .endObjectLiteral:
-            let objectType = activeObjectLiterals.pop()
-            set(instr.output, objectType)
+            let instanceType = dynamicObjectGroupManager.finalizeObjectLiteral()
+            set(instr.output, instanceType)
 
         case .beginClassConstructor(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             let parameters = inferSubroutineParameterList(of: op, at: instr.index)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: parameters)
-            activeClassDefinitions.top.constructorParameters = parameters
+            dynamicObjectGroupManager.setConstructorParameters(parameters: parameters)
 
         case .classAddInstanceProperty(let op):
-            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
+            dynamicObjectGroupManager.updatePropertyType(propertyName: op.propertyName, type: op.hasValue ? type(ofInput: 0) : .jsAnything)
 
         case .beginClassInstanceMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeClassDefinitions.top.instanceType.add(method: op.methodName)
+            dynamicObjectGroupManager.addMethod(methodName: op.methodName, of: .jsClass)
 
         case .beginClassInstanceGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             assert(instr.numInnerOutputs == 1)
-            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
 
         case .beginClassInstanceSetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             assert(instr.numInnerOutputs == 2)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
 
         case .classAddStaticProperty(let op):
-            activeClassDefinitions.top.classType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
 
         case .beginClassStaticInitializer:
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             assert(instr.numInnerOutputs == 1)
 
         case .beginClassStaticMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeClassDefinitions.top.classType.add(method: op.methodName)
+            dynamicObjectGroupManager.addClassStaticMethod(methodName: op.methodName)
 
         case .beginClassStaticGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             assert(instr.numInnerOutputs == 1)
-            activeClassDefinitions.top.classType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
 
         case .beginClassStaticSetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             assert(instr.numInnerOutputs == 2)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            activeClassDefinitions.top.classType.add(property: op.propertyName)
+            dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
 
         case .beginClassPrivateInstanceMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .beginClassPrivateStaticMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .createArray,
              .createIntArray,
              .createFloatArray,
              .createArrayWithSpread:
-            set(instr.output, environment.arrayType)
+            set(instr.output, .jsArray)
 
         case .createTemplateString:
-            set(instr.output, environment.stringType)
+            set(instr.output, .jsString)
 
         case .getProperty(let op):
             set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
@@ -745,7 +1528,7 @@ public struct JSTyper: Analyzer {
             set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
 
         case .deleteProperty(let op):
-            set(instr.input(0), type(ofInput: 0).removing(property: op.propertyName))
+            set(instr.input(0), type(ofInput: 0).removing(propertyOrMethod: op.propertyName))
             set(instr.output, .boolean)
 
             // TODO: An additional analyzer is required to determine the runtime value of the input variable
@@ -754,13 +1537,13 @@ public struct JSTyper: Analyzer {
             set(instr.output, .boolean)
 
             // TODO: An additional analyzer is required to determine the runtime value of the output variable generated from the following operations
-            // For now we treat this as .anything
+            // For now we treat this as .jsAnything
         case .getElement,
              .getComputedProperty,
              .getComputedSuperProperty,
              .callComputedMethod,
              .callComputedMethodWithSpread:
-            set(instr.output, .anything)
+            set(instr.output, .jsAnything)
 
         case .ternaryOperation:
             let outputType = type(ofInput: 1) | type(ofInput: 2)
@@ -775,7 +1558,11 @@ public struct JSTyper: Analyzer {
             set(instr.output, inferConstructedType(of: instr.input(0)))
 
         case .callMethod(let op):
-            let sig = chooseUniform(from: inferMethodSignatures(of: op.methodName, on: instr.input(0)))
+            let sigs = inferMethodSignatures(of: op.methodName, on: instr.input(0))
+            // op.numInputs - 1 because the signature.numParameters does not include the receiver.
+            // TODO: We could make the overload resolution here more accurate
+            // by also comparing the types of parameters.
+            let sig = sigs.filter({$0.numParameters == op.numInputs - 1}).first ?? chooseUniform(from: sigs)
             set(instr.output, sig.outputType)
         case .callMethodWithSpread(let op):
             let sig = chooseUniform(from: inferMethodSignatures(of: op.methodName, on: instr.input(0)))
@@ -834,10 +1621,10 @@ public struct JSTyper: Analyzer {
             }
 
         case .destructArray:
-            instr.outputs.forEach{set($0, .anything)}
+            instr.outputs.forEach{set($0, .jsAnything)}
 
         case .destructArrayAndReassign:
-            instr.inputs.dropFirst().forEach{set($0, .anything)}
+            instr.inputs.dropFirst().forEach{set($0, .jsAnything)}
 
         case .destructObject(let op):
             for (property, output) in zip(op.properties, instr.outputs) {
@@ -845,7 +1632,7 @@ public struct JSTyper: Analyzer {
             }
             if op.hasRestElement {
                 // TODO: Add the subset of object properties and methods captured by the rest element
-                set(instr.outputs.last!, environment.emptyObjectType)
+                set(instr.outputs.last!, .object())
             }
 
         case .destructObjectAndReassign(let op):
@@ -854,7 +1641,7 @@ public struct JSTyper: Analyzer {
             }
             if op.hasRestElement {
                 // TODO: Add the subset of object properties and methods captured by the rest element
-                set(instr.inputs.last!, environment.emptyObjectType)
+                set(instr.inputs.last!, .object())
             }
 
         case .compare:
@@ -862,20 +1649,20 @@ public struct JSTyper: Analyzer {
 
         case .await:
             // TODO if input type is known, set to input type and possibly unwrap the Promise
-            set(instr.output, .anything)
+            set(instr.output, .jsAnything)
 
         case .yield:
-            set(instr.output, .anything)
+            set(instr.output, .jsAnything)
 
         case .eval:
             if instr.hasOneOutput {
-                set(instr.output, .anything)
+                set(instr.output, .jsAnything)
             }
 
         case .fixup:
             // As Fixup operations may change the action that they perform at runtime, we cannot statically know the output type.
             if instr.hasOneOutput {
-                set(instr.output, .anything)
+                set(instr.output, .jsAnything)
             }
 
         case .beginPlainFunction(let op as BeginAnyFunction),
@@ -897,11 +1684,11 @@ public struct JSTyper: Analyzer {
 
         case .getPrivateProperty:
             // We currently don't track the types of private properties
-            set(instr.output, .anything)
+            set(instr.output, .jsAnything)
 
         case .callPrivateMethod:
             // We currently don't track the signatures of private methods
-            set(instr.output, .anything)
+            set(instr.output, .jsAnything)
 
         case .getSuperProperty(let op):
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
@@ -930,11 +1717,11 @@ public struct JSTyper: Analyzer {
             set(instr.innerOutput, .string)
 
         case .beginForOfLoop:
-            set(instr.innerOutput, .anything)
+            set(instr.innerOutput, .jsAnything)
 
         case .beginForOfLoopWithDestruct:
             for v in instr.innerOutputs {
-                set(v, .anything)
+                set(v, .jsAnything)
             }
 
         case .beginRepeatLoop(let op):
@@ -943,30 +1730,30 @@ public struct JSTyper: Analyzer {
             }
 
         case .beginCatch:
-            set(instr.innerOutput, .anything)
+            set(instr.innerOutput, .jsAnything)
 
         // TODO: also add other macro instructions here.
         case .createWasmGlobal(let op):
-            set(instr.output, .object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: WasmGlobalType(valueType: op.value.toType(), isMutable: op.isMutable)))
+            set(instr.output, .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: op.value.toType(), isMutable: op.isMutable)))
 
         case .createWasmMemory(let op):
             set(instr.output, .wasmMemory(limits: op.memType.limits, isShared: op.memType.isShared, isMemory64: op.memType.isMemory64))
 
         case .createWasmTable(let op):
-            set(instr.output, .wasmTable(wasmTableType: WasmTableType(elementType: op.tableType.elementType, limits: op.tableType.limits)))
+            set(instr.output, .wasmTable(wasmTableType: WasmTableType(elementType: op.tableType.elementType, limits: op.tableType.limits, isTable64: op.tableType.isTable64, knownEntries: [])))
 
         case .createWasmJSTag(_):
-            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType(ParameterList([.wasmExternRef]), isJSTag: true)))
+            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef], isJSTag: true)))
 
         case .createWasmTag(let op):
-            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameters)))
+            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameterTypes)))
 
         case .wrapSuspending(_):
             // This operation takes a function but produces an object that can be called from WebAssembly.
             // TODO: right now this "loses" the signature of the JS function, this is unfortunate but won't break fuzzing, in the template we can just store the signature.
             // The WasmJsCall generator just won't work as it requires a callable.
             // In the future we should also attach a WasmTypeExtension to this object that stores the signature of input(0) here.
-            set(instr.output, .object(ofGroup:"WebAssembly.SuspendableObject"))
+            set(instr.output, .object(ofGroup:"WasmSuspendingObject"))
 
         case .wrapPromising(_):
             // Here we basically pass through the type transparently as we just annotate this exported function as "promising"
@@ -981,20 +1768,81 @@ public struct JSTyper: Analyzer {
             let newParameters = [Parameter.plain(.object())] + signature.parameters
             set(instr.output, .function(newParameters => signature.outputType))
 
+        case .bindFunction(_):
+            let inputType = type(ofInput: 0)
+            if let signature = inputType.signature {
+                if instr.inputs.count == 1 {
+                    set(instr.output, inputType)
+                } else {
+                    // We only bind any actual parameters if the BindFunction operation has more
+                    // than 2 inputs(instr.inputs.count - 2) as the first input is the function
+                    // on which we call .bind() and the second input is the receiver, so the bind
+                    // only replaces the existing receiver.
+                    let start = min(instr.inputs.count - 2, signature.parameters.count)
+                    let params = Array(signature.parameters[start..<signature.parameters.count])
+                    set(instr.output, .function(params => signature.outputType))
+                }
+            } else {
+                set(instr.output, .jsAnything)
+            }
+
+        case .wasmBeginTypeGroup(_):
+            startTypeGroup()
+
+        case .wasmEndTypeGroup(_):
+            // For now just forward the type information based on the inputs.
+            zip(instr.inputs, instr.outputs).forEach {input, output in
+                set(output, state.type(of: input))
+            }
+            finishTypeGroup()
+
+        case .wasmDefineArrayType(let op):
+            let elementRef = op.elementType.requiredInputCount() == 1 ? instr.input(0) : nil
+            addArrayType(def: instr.output, elementType: op.elementType, mutability: op.mutability, elementRef: elementRef)
+
+        case .wasmDefineStructType(let op):
+            var inputIndex = 0
+            let fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)] = op.fields.map { field in
+                if field.type.requiredInputCount() == 0 {
+                    return (field, nil)
+                } else {
+                    let ret = (field, instr.input(inputIndex))
+                    inputIndex += 1
+                    return ret
+                }
+            }
+            assert(inputIndex == instr.inputs.count)
+            addStructType(def: instr.output, fieldsWithRefs: fieldsWithRefs)
+
+        case .wasmDefineForwardOrSelfReference(_):
+            set(instr.output, .wasmSelfReference())
+
+        case .wasmResolveForwardReference(_):
+            // Resolve all usages of the forward reference (if any).
+            if let resolvers = selfReferences[instr.input(0)] {
+                for resolve in resolvers {
+                    resolve(&self, instr.input(1))
+                }
+                // Reset the resolvers as the usages have been updated. The self reference can now
+                // be used as a self reference again or resolved to a forward reference at a later
+                // point in time again.
+                selfReferences[instr.input(0)] = []
+            }
+
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
             assert(instr.isNop || (instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0)))
         }
 
-        // We explicitly type the outputs of guarded operations as .anything for two reasons:
+        // We explicitly type the outputs of guarded operations as .jsAnything for two reasons:
         // (1) if the operation raises an exception, then the output will probably be `undefined`
         //     but that's not clearly specified
-        // (2) typing to .anything allows us try and fix the operation at runtime (e.g. by looking
+        // (2) typing to .jsAnything allows us try and fix the operation at runtime (e.g. by looking
         //     at the existing methods for a method call or by selecting different inputs), in
         //     which case the return value may change. See FixupMutator.swift for more details.
         if instr.hasOutputs && instr.isGuarded {
             assert(instr.numInnerOutputs == 0)
-            instr.allOutputs.forEach({ set($0, .anything) })
+            instr.allOutputs.forEach({ set($0, .jsAnything) })
         }
 
         // We should only have parameter types for operations that start a subroutine, otherwise, something is inconsistent.
@@ -1012,7 +1860,7 @@ public struct JSTyper: Analyzer {
                 types.append(t | .undefined)
             case .rest:
                 // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
-                types.append(environment.arrayType)
+                types.append(.jsArray)
             }
         }
         return types
@@ -1093,9 +1941,9 @@ public struct JSTyper: Analyzer {
         }
 
         /// Return the current type of the given variable.
-        /// Return .anything for variables not available in this state.
+        /// Return .jsAnything for variables not available in this state.
         func type(of variable: Variable) -> ILType {
-            return overallState.types[variable] ?? .anything
+            return overallState.types[variable] ?? .jsAnything
         }
 
         func hasType(for v: Variable) -> Bool {

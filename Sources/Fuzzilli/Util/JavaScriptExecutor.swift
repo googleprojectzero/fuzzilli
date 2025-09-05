@@ -14,6 +14,10 @@
 
 import Foundation
 
+#if os(Windows)
+import WinSDK
+#endif /* os(Windows) */
+
 public class JavaScriptExecutor {
     /// Path to the js shell binary.
     let executablePath: String
@@ -53,6 +57,11 @@ public class JavaScriptExecutor {
         }
 
         self.executablePath = path!
+    }
+
+    public init(withExecutablePath executablePath: String, arguments: [String]) {
+        self.executablePath = executablePath
+        self.arguments = arguments
     }
 
     /// Executes the JavaScript script using the configured engine and returns the stdout.
@@ -98,11 +107,21 @@ public class JavaScriptExecutor {
                     break
                 }
             }
-            if task.isRunning {
+            runningCheck: if task.isRunning {
+                timedOut = true
+#if os(Windows)
+                guard let processHandle = OpenProcess(DWORD(PROCESS_TERMINATE), false, DWORD(task.processIdentifier)) else {
+                    // Fall back to built-in termination
+                    task.terminate()
+                    break runningCheck
+                }
+                defer { CloseHandle(processHandle) }
+                TerminateProcess(processHandle, 1)
+#else
                 // Properly kill the task now with SIGKILL as it might be stuck
                 // in Wasm, where SIGTERM is not enough.
                 kill(task.processIdentifier, SIGKILL)
-                timedOut = true
+#endif /* os(Windows) */
             }
         }
 

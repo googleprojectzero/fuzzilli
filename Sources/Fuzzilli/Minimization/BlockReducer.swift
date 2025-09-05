@@ -89,13 +89,32 @@ struct BlockReducer: Reducer {
             case .beginBlockStatement,
                  .beginWasmFunction,
                  .beginWasmModule,
-                 .wasmBeginBlock,
-                 .wasmBeginLoop,
-                 .wasmBeginIf,
-                 .wasmBeginTry,
-                 .wasmBeginCatchAll,
-                 .wasmBeginCatch,
-                 .wasmBeginTryDelegate:
+                 .wasmBeginTryDelegate,
+                 .wasmBeginTryTable:
+                reduceGenericBlockGroup(group, with: helper)
+
+            case .wasmBeginBlock,
+                 .wasmBeginLoop:
+                let rewroteProgram = reduceGenericWasmBlockGroup(group, with: helper)
+                if rewroteProgram {
+                    return
+                }
+
+            case .wasmBeginCatchAll,
+                 .wasmBeginCatch:
+                // These instructions are handled in the reduceWasmTryCatch.
+                break
+            case .wasmBeginTry:
+                reduceWasmTryCatch(group, with: helper)
+
+            case .wasmBeginIf:
+                let rewroteProgram = reduceWasmIfElse(group, with: helper)
+                if rewroteProgram {
+                    return
+                }
+
+            case .wasmBeginTypeGroup:
+                // Try to remove the full type group if it is unused.
                 reduceGenericBlockGroup(group, with: helper)
 
             default:
@@ -287,6 +306,48 @@ struct BlockReducer: Reducer {
         helper.tryNopping(candidates)
     }
 
+    // Reduce a wasm block. In some cases this reduction fully rewrites the program
+    // invalidating pre-computed BlockGroups. If that happens, the function returns true indicating
+    // that following reductions need to rerun the Blockgroups analysis.
+    private func reduceGenericWasmBlockGroup(_ group: BlockGroup, with helper: MinimizationHelper) -> Bool {
+        // Try to remove just the block.
+        var candidates = group.blockInstructionIndices
+        if helper.tryNopping(candidates) {
+            // Success!
+            return false
+        }
+
+        // Try to remove the entire block including its content.
+        candidates = group.instructionIndices
+        if helper.tryNopping(candidates) {
+            // Success!
+            return false
+        }
+
+        // Try to remove just the block and "shortcut" all inputs and outputs of the block.
+        // Check whether block label is used as we can't replace it.
+        if wasmBlockUsesLabel(group.block(0), with: helper) {
+            return false
+        }
+
+        let beginInstr = helper.code[group.head]
+        let endInstr = helper.code[group.tail]
+        var varReplacements = Dictionary(
+            uniqueKeysWithValues: zip(beginInstr.innerOutputs.dropFirst(), beginInstr.inputs))
+        varReplacements.merge(zip(endInstr.outputs, endInstr.inputs.map {varReplacements[$0] ?? $0}),
+            uniquingKeysWith: {_, _ in fatalError("duplicate variables")})
+        var newCode = Code()
+        for (i, instr) in helper.code.enumerated() {
+            if i == group.head || i == group.tail {
+                continue // Skip the block begin and end.
+            }
+            let newInouts = instr.inouts.map({ varReplacements[$0] ?? $0 })
+            newCode.append(Instruction(instr.op, inouts: newInouts, flags: .empty))
+        }
+        newCode.renumberVariables()
+        return helper.testAndCommit(newCode)
+    }
+
     // Try to reduce a BeginSwitch/EndSwitch Block.
     // (1) reduce it by aggressively trying to remove the whole thing.
     // (2) reduce it by removing the BeginSwitch(Default)Case/EndSwitchCase instructions but keeping the content.
@@ -309,7 +370,7 @@ struct BlockReducer: Reducer {
         var blocks: [Block] = []
 
         // Start iterating over the switch case statements.
-        var instructionIdx = group.head+1
+        var instructionIdx = group.head + 1
         while instructionIdx < group.tail {
             if helper.code[instructionIdx].op is BeginSwitchCase || helper.code[instructionIdx].op is BeginSwitchDefaultCase {
                 let block = helper.code.block(startingAt: instructionIdx)
@@ -333,6 +394,168 @@ struct BlockReducer: Reducer {
             // (3) Try to remove the cases here.
             helper.tryNopping(block.allInstructions)
         }
+    }
+
+    // Try to reduce a WasmBeginTry/WasmBeginCatch[All]/WasmEndTry Block.
+    // (1) Reduce it by aggressively trying to remove the whole thing.
+    // (2) Reduce it by removing the WasmBeginCatch[All] block instructions but keeping the content.
+    // (3) Reduce it by removing individual WasmBeginCatch[All] blocks.
+    private func reduceWasmTryCatch(_ group: BlockGroup, with helper: MinimizationHelper) {
+        assert(helper.code[group.head].op is WasmBeginTry)
+
+        var candidates = group.instructionIndices
+
+        if helper.tryNopping(candidates) {
+            // (1)
+            // We successfully removed the whole try-catch statement.
+            return
+        }
+
+        // Add the head and tail of the block. These are the
+        // WasmBeginTry/WasmEndTry instructions.
+        candidates = [group.head, group.tail]
+
+        var blocks: [Block] = []
+
+        // Start iterating over the try catch statements.
+        var instructionIdx = group.head + 1
+        while instructionIdx < group.tail {
+            if helper.code[instructionIdx].op is WasmBeginCatch || helper.code[instructionIdx].op is WasmBeginCatchAll {
+                let block = helper.code.block(startingAt: instructionIdx)
+                blocks.append(block)
+                candidates.append(block.head)
+                candidates.append(block.tail)
+                instructionIdx = block.tail
+            } else {
+                instructionIdx += 1
+            }
+        }
+
+        if helper.tryNopping(candidates) {
+            // (2)
+            // We successfully removed the try catch while keeping the
+            // content inside.
+            return
+        }
+
+        for block in blocks {
+            // (3) Try to remove the catches here.
+            // Skip the last instruction as it is both the .endBlock as well as the .startBlock for
+            // the next catch (or the overall end of the try).
+            let allInstructions = block.allInstructions
+            helper.tryNopping(Array(allInstructions[0..<allInstructions.endIndex-1]))
+        }
+    }
+
+    // Returns true if the label created by this block is used within the block.
+    private func wasmBlockUsesLabel(_ group: Block, with helper: MinimizationHelper) -> Bool {
+        let label = helper.code[group.head].innerOutputs.first!
+        return ((group.head + 1)..<group.tail).contains {helper.code[$0].inputs.contains(label)}
+    }
+
+    // Reduce a wasm if-else construct. In some cases this reduction fully rewrites the program
+    // invalidating pre-computed BlockGroups. If that happens, the function returns true indicating
+    // that following reductions need to rerun the Blockgroups analysis.
+    private func reduceWasmIfElse(_ group: BlockGroup, with helper: MinimizationHelper) -> Bool {
+        assert(helper.code[group.head].op is WasmBeginIf)
+        assert(helper.code[group.tail].op is WasmEndIf)
+
+        // First try to remove the entire if-else block but keep its content.
+        if helper.tryNopping(group.blockInstructionIndices) {
+            // Success!
+            return false
+        }
+
+        let ifBlock = group.block(0)
+        let beginIf = helper.code[ifBlock.head].op as! WasmBeginIf
+        // Now try to turn if-else into just if.
+        if group.numBlocks == 2 && beginIf.signature.outputTypes.isEmpty {
+            // First try to remove the else block.
+            let elseBlock = group.block(1)
+            let rangeToNop = Array(elseBlock.head ..< elseBlock.tail)
+            if helper.tryNopping(rangeToNop) {
+                // Success!
+                return false
+            }
+
+            // Then try to remove the if block. This requires inverting the condition of the if.
+            let invertedIf = WasmBeginIf(with: beginIf.signature, inverted: !beginIf.inverted)
+            var replacements = [(Int, Instruction)]()
+            // The new WasmBeginIf will take the original inputs but produces the inner outputs
+            // of the original WasmBeginElse block, so that users of them are rewired correctly.
+            let inouts = helper.code[ifBlock.head].inputs + helper.code[elseBlock.head].allOutputs
+            replacements.append((ifBlock.head, Instruction(invertedIf, inouts: inouts, flags: .empty)))
+            // The rest of the if body is nopped ...
+            for instr in helper.code.body(of: ifBlock) {
+                replacements.append((instr.index, helper.nop(for: instr)))
+            }
+            // ... as well as the BeginElse.
+            replacements.append((elseBlock.head, Instruction(Nop())))
+            if helper.tryReplacements(replacements, renumberVariables: true) {
+                // Success!
+                return false
+            }
+        }
+        // If we have outputs or the innerOutputs of the WasmBeginIf / WasmBeginElse are used,
+        // a more "sophisticated" reduction is needed.
+        if group.numBlocks == 2 && (!beginIf.signature.parameterTypes.isEmpty || !beginIf.signature.outputTypes.isEmpty) {
+            let elseBlock = group.block(1)
+            let beginIfInstr = helper.code[ifBlock.head]
+
+            // Check whether any of the block labels is used. In that case, we can't eliminate the
+            // if-else.
+            if wasmBlockUsesLabel(ifBlock, with: helper) || wasmBlockUsesLabel(elseBlock, with: helper) {
+                return false
+            }
+
+            do { // First try to replace the if-else with the if body.
+                // "Shortcut" bypassing the WasmBeginIf by directly using its inputs.
+                var varReplacements = Dictionary(
+                    uniqueKeysWithValues: zip(beginIfInstr.innerOutputs.dropFirst(), beginIfInstr.inputs))
+                // Replace all usages of the WasmEndIf outputs with the results of the if true
+                // block which are the inputs into the WasmBeginElse block.
+                varReplacements.merge(
+                    zip(helper.code[elseBlock.tail].outputs, helper.code[elseBlock.head].inputs.map {varReplacements[$0] ?? $0}),
+                    uniquingKeysWith: {_, _ in fatalError("duplicate variables")})
+                var newCode = Code()
+                for (i, instr) in helper.code.enumerated() {
+                    if i == ifBlock.head || (i >= elseBlock.head && i <= elseBlock.tail) {
+                        continue // Skip the WasmBeginIf and the else block.
+                    }
+                    let newInouts = instr.inouts.map {varReplacements[$0] ?? $0}
+                    newCode.append(Instruction(instr.op, inouts: newInouts, flags: .empty))
+                }
+                newCode.renumberVariables()
+                if helper.testAndCommit(newCode) {
+                    // Success!
+                    return true
+                }
+            }
+            do { // Try to replace the if-else with the else body.
+                let beginElseInstr = helper.code[elseBlock.head]
+                // "Shortcut" bypassing the WasmBeginElse by directly using the inputs into the
+                // WasmBeginIf.
+                var varReplacements = Dictionary(
+                    uniqueKeysWithValues: zip(beginElseInstr.innerOutputs.dropFirst(), beginIfInstr.inputs))
+                // Replace all usages of the WasmEndIf outputs with the results of the else block
+                // which are the inputs into the WasmEndIf block.
+                varReplacements.merge(zip(helper.code[elseBlock.tail].outputs, helper.code[elseBlock.tail].inputs.map {varReplacements[$0] ?? $0}), uniquingKeysWith: {_, _ in fatalError("duplicate variables")})
+                var newCode = Code()
+                for (i, instr) in helper.code.enumerated() {
+                    if i == elseBlock.tail || (i >= ifBlock.head && i <= ifBlock.tail) {
+                        continue // Skip the WasmBeginIf and the if true block.
+                    }
+                    let newInouts = instr.inouts.map { varReplacements[$0] ?? $0 }
+                    newCode.append(Instruction(instr.op, inouts: newInouts, flags: .empty))
+                }
+                newCode.renumberVariables()
+                if helper.testAndCommit(newCode) {
+                    // Success!
+                    return true
+                }
+            }
+        }
+        return false
     }
 
     private func reduceFunctionOrConstructor(_ function: BlockGroup, with helper: MinimizationHelper) {

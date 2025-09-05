@@ -136,6 +136,7 @@ public class DistributedFuzzingNode {
                 let state = try Fuzzilli_Protobuf_FuzzerState.with {
                     $0.corpus = try fuzzer.corpus.exportState()
                     $0.evaluatorState = fuzzer.evaluator.exportState()
+                    $0.isWasmEnabled = fuzzer.config.isWasmEnabled
                 }
                 return try state.serializedData()
             } else {
@@ -155,6 +156,14 @@ public class DistributedFuzzingNode {
     func synchronizeState(to data: Data) throws {
         if supportsFastStateSynchronization {
             let state = try Fuzzilli_Protobuf_FuzzerState(serializedBytes: data)
+
+            if state.isWasmEnabled != fuzzer.config.isWasmEnabled {
+                // If the wasm enablement is different, we can't safely import the corpus.
+                let parentState = fuzzer.config.isWasmEnabled ? "enabled" : "disabled"
+                let selfState = state.isWasmEnabled ? "enabled" : "disabled"
+                throw FuzzilliError.corpusImportError("Inconsistent state between distributed nodes: The parent has wasm \(parentState) while the current fuzzer has wasm \(selfState)!")
+            }
+
             try fuzzer.corpus.importState(state.corpus)
             try fuzzer.evaluator.importState(state.evaluatorState)
         } else {

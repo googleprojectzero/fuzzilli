@@ -117,9 +117,9 @@ class TypeSystemTests: XCTestCase {
         // can be used when a function f2 is required (i.e. if the call to the functions
         // assumes the function has the signature of f2).
         // See also the signature subsumption test for more complicated examples.
-        XCTAssert(ILType.function([.anything] => .integer).Is(.function([.integer] => .number)))
-        XCTAssertFalse(ILType.function([.integer] => .integer).Is(.function([.anything] => .number)))
-        XCTAssertFalse(ILType.function([.anything] => .number).Is(.function([.anything] => .integer)))
+        XCTAssert(ILType.function([.jsAnything] => .integer).Is(.function([.integer] => .number)))
+        XCTAssertFalse(ILType.function([.integer] => .integer).Is(.function([.jsAnything] => .number)))
+        XCTAssertFalse(ILType.function([.jsAnything] => .number).Is(.function([.jsAnything] => .integer)))
 
         for t1 in typeSuite {
             for t2 in typeSuite {
@@ -159,13 +159,13 @@ class TypeSystemTests: XCTestCase {
         // Less obviously, an object MayBe an object with a property "foo"
         XCTAssert(ILType.object().MayBe(.object(withProperties: ["foo"])))
         // and a function that takes an integer may be a function that also takes anything as first parameter.
-        // The way to think about is is (probably) that a function taking .anything may still be called
+        // The way to think about is is (probably) that a function taking .jsAnything may still be called
         // with a .integer as argument. However, from a practical point of view the function that takes .integer
         // may in fact also be fine with a different argument.
-        XCTAssert(ILType.function([.integer] => .anything).MayBe(.function([.anything] => .anything)))
+        XCTAssert(ILType.function([.integer] => .jsAnything).MayBe(.function([.jsAnything] => .jsAnything)))
         // But (at least from a theoretical point-of-view) a function taking a .integer is definitely not a function
         // that takes (only) a string as first parameter.
-        XCTAssertFalse(ILType.function([.integer] => .anything).MayBe(.function([.string] => .anything)))
+        XCTAssertFalse(ILType.function([.integer] => .jsAnything).MayBe(.function([.string] => .jsAnything)))
 
         XCTAssert((ILType.integer | ILType.boolean).MayBe(ILType.integer | ILType.string))
         XCTAssertFalse((ILType.integer + ILType.object()).MayBe(ILType.string + ILType.object()))
@@ -209,10 +209,16 @@ class TypeSystemTests: XCTestCase {
             }
         }
 
-        // .anything MayBe anything, but definitely is only .anything
-        for t in typeSuite where t != .anything && t != .nothing {
-            XCTAssert(ILType.anything.MayBe(t), ".anything MayBe \(t)")
-            XCTAssertFalse(ILType.anything.Is(t), ".anything Is not definitely \(t)")
+        // .jsAnything MayBe anything (in JS), but definitely is only .jsAnything
+        for t in typeSuite where t != .jsAnything && t != .nothing {
+            XCTAssert(ILType.jsAnything.MayBe(t) || t.Is(.wasmAnything), ".jsAnything MayBe \(t)")
+            XCTAssertFalse(ILType.jsAnything.Is(t), ".jsAnything Is not definitely \(t)")
+        }
+
+        // .wasmAnything MayBe anything (in Wasm), but definitely is only .wasmAnything
+        for t in typeSuite where t != .wasmAnything && t != .nothing {
+            XCTAssert(ILType.wasmAnything.MayBe(t) || t.Is(.jsAnything), ".wasmAnything MayBe \(t)")
+            XCTAssertFalse(ILType.wasmAnything.Is(t), ".jsAnything Is not definitely \(t)")
         }
     }
 
@@ -230,10 +236,15 @@ class TypeSystemTests: XCTestCase {
 
     func testAnythingAndNothingSubsumption() {
         for t in typeSuite {
-            // .anything subsumes every other type and no other type subsumes .anything
-            XCTAssert(.anything >= t)
-            if t != .anything {
-                XCTAssertFalse(t >= .anything)
+            // .jsAnything subsumes every other type and no other type subsumes .jsAnything
+            XCTAssert(.jsAnything >= t || t.Is(.wasmAnything))
+            if t != .jsAnything {
+                XCTAssertFalse(t >= .jsAnything)
+            }
+
+            XCTAssert(.wasmAnything >= t || t.Is(.jsAnything))
+            if t != .wasmAnything {
+                XCTAssertFalse(t >= .wasmAnything)
             }
 
             // .nothing is subsumed by all types and subsumes no other type but itself
@@ -266,7 +277,7 @@ class TypeSystemTests: XCTestCase {
                 // E.g. string objects never subsume objects, but can subsume other string objects if the
                 // properties and methods are a subset.
                 if t1.baseType == t2.baseType && (t1.group == nil || t1.group == t2.group) {
-                    if t1.properties.isSubset(of: t2.properties) && t1.methods.isSubset(of: t2.methods) {
+                    if t1.properties.isSubset(of: t2.properties) && t1.methods.isSubset(of: t2.methods) && t1.wasmType == t2.wasmType {
                         XCTAssert(t1 >= t2, "\(t1) >= \(t2)")
                     }
                 }
@@ -453,9 +464,9 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(fooObj.adding(property: "baz"), fooBazObj)
         XCTAssertEqual(bazObj.adding(property: "foo"), fooBazObj)
 
-        XCTAssertEqual(fooBarObj.removing(property: "baz"), fooBarObj)
-        XCTAssertEqual(fooBarObj.removing(property: "foo"), barObj)
-        XCTAssertEqual(barObj.removing(property: "bar"), object)
+        XCTAssertEqual(fooBarObj.removing(propertyOrMethod: "baz"), fooBarObj)
+        XCTAssertEqual(fooBarObj.removing(propertyOrMethod: "foo"), barObj)
+        XCTAssertEqual(barObj.removing(propertyOrMethod: "bar"), object)
     }
 
     func testMethodTypeTransitions() {
@@ -478,8 +489,8 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testCallableTypeSubsumption() {
-        let signature1 = [.integer, .string] => .anything
-        let signature2 = [.boolean, .rest(.anything)] => .object()
+        let signature1 = [.integer, .string] => .jsAnything
+        let signature2 = [.boolean, .rest(.jsAnything)] => .object()
 
         // Repeat the below tests for functions, constructors, and function constructors (function and constructor at the same time)
         // We call something that is a function or a constructor (or both) a "callable".
@@ -600,18 +611,22 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalI32Mutable, ILTypeGlobalI32Mutable)
 
         // Types with not equal WasmTypeExtension don't have a WasmTypeExtension in their union.
-        let unionMutabilityDiff = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"])
+        let unionMutabilityDiff = ILType.object(withProperties: ["value"])
         XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalI32NonMutable, unionMutabilityDiff)
         // Invariant: the union of two types subsumes both types.
         XCTAssert(unionMutabilityDiff >= ILTypeGlobalI32Mutable)
         XCTAssert(unionMutabilityDiff >= ILTypeGlobalI32NonMutable)
 
-        let unionValueTypeDiff = ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"])
+        let unionValueTypeDiff = ILType.object(withProperties: ["value"])
         XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalF32Mutable, unionValueTypeDiff)
         XCTAssert(unionValueTypeDiff >= ILTypeGlobalI32Mutable)
         XCTAssert(unionValueTypeDiff >= ILTypeGlobalI32NonMutable)
 
-        XCTAssertEqual(ILTypeGlobalI32Mutable | .object(ofGroup: "WasmGlobal"), .object(ofGroup: "WasmGlobal"))
+        // When removing the WasmTypeExtension, the group is also removed. (Note that this specific
+        // case is artificial as a .object(ofGroup: WasmGlobal) should only be used e.g. as a
+        // search criteria but never appear as a type for a variable without a corresponding
+        // .wasmGlobalType extension.)
+        XCTAssertEqual(ILTypeGlobalI32Mutable | .object(ofGroup: "WasmGlobal"), .object())
         XCTAssert(.object(ofGroup: "WasmGlobal") >= ILTypeGlobalI32Mutable)
         XCTAssertEqual(ILTypeGlobalI32Mutable | .object(withProperties: ["value"]), .object(withProperties: ["value"]))
         XCTAssert(.object(withProperties: ["value"]) >= ILTypeGlobalI32Mutable)
@@ -629,8 +644,8 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalI64Mutable, ILTypeGlobalI64Mutable)
         XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalI64NonMutable, .nothing)
         XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalF64Mutable, .nothing)
-        XCTAssertEqual(ILTypeGlobalI64Mutable & .object(withProperties: ["value"]), .nothing)
-        XCTAssertEqual((ILTypeGlobalI64Mutable & ILType.object(withWasmType: wasmi64Mutable)), ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64Mutable)) 
+        XCTAssertEqual(ILTypeGlobalI64Mutable & .object(withProperties: ["value"]), ILTypeGlobalI64Mutable)
+        XCTAssertEqual((ILTypeGlobalI64Mutable & ILType.object(withWasmType: wasmi64Mutable)), ILType.object(ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64Mutable))
     }
 
     func testWasmGlobalIsAndMayBe() {
@@ -650,8 +665,8 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse(ILTypeGlobalI32Mutable.Is(ILTypeGlobalF64Mutable))
         XCTAssertFalse(ILTypeGlobalF64Mutable.Is(ILTypeGlobalI32Mutable))
 
-        XCTAssertFalse(ILTypeGlobalI32Mutable.MayBe(.object(ofGroup: "WasmGlobal")))
-        XCTAssertFalse(ILTypeGlobalI32Mutable.MayBe(.object(withProperties: ["value"])))
+        XCTAssertTrue(ILTypeGlobalI32Mutable.MayBe(.object(ofGroup: "WasmGlobal")))
+        XCTAssertTrue(ILTypeGlobalI32Mutable.MayBe(.object(withProperties: ["value"])))
         XCTAssert(ILTypeGlobalI32Mutable.MayBe(.object(withWasmType: wasmi32Mutable)))
         XCTAssert(ILTypeGlobalI32Mutable.MayBe(ILTypeGlobalI32Mutable))
         XCTAssertFalse(ILTypeGlobalI32Mutable.MayBe(ILTypeGlobalI32NonMutable))
@@ -676,11 +691,11 @@ class TypeSystemTests: XCTestCase {
         XCTAssert(.integer | .float | .string == .integer | .float | .string)
 
         // Test special union cases
-        XCTAssertEqual(.anything | .integer, .anything)
-        XCTAssertEqual(.anything | .integer, .anything)
-        XCTAssertEqual(.anything | .nothing, .anything)
+        XCTAssertEqual(.jsAnything | .integer, .jsAnything)
+        XCTAssertEqual(.jsAnything | .integer, .jsAnything)
+        XCTAssertEqual(.jsAnything | .nothing, .jsAnything)
         XCTAssertEqual(.nothing | .nothing, .nothing)
-        XCTAssertEqual(.nothing | .anything, .anything)
+        XCTAssertEqual(.nothing | .jsAnything, .jsAnything)
         XCTAssertEqual(.nothing | .integer, .integer)
 
         // Test subsumption of unions of related types.
@@ -772,10 +787,10 @@ class TypeSystemTests: XCTestCase {
         // Maybe a bit less intuitively, the intersection of two functions with different signatures can also exist.
         // In the following example, the more general signature of the two functions is the intersection as that's what
         // both functions "have in common".
-        XCTAssertEqual(ILType.function([.anything] => .integer) & .function([.integer] => .anything), .function([.anything] => .integer))
-        XCTAssertEqual(ILType.function([.anything] => .anything) & .function([.integer] => .anything), .function([.anything] => .anything))
+        XCTAssertEqual(ILType.function([.jsAnything] => .integer) & .function([.integer] => .jsAnything), .function([.jsAnything] => .integer))
+        XCTAssertEqual(ILType.function([.jsAnything] => .jsAnything) & .function([.integer] => .jsAnything), .function([.jsAnything] => .jsAnything))
         // In this example, the parameter type is widened and the return type is narrowed.
-        XCTAssertEqual(ILType.function([.integer] => .integer) & .function([.anything] => .anything), .function([.anything] => .integer))
+        XCTAssertEqual(ILType.function([.integer] => .integer) & .function([.jsAnything] => .jsAnything), .function([.jsAnything] => .integer))
         // However, here the return types are incompatible
         XCTAssertEqual(ILType.function([.integer] => .integer) & .function([.integer] => .string), .nothing)
 
@@ -865,14 +880,23 @@ class TypeSystemTests: XCTestCase {
                     XCTAssertFalse(t1.canMerge(with: t2))
                 }
 
+                else if t1.isCallable && t2.isCallable && t1.receiver != nil && t2.receiver != nil && t1.receiver != t2.receiver {
+                    XCTAssertFalse(t1.canMerge(with: t2))
+                }
+
                 // Objects of different groups cannot be merged
                 else if t1.group != nil && t2.group != nil && t1.group != t2.group {
                     XCTAssertFalse(t1.canMerge(with: t2))
                 }
 
+                // Objects with different WasmTypeExtensions cannot be merged.
+                else if t1.wasmType != nil && t2.wasmType != nil && t1.wasmType != t2.wasmType {
+                    XCTAssertFalse(t1.canMerge(with: t2))
+                }
+
                 // Everything else can be merged
                 else {
-                    XCTAssert(t1.canMerge(with: t2))
+                    XCTAssert(t1.canMerge(with: t2), "\(t1) \(t2)")
                     // Merging is symmetric
                     XCTAssert(t2.canMerge(with: t1))
                 }
@@ -881,7 +905,7 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testSignatureTypes() {
-        let sig1 = [.anything, .string, .integer, .opt(.integer), .opt(.float)] => .undefined
+        let sig1 = [.jsAnything, .string, .integer, .opt(.integer), .opt(.float)] => .undefined
         XCTAssertFalse(sig1.parameters[0].isOptionalParameter)
         XCTAssertFalse(sig1.parameters[1].isOptionalParameter)
         XCTAssertFalse(sig1.parameters[2].isOptionalParameter)
@@ -903,7 +927,7 @@ class TypeSystemTests: XCTestCase {
         // In other words, if we need a function that accepts an integer as first
         // parameter, then we're fine receiving a function that accepts anything
         // (or e.g. a number) as first parameter.
-        XCTAssert([.integer] => .undefined >= [.anything] => .undefined)
+        XCTAssert([.integer] => .undefined >= [.jsAnything] => .undefined)
         XCTAssert([.integer, .string] => .undefined >= [.number, .string] => .undefined)
         XCTAssert([.integer, .string] => .undefined >= [.integer, .primitive] => .undefined)
         // but not one that requires a string.
@@ -911,48 +935,48 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse([.integer, .integer] => .undefined >= [.integer, .string] => .undefined)
         // Or, phrased differentley still, a function that accepts anything as first
         // parameter is a function that accepts an integer as first parameter.
-        XCTAssert(ILType.function([.anything] => .undefined).Is(.function([.integer] => .undefined)))
+        XCTAssert(ILType.function([.jsAnything] => .undefined).Is(.function([.integer] => .undefined)))
         // However, the other direction does not hold: if we want a function that
         // accepts anything as first parameter, we cannot use a function that
         // requires an integer as first parameter instead.
-        XCTAssertFalse([.anything] => .undefined >= [.integer] => .undefined)
+        XCTAssertFalse([.jsAnything] => .undefined >= [.integer] => .undefined)
 
         // Signatures with more parameters subsume signatures with fewer parameters
         // because the additional parameters are simply ignored.
         XCTAssert([.integer] => .undefined >= [] => .undefined)
-        XCTAssert([.anything, .anything] => .undefined >= [.anything] => .undefined)
+        XCTAssert([.jsAnything, .jsAnything] => .undefined >= [.jsAnything] => .undefined)
         // But the other way doesn't work: if we want a function that takes no parameters,
         // we cannot use one that requires parameters instead.
-        XCTAssertFalse([] => .undefined >= [.anything] => .undefined)
+        XCTAssertFalse([] => .undefined >= [.jsAnything] => .undefined)
 
         // A signature with rest parameters is subsumed by a signature with no rest parameters
         // if either there are no parameters that will "turn into" rest parameters, or if
         // they all have the correct type.
-        XCTAssert([] => .undefined >= [.anything...] => .undefined)
-        XCTAssert([.anything] => .undefined >= [.anything...] => .undefined)
-        XCTAssert([.integer, .number] => .undefined >= [.anything...] => .undefined)
+        XCTAssert([] => .undefined >= [.jsAnything...] => .undefined)
+        XCTAssert([.jsAnything] => .undefined >= [.jsAnything...] => .undefined)
+        XCTAssert([.integer, .number] => .undefined >= [.jsAnything...] => .undefined)
         XCTAssert([.integer, .integer] => .undefined >= [.integer...] => .undefined)
         XCTAssertFalse([.integer, .boolean] => .undefined >= [.integer...] => .undefined)
         XCTAssert([.integer, .boolean] => .undefined >= [.primitive...] => .undefined)
         // A signature with rest parameters subsumes a signature with no rest parameters
         // only if the subsumed function expects no parameters at the position of the
         // rest parameter (because it can be omitted by the caller).
-        XCTAssert([.anything...] => .undefined >= [] => .undefined)
-        XCTAssertFalse([.anything...] => .undefined >= [.anything] => .undefined)
+        XCTAssert([.jsAnything...] => .undefined >= [] => .undefined)
+        XCTAssertFalse([.jsAnything...] => .undefined >= [.jsAnything] => .undefined)
         // If both signatures have rest parameters, then these must be compatible.
-        XCTAssert([.anything...] => .undefined >= [.anything...] => .undefined)
-        XCTAssert([.integer...] => .undefined >= [.anything...] => .undefined)
-        XCTAssert([.integer, .integer...] => .undefined >= [.anything...] => .undefined)
+        XCTAssert([.jsAnything...] => .undefined >= [.jsAnything...] => .undefined)
+        XCTAssert([.integer...] => .undefined >= [.jsAnything...] => .undefined)
+        XCTAssert([.integer, .integer...] => .undefined >= [.jsAnything...] => .undefined)
         XCTAssertFalse([.integer, .boolean...] => .undefined >= [.number...] => .undefined)
-        XCTAssertFalse([.anything...] => .undefined >= [.integer...] => .undefined)
-        XCTAssertFalse([.integer, .anything...] => .undefined >= [.integer...] => .undefined)
+        XCTAssertFalse([.jsAnything...] => .undefined >= [.integer...] => .undefined)
+        XCTAssertFalse([.integer, .jsAnything...] => .undefined >= [.integer...] => .undefined)
 
-        // Optional parameters behave mostlu identical to rest parameters, except that they
+        // Optional parameters behave mostly identical to rest parameters, except that they
         // are only expanded once.
         XCTAssert([] => .undefined >= [.opt(.integer), .opt(.float)] => .undefined)
-        XCTAssert([.opt(.integer)] => .undefined >= [.opt(.anything)] => .undefined)
+        XCTAssert([.opt(.integer)] => .undefined >= [.opt(.jsAnything)] => .undefined)
         XCTAssert([.opt(.integer)] => .undefined >= [] => .undefined)
-        XCTAssert([.string, .opt(.integer)] => .undefined >= [.string, .anything...] => .undefined)
+        XCTAssert([.string, .opt(.integer)] => .undefined >= [.string, .jsAnything...] => .undefined)
         XCTAssert([.integer] => .undefined >= [.opt(.integer)] => .undefined)
         XCTAssertFalse([.integer, .integer] => .undefined >= [.opt(.integer), .opt(.string)] => .undefined)
         XCTAssertFalse([.opt(.integer)] => .undefined >= [.integer] => .undefined)
@@ -962,14 +986,41 @@ class TypeSystemTests: XCTestCase {
         // Test return value subsumption: sig1 subsumes sig2 if sig1's return value subsumes that
         // of sig2. For example, a function returning .integer is a function returning a .number.
         XCTAssert([] => .number >= [] => .integer)
-        XCTAssert([] => .anything >= [] => .integer)
+        XCTAssert([] => .jsAnything >= [] => .integer)
         XCTAssertFalse([] => .integer >= [] => .number)
-        XCTAssertFalse([] => .integer >= [] => .anything)
+        XCTAssertFalse([] => .integer >= [] => .jsAnything)
 
         // Check that the unknown function signature is subsumed by most other signatures.
-        XCTAssert(Signature.forUnknownFunction <= [] => .anything)
-        XCTAssert(Signature.forUnknownFunction <= [.anything] => .anything)
-        XCTAssert(Signature.forUnknownFunction <= [.integer, .string] => .anything)
+        XCTAssert(Signature.forUnknownFunction <= [] => .jsAnything)
+        XCTAssert(Signature.forUnknownFunction <= [.jsAnything] => .jsAnything)
+        XCTAssert(Signature.forUnknownFunction <= [.integer, .string] => .jsAnything)
+    }
+
+    func testCustomGroupsSubsumption() {
+        // This is ok, see also the comment in TypeSystem.subsumes.
+        // Essentially, we have these ObjectGroups such that we can ask them about their types for more informed CodeGeneration.
+        // Previously we would just say that all objects are the same anyways.
+        // Now we want them to be interchangeable, e.g. for splicing in JS.
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Object0").Is(.object(ofGroup: "_fuzz_Object1")))
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_WasmExports0").Is(.object(ofGroup: "_fuzz_WasmExports1")))
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_WasmModule0").Is(.object(ofGroup: "_fuzz_WasmModule1")))
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Class1").Is(.object(ofGroup: "_fuzz_Class0")))
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Constructor1").Is(.object(ofGroup: "_fuzz_Constructor0")))
+
+        XCTAssertFalse(ILType.object(ofGroup: "_fuzz_Constructor1").Is(.object(ofGroup: "_fuzz_Class0")))
+        XCTAssertFalse(ILType.object(ofGroup: "_fuzz_Class1").Is(.object(ofGroup: "_fuzz_Constructor1")))
+
+
+        // Negative tests to make sure they don't subsume if they don't subsume based on properties / methods..
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Object1", withMethods: ["a"]).Is(.object(ofGroup: "_fuzz_Object0")))
+        XCTAssertFalse(ILType.object(ofGroup: "_fuzz_Object1").Is(.object(ofGroup: "_fuzz_Object0", withMethods: ["a"])))
+
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Class1", withProperties: ["a"]).Is(.object(ofGroup: "_fuzz_Class0")))
+        XCTAssertFalse(ILType.object(ofGroup: "_fuzz_Class1").Is(.object(ofGroup: "_fuzz_Class0", withProperties: ["a"])))
+
+        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Object1", withProperties: ["a", "b"]).Is(.object(ofGroup: "_fuzz_Object0", withProperties: ["a"])))
+        XCTAssertFalse(ILType.object(ofGroup: "_fuzz_Object1", withProperties: ["b"]).Is(.object(ofGroup: "_fuzz_Object0", withProperties: ["a"])))
+
     }
 
     func testTypeDescriptions() {
@@ -1001,21 +1052,24 @@ class TypeSystemTests: XCTestCase {
 
         // Test function and constructor types
         XCTAssertEqual(ILType.function().description, ".function()")
-        XCTAssertEqual(ILType.function([.rest(.anything)] => .anything).description, ".function([.anything...] => .anything)")
+        XCTAssertEqual(ILType.function([.rest(.jsAnything)] => .jsAnything).description, ".function([.jsAnything...] => .jsAnything)")
         XCTAssertEqual(ILType.function([.float, .opt(.integer)] => .object()).description, ".function([.float, .opt(.integer)] => .object())")
-        XCTAssertEqual(ILType.function([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object())")
+        XCTAssertEqual(ILType.function([.integer, .boolean, .rest(.jsAnything)] => .object()).description, ".function([.integer, .boolean, .jsAnything...] => .object())")
 
         XCTAssertEqual(ILType.constructor().description, ".constructor()")
-        XCTAssertEqual(ILType.constructor([.rest(.anything)] => .anything).description, ".constructor([.anything...] => .anything)")
-        XCTAssertEqual(ILType.constructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".constructor([.integer, .boolean, .anything...] => .object())")
+        XCTAssertEqual(ILType.constructor([.rest(.jsAnything)] => .jsAnything).description, ".constructor([.jsAnything...] => .jsAnything)")
+        XCTAssertEqual(ILType.constructor([.integer, .boolean, .rest(.jsAnything)] => .object()).description, ".constructor([.integer, .boolean, .jsAnything...] => .object())")
 
         XCTAssertEqual(ILType.functionAndConstructor().description, ".function() + .constructor()")
-        XCTAssertEqual(ILType.functionAndConstructor([.rest(.anything)] => .anything).description, ".function([.anything...] => .anything) + .constructor([.anything...] => .anything)")
-        XCTAssertEqual(ILType.functionAndConstructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object()) + .constructor([.integer, .boolean, .anything...] => .object())")
+        XCTAssertEqual(ILType.functionAndConstructor([.rest(.jsAnything)] => .jsAnything).description, ".function([.jsAnything...] => .jsAnything) + .constructor([.jsAnything...] => .jsAnything)")
+        XCTAssertEqual(ILType.functionAndConstructor([.integer, .boolean, .rest(.jsAnything)] => .object()).description, ".function([.integer, .boolean, .jsAnything...] => .object()) + .constructor([.integer, .boolean, .jsAnything...] => .object())")
+
+        XCTAssertEqual(ILType.unboundFunction([.integer, .boolean, .rest(.jsAnything)] => .object(), receiver: .object()).description, ".unboundFunction([.integer, .boolean, .jsAnything...] => .object(), receiver: .object())")
+        XCTAssertEqual(ILType.unboundFunction().description, ".unboundFunction(nil, receiver: nil)")
 
         // Test other "well-known" types
         XCTAssertEqual(ILType.nothing.description, ".nothing")
-        XCTAssertEqual(ILType.anything.description, ".anything")
+        XCTAssertEqual(ILType.jsAnything.description, ".jsAnything")
 
         XCTAssertEqual(ILType.primitive.description, ".primitive")
         XCTAssertEqual(ILType.number.description, ".number")
@@ -1036,23 +1090,239 @@ class TypeSystemTests: XCTestCase {
         let strObj = ILType.string + ILType.object(withProperties: ["foo"])
         XCTAssertEqual(strObj.description, ".string + .object(withProperties: [\"foo\"])")
 
-        let funcObj = ILType.object(withProperties: ["foo"], withMethods: ["m"]) + ILType.function([.integer, .rest(.anything)] => .boolean)
-        XCTAssertEqual(funcObj.description, ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .anything...] => .boolean)")
+        let funcObj = ILType.object(withProperties: ["foo"], withMethods: ["m"]) + ILType.function([.integer, .rest(.jsAnything)] => .boolean)
+        XCTAssertEqual(funcObj.description, ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .jsAnything...] => .boolean)")
 
-        let funcConstrObj = ILType.object(withProperties: ["foo"], withMethods: ["m"]) + ILType.functionAndConstructor([.integer, .rest(.anything)] => .boolean)
-        XCTAssertEqual(funcConstrObj.description, ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .anything...] => .boolean) + .constructor([.integer, .anything...] => .boolean)")
+        let funcConstrObj = ILType.object(withProperties: ["foo"], withMethods: ["m"]) + ILType.functionAndConstructor([.integer, .rest(.jsAnything)] => .boolean)
+        XCTAssertEqual(funcConstrObj.description, ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .jsAnything...] => .boolean) + .constructor([.integer, .jsAnything...] => .boolean)")
 
         // Test union of merged types
-        let strObjOrFuncObj = (ILType.string + ILType.object(withProperties: ["foo"])) | (ILType.function([.rest(.anything)] => .float) + ILType.object(withProperties: ["foo"]))
+        let strObjOrFuncObj = (ILType.string + ILType.object(withProperties: ["foo"])) | (ILType.function([.rest(.jsAnything)] => .float) + ILType.object(withProperties: ["foo"]))
         XCTAssertEqual(strObjOrFuncObj.description, ".string + .object(withProperties: [\"foo\"]) | .object(withProperties: [\"foo\"]) + .function()")
+
+        let nullExn = ILType.wasmRef(.Abstract(.WasmExn), nullability: true)
+        let nonNullAny = ILType.wasmRef(.Abstract(.WasmAny), nullability: false)
+        XCTAssertEqual(nullExn.description, ".wasmRef(.Abstract(null WasmExn))")
+        XCTAssertEqual(nonNullAny.description, ".wasmRef(.Abstract(WasmAny))")
+
+        let arrayDesc = WasmArrayTypeDescription(elementType: .wasmi32, mutability: false, typeGroupIndex: 0)
+        let arrayRef = ILType.wasmIndexRef(arrayDesc, nullability: true)
+        XCTAssertEqual(arrayRef.description, ".wasmRef(null Index 0 Array[immutable .wasmi32])")
+        let nullableSelfRef = ILType.wasmRef(.Index(.init(WasmTypeDescription.selfReference)), nullability: true)
+        let structDesc = WasmStructTypeDescription(fields: [
+            .init(type: .wasmf32, mutability: true),
+            .init(type: nullableSelfRef, mutability: false), // unresolved
+            .init(type: arrayRef, mutability: true)
+        ], typeGroupIndex: 1)
+        let structRef = ILType.wasmIndexRef(structDesc, nullability: false)
+        XCTAssertEqual(structRef.description,
+            ".wasmRef(Index 1 Struct[mutable .wasmf32, " +
+            "immutable .wasmRef(null Index selfReference), mutable .wasmRef(null Index 0 Array)])")
+        // Create a cycle (a "resolved" self reference) for an array element type.
+        arrayDesc.elementType = arrayRef
+        XCTAssertEqual(arrayRef.description,
+            ".wasmRef(null Index 0 Array[immutable .wasmRef(null Index 0 Array)])")
+        // Create a cycle for a struct field type.
+        structDesc.fields[1].type = .wasmIndexRef(structDesc, nullability: true)
+        XCTAssertEqual(structRef.description,
+            ".wasmRef(Index 1 Struct[mutable .wasmf32, " +
+            "immutable .wasmRef(null Index 1 Struct), mutable .wasmRef(null Index 0 Array)])")
+
+        // Type definitions print the same thing as references just with .wasmTypeDef instead of
+        // .wasmRef.
+        let arrayDef = ILType.wasmTypeDef(description: arrayDesc)
+        XCTAssertEqual(arrayDef.description,
+            ".wasmTypeDef(0 Array[immutable .wasmRef(null Index 0 Array)])")
+        let structDef = ILType.wasmTypeDef(description: structDesc)
+        XCTAssertEqual(structDef.description,
+            ".wasmTypeDef(1 Struct[mutable .wasmf32, " +
+            "immutable .wasmRef(null Index 1 Struct), mutable .wasmRef(null Index 0 Array)])")
+
+        // A generic index type without a type description.
+        // These are e.g. used by the element types for arrays and structs inside the operation as
+        // the operation doesn't know about the actual type definition inputs.
+        let nullableGenericIndexRef = ILType.wasmRef(.Index(), nullability: true)
+        XCTAssertEqual(nullableGenericIndexRef.description, ".wasmRef(null Index)")
+        XCTAssertEqual(ILType.anyNonNullableIndexRef.description, ".wasmRef(Index)")
     }
 
     func testWasmSubsumptionRules() {
-        let wasmTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExternRef]
+        let wasmTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExternRef, .wasmI31Ref, .wasmExnRef]
         // Make sure that no Wasm type is subsumed by (JS-)anything.
         for t in wasmTypes {
-            XCTAssertEqual(t <= .anything, false)
+            XCTAssertEqual(t <= .jsAnything, false)
         }
+    }
+
+    func testWasmTypeExtensionSubsumptionRules() {
+        let arrayi32Desc = WasmArrayTypeDescription(elementType: .wasmi32, mutability: true, typeGroupIndex: 0)
+        let arrayi64Desc = WasmArrayTypeDescription(elementType: .wasmi64, mutability: true, typeGroupIndex: 0)
+
+        // Test Wasm reference type definitions.
+        XCTAssertNotEqual(ILType.wasmTypeDef(), ILType.wasmTypeDef(description: arrayi32Desc))
+        XCTAssertNotEqual(ILType.wasmTypeDef(description: arrayi64Desc),
+                          ILType.wasmTypeDef(description: arrayi32Desc))
+        XCTAssertEqual(ILType.wasmTypeDef(description: arrayi32Desc),
+                       ILType.wasmTypeDef(description: arrayi32Desc))
+        XCTAssert(ILType.wasmTypeDef(description:arrayi32Desc) <= ILType.wasmTypeDef())
+        XCTAssert(ILType.wasmTypeDef(description: arrayi32Desc) <=
+                  ILType.wasmTypeDef(description: arrayi32Desc))
+        XCTAssertFalse(ILType.wasmTypeDef(description: arrayi32Desc) <=
+                       ILType.wasmTypeDef(description: arrayi64Desc))
+
+        // Test Wasm references.
+        XCTAssert(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmRef(.Index(), nullability: true))
+        XCTAssert(ILType.wasmRef(.Index(), nullability: false) <= ILType.wasmRef(.Index(), nullability: false))
+        XCTAssert(ILType.wasmRef(.Index(), nullability: false) <= ILType.wasmRef(.Index(), nullability: true))
+        XCTAssertFalse(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmRef(.Index(), nullability: false))
+        XCTAssertFalse(ILType.wasmi32 <= ILType.wasmRef(.Index(), nullability: true))
+        XCTAssertFalse(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmi32)
+        XCTAssertFalse(ILType.wasmIndexRef(arrayi32Desc, nullability: true)
+            >= ILType.wasmIndexRef(arrayi64Desc, nullability: true))
+        XCTAssertFalse(ILType.wasmIndexRef(arrayi64Desc, nullability: true)
+            >= ILType.wasmIndexRef(arrayi32Desc, nullability: true))
+        XCTAssert(ILType.wasmIndexRef(arrayi32Desc, nullability: true)
+            >= ILType.wasmIndexRef(arrayi32Desc, nullability: true))
+        XCTAssert(ILType.wasmIndexRef(arrayi32Desc, nullability: true)
+            >= ILType.wasmIndexRef(arrayi32Desc, nullability: false))
+        XCTAssert(ILType.wasmRef(.Index(), nullability: true) >= ILType.wasmIndexRef(arrayi32Desc, nullability: true))
+        XCTAssertFalse(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmIndexRef(arrayi32Desc, nullability: true))
+
+        XCTAssert(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmGenericRef)
+        XCTAssertFalse(ILType.wasmGenericRef <= ILType.wasmRef(.Index(), nullability: true))
+
+        // Test nullability rules for abstract Wasm types.
+        for heapType: WasmAbstractHeapType in WasmAbstractHeapType.allCases {
+            let nullable = ILType.wasmRef(.Abstract(heapType), nullability: true)
+            let nonNullable = ILType.wasmRef(.Abstract(heapType), nullability: false)
+            XCTAssert(nonNullable.Is(nullable))
+            XCTAssertFalse(nullable.Is(nonNullable))
+            XCTAssertEqual(nullable.union(with: nonNullable), nullable)
+            XCTAssertEqual(nonNullable.union(with: nullable), nullable)
+            XCTAssertEqual(nullable.intersection(with: nonNullable), nonNullable)
+            XCTAssertEqual(nonNullable.intersection(with: nullable), nonNullable)
+        }
+    }
+
+    func testWasmTypeExtensionUnionTypeExtensionVsWasmTypeExtension() {
+        let tagA = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi32]))
+        let tagB = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi64]))
+        // The union with itself doesn't modify the type.
+        XCTAssertEqual(tagA.union(with: tagA), tagA)
+        // The union of two distinct wasm tags / WasmTypeExtensions leads to the removal of the wasm
+        // type extension. To make the types easier to use (e.g. a catch might just want to search
+        // for any wasm tag by doing `required(.object(ofGroup: "WasmTag"))` and expect to get a tag
+        // with a valid type extension), if the WasmTypeExtension is removed, also any object group
+        // is invalidated on the TypeExtension.
+        let tagUnion = tagA.union(with: tagB)
+        XCTAssertNil(tagUnion.wasmType)
+        XCTAssertNil(tagUnion.group)
+        // The intersection of two unequal tags always leads to an invalid type (as tags never
+        // subsume each other).
+        let tagIntersection = tagA.intersection(with: tagB)
+        XCTAssertEqual(tagIntersection, .nothing)
+    }
+
+    func testWasmAbstractHeapTypeSubsumptionRules() {
+        let groupAny: [WasmAbstractHeapType] =
+            [.WasmAny, .WasmEq, .WasmI31, .WasmStruct, .WasmArray, .WasmNone]
+        let groupExtern: [WasmAbstractHeapType] = [.WasmExtern, .WasmNoExtern]
+        let groupFunc: [WasmAbstractHeapType] = [.WasmFunc, .WasmNoFunc]
+        let groupExn: [WasmAbstractHeapType] = [.WasmExn, .WasmNoExn]
+        let allGroups = [groupAny, groupExtern, groupFunc, groupExn]
+        let allTypes = allGroups.joined()
+        // If this fails, please extend the arrays above with the newly added type(s).
+        XCTAssert(WasmAbstractHeapType.allCases.allSatisfy(allTypes.contains))
+
+        // All types in the same type group share the same bottom type.
+        XCTAssert(groupAny.allSatisfy {$0.getBottom() == .WasmNone})
+        XCTAssert(groupExtern.allSatisfy {$0.getBottom() == .WasmNoExtern})
+        XCTAssert(groupFunc.allSatisfy {$0.getBottom() == .WasmNoFunc})
+        XCTAssert(groupExn.allSatisfy {$0.getBottom() == .WasmNoExn})
+
+        // The union and intersection of of two unrelated types are nil.
+        for groupA in allGroups {
+            for groupB in allGroups where groupA != groupB {
+                for typeA in groupA {
+                    for typeB in groupB {
+                        XCTAssertNil(typeA.union(typeB), "a=\(typeA) b=\(typeB)")
+                        XCTAssertNil(typeA.intersection(typeB), "a=\(typeA) b=\(typeB)")
+                    }
+                }
+            }
+        }
+
+        for type in allTypes {
+            XCTAssertEqual(type.union(type), type)
+            XCTAssertEqual(type.union(type.getBottom()), type)
+            XCTAssertEqual(type.getBottom().union(type), type)
+            XCTAssertEqual(type.intersection(type), type)
+            XCTAssertEqual(type.intersection(type.getBottom()), type.getBottom())
+        }
+
+        // Testing a few combinations.
+        XCTAssertEqual(WasmAbstractHeapType.WasmAny.union(.WasmEq), .WasmAny)
+        XCTAssertEqual(WasmAbstractHeapType.WasmStruct.union(.WasmArray), .WasmEq)
+        XCTAssertEqual(WasmAbstractHeapType.WasmI31.union(.WasmArray), .WasmEq)
+        XCTAssertEqual(WasmAbstractHeapType.WasmArray.union(.WasmEq), .WasmEq)
+        XCTAssertEqual(WasmAbstractHeapType.WasmArray.intersection(.WasmStruct), .WasmNone)
+        XCTAssertEqual(WasmAbstractHeapType.WasmI31.intersection(.WasmStruct), .WasmNone)
+        XCTAssertEqual(WasmAbstractHeapType.WasmI31.intersection(.WasmEq), .WasmI31)
+        XCTAssertEqual(WasmAbstractHeapType.WasmAny.intersection(.WasmArray), .WasmArray)
+
+        // Tests on the whole ILType.
+        let ref = {t in ILType.wasmRef(.Abstract(t), nullability: false)}
+        let refNull = {t in ILType.wasmRef(.Abstract(t), nullability: false)}
+        for type in allTypes {
+            let refT = ref(type)
+            let refNullT = refNull(type)
+            XCTAssertEqual(refT.union(with: refNullT), refNullT)
+            XCTAssertEqual(refNullT.union(with: refT), refNullT)
+            XCTAssertEqual(refT.union(with: refT), refT)
+            XCTAssertEqual(refNullT.union(with: refNullT), refNullT)
+            XCTAssertEqual(refT.intersection(with: refT), refT)
+            XCTAssertEqual(refNullT.intersection(with: refNullT), refNullT)
+            XCTAssertEqual(refT.intersection(with: refNullT), refT)
+            XCTAssertEqual(refNullT.intersection(with: refT), refT)
+        }
+
+        XCTAssertEqual(ref(.WasmAny).union(with: refNull(.WasmEq)), refNull(.WasmAny))
+        XCTAssertEqual(ref(.WasmStruct).union(with: ref(.WasmArray)), ref(.WasmEq))
+        // We should never do this for the type information of any Variable as .wasmGenericRef
+        // cannot be encoded in the Wasm module and any instruction that leads to such a static type
+        // is "broken". However, we will still need to allow this union type if we want to be able
+        // to request a .required(.wasmGenericRef) for operations like WasmRefIsNull.
+        XCTAssertEqual(ref(.WasmI31).union(with: refNull(.WasmExn)), .wasmGenericRef)
+
+        XCTAssertEqual(ref(.WasmAny).intersection(with: refNull(.WasmEq)), ref(.WasmEq))
+        XCTAssertEqual(refNull(.WasmI31).intersection(with: refNull(.WasmStruct)), refNull(.WasmNone))
+        // Note that `ref none` is a perfectly valid type in Wasm but such a reference can never be
+        // constructed.
+        XCTAssertEqual(ref(.WasmArray).intersection(with: refNull(.WasmStruct)), ref(.WasmNone))
+        XCTAssertEqual(refNull(.WasmArray).intersection(with: ref(.WasmAny)), ref(.WasmArray))
+    }
+
+    func testUnboundFunctionSubsumptionRules() {
+        XCTAssertEqual(ILType.unboundFunction(), .unboundFunction())
+        XCTAssertNotEqual(ILType.unboundFunction([] => .object()), .unboundFunction())
+        XCTAssertNotEqual(ILType.unboundFunction(receiver: .object()), .unboundFunction())
+        XCTAssert(ILType.unboundFunction(receiver: .object()).Is(.unboundFunction()))
+        XCTAssertFalse(ILType.unboundFunction().Is(.unboundFunction(receiver: .object())))
+        XCTAssert(ILType.unboundFunction(receiver: .object()).Is(.unboundFunction(receiver: .jsAnything)))
+        XCTAssertFalse(ILType.unboundFunction(receiver: .jsAnything).Is(.unboundFunction(receiver: .object())))
+
+        let receiverNil = ILType.unboundFunction()
+        let receiverObject = ILType.unboundFunction(receiver: .object())
+        let receiverArray = ILType.unboundFunction(receiver: .object(ofGroup: "Array"))
+
+        XCTAssertEqual(receiverArray.union(with: receiverObject), receiverArray)
+        XCTAssertEqual(receiverObject.union(with: receiverArray), receiverArray)
+        XCTAssertEqual(receiverNil.union(with: receiverObject), receiverNil)
+        XCTAssertEqual(receiverObject.union(with: receiverNil), receiverNil)
+        XCTAssertEqual(receiverObject.intersection(with: receiverArray), receiverObject)
+        XCTAssertEqual(receiverArray.intersection(with: receiverObject), receiverObject)
+        XCTAssertEqual(receiverNil.intersection(with: receiverObject), receiverObject)
+        XCTAssertEqual(receiverObject.intersection(with: receiverNil), receiverObject)
     }
 
     let primitiveTypes: [ILType] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
@@ -1067,7 +1337,7 @@ class TypeSystemTests: XCTestCase {
                                .bigint,
                                .regexp,
                                .iterable,
-                               .anything,
+                               .jsAnything,
                                .nothing,
                                .object(),
                                .object(ofGroup: "A"),
@@ -1102,40 +1372,60 @@ class TypeSystemTests: XCTestCase {
                                .object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]),
                                .function(),
                                .function([.string] => .string),
-                               .function([.string] => .anything),
+                               .function([.string] => .jsAnything),
                                .function([.primitive] => .string),
-                               .function([.string, .string] => .anything),
+                               .function([.string, .string] => .jsAnything),
                                .function([.integer] => .number),
-                               .function([.anything...] => .anything),
-                               .function([.integer, .string, .opt(.anything)] => .float),
+                               .function([.jsAnything...] => .jsAnything),
+                               .function([.integer, .string, .opt(.jsAnything)] => .float),
+                               .unboundFunction(),
+                               .unboundFunction([.string] => .string),
+                               .unboundFunction([.string] => .string, receiver: .object()),
+                               .unboundFunction([.string] => .jsAnything, receiver: .object()),
                                .constructor(),
                                .constructor([.string] => .string),
-                               .constructor([.string] => .anything),
+                               .constructor([.string] => .jsAnything),
                                .constructor([.primitive] => .string),
-                               .constructor([.string, .string] => .anything),
+                               .constructor([.string, .string] => .jsAnything),
                                .constructor([.integer] => .number),
-                               .constructor([.anything...] => .object()),
-                               .constructor([.integer, .string, .opt(.anything)] => .object()),
+                               .constructor([.jsAnything...] => .object()),
+                               .constructor([.integer, .string, .opt(.jsAnything)] => .object()),
                                .functionAndConstructor(),
                                .functionAndConstructor([.string] => .string),
-                               .functionAndConstructor([.string] => .anything),
+                               .functionAndConstructor([.string] => .jsAnything),
                                .functionAndConstructor([.primitive] => .string),
-                               .functionAndConstructor([.string, .string] => .anything),
+                               .functionAndConstructor([.string, .string] => .jsAnything),
                                .functionAndConstructor([.integer] => .number),
-                               .functionAndConstructor([.anything...] => .anything),
-                               .functionAndConstructor([.integer, .string, .opt(.anything)] => .object()),
+                               .functionAndConstructor([.jsAnything...] => .jsAnything),
+                               .functionAndConstructor([.integer, .string, .opt(.jsAnything)] => .object()),
                                .number,
                                .primitive,
                                .string | .object(),
                                .string | .object(withProperties: ["foo"]),
                                .object(withProperties: ["foo"]) | .function(),
-                               .object(withProperties: ["foo"]) | .constructor([.rest(.anything)] => .object()),
+                               .object(withProperties: ["foo"]) | .constructor([.rest(.jsAnything)] => .object()),
                                .primitive | .object() | .function() | .constructor(),
                                .string + .object(withProperties: ["foo", "bar"]),
                                .integer + .object(withProperties: ["foo"], withMethods: ["m"]),
-                               .object(withProperties: ["foo", "bar"]) + .function([.integer] => .anything),
-                               .object(ofGroup: "A", withProperties: ["foo", "bar"]) + .constructor([.integer] => .anything),
-                               .object(withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .anything),
-                               .object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .anything),
+                               .object(withProperties: ["foo", "bar"]) + .function([.integer] => .jsAnything),
+                               .object(ofGroup: "A", withProperties: ["foo", "bar"]) + .constructor([.integer] => .jsAnything),
+                               .object(withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .jsAnything),
+                               .object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .jsAnything),
+                               // Wasm types
+                               .wasmAnything,
+                               .wasmi32,
+                               .wasmf32,
+                               .wasmi64,
+                               .wasmf64,
+                               .wasmFuncRef,
+                               .wasmExternRef,
+                               .wasmExnRef,
+                               .wasmI31Ref,
+                               .wasmRefI31,
+                               .wasmFunctionDef([.wasmi32] => [.wasmi64]),
+                               .wasmFunctionDef([.wasmf32] => [.wasmi32]),
+                               .wasmFunctionDef([.wasmExternRef] => [.wasmExternRef]),
+                               .wasmMemory(limits: Limits(min: 10)),
+                               .wasmMemory(limits: Limits(min: 10, max: 20)),
     ]
 }

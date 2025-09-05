@@ -19,10 +19,26 @@ import XCTest
 extension Program: @retroactive Equatable {
     // Fairly expensive equality testing, but it's only needed for testing anyway... :)
     public static func == (lhs: Program, rhs: Program) -> Bool {
-        // We consider two programs to be equal if their code is equal
-        let code1 = lhs.code.map({ $0.asProtobuf() })
-        let code2 = rhs.code.map({ $0.asProtobuf() })
-        return code1 == code2
+        // Quick check, they have to be of equal length.
+        guard lhs.code.count == rhs.code.count else {
+            return false
+        }
+
+        do {
+            for (instrA, instrB) in zip(lhs.code, rhs.code) {
+                // We need to compare on a binary level as the Protobuf datastructure can contain floats for i.e. LoadFloat and Constf64 instructions. If those contain a NaN, they won't be equal to one another although we only care about their binary representation being equal.
+                // This might also flake and not deterministically serialize super small floats(?)
+                let instrASerialized = try instrA.asProtobuf().serializedData()
+                let instrBSerialized = try instrB.asProtobuf().serializedData()
+                if instrASerialized != instrBSerialized {
+                    return false
+                }
+            }
+
+            return true
+        } catch {
+            fatalError("foo")
+        }
     }
 }
 
@@ -44,3 +60,29 @@ func GetJavaScriptExecutorOrSkipTest(type: JavaScriptExecutor.ExecutorType, with
     }
     return runner
 }
+
+
+func buildAndLiftProgram(withLiftingOptions: LiftingOptions, buildFunc: (ProgramBuilder) -> ()) -> String {
+    let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+    // We have to use the proper JavaScriptEnvironment here.
+    // This ensures that we use the available builtins.
+    let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+    let b = fuzzer.makeBuilder()
+
+    buildFunc(b)
+
+    // AssertThat prog == Deserialize(Serilize(prog))
+    let prog = b.finalize()
+    let serializedBytes = try! prog.asProtobuf().serializedData()
+    let deserialized = try! Program(from: Fuzzilli_Protobuf_Program(serializedBytes: serializedBytes))
+    XCTAssertEqual(prog, deserialized)
+
+    return fuzzer.lifter.lift(prog, withOptions: withLiftingOptions)
+}
+
+// TODO(pawkra): use it in the whole WasmTests.swift file.
+func buildAndLiftProgram(buildFunc: (ProgramBuilder) -> ()) -> String {
+    return buildAndLiftProgram(withLiftingOptions: [], buildFunc: buildFunc)
+}
+

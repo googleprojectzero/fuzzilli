@@ -98,6 +98,7 @@ Options:
     --tag=tag                    : Optional string tag associated with this instance which will be stored in the settings.json file as well as in crashing samples.
                                    This can for example be used to remember the target revision that is being fuzzed.
     --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
+    --forDifferentialFuzzing     : Enable additional features for better support of external differential fuzzing.
 
 """)
     exit(0)
@@ -155,6 +156,7 @@ let argumentRandomization = args.has("--argumentRandomization")
 let additionalArguments = args["--additionalArguments"] ?? ""
 let tag = args["--tag"]
 let enableWasm = args.has("--wasm")
+let forDifferentialFuzzing = args.has("--forDifferentialFuzzing")
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -440,13 +442,6 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     // Program templates to use.
     var programTemplates = profile.additionalProgramTemplates
 
-    // Filter out ProgramTemplates that will use Wasm if we have not enabled it.
-    if !enableWasm {
-        programTemplates = programTemplates.filter {
-            !($0 is WasmProgramTemplate)
-        }
-    }
-
     for template in ProgramTemplates {
         guard let weight = programTemplateWeights[template.name] else {
             print("Missing weight for program template \(template.name) in ProgramTemplateWeights.swift")
@@ -454,6 +449,13 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         }
 
         programTemplates.append(template, withWeight: weight)
+    }
+
+    // Filter out ProgramTemplates that will use Wasm if we have not enabled it.
+    if !enableWasm {
+        programTemplates = programTemplates.filter {
+            !($0 is WasmProgramTemplate)
+        }
     }
 
     // The environment containing available builtins, property names, and method names.
@@ -469,7 +471,8 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     let lifter = JavaScriptLifter(prefix: profile.codePrefix,
                                   suffix: profile.codeSuffix,
                                   ecmaVersion: profile.ecmaVersion,
-                                  environment: environment)
+                                  environment: environment,
+                                  alwaysEmitVariables: configuration.forDifferentialFuzzing)
 
     // The evaluator to score produced samples.
     let evaluator = ProgramCoverageEvaluator(runner: runner)
@@ -511,7 +514,9 @@ let mainConfig = Configuration(arguments: CommandLine.arguments,
                                enableDiagnostics: diagnostics,
                                enableInspection: inspect,
                                staticCorpus: staticCorpus,
-                               tag: tag)
+                               tag: tag,
+                               isWasmEnabled: enableWasm,
+                               storagePath: storagePath)
 
 let fuzzer = makeFuzzer(with: mainConfig)
 
@@ -644,7 +649,9 @@ let workerConfig = Configuration(arguments: CommandLine.arguments,
                                  enableDiagnostics: false,
                                  enableInspection: inspect,
                                  staticCorpus: staticCorpus,
-                                 tag: tag)
+                                 tag: tag,
+                                 isWasmEnabled: enableWasm,
+                                 storagePath: storagePath)
 
 for _ in 1..<numJobs {
     let worker = makeFuzzer(with: workerConfig)

@@ -131,12 +131,12 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
         }
 
         var properties = ["a"]
-        var values = [b.randomVariable()]
+        var values = [b.randomJsVariable()]
         for _ in 0..<3 {
             let property = chooseUniform(from: propertyNames)
             guard !properties.contains(property) else { continue }
             properties.append(property)
-            values.append(b.randomVariable())
+            values.append(b.randomJsVariable())
         }
         assert(Set(properties).count == values.count)
         return (properties, values)
@@ -207,24 +207,24 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
         assert(b.type(of: obj).Is(objType))
         let numProperties = Int.random(in: 1...3)
         for _ in 0..<numProperties {
-            b.setProperty(chooseUniform(from: propertyNames), of: obj, to: b.randomVariable())
+            b.setProperty(chooseUniform(from: propertyNames), of: obj, to: b.randomJsVariable())
         }
     }
     let propertyConfigureGenerator = CodeGenerator("PropertyConfigure", inputs: .required(objType)) { b, obj in
         assert(b.type(of: obj).Is(objType))
-        b.configureProperty(chooseUniform(from: propertyNames), of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomVariable()))
+        b.configureProperty(chooseUniform(from: propertyNames), of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomJsVariable()))
     }
     let functionDefinitionGenerator = RecursiveCodeGenerator("FunctionDefinition") { b in
         // We use either a randomly generated signature or a fixed on that ensures we use our object type frequently.
         var parameters = b.randomParameters()
         let haveVisibleObjects = b.visibleVariables.contains(where: { b.type(of: $0).Is(objType) })
         if probability(0.5) && haveVisibleObjects {
-            parameters = .parameters(.plain(objType), .plain(objType), .anything, .anything)
+            parameters = .parameters(.plain(objType), .plain(objType), .jsAnything, .jsAnything)
         }
 
         let f = b.buildPlainFunction(with: parameters) { params in
             b.buildRecursive()
-            b.doReturn(b.randomVariable())
+            b.doReturn(b.randomJsVariable())
         }
 
         for _ in 0..<3 {
@@ -291,7 +291,7 @@ fileprivate let ValueSerializerFuzzer = ProgramTemplate("ValueSerializerFuzzer")
     let Uint8Array = b.createNamedVariable(forBuiltin: "Uint8Array")
 
     // Serialize a random object
-    let content = b.callMethod("serialize", on: serializer, withArgs: [b.randomVariable()])
+    let content = b.callMethod("serialize", on: serializer, withArgs: [b.randomJsVariable()])
     let u8 = b.construct(Uint8Array, withArgs: [content])
 
     // Choose a random byte to change
@@ -415,6 +415,131 @@ fileprivate let RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
     b.build(n: 15)
 }
 
+// Emits calls with recursive calls of limited depth.
+fileprivate let LazyDeoptFuzzer = ProgramTemplate("LazyDeoptFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 30)
+
+    let counter = b.loadInt(0)
+    let max = b.loadInt(Int64.random(in: 2...5))
+    let params = b.randomParameters()
+    let dummyFct = b.buildPlainFunction(with: params) { args in
+        b.loadString("Dummy function for emitting recursive call")
+    }
+    let realFct = b.buildPlainFunction(with: params) { args in
+        b.build(n: 10)
+
+        b.buildIf(b.compare(counter, with: max, using: .lessThan)) {
+            b.reassign(counter, to: b.binary(counter, b.loadInt(1), with: .Add))
+            b.callFunction(dummyFct, withArgs: b.randomArguments(forCalling: dummyFct))
+        }
+        // Mark the function for deoptimization. Due to the recursive pattern above, on the outer
+        // stack frames this should trigger a lazy deoptimization.
+        b.eval("%DeoptimizeNow();");
+        b.build(n: 30)
+        b.doReturn(b.randomJsVariable())
+    }
+
+    // Turn the call into a recursive call.
+    b.reassign(dummyFct, to: realFct)
+    let args = b.randomArguments(forCalling: realFct)
+    b.eval("%PrepareFunctionForOptimization(%@)", with: [realFct]);
+    b.callFunction(realFct, withArgs: args)
+    b.eval("%OptimizeFunctionOnNextCall(%@)", with: [realFct]);
+    // Call the function.
+    b.callFunction(realFct, withArgs: args)
+}
+
+fileprivate let WasmDeoptFuzzer = WasmProgramTemplate("WasmDeoptFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 10)
+
+    let calleeSignature = b.randomWasmSignature()
+    // The main function takes the table slot index as an argument to call to a different callee one
+    // after the other.
+    let mainSignatureBase = b.randomWasmSignature()
+    let useTable64 = Bool.random()
+    let mainSignature = [useTable64 ? .wasmi64 : .wasmi32] + mainSignatureBase.parameterTypes
+        => mainSignatureBase.outputTypes
+    let numCallees = Int.random(in: 2...5)
+
+    // Emit a TypeGroup to increase the chance for interesting wasm-gc cases.
+    b.wasmDefineTypeGroup() {
+        b.build(n: 10)
+    }
+
+    let wasmModule = b.buildWasmModule { wasmModule in
+        b.build(n: 10)
+        // Emit the callees for the call_indirect
+        let callees = (0..<numCallees).map { _ in
+            wasmModule.addWasmFunction(with: calleeSignature) { function, label, args in
+                b.build(n: 10)
+                return calleeSignature.outputTypes.map(function.findOrGenerateWasmVar)
+            }
+        }
+
+        let table = wasmModule.addTable(
+            elementType: .wasmFuncRef,
+            minSize: numCallees,
+            definedEntries: (0..<numCallees).map {i in .init(indexInTable: i, signature: calleeSignature)},
+            definedEntryValues: callees,
+            isTable64: useTable64)
+
+        wasmModule.addWasmFunction(with: mainSignature) { function, label, args in
+            b.build(n: 10)
+            let callArgs = calleeSignature.parameterTypes.map(function.findOrGenerateWasmVar)
+            function.wasmCallIndirect(signature: calleeSignature, table: table, functionArgs: callArgs, tableIndex: args[0])
+            b.build(n: 10)
+            return mainSignature.outputTypes.map(function.findOrGenerateWasmVar)
+        }
+    }
+
+    let exports = wasmModule.loadExports()
+    let mainFctName = wasmModule.getExportedMethods().last!.0
+    let mainFct = b.getProperty(mainFctName, of: exports)
+    let mainSignatureJS = ProgramBuilder.convertWasmSignatureToJsSignature(mainSignature)
+    for index in (0..<numCallees).shuffled() {
+        var args = b.findOrGenerateArguments(forSignature: mainSignatureJS)
+        args[0] = useTable64 ? b.loadBigInt(Int64(index)) : b.loadInt(Int64(index))
+        b.callFunction(mainFct, withArgs: args)
+        b.eval("%WasmTierUpFunction(%@)", with: [mainFct])
+        b.callFunction(mainFct, withArgs: args)
+    }
+}
+
+fileprivate let WasmTurbofanFuzzer = WasmProgramTemplate("WasmTurbofanFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 10)
+
+    let wasmSignature = b.randomWasmSignature()
+
+    // Emit a TypeGroup to increase the chance for interesting wasm-gc cases.
+    b.wasmDefineTypeGroup() {
+        b.build(n: 10)
+    }
+
+    let wasmModule = b.buildWasmModule { wasmModule in
+        // Have some budget for tables, globals, memories, other functions that can be called, ...
+        b.build(n: 30)
+
+        // Add the function that we are going to call and optimize from JS.
+        wasmModule.addWasmFunction(with: wasmSignature) { function, label, args in
+            b.build(n: 20)
+            return wasmSignature.outputTypes.map(function.findOrGenerateWasmVar)
+        }
+    }
+
+    let exports = wasmModule.loadExports()
+    let wasmFctName = wasmModule.getExportedMethods().last!.0
+    let wasmFct = b.getProperty(wasmFctName, of: exports)
+    let jsSignature = ProgramBuilder.convertWasmSignatureToJsSignature(wasmSignature)
+    var args = b.findOrGenerateArguments(forSignature: jsSignature)
+    b.callFunction(wasmFct, withArgs: args)
+    // Force tier-up (Turbofan compilation).
+    b.eval("%WasmTierUpFunction(%@)", with: [wasmFct])
+    b.callFunction(wasmFct, withArgs: args)
+}
+
 public extension ILType {
     static let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
 
@@ -422,34 +547,34 @@ public extension ILType {
 
     static let jsD8FastCAPI = ILType.object(ofGroup: "D8FastCAPI", withProperties: [], withMethods: ["throw_no_fallback", "add_32bit_int"])
 
-    static let jsD8FastCAPIConstructor = ILType.constructor(Signature(expects: [], returns: ILType.jsD8FastCAPI))
+    static let jsD8FastCAPIConstructor = ILType.constructor([] => .jsD8FastCAPI)
 
     static let gcTypeEnum = ILType.enumeration(ofName: "gcType", withValues: ["minor", "major"])
     static let gcExecutionEnum = ILType.enumeration(ofName: "gcExecution", withValues: ["async", "sync"])
 }
 
-let jsD8 = ObjectGroup(name: "D8", instanceType: .jsD8, properties: ["test" : .jsD8Test], methods: [:])
+fileprivate let jsD8 = ObjectGroup(name: "D8", instanceType: .jsD8, properties: ["test" : .jsD8Test], methods: [:])
 
-let jsD8Test = ObjectGroup(name: "D8Test", instanceType: .jsD8Test, properties: ["FastCAPI": .jsD8FastCAPIConstructor], methods: [:])
+fileprivate let jsD8Test = ObjectGroup(name: "D8Test", instanceType: .jsD8Test, properties: ["FastCAPI": .jsD8FastCAPIConstructor], methods: [:])
 
-let jsD8FastCAPI = ObjectGroup(name: "D8FastCAPI", instanceType: .jsD8FastCAPI, properties: [:],
-        methods:["throw_no_fallback": Signature(expects: [], returns: ILType.integer),
-                 "add_32bit_int": Signature(expects: [Parameter.plain(ILType.integer), Parameter.plain(ILType.integer)], returns: ILType.integer)
+fileprivate let jsD8FastCAPI = ObjectGroup(name: "D8FastCAPI", instanceType: .jsD8FastCAPI, properties: [:],
+        methods:["throw_no_fallback": [] => .integer,
+                 "add_32bit_int": [.integer, .integer] => .integer
     ])
 
-let gcOptions = ObjectGroup(
+fileprivate let gcOptions = ObjectGroup(
     name: "GCOptions",
     instanceType: .object(ofGroup: "GCOptions", withProperties: ["type", "execution"], withMethods: []),
     properties: ["type": .gcTypeEnum,
                  "execution": .gcExecutionEnum],
     methods: [:])
 
-let fastCallables : [(group: ILType, method: String)] = [
+fileprivate let fastCallables : [(group: ILType, method: String)] = [
     (group: .jsD8FastCAPI, method: "throw_no_fallback"),
     (group: .jsD8FastCAPI, method: "add_32bit_int"),
 ]
 
-let WasmFastCallFuzzer = WasmProgramTemplate("WasmFastCallFuzzer") { b in
+fileprivate let WasmFastCallFuzzer = WasmProgramTemplate("WasmFastCallFuzzer") { b in
     b.buildPrefix()
     b.build(n: 10)
     let target = fastCallables.randomElement()!
@@ -459,21 +584,22 @@ let WasmFastCallFuzzer = WasmProgramTemplate("WasmFastCallFuzzer") { b in
     let wrapped = b.bindMethod(target.method, on: apiObj)
 
     let functionSig = chooseUniform(from: b.methodSignatures(of: target.method, on: target.group))
-    let wrappedSig = Signature(expects: [.plain(b.type(of: apiObj))] + functionSig.parameters, returns: functionSig.outputType)
+    let wrappedSig = [.plain(b.type(of: apiObj))] + functionSig.parameters => functionSig.outputType
 
     let m = b.buildWasmModule { m in
         let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
         let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(wrappedSig, availableTypes: allWasmTypes)
-        m.addWasmFunction(with: wasmSignature) {fbuilder, _  in
+        m.addWasmFunction(with: wasmSignature) {fbuilder, _, _  in
             let args = b.randomWasmArguments(forWasmSignature: wasmSignature)
             if let args {
                 let maybeRet = fbuilder.wasmJsCall(function: wrapped, withArgs: args, withWasmSignature: wasmSignature)
                 if let ret = maybeRet {
-                  fbuilder.wasmReturn(ret)
+                  return [ret]
                 }
             } else {
                 logger.error("Arguments should have been generated")
             }
+            return wasmSignature.outputTypes.map(fbuilder.findOrGenerateWasmVar)
         }
     }
 
@@ -501,7 +627,7 @@ fileprivate let FastApiCallFuzzer = ProgramTemplate("FastApiCallFuzzer") { b in
         b.doReturn(apiCall)
     }
 
-    let args = b.randomVariables(n: Int.random(in: 0...5))
+    let args = b.randomJsVariables(n: Int.random(in: 0...5))
     b.callFunction(f, withArgs: args)
 
     b.eval("%PrepareFunctionForOptimization(%@)", with: [f]);
@@ -527,11 +653,12 @@ let v8Profile = Profile(
             "--jit-fuzzing",
             "--future",
             "--harmony",
+            "--experimental-fuzzing",
             "--js-staging",
             "--wasm-staging",
             "--wasm-fast-api",
             "--expose-fast-api",
-            "--experimental-wasm-memory64",
+            "--experimental-wasm-rab-integration",
         ]
 
         guard randomize else { return args }
@@ -544,10 +671,6 @@ let v8Profile = Profile(
         }
 
         if probability(0.1) {
-            args.append("--no-turboshaft")
-        }
-
-        if probability(0.1) {
             args.append("--no-maglev")
         }
 
@@ -557,6 +680,21 @@ let v8Profile = Profile(
 
         if probability(0.1) {
             args.append("--no-short-builtin-calls")
+        }
+
+        // Disabling Liftoff enables "direct" coverage for the optimizing compiler, though some
+        // features (like speculative inlining) require a combination of Liftoff and Turbofan.
+        // Note that this flag only affects WebAssembly.
+        if probability(0.5) {
+            args.append("--no-liftoff")
+        }
+
+        // This greatly helps the fuzzer to decide inlining wasm functions into each other when
+        // %WasmTierUpFunction() is used as in most cases the call counts will be way too low to
+        // align with V8's current inlining heuristics (which uses absolute call counts as a
+        // deciding factor).
+        if probability(0.5) {
+            args.append("--wasm-inlining-ignore-call-counts")
         }
 
         //
@@ -574,20 +712,18 @@ let v8Profile = Profile(
             args.append("--maglev-future")
         }
 
-        if probability(0.25) && !args.contains("--no-turboshaft") {
-            args.append("--turboshaft-future")
-        }
-
-        if probability(0.1) && !args.contains("--no-turboshaft") {
+        if probability(0.1) {
             args.append("--turboshaft-typed-optimizations")
         }
 
-        if probability(0.1) && !args.contains("--no-turboshaft") {
-            args.append("--turboshaft-from-maglev")
+        if probability(0.4) {
+            args.append("--turbolev")
+        } else if probability(0.15) {
+            args.append("--turbolev-future")
         }
 
-        if probability(0.1) && !args.contains("--no-turboshaft") {
-            args.append("--turboshaft_wasm_in_js_inlining")
+        if probability(0.1) {
+            args.append("--turboshaft-wasm-in-js-inlining")
         }
 
         if probability(0.1) {
@@ -603,7 +739,29 @@ let v8Profile = Profile(
         }
 
         if probability(0.1) {
-            args.append("--stress-scavenger-pinning-objects-random")
+            args.append("--stress-scavenger-conservative-object-pinning-random")
+        }
+
+        if probability(0.1) {
+            args.append("--precise-object-pinning")
+        }
+
+        if probability(0.5) {
+            args.append("--additive-safe-int-feedback")
+        }
+
+        // Temporarily enable the three flags below with high probability to
+        // stress-test JSPI.
+        // Lower the probabilities once we have enough coverage.
+        if (probability(0.5)) {
+            let stackSwitchingSize = Int.random(in: 1...300)
+            args.append("--wasm-stack-switching-stack-size=\(stackSwitchingSize)")
+        }
+        if (probability(0.5)) {
+            args.append("--experimental-wasm-growable-stacks")
+        }
+        if (probability(0.5)) {
+            args.append("--stress-wasm-stack-switching")
         }
 
         //
@@ -633,6 +791,42 @@ let v8Profile = Profile(
         if probability(0.1) {
             args.append("--optimize-on-next-call-optimizes-to-maglev")
         }
+        if probability(0.2) {
+            args.append("--turboshaft-verify-load-elimination")
+        }
+
+        //
+        // A gc-stress session with some fairly expensive flags.
+        //
+        if probability(0.1) {
+            if probability(0.4) {
+                args.append("--stress-marking=\(Int.random(in: 1...100))")
+            }
+            if probability(0.4) {
+                args.append("--stress-scavenge=\(Int.random(in: 1...100))")
+            }
+            if probability(0.5) {
+                args.append("--stress-flush-code")
+                args.append("--flush-bytecode")
+            }
+            if probability(0.5) {
+                args.append("--wasm-code-gc")
+                args.append("--stress-wasm-code-gc")
+            }
+            if probability(0.4) {
+                args.append(chooseUniform(
+                    from: ["--gc-interval=\(Int.random(in: 100...10000))",
+                           "--random-gc-interval=\(Int.random(in: 1000...10000))"]))
+            }
+            if probability(0.4) {
+                args.append("--concurrent-recompilation-queue-length=\(Int.random(in: 4...64))")
+                args.append("--concurrent-recompilation-delay=\(Int.random(in: 1...500))")
+            }
+            if probability(0.6) {
+                args.append(chooseUniform(
+                    from: ["--stress-compaction", "--stress-compaction-random"]))
+            }
+        }
 
         //
         // More exotic configuration changes.
@@ -640,7 +834,6 @@ let v8Profile = Profile(
         if probability(0.05) {
             if probability(0.5) { args.append("--stress-gc-during-compilation") }
             if probability(0.5) { args.append("--lazy-new-space-shrinking") }
-            if probability(0.5) { args.append("--const-tracking-let") }
             if probability(0.5) { args.append("--stress-wasm-memory-moving") }
             if probability(0.5) { args.append("--stress-background-compile") }
             if probability(0.5) { args.append("--parallel-compile-tasks-for-lazy") }
@@ -653,10 +846,8 @@ let v8Profile = Profile(
 
             // Maglev related flags
             args.append(probability(0.5) ? "--maglev-inline-api-calls" : "--no-maglev-inline-api-calls")
-            if probability(0.5) { args.append("--maglev-extend-properties-backing-store") }
 
             // Compiler related flags
-            args.append(probability(0.5) ? "--always-turbofan" : "--no-always-turbofan")
             args.append(probability(0.5) ? "--turbo-move-optimization" : "--no-turbo-move-optimization")
             args.append(probability(0.5) ? "--turbo-jt" : "--no-turbo-jt")
             args.append(probability(0.5) ? "--turbo-loop-peeling" : "--no-turbo-loop-peeling")
@@ -732,6 +923,9 @@ let v8Profile = Profile(
         (RegExpFuzzer,           1),
         (WasmFastCallFuzzer,     1),
         (FastApiCallFuzzer,      1),
+        (LazyDeoptFuzzer,        1),
+        (WasmDeoptFuzzer,        1),
+        (WasmTurbofanFuzzer,     1),
     ]),
 
     disabledCodeGenerators: [],
@@ -741,7 +935,7 @@ let v8Profile = Profile(
     additionalBuiltins: [
         "gc"                                            : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
         "d8"                                            : .jsD8,
-        "Worker"                                        : .constructor([.anything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
+        "Worker"                                        : .constructor([.jsAnything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
 
     additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],

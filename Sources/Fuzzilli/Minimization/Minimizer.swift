@@ -81,7 +81,18 @@ public class Minimizer: ComponentBase {
             //  - The ReplaceReducer should run before the InliningReducer as it changes "special" functions into plain functions, which the inlining reducer inlines.
             //  - The ReassignmentReducer should run right after the InliningReducer as inlining produces new Reassign instructions.
             //  - The VariadicInputReducer should run after the InliningReducer as it may remove function call arguments, causing the parameters to be undefined after inlining.
-            let reducers: [Reducer] = [GenericInstructionReducer(), BlockReducer(), InstructionSimplifier(), LoopSimplifier(), InliningReducer(), ReassignmentReducer(), DataFlowSimplifier(), VariadicInputReducer(), DeduplicatingReducer()]
+            let reducers: [Reducer] = [
+                GenericInstructionReducer(),
+                BlockReducer(),
+                InstructionSimplifier(),
+                LoopSimplifier(),
+                InliningReducer(),
+                ReassignmentReducer(),
+                DataFlowSimplifier(),
+                VariadicInputReducer(),
+                DeduplicatingReducer(),
+                WasmTypeGroupReducer()
+            ]
             for reducer in reducers {
                 reducer.reduce(with: helper)
                 // The reducers should not remove any instructions that we want to keep unconditionally.

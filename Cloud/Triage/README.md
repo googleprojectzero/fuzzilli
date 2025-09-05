@@ -10,5 +10,5 @@ The script requires a local build of the target JS engine. For JavaScriptCore an
 
 The file will produce a log with all output from stdout and stderr (which includes Asan crash reports). Afterwards, you can grep (and uniquify) the log for certain keywords such as
 - for JSC: "trap", "assert", "segv", "Sanitizer"
-- for Spidernmonkey: "trap", "assert", "segv", "Sanitizer"
+- for Spidermonkey: "trap", "assert", "segv", "Sanitizer"
 - for V8: "Debug check failed", "Check failed", "assert", "fatal", "received"

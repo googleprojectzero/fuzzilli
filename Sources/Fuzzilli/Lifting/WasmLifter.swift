@@ -34,18 +34,25 @@ private enum WasmSection: UInt8 {
     case tag
 }
 
+private enum Prefix: UInt8 {
+    case GC = 0xFB
+    case Numeric = 0xFC
+    case Simd = 0xFD
+    case Atomic = 0xFE
+}
+
 // This maps ILTypes to their respective binary encoding.
 private let ILTypeMapping: [ILType: Data] = [
     .wasmi32 : Data([0x7f]),
-    .wasmi64 : Data([0x7e]),
+    .wasmi64 : Data([0x7E]),
     .wasmf32 : Data([0x7D]),
     .wasmf64 : Data([0x7C]),
-    .wasmExternRef: Data([0x6f]),
-    .wasmFuncRef: Data([0x70]),
     .wasmSimd128: Data([0x7B]),
+    .wasmPackedI8: Data([0x78]),
+    .wasmPackedI16: Data([0x77]),
 
     .bigint  : Data([0x7e]), // Maps to .wasmi64
-    .anything: Data([0x6f]), // Maps to .wasmExternRef
+    .jsAnything: Data([0x6f]), // Maps to .wasmExternRef
     .integer: Data([0x7f]), // Maps to .wasmi32
     .number: Data([0x7d]) // Maps to .wasmf32
 ]
@@ -71,6 +78,168 @@ public class WasmLifter {
         case missingTypeInformation
         // If we fail to find a variable during import linking
         case failedRetrieval
+        // This means likely some input has been reassigned in JS, which means it is not of the expected type in Wasm, this is similar to the unknownImportType
+        case invalidInput
+        // Any kind of error that should result in a fatal error instead of gracefully catching it.
+        // (Use this over fatalError() to get better error reporting about the crashing program.
+        case fatalError(String)
+    }
+
+    indirect enum Export {
+        // The associated data can be nil, which means that this is a re-export of an import.
+        case function(FunctionInfo?)
+        // This should only be an import, this is always of type .import(.suspendingObject, variable, signature)
+        case suspendingObject
+        case table(Instruction?)
+        case memory(Instruction?)
+        case global(Instruction?)
+        case tag(Instruction?)
+        // This import case is special.
+        //
+        // We only expect a single level of "indirectness". I.e. if the export is an import, the type can never be import, it can only be other enum cases.
+        // Additionally, if it is an import, the type's associated data should always be nil.
+        // We do this because the exports array will serve multiple purposes:
+        //  - It tracks the exports and the types we define in the Wasm module
+        //  - It tracks the imports we see while traversing the module's code
+        //  - It keeps the ordering of seen variables correct, so that when we refer to variables in instructions `resolveIdx` can only look at the exports array and return the correct index
+        //  - The `importAnalysis` function should add these entries, exports and imports, to the array in the order it sees them, that keeps the indexes correct.
+        //
+        // The variable that is associated with this import is later used to pass the variables back to the JavaScript lifter such that it can get the right expressions for the needed imports.
+        // Imported functions also have signatures, we need these as we might call a function through two different WasmJSCall instructions.
+        // We then cannot distinguish them and we need two different type entries and two different imports.
+        case `import`(type: Export, variable: Variable, signature: WasmSignature?)
+
+        // These accessors below don't look into the imports.
+        // This is by design, it allows us to easily traverse the exports array to build the sections without filtering out the imports.
+        // If we need access to the imports, we can always do
+        //  `exports.compactMap({$0.getImport()})`
+        // Which will now "unwrap" these imports essentially.
+        // It will drop all non-imported entries and return a list of `(type, variable, signature)` for all imports.
+        // This can further be filtered for only e.g. tag imports by doing this.
+        // `exports.compactMap({$0.getImport()}).filter({$0.type.isFunction})`
+
+        var isFunction : Bool {
+            if case .function(_) = self {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        var isTable : Bool {
+            if case .table(_) = self {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        var isMemory : Bool {
+            if case .memory(_) = self {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        var isGlobal : Bool {
+            if case .global(_) = self {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        var isTag : Bool {
+            if case .tag(_) = self {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        var isSuspendingObject : Bool {
+            if case .suspendingObject = self {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        func getImport() -> (type: Self, variable: Variable, signature: WasmSignature?)? {
+            if case let .import(export, variable, signature) = self {
+                return (export, variable, signature)
+            }
+            return nil
+        }
+
+        func getDefInstr() -> Instruction? {
+            switch self {
+            case .function(_),
+                 .import(_, _, _),
+                 .suspendingObject:
+                return nil
+            case .global(let instr),
+                 .table(let instr),
+                 .memory(let instr),
+                 .tag(let instr):
+                return instr!
+            }
+        }
+
+        func groupName() -> String {
+            switch self {
+            case .function,
+                 .import,
+                 .suspendingObject:
+                // Functions and imports don't have group names, this is used for getting imports of that type.
+                fatalError("unreachable")
+            case .table:
+                return "WasmTable"
+            case .memory:
+                return "WasmMemory"
+            case .global:
+                return "WasmGlobal"
+            case .tag:
+                return "WasmTag"
+            }
+        }
+
+        func exportName(forIdx idx: Int) -> String {
+            return switch self {
+            case .function,
+                 .suspendingObject:
+                WasmLifter.nameOfFunction(idx)
+            case .table:
+                WasmLifter.nameOfTable(idx)
+            case .memory:
+                WasmLifter.nameOfMemory(idx)
+            case .global:
+                WasmLifter.nameOfGlobal(idx)
+            case .tag:
+                WasmLifter.nameOfTag(idx)
+            case .import(let exp, _, _):
+                "i\(exp.exportName(forIdx: idx))"
+            }
+        }
+
+        func exportTypeByte() -> Int {
+            switch self {
+            case .function,
+                 .suspendingObject:
+                return 0x0
+            case .table:
+                return 0x1
+            case .memory:
+                return 0x2
+            case .global:
+                return 0x3
+            case .tag:
+                return 0x4
+            case .import(let exp, _, _):
+                return exp.exportTypeByte()
+            }
+        }
     }
 
     private var logger = Logger(withLabel: "WasmLifter")
@@ -92,53 +261,57 @@ public class WasmLifter {
     private var instructionBuffer: Code = Code()
 
     // TODO(cffsmith): we could do some checking here that the function is actually defined, at that point it would not be static anymore though.
-    public static func nameOfFunction(_ idx: Int) -> String {
+    private static func nameOfFunction(_ idx: Int) -> String {
         return "w\(idx)"
     }
 
     // TODO(cffsmith): we could do some checking here that the global is actually defined, at that point it would not be static anymore though.
-    public static func nameOfGlobal(_ idx: Int) -> String {
+    private static func nameOfGlobal(_ idx: Int) -> String {
         return "wg\(idx)"
     }
 
-    public static func nameOfTable(_ idx: Int) -> String {
+    private static func nameOfTable(_ idx: Int) -> String {
         return "wt\(idx)"
     }
 
-    // This contains imports, i.e. WasmJsCall arguments, tables, globals and memories that are not defined in this module. We need to track them here so that we can properly wire up the imports when lifting this module.
-    // The Signature is only valid if the Variable is the argument to a WasmJsCall instruction, it is the Signature contained in the instruction. This Signature that is in the instruction is a loose approximation of the JS Signature, it depends on available Wasm types at the time when it was generated.
-    private var imports: [(Variable, Signature?)] = []
+    private static func nameOfTag(_ idx: Int) -> String {
+        return "wex\(idx)"
+    }
 
-    // This tracks instructions that define globals in this module. We track the instruction as all the information, as well as the actual value for initialization is stored in the Operation instead of the Variable.
-    private var globals: [Instruction] = []
+    private static func nameOfMemory(_ idx: Int) -> String {
+        return "wm\(idx)"
+    }
 
-    // This tracks instructions that define memories in this module. We track the instruction here as the limits are also encoded in the Operation.
-    private var memories: [Instruction] = []
+    // This tracks instructions that create exports of the specific ExportType.
+    // This is later used to build parts of the export section.
+    // The order here matches the order of the exports as seen by the ProgramBuilder, this is necessary so that we use the correct indices when emitting instructions.
+    private var exports: [Export] = []
 
-    // This tracks instructions that define tables in this module. We track the instruction here as the table type and its limits are encoded in the Operation.
-    private var tables: [Instruction] = []
+    private var dataSegments: [Instruction] = []
 
-    // The tags associated with this module.
-    private var tags: VariableMap<ParameterList> = VariableMap()
+//    // The tags associated with this module.
+//    private var tags: VariableMap<[ILType]> = VariableMap()
+
+    private var typeGroups: Set<Int> = []
+    private var freeTypes: Set<Variable> = []
+
+    private var typeDescToIndex : [WasmTypeDescription:Int] = [:]
+    private var userDefinedTypesCount = 0
 
     // The function index space
     private var functionIdxBase = 0
 
     // The signature index space.
-    private var signatures : [Signature] = []
-    private var signatureIndexMap : [Signature: Int] = [:]
-
-    // This should only be set once we have preprocessed all imported globals, so that we know where internally defined globals start
-    private var baseDefinedGlobals: Int? = nil
-
-    // This should only be set once we have preprocessed all imported tables, so that we know where internally defined tables start
-    private var baseDefinedTables: Int? = nil
+    private var signatures : [WasmSignature] = []
+    private var signatureIndexMap : [WasmSignature: Int] = [:]
 
     // This tracks in which order we have seen globals, this can probably be unified with the .globals and .imports properties, as they should match in their keys.
     private var globalOrder: [Variable] = []
+    private var tagOrder: [Variable] = []
 
-    public init(withTyper typer: JSTyper) {
+    public init(withTyper typer: JSTyper, withWasmCode instrs: Code) {
         self.typer = typer
+        self.instructionBuffer = instrs
     }
 
     private class WasmExprWriter {
@@ -161,12 +334,6 @@ public class WasmLifter {
             return expr
         }
 
-        // Return all not-yet-emitted variables
-        // TODO: this does not preserve order?
-        func getPendingVars() -> [Variable] {
-            varMap.filter({ !emittedVariables.contains($0.0) }).map { $0.0 }
-        }
-
         public var isEmpty: Bool {
             return varMap.isEmpty
         }
@@ -177,7 +344,7 @@ public class WasmLifter {
     var isEmpty: Bool {
         return instructionBuffer.isEmpty &&
                self.bytecode.isEmpty &&
-               self.functions.isEmpty
+               self.exports.isEmpty
     }
 
     // TODO: maybe we can do some analysis based on blocks.
@@ -186,19 +353,15 @@ public class WasmLifter {
     private func updateVariableAnalysis(forInstruction wasmInstruction: Instruction) {
         // Only analyze an instruction if we are inside a function definition.
         if let currentFunction = currentFunction {
-            // We don't need to analyze the Begin instruction which opened this one.
-            // TODO: can this be done more neatly? i.e. re-order analyis and emitting the instruction?
-            if wasmInstruction.op is BeginWasmFunction {
-                return
-            }
             currentFunction.variableAnalyzer.analyze(wasmInstruction)
         }
     }
 
     // Holds various information for the functions in a wasm module.
-    private class FunctionInfo {
-        var signature: Signature
+    class FunctionInfo {
+        var signature: WasmSignature
         var code: Data
+        var branchHints: [(hint: WasmBranchHint, offset: Int)] = []
         var outputVariable: Variable? = nil
         // Locals that we spill to, this maps from the ordering to the stack.
         var localsInfo: [(Variable, ILType)]
@@ -211,23 +374,18 @@ public class WasmLifter {
         public var labelBranchDepthMapping: VariableMap<Int> = VariableMap()
 
         // Expects the withArguments array to contain the variables of the innerOutputs, they should map directly to the local indices.
-        init(_ signature: Signature, _ code: Data, for lifter: WasmLifter, withArguments arguments: [Variable]) {
+        init(_ signature: WasmSignature, _ code: Data, for lifter: WasmLifter, withArguments arguments: [Variable]) {
             // Infer the first few locals from this signature.
             self.signature = signature
             self.code = code
             self.localsInfo = [(Variable, ILType)]()
             self.lifter = lifter
-            assert(signature.parameters.count == arguments.count)
-            // Populate the localsInfo with the parameter types
-            for (idx, argVar) in arguments.enumerated() {
-                switch signature.parameters[idx] {
-                case .plain(let argType):
-                    self.localsInfo.append((argVar, argType))
-                    // Emit the expressions for the parameters such that we can accesss them if we need them.
-                    self.lifter!.writer.addExpr(for: argVar, bytecode: Data([0x20, UInt8(self.localsInfo.count - 1)]))
-                default:
-                    fatalError("Cannot have a non-plain argument as a function parameter")
-                }
+            assert(signature.parameterTypes.count + 1 == arguments.count)
+            // Populate the localsInfo with the parameter types.
+            for (idx, argVar) in arguments.dropFirst().enumerated() {
+                self.localsInfo.append((argVar, signature.parameterTypes[idx]))
+                // Emit the expressions for the parameters such that we can accesss them if we need them.
+                self.lifter!.writer.addExpr(for: argVar, bytecode: Data([0x20]) + Leb128.unsignedEncode(self.localsInfo.count - 1))
             }
         }
 
@@ -240,7 +398,7 @@ public class WasmLifter {
             self.localsInfo.append((variable, lifter!.typer.type(of: variable)))
             assert(lifter!.typer.type(of: variable).Is(.wasmPrimitive))
             // Do a local.set on the stack slot
-            self.code += Data([0x21, UInt8(localsInfo.count - 1)])
+            self.code += Data([0x21]) + Leb128.unsignedEncode(localsInfo.count - 1)
         }
 
         func isLocal(_ variable: Variable) -> Bool {
@@ -256,18 +414,17 @@ public class WasmLifter {
             // We expect to do this for innerOutputs.
             assert(isLocal(variable) && getStackSlot(for: variable) != nil)
             // This emits a local.get for the function argument.
-            self.code += Data([0x20, UInt8(getStackSlot(for: variable)!)])
+            self.code += Data([0x20]) + Leb128.unsignedEncode(getStackSlot(for: variable)!)
+        }
+
+        func addBranchHint(_ hint: WasmBranchHint) {
+            if hint != .None {
+                self.branchHints.append((hint: hint, offset: self.code.count))
+            }
         }
     }
 
-    // The parameters, actual bytecode and number of locals of the functions.
-    private var functions: [FunctionInfo] = []
-
     private var currentFunction: FunctionInfo? = nil
-
-    public func addInstruction(_ instruction: Instruction) {
-        self.instructionBuffer.append(instruction)
-    }
 
     public func lift(binaryOutPath path: String? = nil) throws -> (Data, [Variable]) {
         // Lifting currently happens in three stages.
@@ -319,18 +476,18 @@ public class WasmLifter {
 
         if verbose {
             print("Got the following functions")
-            for function in functions {
-                print("\(String(describing: function))")
+            for case let .function(functionInfo) in self.exports {
+                print("\(String(describing: functionInfo))")
             }
         }
 
         // Build the header section which includes the Wasm version first
         self.buildHeader()
 
-        self.buildTypeSection()
+        try self.buildTypeSection()
         try self.buildImportSection()
         try self.buildFunctionSection()
-        self.buildTableSection()
+        try self.buildTableSection()
         self.buildMemorySection()
         try self.buildTagSection()
         try self.buildGlobalSection()
@@ -341,8 +498,12 @@ public class WasmLifter {
         // Build element segments for defined tables.
         try self.buildElementSection()
 
+        try self.buildDataCountSection()
+
         // The actual bytecode of the functions.
-        self.buildCodeSection(self.instructionBuffer)
+        try self.buildCodeSection(self.instructionBuffer)
+
+        try self.buildDataSection()
 
         // Write the bytecode as file to the given path for debugging purposes.
         if let path = path {
@@ -354,7 +515,7 @@ public class WasmLifter {
         // Step 3 done
         //
 
-        return (bytecode, imports.map { $0.0 })
+        return (bytecode, exports.compactMap { $0.getImport()?.variable })
     }
 
     private func buildHeader() {
@@ -366,45 +527,134 @@ public class WasmLifter {
         self.bytecode += [0x1, 0x0, 0x0, 0x0]
     }
 
-    private func buildTypeSection() {
-        self.bytecode += [WasmSection.type.rawValue]
+    private func encodeAbstractHeapType(_ heapType: WasmAbstractHeapType) -> Data {
+        switch (heapType) {
+            case .WasmExtern:
+                return Data([0x6f])
+            case .WasmFunc:
+                return Data([0x70])
+            case .WasmAny:
+                return Data([0x6e])
+            case .WasmEq:
+                return Data([0x6d])
+            case .WasmI31:
+                return Data([0x6c])
+            case .WasmStruct:
+                return Data([0x6b])
+            case .WasmArray:
+                return Data([0x6a])
+            case .WasmExn:
+                return Data([0x69])
+            case .WasmNone:
+                return Data([0x71])
+            case .WasmNoExtern:
+                return Data([0x72])
+            case .WasmNoFunc:
+                return Data([0x73])
+            case .WasmNoExn:
+                return Data([0x74])
+        }
+    }
 
+    private func encodeWasmGCType(_ description: WasmTypeDescription?) throws -> Data {
+        guard let description else {
+            throw WasmLifter.CompileError.missingTypeInformation
+        }
+        return Leb128.unsignedEncode(typeDescToIndex[description]!)
+    }
+
+    private func encodeType(_ type: ILType, defaultType: ILType? = nil) throws -> Data {
+        if let refType = type.wasmReferenceType {
+            let isNullable = refType.nullability
+            let nullabilityByte: UInt8 = isNullable ? 0x63 : 0x64
+
+            switch refType.kind {
+            case .Index(let description):
+                return try Data([nullabilityByte]) + encodeWasmGCType(description.get())
+            case .Abstract(let heapType):
+                return Data([nullabilityByte]) + encodeAbstractHeapType(heapType)
+            }
+        }
+        // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
+        return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!
+    }
+
+    private func encodeHeapType(_ type: ILType, defaultType: ILType? = nil)  throws -> Data {
+        if let refType = type.wasmReferenceType {
+            switch refType.kind {
+            case .Index(let description):
+                return try encodeWasmGCType(description.get())
+            case .Abstract(let heapType):
+                return encodeAbstractHeapType(heapType)
+            }
+        }
+        // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
+        return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!
+    }
+
+    private func buildTypeEntry(for desc: WasmTypeDescription, data: inout Data) throws {
+        if let arrayDesc = desc as? WasmArrayTypeDescription {
+            data += [0x5e]
+            data += try encodeType(arrayDesc.elementType)
+            data += [arrayDesc.mutability ? 1 : 0]
+        } else if let structDesc = desc as? WasmStructTypeDescription {
+            data += [0x5f]
+            data += Leb128.unsignedEncode(structDesc.fields.count)
+            for field in structDesc.fields {
+                data += try encodeType(field.type)
+                data += [field.mutability ? 1 : 0]
+            }
+        } else {
+            fatalError("Unsupported WasmTypeDescription!")
+        }
+    }
+
+    private func buildTypeSection() throws {
+        self.bytecode += [WasmSection.type.rawValue]
 
         var temp = Data()
 
-        // Collect all signatures.
-        for (_, signature) in self.imports {
-            if let signature {
-                registerSignature(signature)
+        // Collect all signatures of imported functions, suspendable objects or tags.
+        // See importAnalysis for more details.
+        for signature in self.exports.compactMap({ $0.getImport()?.signature }) {
+            registerSignature(signature)
+        }
+
+        // Special handling for defined Tags
+        for case let .tag(instr) in self.exports {
+            let tagSignature = (instr!.op as! WasmDefineTag).parameterTypes => []
+            assert(tagSignature.outputTypes.isEmpty)
+            registerSignature(tagSignature)
+        }
+        // Special handling for defined functions
+        for case let .function(functionInfo) in self.exports {
+            registerSignature(functionInfo!.signature)
+        }
+
+        let typeCount = self.signatures.count + typeGroups.count
+        temp += Leb128.unsignedEncode(typeCount)
+
+        // TODO(mliedtke): Integrate this with the whole signature mechanism as
+        // these signatures could contain wasm-gc types.
+        for typeGroupIndex in typeGroups.sorted() {
+            let typeGroup = typer.getTypeGroup(typeGroupIndex)
+            temp += [0x4e]
+            temp += Leb128.unsignedEncode(typeGroup.count)
+            for typeDef in typeGroup {
+                try buildTypeEntry(for: typer.getTypeDescription(of: typeDef), data: &temp)
             }
         }
-        for tag in self.tags {
-            registerSignature(tag.1 => .nothing)
-        }
-        for function in self.functions {
-            registerSignature(function.signature)
-        }
-
-        let typeCount = self.signatures.count
-
-        temp += Leb128.unsignedEncode(typeCount)
+        // TODO(mliedtke): Also add "free types" which aren't in any explicit type group.
 
         for signature in self.signatures {
             temp += [0x60]
-            temp += Leb128.unsignedEncode(signature.parameters.count)
-            for paramType in signature.parameters {
-                switch paramType {
-                case .plain(let paramType):
-                    temp += ILTypeMapping[paramType]!
-                default:
-                    fatalError("unreachable")
-                }
+            temp += Leb128.unsignedEncode(signature.parameterTypes.count)
+            for paramType in signature.parameterTypes {
+                temp += try encodeType(paramType)
             }
-            if signature.outputType != .nothing {
-                temp += Leb128.unsignedEncode(1) // num output types
-                temp += ILTypeMapping[signature.outputType] ?? Data([0x6f])
-            } else {
-                temp += [0x00] // num output types
+            temp += Leb128.unsignedEncode(signature.outputTypes.count)
+            for outputType in signature.outputTypes {
+                temp += try encodeType(outputType, defaultType: .wasmExternRef)
             }
         }
 
@@ -420,18 +670,18 @@ public class WasmLifter {
         self.bytecode.append(temp)
     }
 
-    private func registerSignature(_ signature: Signature) {
+    private func registerSignature(_ signature: WasmSignature) {
         assert(signatures.count == signatureIndexMap.count)
         if signatureIndexMap[signature] != nil {
             return
         }
-        let signatureIndex = signatures.count
+        let signatureIndex = userDefinedTypesCount + signatures.count
         signatures.append(signature)
         signatureIndexMap[signature] = signatureIndex
         assert(signatures.count == signatureIndexMap.count)
     }
 
-    private func getSignatureIndex(_ signature: Signature) throws -> Int {
+    private func getSignatureIndex(_ signature: WasmSignature) throws -> Int {
         if let idx = signatureIndexMap[signature] {
             return idx
         }
@@ -439,8 +689,12 @@ public class WasmLifter {
         throw WasmLifter.CompileError.failedSignatureLookUp
     }
 
+    private func getSignatureIndexStrict(_ signature: WasmSignature) -> Int {
+        return signatureIndexMap[signature]!
+    }
+
     private func buildImportSection() throws {
-        if self.imports.isEmpty {
+        if self.exports.compactMap({ $0.getImport() }).isEmpty {
             return
         }
 
@@ -448,10 +702,10 @@ public class WasmLifter {
 
         var temp = Data()
 
-        temp += Leb128.unsignedEncode(self.imports.map { $0 }.count)
+        temp += Leb128.unsignedEncode(self.exports.count { $0.getImport() != nil })
 
         // Build the import components of this vector that consist of mod:name, nm:name, and d:importdesc
-        for (idx, (importVariable, signature)) in self.imports.enumerated() {
+        for (idx, (_, importVariable, signature)) in self.exports.compactMap({ $0.getImport() }).enumerated() {
             if verbose {
                 print(importVariable)
             }
@@ -464,7 +718,7 @@ public class WasmLifter {
             temp += importName.data(using: .utf8)!
             let type = typer.type(of: importVariable)
             // This is a temporary workaround for functions that have been marked as suspendable.
-            if type.Is(.function()) || type.Is(.object(ofGroup: "WebAssembly.SuspendableObject")) {
+            if type.Is(.function()) || type.Is(.object(ofGroup: "WasmSuspendingObject")) {
                 if verbose {
                     print(functionIdxBase)
                 }
@@ -489,16 +743,18 @@ public class WasmLifter {
                 continue
             }
             if type.Is(.object(ofGroup: "WasmTable")) {
-                let tableType = type.wasmTableType!.elementType
-                assert(tableType == ILType.wasmExternRef)
-                let minSize = type.wasmTableType!.limits.min
-                let maxSize = type.wasmTableType!.limits.max
+                // Emit import type.
                 temp += Data([0x1])
-                temp += ILTypeMapping[tableType]!
-                if let maxSize = maxSize {
-                    temp += Data([0x1] + Leb128.unsignedEncode(minSize) + Leb128.unsignedEncode(maxSize))
-                } else {
-                    temp += Data([0x0] + Leb128.unsignedEncode(minSize))
+
+                let table = type.wasmTableType!
+                temp += try encodeType(table.elementType)
+
+                let limits_byte: UInt8 = (table.isTable64 ? 4 : 0) | (table.limits.max != nil ? 1 : 0)
+                temp += Data([limits_byte])
+
+                temp += Data(Leb128.unsignedEncode(table.limits.min))
+                if let maxSize = table.limits.max {
+                    temp += Data(Leb128.unsignedEncode(maxSize))
                 }
                 continue
             }
@@ -506,7 +762,7 @@ public class WasmLifter {
                 let valueType = type.wasmGlobalType!.valueType
                 let mutability = type.wasmGlobalType!.isMutable
                 temp += [0x3]
-                temp += ILTypeMapping[valueType]!
+                temp += try encodeType(valueType)
                 temp += mutability ? [0x1] : [0x0]
                 continue
             }
@@ -534,10 +790,10 @@ public class WasmLifter {
 
         // The number of functions we have, as this is a vector of type idxs.
         // TODO(cffsmith): functions can share type indices. This could be an optimization later on.
-        var temp = Leb128.unsignedEncode(self.functions.count)
+        var temp = Leb128.unsignedEncode(self.exports.count { $0.isFunction })
 
-        for info in self.functions {
-            temp.append(Leb128.unsignedEncode(try getSignatureIndex(info.signature)))
+        for case let .function(functionInfo) in self.exports {
+            temp.append(Leb128.unsignedEncode(try getSignatureIndex(functionInfo!.signature)))
         }
 
         // Append the length of the section and the section contents itself.
@@ -552,22 +808,25 @@ public class WasmLifter {
         }
     }
 
-    private func buildTableSection() {
+    private func buildTableSection() throws {
         self.bytecode += [WasmSection.table.rawValue]
 
-        var temp = Leb128.unsignedEncode(self.tables.count)
+        var temp = Leb128.unsignedEncode(self.exports.count { $0.isTable })
 
-        for instruction in self.tables {
-            let op = instruction.op as! WasmDefineTable
-            let elementType = op.tableType.elementType
-            let minSize = op.tableType.limits.min
-            let maxSize = op.tableType.limits.max
+        for case let .table(instruction) in self.exports {
+            let op = instruction!.op as! WasmDefineTable
+            let elementType = op.elementType
+            let minSize = op.limits.min
+            let maxSize = op.limits.max
+            let isTable64 = op.isTable64
+            temp += try encodeType(elementType)
 
-            temp += ILTypeMapping[elementType]!
-            if let maxSize = maxSize {
-                temp += Data([0x1] + Leb128.unsignedEncode(minSize) + Leb128.unsignedEncode(maxSize))
-            } else {
-                temp += Data([0x0] + Leb128.unsignedEncode(minSize))
+            let limits_byte: UInt8 = (isTable64 ? 4 : 0) | (maxSize != nil ? 1 : 0)
+            temp += Data([limits_byte])
+
+            temp += Data(Leb128.unsignedEncode(minSize))
+            if let maxSize {
+                temp += Data(Leb128.unsignedEncode(maxSize))
             }
         }
         // Append the length of the section and the section contents itself.
@@ -589,34 +848,41 @@ public class WasmLifter {
     // - one segment per table (assumes entries are continuous)
     // - constant starting index.
     private func buildElementSection() throws {
+        let numDefinedTablesWithEntries = self.exports.count {
+            if case let .table(instruction) = $0 {
+                return !(instruction!.op as! WasmDefineTable).definedEntries.isEmpty
+            } else {
+                return false
+            }
+        }
+
+        if numDefinedTablesWithEntries == 0 { return }
+
         self.bytecode += [WasmSection.element.rawValue]
         var temp = Data();
-
-        let numDefinedTablesWithEntries = self.tables.count { instruction in
-            !(instruction.op as! WasmDefineTable).definedEntryIndices.isEmpty
-        }
 
         // Element segment count.
         temp += Leb128.unsignedEncode(numDefinedTablesWithEntries);
 
-        for instruction in self.tables {
-            let definedEntryIndices = (instruction.op as! WasmDefineTable).definedEntryIndices
-            assert(definedEntryIndices.count == instruction.inputs.count)
-            if definedEntryIndices.isEmpty { continue }
+        for case let .table(instruction) in self.exports {
+            let table = instruction!.op as! WasmDefineTable
+            let definedEntries = table.definedEntries
+            assert(definedEntries.count == instruction!.inputs.count)
+            if definedEntries.isEmpty { continue }
             // Element segment case 2 definition.
             temp += [0x02]
-            let tableIndex = try self.resolveIdx(ofType: .table, for: instruction.output)
+            let tableIndex = try self.resolveIdx(ofType: .table, for: instruction!.output)
             temp += Leb128.unsignedEncode(tableIndex)
             // Starting index. Assumes all entries are continuous.
-            temp += [0x41]
-            temp += Leb128.unsignedEncode(definedEntryIndices[0])
+            temp += table.isTable64 ? [0x42] : [0x41]
+            temp += Leb128.unsignedEncode(definedEntries[0].indexInTable)
             temp += [0x0b]  // end
             // elemkind
             temp += [0x00]
             // entry count
-            temp += Leb128.unsignedEncode(definedEntryIndices.count)
+            temp += Leb128.unsignedEncode(definedEntries.count)
             // entries
-            for entry in instruction.inputs {
+            for entry in instruction!.inputs {
                 let functionId = try resolveIdx(ofType: .function, for: entry)
                 temp += Leb128.unsignedEncode(functionId)
             }
@@ -633,18 +899,27 @@ public class WasmLifter {
         }
     }
 
-    private func buildCodeSection(_ instructions: Code) {
-        self.bytecode += [WasmSection.code.rawValue]
-
+    private func buildCodeSection(_ instructions: Code) throws {
         // Build the contents of the section
         var temp = Data()
+        temp += Leb128.unsignedEncode(self.exports.count { $0.isFunction })
 
-        temp += Leb128.unsignedEncode(self.functions.count)
+        var functionBranchHints = [Data]()
 
-        for (_, functionInfo) in self.functions.enumerated() {
+        let functions = self.exports.filter({ $0.isFunction })
+
+        let importedFunctionCount = self.exports.compactMap({$0.getImport()}).count {
+            $0.type.isFunction
+        }
+
+        for (defIndex, export) in functions.enumerated() {
+            guard case .function(let functionInfo) = export else {
+                fatalError("unreachable")
+            }
+
             if verbose {
                 print("code is:")
-                for byte in functionInfo.code {
+                for byte in functionInfo!.code {
                     print(String(format: "%02X", byte))
                 }
                 print("end of code")
@@ -653,22 +928,49 @@ public class WasmLifter {
             var funcTemp = Data()
             // TODO: this should be encapsulated more nicely. There should be an interface that gets the locals without the parameters. As this is currently mainly used to get the slots info.
             // Encode number of locals
-            funcTemp += Leb128.unsignedEncode(functionInfo.localsInfo.count - functionInfo.signature.parameters.count)
-            for (_, type) in functionInfo.localsInfo[functionInfo.signature.parameters.count...] {
+            funcTemp += Leb128.unsignedEncode(functionInfo!.localsInfo.count - functionInfo!.signature.parameterTypes.count)
+            for (_, type) in functionInfo!.localsInfo[functionInfo!.signature.parameterTypes.count...] {
                 // Encode the locals
                 funcTemp += Leb128.unsignedEncode(1)
-                // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
-                funcTemp += ILTypeMapping[type]!
+                funcTemp += try encodeType(type)
             }
+            let localsDefSizeInBytes = funcTemp.count
             // append the actual code and the end marker
-            funcTemp += functionInfo.code
+            funcTemp += functionInfo!.code
             funcTemp += [0x0b]
 
             // Append the function object to the section
             temp += Leb128.unsignedEncode(funcTemp.count)
             temp += funcTemp
+
+            // Encode the branch hint section entry for this function.
+            if !functionInfo!.branchHints.isEmpty {
+                // The function entry is the function index, followed by the counts of branch hints
+                // for this function and then the bytes containing the actual branch hints.
+                let functionIndex = defIndex + importedFunctionCount
+                let hintsEncoded = Leb128.unsignedEncode(functionIndex)
+                    + Leb128.unsignedEncode(functionInfo!.branchHints.count)
+                    + functionInfo!.branchHints.map {
+                        // Each branch hint is the instruction offset starting from the locals
+                        // definitions of the functions, a 0x01 byte, followed by the hint byte.
+                        Leb128.unsignedEncode(localsDefSizeInBytes + $0.offset) + [0x01]
+                            + [$0.hint == .Likely ? 1 : 0]
+                    }.joined()
+                functionBranchHints.append(hintsEncoded)
+            }
         }
 
+        // The branch hint section has to appear before the code section.
+        if !functionBranchHints.isEmpty {
+            self.bytecode += [WasmSection.custom.rawValue]
+            let name = "metadata.code.branch_hint"
+            let sectionContent = Leb128.unsignedEncode(name.count) + Data(name.data(using: .ascii)!)
+                + Leb128.unsignedEncode(functionBranchHints.count) + functionBranchHints.joined()
+            self.bytecode.append(Leb128.unsignedEncode(sectionContent.count))
+            self.bytecode.append(sectionContent)
+        }
+
+        self.bytecode += [WasmSection.code.rawValue]
         // Append the length of the section and the section contents itself.
         self.bytecode.append(Leb128.unsignedEncode(temp.count))
         self.bytecode.append(temp)
@@ -681,19 +983,60 @@ public class WasmLifter {
         }
     }
 
+    private func buildDataSection() throws {
+        self.bytecode += [WasmSection.data.rawValue]
+
+        var temp = Data()
+        temp += Leb128.unsignedEncode(self.dataSegments.count)
+
+        for instruction in self.dataSegments {
+            let segment = (instruction.op as! WasmDefineDataSegment).segment
+            temp += Data([0x01]) // mode = passive
+            temp += Leb128.unsignedEncode(segment.count)
+            temp += Data(segment)
+        }
+
+        self.bytecode.append(Leb128.unsignedEncode(temp.count))
+        self.bytecode.append(temp)
+
+        if verbose {
+            print("data section is")
+            for byte in temp {
+                print(String(format: "%02X ", byte))
+            }
+        }
+    }
+
+    private func buildDataCountSection() throws {
+        self.bytecode += [WasmSection.datacount.rawValue]
+
+        var temp = Data()
+        temp += Leb128.unsignedEncode(self.dataSegments.count)
+
+        self.bytecode.append(Leb128.unsignedEncode(temp.count))
+        self.bytecode.append(temp)
+
+        if verbose {
+            print("data count section is")
+            for byte in temp {
+                print(String(format: "%02X ", byte))
+            }
+        }
+    }
+
     private func buildGlobalSection() throws {
         self.bytecode += [WasmSection.global.rawValue]
 
         var temp = Data()
 
-        temp += Leb128.unsignedEncode(self.globals.map { $0 }.count)
+        temp += Leb128.unsignedEncode(self.exports.count { $0.isGlobal })
 
         // TODO: in the future this should maybe be a context that allows instructions? Such that we can fuzz this expression as well?
-        for instruction in self.globals {
-            let definition = instruction.op as! WasmDefineGlobal
+        for case let .global(instruction) in self.exports {
+            let definition = instruction!.op as! WasmDefineGlobal
             let global = definition.wasmGlobal
 
-            temp += ILTypeMapping[global.toType()]!
+            temp += try encodeType(global.toType())
             temp += Data([definition.isMutable ? 0x1 : 0x0])
             // This has to be a constant expression: https://webassembly.github.io/spec/core/valid/instructions.html#constant-expressions
             var temporaryInstruction: Instruction? = nil
@@ -707,8 +1050,16 @@ public class WasmLifter {
                 temporaryInstruction = Instruction(Consti32(value: val), output: Variable())
             case .wasmi64(let val):
                 temporaryInstruction = Instruction(Consti64(value: val), output: Variable())
-            case .refNull,
-                 .refFunc(_),
+            case .externref:
+                temp += try! Data([0xD0]) + encodeHeapType(.wasmExternRef) + Data([0x0B])
+                continue
+            case .exnref:
+                temp += try! Data([0xD0]) + encodeHeapType(.wasmExnRef) + Data([0x0B])
+                continue
+            case .i31ref:
+                temp += try! Data([0xD0]) + encodeHeapType(.wasmI31Ref) + Data([0x0B])
+                continue
+            case .refFunc(_),
                  .imported(_):
                 fatalError("unreachable")
             }
@@ -735,10 +1086,10 @@ public class WasmLifter {
 
         // The amount of memories we have, per standard this can currently only be one, either defined or imported
         // https://webassembly.github.io/spec/core/syntax/modules.html#memories
-        temp += Leb128.unsignedEncode(memories.count)
+        temp += Leb128.unsignedEncode(self.exports.count { $0.isMemory })
 
-        for instruction in memories {
-            let type = typer.type(of: instruction.output)
+        for case let .memory(instruction) in self.exports {
+            let type = typer.type(of: instruction!.output)
             assert(type.isWasmMemoryType)
             let mem = type.wasmMemoryType!
 
@@ -760,20 +1111,22 @@ public class WasmLifter {
                 print(String(format: "%02X ", byte))
             }
         }
-
     }
 
     private func buildTagSection() throws {
-        if self.tags.isEmpty {
+        if self.exports.count(where: { $0.isTag }) == 0 {
             return // Skip the whole section.
         }
 
         self.bytecode.append(WasmSection.tag.rawValue)
         var section = Data()
-        section += Leb128.unsignedEncode(self.tags.reduce(0, {res, _ in res + 1}))
-        for tag in self.tags {
+
+        section += Leb128.unsignedEncode(self.exports.count { $0.isTag })
+
+        for case let .tag(instr) in self.exports {
+            let tagSignature = (instr!.op as! WasmDefineTag).parameterTypes => []
             section.append(0)
-            section.append(Leb128.unsignedEncode(try getSignatureIndex(tag.1 => .nothing)))
+            section.append(Leb128.unsignedEncode(try getSignatureIndex(tagSignature)))
         }
 
         self.bytecode.append(Leb128.unsignedEncode(section.count))
@@ -787,63 +1140,59 @@ public class WasmLifter {
         }
     }
 
-    // Export all functions and globals by default.
-    // TODO(manoskouk): Also export tables.
+    // Export all imports and defined things by default.
     private func buildExportedSection() throws {
         self.bytecode += [WasmSection.export.rawValue]
 
         var temp = Data()
 
-        // TODO: Track the order in which globals are seen by the typer in the program builder and maybe export them by name here like they are seen.
-        // This would just be a 'correctness' fix as this mismatch does not have any implications, it should be fixed though to avoid issues down the road as this is a very subtle mismatch.
+        // The number of all exports.
+        temp += Leb128.unsignedEncode(self.exports.count)
 
-        // Get the number of imported globals.
-        let importedGlobals = self.imports.map({$0.0}).filter {
-            typer.type(of: $0).Is(.object(ofGroup: "WasmGlobal"))
-        }
-
-        temp += Leb128.unsignedEncode(self.functions.count + importedGlobals.count + self.globals.count + self.tables.count)
-        for (idx, _) in self.functions.enumerated() {
-            // Append the name as a vector
-            let name = WasmLifter.nameOfFunction(idx)
+        // The offset can be used to shift the internally defined functions up
+        // While still maintaining their name, e.g. iw0, and w0 will co-exist.
+        func writeExportData(_ export: Export, _ idx: Int, offset: Int = 0) {
+            let name = export.exportName(forIdx: idx)
             temp += Leb128.unsignedEncode(name.count)
             temp += name.data(using: .utf8)!
             // Add the base, as our exports start after the imports. This variable needs to be incremented in the `buildImportSection` function.
-            temp += [0x0, UInt8(functionIdxBase + idx)]
-        }
-        // export all globals that are imported.
-        for (idx, imp) in importedGlobals.enumerated() {
-            // Append the name as a vector
-            // Here for the name, we use the index as remembered by the globalsOrder array, to preserve the export order with what the typer of the ProgramBuilder has seen before.
-            let index = self.globalOrder.firstIndex(of: imp)!
-            let name = WasmLifter.nameOfGlobal(index)
-            temp += Leb128.unsignedEncode(name.count)
-            temp += name.data(using: .utf8)!
-            temp += [0x3, UInt8(idx)]
-        }
-        // Also export all globals that we have defined.
-        for (idx, instruction) in self.globals.enumerated() {
-            // Append the name as a vector
-            // Again, the name that we export it as matches the order that the ProgramBuilder's typer has seen it when traversing the Code, which happen's way before our typer here sees it, as we are typing during *lifting* of the JS code.
-            // This kinda solves a problem we don't actually have... but it's correct this way :)
-            let index = self.globalOrder.firstIndex(of: instruction.output)!
-            let name = WasmLifter.nameOfGlobal(index)
-            temp += Leb128.unsignedEncode(name.count)
-            temp += name.data(using: .utf8)!
-            // Add the base, as our exports start after the imports. This variable needs to be incremented in the `buildImportSection` function.
-            // TODO: maybe add something like a global base?
-            temp += [0x3, UInt8(importedGlobals.count + idx)]
+            temp += Leb128.unsignedEncode(export.exportTypeByte()) + Leb128.unsignedEncode(idx + offset)
         }
 
-        for instruction in self.tables {
-            let index = try resolveIdx(ofType: .table, for: instruction.output)
-            let name = WasmLifter.nameOfTable(index)
-            temp += Leb128.unsignedEncode(name.count)
-            temp += name.data(using: .utf8)!
-            temp += [0x1, UInt8(index)]
+        // The predicate is used to filter for only a specific type of import.
+        let reexportAndExport: ((Export) -> Bool) -> () = { predicate in
+            let imported = self.exports.filter({
+                $0.getImport() != nil && predicate($0.getImport()!.type)
+            })
+
+            for (idx, imp) in imported.enumerated() {
+                // Append the name as a vector
+                // Here for the name, we use the index as remembered by the globalsOrder array, to preserve the export order with what the typer of the ProgramBuilder has seen before.
+                writeExportData(imp, idx)
+            }
+
+            let defined = self.exports.filter { predicate($0) }
+
+            for (idx, exp) in defined.enumerated() {
+                writeExportData(exp, idx, offset: imported.count)
+            }
         }
 
-        // TODO(mliedtke): Export defined tags.
+        reexportAndExport {
+            $0.isFunction
+        }
+        reexportAndExport {
+            $0.isGlobal
+        }
+        reexportAndExport {
+            $0.isTable
+        }
+        reexportAndExport {
+            $0.isMemory
+        }
+        reexportAndExport {
+            $0.isTag
+        }
 
         // Append the length of the section and the section contents itself.
         self.bytecode.append(Leb128.unsignedEncode(temp.count))
@@ -864,7 +1213,6 @@ public class WasmLifter {
 
         switch instr.op.opcode {
         case .wasmBeginBlock(let op):
-            // TODO(mliedtke): Repeat this for loops.
             registerSignature(op.signature)
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
@@ -877,6 +1225,11 @@ public class WasmLifter {
         case .wasmBeginElse(_):
             // Note: We need to subtract one because the begin else block closes the if block before opening the else block!
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
+            // Needs typer analysis
+            return true
+        case .wasmBeginTryTable(let op):
+            registerSignature(op.signature)
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
         case .wasmBeginTry(let op):
@@ -897,41 +1250,60 @@ public class WasmLifter {
         case .wasmBeginCatch(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(1)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
-            assert(self.imports.contains(where: { $0.0 == instr.input(0)}) || self.tags.contains(instr.input(0)))
             // Needs typer analysis
             return true
         case .wasmBeginCatchAll(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth - 1
             // Needs typer analysis
             return true
+        case .wasmCallIndirect(let op):
+            registerSignature(op.signature)
+            return true
+        case .wasmReturnCallIndirect(let op):
+            registerSignature(op.signature)
+            return true
         case .wasmNop(_):
             // Just analyze the instruction but do nothing else here.
             // This lets the typer know that we can skip this instruction without breaking any analysis.
             break
         case .beginWasmFunction(let op):
-            functions.append(FunctionInfo(op.signature, Data(), for: self, withArguments: Array(instr.innerOutputs)))
+            let functionInfo = FunctionInfo(op.signature, Data(), for: self, withArguments: Array(instr.innerOutputs))
+            self.exports.append(.function(functionInfo))
             // Set the current active function as we are *actively* in it.
-            currentFunction = functions.last
+            currentFunction = functionInfo
+            self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
         case .endWasmFunction(_):
-            // TODO: Make sure that the stack is matching the output of the function signature, at least depth wise
-            // Make sure that we exit the current function, this is necessary such that the variableAnalyzer can be reset too, it is local to a function definition and we should only pass .wasmFunction context instructions to the variableAnalyzer.
             currentFunction!.outputVariable = instr.output
-            currentFunction = nil
-            break
+            return true
         case .wasmDefineGlobal(_):
-            assert(self.globals.contains(where: { $0.output == instr.output }))
+            assert(self.exports.contains(where: {
+                $0.isGlobal && $0.getDefInstr()!.output == instr.output
+            }))
         case .wasmDefineTable(_):
-            assert(self.tables.contains(where: { $0.output == instr.output }))
+            assert(self.exports.contains(where: {
+                $0.isTable && $0.getDefInstr()!.output == instr.output
+            }))
         case .wasmDefineMemory(_):
-            assert(self.memories.contains(where: { $0.output == instr.output }))
+            assert(self.exports.contains(where: {
+                $0.isMemory && $0.getDefInstr()!.output == instr.output
+            }))
+        case .wasmDefineDataSegment(_):
+            self.dataSegments.append(instr)
         case .wasmJsCall(_):
-            assert(self.imports.contains(where: { $0.0 == instr.input(0)}))
             return true
         case .wasmThrow(_):
-            assert(self.imports.contains(where: { $0.0 == instr.input(0)}) || self.tags.contains(instr.input(0)))
             return true
         case .wasmDefineTag(_):
-            assert(self.tags.contains(instr.output))
+            assert(self.exports.contains(where: {
+                if case .tag(let i) = $0 {
+                    return i!.output == instr.output
+                } else {
+                    return false
+                }
+            }))
+            assert(self.exports.contains(where: {
+                $0.isTag && $0.getDefInstr()!.output == instr.output
+            }))
         default:
             return true
         }
@@ -966,16 +1338,6 @@ public class WasmLifter {
                 currentFunction!.appendToCode(expr)
                 continue
             }
-
-            // Special inputs that aren't locals (e.g. memories, functions, tags, ...)
-            let isLocallyDefined = inputType.isWasmTagType && tags.contains(input)
-                || inputType.isWasmTableType && tables.contains(where: {$0.output == input})
-                || inputType.Is(.wasmFuncRef) && functions.contains(where: {$0.outputVariable == input})
-                || inputType.isWasmGlobalType && globals.contains(where: {$0.output == input})
-                || inputType.isWasmMemoryType && memories.contains(where: {$0.output == input})
-            if !isLocallyDefined {
-                assert(self.imports.contains(where: {$0.0 == input}), "Variable \(input) needs to be imported during importAnalysis()")
-            }
         }
     }
 
@@ -985,53 +1347,70 @@ public class WasmLifter {
 
     private func emitStackSpillsIfNecessary(forInstruction instr: Instruction) {
         // Don't emit spills for reassigns. This is specially handled in the `lift` function for reassigns.
-        if instr.op is WasmReassign {
+        // Similarly, the end of a function doesn't spill anything.
+        if instr.op is WasmReassign || instr.op is EndWasmFunction {
             return
         }
 
-        // If we have an output, make sure we store it on the stack as this is a "complex" instruction, i.e. has inputs and outputs
+        // If we have an output, make sure we store it on the stack as this is a "complex" instruction, i.e. has inputs and outputs.
         if instr.numOutputs > 0 {
-            assert(!typer.type(of: instr.output).Is(.anyLabel))
-            // Also spill the instruction
-            currentFunction!.spillLocal(forVariable: instr.output)
-            // Add the corresponding stack load as an expression, this adds the number of arguments, as output vars always live after the function arguments.
-            self.writer.addExpr(for: instr.output, bytecode: Data([0x20, UInt8(currentFunction!.localsInfo.count - 1)]))
+            assert(instr.outputs.allSatisfy {!typer.type(of: $0).Is(.anyLabel)})
+            for output in instr.outputs.reversed() {
+                // Also spill the instruction
+                currentFunction!.spillLocal(forVariable: output)
+                // Add the corresponding stack load as an expression, this adds the number of arguments, as output vars always live after the function arguments.
+                self.writer.addExpr(for: output, bytecode: Data([0x20]) + Leb128.unsignedEncode(currentFunction!.localsInfo.count - 1))
+            }
         }
 
-        // TODO(mliedtke): Reuse this for handling parameters in loops, if-else, ...
-        if instr.op is WasmBeginBlock || instr.op is WasmBeginTry
-            || instr.op is WasmBeginTryDelegate || instr.op is WasmBeginIf || instr.op is WasmBeginElse
-            || instr.op is WasmBeginLoop {
+        if instr.op.attributes.contains(.isBlockStart) {
             // As the parameters are pushed "in order" to the stack, they need to be popped in reverse order.
-            for innerOutput in instr.innerOutputs(1...).reversed() {
-                currentFunction!.spillLocal(forVariable: innerOutput)
-            }
-        }
-        if instr.op is WasmBeginCatch {
-            for innerOutput in instr.innerOutputs(2...).reversed() {
-                currentFunction!.spillLocal(forVariable: innerOutput)
+            for innerOutput in instr.innerOutputs.reversed() {
+                let t = typer.type(of: innerOutput)
+                if !t.Is(.anyLabel) && !t.Is(.exceptionLabel) {
+                    currentFunction!.spillLocal(forVariable: innerOutput)
+                }
             }
         }
     }
 
-    private func importTagIfNeeded(tag: Variable, parameters: ParameterList) {
-        if (!self.tags.contains(tag) && self.imports.firstIndex(where: {variable, _ in variable == tag}) == nil) {
-            self.imports.append((tag, parameters => .nothing))
+    private func importIfNeeded(_ imp: Export) {
+        guard case .import(let type, let variable, let signature) = imp else {
+            fatalError("This needs an import.")
         }
-    }
 
-    // Helper function for memory accessing instructions.
-    private func memoryOpImportAnalysis(instr: Instruction, isMemory64: Bool) throws {
-        let memory = instr.input(0)
-        if !typer.type(of: memory).isWasmMemoryType {
-            throw WasmLifter.CompileError.missingTypeInformation
+        // Check if we define this variable in Wasm, i.e. it is defined.
+        if self.exports.contains(where: { exp in
+            exp.getDefInstr()?.output == variable
+        }) {
+            return
         }
-        assert(typer.type(of: memory).wasmMemoryType!.isMemory64 == isMemory64)
-        if !self.memories.contains(where: {$0.output == memory}) {
-            // TODO(cffsmith) this needs to be changed once we support multimemory as we probably also need to fix the ordering.
-            if !self.imports.map({$0.0}).contains(memory) {
-                self.imports.append((memory, nil))
+
+        // Check all imports to see if we have this already.
+        let imports = self.exports.compactMap { $0.getImport() }
+
+        // We also need a signature for this import to distinguish it from other imports.
+        if type.isFunction || type.isSuspendingObject {
+            if !imports.contains(where: {
+                if let otherSig = $0.signature {
+                    $0.variable == variable && otherSig == signature
+                } else {
+                    false
+                }
+            }) {
+                self.exports.append(imp)
             }
+
+            return
+        }
+
+
+        // Now check for generic imports that we can just import as is without using a signature.
+        if !imports.contains(where: {
+            // if we have a signature, we need to make sure that create a new import with that signature.
+            $0.variable == variable
+        }) {
+            self.exports.append(imp)
         }
     }
 
@@ -1041,148 +1420,182 @@ public class WasmLifter {
     // Also, we export the globals in the order we "see" them, which might mismatch the order in which they are laid out in the binary at the end, which is why we track the order of the globals separately.
     private func importAnalysis() throws {
         for instr in self.instructionBuffer {
-            switch instr.op.opcode {
-            case .wasmLoadGlobal(_),
-                 .wasmStoreGlobal(_):
-                let globalVariable = instr.input(0)
-                if !self.globalOrder.contains(globalVariable) {
-                    self.imports.append((globalVariable, nil))
-                    self.globalOrder.append(globalVariable)
+            for (idx, input) in instr.inputs.enumerated() {
+                let inputType = typer.type(of: input)
+
+                if inputType.Is(.wasmTypeDef()) || inputType.Is(.wasmRef(.Index(), nullability: true)) {
+                    let typeDesc = typer.getTypeDescription(of: input)
+                    if typeDesc.typeGroupIndex != -1 {
+                        // Add typegroups and their dependencies.
+                        if typeGroups.insert(typeDesc.typeGroupIndex).inserted {
+                            typeGroups.formUnion(typer.getTypeGroupDependencies(typeGroupIndex: typeDesc.typeGroupIndex))
+                        }
+                    } else {
+                        freeTypes.insert(input)
+                    }
                 }
+
+                for importType in [Export.table(nil), Export.memory(nil), Export.global(nil)] {
+                    if inputType.Is(.object(ofGroup: importType.groupName())) {
+                        importIfNeeded(.import(type: importType, variable: input, signature: nil))
+                    }
+                }
+
+                // Special handling for tag
+                // TODO: Can we just use .isWasmTagType?
+                if inputType.Is(.object(ofGroup: "WasmTag")) {
+                    // We need the tag parameters here or we need to bail.
+                    if !inputType.isWasmTagType {
+                        throw WasmLifter.CompileError.missingTypeInformation
+                    }
+                    // TODO: This now uses the typer here but the op also carries this information?
+                    importIfNeeded(.import(type: .tag(nil), variable: input, signature: inputType.wasmTagType!.parameters => []))
+                }
+
+                // Special handling for functions, we only expect them in WasmJSCalls, and WasmDefineTable instructions right now.
+                // We can treat the suspendingObjects as function imports.
+                if inputType.Is(.function()) || inputType.Is(.object(ofGroup: "WasmSuspendingObject")) {
+                    if case .wasmJsCall(let op) = instr.op.opcode {
+                        importIfNeeded(.import(type: .function(nil), variable: input, signature: op.functionSignature))
+                    } else if case .wasmDefineTable(let op) = instr.op.opcode {
+                        // Find the signature in the defined entries
+                        let sig = op.definedEntries[idx].signature
+                        importIfNeeded(.import(type: .function(nil), variable: input, signature: sig))
+                    } else {
+                        // This instruction has likely expected some .object() of a specific group, as this variable can originate from outside wasm, it might have been reassigned to. Which means we will enter this path.
+                        // Therefore we need to bail.
+                        throw CompileError.invalidInput
+                    }
+                }
+            }
+
+            // The output handling needs to match on specific opcodes, it cannot just look at the output type as that might've been propagated.
+            switch instr.op.opcode {
             case .wasmDefineGlobal(_):
-                self.globals.append(instr)
-                self.globalOrder.append(instr.output)
-
+                self.exports.append(.global(instr))
             case .wasmDefineTable(let tableDef):
-                self.tables.append(instr)
-                if tableDef.tableType.elementType == .wasmFuncRef {
-                    for definedEntry in instr.inputs {
-                        if typer.type(of: definedEntry).Is(.function()) && !self.imports.contains(where: { $0.0 == definedEntry }) {
-                            // Ensure deterministic lifting.
-
-                            let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(typer.type(of: definedEntry).signature ?? Signature.forUnknownFunction)
-                            self.imports.append((definedEntry, wasmSignature))
+                self.exports.append(.table(instr))
+                if tableDef.elementType == .wasmFuncRef {
+                    for (value, definedEntry) in zip(instr.inputs, tableDef.definedEntries) {
+                        if !typer.type(of: value).Is(.wasmFunctionDef()) {
+                            // Check if we need to import the inputs.
+                            importIfNeeded(.import(type: .function(nil), variable: value, signature: definedEntry.signature))
                         }
                     }
                 }
-            case .wasmDefineMemory:
-                self.memories.append(instr)
-            case .wasmMemoryLoad(let op):
-                try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
-            case .wasmMemoryStore(let op):
-                try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
-            case .wasmSimdLoad(let op):
-                try memoryOpImportAnalysis(instr: instr, isMemory64: op.isMemory64)
-            case .wasmTableGet(_),
-                 .wasmTableSet(_):
-                let table = instr.input(0)
-                if !self.tables.contains(where: {$0.output == table}) {
-                    // TODO: check if the ordering here is also somehow important?
-                    if !self.imports.map({$0.0}).contains(table) {
-                        self.imports.append((table, nil))
-                    }
-                }
-
-            case .wasmJsCall(let op):
-                self.imports.append((instr.input(0), op.functionSignature))
-
-            case .wasmDefineTag(let op):
-                self.tags[instr.output] = op.parameters
-
-            case .wasmBeginCatch(let op):
-                if !typer.type(of: instr.input(0)).isWasmTagType {
-                    throw WasmLifter.CompileError.missingTypeInformation
-                }
-                assert(typer.type(of: instr.input(0)).wasmTagType!.parameters == op.signature.parameters)
-                importTagIfNeeded(tag: instr.input(0), parameters: op.signature.parameters)
-
-            case .wasmThrow(let op):
-                if !typer.type(of: instr.input(0)).isWasmTagType {
-                    throw WasmLifter.CompileError.missingTypeInformation
-                }
-                assert(typer.type(of: instr.input(0)).wasmTagType!.parameters == op.parameters)
-                importTagIfNeeded(tag: instr.input(0), parameters: op.parameters)
+            case .wasmDefineMemory(_):
+                self.exports.append(.memory(instr))
+            case .wasmDefineTag(_):
+                self.exports.append(.tag(instr))
 
             default:
-                assert((instr.op as! WasmOperation).inputTypes.allSatisfy { type in
-                    !type.Is(.object())
-                }, "\(instr.op) has an input that is .object() it should probably be handled here.")
                 continue
             }
         }
 
-        // The base of the internally defined globals indices come after the imports.
-        self.baseDefinedGlobals = self.imports.filter({typer.type(of: $0.0).Is(.object(ofGroup: "WasmGlobal")) }).count
-        // The number of internally defined tables indices come after the imports.
-        self.baseDefinedTables = self.imports.filter({ typer.type(of: $0.0).Is(.object(ofGroup: "WasmTable")) }).count
+        // Eagerly map all types in typegroups to module-specific indices. (We can't do this when
+        // building the type section as the instructions get lowered before we emit the type
+        // section.)
+        var currentTypeIndex = 0
+        for typeGroupIndex in typeGroups.sorted() {
+            for typeDef in typer.getTypeGroup(typeGroupIndex) {
+                let typeDesc = typer.getTypeDescription(of: typeDef)
+                typeDescToIndex[typeDesc] = currentTypeIndex
+                currentTypeIndex += 1
+            }
+        }
+        userDefinedTypesCount = currentTypeIndex
     }
 
     /// Describes the types of indexes in the different index spaces in the Wasm binary format.
     public enum IndexType {
         case global
         case table
+        case memory
         case tag
         case function
+
+        func matches(_ export: Export) -> Bool {
+            switch self {
+            case .global:
+                return export.isGlobal
+            case .table:
+                return export.isTable
+            case .memory:
+                return export.isMemory
+            case .tag:
+                return export.isTag
+            case .function:
+                return export.isFunction || export.isSuspendingObject
+
+            }
+        }
     }
 
     /// Helper function to resolve the index (as laid out in the binary format) of an instruction input Variable of a specific `IndexType`
     /// Intended to be called from `lift`.
-    func resolveIdx(ofType type: IndexType, for input: Variable) throws -> Int {
-        var base = 0
-        var groupType: String? = nil
+    func resolveIdx(ofType importType: IndexType, for input: Variable) throws -> Int {
+        // The imports of the requested type.
+        let imports = self.exports.compactMap({
+            $0.getImport()
+        }).filter({
+            importType.matches($0.type)
+        })
 
-        switch type {
-        case .global:
-            groupType = "WasmGlobal"
-            base = self.baseDefinedGlobals!
-        case .table:
-            groupType = "WasmTable"
-            base = self.baseDefinedTables!
-        case .tag:
-            groupType = "WasmTag"
-            base = self.imports.filter({
-                self.typer.type(of: $0.0).Is(.object(ofGroup: groupType!))
-            }).count
-        case .function:
-            base = self.functionIdxBase
-        }
-
-        let predicate: ((Variable) -> Bool) = switch type {
-        case .global,
-                .table,
-                .tag:
-            { variable in
-                self.typer.type(of: variable).Is(.object(ofGroup: groupType!))
-            }
-        case .function:
-            { variable in
-                self.typer.type(of: variable).Is(.function()) || self.typer.type(of: variable).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))
-            }
-        }
-
-        let filteredImports = self.imports.filter({ predicate($0.0) })
-        // Check if we can find this in the imports:
-        if let idx = filteredImports.firstIndex(where: { $0.0 == input }) {
+        // Now get the index in this "import space"
+        if let idx =  imports.firstIndex(where: {
+            $0.variable == input
+        }) {
             return idx
         }
 
-        // If we don't have it as an import, look into the respective internally defined sections.
-        let idx: Int? = switch type {
-        case .global:
-            self.globals.firstIndex(where: {$0.output == input})
-        case .tag:
-            self.tags.map({$0}).firstIndex(where: {$0.0 == input})
-        case .table:
-            self.tables.firstIndex(where: {$0.output == input})
-        case .function:
-            self.functions.firstIndex { $0.outputVariable == input }
-        }
+        // This is the defined space, i.e. where the type matches the predicate directly.
+        let idx = self.exports.filter({ importType.matches($0) }).firstIndex(where: { export in
+            // Functions don't have a defining instruction and as such have special handling here.
+            if case .function(let fInfo) = export {
+                fInfo!.outputVariable == input
+            } else {
+                export.getDefInstr()!.output == input
+            }
+        })
 
         if let idx = idx {
-            return base + idx
+            return imports.count + idx
         }
 
         throw WasmLifter.CompileError.failedIndexLookUp
+    }
+
+    func resolveDataSegmentIdx(for input: Variable) -> Int {
+        dataSegments.firstIndex {$0.output == input}!
+    }
+
+    // The memory immediate argument, which encodes the alignment and memory index.
+    // For memory 0, this is just the alignment. For other memories, a flag is set
+    // and the memory index is also encoded.
+    // Memory zero: `[align]`.
+    // Multi-memory: `[align | 0x40] + [mem_idx]`.
+    private func alignmentAndMemoryBytes(_ memory: Variable, alignment: Int64 = 1) throws -> Data {
+        assert(alignment > 0 && (alignment & (alignment - 1)) == 0, "Alignment must be a power of two")
+        let memoryIdx = try resolveIdx(ofType: .memory, for: memory)
+
+
+        let alignmentLog2 = alignment.trailingZeroBitCount
+        assert(alignmentLog2 < 0x40, "Alignment \(alignment) is too large for multi-memory encoding")
+
+        if memoryIdx == 0 {
+            return Leb128.unsignedEncode(alignmentLog2)
+        } else {
+            let flags = UInt8(alignmentLog2) | 0x40
+            return Data([flags]) + Leb128.unsignedEncode(memoryIdx)
+        }
+    }
+
+    private func branchDepthFor(label: Variable) throws -> Int {
+        guard let labelDepth = self.currentFunction!.labelBranchDepthMapping[label] else {
+            throw CompileError.fatalError("No branch depth information for label \(label)")
+        }
+        return self.currentFunction!.variableAnalyzer.wasmBranchDepth - labelDepth - 1
     }
 
     /// Returns the Bytes that correspond to this instruction.
@@ -1193,6 +1606,9 @@ public class WasmLifter {
         assert(wasmInstruction.op is WasmOperation)
 
         switch wasmInstruction.op.opcode {
+        case .endWasmFunction(_):
+            currentFunction = nil
+            return Data([])
         case .consti64(let op):
             return Data([0x42]) + Leb128.signedEncode(Int(op.value))
         case .consti32(let op):
@@ -1312,28 +1728,28 @@ public class WasmLifter {
         case .wasmSignExtend32Intoi64(_):
             return Data([0xC4])
         case .wasmTruncateSatf32Toi32(let op):
-            let d = Data([0xFC])
+            let d = Data([Prefix.Numeric.rawValue])
             if op.isSigned {
                 return d + Leb128.unsignedEncode(0)
             } else {
                 return d + Leb128.unsignedEncode(1)
             }
         case .wasmTruncateSatf64Toi32(let op):
-            let d = Data([0xFC])
+            let d = Data([Prefix.Numeric.rawValue])
             if op.isSigned {
                 return d + Leb128.unsignedEncode(2)
             } else {
                 return d + Leb128.unsignedEncode(3)
             }
         case .wasmTruncateSatf32Toi64(let op):
-            let d = Data([0xFC])
+            let d = Data([Prefix.Numeric.rawValue])
             if op.isSigned {
                 return d + Leb128.unsignedEncode(4)
             } else {
                 return d + Leb128.unsignedEncode(5)
             }
         case .wasmTruncateSatf64Toi64(let op):
-            let d = Data([0xFC])
+            let d = Data([Prefix.Numeric.rawValue])
             if op.isSigned {
                 return d + Leb128.unsignedEncode(6)
             } else {
@@ -1359,19 +1775,88 @@ public class WasmLifter {
         case .wasmTableSet(_):
             let tableRef = wasmInstruction.input(0)
             return Data([0x26]) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
+        case .wasmTableSize(_):
+            let tableRef = wasmInstruction.input(0)
+            // Value 0x10 is table.size opcode
+            return Data([Prefix.Numeric.rawValue]) + Leb128.unsignedEncode(0x10) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
+        case .wasmTableGrow(_):
+            let tableRef = wasmInstruction.input(0)
+            // Value 0x0f is table.grow opcode
+            return Data([Prefix.Numeric.rawValue]) + Leb128.unsignedEncode(0x0f) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
+        case .wasmCallIndirect(let op):
+            let tableRef = wasmInstruction.input(0)
+            let sigIndex = try getSignatureIndex(op.signature)
+            return Data([0x11]) + Leb128.unsignedEncode(sigIndex) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
+        case .wasmCallDirect(_):
+            let functionRef = wasmInstruction.input(0)
+            return Data([0x10]) + Leb128.unsignedEncode(try resolveIdx(ofType: .function, for: functionRef))
+        case .wasmReturnCallDirect(_):
+            let functionRef = wasmInstruction.input(0)
+            return Data([0x12]) + Leb128.unsignedEncode(try resolveIdx(ofType: .function, for: functionRef))
+        case .wasmReturnCallIndirect(let op):
+            let tableRef = wasmInstruction.input(0)
+            let sigIndex = try getSignatureIndex(op.signature)
+            return Data([0x13]) + Leb128.unsignedEncode(sigIndex) + Leb128.unsignedEncode(try resolveIdx(ofType: .table, for: tableRef))
         case .wasmMemoryLoad(let op):
-            // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
-            return Data([op.loadType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
+            return Data([op.loadType.rawValue]) + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
         case .wasmMemoryStore(let op):
-            // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
-            return Data([op.storeType.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
+            let opCode = Data(op.storeType != .S128StoreMem
+                ? [op.storeType.rawValue]
+                : [Prefix.Simd.rawValue, op.storeType.rawValue])
+            return opCode + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
+        case .wasmAtomicLoad(let op):
+            let opcode = [Prefix.Atomic.rawValue, op.loadType.rawValue]
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0), alignment: op.loadType.naturalAlignment())
+            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
+
+        case .wasmAtomicStore(let op):
+            let opcode = [Prefix.Atomic.rawValue, op.storeType.rawValue]
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0), alignment: op.storeType.naturalAlignment())
+            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
+        case .wasmAtomicRMW(let op):
+            let opcode = [Prefix.Atomic.rawValue, op.op.rawValue]
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0), alignment: op.op.naturalAlignment())
+            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
+        case .wasmAtomicCmpxchg(let op):
+            let opcode = [Prefix.Atomic.rawValue, op.op.rawValue]
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0), alignment: op.op.naturalAlignment())
+            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
+        case .wasmMemorySize(_):
+            let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
+            return Data([0x3F]) + Leb128.unsignedEncode(memoryIdx)
+        case .wasmMemoryGrow(_):
+            let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
+            return Data([0x40]) + Leb128.unsignedEncode(memoryIdx)
+        case .wasmMemoryCopy(_):
+            let dstMemIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
+            let srcMemIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(1))
+            return Data([0xFC, 0x0a]) + Leb128.unsignedEncode(dstMemIdx) + Leb128.unsignedEncode(srcMemIdx)
+        case .wasmMemoryFill(_):
+            let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
+            return Data([0xFC, 0x0b]) + Leb128.unsignedEncode(memoryIdx)
+        case .wasmMemoryInit(_):
+            let dataSegmentIdx = resolveDataSegmentIdx(for: wasmInstruction.input(0))
+            let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(1))
+            return Data([0xFC, 0x08]) + Leb128.unsignedEncode(dataSegmentIdx) + Leb128.unsignedEncode(memoryIdx)
+        case .wasmDropDataSegment(_):
+            let dataSegmentIdx = resolveDataSegmentIdx(for: wasmInstruction.input(0))
+            return Data([0xFC, 0x09]) + Leb128.unsignedEncode(dataSegmentIdx)
         case .wasmJsCall(let op):
             // We filter first, such that we get the index of functions only.
-            if let index = imports.filter({
-                // TODO, switch query?
-                typer.type(of: $0.0).Is(.function()) || typer.type(of: $0.0).Is(.object(ofGroup: "WebAssembly.SuspendableObject"))
+            let wasmSignature = op.functionSignature
+
+            // This has somewhat special handling as we might have multiple imports for this variable, we also need to get the right index that matches that signature that we expect here.
+            // TODO(cffsmith): consider adding that signature matching feature to resolveIdx.
+            if let index = self.exports.filter({
+                if let imp = $0.getImport() {
+                    return imp.type.isFunction || imp.type.isSuspendingObject
+                } else {
+                    return false
+                }
             }).firstIndex(where: {
-                wasmInstruction.input(0) == $0.0 && op.functionSignature == $0.1
+                wasmInstruction.input(0) == $0.getImport()!.variable && wasmSignature == $0.getImport()!.signature
             }) {
                 return Data([0x10]) + Leb128.unsignedEncode(index)
             } else {
@@ -1380,25 +1865,46 @@ public class WasmLifter {
         case .wasmBeginBlock(let op):
             // A Block can "produce" (push) an item on the value stack, just like a function. Similarly, a block can also have parameters.
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
-            return Data([0x02] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x02] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginLoop(let op):
-            return Data([0x03] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x03] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
+        case .wasmBeginTryTable(let op):
+            var inputIndex = op.signature.parameterTypes.count
+            let catchTable: Data = try op.catches.map {
+                    switch $0 {
+                    case .Ref, .NoRef:
+                        let tag = try resolveIdx(ofType: .tag, for: wasmInstruction.input(inputIndex))
+                        let depth = try branchDepthFor(label: wasmInstruction.input(inputIndex + 1)) - 1
+                        let result = Data([$0.rawValue]) + Leb128.unsignedEncode(tag) + Leb128.unsignedEncode(depth)
+                        inputIndex += 2
+                        return result
+                    case .AllRef, .AllNoRef:
+                        let depth = try branchDepthFor(label: wasmInstruction.input(inputIndex)) - 1
+                        inputIndex += 1
+                        return Data([$0.rawValue]) + Leb128.unsignedEncode(depth)
+                    }
+                }.reduce(Data(), +)
+            return [0x1F]
+                + Leb128.unsignedEncode(signatureIndexMap[op.signature]!)
+                + Leb128.unsignedEncode(op.catches.count)
+                + catchTable
         case .wasmBeginTry(let op):
-            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x06] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginTryDelegate(let op):
-            return Data([0x06] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            return Data([0x06] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
         case .wasmBeginCatchAll(_):
             return Data([0x19])
         case .wasmBeginCatch(_):
             return Data([0x07] + Leb128.unsignedEncode(try resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
         case .wasmEndLoop(_),
                 .wasmEndIf(_),
+                .wasmEndTryTable(_),
                 .wasmEndTry(_),
                 .wasmEndBlock(_):
             // Basically the same as EndBlock, just an explicit instruction.
             return Data([0x0B])
         case .wasmEndTryDelegate(_):
-            let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             // Mutation might make this EndTryDelegate branch to itself, which should not happen.
             if branchDepth < 0 {
                 throw WasmLifter.CompileError.invalidBranch
@@ -1406,17 +1912,28 @@ public class WasmLifter {
             return Data([0x18]) + Leb128.unsignedEncode(branchDepth)
         case .wasmThrow(_):
             return Data([0x08] + Leb128.unsignedEncode(try resolveIdx(ofType: .tag, for: wasmInstruction.input(0))))
+        case .wasmThrowRef(_):
+            return Data([0x0a])
         case .wasmRethrow(_):
-            let blockDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            let blockDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0x09] + Leb128.unsignedEncode(blockDepth))
         case .wasmBranch(let op):
-            let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0x0C]) + Leb128.unsignedEncode(branchDepth) + Data(op.labelTypes.map {_ in 0x1A})
         case .wasmBranchIf(let op):
-            let branchDepth = self.currentFunction!.variableAnalyzer.wasmBranchDepth - self.currentFunction!.labelBranchDepthMapping[wasmInstruction.input(0)]! - 1
+            currentFunction!.addBranchHint(op.hint)
+            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0x0D]) + Leb128.unsignedEncode(branchDepth) + Data(op.labelTypes.map {_ in 0x1A})
+        case .wasmBranchTable(let op):
+            let depths = try (0...op.valueCount).map {
+                try branchDepthFor(label: wasmInstruction.input($0))
+            }
+            return Data([0x0E]) + Leb128.unsignedEncode(op.valueCount) + depths.map(Leb128.unsignedEncode).joined()
         case .wasmBeginIf(let op):
-            return Data([0x04] + Leb128.unsignedEncode(signatureIndexMap[op.signature]!))
+            currentFunction!.addBranchHint(op.hint)
+            let beginIf = Data([0x04] + Leb128.unsignedEncode(try getSignatureIndex(op.signature)))
+            // Invert the condition with an `i32.eqz` (resulting in 0 becoming 1 and everything else becoming 0).
+            return op.inverted ? Data([0x45]) + beginIf : beginIf
         case .wasmBeginElse(_):
             // 0x05 is the else block instruction.
             return Data([0x05])
@@ -1452,12 +1969,12 @@ public class WasmLifter {
             return Data([0x01])
         case .wasmUnreachable(_):
             return Data([0x00])
-        case .wasmSelect(let op):
-            return Data([0x1c, 0x01]) + ILTypeMapping[op.type]!
+        case .wasmSelect(_):
+            return try Data([0x1c, 0x01]) + encodeType(typer.type(of: wasmInstruction.input(0)))
         case .constSimd128(let op):
-            return Data([0xFD]) + Leb128.unsignedEncode(12) + Data(op.value)
+            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(12) + Data(op.value)
         case .wasmSimd128IntegerUnOp(let op):
-            assert(WasmSimd128IntegerUnOpKind.allCases.count == 13, "New WasmSimd128IntegerUnOpKind added: check if the encoding is still correct!")
+            assert(WasmSimd128IntegerUnOpKind.allCases.count == 17, "New WasmSimd128IntegerUnOpKind added: check if the encoding is still correct!")
             let base = switch op.shape {
                 case .i8x16: 0x5C
                 case .i16x8: 0x7C
@@ -1465,7 +1982,7 @@ public class WasmLifter {
                 case .i64x2: 0xBC
                 default: fatalError("Shape \(op.shape) not supported for WasmSimd128IntegerUnOp")
             }
-            var encoding = Data([0xFD]) + Leb128.unsignedEncode(base + op.unOpKind.rawValue)
+            var encoding = Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.unOpKind.rawValue)
             // For most of the instructions we have to add another 0x01 byte add the end of the encoding.
             switch op.shape {
                 case .i8x16:
@@ -1481,7 +1998,7 @@ public class WasmLifter {
             }
             return encoding
         case .wasmSimd128IntegerBinOp(let op):
-            assert(WasmSimd128IntegerBinOpKind.allCases.count == 23, "New WasmSimd128IntegerBinOpKind added: check if the encoding is still correct!")
+            assert(WasmSimd128IntegerBinOpKind.allCases.count == 26, "New WasmSimd128IntegerBinOpKind added: check if the encoding is still correct!")
             let base = switch op.shape {
                 case .i8x16: 0x5C
                 case .i16x8: 0x7C
@@ -1489,12 +2006,22 @@ public class WasmLifter {
                 case .i64x2: 0xBC
                 default: fatalError("Shape \(op.shape) not supported for WasmSimd128IntegerBinOp")
             }
-            var encoding =  Data([0xFD]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue)
+            var encoding =  Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue)
             // Apart from .i8x16 shape, the encoding has another 0x01 byte at the end of the encoding.
             if (op.shape != .i8x16) {
                 encoding += Leb128.unsignedEncode(0x01)
             }
             return encoding
+        case .wasmSimd128IntegerTernaryOp(let op):
+            assert(WasmSimd128IntegerTernaryOpKind.allCases.count == 2, "New WasmSimd128IntegerTernaryOpKind added: check if the encoding is still correct!")
+            let base = switch op.shape {
+                case .i8x16: 0x100
+                case .i16x8: 0x101
+                case .i32x4: 0x102
+                case .i64x2: 0x103
+                default: fatalError("Shape \(op.shape) not supported for WasmSimd128IntegerTernaryOp")
+            }
+            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.ternaryOpKind.rawValue) + Leb128.unsignedEncode(0x01)
         case .wasmSimd128FloatUnOp(let op):
             assert(WasmSimd128FloatUnOpKind.allCases.count == 7, "New WasmSimd128FloatUnOpKind added: check if the encoding is still correct!")
             let encoding = switch op.shape {
@@ -1518,21 +2045,28 @@ public class WasmLifter {
                 }
                 default: fatalError("Shape \(op.shape) not supported for WasmSimd128FloatUnOp")
             }
-            return Data([0xFD]) + encoding
+            return Data([Prefix.Simd.rawValue]) + encoding
         case .wasmSimd128FloatBinOp(let op):
-            assert(WasmSimd128FloatBinOpKind.allCases.count == 8, "New WasmSimd128FloatBinOpKind added: check if the encoding is still correct!")
-            let base = (op.shape == .f32x4) ? 0xE4 : 0xF0;
-            return Data([0xFD]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue) + Leb128.unsignedEncode(0x01)
+            assert(WasmSimd128FloatBinOpKind.allCases.count == 10, "New WasmSimd128FloatBinOpKind added: check if the encoding is still correct!")
+            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(op.getOpcode()) + Leb128.unsignedEncode(0x01)
+        case .wasmSimd128FloatTernaryOp(let op):
+            assert(WasmSimd128FloatTernaryOpKind.allCases.count == 2, "New WasmSimd128FloatTernaryOpKind added: check if the encoding is still correct!")
+            let base = switch op.shape {
+                case .f32x4: 0x100
+                case .f64x2: 0x102
+                default: fatalError("Shape \(op.shape) not supported for WasmSimd128FloatTernaryOp")
+            }
+            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.ternaryOpKind.rawValue) + Leb128.unsignedEncode(0x01)
         case .wasmSimd128Compare(let op):
             assert(WasmIntegerCompareOpKind.allCases.count == 10, "New WasmIntegerCompareOpKind added: check if the encoding is still correct!")
             assert(WasmFloatCompareOpKind.allCases.count == 6, "New WasmFloatCompareOpKind added: check if the encoding is still correct!")
             switch op.shape {
             case .i8x16:
-                return Data([0xFD]) + Leb128.unsignedEncode(0x23 + op.compareOpKind.toInt())
+                return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0x23 + op.compareOpKind.toInt())
             case .i16x8:
-                return Data([0xFD]) + Leb128.unsignedEncode(0x2D + op.compareOpKind.toInt())
+                return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0x2D + op.compareOpKind.toInt())
             case .i32x4:
-                return Data([0xFD]) + Leb128.unsignedEncode(0x37 + op.compareOpKind.toInt())
+                return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0x37 + op.compareOpKind.toInt())
             case .i64x2:
                 if case .iKind(let value) = op.compareOpKind {
                     let temp = switch value {
@@ -1544,21 +2078,79 @@ public class WasmLifter {
                         case .Ge_s: 5
                         default: fatalError("Shape \(op.shape) does not have \(op.compareOpKind) instruction")
                     }
-                    return Data([0xFD]) + Leb128.unsignedEncode(0xD6 + temp) + Leb128.unsignedEncode(0x01)
+                    return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0xD6 + temp) + Leb128.unsignedEncode(0x01)
                 }
                 fatalError("unreachable")
             case .f32x4:
-                return Data([0xFD]) + Leb128.unsignedEncode(0x41 + op.compareOpKind.toInt())
+                return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0x41 + op.compareOpKind.toInt())
             case .f64x2:
-                return Data([0xFD]) + Leb128.unsignedEncode(0x47 + op.compareOpKind.toInt())
+                return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0x47 + op.compareOpKind.toInt())
             }
-        case .wasmI64x2Splat(_):
-            return Data([0xFD]) + Leb128.unsignedEncode(0x12)
-        case .wasmI64x2ExtractLane(let op):
-            return Data([0xFD]) + Leb128.unsignedEncode(0x1D) + Leb128.unsignedEncode(op.lane)
+        case .wasmSimdSplat(let op):
+            return Data([Prefix.Simd.rawValue, op.kind.rawValue])
+        case .wasmSimdExtractLane(let op):
+            return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + Leb128.unsignedEncode(op.lane)
+        case .wasmSimdReplaceLane(let op):
+            return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + Leb128.unsignedEncode(op.lane)
+        case .wasmSimdStoreLane(let op):
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
+            return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + alignAndMemory
+                + Leb128.signedEncode(Int(op.staticOffset)) + Leb128.unsignedEncode(op.lane)
+        case .wasmSimdLoadLane(let op):
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
+            return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + alignAndMemory
+                + Leb128.signedEncode(Int(op.staticOffset)) + Leb128.unsignedEncode(op.lane)
          case .wasmSimdLoad(let op):
             // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
-            return Data([0xFD, op.kind.rawValue]) + Leb128.unsignedEncode(0) + Leb128.signedEncode(Int(op.staticOffset))
+            let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
+            return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
+        case .wasmArrayNewFixed(let op):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            return Data([Prefix.GC.rawValue, 0x08]) + arrayIndex + Leb128.unsignedEncode(op.size)
+        case .wasmArrayNewDefault(_):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            return Data([Prefix.GC.rawValue, 0x07]) + arrayIndex
+        case .wasmArrayLen(_):
+            return Data([Prefix.GC.rawValue, 0x0F])
+        case .wasmArrayGet(let op):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0)) as! WasmArrayTypeDescription
+            let opCode: UInt8 = typeDesc.elementType.isPacked() ? (op.isSigned ? 0x0C : 0x0D) : 0x0B
+            let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            return Data([Prefix.GC.rawValue, opCode]) + arrayIndex
+        case .wasmArraySet(_):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            return Data([Prefix.GC.rawValue, 0x0E]) + arrayIndex
+        case .wasmStructNewDefault(_):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let structIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            return Data([Prefix.GC.rawValue, 0x01]) + structIndex
+        case .wasmStructGet(let op):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0)) as! WasmStructTypeDescription
+            let opCode: UInt8 = typeDesc.fields[op.fieldIndex].type.isPacked() ? (op.isSigned ? 0x03 : 0x04) : 0x02
+            let structIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            let fieldIndex = Leb128.unsignedEncode(op.fieldIndex)
+            return Data([Prefix.GC.rawValue, opCode]) + structIndex + fieldIndex
+        case .wasmStructSet(let op):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let structIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            let fieldIndex = Leb128.unsignedEncode(op.fieldIndex)
+            return Data([Prefix.GC.rawValue, 0x05]) + structIndex + fieldIndex
+        case .wasmRefNull(_):
+            return try Data([0xD0]) + encodeHeapType(typer.type(of: wasmInstruction.output))
+        case .wasmRefIsNull(_):
+            return Data([0xD1])
+        case .wasmRefI31(_):
+            return Data([Prefix.GC.rawValue, 0x1C])
+        case .wasmI31Get(let op):
+            let opCode: UInt8 = op.isSigned ? 0x1D : 0x1E
+            return Data([Prefix.GC.rawValue, opCode])
+        case .wasmAnyConvertExtern(_):
+            return Data([Prefix.GC.rawValue, 0x1A])
+        case .wasmExternConvertAny(_):
+            return Data([Prefix.GC.rawValue, 0x1B])
 
         default:
              fatalError("unreachable")

@@ -51,7 +51,7 @@ let duktapeProfile = Profile(
     disabledMutators: [],
 
     additionalBuiltins: [
-        "CBOR.encode"               :  .function([.anything] => .object()),
+        "CBOR.encode"               :  .function([.jsAnything] => .object()),
         "CBOR.decode"               :  .function([.object()] => .object()),
         "Duktape.fin"               :  .function([.object(), .opt(.function())] => .undefined),
         "Duktape.act"               :  .function([.number] => .object()),

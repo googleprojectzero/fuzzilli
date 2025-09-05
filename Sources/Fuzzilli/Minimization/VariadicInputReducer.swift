@@ -20,7 +20,7 @@ struct VariadicInputReducer: Reducer {
             let index = instr.index
 
             var instr = instr
-            repeat {
+            loop: repeat {
                 assert(instr.isVariadic)
                 // Remove the last variadic input (if it exists)
                 guard instr.numInputs > instr.firstVariadicInput else { break }
@@ -69,8 +69,15 @@ struct VariadicInputReducer: Reducer {
                     newOp = CallPrivateMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
                 case .callSuperMethod(let op):
                     newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
+                case .bindFunction(let op):
+                    newOp = BindFunction(numInputs: op.numInputs - 1)
                 case .createTemplateString(let op):
                     newOp = CreateTemplateString(parts: op.parts.dropLast())
+                case .wasmEndTypeGroup(_):
+                    // Reduction of unused outputs (and therefore reduction of the corresponding
+                    // inputs) is done by the WasmTypeGroupReducer (as it requires further tracking
+                    // e.g. of output usages.)
+                    break loop
                 default:
                     fatalError("Unknown variadic operation \(instr.op)")
                 }

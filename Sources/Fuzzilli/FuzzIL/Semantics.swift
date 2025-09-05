@@ -228,6 +228,8 @@ extension Operation {
             return endOp is WasmEndBlock
         case .wasmBeginLoop:
             return endOp is WasmEndLoop
+        case .wasmBeginTryTable:
+            return endOp is WasmEndTryTable
         case .wasmBeginTry,
              .wasmBeginCatch:
             return endOp is WasmEndTry || endOp is WasmBeginCatch || endOp is WasmBeginCatchAll
@@ -239,6 +241,8 @@ extension Operation {
             return endOp is WasmEndIf || endOp is WasmBeginElse
         case .wasmBeginElse:
             return endOp is WasmEndIf
+        case .wasmBeginTypeGroup:
+            return endOp is WasmEndTypeGroup
         default:
             fatalError("Unknown block operation \(beginOp)")
         }

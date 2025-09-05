@@ -48,7 +48,7 @@ fileprivate protocol MessageHandler {
 /// A connection to a network peer that speaks the above protocol.
 fileprivate class Connection {
     /// The file descriptor on POSIX or SOCKET handle on Windows of the socket.
-    let socket: libsocket.socket_t
+    let socket: libsocket.libsocket_t
 
     /// The UUID of the remote end.
     let localId: UUID
@@ -78,7 +78,7 @@ fileprivate class Connection {
     /// Pending outgoing data. Must only be accessed on this connection's dispatch queue.
     private var sendQueue: [Data] = []
 
-    init?(socket: libsocket.socket_t, localId: UUID, handler: MessageHandler) {
+    init?(socket: libsocket.libsocket_t, localId: UUID, handler: MessageHandler) {
         self.socket = socket
         self.localId = localId
         self.handler = handler
@@ -331,7 +331,7 @@ public class NetworkParent: DistributedFuzzingParentNode {
         unowned let fuzzer: Fuzzer
 
         /// File descriptor or SOCKET handle of the server socket.
-        private var serverFd: libsocket.socket_t = INVALID_SOCKET
+        private var serverFd: libsocket.libsocket_t = INVALID_SOCKET
 
         /// Address and port on which to listen for connections.
         private let address: String
@@ -346,7 +346,7 @@ public class NetworkParent: DistributedFuzzingParentNode {
         private var serverQueue: DispatchQueue? = nil
 
         /// Active workers indexed by the socket used to communicate with them.
-        private var clientsBySocket = [libsocket.socket_t: Client]()
+        private var clientsBySocket = [libsocket.libsocket_t: Client]()
 
         /// Active workers indexed by their id.
         private var clientsById = [UUID: Client]()
@@ -445,7 +445,7 @@ public class NetworkParent: DistributedFuzzingParentNode {
             onChildDisconnectedCallback = callback
         }
 
-        private func handleNewConnection(_ socket: libsocket.socket_t) {
+        private func handleNewConnection(_ socket: libsocket.libsocket_t) {
             guard socket > 0 else {
                 return logger.error("Failed to accept client connection")
             }
