@@ -2469,7 +2469,7 @@ public extension ObjectGroup {
             "prototype" : jsTemporalZonedDateTimePrototype.instanceType
         ],
         overloads: [
-            "from": temporalFromSignature(forType: .jsTemporalPlainDateTime, possibleParams: jsTemporalPlainDateTimeLikeParameters, settingsArg: jsTemporalZonedInterpretationSettings),
+            "from": temporalFromSignature(forType: .jsTemporalZonedDateTime, possibleParams: jsTemporalZonedDateTimeLikeParameters, settingsArg: jsTemporalZonedInterpretationSettings),
             "compare": temporalCompareSignature(possibleParams: jsTemporalZonedDateTimeLikeParameters),
         ]
     )
