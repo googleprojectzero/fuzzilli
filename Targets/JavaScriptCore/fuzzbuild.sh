@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export WEBKIT_OUTPUTDIR=FuzzBuild
+export WEBKIT_OUTPUTDIR=WebKitBuild/Fuzzilli
 
 if [ "$(uname)" == "Linux" ]; then
-    ./Tools/Scripts/build-jsc --jsc-only --debug --cmakeargs="-DENABLE_STATIC_JSC=ON -DCMAKE_C_COMPILER='/usr/bin/clang' -DCMAKE_CXX_COMPILER='/usr/bin/clang++' -DCMAKE_CXX_FLAGS='-fsanitize-coverage=trace-pc-guard -O3 -lrt'"
+    # Optionally enable ASAN by adding --fsanitize=address to the CXX_FLAGS
+    ./Tools/Scripts/build-jsc --jsc-only --debug --cmakeargs="-DENABLE_FUZZILLI=YES -DENABLE_STATIC_JSC=YES -DCMAKE_C_COMPILER='/usr/bin/clang' -DCMAKE_CXX_COMPILER='/usr/bin/clang++' -DCMAKE_CXX_FLAGS='-fsanitize-coverage=trace-pc-guard -O3 -lrt'"
 else
     echo "Unsupported operating system"
 fi
