@@ -239,9 +239,12 @@ public struct Code: Collection {
                     throw FuzzilliError.codeVerificationError("variable \(input) is not visible anymore")
                 }
             }
-
-            guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
-                throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
+            
+            // allow top-level await
+            if !(instr.op is Await) {
+                guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
+                    throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
+                }
             }
 
             // Ensure that the instruction exists in the right context
