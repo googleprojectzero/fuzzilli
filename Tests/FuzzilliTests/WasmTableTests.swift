@@ -18,43 +18,39 @@ import XCTest
 class WasmTableTests: XCTestCase {
     func testTableSizeAndGrow() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
-        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
-        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
-        let b = fuzzer.makeBuilder()
         var expectedOutput = ""
 
-        let module = b.buildWasmModule { wasmModule in
-            let table = wasmModule.addTable(elementType: .wasmFuncRef, minSize: 10, maxSize: 20, isTable64: false)
+        let js = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                let table = wasmModule.addTable(elementType: .wasmFuncRef, minSize: 10, maxSize: 20, isTable64: false)
 
-            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { f, _, _ in
-                let size = f.wasmTableSize(table: table)
-                return [size]
-            }
-            expectedOutput += "10\n"
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { f, _, _ in
+                    let size = f.wasmTableSize(table: table)
+                    return [size]
+                }
+                expectedOutput += "10\n"
 
-            wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32]) { f, _, _ in
-                let initialValue = f.wasmRefNull(type: .wasmFuncRef)
-                let growBy = f.consti32(5)
-                let oldSize = f.wasmTableGrow(table: table, with: initialValue, by: growBy)
-                let newSize = f.wasmTableSize(table: table)
-                return [oldSize, newSize]
+                wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32]) { f, _, _ in
+                    let initialValue = f.wasmRefNull(type: .wasmFuncRef)
+                    let growBy = f.consti32(5)
+                    let oldSize = f.wasmTableGrow(table: table, with: initialValue, by: growBy)
+                    let newSize = f.wasmTableSize(table: table)
+                    return [oldSize, newSize]
+                }
+                expectedOutput += "10,15\n"
             }
-            expectedOutput += "10,15\n"
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            let w0 = b.getProperty("w0", of: exports)
+            let r0 = b.callFunction(w0)
+            b.callFunction(outputFunc, withArgs: [r0])
+
+            let w1 = b.getProperty("w1", of: exports)
+            let r1 = b.callFunction(w1)
+            b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(r1)])
         }
-
-        let exports = module.loadExports()
-        let outputFunc = b.createNamedVariable(forBuiltin: "output")
-
-        let w0 = b.getProperty("w0", of: exports)
-        let r0 = b.callFunction(w0)
-        b.callFunction(outputFunc, withArgs: [r0])
-
-        let w1 = b.getProperty("w1", of: exports)
-        let r1 = b.callFunction(w1)
-        b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(r1)])
-
-        let prog = b.finalize()
-        let js = fuzzer.lifter.lift(prog)
 
         testForOutput(program: js, runner: runner, outputString: expectedOutput)
     }

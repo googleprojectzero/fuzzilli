@@ -81,7 +81,6 @@ func buildAndLiftProgram(withLiftingOptions: LiftingOptions, buildFunc: (Program
     return fuzzer.lifter.lift(prog, withOptions: withLiftingOptions)
 }
 
-// TODO(pawkra): use it in the whole WasmTests.swift file.
 func buildAndLiftProgram(buildFunc: (ProgramBuilder) -> ()) -> String {
     return buildAndLiftProgram(withLiftingOptions: [], buildFunc: buildFunc)
 }
