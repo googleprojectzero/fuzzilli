@@ -728,6 +728,14 @@ public class JavaScriptEnvironment: ComponentBase {
         type.group.flatMap {producingGenerators[$0]}
     }
 
+    // If the object group refers to a constructor, get its path.
+    public func getPathIfConstructor(ofGroup groupName: String) -> [String]? {
+        guard let group = groups[groupName] else {
+            return nil
+        }
+        return group.constructorPath
+    }
+
     public func getProducingProperties(ofType type: ILType) -> [(group: String, property: String)] {
         guard let array = producingProperties[type] else {
             return []
@@ -755,11 +763,13 @@ public struct ObjectGroup {
     public var properties: [String: ILType]
     public var methods: [String: [Signature]]
     public let parent: String?
+    // Path to constructor function from `globalThis` if available (e.g. `["Temporal", "Instant"]`).
+    public let constructorPath: [String]?
 
     /// The type of instances of this group.
     public var instanceType: ILType
 
-    public init(name: String, instanceType: ILType?, properties: [String: ILType], overloads: [String: [Signature]], parent: String? = nil) {
+    public init(name: String, constructorPath: String? = nil, instanceType: ILType?, properties: [String: ILType], overloads: [String: [Signature]], parent: String? = nil) {
         self.name = name
         self.properties = properties
         self.methods = overloads
@@ -777,10 +787,17 @@ public struct ObjectGroup {
             // Simply calculate the instance type based on the ObjectGroup information.
             self.instanceType = .object(ofGroup: name, withProperties: Array(properties.keys), withMethods: Array(methods.keys))
         }
+
+        if let constructorPath {
+            assert(self.instanceType.Is(.constructor()) || self.instanceType.Is(.function()), "\(name) has a constructor path set but does not wrap a constructor")
+            self.constructorPath = constructorPath.split(separator: ".").map({ String($0) })
+        } else {
+            self.constructorPath = nil
+        }
     }
 
-    public init(name: String, instanceType: ILType?, properties: [String: ILType], methods: [String: Signature], parent: String? = nil) {
-       self.init(name: name, instanceType: instanceType, properties: properties, overloads: methods.mapValues({[$0]}), parent: parent)
+    public init(name: String, constructorPath: String? = nil, instanceType: ILType?, properties: [String: ILType], methods: [String: Signature], parent: String? = nil) {
+       self.init(name: name, constructorPath: constructorPath, instanceType: instanceType, properties: properties, overloads: methods.mapValues({[$0]}), parent: parent)
     }
 }
 
@@ -1539,6 +1556,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Promise constructor builtin
     static let jsPromiseConstructor = ObjectGroup(
         name: "PromiseConstructor",
+        constructorPath: "Promise",
         instanceType: .jsPromiseConstructor,
         properties: [
             "prototype" : jsPromisePrototype.instanceType
@@ -1612,6 +1630,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Date constructor
     static let jsDateConstructor = ObjectGroup(
         name: "DateConstructor",
+        constructorPath: "Date",
         instanceType: .jsDateConstructor,
         properties: [
             "prototype" : jsDatePrototype.instanceType
@@ -1626,6 +1645,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Object constructor builtin
     static let jsObjectConstructor = ObjectGroup(
         name: "ObjectConstructor",
+        constructorPath: "Object",
         instanceType: .jsObjectConstructor,
         properties: [
             "prototype" : .object(),        // TODO
@@ -1658,6 +1678,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Array constructor builtin
     static let jsArrayConstructor = ObjectGroup(
         name: "ArrayConstructor",
+        constructorPath: "Array",
         instanceType: .jsArrayConstructor,
         properties: [
             // This might seem wrong, note however that `Array.isArray(Array.prototype)` is true.
@@ -1674,6 +1695,7 @@ public extension ObjectGroup {
 
     static let jsArrayBufferConstructor = ObjectGroup(
         name: "ArrayBufferConstructor",
+        constructorPath: "ArrayBuffer",
         instanceType: .jsArrayBufferConstructor,
         properties: [
             "prototype" : jsArrayBufferPrototype.instanceType
@@ -1687,6 +1709,7 @@ public extension ObjectGroup {
 
     static let jsSharedArrayBufferConstructor = ObjectGroup(
         name: "SharedArrayBufferConstructor",
+        constructorPath: "SharedArrayBuffer",
         instanceType: .jsSharedArrayBufferConstructor,
         properties: [
             "prototype" : jsSharedArrayBufferPrototype.instanceType
@@ -1699,6 +1722,7 @@ public extension ObjectGroup {
     /// Object group modelling the JavaScript String constructor builtin
     static let jsStringConstructor = ObjectGroup(
         name: "StringConstructor",
+        constructorPath: "String",
         instanceType: .jsStringConstructor,
         properties: [
             "prototype" : jsStringPrototype.instanceType
@@ -1713,6 +1737,7 @@ public extension ObjectGroup {
     /// Object group modelling the JavaScript Symbol constructor builtin
     static let jsSymbolConstructor = ObjectGroup(
         name: "SymbolConstructor",
+        constructorPath: "Symbol",
         instanceType: .jsSymbolConstructor,
         properties: [
             "iterator"           : .jsSymbol,
@@ -1740,6 +1765,7 @@ public extension ObjectGroup {
     /// Object group modelling the JavaScript BigInt constructor builtin
     static let jsBigIntConstructor = ObjectGroup(
         name: "BigIntConstructor",
+        constructorPath: "BigInt",
         instanceType: .jsBigIntConstructor,
         properties: [
             "prototype" : .object()
@@ -1753,6 +1779,7 @@ public extension ObjectGroup {
     /// Object group modelling the JavaScript Boolean constructor builtin
     static let jsBooleanConstructor = ObjectGroup(
         name: "BooleanConstructor",
+        constructorPath: "Boolean",
         instanceType: .jsBooleanConstructor,
         properties: [
             "prototype" : .object()
@@ -1763,6 +1790,7 @@ public extension ObjectGroup {
     /// Object group modelling the JavaScript Number constructor builtin
     static let jsNumberConstructor = ObjectGroup(
         name: "NumberConstructor",
+        constructorPath: "Number",
         instanceType: .jsNumberConstructor,
         properties: [
             "prototype"         : .object(),
@@ -1908,6 +1936,7 @@ public extension ObjectGroup {
 
     static let jsWebAssemblyModuleConstructor = ObjectGroup(
         name: "WebAssemblyModuleConstructor",
+        constructorPath: "WebAssembly.Module",
         instanceType: .jsWebAssemblyModuleConstructor,
         properties: [
             "prototype": .object()
@@ -1923,6 +1952,7 @@ public extension ObjectGroup {
 
     static let jsWebAssemblyGlobalConstructor = ObjectGroup(
         name: "WebAssemblyGlobalConstructor",
+        constructorPath: "WebAssembly.Global",
         instanceType: .jsWebAssemblyGlobalConstructor,
         properties: [
             "prototype": jsWebAssemblyGlobalPrototype.instanceType,
@@ -1932,6 +1962,7 @@ public extension ObjectGroup {
 
     static let jsWebAssemblyInstanceConstructor = ObjectGroup(
         name: "WebAssemblyInstanceConstructor",
+        constructorPath: "WebAssembly.Instance",
         instanceType: .jsWebAssemblyInstanceConstructor,
         properties: [
             "prototype": .object(),
@@ -1952,6 +1983,7 @@ public extension ObjectGroup {
 
     static let jsWebAssemblyMemoryConstructor = ObjectGroup(
         name: "WebAssemblyMemoryConstructor",
+        constructorPath: "WebAssembly.Memory",
         instanceType: .jsWebAssemblyMemoryConstructor,
         properties: [
             "prototype": jsWebAssemblyMemoryPrototype.instanceType,
@@ -1963,6 +1995,7 @@ public extension ObjectGroup {
 
     static let jsWebAssemblyTableConstructor = ObjectGroup(
         name: "WebAssemblyTableConstructor",
+        constructorPath: "WebAssembly.Table",
         instanceType: .jsWebAssemblyTableConstructor,
         properties: [
             "prototype": jsWebAssemblyTablePrototype.instanceType,
@@ -1974,6 +2007,7 @@ public extension ObjectGroup {
 
     static let jsWebAssemblyTagConstructor = ObjectGroup(
         name: "WebAssemblyTagConstructor",
+        constructorPath: "WebAssembly.Tag",
         instanceType: .jsWebAssemblyTagConstructor,
         properties: [
             "prototype": jsWebAssemblyTagPrototype.instanceType,
@@ -1997,6 +2031,7 @@ public extension ObjectGroup {
 
     static let jsWebAssemblyExceptionConstructor = ObjectGroup(
         name: "WebAssemblyExceptionConstructor",
+        constructorPath: "WebAssembly.Exception",
         instanceType: .jsWebAssemblyExceptionConstructor,
         properties: [
             "prototype": jsWebAssemblyExceptionPrototype.instanceType,
@@ -2202,6 +2237,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Temporal.Instant constructor
     static let jsTemporalInstantConstructor = ObjectGroup(
         name: "TemporalInstantConstructor",
+        constructorPath: "Temporal.Instant",
         instanceType: .jsTemporalInstantConstructor,
         properties: [
             "prototype" : jsTemporalInstantPrototype.instanceType
@@ -2250,6 +2286,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Temporal.Duration constructor
     static let jsTemporalDurationConstructor = ObjectGroup(
         name: "TemporalDurationConstructor",
+        constructorPath: "Temporal.Duration",
         instanceType: .jsTemporalDurationConstructor,
         properties: [
             "prototype" : jsTemporalDurationPrototype.instanceType
@@ -2290,6 +2327,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Temporal.PlainTime constructor
     static let jsTemporalPlainTimeConstructor = ObjectGroup(
         name: "TemporalPlainTimeConstructor",
+        constructorPath: "Temporal.PlainTime",
         instanceType: .jsTemporalPlainTimeConstructor,
         properties: [
             "prototype" : jsTemporalPlainTimePrototype.instanceType
@@ -2336,6 +2374,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Temporal.PlainYearMonth constructor
     static let jsTemporalPlainYearMonthConstructor = ObjectGroup(
         name: "TemporalPlainYearMonthConstructor",
+        constructorPath: "Temporal.PlainYearMonth",
         instanceType: .jsTemporalPlainYearMonthConstructor,
         properties: [
             "prototype" : jsTemporalPlainYearMonthPrototype.instanceType
@@ -2369,6 +2408,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Temporal.PlainMonthDay constructor.
     static let jsTemporalPlainMonthDayConstructor = ObjectGroup(
         name: "TemporalPlainMonthDayConstructor",
+        constructorPath: "Temporal.PlainMonthDay",
         instanceType: .jsTemporalPlainMonthDayConstructor,
         properties: [
             "prototype" : jsTemporalPlainMonthDayPrototype.instanceType
@@ -2412,6 +2452,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Temporal.PlainDate constructor
     static let jsTemporalPlainDateConstructor = ObjectGroup(
         name: "TemporalPlainDateConstructor",
+        constructorPath: "Temporal.PlainDate",
         instanceType: .jsTemporalPlainDateConstructor,
         properties: [
             "prototype" : jsTemporalPlainDatePrototype.instanceType
@@ -2450,6 +2491,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Temporal.PlainDateTime constructor
     static let jsTemporalPlainDateTimeConstructor = ObjectGroup(
         name: "TemporalPlainDateTimeConstructor",
+        constructorPath: "Temporal.PlainDateTime",
         instanceType: .jsTemporalPlainDateTimeConstructor,
         properties: [
             "prototype" : jsTemporalPlainDateTimePrototype.instanceType
@@ -2499,6 +2541,7 @@ public extension ObjectGroup {
     /// ObjectGroup modelling the JavaScript Temporal.ZonedDateTime constructor
     static let jsTemporalZonedDateTimeConstructor = ObjectGroup(
         name: "TemporalZonedDateTimeConstructor",
+        constructorPath: "Temporal.ZonedDateTime",
         instanceType: .jsTemporalZonedDateTimeConstructor,
         properties: [
             "prototype" : jsTemporalZonedDateTimePrototype.instanceType
