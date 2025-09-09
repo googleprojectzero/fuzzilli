@@ -1757,7 +1757,7 @@ public class ProgramBuilder {
 
             var mode = state.mode
             if mode == .generatingAndSplicing {
-                mode = chooseUniform(from: [.generating, .splicing])
+                mode = fuzzer.corpus.isEmpty ? .generating : chooseUniform(from: [.generating, .splicing])
             }
 
             let codeSizeBefore = code.count

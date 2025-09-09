@@ -145,12 +145,6 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
         }
 
         fuzzer.initialize()
-
-        // Tests can also rely on the corpus not being empty
-        let b = fuzzer.makeBuilder()
-        b.buildPrefix()
-        b.build(n: 50, by: .generating)
-        corpus.add(b.finalize(), ProgramAspects(outcome: .succeeded))
     }
     // If a DispatchQueue was provided by the caller, initialize the fuzzer
     // there. Otherwise initialize it directly.

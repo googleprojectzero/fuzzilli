@@ -91,6 +91,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
 
     /// Returns a random program from this corpus for use in splicing to another program
     public func randomElementForSplicing() -> Program {
+        assert(programs.count > 0)
         let idx = Int.random(in: 0..<programs.count)
         let program = programs[idx]
         assert(!program.isEmpty)
