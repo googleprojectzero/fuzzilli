@@ -4506,6 +4506,150 @@ public class ProgramBuilder {
             }
         }
         return createObject(with: properties)
-
     }
+
+    @discardableResult
+    func constructTemporalInstant() -> Variable {
+        let temporal = createNamedVariable(forBuiltin: "Temporal")
+        let useConstructor = Bool.random()
+        let constructor = getProperty("Instant", of: temporal)
+        if useConstructor {
+            let nanoseconds = randomVariable(forUseAs: .bigint)
+            return construct(constructor, withArgs: [nanoseconds])
+        } else {
+            // TODO(manishearth, 439921647) Generate Temporal-like strings
+            let string = randomVariable(forUseAs: .string)
+            return callMethod("from", on: constructor, withArgs: [string])
+        }
+    }
+
+    @discardableResult
+    func constructTemporalDuration() -> Variable {
+        let temporal = createNamedVariable(forBuiltin: "Temporal")
+        let useConstructor = Bool.random()
+        let constructor = getProperty("Duration", of: temporal)
+        if useConstructor {
+            // Constructor takes between 0 and 10 integer args
+            let numArgs = Int.random(in: 0...10)
+            let args = (0..<numArgs).map { _ in randomVariable(forUseAs: .number) }
+            return construct(constructor, withArgs: args)
+        } else {
+            // Whether to pass a Temporal-like object or a string
+            if Bool.random() {
+                let fields = createTemporalDurationFieldsObject()
+                return callMethod("", on: constructor, withArgs: [ fields ] )
+            } else {
+                // TODO(manishearth, 439921647) Generate Temporal-like strings
+                let string = randomVariable(forUseAs: .string)
+                return callMethod("from", on: constructor, withArgs: [string])
+             }
+         }
+    }
+
+    // Generic generators for Temporal date/time types.
+    // Pass in a closure that knows how to construct the type with `new()`.
+    private func constructTemporalType(type: String,
+                            dateFields: Bool, timeFields: Bool, zonedFields: Bool, optionsBag: OptionsBag,
+                            generateWithConstructor: (Variable) -> Variable) -> Variable {
+        let temporal = createNamedVariable(forBuiltin: "Temporal")
+        let useConstructor = Bool.random()
+        let constructor = getProperty(type, of: temporal)
+        if useConstructor {
+            return generateWithConstructor(constructor)
+        } else {
+            // Whether to pass a Temporal-like object or a string
+            if Bool.random() {
+                let fields = createTemporalFieldsObject(forWith: false, dateFields: dateFields, timeFields: timeFields, zonedFields: zonedFields)
+                var args = [fields]
+                if Bool.random() {
+                    args.append(createOptionsBag(optionsBag))
+                }
+                return callMethod("from", on: constructor, withArgs: args )
+            } else {
+                // TODO(manishearth, 439921647) Generate Temporal-like strings
+                let string = randomVariable(forUseAs: .string)
+                return callMethod("from", on: constructor, withArgs: [string])
+            }
+        }
+    }
+
+    @discardableResult
+    func constructTemporalTime() -> Variable {
+        return constructTemporalType(type: "PlainTime", dateFields: false, timeFields: true, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+            // The constructor takes between 0 and 6 integer args.
+            let numArgs = Int.random(in: 0...6)
+            // Should we be constraining these to valid range?
+            let args = (0..<numArgs).map { _ in randomVariable(forUseAs: .number) }
+            return construct(constructor, withArgs: args)
+        }
+    }
+
+    @discardableResult
+    func constructTemporalYearMonth() -> Variable {
+        return constructTemporalType(type: "PlainYearMonth", dateFields: true, timeFields: false, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+            // The constructor takes 3 int args, an optional calendar, and an optional reference day.
+            var args = (0..<3).map {_ in randomVariable(forUseAs: .integer) }
+            if Bool.random() {
+                args.append(randomVariable(forUseAs: .jsTemporalCalendarEnum))
+                if Bool.random() {
+                    args.append(randomVariable(forUseAs: .integer))
+                }
+            }
+            return construct(constructor, withArgs: args)
+        }
+    }
+    @discardableResult
+    func constructTemporalMonthDay() -> Variable {
+        return constructTemporalType(type: "PlainMonthDay", dateFields: true, timeFields: false, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+            // The constructor takes 3 int args, an optional calendar, and an optional reference day.
+            var args = (0..<3).map {_ in randomVariable(forUseAs: .integer) }
+            if Bool.random() {
+                args.append(randomVariable(forUseAs: .jsTemporalCalendarEnum))
+                if Bool.random() {
+                    args.append(randomVariable(forUseAs: .integer))
+                }
+            }
+            return construct(constructor, withArgs: args)
+        }
+    }
+
+    @discardableResult
+    func constructTemporalDate() -> Variable {
+        return constructTemporalType(type: "PlainDate", dateFields: true, timeFields: false, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+            // The constructor takes 3 int args and an optional calendar.
+            var args = (0..<3).map {_ in randomVariable(forUseAs: .integer) }
+            if Bool.random() {
+                args.append(randomVariable(forUseAs: .jsTemporalCalendarEnum))
+            }
+            return construct(constructor, withArgs: args)
+        }
+    }
+    @discardableResult
+    func constructTemporalDateTime() -> Variable {
+        return constructTemporalType(type: "PlainDateTime", dateFields: true, timeFields: true, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+            // The constructor takes 3 mandatory integer args and between 0 and 6 additional integer args.
+            let timeArgs = Int.random(in: 0...6)
+            let totalIntArgs = 3 + timeArgs
+            var args = (0..<totalIntArgs).map { _ in randomVariable(forUseAs: .number) }
+            if timeArgs == 6 && Bool.random() {
+                args.append(randomVariable(forUseAs: .jsTemporalCalendarEnum))
+            }
+            return construct(constructor, withArgs: args)
+        }
+    }
+
+    @discardableResult
+    func constructTemporalZonedDateTime() -> Variable {
+        return constructTemporalType(type: "ZonedDateTime", dateFields: true, timeFields: true, zonedFields: true, optionsBag: .jsTemporalZonedInterpretationSettings) { constructor in
+            // The constructor takes one integer arg, one timezone arg, one optional calendar arg.
+            // TODO(manishearth, 439921647) Generate timezone strings
+            var args = [randomVariable(forUseAs: .bigint), randomVariable(forUseAs: .string)]
+            if Bool.random() {
+                args.append(randomVariable(forUseAs: .jsTemporalCalendarEnum))
+            }
+            return construct(constructor, withArgs: args)
+        }
+    }
+
 }
+
