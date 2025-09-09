@@ -62,285 +62,237 @@ class WasmSignatureConversionTests: XCTestCase {
 class WasmFoundationTests: XCTestCase {
     func testFunction() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
-        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let jsProg = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _, _ in
+                    let constVar = function.consti32(1338)
+                    return [constVar]
+                }
 
-        // We have to use the proper JavaScriptEnvironment here.
-        // This ensures that we use the available builtins.
-        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
-        let b = fuzzer.makeBuilder()
+                wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, label, arg in
+                    let var64 = function.consti64(41)
+                    let added = function.wasmi64BinOp(var64, arg[0], binOpKind: WasmIntegerBinaryOpKind.Add)
+                    return [added]
+                }
 
-        let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _, _ in
-                let constVar = function.consti32(1338)
-                return [constVar]
+                wasmModule.addWasmFunction(with: [.wasmi64, .wasmi64] => [.wasmi64]) { function, label, arg in
+                    let subbed = function.wasmi64BinOp(arg[0], arg[1], binOpKind: WasmIntegerBinaryOpKind.Sub)
+                    return [subbed]
+                }
             }
 
-            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, label, arg in
-                let var64 = function.consti64(41)
-                let added = function.wasmi64BinOp(var64, arg[0], binOpKind: WasmIntegerBinaryOpKind.Add)
-                return [added]
-            }
+            let exports = module.loadExports()
 
-            wasmModule.addWasmFunction(with: [.wasmi64, .wasmi64] => [.wasmi64]) { function, label, arg in
-                let subbed = function.wasmi64BinOp(arg[0], arg[1], binOpKind: WasmIntegerBinaryOpKind.Sub)
-                return [subbed]
-            }
+            let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+
+            let num = b.loadBigInt(1)
+            let res1 = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [num])
+
+            let res2 = b.callMethod(module.getExportedMethod(at: 2), on: exports, withArgs: [res1, num])
+
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res1)])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res2)])
         }
-
-        let exports = module.loadExports()
-
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports)
-
-        let num = b.loadBigInt(1)
-        let res1 = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [num])
-
-        let res2 = b.callMethod(module.getExportedMethod(at: 2), on: exports, withArgs: [res1, num])
-
-        let outputFunc = b.createNamedVariable(forBuiltin: "output")
-
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res1)])
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res2)])
-
-        let prog = b.finalize()
-        let jsProg = fuzzer.lifter.lift(prog)
 
         testForOutput(program: jsProg, runner: runner, outputString: "1338\n42\n41\n")
     }
 
     func testFunctionLabel() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
-        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
-
-        // We have to use the proper JavaScriptEnvironment here.
-        // This ensures that we use the available builtins.
-        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
-        let b = fuzzer.makeBuilder()
-
-        let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
-                function.wasmBranchIf(args[0], to: label, args: args)
-                return [function.consti32(-1)]
+        let jsProg = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                    function.wasmBranchIf(args[0], to: label, args: args)
+                    return [function.consti32(-1)]
+                }
             }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(42)])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
         }
-
-        let exports = module.loadExports()
-        let outputFunc = b.createNamedVariable(forBuiltin: "output")
-
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(42)])
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
-
-        let prog = b.finalize()
-        let jsProg = fuzzer.lifter.lift(prog)
 
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 
     func testFunctionMultiReturn() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
-        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let jsProg = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                // Test branch if and fall-through.
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32, .wasmi64, .wasmf32]) { function, label, args in
+                    function.wasmBranchIf(args[0], to: label, args: [function.consti32(1), function.consti64(2), function.constf32(3)])
+                    return [function.consti32(4), function.consti64(5), function.constf32(6)]
+                }
+                // Test explicit return.
+                wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi64, .wasmf32]) { function, label, args in
+                    function.wasmReturn([function.consti32(7), function.consti64(8), function.constf32(9)])
+                    return [function.consti32(-1), function.consti64(-1), function.constf32(-1)]
+                }
+                // Test unconditional branch.
+                wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi64, .wasmf32]) { function, label, args in
+                    function.wasmBranch(to: label, args: [function.consti32(10), function.consti64(11), function.constf32(12)])
+                    return [function.consti32(-1), function.consti64(-1), function.constf32(-1)]
+                }
+            }
 
-        // We have to use the proper JavaScriptEnvironment here.
-        // This ensures that we use the available builtins.
-        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
-        let b = fuzzer.makeBuilder()
-
-        let module = b.buildWasmModule { wasmModule in
-            // Test branch if and fall-through.
-            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32, .wasmi64, .wasmf32]) { function, label, args in
-                function.wasmBranchIf(args[0], to: label, args: [function.consti32(1), function.consti64(2), function.constf32(3)])
-                return [function.consti32(4), function.consti64(5), function.constf32(6)]
-            }
-            // Test explicit return.
-            wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi64, .wasmf32]) { function, label, args in
-                function.wasmReturn([function.consti32(7), function.consti64(8), function.constf32(9)])
-                return [function.consti32(-1), function.consti64(-1), function.constf32(-1)]
-            }
-            // Test unconditional branch.
-            wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi64, .wasmf32]) { function, label, args in
-                function.wasmBranch(to: label, args: [function.consti32(10), function.consti64(11), function.constf32(12)])
-                return [function.consti32(-1), function.consti64(-1), function.constf32(-1)]
-            }
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            [
+                b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1)]),
+                b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)]),
+                b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: []),
+                b.callMethod(module.getExportedMethod(at: 2), on: exports, withArgs: []),
+            ].forEach {b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: $0)])}
         }
-
-        let exports = module.loadExports()
-        let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        [
-            b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1)]),
-            b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)]),
-            b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: []),
-            b.callMethod(module.getExportedMethod(at: 2), on: exports, withArgs: []),
-        ].forEach {b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: $0)])}
-
-        let prog = b.finalize()
-        let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "1,2,3\n4,5,6\n7,8,9\n10,11,12\n")
     }
 
     func testExportNaming() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
-        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let jsProg = buildAndLiftProgram { b in
+            // This test tests whether re-exported imports and module defined globals are re-ordered from the typer.
+            let wasmGlobali32: Variable = b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
+            XCTAssertEqual(b.type(of: wasmGlobali32), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)))
 
-        // We have to use the proper JavaScriptEnvironment here.
-        // This ensures that we use the available builtins.
-        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
-        let b = fuzzer.makeBuilder()
+            let wasmGlobalf32: Variable = b.createWasmGlobal(value: .wasmf32(42.0), isMutable: false)
+            XCTAssertEqual(b.type(of: wasmGlobalf32), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmf32, isMutable: false)))
 
-        // This test tests whether re-exported imports and module defined globals are re-ordered from the typer.
-        let wasmGlobali32: Variable = b.createWasmGlobal(value: .wasmi32(1337), isMutable: true)
-        XCTAssertEqual(b.type(of: wasmGlobali32), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)))
-
-        let wasmGlobalf32: Variable = b.createWasmGlobal(value: .wasmf32(42.0), isMutable: false)
-        XCTAssertEqual(b.type(of: wasmGlobalf32), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmf32, isMutable: false)))
-
-        let module = b.buildWasmModule { wasmModule in
-            // Imports are always before internal globals, this breaks the logic if we add a global and then import a global.
-            wasmModule.addWasmFunction(with: [] => []) { fun, _, _  in
-                // This load forces an import
-                // This should be iwg0
-                fun.wasmLoadGlobal(globalVariable: wasmGlobalf32)
-                return []
+            let module = b.buildWasmModule { wasmModule in
+                // Imports are always before internal globals, this breaks the logic if we add a global and then import a global.
+                wasmModule.addWasmFunction(with: [] => []) { fun, _, _  in
+                    // This load forces an import
+                    // This should be iwg0
+                    fun.wasmLoadGlobal(globalVariable: wasmGlobalf32)
+                    return []
+                }
+                // This adds an internally defined global, it should be wg0
+                wasmModule.addGlobal(wasmGlobal: .wasmi64(4141), isMutable: true)
+                wasmModule.addWasmFunction(with: [] => []) { fun, _, _  in
+                    // This load forces an import
+                    // This should be iwg1
+                    fun.wasmLoadGlobal(globalVariable: wasmGlobali32)
+                    return []
+                }
             }
-            // This adds an internally defined global, it should be wg0
-            wasmModule.addGlobal(wasmGlobal: .wasmi64(4141), isMutable: true)
-            wasmModule.addWasmFunction(with: [] => []) { fun, _, _  in
-                // This load forces an import
-                // This should be iwg1
-                fun.wasmLoadGlobal(globalVariable: wasmGlobali32)
-                return []
-            }
+
+            let exports = module.loadExports()
+
+            XCTAssertEqual(b.type(of: exports), .object(ofGroup: "_fuzz_WasmExports0", withProperties: ["iwg0", "iwg1", "wg0"], withMethods: ["w1", "w0"]))
+
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            // Now let's actually see what the re-exported values are and see that the types don't match with what the programbuilder will see.
+            // TODO: Is this an issue? will the programbuilder still be queriable for variables? I think so, it is internally consistent within the module...
+            let firstExport = b.getProperty("iwg0", of: exports)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: b.getProperty("value", of: firstExport))])
+
+            let secondExport = b.getProperty("wg0", of: exports)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: b.getProperty("value", of: secondExport))])
+
+            let thirdExport = b.getProperty("iwg1", of: exports)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: b.getProperty("value", of: thirdExport))])
         }
-
-        let exports = module.loadExports()
-
-        XCTAssertEqual(b.type(of: exports), .object(ofGroup: "_fuzz_WasmExports0", withProperties: ["iwg0", "iwg1", "wg0"], withMethods: ["w1", "w0"]))
-
-        let outputFunc = b.createNamedVariable(forBuiltin: "output")
-
-        // Now let's actually see what the re-exported values are and see that the types don't match with what the programbuilder will see.
-        // TODO: Is this an issue? will the programbuilder still be queriable for variables? I think so, it is internally consistent within the module...
-        let firstExport = b.getProperty("iwg0", of: exports)
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: b.getProperty("value", of: firstExport))])
-
-        let secondExport = b.getProperty("wg0", of: exports)
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: b.getProperty("value", of: secondExport))])
-
-        let thirdExport = b.getProperty("iwg1", of: exports)
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: b.getProperty("value", of: thirdExport))])
-
-        let prog = b.finalize()
-        let jsProg = fuzzer.lifter.lift(prog)
 
         testForOutput(program: jsProg, runner: runner, outputString: "42\n4141\n1337\n")
     }
 
     func testImports() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
-        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
-
-        // We have to use the proper JavaScriptEnvironment here.
-        // This ensures that we use the available builtins.
-        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
-        let b = fuzzer.makeBuilder()
-
-        let functionA = b.buildPlainFunction(with: .parameters(.bigint)) { args in
-            let varA = b.loadBigInt(1)
-            let added = b.binary(varA, args[0], with: .Add)
-            b.doReturn(added)
-        }
-
-        XCTAssertEqual(b.type(of: functionA).signature, [.bigint] => .bigint)
-
-        let functionB = b.buildArrowFunction(with: .parameters(.integer)) { args in
-            let varB = b.loadInt(2)
-            let subbed = b.binary(varB, args[0], with: .Sub)
-            b.doReturn(subbed)
-        }
-        // We are unable to determine that .integer - .integer == .integer here as INT_MAX + 1 => float
-        XCTAssertEqual(b.type(of: functionB).signature, [.integer] => .number)
-
-        let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, label, args in
-                // Manually set the availableTypes here for testing
-                let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([(.wasmi64, 1)]))
-                XCTAssertEqual(wasmSignature, [.wasmi64] => [.wasmi64])
-                let varA = function.wasmJsCall(function: functionA, withArgs: [args[0]], withWasmSignature: wasmSignature)!
-                return [varA]
+        let jsProg = buildAndLiftProgram { b in
+            let functionA = b.buildPlainFunction(with: .parameters(.bigint)) { args in
+                let varA = b.loadBigInt(1)
+                let added = b.binary(varA, args[0], with: .Add)
+                b.doReturn(added)
             }
 
-            wasmModule.addWasmFunction(with: [] => [.wasmf32]) { function, _, _ in
-                // Manually set the availableTypes here for testing
-                let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionB).signature!, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
-                XCTAssertEqual(wasmSignature.parameterTypes.count, 1)
-                XCTAssert(wasmSignature.parameterTypes[0] == .wasmi32 || wasmSignature.parameterTypes[0] == .wasmf32)
-                XCTAssert(wasmSignature.outputTypes == [.wasmi32] || wasmSignature.outputTypes == [.wasmf32])
-                let varA = wasmSignature.parameterTypes[0] == .wasmi32 ? function.consti32(1337) : function.constf32(1337)
-                let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: wasmSignature)!
-                return [varRet]
+            XCTAssertEqual(b.type(of: functionA).signature, [.bigint] => .bigint)
+
+            let functionB = b.buildArrowFunction(with: .parameters(.integer)) { args in
+                let varB = b.loadInt(2)
+                let subbed = b.binary(varB, args[0], with: .Sub)
+                b.doReturn(subbed)
+            }
+            // We are unable to determine that .integer - .integer == .integer here as INT_MAX + 1 => float
+            XCTAssertEqual(b.type(of: functionB).signature, [.integer] => .number)
+
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, label, args in
+                    // Manually set the availableTypes here for testing
+                    let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([(.wasmi64, 1)]))
+                    XCTAssertEqual(wasmSignature, [.wasmi64] => [.wasmi64])
+                    let varA = function.wasmJsCall(function: functionA, withArgs: [args[0]], withWasmSignature: wasmSignature)!
+                    return [varA]
+                }
+
+                wasmModule.addWasmFunction(with: [] => [.wasmf32]) { function, _, _ in
+                    // Manually set the availableTypes here for testing
+                    let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(b.type(of: functionB).signature!, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
+                    XCTAssertEqual(wasmSignature.parameterTypes.count, 1)
+                    XCTAssert(wasmSignature.parameterTypes[0] == .wasmi32 || wasmSignature.parameterTypes[0] == .wasmf32)
+                    XCTAssert(wasmSignature.outputTypes == [.wasmi32] || wasmSignature.outputTypes == [.wasmf32])
+                    let varA = wasmSignature.parameterTypes[0] == .wasmi32 ? function.consti32(1337) : function.constf32(1337)
+                    let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: wasmSignature)!
+                    return [varRet]
+                }
+
+                wasmModule.addWasmFunction(with: [] => [.wasmf32]) { function, _, _ in
+                    let varA = function.constf32(1337.1)
+                    let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: [.wasmf32] => [.wasmf32])!
+                    return [varRet]
+                }
             }
 
-            wasmModule.addWasmFunction(with: [] => [.wasmf32]) { function, _, _ in
-                let varA = function.constf32(1337.1)
-                let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: [.wasmf32] => [.wasmf32])!
-                return [varRet]
-            }
+            let exports = module.loadExports()
+
+            let val = b.loadBigInt(2)
+            let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [val])
+            let res1 = b.callMethod(module.getExportedMethod(at: 1), on: exports)
+            let res2 = b.callMethod(module.getExportedMethod(at: 2), on: exports)
+
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res1)])
+            // We do not control whether the JS function is imported with a floating point or an integer type, so the
+            // fractional digits might be lost. Round the result to make the output predictable.
+            let res2Rounded = b.callFunction(b.createNamedVariable(forBuiltin: "Math.round"), withArgs: [res2])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res2Rounded)])
         }
-
-        let exports = module.loadExports()
-
-        let val = b.loadBigInt(2)
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [val])
-        let res1 = b.callMethod(module.getExportedMethod(at: 1), on: exports)
-        let res2 = b.callMethod(module.getExportedMethod(at: 2), on: exports)
-
-        let outputFunc = b.createNamedVariable(forBuiltin: "output")
-
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res1)])
-        // We do not control whether the JS function is imported with a floating point or an integer type, so the
-        // fractional digits might be lost. Round the result to make the output predictable.
-        let res2Rounded = b.callFunction(b.createNamedVariable(forBuiltin: "Math.round"), withArgs: [res2])
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res2Rounded)])
-
-        let prog = b.finalize()
-        let jsProg = fuzzer.lifter.lift(prog)
 
         testForOutput(program: jsProg, runner: runner, outputString: "3\n-1335\n-1335\n")
     }
 
     func testBasics() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
-        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let jsProg = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    [function.consti32(42)]
+                }
 
-        // We have to use the proper JavaScriptEnvironment here.
-        // This ensures that we use the available builtins.
-        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
-        let b = fuzzer.makeBuilder()
-
-        let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
-                [function.consti32(42)]
+                wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, label, arg in
+                    let varA = function.consti64(41)
+                    return [function.wasmi64BinOp(varA, arg[0], binOpKind: .Add)]
+                }
             }
 
-            wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64]) { function, label, arg in
-                let varA = function.consti64(41)
-                return [function.wasmi64BinOp(varA, arg[0], binOpKind: .Add)]
-            }
+            let exports = module.loadExports()
+
+            let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+            let integer = b.loadBigInt(1)
+            let res1 = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [integer])
+
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res1)])
         }
-
-        let exports = module.loadExports()
-
-        let res0 = b.callMethod(module.getExportedMethod(at: 0), on: exports)
-        let integer = b.loadBigInt(1)
-        let res1 = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [integer])
-
-        let outputFunc = b.createNamedVariable(forBuiltin: "output")
-
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
-        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res1)])
-
-        let prog = b.finalize()
-        let jsProg = fuzzer.lifter.lift(prog)
 
         testForOutput(program: jsProg, runner: runner, outputString: "42\n42\n")
     }
