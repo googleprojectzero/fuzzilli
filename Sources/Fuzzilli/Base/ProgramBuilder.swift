@@ -723,7 +723,9 @@ public class ProgramBuilder {
                 // so try and generate it using the generator in most cases
                 let producingGenerator = self.fuzzer.environment.getProducingGenerator(ofType: type);
                 if let producingGenerator {
-                    return producingGenerator(self)
+                    if probability(producingGenerator.probability) {
+                        return producingGenerator.generator(self)
+                    }
                 }
 
                 let producingMethods = self.fuzzer.environment.getProducingMethods(ofType: type)

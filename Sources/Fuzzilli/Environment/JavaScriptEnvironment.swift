@@ -297,7 +297,7 @@ public class JavaScriptEnvironment: ComponentBase {
     private var groups: [String: ObjectGroup] = [:]
 
     // Producing generators, keyed on `type.group`
-    private var producingGenerators: [String: EnvironmentValueGenerator] = [:]
+    private var producingGenerators: [String: (generator: EnvironmentValueGenerator, probability: Double)] = [:]
     private var producingMethods: [ILType: [(group: String, method: String)]] = [:]
     private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
     private var subtypes: [ILType: [ILType]] = [:]
@@ -430,8 +430,22 @@ public class JavaScriptEnvironment: ComponentBase {
         registerTemporalFieldsObject(.jsTemporalZonedDateTimeLikeObject, forWith: false, dateFields: true, timeFields: true, zonedFields: true)
         registerTemporalFieldsObject(.jsTemporalZonedDateTimeLikeObjectForWith, forWith: true, dateFields: true, timeFields: true, zonedFields: true)
 
+        // This isn't a normal "temporal fields object" but is similar, and needs a similar producing generator
         registerObjectGroup(.jsTemporalDurationLikeObject)
         addProducingGenerator(forType: ObjectGroup.jsTemporalDurationLikeObject.instanceType, with: { b in b.createTemporalDurationFieldsObject() })
+
+        // Temporal types are produced by a large number of methods; which means findOrGenerateType(), when asked to produce
+        // a Temporal type, will tend towards trying to call a method on another Temporal type, which needs more Temporal types,
+        // leading to a large amount of code generated. We do wish to test these codepaths as well, but by and large we
+        // just want a freshly generated type.
+        addProducingGenerator(forType: .jsTemporalInstant, with: { $0.constructTemporalInstant() }, probability: 0.9)
+        addProducingGenerator(forType: .jsTemporalDuration, with: { $0.constructTemporalDuration() }, probability: 0.9)
+        addProducingGenerator(forType: .jsTemporalPlainTime, with: { $0.constructTemporalTime() }, probability: 0.9)
+        addProducingGenerator(forType: .jsTemporalPlainYearMonth, with: { $0.constructTemporalYearMonth() }, probability: 0.9)
+        addProducingGenerator(forType: .jsTemporalPlainMonthDay, with: { $0.constructTemporalMonthDay() }, probability: 0.9)
+        addProducingGenerator(forType: .jsTemporalPlainDate, with: { $0.constructTemporalDate() }, probability: 0.9)
+        addProducingGenerator(forType: .jsTemporalPlainDateTime, with: { $0.constructTemporalDateTime() }, probability: 0.9)
+        addProducingGenerator(forType: .jsTemporalZonedDateTime, with: { $0.constructTemporalZonedDateTime() }, probability: 0.9)
 
         // Register builtins that should be available for fuzzing.
         // Here it is easy to selectively disable/enable some APIs for fuzzing by
@@ -550,10 +564,18 @@ public class JavaScriptEnvironment: ComponentBase {
 
     // Add a generator that produces an object of the provided `type`.
     //
-    // This is for groups that are never generated as return types of other objects; so we register
-    // a generator that can be called.
-    public func addProducingGenerator(forType type: ILType, with generator: @escaping EnvironmentValueGenerator) {
-        producingGenerators[type.group!] = generator
+    // The probability is how often this generator should be called when this type is required.
+    //
+    // The default probability (1) is for groups that are never generated as return types of other objects.
+    // Use a lower probability if there are other ways to generate the object.
+    //
+    // Note that Fuzzilli is able to discover ways to construct types on its own. There are two use cases for this:
+    // - "Options bag" type objects where no JS API produces them, so we *must* run a producing generator
+    // - Temporal objects: These can be obtained from the result of other API calls, however a
+    //   a lot of these API calls need more Temporal objects, leading to runaway recursion attempting
+    //   to generate a large number of Temporal objects. Instead, we bias heavily towards the producing generator.
+    public func addProducingGenerator(forType type: ILType, with generator: @escaping EnvironmentValueGenerator, probability: Double = 1.0) {
+        producingGenerators[type.group!] = (generator, probability)
     }
 
     private func addProducingMethod(forType type: ILType, by method: String, on group: String) {
@@ -724,7 +746,7 @@ public class JavaScriptEnvironment: ComponentBase {
 
     // For ObjectGroups, get a generator that is registered as being able to produce this
     // ObjectGroup.
-    public func getProducingGenerator(ofType type: ILType) -> EnvironmentValueGenerator? {
+    public func getProducingGenerator(ofType type: ILType) -> (generator: EnvironmentValueGenerator, probability: Double)? {
         type.group.flatMap {producingGenerators[$0]}
     }
 
