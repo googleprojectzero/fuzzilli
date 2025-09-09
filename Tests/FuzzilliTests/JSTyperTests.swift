@@ -1714,9 +1714,9 @@ class JSTyperTests: XCTestCase {
         var foundDate = false
         var foundString = false
         // Test that relativeTo arguments are correctly generated
-        // Annoyingly, we may generate undefined/.jsAnything here since the field may not exist. Instead
-        // we try a large number of times and ensure all the generators get called *eventually*
-        for _ in 1..<100 {
+        // Annoyingly, we may generate undefined/.jsAnything here since the field may not exist.
+        // We just call this a large number of times until we find everything.
+        for i in 1..<100 {
             let fuzzer = makeMockFuzzer()
             let b = fuzzer.makeBuilder()
             let temporalBuiltin = b.createNamedVariable(forBuiltin: "Temporal")
@@ -1738,9 +1738,17 @@ class JSTyperTests: XCTestCase {
             } else if type.Is(.jsTemporalPlainDate) {
                 XCTAssertEqual(type.group, "Temporal.PlainDate")
                 foundDate = true
+            } else {
+                // If we got here, it must be because we never generated a relativeTo
+                // argument
+                let obj = b.type(of: args[0])
+                XCTAssert(!obj.properties.contains("relativeTo"))
             }
 
-            if foundZDT && foundString && foundDate && foundDT {
+            // We don't want to run the test for 100 iterations, we only
+            // want to run it for ~20 to ensure enough paths get tested,
+            // and only if we do not generate all paths do we wish to run it more.
+            if foundZDT && foundString && foundDate && foundDT && i > 20 {
                 break
             }
         }
@@ -1849,5 +1857,21 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(callCount, 1)
         // Test that the returned variable matches the generated one
         XCTAssertEqual(variable, returnedVar)
+    }
+
+    func testFindConstructor() {
+        for ctor in ["TemporalPlainMonthDayConstructor", "DateConstructor", "PromiseConstructor", "SymbolConstructor", "TemporalZonedDateTimeConstructor"] {
+            let fuzzer = makeMockFuzzer()
+            let b = fuzzer.makeBuilder()
+            let temporalBuiltin = b.createNamedVariable(forBuiltin: "Temporal")
+            let dateCtor = b.getProperty("PlainDate", of: temporalBuiltin)
+            let requestedCtor = fuzzer.environment.type(ofGroup: ctor)
+            let result = b.findOrGenerateType(requestedCtor)
+
+            // The typer should not pick up the PlainDateConstructor we have in scope,
+            // it should instead get the ctor from the global
+            XCTAssert(result != dateCtor)
+            XCTAssert(b.type(of: result).Is(requestedCtor))
+        }
     }
 }

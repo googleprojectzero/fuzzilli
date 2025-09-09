@@ -600,11 +600,33 @@ public class ProgramBuilder {
         return generateTypeInternal(type)
     }
 
+    // If the type is a builtin constructor like Promise or Temporal.Instant, generate
+    // a path to it from field accesses.
+    private func maybeGenerateConstructorAsPath(_ type: ILType) -> Variable? {
+        guard let group = type.group else {
+            return nil
+        }
+        guard let path = self.fuzzer.environment.getPathIfConstructor(ofGroup: group) else {
+            return nil
+        }
+        var current = createNamedVariable(forBuiltin: path[0])
+        for element in path.dropFirst() {
+            current = getProperty(element, of: current)
+        }
+        assert(self.type(of: current).Is(type), "Registered constructorPath produces incorrect type for ObjectGroup \(group)")
+        return current
+    }
+
     private func generateTypeInternal(_ type: ILType) -> Variable {
         if probability(0.9) && !type.isEnumeration {
             if let existingVariable = randomVariable(ofTypeOrSubtype: type) {
                 return existingVariable
             }
+        }
+
+        // For builtin constructors from the JavaScriptEnvironment, just generate them.
+        if let ret = self.maybeGenerateConstructorAsPath(type) {
+            return ret
         }
 
         if numVariables >= argumentGenerationVariableBudget.top {
@@ -635,11 +657,15 @@ public class ProgramBuilder {
             (.function(), {
                     // TODO: We could technically generate a full function here but then we would enter the full code generation logic which could do anything.
                     // Because we want to avoid this, we will just pick anything that can be a function.
+                    //
+                    // Note that builtin constructors are handled above in the maybeGenerateConstructorAsPath call.
                     return self.randomVariable(forUseAs: .function())
                 }),
             (.undefined, { return self.loadUndefined() }),
             (.constructor(), {
                     // TODO: We have the same issue as above for functions.
+                    //
+                    // Note that builtin constructors are handled above in the maybeGenerateConstructorAsPath call.
                     return self.randomVariable(forUseAs: .constructor())
                 }),
             (.object(), {
