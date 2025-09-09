@@ -241,7 +241,7 @@ public struct Code: Collection {
             }
             
             // allow top-level await
-            if !instr.op is Await {
+            if !(instr.op is Await) {
                 guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
                     throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
                 }
