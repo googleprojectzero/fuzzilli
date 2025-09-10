@@ -72,4 +72,38 @@ class EnvironmentTests: XCTestCase {
         // No output expected, all builtins should exist.
         testForOutput(program: jsProg, runner: runner, outputString: "")
     }
+
+    func convertTypedArrayToHex(_ b: ProgramBuilder, _ array: Variable) -> Variable {
+        let toHex = b.buildArrowFunction(with: .parameters(n: 1)) { args in
+            let hex = b.callMethod("toString", on: args[0], withArgs: [b.loadInt(16)])
+            let hexPadded = b.callMethod("padStart", on: hex, withArgs: [b.loadInt(2), b.loadString("0")])
+            b.doReturn(hexPadded)
+        }
+        let untypedArray = b.construct(b.createNamedVariable(forBuiltin: "Array"),
+            withArgs: [array], spreading: [true])
+        let hexArray = b.callMethod("map", on: untypedArray, withArgs: [toHex])
+        return b.callMethod("join", on: hexArray, withArgs: [b.loadString("")])
+    }
+
+    func testBase64OptionsBag() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let jsProg = buildAndLiftProgram { b in
+            let arrayConstructor = b.createNamedVariable(forBuiltin: "Uint8Array")
+            // Whatever the options object looks like, it should construct something valid.
+            // With the provided input string, the actual options should not matter.
+            let options = b.createOptionsBag(OptionsBag.fromBase64Settings)
+            let inputString = b.loadString("qxI0VniQq83v")
+            let array = b.callMethod("fromBase64", on: arrayConstructor, withArgs: [inputString, options])
+            XCTAssert(b.type(of: array).Is(.object(ofGroup: "Uint8Array")))
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            b.callFunction(outputFunc, withArgs: [convertTypedArrayToHex(b, array)])
+
+            let options2 = b.createOptionsBag(OptionsBag.fromBase64Settings)
+            let inputString2 = b.loadString("uq3erb7v")
+            b.callMethod("setFromBase64", on: array, withArgs: [inputString2, options2])
+            b.callFunction(outputFunc, withArgs: [convertTypedArrayToHex(b, array)])
+        }
+        testForOutput(program: jsProg, runner: runner,
+            outputString: "ab1234567890abcdef\nbaaddeadbeefabcdef\n")
+    }
 }

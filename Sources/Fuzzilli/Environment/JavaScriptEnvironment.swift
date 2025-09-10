@@ -333,6 +333,8 @@ public class JavaScriptEnvironment: ComponentBase {
         for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
             registerObjectGroup(.jsTypedArrays(variant))
         }
+        registerObjectGroup(.jsUint8ArrayConstructor)
+        registerObjectGroup(.jsUint8ArrayPrototype)
         registerObjectGroup(.jsDataViews)
 
         registerObjectGroup(.jsObjectConstructor)
@@ -417,6 +419,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsTemporalZonedInterpretationSettings)
         registerOptionsBag(.jsTemporalDurationRoundToSettings)
         registerOptionsBag(.jsTemporalDurationTotalOfSettings)
+        registerOptionsBag(.toBase64Settings)
+        registerOptionsBag(.fromBase64Settings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
         registerTemporalFieldsObject(.jsTemporalPlainDateLikeObject, forWith: false, dateFields: true, timeFields: false, zonedFields: false)
@@ -447,9 +451,11 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("AggregateError", ofType: .functionAndConstructor([.plain(.iterable), .opt(.string), .opt(.object())] => .jsError("AggregateError")))
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
         registerBuiltin("SharedArrayBuffer", ofType: .jsSharedArrayBufferConstructor)
-        for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
+        // Uint8Array handled below.
+        for variant in ["Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
             registerBuiltin(variant, ofType: .jsTypedArrayConstructor(variant))
         }
+        registerBuiltin("Uint8Array", ofType: .jsUint8ArrayConstructor)
         registerBuiltin("DataView", ofType: .jsDataViewConstructor)
         registerBuiltin("Date", ofType: .jsDateConstructor)
         registerBuiltin("Promise", ofType: .jsPromiseConstructor)
@@ -791,8 +797,8 @@ public struct OptionsBag {
     public init(name: String, properties: [String: ILType]) {
         self.properties = properties
         let properties = properties.mapValues {
-            // This list can be expanded over time as long as OptionsBagGenerator supports this
-            assert($0.isEnumeration || $0.Is(.number) || $0.Is(.integer) || $0.Is(OptionsBag.jsTemporalRelativeTo), "Found unsupported option type \($0) in options bag \(name)")
+            // This list can be expanded over time as long as createOptionsBag() supports this
+            assert($0.isEnumeration || $0.Is(.number | .integer | .boolean) || $0.Is(OptionsBag.jsTemporalRelativeTo), "Found unsupported option type \($0) in options bag \(name)")
             return $0 | .undefined;
         }
         self.group = ObjectGroup(name: name, instanceType: nil, properties: properties, overloads: [:])
@@ -868,8 +874,12 @@ public extension ILType {
 
     /// Type of a JavaScript TypedArray object of the given variant.
     static func jsTypedArray(_ variant: String) -> ILType {
-        return .iterable + .object(ofGroup: variant, withProperties: ["buffer", "byteOffset", "byteLength", "length"], withMethods: ["at", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "toLocaleString", "toString", "toReversed", "toSorted", "with"])
+        let extraMethods = variant == "Uint8Array" ? ["setFromBase64", "setFromHex", "toBase64", "toHex"] : []
+        return .iterable + .object(ofGroup: variant, withProperties: ["buffer", "byteOffset", "byteLength", "length"], withMethods: ["at", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "toLocaleString", "toString", "toReversed", "toSorted", "with"]
+            + extraMethods)
     }
+
+    static let jsUint8Array = jsTypedArray("Uint8Array")
 
     /// Type of a JavaScript function.
     /// A JavaScript function is also constructors. Moreover, it is also an object as it has a number of properties and methods.
@@ -923,8 +933,11 @@ public extension ILType {
     /// Type of a JavaScript TypedArray constructor builtin.
     static func jsTypedArrayConstructor(_ variant: String) -> ILType {
         // TODO Also allow SharedArrayBuffers for first argument
-        return .constructor([.oneof(.integer, .jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsTypedArray(variant))
+        return .constructor([.opt(.integer | .jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsTypedArray(variant))
     }
+
+    static let jsUint8ArrayConstructor = jsTypedArrayConstructor("Uint8Array")
+        + .object(ofGroup: "Uint8ArrayConstructor", withProperties: ["prototype"], withMethods: ["fromBase64", "fromHex"])
 
     /// Type of the JavaScript DataView constructor builtin. (TODO Also allow SharedArrayBuffers for first argument)
     static let jsDataViewConstructor = ILType.constructor([.plain(.jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsDataView)
@@ -1423,6 +1436,14 @@ public extension ObjectGroup {
 
     /// ObjectGroup modelling JavaScript TypedArray objects
     static func jsTypedArrays(_ variant: String) -> ObjectGroup {
+        // Extra methods from the base64 proposal: https://tc39.es/proposal-arraybuffer-base64/
+        let extraMethods: [String: Signature] = variant != "Uint8Array" ? [:] : [
+            "toBase64": [.opt(OptionsBag.toBase64Settings.group.instanceType)] => .string,
+            "toHex": [] => .string,
+            "setFromBase64": [.string, .opt(OptionsBag.fromBase64Settings.group.instanceType)]
+                => .object(withProperties: ["read", "written"]),
+            "setFromHex": [.string] => .object(withProperties: ["read", "written"]),
+        ]
         return ObjectGroup(
             name: variant,
             instanceType: .jsTypedArray(variant),
@@ -1464,9 +1485,23 @@ public extension ObjectGroup {
                 "toReversed"     : [] => .jsTypedArray(variant),
                 "toSorted"       : [.opt(.function())] => .jsTypedArray(variant),
                 "with"           : [.integer, .jsAnything] => .jsTypedArray(variant),
-            ]
+            ].merging(extraMethods) { _, _ in fatalError("duplicate method") }
         )
     }
+
+    static let jsUint8ArrayPrototype = createPrototypeObjectGroup(jsTypedArrays("Uint8Array"))
+
+    static let jsUint8ArrayConstructor = ObjectGroup(
+        name: "Uint8ArrayConstructor",
+        instanceType: .jsUint8ArrayConstructor,
+        properties: [
+            "prototype": jsUint8ArrayPrototype.instanceType,
+        ],
+        methods: [
+            "fromBase64": [.plain(.string), .opt(OptionsBag.fromBase64Settings.group.instanceType)] => .jsUint8Array,
+            "fromHex": [.plain(.string)] => .jsUint8Array,
+        ]
+    )
 
     /// ObjectGroup modelling JavaScript DataView objects
     static let jsDataViews = ObjectGroup(
@@ -2679,6 +2714,29 @@ extension OptionsBag {
         name: "TemporalDurationCompareSettingsObject",
         properties: [
             "relativeTo": jsTemporalRelativeTo,
+        ]
+    )
+}
+
+// Base64
+extension OptionsBag {
+    fileprivate static let base64Alphabet =
+        ILType.enumeration(ofName: "base64Alphabet", withValues: ["base64", "base64url"])
+    fileprivate static let base64LastChunkHandling =
+        ILType.enumeration(ofName: "base64LastChunkHandling", withValues: ["loose", "strict", "stop-before-partial"])
+
+    static let toBase64Settings = OptionsBag(
+        name: "ToBase64Settings",
+        properties: [
+            "alphabet": base64Alphabet,
+            "omitPadding": .boolean,
+        ])
+
+    static let fromBase64Settings = OptionsBag(
+        name: "FromBase64Settings",
+        properties: [
+            "alphabet": base64Alphabet,
+            "lastChunkHandling": base64LastChunkHandling
         ]
     )
 }
