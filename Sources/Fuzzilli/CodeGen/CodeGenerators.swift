@@ -159,29 +159,27 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("HexGenerator") { b in
         let hexValues = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "A", "B", "C", "D", "E", "F"]
 
-        let Uint8Array = b.createNamedVariable(forBuiltin: "Uint8Array")
+        let uint8ArrayBuiltin = b.createNamedVariable(forBuiltin: "Uint8Array")
 
         withEqualProbability({
+                // Generate Uint8Array construction from hex string.
                 var s = ""
-                for _ in 0..<Int.random(in: 1...10) {
+                for _ in 0..<Int.random(in: 1...40) {
                     s += chooseUniform(from: hexValues)
                     s += chooseUniform(from: hexValues)
                 }
                 let hex = b.loadString(s)
 
                 if probability(0.5) {
-                    b.callMethod("fromHex", on: Uint8Array, withArgs: [hex])
+                    b.callMethod("fromHex", on: uint8ArrayBuiltin, withArgs: [hex])
                 } else {
-                    let target = b.construct(Uint8Array, withArgs: [b.loadInt(Int64.random(in: 0...0x100))])
+                    let target = b.construct(uint8ArrayBuiltin, withArgs: [b.loadInt(Int64.random(in: 0...0x100))])
                     b.callMethod("setFromHex", on: target, withArgs: [hex])
                 }
             }, {
-                var values = [Variable]()
-                for _ in 0..<Int.random(in: 1...20) {
-                    values.append(b.loadInt(Int64.random(in: 0...0xFF)))
-                }
-
-                let bytes = b.callMethod("of", on: Uint8Array, withArgs: values)
+                // Generate hex String construction from Uint8Array.
+                let values = (0..<Int.random(in: 1...20)).map {_ in b.loadInt(Int64.random(in: 0...0xFF))}
+                let bytes = b.callMethod("of", on: uint8ArrayBuiltin, withArgs: values)
                 b.callMethod("toHex", on: bytes, withArgs: [])
             }
         )
@@ -191,11 +189,11 @@ public let CodeGenerators: [CodeGenerator] = [
         let base64Alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "/"]
         let base64URLAlphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", "_"]
 
-        let Uint8Array = b.createNamedVariable(forBuiltin: "Uint8Array")
+        let uint8ArrayBuiltin = b.createNamedVariable(forBuiltin: "Uint8Array")
 
         withEqualProbability({
                 var options = [String: Variable]()
-                var alphabet = chooseUniform(from: [base64Alphabet, base64URLAlphabet])
+                let alphabet = chooseUniform(from: [base64Alphabet, base64URLAlphabet])
 
                 options["alphabet"] = b.loadString((alphabet == base64Alphabet) ? "base64" : "base64url")
                 options["lastChunkHandling"] = b.loadString(
@@ -209,7 +207,7 @@ public let CodeGenerators: [CodeGenerator] = [
                     s += chooseUniform(from: alphabet)
                 }
 
-                // extend by 0, 1, or 2 bytes
+                // Extend by 0, 1, or 2 bytes.
                 switch (Int.random(in: 0...3)) {
                     case 1:
                         s += base64Alphabet[Int.random(in: 0...63)]
@@ -232,18 +230,14 @@ public let CodeGenerators: [CodeGenerator] = [
 
                 let optionsObject = b.createObject(with: options)
                 if probability(0.5) {
-                    b.callMethod("fromBase64", on: Uint8Array, withArgs: [base64, optionsObject])
+                    b.callMethod("fromBase64", on: uint8ArrayBuiltin, withArgs: [base64, optionsObject])
                 } else {
-                    let target = b.construct(Uint8Array, withArgs: [b.loadInt(Int64.random(in: 0...0x100))])
+                    let target = b.construct(uint8ArrayBuiltin, withArgs: [b.loadInt(Int64.random(in: 0...0x100))])
                     b.callMethod("setFromBase64", on: target, withArgs: [base64, optionsObject])
                 }
             }, {
-                var values = [Variable]()
-                for _ in 0..<Int.random(in: 1...64) {
-                    values.append(b.loadInt(Int64.random(in: 0...0xFF)))
-                }
-
-                let bytes = b.callMethod("of", on: Uint8Array, withArgs: values)
+                let values = (0..<Int.random(in: 1...64)).map {_ in b.loadInt(Int64.random(in: 0...0xFF))}
+                let bytes = b.callMethod("of", on: uint8ArrayBuiltin, withArgs: values)
                 b.callMethod("toBase64", on: bytes, withArgs: [])
             }
         )
