@@ -50,8 +50,41 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadBigInt(value: b.randomInt())
         case .loadFloat(_):
             newOp = LoadFloat(value: b.randomFloat())
-        case .loadString(_):
-            newOp = LoadString(value: b.randomString())
+        case .loadString(let op):
+            let charSetAlNum = Array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+            // TODO(mliedtke): Should we also use some more esoteric characters in initial string
+            // creation, e.g. ProgramBuilder.randomString?
+            let charSetExtended = charSetAlNum + Array("-_.,!?<>()[]{}`´^\\/|+#*=;:'~^²\t°ß¿ 🤯🙌🏿\u{202D}")
+            let randomIndex = {(s: String) in
+                s.index(s.startIndex, offsetBy: Int.random(in: 0..<s.count))
+            }
+            let randomCharacter = {
+                // Add an overweight to the alpha-numeric characters.
+                (Bool.random() ? charSetAlNum : charSetExtended).randomElement()!
+            }
+            // With a 50% chance create a new string, otherwise perform a modification on the
+            // existing string. Modifying the string can be especially interesting for
+            // decoders for RegEx, base64, hex, ...
+            let newString = op.value.isEmpty || Bool.random() ? b.randomString() : withEqualProbability(
+                {
+                    // Replace a single character.
+                    var result = op.value
+                    let index = randomIndex(result)
+                    result.replaceSubrange(index..<result.index(index, offsetBy: 1), with: String(randomCharacter()))
+                    return result
+                }, {
+                    // Insert a single character.
+                    var result = op.value
+                    result.insert(randomCharacter(), at: randomIndex(result))
+                    return result
+                }, {
+                    // Remove a single character.
+                    var result = op.value
+                    result.remove(at: randomIndex(result))
+                    return result
+                }
+            )
+            newOp = LoadString(value: newString)
         case .loadRegExp(let op):
             newOp = withEqualProbability({
                 let (pattern, flags) = b.randomRegExpPatternAndFlags()
