@@ -212,6 +212,12 @@ public struct ILType: Hashable {
         return ILType(definiteType: .wasmDataSegment, ext: typeExtension)
     }
 
+    public static func  wasmElementSegment(segmentLength: Int? = nil) -> ILType {
+        let maybeWasmExtention = segmentLength.map { WasmElementSegmentType(segmentLength: $0) }
+        let typeExtension = TypeExtension(group: "WasmElementSegment", properties: Set(), methods: Set(), signature: nil, wasmExt: maybeWasmExtention)
+        return ILType(definiteType: .wasmElementSegment, ext: typeExtension)
+    }
+
     public static func wasmTable(wasmTableType: WasmTableType) -> ILType {
         return .object(ofGroup: "WasmTable", withProperties: ["length"], withMethods: ["get", "grow", "set"], withWasmType: wasmTableType)
     }
@@ -516,6 +522,14 @@ public struct ILType: Hashable {
 
     public var isWasmDataSegmentType: Bool {
         return wasmDataSegmentType != nil
+    }
+
+    public var wasmElementSegmentType: WasmElementSegmentType? {
+        return ext?.wasmExt as? WasmElementSegmentType
+    }
+
+    public var isWasmElementSegmentType: Bool {
+        return wasmElementSegmentType != nil
     }
 
 
@@ -1082,6 +1096,8 @@ extension ILType: CustomStringConvertible {
             return ".exceptionLabel"
         case .wasmDataSegment:
             return ".wasmDataSegment"
+        case .wasmElementSegment:
+            return ".wasmElementSegment"
         default:
             break
         }
@@ -1157,6 +1173,7 @@ struct BaseType: OptionSet, Hashable {
     static let wasmPackedI16 = BaseType(rawValue: 1 << 23)
 
     static let wasmDataSegment = BaseType(rawValue: 1 << 24)
+    static let wasmElementSegment = BaseType(rawValue: 1 << 25)
 
     static let jsAnything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .unboundFunction, .bigint, .regexp, .iterable])
 
@@ -1641,6 +1658,30 @@ public class WasmDataSegmentType: WasmTypeExtension {
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmDataSegmentType else { return false }
+        return self.segmentLength == other.segmentLength && self.isDropped == other.isDropped
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine(segmentLength)
+        hasher.combine(isDropped)
+    }
+
+    init(segmentLength: Int) {
+        self.segmentLength = segmentLength
+        self.isDropped = false
+    }
+
+    public func markAsDropped() {
+        self.isDropped = true
+    }
+}
+
+public class WasmElementSegmentType: WasmTypeExtension {
+    let segmentLength: Int
+    private(set) var isDropped: Bool
+
+    override func isEqual(to other: WasmTypeExtension) -> Bool {
+        guard let other = other as? WasmElementSegmentType else { return false }
         return self.segmentLength == other.segmentLength && self.isDropped == other.isDropped
     }
 

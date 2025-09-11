@@ -1231,6 +1231,16 @@ extension Instruction: ProtobufConvertible {
                     }
                     $0.isTable64 = op.isTable64
                 }
+            case .wasmDefineElementSegment(let op):
+                $0.wasmDefineElementSegment = Fuzzilli_Protobuf_WasmDefineElementSegment.with {
+                    $0.size = op.size
+                }
+            case .wasmDropElementSegment(_):
+                $0.wasmDropElementSegment = Fuzzilli_Protobuf_WasmDropElementSegment()
+            case .wasmTableCopy(_):
+                $0.wasmTableCopy = Fuzzilli_Protobuf_WasmTableCopy()
+            case .wasmTableInit(_):
+                $0.wasmTableInit = Fuzzilli_Protobuf_WasmTableInit()
             case .wasmDefineMemory(let op):
                 assert(op.wasmMemory.isWasmMemoryType)
                 let mem = op.wasmMemory.wasmMemoryType!
@@ -2322,6 +2332,14 @@ extension Instruction: ProtobufConvertible {
                                      WasmTableType.IndexInTableAndWasmSignature(indexInTable: Int(entry.index), signature: WasmSignatureFromProto(entry.signature))
                                  },
                                  isTable64: p.isTable64)
+        case .wasmDefineElementSegment(let p):
+            op = WasmDefineElementSegment(size: p.size)
+        case .wasmDropElementSegment(_):
+            op = WasmDropElementSegment()
+        case .wasmTableInit(_):
+            op = WasmTableInit()
+        case .wasmTableCopy(_):
+            op = WasmTableCopy()
         case .wasmDefineMemory(let p):
             let maxPages = p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil
             op = WasmDefineMemory(limits: Limits(min: Int(p.wasmMemory.minPages), max: maxPages), isShared: p.wasmMemory.isShared, isMemory64: p.wasmMemory.isMemory64)

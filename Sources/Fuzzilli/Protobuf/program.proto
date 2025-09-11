@@ -348,6 +348,10 @@ message Instruction {
         WasmAnyConvertExtern wasmAnyConvertExtern = 322;
         WasmExternConvertAny wasmExternConvertAny = 323;
         WasmMemoryCopy wasmMemoryCopy = 324;
+        WasmDefineElementSegment wasmDefineElementSegment = 325;
+        WasmTableInit wasmTableInit = 326;
+        WasmDropElementSegment wasmDropElementSegment = 327;
+        WasmTableCopy wasmTableCopy = 328;
     }
 }
 

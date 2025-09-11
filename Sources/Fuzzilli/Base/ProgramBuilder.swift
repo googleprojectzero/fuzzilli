@@ -3400,6 +3400,28 @@ public class ProgramBuilder {
             b.emit(WasmDropDataSegment(), withInputs: [dataSegment], types: [.wasmDataSegment()])
         }
 
+        public func wasmDropElementSegment(elementSegment: Variable) {
+            b.emit(WasmDropElementSegment(), withInputs: [elementSegment], types: [.wasmElementSegment()])
+        }
+
+        public func wasmTableInit(elementSegment: Variable, table: Variable, tableOffset: Variable, elementSegmentOffset: Variable, nrOfElementsToUpdate: Variable) {
+            // TODO: b/427115604 - assert that table.elemType IS_SUBTYPE_OF elementSegment.elemType (depending on refactor outcome).
+            let addrType = b.type(of: table).wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            b.emit(WasmTableInit(), withInputs: [elementSegment, table, tableOffset, elementSegmentOffset, nrOfElementsToUpdate],
+                types: [.wasmElementSegment(), .object(ofGroup: "WasmTable"), addrType, addrType, addrType])
+        }
+
+        public func wasmTableCopy(dstTable: Variable, srcTable: Variable, dstOffset: Variable, srcOffset: Variable, count: Variable) {
+            // TODO: b/427115604 - assert that srcTable.elemType IS_SUBTYPE_OF dstTable.elemType (depending on refactor outcome).
+            let dstTableType = b.type(of: dstTable).wasmTableType!
+            let srcTableType = b.type(of: srcTable).wasmTableType!
+            assert(dstTableType.isTable64 == srcTableType.isTable64)
+
+            let addrType = dstTableType.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            b.emit(WasmTableCopy(), withInputs: [dstTable, srcTable, dstOffset, srcOffset, count],
+                types: [.object(ofGroup: "WasmTable"), .object(ofGroup: "WasmTable"), addrType, addrType, addrType])
+        }
+
         public func wasmReassign(variable: Variable, to: Variable) {
             assert(b.type(of: variable) == b.type(of: to))
             b.emit(WasmReassign(variableType: b.type(of: variable)), withInputs: [variable, to])
@@ -3922,6 +3944,12 @@ public class ProgramBuilder {
                 withInputs: definedEntryValues, types: inputTypes).output
         }
 
+        @discardableResult
+        public func addElementSegment(elementsType: ILType,  elements: [Variable]) -> Variable {
+            let inputTypes = Array(repeating: elementsType, count: elements.count)
+            return b.emit(WasmDefineElementSegment(size: UInt32(elements.count)), withInputs: elements, types: inputTypes).output
+        }
+
         // This result can be ignored right now, as we can only define one memory per module
         // Also this should be tracked like a global / table.
         @discardableResult
@@ -4292,7 +4320,8 @@ public class ProgramBuilder {
         case .wasmDefineGlobal(_),
              .wasmDefineTable(_),
              .wasmDefineMemory(_),
-             .wasmDefineDataSegment(_):
+             .wasmDefineDataSegment(_),
+             .wasmDefineElementSegment(_):
             break
         case .wasmDefineTag(_):
             break

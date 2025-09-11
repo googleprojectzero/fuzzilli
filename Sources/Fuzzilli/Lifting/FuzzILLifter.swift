@@ -822,6 +822,18 @@ public class FuzzILLifter: Lifter {
             let isTable64Str = op.isTable64 ? ", table64" : ""
             w.emit("\(output()) <- WasmDefineTable \(op.elementType)\(isTable64Str), (\(op.limits.min), \(String(describing: op.limits.max))), [\(entries)]")
 
+        case .wasmDefineElementSegment(_):
+            w.emit("\(output()) <- WasmDefineElementSegment [...]")
+
+        case .wasmDropElementSegment:
+            w.emit("WasmDropElementSegment \(input(0))")
+
+        case .wasmTableInit:
+            w.emit("WasmTableInit \(input(0)), \(input(1)), \(input(2)), \(input(3)), \(input(4))")
+
+        case .wasmTableCopy:
+            w.emit("WasmTableCopy \(input(0)), \(input(1)), \(input(2)), \(input(3)), \(input(4))")
+
         case .wasmDefineMemory(let op):
             assert(op.wasmMemory.isWasmMemoryType)
             let mem = op.wasmMemory.wasmMemoryType!

@@ -810,6 +810,44 @@ final class WasmDefineTable: WasmOperation {
     }
 }
 
+final class WasmDefineElementSegment: WasmOperation {
+    override var opcode: Opcode { .wasmDefineElementSegment(self) }
+
+    public let size: UInt32
+
+    init(size: UInt32) {
+        self.size = size
+        super.init(numInputs: Int(size), numOutputs: 1, requiredContext: [.wasm])
+    }
+}
+
+class WasmDropElementSegment: WasmOperation {
+    override var opcode: Opcode { .wasmDropElementSegment(self) }
+
+    init() {
+        super.init(
+            numInputs: 1, numOutputs: 0, requiredContext: [.wasmFunction])
+    }
+}
+
+class WasmTableInit: WasmOperation {
+    override var opcode: Opcode { .wasmTableInit(self) }
+
+    init() {
+        super.init(
+            numInputs: 5, numOutputs: 0, requiredContext: [.wasmFunction])
+    }
+}
+
+class WasmTableCopy: WasmOperation {
+    override var opcode: Opcode { .wasmTableCopy(self) }
+
+    init() {
+        super.init(
+            numInputs: 5, numOutputs: 0, requiredContext: [.wasmFunction])
+    }
+}
+
 // TODO: Wasm memory can be initialized in the data segment, theoretically one could initialize them with this instruction as well.
 // Currently they are by default zero initialized and fuzzilli should then just store or load from there.
 // Also note: https://webassembly.github.io/spec/core/syntax/modules.html#memories
@@ -2355,4 +2393,3 @@ final class WasmAtomicCmpxchg: WasmOperation {
         super.init(numInputs: 4, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
-

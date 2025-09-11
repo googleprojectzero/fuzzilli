@@ -288,6 +288,7 @@ public class WasmLifter {
     private var exports: [Export] = []
 
     private var dataSegments: [Instruction] = []
+    private var elementSegments: [Instruction] = []
 
 //    // The tags associated with this module.
 //    private var tags: VariableMap<[ILType]> = VariableMap()
@@ -842,9 +843,9 @@ public class WasmLifter {
     }
 
     // Only supports:
-    // - active segments
+    // - passive & active segments
     // - with custom table id
-    // - function-indices-as-elements (i.e. case 2 of the spec: https://webassembly.github.io/spec/core/binary/modules.html#element-section)
+    // - function-indices-as-elements (i.e. case 1 && 2 of the spec: https://webassembly.github.io/spec/core/binary/modules.html#element-section)
     // - one segment per table (assumes entries are continuous)
     // - constant starting index.
     private func buildElementSection() throws {
@@ -856,14 +857,31 @@ public class WasmLifter {
             }
         }
 
-        if numDefinedTablesWithEntries == 0 { return }
+        if numDefinedTablesWithEntries == 0  && elementSegments.count == 0 { return }
 
         self.bytecode += [WasmSection.element.rawValue]
         var temp = Data();
 
         // Element segment count.
-        temp += Leb128.unsignedEncode(numDefinedTablesWithEntries);
+        temp += Leb128.unsignedEncode(numDefinedTablesWithEntries + elementSegments.count);
 
+        // Passive element segments. They go first so that their indexes start with 0.
+        for instruction in self.elementSegments {
+            let size = (instruction.op as! WasmDefineElementSegment).size
+            assert(size == instruction.numInputs)
+            // Element segment case 1 definition.
+            temp += [0x01]
+            // elemkind
+            temp += [0x00]
+            // Elements
+            temp += Leb128.unsignedEncode(instruction.numInputs)
+            for f in instruction.inputs {
+                let functionIdx = try resolveIdx(ofType: .function, for: f)
+                temp += Leb128.unsignedEncode(functionIdx)
+            }
+        }
+
+        // Active element segments 
         for case let .table(instruction) in self.exports {
             let table = instruction!.op as! WasmDefineTable
             let definedEntries = table.definedEntries
@@ -883,8 +901,8 @@ public class WasmLifter {
             temp += Leb128.unsignedEncode(definedEntries.count)
             // entries
             for entry in instruction!.inputs {
-                let functionId = try resolveIdx(ofType: .function, for: entry)
-                temp += Leb128.unsignedEncode(functionId)
+                let functionIdx = try resolveIdx(ofType: .function, for: entry)
+                temp += Leb128.unsignedEncode(functionIdx)
             }
         }
 
@@ -1289,6 +1307,8 @@ public class WasmLifter {
             }))
         case .wasmDefineDataSegment(_):
             self.dataSegments.append(instr)
+        case .wasmDefineElementSegment(_):
+            self.elementSegments.append(instr)
         case .wasmJsCall(_):
             return true
         case .wasmThrow(_):
@@ -1570,6 +1590,10 @@ public class WasmLifter {
         dataSegments.firstIndex {$0.output == input}!
     }
 
+    func resolveElementSegmentIdx(for input: Variable) -> Int {
+        elementSegments.firstIndex {$0.output == input}!
+    }
+
     // The memory immediate argument, which encodes the alignment and memory index.
     // For memory 0, this is just the alignment. For other memories, a flag is set
     // and the memory index is also encoded.
@@ -1843,6 +1867,17 @@ public class WasmLifter {
         case .wasmDropDataSegment(_):
             let dataSegmentIdx = resolveDataSegmentIdx(for: wasmInstruction.input(0))
             return Data([0xFC, 0x09]) + Leb128.unsignedEncode(dataSegmentIdx)
+        case .wasmDropElementSegment(_):
+            let elementSegmentIdx = resolveElementSegmentIdx(for: wasmInstruction.input(0))
+            return Data([0xFC, 0x0d]) + Leb128.unsignedEncode(elementSegmentIdx)
+        case .wasmTableInit(_):
+            let elementSegmentIdx = resolveElementSegmentIdx(for: wasmInstruction.input(0))
+            let tableIdx = try resolveIdx(ofType: .table, for: wasmInstruction.input(1))
+            return Data([0xFC, 0x0c]) + Leb128.unsignedEncode(elementSegmentIdx) + Leb128.unsignedEncode(tableIdx)
+        case .wasmTableCopy(_):
+            let dstTableIdx = try resolveIdx(ofType: .table, for: wasmInstruction.input(0))
+            let srcTableIdx = try resolveIdx(ofType: .table, for: wasmInstruction.input(1))
+            return Data([0xFC, 0x0e]) + Leb128.unsignedEncode(dstTableIdx) + Leb128.unsignedEncode(srcTableIdx)
         case .wasmJsCall(let op):
             // We filter first, such that we get the index of functions only.
             let wasmSignature = op.functionSignature

@@ -673,6 +673,14 @@ public struct JSTyper: Analyzer {
                     let jsSignature = ProgramBuilder.convertWasmSignatureToJsSignature(entry.signature)
                     dynamicObjectGroupManager.addWasmFunction(withSignature: jsSignature, forDefinition: definingInstruction, forVariable: instr.input(idx))
                 }
+            case .wasmDefineElementSegment(let op):
+                setType(of: instr.output, to: .wasmElementSegment(segmentLength: Int(op.size)))
+            case .wasmDropElementSegment(_):
+                type(of: instr.input(0)).wasmElementSegmentType!.markAsDropped()
+            case .wasmTableInit(_),
+                 .wasmTableCopy(_):
+                // TODO(427115604): - implement both init and copy instructions.
+                break
             case .wasmDefineMemory(let op):
                 setType(of: instr.output, to: op.wasmMemory)
                 registerWasmMemoryUse(for: instr.output)

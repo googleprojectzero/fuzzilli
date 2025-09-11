@@ -4108,6 +4108,39 @@ class WasmFoundationTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "42\n42\n")
     }
+
+    func testDefineElementSegments() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            b.buildWasmModule { wasmModule in
+                let f1 = wasmModule.addWasmFunction(with: [] => []) { _, _, _ in return []}
+                let f2 = wasmModule.addWasmFunction(with: [] => []) { _, _, _ in return []}
+                wasmModule.addElementSegment(elementsType: .wasmFunctionDef(), elements: [])
+                wasmModule.addElementSegment(elementsType: .wasmFunctionDef(), elements: [f1])
+                wasmModule.addElementSegment(elementsType: .wasmFunctionDef(), elements: [f1, f2])
+            }
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "")
+    }
+
+    func testDropElementSegments() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            b.buildWasmModule { wasmModule in
+                let function = wasmModule.addWasmFunction(with: [] => []) { _, _, _ in return []}
+                let segment = wasmModule.addElementSegment(elementsType: .wasmFunctionDef(), elements: [function])
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in 
+                    f.wasmDropElementSegment(elementSegment: segment)
+                    return []
+                }
+            }
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "")
+    }
+
+    // TODO(427115604): add tests that actually use element segments once table.init operation is supported.
 }
 
 class WasmGCTests: XCTestCase {

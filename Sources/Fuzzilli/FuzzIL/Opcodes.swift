@@ -352,4 +352,8 @@ enum Opcode {
     case wasmAnyConvertExtern(WasmAnyConvertExtern)
     case wasmExternConvertAny(WasmExternConvertAny)
     case wasmMemoryCopy(WasmMemoryCopy)
+    case wasmDefineElementSegment(WasmDefineElementSegment)
+    case wasmDropElementSegment(WasmDropElementSegment)
+    case wasmTableInit(WasmTableInit)
+    case wasmTableCopy(WasmTableCopy)
 }
