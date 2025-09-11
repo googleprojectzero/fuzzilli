@@ -35,6 +35,7 @@ public let codeGeneratorWeights = [
     "ObjectConstructorGenerator":               10,
     "ClassDefinitionGenerator":                 20,
     "TrivialFunctionGenerator":                 10,
+    "TimeZoneIdGenerator":                      5,
 
     // Regular code generators.
     "ThisGenerator":                            3,
