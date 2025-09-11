@@ -670,7 +670,11 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmRefIsNull(_),
              .wasmRefI31(_),
              .wasmAnyConvertExtern(_),
-             .wasmExternConvertAny(_):
+             .wasmExternConvertAny(_),
+             .wasmDefineElementSegment(_),
+             .wasmDropElementSegment(_),
+             .wasmTableInit(_),
+             .wasmTableCopy(_):
              assert(!instr.isOperationMutable)
              fatalError("Unexpected Operation")
         }

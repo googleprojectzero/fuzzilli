@@ -1650,3 +1650,16 @@ message WasmMemoryInit {
 
 message WasmMemoryCopy {
 }
+
+message WasmDefineElementSegment {
+    uint32 size = 1;
+}
+
+message WasmDropElementSegment {
+}
+
+message WasmTableInit {
+}
+
+message WasmTableCopy {
+}

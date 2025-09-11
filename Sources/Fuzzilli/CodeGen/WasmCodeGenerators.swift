@@ -528,6 +528,20 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         module.addTable(elementType: elementType, minSize: minSize, maxSize: maxSize, definedEntries: definedEntries, definedEntryValues: definedEntryValues, isTable64: probability(0.5))
     },
 
+    CodeGenerator("WasmDefineElementSegmentGenerator", inContext: .wasm) { b in
+        let elementsType: ILType = .wasmFunctionDef() | .function()
+        if b.randomVariable(ofType: elementsType) == nil {
+            return
+        }
+
+        var elements: [Variable] = (0...Int.random(in: 0...8)).map {_ in b.randomVariable(ofType: elementsType)!}
+        b.currentWasmModule.addElementSegment(elementsType: elementsType, elements: elements)
+    },
+
+    CodeGenerator("WasmDropElementSegmentGenerator", inContext: .wasmFunction, inputs: .required(.wasmElementSegment())) { b, elementSegment in
+        b.currentWasmFunction.wasmDropElementSegment(elementSegment: elementSegment)
+    },
+
     CodeGenerator("WasmTableSizeGenerator", inContext: .wasmFunction, inputs: .required(.object(ofGroup: "WasmTable"))) { b, table in
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmTableSize(table: table)
