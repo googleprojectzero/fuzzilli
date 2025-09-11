@@ -354,6 +354,16 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    ValueGenerator("TimeZoneIdGenerator") { b, n in
+        for _ in 0..<n {
+            if Bool.random() {
+                b.randomTimeZone()
+            } else {
+                b.randomUTCOffset()
+            }
+        }
+    },
+
     //
     // "Regular" Code Generators.
     //

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 /// Builds programs.
 ///
 /// This provides methods for constructing and appending random
@@ -4435,6 +4437,24 @@ public class ProgramBuilder {
         return createObject(with: properties)
     }
 
+    fileprivate static let allTimeZoneAbbreviations: [String] = Array(TimeZone.abbreviationDictionary.keys)
+
+    // Generate a random time zone identifier
+    @discardableResult
+    func randomTimeZone() -> Variable {
+        // Bias towards knownTimeZoneIdentifiers since it's a larger array
+        if probability(0.7) {
+            return loadString(chooseUniform(from: TimeZone.knownTimeZoneIdentifiers))
+        } else {
+            return loadString(chooseUniform(from: ProgramBuilder.allTimeZoneAbbreviations))
+        }
+    }
+
+    @discardableResult
+    func randomUTCOffset() -> Variable {
+        return loadString(randomUTCOffsetString(mayHaveSeconds: true))
+    }
+
     // Generate an object with fields from
     // https://tc39.es/proposal-temporal/#table-temporal-calendar-fields-record-fields
     //
@@ -4549,32 +4569,37 @@ public class ProgramBuilder {
         }
         // timeZone
         if zonedFields {
-            // TODO: write generator for timezone strings
+            var generatedOffset: Variable? = nil
+            // ZonedDateTime must be constructed with a timeZone property.
+            // but ZonedDateTime.with will always reject a timeZone.
+            //
+            // This is because ZonedDateTime.with is about partially replacing
+            // calendar fields: and operations like "change the day and also the
+            // time zone" are ambiguous based on whether you change the day first
+            // or the time zone first (and it's not a *useful* ambiguity).
+            // Instead, you are expected to use `.with()` and `.withTimeZone()`
+            // in whatever order you need.
             if (!forWith) {
-                // ZonedDateTime needs a timeZone property
-                properties["timeZone"] = randomVariable(forUseAs: .string)
+                if Bool.random() {
+                    // Time zones can be offsets, but cannot have seconds
+                    generatedOffset = loadString(randomUTCOffsetString(mayHaveSeconds: false))
+                    properties["timeZone"] = generatedOffset
+                } else {
+                    properties["timeZone"] = randomTimeZone()
+                }
             }
 
-            // Most of the time this will cause uninteresting errors
-            // (it needs to match with the offset), so
-            // we generate this with a lower probability
-            if probability(0.3) {
-                let hours = Int.random(in: 0..<24)
-                let minutes = Int.random(in: 0..<60)
-                let plusminus = Bool.random() ? "+" : "-";
-                var offset = String(format: "%s%02d:%02d", plusminus, hours, minutes)
-                if probability(0.3) {
-                    offset += ":"
-                    let seconds = Int.random(in: 0..<60)
-                    offset += "\(seconds)"
-                    if probability(0.3) {
-                        offset += "."
-                        offset += String(format: "%09d", Int.random(in: 0...999999999))
-                    }
-
-                    offset += ""
-                }
-                properties["offset"] = loadString(offset)
+            // Most of the time mixing a random offset and timezone
+            // will cause uninteresting errors since they need to match.
+            // If our timezone was a UTC offset, then there's not much harm
+            // in setting the field (it matches!), but otherwise we should generate offsets
+            // with a low probability.
+            if generatedOffset != nil && Bool.random() {
+                // Half the time when we've generated an offset, set the offset field too, it won't clash.
+                properties["offset"] = generatedOffset!
+            } else if probability(0.3) {
+                // Otherwise, with a low probability, generate a random offset.
+                properties["offset"] = loadString(randomUTCOffsetString(mayHaveSeconds: true))
             }
         }
         return createObject(with: properties)
@@ -4725,3 +4750,21 @@ public class ProgramBuilder {
 
 }
 
+
+
+fileprivate func randomUTCOffsetString(mayHaveSeconds: Bool) -> String {
+    let hours = Int.random(in: 0..<24)
+    // Bias towards zero minutes since that's what most time zones do.
+    let zeroMinutes = probability(0.8)
+    let minutes = zeroMinutes ? 0 : Int.random(in: 0..<60)
+    let plusminus = Bool.random() ? "+" : "-";
+    var offset = String(format: "%@%02d:%02d", plusminus, hours, minutes)
+    if !zeroMinutes && mayHaveSeconds && probability(0.3) {
+        let seconds = Int.random(in: 0..<60)
+        offset = String(format: "%@:%02d", offset, seconds)
+        if  probability(0.3) {
+            offset = String(format: "%@:.%09d", offset, Int.random(in: 0...999999999))
+        }
+    }
+    return offset
+}
