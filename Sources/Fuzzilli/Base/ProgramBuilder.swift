@@ -794,12 +794,6 @@ public class ProgramBuilder {
     /// This is writable for use in tests, but it could also be used to change how "conservative" variable selection is.
     var probabilityOfVariableSelectionTryingToFindAnExactMatch = 0.5
 
-    /// This threshold  affects the behavior of `randomVariable(forUseAs:)`. It determines how many existing variables of the
-    /// requested type we want to have before we try to find an exact match. If there are fewer variables of the requested type, we'll
-    /// always do a more general search which may also return variables of unknown (i.e. `.jsAnything`) type.
-    /// This ensures that consecutive queries for the same type can return different variables.
-    let minVisibleVariablesOfRequestedTypeForVariableSelection = 3
-
     /// Returns a random variable to be used as the given type.
     ///
     /// This function may return variables of a different type, or variables that may have the requested type, but could also have a different type.
@@ -818,8 +812,7 @@ public class ProgramBuilder {
         var result: Variable? = nil
 
         // Prefer variables that are known to have the requested type if there's a sufficient number of them.
-        if probability(probabilityOfVariableSelectionTryingToFindAnExactMatch) &&
-            haveAtLeastNVisibleVariables(ofType: type, n: minVisibleVariablesOfRequestedTypeForVariableSelection) {
+        if probability(probabilityOfVariableSelectionTryingToFindAnExactMatch) {
             result = findVariable(satisfying: { self.type(of: $0).Is(type) })
         }
 
@@ -900,19 +893,6 @@ public class ProgramBuilder {
         }
 
         return chooseUniform(from: candidates)
-    }
-
-    /// Helper function to determine if we have a sufficient number of variables of a given type to ensure that
-    /// consecutive queries for a variable of a given type will not always return the same variables.
-    private func haveAtLeastNVisibleVariables(ofType t: ILType, n: Int) -> Bool {
-        var count = 0
-        for v in variablesInScope where !hiddenVariables.contains(v) && type(of: v).Is(t) {
-            count += 1
-            if count >= n {
-                return true
-            }
-        }
-        return false
     }
 
     /// Find random variables to use as arguments for calling the specified function.

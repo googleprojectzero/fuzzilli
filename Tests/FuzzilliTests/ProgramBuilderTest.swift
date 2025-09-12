@@ -151,10 +151,7 @@ class ProgramBuilderTests: XCTestCase {
         // This testcase demonstrates the behavior of `b.randomVariable(forUseAs:)`
         // This API behaves in the following way:
         //  - It prefers to return variables that are known to have the requested type
-        //    with probability `b.probabilityOfVariableSelectionTryingToFindAnExactMatch`,
-        //    but only if there's a sufficient number of them currently visible (to ensure
-        //    that consecutive queries return different variables. This threshold is
-        //    determined by `b.minVisibleVariablesOfRequestedTypeForVariableSelection`.
+        //    with probability `b.probabilityOfVariableSelectionTryingToFindAnExactMatch`.
         //  - Otherwise, it tries a wider match, including all variables that may have the
         //    requested type. This includes all variables that have unknown type.
         //  - If even that doesn't find any matches, the function will return a random
@@ -165,8 +162,6 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let i = b.loadInt(42)
-        // There is only one visible variable, so we always get that, no matter what we actually query
-        XCTAssertLessThan(b.numberOfVisibleVariables, b.minVisibleVariablesOfRequestedTypeForVariableSelection)
         XCTAssertEqual(b.randomVariable(forUseAs: .integer), i)
         XCTAssertEqual(b.randomVariable(forUseAs: .jsAnything), i)
         XCTAssertEqual(b.randomVariable(forUseAs: .string), i)
@@ -178,31 +173,24 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert([i, s].contains(b.randomVariable(forUseAs: .primitive)))
         XCTAssertEqual(b.randomVariable(forUseAs: .string), s)
 
-        // Now there's also a variable of unknown type, which may be anything. Since we don't have enough variables
-        // of a known type, all queries will use a `MayBe` type query to find matches and so may return the unknown variable.
+        // Now there's also a variable of unknown type, which may be anything.
         let unknown = b.createNamedVariable(forBuiltin: "unknown")
         XCTAssertEqual(b.type(of: unknown), .jsAnything)
 
+        // There is now still a 50% chance that we will do a `MayBe` query, so we may return the unknown variable.
         XCTAssert([i, unknown].contains(b.randomVariable(forUseAs: .integer)))
         XCTAssert([i, unknown].contains(b.randomVariable(forUseAs: .number)))
         XCTAssert([s, unknown].contains(b.randomVariable(forUseAs: .string)))
         XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .primitive)))
         XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .jsAnything)))
 
-        // Now we add some more integers and set the probability of trying an exact match (i.e. an `Is` query instead of a
-        // `MayBe` query) to 100%. Then, we expect to always get back the known integers when asking for them.
-        let i2 = b.loadInt(43)
-        let i3 = b.loadInt(44)
-        XCTAssertGreaterThanOrEqual(b.numberOfVisibleVariables, b.minVisibleVariablesOfRequestedTypeForVariableSelection)
         b.probabilityOfVariableSelectionTryingToFindAnExactMatch = 1.0
-        // Now we should always get back the integer when querying for that type.
-        XCTAssert([i, i2, i3].contains(b.randomVariable(forUseAs: .integer)))
-        XCTAssert([i, i2, i3].contains(b.randomVariable(forUseAs: .number)))
-        // We don't have enough strings yet though.
-        XCTAssert([s, unknown].contains(b.randomVariable(forUseAs: .string)))
-        // But enough primitive values.
-        XCTAssert([i, i2, i3, s].contains(b.randomVariable(forUseAs: .primitive)))
-        XCTAssert([i, i2, i3, s, unknown].contains(b.randomVariable(forUseAs: .jsAnything)))
+        // We should now always first look for a variable whose type matches or subsumes the requested one.
+        XCTAssertEqual(b.randomVariable(ofType: .integer), i)
+        XCTAssertEqual(b.randomVariable(ofType: .number), i)
+        XCTAssertEqual(b.randomVariable(ofType: .string), s)
+        XCTAssert([i, s].contains(b.randomVariable(forUseAs: .primitive)))
+        XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .jsAnything)))
     }
 
     func testVariableRetrieval2() {
