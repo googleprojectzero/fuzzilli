@@ -4437,8 +4437,6 @@ public class ProgramBuilder {
         return createObject(with: properties)
     }
 
-    fileprivate static let allTimeZoneAbbreviations: [String] = Array(TimeZone.abbreviationDictionary.keys)
-
     // Generate a random time zone identifier
     @discardableResult
     func randomTimeZone() -> Variable {
@@ -4446,7 +4444,7 @@ public class ProgramBuilder {
         if probability(0.7) {
             return loadString(chooseUniform(from: TimeZone.knownTimeZoneIdentifiers))
         } else {
-            return loadString(chooseUniform(from: ProgramBuilder.allTimeZoneAbbreviations))
+            return loadString(chooseUniform(from: TimeZone.abbreviationDictionary.keys))
         }
     }
 
