@@ -254,22 +254,26 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
         }
 
         for _ in 0..<3 {
-            b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+            let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+            b.callFunction(f, withArgs: arguments, guard: !matches)
         }
     }
     let functionCallGenerator = CodeGenerator("FunctionCall", inputs: .required(.function())) { b, f in
         assert(b.type(of: f).Is(.function()))
-        let rval = b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+        let rval = b.callFunction(f, withArgs: arguments, guard: !matches)
     }
     let constructorCallGenerator = CodeGenerator("ConstructorCall", inputs: .required(.constructor())) { b, c in
         assert(b.type(of: c).Is(.constructor()))
-        let rval = b.construct(c, withArgs: b.randomArguments(forCalling: c))
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: c)
+        let rval = b.construct(c, withArgs: arguments, guard: !matches)
      }
     let functionJitCallGenerator = CodeGenerator("FunctionJitCall", inputs: .required(.function())) { b, f in
         assert(b.type(of: f).Is(.function()))
         let args = b.randomArguments(forCalling: f)
         b.buildRepeatLoop(n: 100) { _ in
-            b.callFunction(f, withArgs: args)
+            let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+            b.callFunction(f, withArgs: arguments, guard: !matches)
         }
     }
 

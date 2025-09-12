@@ -804,12 +804,15 @@ public class ProgramBuilder {
     /// It's the caller's responsibility to check the type of the returned variable to avoid runtime exceptions if necessary. For example, if performing a
     /// property access, the returned variable should be checked if it `MayBe(.nullish)` in which case a property access would result in a
     /// runtime exception and so should be appropriately guarded against that.
+    /// This function also returns a boolean, `matches`. If matches is not true, it means that value being returned either `MayBe` the type requested, or
+    /// is a random JsVariable.
     ///
     /// If the variable must be of the specified type, use `randomVariable(ofType:)` instead.
-    public func randomVariable(forUseAs type: ILType) -> Variable {
+    public func randomVariable(forUseAsGuarded type: ILType) -> (variable: Variable, matches: Bool) {
         assert(type != .nothing)
 
         var result: Variable? = nil
+        var matches = true
 
         // Prefer variables that are known to have the requested type if there's a sufficient number of them.
         if probability(probabilityOfVariableSelectionTryingToFindAnExactMatch) {
@@ -820,13 +823,24 @@ public class ProgramBuilder {
         // In particular, this query will include all variable for which we don't know the type as they'll
         // be typed as .jsAnything. We usually expect to have a lot of candidates available for this query,
         // so we don't check the number of them upfront as we do for the above query.
+        // If findVariable(satisfying: { self.type(of: $0).Is(type) }) returned nil, we cannot be sure that
+        // the result matches the requested type, so we set matches to be false.
         if result == nil {
+            matches = false
             result = findVariable(satisfying: { self.type(of: $0).MayBe(type) })
         }
 
         // Worst case fall back to completely random variables. This should happen rarely, as we'll usually have
         // at least some variables of type .jsAnything.
-        return result ?? randomJsVariable()
+        return (result ?? randomJsVariable(), matches)
+    }
+
+    /// This function is a wrapper around `randomVariable(forUseAsGuarded type:)' which ignores the `matches`
+    /// value that it returns.
+    /// See the comment above the other function for details.
+    public func randomVariable(forUseAs type: ILType) -> Variable {
+        assert(type != .nothing)
+        return randomVariable(forUseAsGuarded: type).variable
     }
 
     /// Returns a random variable that is known to have the given type.
@@ -940,6 +954,29 @@ public class ProgramBuilder {
         let parameterTypes = ProgramBuilder.prepareArgumentTypes(forParameters: params)
         return parameterTypes.map({ randomVariable(forUseAs: $0) })
     }
+
+    /// Find random variables to use as arguments for calling a function with the given parameters.
+    ///
+    /// If any of the arguments returned does not match the type of its corresponding parameter,
+    /// the boolean this function returns will be true. If everything matches, it will be false.
+    public func randomArguments(forCallingGuardableFunction function: Variable) -> (arguments: [Variable], allArgsMatch: Bool) {
+        let signature = type(of: function).signature ?? Signature.forUnknownFunction
+        let params = signature.parameters
+        assert(params.count == 0 || hasVisibleVariables)
+
+        let parameterTypes = ProgramBuilder.prepareArgumentTypes(forParameters: params)
+
+        var variables: [Variable] = []
+        var allArgsMatch = true
+        for type in parameterTypes {
+            let (variable, matches) = randomVariable(forUseAsGuarded: type)
+            variables.append(variable)
+            allArgsMatch = allArgsMatch && matches
+        }
+
+        return (variables, allArgsMatch)
+    }
+
 
     /// Converts the JS world signature into a Wasm world signature.
     /// In practice this means that we will try to map JS types to corresponding Wasm types.

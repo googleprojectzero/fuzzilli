@@ -125,12 +125,12 @@ public let CodeGenerators: [CodeGenerator] = [
         let fctName = (useProperty ? prototypeType.properties : prototypeType.methods).randomElement()!
         let fct = b.getProperty(fctName, of: prototype)
         let fctType = b.type(of: fct)
-        let arguments = b.randomArguments(forCalling: fct)
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: fct)
         let receiverType = fctType.receiver ?? prototypeType
         let desiredReceiverType = fctType.receiver ?? prototypeType
         let receiver = b.randomVariable(forUseAs: desiredReceiverType)
         let needGuard = (!fctType.Is(.function()) && !fctType.Is(.unboundFunction()))
-            || !b.type(of: receiver).Is(receiverType)
+            || !b.type(of: receiver).Is(receiverType) || !matches
         if Bool.random() {
             b.callMethod("call", on: fct, withArgs: [receiver] + arguments, guard: needGuard)
         } else {
@@ -918,7 +918,8 @@ public let CodeGenerators: [CodeGenerator] = [
             b.buildRecursive()
             b.doReturn(b.randomJsVariable())
         }
-        b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+        b.callFunction(f, withArgs: arguments, guard: !matches)
     },
 
     RecursiveCodeGenerator("StrictModeFunctionGenerator") { b in
@@ -929,7 +930,8 @@ public let CodeGenerators: [CodeGenerator] = [
             b.buildRecursive()
             b.doReturn(b.randomJsVariable())
         }
-        b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+        b.callFunction(f, withArgs: arguments, guard: !matches)
     },
 
     RecursiveCodeGenerator("ArrowFunctionGenerator") { b in
@@ -952,7 +954,8 @@ public let CodeGenerators: [CodeGenerator] = [
             }
             b.doReturn(b.randomJsVariable())
         }
-        b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+        b.callFunction(f, withArgs: arguments, guard: !matches)
     },
 
     RecursiveCodeGenerator("AsyncFunctionGenerator") { b in
@@ -961,7 +964,8 @@ public let CodeGenerators: [CodeGenerator] = [
             b.await(b.randomJsVariable())
             b.doReturn(b.randomJsVariable())
         }
-        b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+        b.callFunction(f, withArgs: arguments, guard: !matches)
     },
 
     RecursiveCodeGenerator("AsyncArrowFunctionGenerator") { b in
@@ -986,7 +990,8 @@ public let CodeGenerators: [CodeGenerator] = [
             }
             b.doReturn(b.randomJsVariable())
         }
-        b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+        b.callFunction(f, withArgs: arguments, guard: !matches)
     },
 
     CodeGenerator("PropertyRetrievalGenerator", inputs: .preferred(.object())) { b, obj in
@@ -1227,16 +1232,13 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("FunctionCallGenerator", inputs: .preferred(.function())) { b, f in
-        let arguments = b.randomArguments(forCalling: f)
-        // TODO: we may also need guarding if the arguments aren't compatible with the expected ones
-        let needGuard = b.type(of: f).MayNotBe(.function())
-        b.callFunction(f, withArgs: arguments, guard: needGuard)
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+        b.callFunction(f, withArgs: arguments, guard: !matches)
     },
 
     CodeGenerator("ConstructorCallGenerator", inputs: .preferred(.constructor())) { b, c in
-        let arguments = b.randomArguments(forCalling: c)
-        // TODO: we may also need guarding if the arguments aren't compatible with the expected ones
-        let needGuard = b.type(of: c).MayNotBe(.constructor())
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: c)
+        let needGuard = b.type(of: c).MayNotBe(.constructor()) || !matches
         b.construct(c, withArgs: arguments, guard: needGuard)
     },
 
@@ -1261,22 +1263,20 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("UnboundFunctionCallGenerator", inputs: .preferred(.unboundFunction())) { b, f in
-        let arguments = b.randomArguments(forCalling: f)
+        let (arguments, argsMatch) = b.randomArguments(forCallingGuardableFunction: f)
         let fctType = b.type(of: f)
-        // TODO: we may also need guarding if the arguments aren't compatible with the expected ones
-        let needGuard = fctType.MayNotBe(.unboundFunction())
-        let receiver = b.randomVariable(forUseAs: fctType.receiver ?? .object())
+        let (receiver, recMatches) = b.randomVariable(forUseAsGuarded: fctType.receiver ?? .object())
+        let needGuard = fctType.MayNotBe(.unboundFunction()) || !argsMatch || !recMatches
         // For simplicity we just hard-code the call function. If this was a separate IL
         // instruction, the JSTyper could infer the result type.
         b.callMethod("call", on: f, withArgs: [receiver] + arguments, guard: needGuard)
     },
 
     CodeGenerator("UnboundFunctionApplyGenerator", inputs: .preferred(.unboundFunction())) { b, f in
-        let arguments = b.randomArguments(forCalling: f)
+        let (arguments, argsMatch) = b.randomArguments(forCallingGuardableFunction: f)
         let fctType = b.type(of: f)
-        // TODO: we may also need guarding if the arguments aren't compatible with the expected ones
-        let needGuard = fctType.MayNotBe(.unboundFunction())
-        let receiver = b.randomVariable(forUseAs: fctType.receiver ?? .object())
+        let (receiver, recMatches) = b.randomVariable(forUseAsGuarded: fctType.receiver ?? .object())
+        let needGuard = fctType.MayNotBe(.unboundFunction()) || !argsMatch || !recMatches
         // For simplicity we just hard-code the apply function. If this was a separate IL
         // instruction, the JSTyper could infer the result type.
         b.callMethod("apply", on: f, withArgs: [receiver, b.createArray(with: arguments)], guard: needGuard)

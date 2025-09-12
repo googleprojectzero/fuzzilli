@@ -260,6 +260,46 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(b.randomVariable(preferablyNotOfType: .jsAnything), nil)
     }
 
+    func testVariableRetrieval4() {
+        // This testcase demonstrates the behavior of `b.randomVariable(forUseAsGuarded:)`
+        // This API behaves in the following way:
+        //  - If a variable that matches or subsumes the requested type was found, it
+        //    returns the variable, along with a boolean that is true.
+        //  - If no matching variable was found, it will return one whose type intersects
+        //    with the requested one, or a random variable. In either of these cases, the
+        //    returned boolean will be false.
+
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createObject(with: ["x": b.loadInt(1), "y": b.loadInt(2)])
+
+        // We created three visible variables before; obj and its two properties.
+        XCTAssertEqual(b.numberOfVisibleVariables, 3)
+
+        b.probabilityOfVariableSelectionTryingToFindAnExactMatch = 1.0
+
+        do { // Search with exact match.
+            let (foundVar, matches) = b.randomVariable(forUseAsGuarded: b.type(of: obj))
+            XCTAssertEqual(obj, foundVar)
+            XCTAssert(matches)
+        }
+        do { // Search for supertype.
+            let (foundVar, matches) = b.randomVariable(forUseAsGuarded: .object(withProperties: ["x"]))
+            XCTAssertEqual(obj, foundVar)
+            XCTAssert(matches)
+        }
+        do { // Search for subtype.
+            let (foundVar, matches) = b.randomVariable(forUseAsGuarded: .object(withProperties: ["x", "y", "z"]))
+            XCTAssertEqual(obj, foundVar)
+            XCTAssertFalse(matches)
+        }
+        do { // Search for unrelated type. We ignore the variable, since it's completely random.
+            let (_, matches) = b.randomVariable(forUseAsGuarded: .string)
+            XCTAssertFalse(matches)
+        }
+    }
+
     func testRandomVarableInternal() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
