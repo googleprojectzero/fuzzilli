@@ -55,22 +55,9 @@ extension String {
 }
 
 /// Returns a uniformly choosen, random element from the given collection.
-public func chooseUniform<E>(from collection: [E]) -> E {
+public func chooseUniform<C: Collection>(from collection: C) -> C.Element {
     assert(collection.count != 0, "cannot choose from an empty sequence")
-    return collection[Int.random(in: 0..<collection.count)]
-}
-
-/// Returns a uniformly choosen, random element from the given collection.
-public func chooseUniform<E>(from collection: ArraySlice<E>) -> E {
-    assert(collection.count != 0, "cannot choose from an empty sequence")
-    return collection[Int.random(in: 0..<collection.count)]
-}
-
-/// Returns a uniformly choosen, random element from the given collection.
-public func chooseUniform<E>(from collection: Set<E>) -> E {
-    assert(collection.count != 0, "cannot choose from an empty set")
-    let i = collection.index(collection.startIndex, offsetBy: Int.random(in: 0..<collection.count))
-    return collection[i]
+    return collection.randomElement()!
 }
 
 /// Returns a random element from the given collection favouring later elements by the given factor.
