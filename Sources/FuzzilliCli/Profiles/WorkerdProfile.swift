@@ -17,8 +17,7 @@ import Fuzzilli
 let workerdProfile = Profile(
     processArgs: { randomize in ["fuzzilli"] },
 
-
-    processEnv: [:],
+    processEnv: ["ASAN_OPTIONS" : "abort_on_error=1:symbolize=false", "UBSAN_OPTIONS" : "abort_on_error=1:symbolize=false"],
 
     maxExecsBeforeRespawn: 1000,
 
