@@ -86,7 +86,7 @@ class EnvironmentTests: XCTestCase {
     }
 
     func testBase64OptionsBag() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--js-base-64"])
         let jsProg = buildAndLiftProgram { b in
             let arrayConstructor = b.createNamedVariable(forBuiltin: "Uint8Array")
             // Whatever the options object looks like, it should construct something valid.
