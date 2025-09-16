@@ -2591,6 +2591,18 @@ class WasmDefineStructType: WasmTypeOperation {
     }
 }
 
+class WasmDefineSignatureType: WasmTypeOperation {
+    override var opcode: Opcode { .wasmDefineSignatureType(self) }
+    let signature: WasmSignature
+
+    init(signature: WasmSignature) {
+        self.signature = signature
+        let numInputs = (signature.outputTypes + signature.parameterTypes).map {
+            $0.requiredInputCount() }.reduce(0) { $0 + $1 }
+        super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmTypeGroup])
+    }
+}
+
 class WasmDefineForwardOrSelfReference: WasmTypeOperation {
     override var opcode: Opcode { .wasmDefineForwardOrSelfReference(self) }
 

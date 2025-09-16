@@ -2089,6 +2089,25 @@ class WasmTypeDescription: Hashable, CustomStringConvertible {
     }
 }
 
+class WasmSignatureTypeDescription: WasmTypeDescription {
+    let signature: WasmSignature
+
+    init(signature: WasmSignature, typeGroupIndex: Int) {
+        self.signature = signature
+        super.init(typeGroupIndex: typeGroupIndex, superType: .WasmFunc)
+    }
+
+    override func format(abbreviate: Bool) -> String {
+        let abbreviated = "\(super.format(abbreviate: abbreviate)) Func"
+        if abbreviate {
+            return abbreviated
+        }
+        let paramTypes = signature.parameterTypes.map {$0.abbreviated}.joined(separator: ", ")
+        let outputTypes = signature.outputTypes.map {$0.abbreviated}.joined(separator: ", ")
+        return "\(abbreviated)[[\(paramTypes)] => [\(outputTypes)]]"
+    }
+}
+
 class WasmArrayTypeDescription: WasmTypeDescription {
     var elementType: ILType
     let mutability: Bool

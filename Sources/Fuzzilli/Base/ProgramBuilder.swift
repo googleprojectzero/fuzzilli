@@ -4177,6 +4177,11 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    func wasmDefineSignatureType(signature: WasmSignature, indexTypes: [Variable]) -> Variable {
+        return emit(WasmDefineSignatureType(signature: signature), withInputs: indexTypes).output
+    }
+
+    @discardableResult
     func wasmDefineArrayType(elementType: ILType, mutability: Bool, indexType: Variable? = nil) -> Variable {
         let inputs = indexType != nil ? [indexType!] : []
         return emit(WasmDefineArrayType(elementType: elementType, mutability: mutability), withInputs: inputs).output

@@ -352,6 +352,7 @@ message Instruction {
         WasmTableInit wasmTableInit = 326;
         WasmDropElementSegment wasmDropElementSegment = 327;
         WasmTableCopy wasmTableCopy = 328;
+        WasmDefineSignatureType wasmDefineSignatureType = 329;
     }
 }
 

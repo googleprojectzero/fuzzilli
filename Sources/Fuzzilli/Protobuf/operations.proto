@@ -1476,6 +1476,11 @@ message WasmBeginTypeGroup {
 message WasmEndTypeGroup {
 }
 
+message WasmDefineSignatureType {
+    repeated WasmILType parameterTypes = 1;
+    repeated WasmILType outputTypes = 2;
+}
+
 message WasmDefineArrayType {
     WasmILType elementType = 1;
     bool mutability = 2;

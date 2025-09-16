@@ -4131,7 +4131,7 @@ class WasmFoundationTests: XCTestCase {
             b.buildWasmModule { wasmModule in
                 let function = wasmModule.addWasmFunction(with: [] => []) { _, _, _ in return []}
                 let segment = wasmModule.addElementSegment(elementsType: .wasmFunctionDef(), elements: [function])
-                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in 
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
                     f.wasmDropElementSegment(elementSegment: segment)
                     return []
                 }
@@ -4363,6 +4363,35 @@ class WasmGCTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "-100,156,42,42,-10000,55536\n")
+    }
+
+    func testSignature() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let jsProg = buildAndLiftProgram { b in
+            let typeGroup = b.wasmDefineTypeGroup {
+                let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                let signature = b.wasmDefineSignatureType(
+                    signature: [.wasmRef(.Index(), nullability: true), .wasmi32] => [.wasmi32],
+                    indexTypes: [arrayi32])
+                return [arrayi32, signature]
+            }
+
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmFuncRef]) { function, label, args in
+                    // TODO(mliedtke): Do something more useful with the signature type than
+                    // defining a null value for it and testing that it's implicitly convertible to
+                    // .wasmFuncRef.
+                    [function.wasmRefNull(typeDef: typeGroup[1])]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [wasmOut])
+        }
+
+        testForOutput(program: jsProg, runner: runner, outputString: "null\n")
     }
 
     func testSelfReferenceType() throws {
