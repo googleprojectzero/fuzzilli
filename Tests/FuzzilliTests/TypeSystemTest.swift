@@ -1023,6 +1023,16 @@ class TypeSystemTests: XCTestCase {
 
     }
 
+    func testNamedStrings() {
+        let namedA = ILType.namedString(ofName: "A")
+        XCTAssert(namedA.Is(.string))
+        let namedB = ILType.namedString(ofName: "B")
+        XCTAssertEqual(namedA | namedB, .string)
+        XCTAssertEqual(namedA & namedB, .nothing)
+        let objectA = ILType.object(ofGroup: "A", withProperties: ["a"])
+        XCTAssertEqual(namedA & objectA, .nothing)
+    }
+
     func testTypeDescriptions() {
         // Test primitive types
         XCTAssertEqual(ILType.undefined.description, ".undefined")

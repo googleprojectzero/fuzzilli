@@ -434,6 +434,7 @@ public class JavaScriptEnvironment: ComponentBase {
         // This isn't a normal "temporal fields object" but is similar, and needs a similar producing generator
         registerObjectGroup(.jsTemporalDurationLikeObject)
         addProducingGenerator(forType: ObjectGroup.jsTemporalDurationLikeObject.instanceType, with: { b in b.createTemporalDurationFieldsObject() })
+        addProducingGenerator(forType: ObjectGroup.jsTemporalTimeZoneLike, with: { b in chooseUniform(from: [b.randomTimeZone, b.randomUTCOffset])() })
 
         // Temporal types are produced by a large number of methods; which means findOrGenerateType(), when asked to produce
         // a Temporal type, will tend towards trying to call a method on another Temporal type, which needs more Temporal types,
@@ -2701,7 +2702,7 @@ public extension ObjectGroup {
 
     // Stringy objects
     // TODO(manishearth, 439921647) support stringy objects
-    fileprivate static let jsTemporalTimeZoneLike = ILType.string
+    fileprivate static let jsTemporalTimeZoneLike = ILType.namedString(ofName: "TemporalTimeZoneString")
 
     // Options objects
     fileprivate static let jsTemporalDifferenceSettings = OptionsBag.jsTemporalDifferenceSettingOrRoundTo.group.instanceType

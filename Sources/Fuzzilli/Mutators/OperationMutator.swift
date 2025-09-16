@@ -84,6 +84,8 @@ public class OperationMutator: BaseInstructionMutator {
                     return result
                 }
             )
+            // Note: This explicitly discards customName since we may have created a string that no longer
+            // matches the original schema.
             newOp = LoadString(value: newString)
         case .loadRegExp(let op):
             newOp = withEqualProbability({

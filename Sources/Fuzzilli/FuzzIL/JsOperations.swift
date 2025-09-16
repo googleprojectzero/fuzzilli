@@ -183,9 +183,11 @@ final class LoadString: JsOperation {
     override var opcode: Opcode { .loadString(self) }
 
     let value: String
+    let customName: String?
 
-    init(value: String) {
+    init(value: String, customName: String? = nil) {
         self.value = value
+        self.customName = customName
         super.init(numOutputs: 1, attributes: [.isMutable])
     }
 }

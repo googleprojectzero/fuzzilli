@@ -35,6 +35,7 @@ message LoadFloat {
 
 message LoadString {
     string value = 1;
+    optional string customName = 2;
 }
 
 message LoadBoolean {

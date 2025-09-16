@@ -648,6 +648,12 @@ public class ProgramBuilder {
                 if type.isEnumeration {
                     return self.loadString(type.enumValues.randomElement()!)
                 }
+                let producingGenerator = self.fuzzer.environment.getProducingGenerator(ofType: type);
+                if let producingGenerator {
+                    if probability(producingGenerator.probability) {
+                        return producingGenerator.generator(self)
+                    }
+                }
                 return self.loadString(self.randomString()) }),
             (.boolean, { return self.loadBool(probability(0.5)) }),
             (.bigint, { return self.loadBigInt(self.randomInt()) }),
@@ -2047,8 +2053,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadString(_ value: String) -> Variable {
-        return emit(LoadString(value: value)).output
+    public func loadString(_ value: String, customName: String? = nil) -> Variable {
+        return emit(LoadString(value: value, customName: customName)).output
     }
 
     @discardableResult
@@ -4444,15 +4450,15 @@ public class ProgramBuilder {
     func randomTimeZone() -> Variable {
         // Bias towards knownTimeZoneIdentifiers since it's a larger array
         if probability(0.7) {
-            return loadString(chooseUniform(from: TimeZone.knownTimeZoneIdentifiers))
+            return loadString(chooseUniform(from: TimeZone.knownTimeZoneIdentifiers), customName: "TemporalTimeZoneString")
         } else {
-            return loadString(chooseUniform(from: TimeZone.abbreviationDictionary.keys))
+            return loadString(chooseUniform(from: TimeZone.abbreviationDictionary.keys), customName: "TemporalTimeZoneString")
         }
     }
 
     @discardableResult
     func randomUTCOffset() -> Variable {
-        return loadString(randomUTCOffsetString(mayHaveSeconds: true))
+        return loadString(randomUTCOffsetString(mayHaveSeconds: true), customName: "TemporalTimeZoneString")
     }
 
     // Generate an object with fields from

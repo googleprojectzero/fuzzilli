@@ -1654,9 +1654,20 @@ public struct Fuzzilli_Protobuf_LoadString: Sendable {
 
   public var value: String = String()
 
+  public var customName: String {
+    get {return _customName ?? String()}
+    set {_customName = newValue}
+  }
+  /// Returns true if `customName` has been explicitly set.
+  public var hasCustomName: Bool {return self._customName != nil}
+  /// Clears the value of `customName`. Subsequent reads from it will return its default value.
+  public mutating func clearCustomName() {self._customName = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _customName: String? = nil
 }
 
 public struct Fuzzilli_Protobuf_LoadBoolean: Sendable {
@@ -6208,7 +6219,7 @@ extension Fuzzilli_Protobuf_LoadFloat: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Fuzzilli_Protobuf_LoadString: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LoadString"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}value\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}value\0\u{1}customName\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6217,20 +6228,29 @@ extension Fuzzilli_Protobuf_LoadString: SwiftProtobuf.Message, SwiftProtobuf._Me
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.value) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._customName) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.value.isEmpty {
       try visitor.visitSingularStringField(value: self.value, fieldNumber: 1)
     }
+    try { if let v = self._customName {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_LoadString, rhs: Fuzzilli_Protobuf_LoadString) -> Bool {
     if lhs.value != rhs.value {return false}
+    if lhs._customName != rhs._customName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
