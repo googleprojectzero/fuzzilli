@@ -421,6 +421,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsTemporalDurationTotalOfSettings)
         registerOptionsBag(.toBase64Settings)
         registerOptionsBag(.fromBase64Settings)
+        registerOptionsBag(.jsTemporalPlainDateToZDTSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
         registerTemporalFieldsObject(.jsTemporalPlainDateLikeObject, forWith: false, dateFields: true, timeFields: false, zonedFields: false)
@@ -837,7 +838,12 @@ public struct OptionsBag {
         self.properties = properties
         let properties = properties.mapValues {
             // This list can be expanded over time as long as createOptionsBag() supports this
-            assert($0.isEnumeration || $0.Is(.number | .integer | .boolean) || $0.Is(OptionsBag.jsTemporalRelativeTo), "Found unsupported option type \($0) in options bag \(name)")
+            assert($0.isEnumeration || $0.Is(.number | .integer | .boolean) ||
+                    // Has a producing generator registered
+                    $0.Is(.jsTemporalPlainTime) ||
+                    // Has explicit support in createOptionsBag
+                    $0.Is(OptionsBag.jsTemporalRelativeTo),
+                   "Found unsupported option type \($0) in options bag \(name)")
             return $0 | .undefined;
         }
         self.group = ObjectGroup(name: name, instanceType: nil, properties: properties, overloads: [:])
@@ -2199,6 +2205,13 @@ public extension ObjectGroup {
         return possibleParams.map { [.plain($0)] => .boolean }
     }
 
+    private static func temporalTimeZoneLikeSignature(signature: (ILType) -> Signature) -> [Signature] {
+        return [
+            signature(jsTemporalTimeZoneLike),
+            signature(.jsTemporalZonedDateTime),
+        ]
+    }
+
     /// Object group modelling the JavaScript Temporal builtin
     static let jsTemporalObject = ObjectGroup(
         name: "Temporal",
@@ -2221,14 +2234,13 @@ public extension ObjectGroup {
         name: "Temporal.Now",
         instanceType: .jsTemporalNow,
         properties: [:],
-        methods: [
-            "timeZoneId": [] => .string,
-            "instant": [] => .jsTemporalInstant,
-            // TODO(manishearth, 439921647) Potentially hint to the generator that these are timezone-like
-            "plainDateTimeISO": [.opt(.string)] => .jsTemporalPlainDateTime,
-            "zonedDateTimeISO": [.opt(.string)] => .jsTemporalZonedDateTime,
-            "plainDateISO": [.opt(.string)] => .jsTemporalPlainDate,
-            "plainTimeISO": [.opt(.string)] => .jsTemporalPlainTime,
+        overloads: [
+            "timeZoneId": [[] => .string],
+            "instant": [[] => .jsTemporalInstant],
+            "plainDateTimeISO": temporalTimeZoneLikeSignature { [.opt($0)] => .jsTemporalPlainDateTime },
+            "zonedDateTimeISO": temporalTimeZoneLikeSignature { [.opt($0)] => .jsTemporalZonedDateTime },
+            "plainDateISO": temporalTimeZoneLikeSignature { [.opt($0)] => .jsTemporalPlainDate },
+            "plainTimeISO": temporalTimeZoneLikeSignature { [.opt($0)] => .jsTemporalPlainTime },
         ]
     )
 
@@ -2250,7 +2262,7 @@ public extension ObjectGroup {
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
-            "toZonedDateTimeISO": [[jsTemporalTimeZoneLike] => .jsTemporalZonedDateTime],
+            "toZonedDateTimeISO": temporalTimeZoneLikeSignature { [.plain($0)] => .jsTemporalZonedDateTime },
         ]
     )
 
@@ -2462,7 +2474,9 @@ public extension ObjectGroup {
             "since": temporalUntilSinceSignature(possibleParams: jsTemporalPlainDateLikeParameters),
             "equals": temporalEqualsSignature(possibleParams: jsTemporalPlainDateLikeParameters),
             "toPlainDateTime": jsTemporalPlainTimeLikeParameters.map {[.opt($0)] => .jsTemporalPlainDateTime},
-            "toZonedDateTime": [[.jsAnything] => .jsAnything],
+            "toZonedDateTime": temporalTimeZoneLikeSignature { [.plain($0)] => .jsTemporalZonedDateTime }
+                // Can also accept an object with timezone/time fields
+                + [[.plain(OptionsBag.jsTemporalPlainDateToZDTSettings.group.instanceType)] => .jsTemporalZonedDateTime],
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
@@ -2502,7 +2516,7 @@ public extension ObjectGroup {
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
-            "toZonedDateTime": [[.string, .opt(OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType)] => .jsTemporalZonedDateTime],
+            "toZonedDateTime": temporalTimeZoneLikeSignature { [.plain($0), .opt(OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType)] => .jsTemporalZonedDateTime },
             "toPlainDate": [[] => .jsTemporalPlainDate],
             "toPlainTime": [[] => .jsTemporalPlainTime],
         ]
@@ -2687,7 +2701,7 @@ public extension ObjectGroup {
 
     // Stringy objects
     // TODO(manishearth, 439921647) support stringy objects
-    fileprivate static let jsTemporalTimeZoneLike = Parameter.string
+    fileprivate static let jsTemporalTimeZoneLike = ILType.string
 
     // Options objects
     fileprivate static let jsTemporalDifferenceSettings = OptionsBag.jsTemporalDifferenceSettingOrRoundTo.group.instanceType
@@ -2779,6 +2793,14 @@ extension OptionsBag {
         name: "TemporalDurationCompareSettingsObject",
         properties: [
             "relativeTo": jsTemporalRelativeTo,
+        ]
+    )
+
+    static let jsTemporalPlainDateToZDTSettings = OptionsBag(
+        name: "TemporalPlainDateToZDTSettings",
+        properties: [
+            "timeZone": ObjectGroup.jsTemporalTimeZoneLike,
+            "plainTime": .jsTemporalPlainTime,
         ]
     )
 }
