@@ -1838,16 +1838,26 @@ class JSTyperTests: XCTestCase {
         var callCount = 0
         var returnedVar: Variable? = nil
         // A simple generator
-        func generate(builder: ProgramBuilder) -> Variable {
+        func generateObject(builder: ProgramBuilder) -> Variable {
             callCount += 1
             let val = builder.loadString("mockValue")
             let variable = builder.createObject(with: ["mockField": val])
             returnedVar = variable
             return variable
         }
+
+        let mockNamedString = ILType.namedString(ofName: "NamedString");
+        func generateString(builder: ProgramBuilder) -> Variable {
+            callCount += 1
+            let val = builder.loadString("mockStringValue", customName: "NamedString")
+            returnedVar = val
+            return val
+        }
+
         let fuzzer = makeMockFuzzer()
         fuzzer.environment.registerObjectGroup(mockObject)
-        fuzzer.environment.addProducingGenerator(forType: mockObject.instanceType, with: generate)
+        fuzzer.environment.addProducingGenerator(forType: mockObject.instanceType, with: generateObject)
+        fuzzer.environment.addProducingGenerator(forType: mockNamedString, with: generateString)
         let b = fuzzer.makeBuilder()
         b.buildPrefix()
 
@@ -1857,6 +1867,18 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(callCount, 1)
         // Test that the returned variable matches the generated one
         XCTAssertEqual(variable, returnedVar)
+
+
+        // Try to get it to invoke the string generator
+        let variable2 = b.findOrGenerateType(mockNamedString)
+        // Test that the generator was invoked
+        XCTAssertEqual(callCount, 2)
+        // Test that the returned variable matches the generated one
+        XCTAssertEqual(variable2, returnedVar)
+
+        // Test that the returned variable gets typed correctly
+        XCTAssert(b.type(of: variable2).Is(mockNamedString))
+        XCTAssertEqual(b.type(of: variable2).group, "NamedString")
     }
 
     func testFindConstructor() {

@@ -1368,8 +1368,12 @@ public struct JSTyper: Analyzer {
         case .loadFloat:
             set(instr.output, .float)
 
-        case .loadString:
-            set(instr.output, .jsString)
+        case .loadString(let op):
+            if let customName = op.customName {
+                set(instr.output, .namedString(ofName: customName))
+            } else {
+                set(instr.output, .jsString)
+            }
 
         case .loadBoolean:
             set(instr.output, .boolean)
