@@ -1147,6 +1147,12 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(structDef.description,
             ".wasmTypeDef(1 Struct[mutable .wasmf32, " +
             "immutable .wasmRef(null Index 1 Struct), mutable .wasmRef(null Index 0 Array)])")
+        let signatureDesc = WasmSignatureTypeDescription(
+            signature: [.wasmi32, arrayRef] => [structRef, .wasmNullRef], typeGroupIndex: 0)
+        let signatureDef = ILType.wasmTypeDef(description: signatureDesc)
+        XCTAssertEqual(signatureDef.description,
+            ".wasmTypeDef(0 Func[[.wasmi32, .wasmRef(null Index 0 Array)] => " +
+            "[.wasmRef(Index 1 Struct), .wasmRef(.Abstract(null WasmNone))]])")
 
         // A generic index type without a type description.
         // These are e.g. used by the element types for arrays and structs inside the operation as

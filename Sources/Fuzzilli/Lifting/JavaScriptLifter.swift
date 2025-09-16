@@ -1695,6 +1695,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmSimdLoad(_),
                  .wasmBeginTypeGroup(_),
                  .wasmEndTypeGroup(_),
+                 .wasmDefineSignatureType(_),
                  .wasmDefineArrayType(_),
                  .wasmDefineStructType(_),
                  .wasmDefineForwardOrSelfReference(_),

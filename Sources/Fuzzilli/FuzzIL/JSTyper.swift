@@ -432,6 +432,32 @@ public struct JSTyper: Analyzer {
         }
     }
 
+    mutating func addSignatureType(def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>) {
+        var inputs = inputs.makeIterator()
+        let resolveType = { (paramType: ILType) in
+            if paramType.requiredInputCount() == 0 {
+                return paramType
+            }
+            assert(paramType.Is(.wasmRef(.Index(), nullability: true)))
+            let typeDef = inputs.next()!
+            let elementDesc = type(of: typeDef).wasmTypeDefinition!.description
+            if elementDesc == .selfReference {
+                // TODO(mliedtke): Implement this before we add code genertors for signature types.
+                fatalError("self and forward references not implemented for signatures, yet.")
+            }
+            return type(of: typeDef).wasmTypeDefinition!
+                .getReferenceTypeTo(nullability: paramType.wasmReferenceType!.nullability)
+        }
+
+        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+        let resolvedParameterTypes = signature.parameterTypes.map(resolveType)
+        let resolvedOutputTypes = signature.outputTypes.map(resolveType)
+        set(def, .wasmTypeDef(description: WasmSignatureTypeDescription(signature: resolvedParameterTypes => resolvedOutputTypes, typeGroupIndex: tgIndex)))
+        if isWithinTypeGroup {
+            typeGroups[typeGroups.count - 1].append(def)
+        }
+    }
+
     mutating func addArrayType(def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil) {
         let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
         let resolvedElementType: ILType
@@ -1807,6 +1833,9 @@ public struct JSTyper: Analyzer {
                 set(output, state.type(of: input))
             }
             finishTypeGroup()
+
+        case .wasmDefineSignatureType(let op):
+            addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)
 
         case .wasmDefineArrayType(let op):
             let elementRef = op.elementType.requiredInputCount() == 1 ? instr.input(0) : nil
