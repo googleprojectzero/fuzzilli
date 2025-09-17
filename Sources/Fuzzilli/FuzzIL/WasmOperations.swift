@@ -880,8 +880,6 @@ final class WasmDefineTag: WasmOperation {
 
     init(parameterTypes: [ILType]) {
         self.parameterTypes = parameterTypes
-        // Note that tags in wasm are nominal (differently to types) meaning that two tags with the same input are not
-        // the same, therefore this operation is not considered to be .pure.
         super.init(numOutputs: 1, attributes: [], requiredContext: [.wasm])
     }
 }
