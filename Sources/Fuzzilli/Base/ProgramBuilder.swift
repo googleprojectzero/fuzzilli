@@ -646,7 +646,7 @@ public class ProgramBuilder {
             (.integer, { return self.loadInt(self.randomInt()) }),
             (.string, {
                 if type.isEnumeration {
-                    return self.loadString(type.enumValues.randomElement()!)
+                    return self.loadEnum(type)
                 }
                 let producingGenerator = self.fuzzer.environment.getProducingGenerator(ofType: type);
                 if let producingGenerator {
@@ -2055,6 +2055,12 @@ public class ProgramBuilder {
     @discardableResult
     public func loadString(_ value: String, customName: String? = nil) -> Variable {
         return emit(LoadString(value: value, customName: customName)).output
+    }
+
+    @discardableResult
+    public func loadEnum(_ type: ILType) -> Variable {
+        assert(type.isEnumeration)
+        return loadString(chooseUniform(from: type.enumValues), customName: type.group)
     }
 
     @discardableResult
@@ -4425,7 +4431,7 @@ public class ProgramBuilder {
         // and let the mutator prune things
         let dict: [String : Variable] = bag.properties.filter {_ in probability(0.8)}.mapValues {
             if $0.isEnumeration {
-                return loadString(chooseUniform(from: $0.enumValues))
+                return loadEnum($0)
             // relativeTo doesn't have an ObjectGroup so we cannot just register a producingGenerator for it
             } else if $0.Is(OptionsBag.jsTemporalRelativeTo) {
                 return findOrGenerateType(chooseUniform(from: [.jsTemporalZonedDateTime, .jsTemporalPlainDateTime,

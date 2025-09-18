@@ -1824,7 +1824,7 @@ class JSTyperTests: XCTestCase {
 
     func testProducingGenerators() {
         // Make a simple object
-        let mockEnum = ILType.enumeration(ofName: "mockField", withValues: ["mockValue"]);
+        let mockEnum = ILType.enumeration(ofName: "MockEnum", withValues: ["mockValue"]);
         let mockObject = ObjectGroup(
             name: "MockObject",
             instanceType: nil,
@@ -1837,10 +1837,12 @@ class JSTyperTests: XCTestCase {
         // Some things to keep track of how the generator was called
         var callCount = 0
         var returnedVar: Variable? = nil
+        var generatedEnum: Variable? = nil
         // A simple generator
         func generateObject(builder: ProgramBuilder) -> Variable {
             callCount += 1
-            let val = builder.loadString("mockValue")
+            let val = builder.loadEnum(mockEnum)
+            generatedEnum = val
             let variable = builder.createObject(with: ["mockField": val])
             returnedVar = variable
             return variable
@@ -1856,6 +1858,7 @@ class JSTyperTests: XCTestCase {
 
         let fuzzer = makeMockFuzzer()
         fuzzer.environment.registerObjectGroup(mockObject)
+        fuzzer.environment.registerEnumeration(mockEnum)
         fuzzer.environment.addProducingGenerator(forType: mockObject.instanceType, with: generateObject)
         fuzzer.environment.addProducingGenerator(forType: mockNamedString, with: generateString)
         let b = fuzzer.makeBuilder()
@@ -1879,6 +1882,15 @@ class JSTyperTests: XCTestCase {
         // Test that the returned variable gets typed correctly
         XCTAssert(b.type(of: variable2).Is(mockNamedString))
         XCTAssertEqual(b.type(of: variable2).group, "NamedString")
+
+        // We already generated a mockEnum, look for it.
+        let foundEnum = b.randomVariable(ofType: mockEnum)!
+        // Test that it picked up the existing generated variable.
+        XCTAssertEqual(generatedEnum, foundEnum)
+
+        // Test that the returned variable gets typed correctly.
+        XCTAssert(b.type(of: foundEnum).Is(mockEnum))
+        XCTAssertEqual(b.type(of: foundEnum).group, "MockEnum")
     }
 
     func testFindConstructor() {

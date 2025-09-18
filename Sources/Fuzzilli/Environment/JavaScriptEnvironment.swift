@@ -295,6 +295,7 @@ public class JavaScriptEnvironment: ComponentBase {
 
     private var builtinTypes: [String: ILType] = [:]
     private var groups: [String: ObjectGroup] = [:]
+    private var enums: [String: ILType] = [:]
 
     // Producing generators, keyed on `type.group`
     private var producingGenerators: [String: (generator: EnvironmentValueGenerator, probability: Double)] = [:]
@@ -412,6 +413,19 @@ public class JavaScriptEnvironment: ComponentBase {
         for group in additionalObjectGroups {
             registerObjectGroup(group)
         }
+
+        registerEnumeration(.jsTemporalCalendarEnum)
+        registerEnumeration(ObjectGroup.jsTemporalDirectionParam)
+        registerEnumeration(OptionsBag.jsTemporalUnitEnum)
+        registerEnumeration(OptionsBag.jsTemporalRoundingModeEnum)
+        registerEnumeration(OptionsBag.jsTemporalShowCalendarEnum)
+        registerEnumeration(OptionsBag.jsTemporalShowOffsetEnum)
+        registerEnumeration(OptionsBag.jsTemporalShowTimeZoneEnum)
+        registerEnumeration(OptionsBag.jsTemporalOverflowEnum)
+        registerEnumeration(OptionsBag.jsTemporalDisambiguationEnum)
+        registerEnumeration(OptionsBag.jsTemporalOffsetEnum)
+        registerEnumeration(OptionsBag.base64Alphabet)
+        registerEnumeration(OptionsBag.base64LastChunkHandling)
 
         registerOptionsBag(.jsTemporalDifferenceSettingOrRoundTo)
         registerOptionsBag(.jsTemporalToStringSettings)
@@ -601,6 +615,13 @@ public class JavaScriptEnvironment: ComponentBase {
         return actualType
     }
 
+    public func registerEnumeration(_ type: ILType) {
+        assert(type.isEnumeration)
+        let group = type.group!
+        assert(enums[group] == nil)
+        enums[group] = type
+    }
+
     public func registerObjectGroup(_ group: ObjectGroup) {
         assert(groups[group.name] == nil)
         groups[group.name] = group
@@ -685,6 +706,13 @@ public class JavaScriptEnvironment: ComponentBase {
 
     public func registerOptionsBag(_ bag: OptionsBag) {
         registerObjectGroup(bag.group)
+
+        for property in bag.properties.values {
+            if property.isEnumeration {
+                assert(enums[property.group!] != nil, "Enum \(property.group!) used in options bag but not registered on the JavaScriptEnvironment")
+            }
+        }
+
         addProducingGenerator(forType: bag.group.instanceType, with: { b in b.createOptionsBag(bag) })
     }
 
@@ -737,6 +765,10 @@ public class JavaScriptEnvironment: ComponentBase {
         }
 
         return [.forUnknownFunction]
+    }
+
+    public func getEnum(ofName name: String) -> ILType? {
+        return enums[name]
     }
 
     public func getProducingMethods(ofType type: ILType) -> [(group: String, method: String)] {
