@@ -4370,9 +4370,11 @@ class WasmGCTests: XCTestCase {
         let jsProg = buildAndLiftProgram { b in
             let typeGroup = b.wasmDefineTypeGroup {
                 let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                let selfRef = b.wasmDefineForwardOrSelfReference()
                 let signature = b.wasmDefineSignatureType(
-                    signature: [.wasmRef(.Index(), nullability: true), .wasmi32] => [.wasmi32],
-                    indexTypes: [arrayi32])
+                    signature: [.wasmRef(.Index(), nullability: true), .wasmi32] =>
+                        [.wasmi32, .wasmRef(.Index(), nullability: true)],
+                    indexTypes: [arrayi32, selfRef])
                 return [arrayi32, signature]
             }
 
@@ -4381,6 +4383,9 @@ class WasmGCTests: XCTestCase {
                     // TODO(mliedtke): Do something more useful with the signature type than
                     // defining a null value for it and testing that it's implicitly convertible to
                     // .wasmFuncRef.
+                    // TODO(mliedtke): Also properly test for self and forward references in both
+                    // parameter and return types as well as type group dependencies once signatures
+                    // are usable with more interesting operations.
                     [function.wasmRefNull(typeDef: typeGroup[1])]
                 }
             }

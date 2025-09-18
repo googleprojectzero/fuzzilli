@@ -434,24 +434,47 @@ public struct JSTyper: Analyzer {
 
     mutating func addSignatureType(def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>) {
         var inputs = inputs.makeIterator()
-        let resolveType = { (paramType: ILType) in
+        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+
+        // Temporary variable to use by the resolveType capture. It would be nicer to use
+        // higher-order functions for this but resolveType has to be a mutating func which doesn't
+        // seem to work well with escaping functions.
+        var isParameter = true
+        let resolveType = { (i: Int, paramType: ILType) in
             if paramType.requiredInputCount() == 0 {
                 return paramType
             }
             assert(paramType.Is(.wasmRef(.Index(), nullability: true)))
             let typeDef = inputs.next()!
-            let elementDesc = type(of: typeDef).wasmTypeDefinition!.description
+            let elementDesc = type(of: typeDef).wasmTypeDefinition!.description!
             if elementDesc == .selfReference {
-                // TODO(mliedtke): Implement this before we add code genertors for signature types.
-                fatalError("self and forward references not implemented for signatures, yet.")
+                // Register a resolver callback. See `addArrayType` for details.
+                if isParameter {
+                    selfReferences[typeDef, default: []].append({typer, replacement in
+                        let desc = typer.type(of: def).wasmTypeDefinition!.description as! WasmSignatureTypeDescription
+                        var params = desc.signature.parameterTypes
+                        params[i] = typer.type(of: replacement ?? def)
+                        desc.signature = params => desc.signature.outputTypes
+                    })
+                } else {
+                    selfReferences[typeDef, default: []].append({typer, replacement in
+                        let desc = typer.type(of: def).wasmTypeDefinition!.description as! WasmSignatureTypeDescription
+                        var outputTypes = desc.signature.outputTypes
+                        let nullability = outputTypes[i].wasmReferenceType!.nullability
+                        outputTypes[i] = typer.type(of: replacement ?? def).wasmTypeDefinition!.getReferenceTypeTo(nullability: nullability)
+                        desc.signature = desc.signature.parameterTypes => outputTypes
+                    })
+                }
+
             }
+            registerTypeGroupDependency(from: tgIndex, to: elementDesc.typeGroupIndex)
             return type(of: typeDef).wasmTypeDefinition!
                 .getReferenceTypeTo(nullability: paramType.wasmReferenceType!.nullability)
         }
 
-        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
-        let resolvedParameterTypes = signature.parameterTypes.map(resolveType)
-        let resolvedOutputTypes = signature.outputTypes.map(resolveType)
+        let resolvedParameterTypes = signature.parameterTypes.enumerated().map(resolveType)
+        isParameter = false // TODO(mliedtke): Is there a nicer way to capture this?
+        let resolvedOutputTypes = signature.outputTypes.enumerated().map(resolveType)
         set(def, .wasmTypeDef(description: WasmSignatureTypeDescription(signature: resolvedParameterTypes => resolvedOutputTypes, typeGroupIndex: tgIndex)))
         if isWithinTypeGroup {
             typeGroups[typeGroups.count - 1].append(def)
