@@ -1396,7 +1396,12 @@ public struct JSTyper: Analyzer {
 
         case .loadString(let op):
             if let customName = op.customName {
-                set(instr.output, .namedString(ofName: customName))
+                if let enumTy = environment.getEnum(ofName: customName) {
+                    set(instr.output, enumTy)
+                } else {
+                    set(instr.output, .namedString(ofName: customName))
+                }
+
             } else {
                 set(instr.output, .jsString)
             }
