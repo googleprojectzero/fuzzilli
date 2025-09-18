@@ -2090,7 +2090,7 @@ class WasmTypeDescription: Hashable, CustomStringConvertible {
 }
 
 class WasmSignatureTypeDescription: WasmTypeDescription {
-    let signature: WasmSignature
+    var signature: WasmSignature
 
     init(signature: WasmSignature, typeGroupIndex: Int) {
         self.signature = signature
