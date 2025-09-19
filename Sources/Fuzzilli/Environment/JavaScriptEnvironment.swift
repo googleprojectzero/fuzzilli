@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 public class JavaScriptEnvironment: ComponentBase {
     // Possible return values of the 'typeof' operator.
     public static let jsTypeNames = ["undefined", "boolean", "number", "string", "symbol", "function", "object", "bigint"]
@@ -411,6 +413,10 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsTemporalZonedDateTime)
         registerObjectGroup(.jsTemporalZonedDateTimeConstructor)
         registerObjectGroup(.jsTemporalZonedDateTimePrototype)
+        registerObjectGroup(.jsIntlObject)
+        registerObjectGroup(.jsIntlDateTimeFormat)
+        registerObjectGroup(.jsIntlDateTimeFormatConstructor)
+        registerObjectGroup(.jsIntlDateTimeFormatPrototype)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -426,6 +432,15 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsTemporalOverflowEnum)
         registerEnumeration(OptionsBag.jsTemporalDisambiguationEnum)
         registerEnumeration(OptionsBag.jsTemporalOffsetEnum)
+        registerEnumeration(OptionsBag.jsIntlLocaleMatcherEnum)
+        registerEnumeration(OptionsBag.jsIntlNumberingSystemEnum)
+        registerEnumeration(OptionsBag.jsIntlHourCycleEnum)
+        registerEnumeration(OptionsBag.jsIntlLongShortNarrowEnum)
+        registerEnumeration(OptionsBag.jsIntlNumeric2DigitEnum)
+        registerEnumeration(OptionsBag.jsIntlMonthEnum)
+        registerEnumeration(OptionsBag.jsIntlTimeZoneNameEnum)
+        registerEnumeration(OptionsBag.jsIntlFormatMatcherEnum)
+        registerEnumeration(OptionsBag.jsIntlFullLongMediumShort)
         registerEnumeration(OptionsBag.base64Alphabet)
         registerEnumeration(OptionsBag.base64LastChunkHandling)
 
@@ -443,6 +458,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.toBase64Settings)
         registerOptionsBag(.fromBase64Settings)
         registerOptionsBag(.jsTemporalPlainDateToZDTSettings)
+        registerOptionsBag(.jsIntlDateTimeFormatSettings)
+        registerOptionsBag(.jsIntlLocaleMatcherSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
         registerTemporalFieldsObject(.jsTemporalPlainDateLikeObject, forWith: false, dateFields: true, timeFields: false, zonedFields: false)
@@ -463,6 +480,7 @@ public class JavaScriptEnvironment: ComponentBase {
                 return ProgramBuilder.randomUTCOffsetString(mayHaveSeconds: true)
             }
         })
+        addNamedStringGenerator(forType: .jsIntlLocaleLike, with: { ProgramBuilder.constructIntlLocaleString() })
 
         // Temporal types are produced by a large number of methods; which means findOrGenerateType(), when asked to produce
         // a Temporal type, will tend towards trying to call a method on another Temporal type, which needs more Temporal types,
@@ -528,6 +546,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("NaN", ofType: .jsNaN)
         registerBuiltin("Infinity", ofType: .jsInfinity)
         registerBuiltin("Temporal", ofType: .jsTemporalObject)
+        registerBuiltin("Intl", ofType: .jsIntlObject)
         registerBuiltin("WebAssembly", ofType: ObjectGroup.jsWebAssembly.instanceType)
 
         for (builtin, type) in additionalBuiltins {
@@ -1233,8 +1252,15 @@ public extension ObjectGroup {
     // so Fuzzilli can generate sequences like `Date.prototype.getTime.call(new Date())`.
     static func createPrototypeObjectGroup(_ receiver: ObjectGroup) -> ObjectGroup {
         let name = receiver.name + ".prototype"
-        let properties = Dictionary(uniqueKeysWithValues: receiver.methods.map {
+        var properties = Dictionary(uniqueKeysWithValues: receiver.methods.map {
             ($0.0, ILType.unboundFunction($0.1.first, receiver: receiver.instanceType)) })
+        if receiver.name == "Intl.DateTimeFormat" {
+            // DateTimeFormat.format is a getter instead of regular function, and errors
+            // when called on the prototype. To avoid test failures, we omit
+            // it from the prototype.
+            // https://tc39.es/ecma402/#sec-intl.datetimeformat.prototype.format
+            properties.removeValue(forKey: "format")
+        }
         return ObjectGroup(
             name: name,
             instanceType: .object(ofGroup: name, withProperties: properties.map {$0.0}, withMethods: []),
@@ -2862,6 +2888,119 @@ extension OptionsBag {
         properties: [
             "timeZone": ObjectGroup.jsTemporalTimeZoneLike,
             "plainTime": .jsTemporalPlainTime,
+        ]
+    )
+}
+
+// Intl
+extension ILType {
+    // Intl types
+    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat"])
+    static let jsIntlDateTimeFormat = ILType.object(ofGroup: "Intl.DateTimeFormat", withProperties: [], withMethods: ["format", "formatRange", "formatRangeToParts", "formatToParts", "resolvedOptions"])
+    static let jsIntlDateTimeFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlDateTimeFormatSettings.group.instanceType)] => .jsIntlDateTimeFormat) + .object(ofGroup: "IntlDateTimeFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlLocaleLike = ILType.namedString(ofName: "IntlLocaleString")
+}
+
+extension ObjectGroup {
+    static let jsIntlObject = ObjectGroup(
+        name: "Intl",
+        instanceType: .jsIntlObject,
+        properties: [
+            "DateTimeFormat"  : .jsIntlDateTimeFormatConstructor,
+        ],
+        methods: [:]
+    )
+    fileprivate static func dateTimeFormatSignature(_ returnType: ILType) -> [Signature] {
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/format#date
+        // No ZonedDateTime as stated in the docs.
+        [ILType.jsDate, .jsTemporalPlainDate, .jsTemporalPlainTime, .jsTemporalPlainMonthDay, .jsTemporalPlainYearMonth, .jsTemporalPlainDateTime].map {
+            [.opt($0)] => returnType
+        }
+    }
+    fileprivate static func dateTimeFormatRangeSignature(_ returnType: ILType) -> [Signature] {
+        // Docs list all Temporal types except ZDT, but we don't wish to explode the signatures so we just pick
+        // the two main relevant ones.
+        [ILType.jsDate, .jsTemporalPlainDateTime].flatMap { firstParam in
+            [ILType.jsDate, .jsTemporalPlainDateTime].map {
+                [.opt(firstParam), .opt($0)] => returnType
+            }
+        }
+    }
+    static let jsIntlDateTimeFormat = ObjectGroup(
+        name: "Intl.DateTimeFormat",
+        instanceType: .jsIntlDateTimeFormat,
+        properties: [:],
+        overloads: [
+            "format": dateTimeFormatSignature(.string),
+            "formatRange": dateTimeFormatRangeSignature(.string),
+            "formatRangeToParts": dateTimeFormatRangeSignature(.jsArray),
+            "formatToParts": dateTimeFormatSignature(.jsArray),
+            "resolvedOptions": [[] => .object()],
+        ]
+    )
+
+    static let jsIntlDateTimeFormatPrototype = createPrototypeObjectGroup(jsIntlDateTimeFormat)
+
+    static let jsIntlDateTimeFormatConstructor = ObjectGroup(
+        name: "IntlDateTimeFormatConstructor",
+        constructorPath: "Intl.DateTimeFormat",
+        instanceType: .jsIntlDateTimeFormatConstructor,
+        properties: [
+            "prototype" : jsIntlDateTimeFormatPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+}
+
+extension OptionsBag {
+    fileprivate static let jsIntlLocaleMatcherEnum = ILType.enumeration(ofName: "IntlLocaleMatcher", withValues: ["lookup", "best fit"])
+    fileprivate static let jsIntlNumberingSystemEnum = ILType.enumeration(ofName: "IntlNumberingSystem", withValues: Locale.NumberingSystem.availableNumberingSystems.map { $0.identifier })
+    fileprivate static let jsIntlHourCycleEnum = ILType.enumeration(ofName: "IntlHourCycle", withValues: ["h11", "h12", "h23", "h24"])
+    fileprivate static let jsIntlLongShortNarrowEnum = ILType.enumeration(ofName: "IntlLongShortNarrow", withValues: ["long", "short", "narrow"])
+    fileprivate static let jsIntlNumeric2DigitEnum = ILType.enumeration(ofName: "IntlNumeric2Digit", withValues: ["numeric", "2-digit"])
+    fileprivate static let jsIntlMonthEnum = ILType.enumeration(ofName: "IntlMonth", withValues: ["numeric", "2-digit", "long", "short", "narrow"])
+    fileprivate static let jsIntlTimeZoneNameEnum = ILType.enumeration(ofName: "IntlTimeZoneName", withValues: ["long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric"])
+    fileprivate static let jsIntlFormatMatcherEnum = ILType.enumeration(ofName: "IntlFormatMatcher", withValues: ["basic", "best fit"])
+    fileprivate static let jsIntlFullLongMediumShort = ILType.enumeration(ofName: "IntlFullLongMediumShort", withValues: ["full", "long", "medium", "short"])
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters
+    static let jsIntlDateTimeFormatSettings = OptionsBag(
+        name: "IntlLocaleSettings",
+        properties: [
+            // Locale options
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "calendar": .jsTemporalCalendarEnum,
+            "numberingSystem": jsIntlNumberingSystemEnum,
+            "hour12": .boolean,
+            "hourCycle": jsIntlHourCycleEnum,
+            "timeZone": ObjectGroup.jsTemporalTimeZoneLike,
+            // datetime options
+            "weekday": jsIntlLongShortNarrowEnum,
+            "era": jsIntlLongShortNarrowEnum,
+            "year": jsIntlNumeric2DigitEnum,
+            "month": jsIntlMonthEnum,
+            "day": jsIntlNumeric2DigitEnum,
+            "dayPeriod": jsIntlLongShortNarrowEnum,
+            "hour": jsIntlNumeric2DigitEnum,
+            "minute": jsIntlNumeric2DigitEnum,
+            "second": jsIntlNumeric2DigitEnum,
+            "fractionalSecondDigits": .integer, // Technically only 1-3
+            "timeZoneName": jsIntlTimeZoneNameEnum,
+            "formatMatcher": jsIntlFormatMatcherEnum,
+            // style options
+            "dateStyle": jsIntlFullLongMediumShort,
+            "timeStyle": jsIntlFullLongMediumShort,
+        ]
+    )
+
+    static let jsIntlLocaleMatcherSettings = OptionsBag(
+        name: "IntlLocaleMatcherSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
         ]
     )
 }

@@ -5141,4 +5141,31 @@ public class ProgramBuilder {
         }
     }
 
+    @discardableResult
+    static func constructIntlLocaleString() -> String {
+        // TODO(Manishearth) Generate more interesting locales than just the builtins
+        return chooseUniform(from: Locale.availableIdentifiers)
+    }
+
+    // Generic generators for Intl types.
+    private func constructIntlType(type: String, optionsBag: OptionsBag) -> Variable {
+        let intl = createNamedVariable(forBuiltin: "Intl")
+        let constructor = getProperty(type, of: intl)
+
+        var args: [Variable] = []
+        if probability(0.7) {
+            args.append(findOrGenerateType(.jsIntlLocaleLike))
+
+            if probability(0.7) {
+                args.append(createOptionsBag(optionsBag))
+            }
+        }
+        return construct(constructor, withArgs: args)
+    }
+
+    @discardableResult
+    func constructIntlDateTimeFormat() -> Variable {
+        return constructIntlType(type: "DateTimeFormat", optionsBag: .jsIntlDateTimeFormatSettings)
+    }
+
 }
