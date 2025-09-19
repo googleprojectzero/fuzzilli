@@ -1849,18 +1849,16 @@ class JSTyperTests: XCTestCase {
         }
 
         let mockNamedString = ILType.namedString(ofName: "NamedString");
-        func generateString(builder: ProgramBuilder) -> Variable {
+        func generateString() -> String {
             callCount += 1
-            let val = builder.loadString("mockStringValue", customName: "NamedString")
-            returnedVar = val
-            return val
+            return "mockStringValue"
         }
 
         let fuzzer = makeMockFuzzer()
         fuzzer.environment.registerObjectGroup(mockObject)
         fuzzer.environment.registerEnumeration(mockEnum)
         fuzzer.environment.addProducingGenerator(forType: mockObject.instanceType, with: generateObject)
-        fuzzer.environment.addProducingGenerator(forType: mockNamedString, with: generateString)
+        fuzzer.environment.addNamedStringGenerator(forType: mockNamedString, with: generateString)
         let b = fuzzer.makeBuilder()
         b.buildPrefix()
 
@@ -1876,8 +1874,6 @@ class JSTyperTests: XCTestCase {
         let variable2 = b.findOrGenerateType(mockNamedString)
         // Test that the generator was invoked
         XCTAssertEqual(callCount, 2)
-        // Test that the returned variable matches the generated one
-        XCTAssertEqual(variable2, returnedVar)
 
         // Test that the returned variable gets typed correctly
         XCTAssert(b.type(of: variable2).Is(mockNamedString))

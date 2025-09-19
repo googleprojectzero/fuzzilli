@@ -299,6 +299,8 @@ public class JavaScriptEnvironment: ComponentBase {
 
     // Producing generators, keyed on `type.group`
     private var producingGenerators: [String: (generator: EnvironmentValueGenerator, probability: Double)] = [:]
+    // Named string generators, keyed on `type.group`
+    private var namedStringGenerators: [String: () -> String] = [:]
     private var producingMethods: [ILType: [(group: String, method: String)]] = [:]
     private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
     private var subtypes: [ILType: [ILType]] = [:]
@@ -453,7 +455,14 @@ public class JavaScriptEnvironment: ComponentBase {
         // This isn't a normal "temporal fields object" but is similar, and needs a similar producing generator
         registerObjectGroup(.jsTemporalDurationLikeObject)
         addProducingGenerator(forType: ObjectGroup.jsTemporalDurationLikeObject.instanceType, with: { b in b.createTemporalDurationFieldsObject() })
-        addProducingGenerator(forType: ObjectGroup.jsTemporalTimeZoneLike, with: { b in chooseUniform(from: [b.randomTimeZone, b.randomUTCOffset])() })
+        addNamedStringGenerator(forType: ObjectGroup.jsTemporalTimeZoneLike,
+         with: {
+            if Bool.random() {
+                return ProgramBuilder.randomTimeZoneString()
+            } else {
+                return ProgramBuilder.randomUTCOffsetString(mayHaveSeconds: true)
+            }
+        })
 
         // Temporal types are produced by a large number of methods; which means findOrGenerateType(), when asked to produce
         // a Temporal type, will tend towards trying to call a method on another Temporal type, which needs more Temporal types,
@@ -596,7 +605,14 @@ public class JavaScriptEnvironment: ComponentBase {
     //   a lot of these API calls need more Temporal objects, leading to runaway recursion attempting
     //   to generate a large number of Temporal objects. Instead, we bias heavily towards the producing generator.
     public func addProducingGenerator(forType type: ILType, with generator: @escaping EnvironmentValueGenerator, probability: Double = 1.0) {
+        assert(type.Is(.object()), "Producing generators can only be registered for objects, found \(type)")
         producingGenerators[type.group!] = (generator, probability)
+    }
+
+    // Register a generator for a custom named string.
+    public func addNamedStringGenerator(forType type: ILType, with generator: @escaping () -> String) {
+        assert(type.Is(.string), "Named string generators can only be registered for strings, found \(type)")
+        namedStringGenerators[type.group!] = generator
     }
 
     private func addProducingMethod(forType type: ILType, by method: String, on group: String) {
@@ -788,6 +804,13 @@ public class JavaScriptEnvironment: ComponentBase {
     public func getProducingGenerator(ofType type: ILType) -> (generator: EnvironmentValueGenerator, probability: Double)? {
         type.group.flatMap {producingGenerators[$0]}
     }
+
+    // For named strings, get a generator that is registered as being able to produce this
+    // named string.
+    public func getNamedStringGenerator(ofName name: String) -> (() -> String)? {
+        namedStringGenerators[name]
+    }
+
 
     // If the object group refers to a constructor, get its path.
     public func getPathIfConstructor(ofGroup groupName: String) -> [String]? {
