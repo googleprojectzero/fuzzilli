@@ -1160,13 +1160,10 @@ public class JavaScriptCompiler {
             fatalError("V8IntrinsicIdentifiers must be handled as part of their surrounding CallExpression")
 
         case .awaitExpression(let awaitExpression):
-                // TODO await is also allowed at the top level of a module
-                if !contextAnalyzer.context.contains(.asyncFunction) {
-                    throw CompilerError.invalidNodeError("`await` is currently only supported in async functions")
-                }
+                // Await is also allowed at the top level of a module
+                // workerd requires that support
                 let argument = try compileExpression(awaitExpression.argument)
                 return emit(Await(), withInputs: [argument]).output
-
         }
     }
 
