@@ -51,6 +51,18 @@ public class OperationMutator: BaseInstructionMutator {
         case .loadFloat(_):
             newOp = LoadFloat(value: b.randomFloat())
         case .loadString(let op):
+            if let customName = op.customName {
+                // Half the time we want to just hit the regular path
+                if Bool.random() {
+                    if let type = b.fuzzer.environment.getEnum(ofName: customName) {
+                        newOp = LoadString(value: chooseUniform(from: type.enumValues), customName: customName)
+                        break
+                    } else if let gen = b.fuzzer.environment.getNamedStringGenerator(ofName: customName) {
+                        newOp = LoadString(value: gen(), customName: customName)
+                        break
+                    }
+                }
+            }
             let charSetAlNum = Array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
             // TODO(mliedtke): Should we also use some more esoteric characters in initial string
             // creation, e.g. ProgramBuilder.randomString?

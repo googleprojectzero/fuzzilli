@@ -365,7 +365,7 @@ public let CodeGenerators: [CodeGenerator] = [
         if Bool.random() {
             b.randomTimeZone()
         } else {
-            b.randomUTCOffset()
+            b.randomUTCOffset(mayHaveSeconds: true)
         }
     },
 

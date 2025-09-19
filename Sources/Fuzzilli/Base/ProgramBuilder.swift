@@ -667,11 +667,9 @@ public class ProgramBuilder {
                 if type.isEnumeration {
                     return self.loadEnum(type)
                 }
-                let producingGenerator = self.fuzzer.environment.getProducingGenerator(ofType: type);
-                if let producingGenerator {
-                    if probability(producingGenerator.probability) {
-                        return producingGenerator.generator(self)
-                    }
+                if let typeName = type.group,
+                   let customStringGen = self.fuzzer.environment.getNamedStringGenerator(ofName: typeName) {
+                    return self.loadString(customStringGen(), customName: typeName)
                 }
                 return self.loadString(self.randomString()) }),
             (.boolean, { return self.loadBool(probability(0.5)) }),
@@ -4814,17 +4812,40 @@ public class ProgramBuilder {
     // Generate a random time zone identifier
     @discardableResult
     func randomTimeZone() -> Variable {
+        return loadString(ProgramBuilder.randomTimeZoneString(), customName: "TemporalTimeZoneString")
+    }
+
+    @discardableResult
+    static func randomTimeZoneString() -> String {
         // Bias towards knownTimeZoneIdentifiers since it's a larger array
         if probability(0.7) {
-            return loadString(chooseUniform(from: TimeZone.knownTimeZoneIdentifiers), customName: "TemporalTimeZoneString")
+            return chooseUniform(from: TimeZone.knownTimeZoneIdentifiers)
         } else {
-            return loadString(chooseUniform(from: TimeZone.abbreviationDictionary.keys), customName: "TemporalTimeZoneString")
+            return chooseUniform(from: TimeZone.abbreviationDictionary.keys)
         }
     }
 
     @discardableResult
-    func randomUTCOffset() -> Variable {
-        return loadString(randomUTCOffsetString(mayHaveSeconds: true), customName: "TemporalTimeZoneString")
+    func randomUTCOffset(mayHaveSeconds: Bool) -> Variable {
+        return loadString(ProgramBuilder.randomUTCOffsetString(mayHaveSeconds: mayHaveSeconds), customName: "TemporalTimeZoneString")
+    }
+
+    @discardableResult
+    static func randomUTCOffsetString(mayHaveSeconds: Bool) -> String {
+        let hours = Int.random(in: 0..<24)
+        // Bias towards zero minutes since that's what most time zones do.
+        let zeroMinutes = probability(0.8)
+        let minutes = zeroMinutes ? 0 : Int.random(in: 0..<60)
+        let plusminus = Bool.random() ? "+" : "-";
+        var offset = String(format: "%@%02d:%02d", plusminus, hours, minutes)
+        if !zeroMinutes && mayHaveSeconds && probability(0.3) {
+            let seconds = Int.random(in: 0..<60)
+            offset = String(format: "%@:%02d", offset, seconds)
+            if  probability(0.3) {
+                offset = String(format: "%@:.%09d", offset, Int.random(in: 0...999999999))
+            }
+        }
+        return offset
     }
 
     // Generate an object with fields from
@@ -4954,7 +4975,7 @@ public class ProgramBuilder {
             if (!forWith) {
                 if Bool.random() {
                     // Time zones can be offsets, but cannot have seconds
-                    generatedOffset = loadString(randomUTCOffsetString(mayHaveSeconds: false))
+                    generatedOffset = randomUTCOffset(mayHaveSeconds: false)
                     properties["timeZone"] = generatedOffset
                 } else {
                     properties["timeZone"] = randomTimeZone()
@@ -4971,7 +4992,7 @@ public class ProgramBuilder {
                 properties["offset"] = generatedOffset!
             } else if probability(0.3) {
                 // Otherwise, with a low probability, generate a random offset.
-                properties["offset"] = loadString(randomUTCOffsetString(mayHaveSeconds: true))
+                properties["offset"] = randomUTCOffset(mayHaveSeconds: true)
             }
         }
         return createObject(with: properties)
@@ -5120,23 +5141,4 @@ public class ProgramBuilder {
         }
     }
 
-}
-
-
-
-fileprivate func randomUTCOffsetString(mayHaveSeconds: Bool) -> String {
-    let hours = Int.random(in: 0..<24)
-    // Bias towards zero minutes since that's what most time zones do.
-    let zeroMinutes = probability(0.8)
-    let minutes = zeroMinutes ? 0 : Int.random(in: 0..<60)
-    let plusminus = Bool.random() ? "+" : "-";
-    var offset = String(format: "%@%02d:%02d", plusminus, hours, minutes)
-    if !zeroMinutes && mayHaveSeconds && probability(0.3) {
-        let seconds = Int.random(in: 0..<60)
-        offset = String(format: "%@:%02d", offset, seconds)
-        if  probability(0.3) {
-            offset = String(format: "%@:.%09d", offset, Int.random(in: 0...999999999))
-        }
-    }
-    return offset
 }
