@@ -2752,8 +2752,7 @@ public let CodeGenerators: [CodeGenerator] = [
         [
             GeneratorStub(
                 "WithStatementBeginGenerator",
-                inputs: .preferred(.object()),
-                provides: [.with]
+                inputs: .preferred(.object())
             ) { b, obj in
                 b.emit(BeginWith(), withInputs: [obj])
                 for i in 1...3 {
@@ -2764,8 +2763,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 }
             },
             GeneratorStub(
-                "WithStatementEndGenerator",
-                inContext: .single(.with)
+                "WithStatementEndGenerator"
             ) { b in
                 b.emit(EndWith())
             },

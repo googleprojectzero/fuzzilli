@@ -1251,7 +1251,7 @@ final class WasmBeginBlock: WasmOperation {
 
     init(with signature: WasmSignature) {
         self.signature = signature
-        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1262,7 +1262,7 @@ final class WasmEndBlock: WasmOperation {
 
     init(outputTypes: [ILType]) {
         self.outputTypes = outputTypes
-        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction, .wasmBlock])
+        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1286,7 +1286,7 @@ final class WasmBeginIf: WasmOperation {
         // value stack and that the condition is the first value to be removed from the stack, so
         // it needs to be the last one pushed to it.
         // Inner outputs: 1 label (used for branch instructions) plus all the parameters.
-        super.init(numInputs: signature.parameterTypes.count + 1, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext, .isMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(numInputs: signature.parameterTypes.count + 1, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1299,7 +1299,7 @@ final class WasmBeginElse: WasmOperation {
         // The WasmBeginElse acts both as a block end for the true case and as a block start for the
         // false case. As such, its input types are the results from the true block and its inner
         // output types are the same as for the corresponding WasmBeginIf.
-        super.init(numInputs: signature.outputTypes.count, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(numInputs: signature.outputTypes.count, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1309,7 +1309,7 @@ final class WasmEndIf: WasmOperation {
 
     init(outputTypes: [ILType] = []) {
         self.outputTypes = outputTypes
-        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd], requiredContext: [.wasmBlock, .wasmFunction])
+        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1352,7 +1352,7 @@ final class WasmBeginTryTable: WasmOperation {
         self.catches = catches
         let inputTagCount = catches.count {$0 == .Ref || $0 == .NoRef}
         let inputLabelCount = catches.count
-        super.init(numInputs: signature.parameterTypes.count + inputLabelCount + inputTagCount , numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(numInputs: signature.parameterTypes.count + inputLabelCount + inputTagCount , numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1362,7 +1362,7 @@ final class WasmEndTryTable: WasmOperation {
 
     init(outputTypes: [ILType]) {
         self.outputTypes = outputTypes
-        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction, .wasmBlock])
+        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 
@@ -1372,7 +1372,7 @@ final class WasmBeginTry: WasmOperation {
 
     init(with signature: WasmSignature) {
         self.signature = signature
-        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 

@@ -1238,13 +1238,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             GeneratorStub(
                 "WasmBeginBlockGenerator",
                 inContext: .single(.wasmFunction),
-                provides: [.wasmBlock]
+                provides: [.wasmFunction]
             ) { b in
                 b.emit(WasmBeginBlock(with: [] => []))
             },
             GeneratorStub(
                 "WasmEndBlockGenerator",
-                inContext: .single(.wasmBlock)
+                inContext: .single(.wasmFunction)
             ) { b in
                 b.emit(WasmEndBlock(outputTypes: []))
             },
@@ -1256,7 +1256,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             GeneratorStub(
                 "WasmBeginBlockGenerator",
                 inContext: .single(.wasmFunction),
-                provides: [.wasmBlock]
+                provides: [.wasmFunction]
             ) { b in
                 let args = b.randomWasmBlockArguments(upTo: 5)
                 let parameters = args.map(b.type)
@@ -1267,7 +1267,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             },
             GeneratorStub(
                 "WasmEndBlockGenerator",
-                inContext: .single(.wasmBlock)
+                inContext: .single(.wasmFunction)
             ) { b in
                 let signature = b.currentWasmSignature
                 let function = b.currentWasmFunction
@@ -1445,7 +1445,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 "WasmBeginIfGenerator",
                 inContext: .single(.wasmFunction),
                 inputs: .required(.wasmi32),
-                provides: [.wasmBlock, .wasmFunction]
+                provides: [.wasmFunction]
             ) { b, condition in
                 b.emit(
                     WasmBeginIf(hint: b.randomWasmBranchHint()),
@@ -1453,14 +1453,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             },
             GeneratorStub(
                 "WasmBeginElseGenerator",
-                inContext: .single([.wasmFunction, .wasmBlock]),
-                provides: [.wasmBlock, .wasmFunction]
+                inContext: .single(.wasmFunction),
+                provides: [.wasmFunction]
             ) { b in
                 b.emit(WasmBeginElse())
             },
             GeneratorStub(
                 "WasmEndIfElseGenerator",
-                inContext: .single([.wasmFunction, .wasmBlock])
+                inContext: .single(.wasmFunction)
             ) { b in
                 b.emit(WasmEndIf())
             },
@@ -1473,7 +1473,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 "WasmBeginIfGenerator",
                 inContext: .single(.wasmFunction),
                 inputs: .required(.wasmi32),
-                provides: [.wasmBlock, .wasmFunction]
+                provides: [.wasmFunction]
             ) { b, condition in
                 let args = b.randomWasmBlockArguments(upTo: 5)
                 let parameters = args.map(b.type)
@@ -1486,8 +1486,8 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             },
             GeneratorStub(
                 "WasmBeginElseGenerator",
-                inContext: .single([.wasmBlock, .wasmFunction]),
-                provides: [.wasmFunction, .wasmBlock]
+                inContext: .single(.wasmFunction),
+                provides: [.wasmFunction]
             ) { b in
                 let function = b.currentWasmFunction
                 let signature = b.currentWasmSignature
@@ -1497,7 +1497,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             },
             GeneratorStub(
                 "WasmEndIfGenerator",
-                inContext: .single([.wasmFunction, .wasmBlock])
+                inContext: .single(.wasmFunction)
             ) { b in
                 let function = b.currentWasmFunction
                 let signature = b.currentWasmSignature
