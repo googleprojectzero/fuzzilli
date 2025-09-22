@@ -493,12 +493,14 @@ let v8SandboxProfile = Profile(
     disabledMutators: [],
 
     additionalBuiltins: [
-        "gc"                                            : .function([] => (.undefined | .jsPromise)),
+        "gc"                                            : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
         "d8"                                            : .object(),
         "Worker"                                        : .constructor([.jsAnything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
 
-    additionalObjectGroups: [],
+    additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],
+
+    additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
 
     optionalPostProcessor: SandboxFuzzingPostProcessor()
 )

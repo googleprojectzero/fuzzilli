@@ -309,5 +309,7 @@ let v8Profile = Profile(
 
     additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],
 
+    additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
+
     optionalPostProcessor: nil
 )

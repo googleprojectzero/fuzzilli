@@ -352,5 +352,7 @@ let xsProfile = Profile(
 
     additionalObjectGroups: [jsCompartments, jsCompartmentConstructor, jsModuleSources, jsModuleSourceConstructor],
 
+    additionalEnumerations: [],
+
     optionalPostProcessor: nil
 )
