@@ -36,9 +36,7 @@ class ContextGraphTests: XCTestCase {
                             .asyncFunction,
                             .wasmFunction,
                             .wasm,
-                            .with,
                             .loop,
-                            .wasmBlock,
                             .generatorFunction,
                             .objectLiteral,
                             .subroutine,
@@ -59,8 +57,7 @@ class ContextGraphTests: XCTestCase {
         XCTAssertTrue(reachableContextsWasmFunction.isSubset(of: reachableContextsWasm))
         XCTAssertEqual(reachableContextsWasm,
                        Set([.wasmFunction,
-                            .wasm,
-                            .wasmBlock]))
+                            .wasm]))
         XCTAssertTrue(reachableContextsWasm.isSubset(of: reachableContextsJavaScript))
     }
 }

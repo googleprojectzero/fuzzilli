@@ -1801,7 +1801,7 @@ final class BeginWith: JsOperation {
     override var opcode: Opcode { .beginWith(self) }
 
     init() {
-        super.init(numInputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .with])
+        super.init(numInputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript])
     }
 }
 

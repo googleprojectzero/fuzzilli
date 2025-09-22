@@ -120,14 +120,14 @@ class AnalyzerTests: XCTestCase {
         XCTAssertEqual(b.context, .javascript)
         let obj = b.loadString("HelloWorld")
         b.buildWith(obj) {
-            XCTAssertEqual(b.context, [.javascript, .with])
+            XCTAssertEqual(b.context, [.javascript])
             b.buildPlainFunction(with: .parameters(n: 3)) { _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine])
                 b.buildWith(obj) {
-                    XCTAssertEqual(b.context, [.javascript, .subroutine, .with])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine])
                 }
             }
-            XCTAssertEqual(b.context, [.javascript, .with])
+            XCTAssertEqual(b.context, [.javascript])
             b.createNamedVariable(b.randomPropertyName(), declarationMode: .none)
         }
 
