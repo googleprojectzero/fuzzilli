@@ -55,5 +55,7 @@ let njsProfile = Profile(
 
     additionalObjectGroups: [],
 
+    additionalEnumerations: [],
+
     optionalPostProcessor: nil
 )

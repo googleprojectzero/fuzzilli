@@ -303,7 +303,7 @@ public class JavaScriptEnvironment: ComponentBase {
     private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
     private var subtypes: [ILType: [ILType]] = [:]
 
-    public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = []) {
+    public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = [], additionalEnumerations: [ILType] = []) {
         super.init(name: "JavaScriptEnvironment")
 
         // Build model of the JavaScript environment
@@ -426,6 +426,11 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsTemporalOffsetEnum)
         registerEnumeration(OptionsBag.base64Alphabet)
         registerEnumeration(OptionsBag.base64LastChunkHandling)
+
+        for enumeration in additionalEnumerations {
+            assert(enumeration.isEnumeration)
+            registerEnumeration(enumeration)
+        }
 
         registerOptionsBag(.jsTemporalDifferenceSettingOrRoundTo)
         registerOptionsBag(.jsTemporalToStringSettings)

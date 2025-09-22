@@ -35,13 +35,19 @@ let v8HoleFuzzingProfile = Profile(
         ]
         return args
     },
+
     processEnv: [:],
+
     maxExecsBeforeRespawn: 1000,
+
     timeout: 250,
+
     codePrefix: """
                 """,
+
     codeSuffix: """
                 """,
+
     ecmaVersion: ECMAScriptVersion.es6,
 
     startupTests: [
@@ -67,15 +73,23 @@ let v8HoleFuzzingProfile = Profile(
         (V8GcGenerator,                           10),
         (HoleLeakGenerator,                       25),
     ],
+
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
     ]),
+
     disabledCodeGenerators: [],
+
     disabledMutators: [],
+
     additionalBuiltins: [
-        "gc"                                            : .function([] => (.undefined | .jsPromise)),
+        "gc"                                            : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
         "d8"                                            : .object(),
         "Worker"                                        : .constructor([.jsAnything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
-    additionalObjectGroups: [],
+
+    additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],
+
+    additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
+
     optionalPostProcessor: nil
 )
