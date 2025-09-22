@@ -312,7 +312,7 @@ if swarmTesting {
     logger.info("Weight | CodeGenerator")
 }
 
-let disabledGenerators = Set(profile.disabledCodeGenerators)
+let disableCodeGenerators = Set(profile.disabledCodeGenerators)
 let additionalCodeGenerators = profile.additionalCodeGenerators
 
 let codeGeneratorsToUse = if enableWasm {
@@ -324,14 +324,14 @@ let codeGeneratorsToUse = if enableWasm {
 
 let standardCodeGenerators: [(CodeGenerator, Int)] = codeGeneratorsToUse.map {
     guard let weight = codeGeneratorWeights[$0.name] else {
-        logger.fatal("Missing weight for code generator \($0.name) in CodeGeneratorWeights.swift")
+        logger.fatal("Missing weight for CodeGenerator \($0.name) in CodeGeneratorWeights.swift")
     }
     return ($0, weight)
 }
 var codeGenerators: WeightedList<CodeGenerator> = WeightedList<CodeGenerator>([])
 
 for (generator, var weight) in (additionalCodeGenerators + standardCodeGenerators) {
-    if disabledGenerators.contains(generator.name) {
+    if disableCodeGenerators.contains(generator.name) {
         continue
     }
 

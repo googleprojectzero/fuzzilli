@@ -26,6 +26,10 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.31.0"),
+        .package(
+          url: "https://github.com/apple/swift-collections.git",
+          .upToNextMinor(from: "1.2.0")
+        ),
     ],
     targets: [
         .target(name: "libsocket",
@@ -42,6 +46,7 @@ let package = Package(
         .target(name: "Fuzzilli",
                 dependencies: [
                     .product(name: "SwiftProtobuf", package: "swift-protobuf"),
+                    .product(name: "Collections", package: "swift-collections"),
                     "libsocket",
                     "libreprl",
                     "libcoverage"],

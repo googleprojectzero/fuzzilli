@@ -14,7 +14,6 @@
 
 import Fuzzilli
 
-
 let v8Profile = Profile(
     processArgs: { randomize in
         var args = [
