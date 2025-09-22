@@ -193,6 +193,10 @@ public class ProgramBuilder {
         self.fuzzer = fuzzer
         self.jsTyper = JSTyper(for: fuzzer.environment)
         self.parent = parent
+
+        if fuzzer.config.logLevel.isAtLeast(.verbose)  {
+            self.buildLog = BuildLog()
+        }
     }
 
     /// Resets this builder.
@@ -1790,7 +1794,8 @@ public class ProgramBuilder {
     // We definitely want to have the BuildLog in DEBUG builds.
     var buildLog: BuildLog? = BuildLog()
     #else
-    var buildLog: BuildLog? = fuzzer.config.logLevel.isAtLeast(.verbose) ? BuildLog() : nil
+    // We initialize this depending on the LogLevel in the initializer.
+    var buildLog: BuildLog? = nil
     #endif
 
     /// Build random code at the current position in the program.
