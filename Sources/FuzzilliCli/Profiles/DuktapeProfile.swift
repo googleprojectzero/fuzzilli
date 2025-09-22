@@ -47,7 +47,7 @@ let duktapeProfile = Profile(
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
     disabledCodeGenerators: [],
-    
+
     disabledMutators: [],
 
     additionalBuiltins: [

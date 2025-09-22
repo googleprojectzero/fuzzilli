@@ -79,12 +79,7 @@ public struct Context: OptionSet, Hashable, CaseIterable {
     public static let wasmTypeGroup     = Context(rawValue: 1 << 15)
 
     public static let empty             = Context([])
-
-    // These contexts have ValueGenerators and as such we can .buildPrefix in them.
-    public var isValueBuildableContext: Bool {
-        self.contains(.wasmFunction) || self.contains(.javascript)
-    }
-
+    
     public var inWasm: Bool {
         // .wasmBlock is propagating surrounding context
         self.contains(.wasm) || self.contains(.wasmFunction)

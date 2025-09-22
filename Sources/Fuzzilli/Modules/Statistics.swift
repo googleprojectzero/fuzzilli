@@ -235,14 +235,16 @@ public class Statistics: Module {
                 let nameMaxLength = fuzzer.codeGenerators.map({ $0.name.count }).max()!
 
                 for generator in fuzzer.codeGenerators {
-                    let name = generator.name.rightPadded(toLength: nameMaxLength)
-                    let correctnessRate = Self.percentageOrNa(generator.correctnessRate, 7)
-                    let interestingSamplesRate = Self.percentageOrNa(generator.interestingSamplesRate, 7)
-                    let timeoutRate = Self.percentageOrNa(generator.timeoutRate, 6)
-                    let avgInstructionsAdded = String(format: "%.2f", generator.avgNumberOfInstructionsGenerated).leftPadded(toLength: 5)
-                    let invocationSuccessRate = Self.percentageOrNa(generator.invocationSuccessRate, 6)
-                    let samplesGenerated = generator.totalSamples
-                    self.logger.verbose("    \(name) : Invocation Success: \(invocationSuccessRate), Correctness rate: \(correctnessRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions added: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated)")
+                    for stub in generator.parts {
+                        let name = stub.name.rightPadded(toLength: nameMaxLength)
+                        let correctnessRate = Self.percentageOrNa(stub.correctnessRate, 7)
+                        let interestingSamplesRate = Self.percentageOrNa(stub.interestingSamplesRate, 7)
+                        let timeoutRate = Self.percentageOrNa(stub.timeoutRate, 6)
+                        let avgInstructionsAdded = String(format: "%.2f", stub.avgNumberOfInstructionsGenerated).leftPadded(toLength: 5)
+                        let invocationSuccessRate = Self.percentageOrNa(stub.invocationSuccessRate, 6)
+                        let samplesGenerated = stub.totalSamples
+                        self.logger.verbose("    \(name) : Invocation Success: \(invocationSuccessRate), Correctness rate: \(correctnessRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions added: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated)")
+                    }
                 }
             }
         }
