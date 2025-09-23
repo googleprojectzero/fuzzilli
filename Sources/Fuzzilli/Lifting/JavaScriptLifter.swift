@@ -323,6 +323,14 @@ public class JavaScriptLifter: Lifter {
                 }
                 w.declare(instr.output, as: op.variableName)
 
+            case .createNamedDisposableVariable(let op):
+                w.emit("using \(op.variableName) = \(input(0));");
+                w.declare(instr.output, as: op.variableName)
+
+            case .createNamedAsyncDisposableVariable(let op):
+                w.emit("await using \(op.variableName) = \(input(0));");
+                w.declare(instr.output, as: op.variableName)
+
             case .loadDisposableVariable:
                 let V = w.declare(instr.output);
                 w.emit("using \(V) = \(input(0));");

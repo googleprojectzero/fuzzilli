@@ -34,7 +34,7 @@ function tryReadFile(path) {
 
 // Parse the given JavaScript script and return an AST compatible with Fuzzilli's protobuf-based AST format.
 function parse(script, proto) {
-    let ast = Parser.parse(script, { plugins: ["v8intrinsic"] });
+    let ast = Parser.parse(script, { plugins: ["explicitResourceManagement", "v8intrinsic"] });
 
     function assertNoError(err) {
         if (err) throw err;
@@ -98,12 +98,22 @@ function parse(script, proto) {
 
     function visitVariableDeclaration(node) {
         let kind;
+        let disposable;
         if (node.kind === "var") {
             kind = 0;
+            disposable = false;
         } else if (node.kind === "let") {
             kind = 1;
+            disposable = false;
         } else if (node.kind === "const") {
             kind = 2;
+            disposable = false;
+        } else if (node.kind === "using") {
+            kind = 0;
+            disposable = true;
+        } else if (node.kind === "await using") {
+            kind = 1;
+            disposable = true;
         } else {
             throw "Unknown variable declaration kind: " + node.kind;
         }
@@ -118,7 +128,8 @@ function parse(script, proto) {
             declarations.push(make('VariableDeclarator', outDecl));
         }
 
-        return { kind, declarations };
+        const type = disposable ? 'DisposableVariableDeclaration' : 'VariableDeclaration'
+        return [type, { kind, declarations }];
     }
 
     function visitClass(node, isExpression) {
@@ -222,7 +233,7 @@ function parse(script, proto) {
                 return makeStatement('ExpressionStatement', { expression });
             }
             case 'VariableDeclaration': {
-                return makeStatement('VariableDeclaration', visitVariableDeclaration(node));
+                return makeStatement(...visitVariableDeclaration(node));
             }
             case 'FunctionDeclaration': {
                 assert(node.id.type === 'Identifier', "Expected an identifier as function declaration name");
@@ -275,7 +286,9 @@ function parse(script, proto) {
                 let forLoop = {};
                 if (node.init !== null) {
                     if (node.init.type === 'VariableDeclaration') {
-                        forLoop.declaration = make('VariableDeclaration', visitVariableDeclaration(node.init));
+                        let [type, config] = visitVariableDeclaration(node.init);
+                        assert(type != 'DisposableVariableDeclaration', 'Disposable variables in for loops are not yet supported')
+                        forLoop.declaration = make(type, config);
                     } else {
                         forLoop.expression = visitExpression(node.init);
                     }

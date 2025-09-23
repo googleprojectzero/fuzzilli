@@ -918,6 +918,14 @@ extension Instruction: ProtobufConvertible {
                     $0.variableName = op.variableName
                     $0.declarationMode = convertEnum(op.declarationMode, NamedVariableDeclarationMode.allCases)
                 }
+            case .createNamedDisposableVariable(let op):
+                $0.createNamedDisposableVariable = Fuzzilli_Protobuf_CreateNamedDisposableVariable.with {
+                    $0.variableName = op.variableName
+                }
+            case .createNamedAsyncDisposableVariable(let op):
+                $0.createNamedAsyncDisposableVariable = Fuzzilli_Protobuf_CreateNamedAsyncDisposableVariable.with {
+                    $0.variableName = op.variableName
+                }
             case .eval(let op):
                 $0.eval = Fuzzilli_Protobuf_Eval.with {
                     $0.code = op.code
@@ -2084,6 +2092,10 @@ extension Instruction: ProtobufConvertible {
             op = Compare(try convertEnum(p.op, Comparator.allCases))
         case .createNamedVariable(let p):
             op = CreateNamedVariable(p.variableName, declarationMode: try convertEnum(p.declarationMode, NamedVariableDeclarationMode.allCases))
+        case .createNamedDisposableVariable(let p):
+            op = CreateNamedDisposableVariable(p.variableName)
+        case .createNamedAsyncDisposableVariable(let p):
+            op = CreateNamedAsyncDisposableVariable(p.variableName)
         case .eval(let p):
             let numArguments = inouts.count - (p.hasOutput_p ? 1 : 0)
             op = Eval(p.code, numArguments: numArguments, hasOutput: p.hasOutput_p)

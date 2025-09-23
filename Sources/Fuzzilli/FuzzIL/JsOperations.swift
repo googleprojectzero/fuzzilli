@@ -324,10 +324,33 @@ final class LoadDisposableVariable: JsOperation {
     }
 }
 
+final class CreateNamedDisposableVariable: JsOperation {
+    override var opcode: Opcode { .createNamedDisposableVariable(self) }
+
+    let variableName: String
+
+    init(_ name: String) {
+        self.variableName = name
+        // TODO: Add support for block context, see details above.
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .subroutine])
+    }
+}
+
 final class LoadAsyncDisposableVariable: JsOperation {
     override var opcode: Opcode { .loadAsyncDisposableVariable(self) }
 
     init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .asyncFunction])
+    }
+}
+
+final class CreateNamedAsyncDisposableVariable: JsOperation {
+    override var opcode: Opcode { .createNamedAsyncDisposableVariable(self) }
+
+    let variableName: String
+
+    init(_ name: String) {
+        self.variableName = name
         super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .asyncFunction])
     }
 }

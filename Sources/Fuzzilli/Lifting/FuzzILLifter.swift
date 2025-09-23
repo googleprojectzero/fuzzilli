@@ -78,6 +78,12 @@ public class FuzzILLifter: Lifter {
                 w.emit("\(output()) <- CreateNamedVariable '\(op.variableName)', '\(op.declarationMode)'")
             }
 
+        case .createNamedDisposableVariable(let op):
+            w.emit("\(output()) <- CreateNamedDisposableVariable '\(op.variableName)', \(input(0))")
+
+        case .createNamedAsyncDisposableVariable(let op):
+            w.emit("\(output()) <- CreateNamedAsyncDisposableVariable '\(op.variableName)', \(input(0))")
+
         case .loadDisposableVariable:
             w.emit("\(output()) <- LoadDisposableVariable \(input(0))")
 

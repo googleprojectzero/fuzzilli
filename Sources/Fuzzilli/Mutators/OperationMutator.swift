@@ -617,6 +617,8 @@ public class OperationMutator: BaseInstructionMutator {
              .explore(_),
              .probe(_),
              .fixup(_),
+             .createNamedDisposableVariable(_),
+             .createNamedAsyncDisposableVariable(_),
              .loadDisposableVariable(_),
              .loadAsyncDisposableVariable(_),
              .void(_),

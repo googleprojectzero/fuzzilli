@@ -3138,7 +3138,9 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testLoadDisposableVariableLifting() {
+    // This test is parameterized for normal and named variables with the
+    // respective concrete cases below.
+    func _testDisposableVariableLifting(_ variableName : String, generateVariable: (ProgramBuilder, Variable) -> Void) {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -3152,7 +3154,7 @@ class LifterTests: XCTestCase {
                     b.doReturn(v2)
                 }
             }
-            b.loadDisposableVariable(disposableVariable)
+            generateVariable(b, disposableVariable)
         }
         b.callFunction(f)
 
@@ -3168,15 +3170,29 @@ class LifterTests: XCTestCase {
                     return 42;
                 },
             };
-            using v7 = v6;
+            using %@ = v6;
         }
         f0();
 
         """
-        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(actual, String(format: expected, variableName))
     }
 
-    func testLoadAsyncDisposableVariableLifting() {
+    func testLoadDisposableVariableLifting() {
+        _testDisposableVariableLifting("v7", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.loadDisposableVariable(v)
+        })
+    }
+
+    func testCreateNamedDisposableVariableLifting() {
+        _testDisposableVariableLifting("dis", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.createNamedDisposableVariable("dis", v)
+        })
+    }
+
+    // This test is parameterized for normal and named variables with the
+    // respective concrete cases below.
+    func _testAsyncDisposableVariableLifting(_ variableName : String, generateVariable: (ProgramBuilder, Variable) -> Void) {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -3190,7 +3206,7 @@ class LifterTests: XCTestCase {
                     b.doReturn(v2)
                 }
             }
-            b.loadAsyncDisposableVariable(asyncDisposableVariable)
+            generateVariable(b, asyncDisposableVariable)
         }
 
         let g = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
@@ -3210,7 +3226,7 @@ class LifterTests: XCTestCase {
                     return 42;
                 },
             };
-            await using v7 = v6;
+            await using %@ = v6;
         }
         async function f8() {
             await f0();
@@ -3218,7 +3234,19 @@ class LifterTests: XCTestCase {
         f8();
 
         """
-        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(actual, String(format: expected, variableName))
+    }
+
+    func testLoadAsyncDisposableVariableLifting() {
+        _testAsyncDisposableVariableLifting("v7", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.loadAsyncDisposableVariable(v)
+        })
+    }
+
+    func testCreateNamedAsyncDisposableVariableLifting() {
+        _testAsyncDisposableVariableLifting("dis", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.createNamedAsyncDisposableVariable("dis", v)
+        })
     }
 
     func testImportAnalysisMisTypedJS() {
