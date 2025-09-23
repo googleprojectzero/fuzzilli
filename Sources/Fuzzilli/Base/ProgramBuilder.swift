@@ -5168,4 +5168,9 @@ public class ProgramBuilder {
         return constructIntlType(type: "DateTimeFormat", optionsBag: .jsIntlDateTimeFormatSettings)
     }
 
+    @discardableResult
+    func constructIntlCollator() -> Variable {
+        return constructIntlType(type: "Collator", optionsBag: .jsIntlCollatorSettings)
+    }
+
 }
