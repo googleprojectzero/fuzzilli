@@ -1459,6 +1459,12 @@ public struct JSTyper: Analyzer {
         case .loadAsyncDisposableVariable:
             set(instr.output, type(ofInput: 0))
 
+        case .createNamedDisposableVariable:
+            set(instr.output, type(ofInput: 0))
+
+        case .createNamedAsyncDisposableVariable:
+            set(instr.output, type(ofInput: 0))
+
         case .loadNewTarget:
             set(instr.output, .function() | .undefined)
 

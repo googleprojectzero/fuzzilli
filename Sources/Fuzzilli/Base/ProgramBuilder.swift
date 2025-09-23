@@ -3094,6 +3094,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func createNamedDisposableVariable(_ name: String, _ initialValue: Variable) -> Variable {
+        return emit(CreateNamedDisposableVariable(name), withInputs: [initialValue]).output
+    }
+
+    @discardableResult
+    public func createNamedAsyncDisposableVariable(_ name: String, _ initialValue: Variable) -> Variable {
+        return emit(CreateNamedAsyncDisposableVariable(name), withInputs: [initialValue]).output
+    }
+
+    @discardableResult
     public func eval(_ string: String, with arguments: [Variable] = [], hasOutput: Bool = false) -> Variable? {
         let instr = emit(Eval(string, numArguments: arguments.count, hasOutput: hasOutput), withInputs: arguments)
         return hasOutput ? instr.output : nil

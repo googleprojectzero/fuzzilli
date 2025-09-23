@@ -353,6 +353,8 @@ message Instruction {
         WasmDropElementSegment wasmDropElementSegment = 327;
         WasmTableCopy wasmTableCopy = 328;
         WasmDefineSignatureType wasmDefineSignatureType = 329;
+        CreateNamedDisposableVariable createNamedDisposableVariable = 330;
+        CreateNamedAsyncDisposableVariable createNamedAsyncDisposableVariable = 331;
     }
 }
 

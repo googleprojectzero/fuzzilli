@@ -357,4 +357,6 @@ enum Opcode {
     case wasmDropElementSegment(WasmDropElementSegment)
     case wasmTableCopy(WasmTableCopy)
     case wasmDefineSignatureType(WasmDefineSignatureType)
+    case createNamedDisposableVariable(CreateNamedDisposableVariable)
+    case createNamedAsyncDisposableVariable(CreateNamedAsyncDisposableVariable)
 }

@@ -238,6 +238,14 @@ public class JavaScriptCompiler {
         return classDecl.output
     }
 
+    private func compileInitialDeclarationValue(_ decl: Compiler_Protobuf_VariableDeclarator) throws -> Variable {
+        if decl.hasValue {
+            return try compileExpression(decl.value)
+        } else {
+            // TODO(saelo): consider caching the `undefined` value for future uses
+            return emit(LoadUndefined()).output
+        }
+    }
 
     private func compileStatement(_ node: StatementNode) throws {
         guard let stmt = node.statement else {
@@ -260,13 +268,7 @@ public class JavaScriptCompiler {
 
         case .variableDeclaration(let variableDeclaration):
             for decl in variableDeclaration.declarations {
-                let initialValue: Variable
-                if decl.hasValue {
-                    initialValue = try compileExpression(decl.value)
-                } else {
-                    // TODO(saelo): consider caching the `undefined` value for future uses
-                    initialValue = emit(LoadUndefined()).output
-                }
+                let initialValue = try compileInitialDeclarationValue(decl)
 
                 let declarationMode: NamedVariableDeclarationMode
                 switch variableDeclaration.kind {
@@ -283,6 +285,23 @@ public class JavaScriptCompiler {
                 let v = emit(CreateNamedVariable(decl.name, declarationMode: declarationMode), withInputs: [initialValue]).output
                 // Variables declared with .var are allowed to overwrite each other.
                 assert(!currentScope.keys.contains(decl.name) || declarationMode == .var)
+                mapOrRemap(decl.name, to: v)
+            }
+
+        case .disposableVariableDeclaration(let variableDeclaration):
+            for decl in variableDeclaration.declarations {
+                let initialValue = try compileInitialDeclarationValue(decl)
+
+                let v: Variable;
+                switch variableDeclaration.kind {
+                case .using:
+                    v = emit(CreateNamedDisposableVariable(decl.name), withInputs: [initialValue]).output
+                case .awaitUsing:
+                    v = emit(CreateNamedAsyncDisposableVariable(decl.name), withInputs: [initialValue]).output
+                case .UNRECOGNIZED(let type):
+                    throw CompilerError.invalidNodeError("invalid disposable variable declaration type \(type)")
+                }
+                assert(!currentScope.keys.contains(decl.name))
                 mapOrRemap(decl.name, to: v)
             }
 

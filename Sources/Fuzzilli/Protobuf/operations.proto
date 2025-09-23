@@ -602,6 +602,14 @@ message CreateNamedVariable {
     NamedVariableDeclarationMode declarationMode = 2;
 }
 
+message CreateNamedDisposableVariable {
+    string variableName = 1;
+}
+
+message CreateNamedAsyncDisposableVariable {
+    string variableName = 1;
+}
+
 message Eval {
     string code = 1;
     bool hasOutput = 2;

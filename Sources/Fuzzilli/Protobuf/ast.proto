@@ -48,6 +48,16 @@ message VariableDeclaration {
     repeated VariableDeclarator declarations = 2;
 }
 
+enum DisposableVariableDeclarationKind {
+    USING = 0;
+    AWAIT_USING = 1;
+}
+
+message DisposableVariableDeclaration {
+    DisposableVariableDeclarationKind kind = 1;
+    repeated VariableDeclarator declarations = 2;
+}
+
 enum FunctionType {
     PLAIN = 0;
     GENERATOR = 1;
@@ -251,6 +261,7 @@ message Statement {
         ThrowStatement throwStatement = 18;
         WithStatement withStatement = 19;
         SwitchStatement switchStatement = 20;
+        DisposableVariableDeclaration disposableVariableDeclaration = 21;
     }
 }
 
