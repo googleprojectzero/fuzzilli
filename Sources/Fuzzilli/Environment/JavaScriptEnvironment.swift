@@ -414,6 +414,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsTemporalZonedDateTimeConstructor)
         registerObjectGroup(.jsTemporalZonedDateTimePrototype)
         registerObjectGroup(.jsIntlObject)
+        registerObjectGroup(.jsIntlCollator)
+        registerObjectGroup(.jsIntlCollatorConstructor)
+        registerObjectGroup(.jsIntlCollatorPrototype)
         registerObjectGroup(.jsIntlDateTimeFormat)
         registerObjectGroup(.jsIntlDateTimeFormatConstructor)
         registerObjectGroup(.jsIntlDateTimeFormatPrototype)
@@ -441,6 +444,10 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsIntlTimeZoneNameEnum)
         registerEnumeration(OptionsBag.jsIntlFormatMatcherEnum)
         registerEnumeration(OptionsBag.jsIntlFullLongMediumShort)
+        registerEnumeration(OptionsBag.jsIntlCollatorUsageEnum)
+        registerEnumeration(OptionsBag.jsIntlCollationEnum)
+        registerEnumeration(OptionsBag.jsIntlCaseFirstEnum)
+        registerEnumeration(OptionsBag.jsIntlCollatorSensitivityEnum)
         registerEnumeration(OptionsBag.base64Alphabet)
         registerEnumeration(OptionsBag.base64LastChunkHandling)
 
@@ -459,6 +466,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.fromBase64Settings)
         registerOptionsBag(.jsTemporalPlainDateToZDTSettings)
         registerOptionsBag(.jsIntlDateTimeFormatSettings)
+        registerOptionsBag(.jsIntlCollatorSettings)
         registerOptionsBag(.jsIntlLocaleMatcherSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
@@ -1256,10 +1264,12 @@ public extension ObjectGroup {
             ($0.0, ILType.unboundFunction($0.1.first, receiver: receiver.instanceType)) })
         if receiver.name == "Intl.DateTimeFormat" {
             // DateTimeFormat.format is a getter instead of regular function, and errors
-            // when called on the prototype. To avoid test failures, we omit
-            // it from the prototype.
+            // when called on the prototype. We hide this from the prototype object to avoid
+            // generating `let v0 = Intl.DateTimeFormat.prototype.format`.
             // https://tc39.es/ecma402/#sec-intl.datetimeformat.prototype.format
             properties.removeValue(forKey: "format")
+        } else if receiver.name == "Intl.Collator" {
+            properties.removeValue(forKey: "compare")
         }
         return ObjectGroup(
             name: name,
@@ -2895,7 +2905,11 @@ extension OptionsBag {
 // Intl
 extension ILType {
     // Intl types
-    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat"])
+    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator"])
+
+    static let jsIntlCollator = ILType.object(ofGroup: "Intl.Collator", withProperties: [], withMethods: ["compare", "resolvedOptions"])
+    static let jsIntlCollatorConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlCollatorSettings.group.instanceType)] => .jsIntlCollator) + .object(ofGroup: "IntlCollatorConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
     static let jsIntlDateTimeFormat = ILType.object(ofGroup: "Intl.DateTimeFormat", withProperties: [], withMethods: ["format", "formatRange", "formatRangeToParts", "formatToParts", "resolvedOptions"])
     static let jsIntlDateTimeFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlDateTimeFormatSettings.group.instanceType)] => .jsIntlDateTimeFormat) + .object(ofGroup: "IntlDateTimeFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
 
@@ -2907,10 +2921,37 @@ extension ObjectGroup {
         name: "Intl",
         instanceType: .jsIntlObject,
         properties: [
+            "Collator"  : .jsIntlCollatorConstructor,
             "DateTimeFormat"  : .jsIntlDateTimeFormatConstructor,
         ],
         methods: [:]
     )
+
+    static let jsIntlCollator = ObjectGroup(
+        name: "Intl.Collator",
+        instanceType: .jsIntlCollator,
+        properties: [:],
+        methods: [
+            "compare": [.string, .string] => .integer,
+            "resolvedOptions": [] => .object(),
+        ]
+    )
+
+    static let jsIntlCollatorPrototype = createPrototypeObjectGroup(jsIntlCollator)
+
+    static let jsIntlCollatorConstructor = ObjectGroup(
+        name: "IntlCollatorConstructor",
+        constructorPath: "Intl.Collator",
+        instanceType: .jsIntlCollatorConstructor,
+        properties: [
+            "prototype" : jsIntlCollatorPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+
     fileprivate static func dateTimeFormatSignature(_ returnType: ILType) -> [Signature] {
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/format#date
         // No ZonedDateTime as stated in the docs.
@@ -2954,6 +2995,7 @@ extension ObjectGroup {
             "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
         ]
     )
+
 }
 
 extension OptionsBag {
@@ -2966,6 +3008,10 @@ extension OptionsBag {
     fileprivate static let jsIntlTimeZoneNameEnum = ILType.enumeration(ofName: "IntlTimeZoneName", withValues: ["long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric"])
     fileprivate static let jsIntlFormatMatcherEnum = ILType.enumeration(ofName: "IntlFormatMatcher", withValues: ["basic", "best fit"])
     fileprivate static let jsIntlFullLongMediumShort = ILType.enumeration(ofName: "IntlFullLongMediumShort", withValues: ["full", "long", "medium", "short"])
+    fileprivate static let jsIntlCollatorUsageEnum = ILType.enumeration(ofName: "IntlCollatorUsage", withValues: ["sort", "search"])
+    fileprivate static let jsIntlCollationEnum = ILType.enumeration(ofName: "IntlCollation", withValues: ["emoji", "pinyin", "stroke"])
+    fileprivate static let jsIntlCaseFirstEnum = ILType.enumeration(ofName: "IntlCaseFirst", withValues: ["upper", "lower", "false"])
+    fileprivate static let jsIntlCollatorSensitivityEnum = ILType.enumeration(ofName: "IntlCollatorSensitivity", withValues: ["base", "accent", "case", "variant"])
 
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters
     static let jsIntlDateTimeFormatSettings = OptionsBag(
@@ -2994,6 +3040,20 @@ extension OptionsBag {
             // style options
             "dateStyle": jsIntlFullLongMediumShort,
             "timeStyle": jsIntlFullLongMediumShort,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Collator/Collator#options
+    static let jsIntlCollatorSettings = OptionsBag(
+        name: "IntlCollatorSettings",
+        properties: [
+            "usage": jsIntlCollatorUsageEnum,
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "collation": jsIntlCollationEnum,
+            "numeric": .boolean,
+            "caseFirst": jsIntlCaseFirstEnum,
+            "sensitivity": jsIntlCollatorSensitivityEnum,
+            "ignorePunctuation": .boolean,
         ]
     )
 
