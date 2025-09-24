@@ -423,6 +423,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsIntlListFormat)
         registerObjectGroup(.jsIntlListFormatConstructor)
         registerObjectGroup(.jsIntlListFormatPrototype)
+        registerObjectGroup(.jsIntlNumberFormat)
+        registerObjectGroup(.jsIntlNumberFormatConstructor)
+        registerObjectGroup(.jsIntlNumberFormatPrototype)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -442,6 +445,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsIntlNumberingSystemEnum)
         registerEnumeration(OptionsBag.jsIntlHourCycleEnum)
         registerEnumeration(OptionsBag.jsIntlLongShortNarrowEnum)
+        registerEnumeration(OptionsBag.jsIntlLongShortEnum)
         registerEnumeration(OptionsBag.jsIntlNumeric2DigitEnum)
         registerEnumeration(OptionsBag.jsIntlMonthEnum)
         registerEnumeration(OptionsBag.jsIntlTimeZoneNameEnum)
@@ -452,6 +456,16 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsIntlCaseFirstEnum)
         registerEnumeration(OptionsBag.jsIntlCollatorSensitivityEnum)
         registerEnumeration(OptionsBag.jsIntlListFormatTypeEnum)
+        registerEnumeration(OptionsBag.jsIntlNumberFormatStyleEnum)
+        registerEnumeration(OptionsBag.jsIntlCurrencySystemEnum)
+        registerEnumeration(OptionsBag.jsIntlCurrencyDisplayEnum)
+        registerEnumeration(OptionsBag.jsIntlCurrencySignEnum)
+        registerEnumeration(OptionsBag.jsIntlRoundingPriorityEnum)
+        registerEnumeration(OptionsBag.jsIntlRoundingModeEnum)
+        registerEnumeration(OptionsBag.jsIntlTrailingZeroDisplayEnum)
+        registerEnumeration(OptionsBag.jsIntlNumberFormatNotationEnum)
+        registerEnumeration(OptionsBag.jsIntlNumberFormatGroupingEnum)
+        registerEnumeration(OptionsBag.jsIntlSignDisplayEnum)
         registerEnumeration(OptionsBag.base64Alphabet)
         registerEnumeration(OptionsBag.base64LastChunkHandling)
 
@@ -472,6 +486,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsIntlDateTimeFormatSettings)
         registerOptionsBag(.jsIntlCollatorSettings)
         registerOptionsBag(.jsIntlListFormatSettings)
+        registerOptionsBag(.jsIntlNumberFormatSettings)
         registerOptionsBag(.jsIntlLocaleMatcherSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
@@ -494,6 +509,7 @@ public class JavaScriptEnvironment: ComponentBase {
             }
         })
         addNamedStringGenerator(forType: .jsIntlLocaleLike, with: { ProgramBuilder.constructIntlLocaleString() })
+        addNamedStringGenerator(forType: .jsIntlUnit, with: { ProgramBuilder.constructIntlUnit() })
 
         // Temporal types are produced by a large number of methods; which means findOrGenerateType(), when asked to produce
         // a Temporal type, will tend towards trying to call a method on another Temporal type, which needs more Temporal types,
@@ -671,17 +687,17 @@ public class JavaScriptEnvironment: ComponentBase {
     public func registerEnumeration(_ type: ILType) {
         assert(type.isEnumeration)
         let group = type.group!
-        assert(enums[group] == nil)
+        assert(enums[group] == nil, "Registered duplicate enum \(group)")
         enums[group] = type
     }
 
     public func registerObjectGroup(_ group: ObjectGroup) {
-        assert(groups[group.name] == nil)
+        assert(groups[group.name] == nil, "Registered duplicate enum \(group.name)")
         groups[group.name] = group
         builtinProperties.formUnion(group.properties.keys)
         builtinMethods.formUnion(group.methods.keys)
 
-        //
+        //func register
         // Step 1: Initialize `subtypes`
         //
         subtypes[group.instanceType] = [group.instanceType]
@@ -1267,11 +1283,11 @@ public extension ObjectGroup {
         let name = receiver.name + ".prototype"
         var properties = Dictionary(uniqueKeysWithValues: receiver.methods.map {
             ($0.0, ILType.unboundFunction($0.1.first, receiver: receiver.instanceType)) })
-        if receiver.name == "Intl.DateTimeFormat" {
-            // DateTimeFormat.format is a getter instead of regular function, and errors
-            // when called on the prototype. We hide this from the prototype object to avoid
-            // generating `let v0 = Intl.DateTimeFormat.prototype.format`.
-            // https://tc39.es/ecma402/#sec-intl.datetimeformat.prototype.format
+        // These functions are getters instead of regular functions, and error when called
+        // on the prototype. We hide them from the prototype object to avoid
+        // generating `let v0 = Intl.DateTimeFormat.prototype.format`.
+        // https://tc39.es/ecma402/#sec-intl.datetimeformat.prototype.format
+        if receiver.name == "Intl.DateTimeFormat" || receiver.name == "Intl.NumberFormat" {
             properties.removeValue(forKey: "format")
         } else if receiver.name == "Intl.Collator" {
             properties.removeValue(forKey: "compare")
@@ -2921,7 +2937,11 @@ extension ILType {
     static let jsIntlListFormat = ILType.object(ofGroup: "Intl.ListFormat", withProperties: [], withMethods: ["format", "formatToParts", "resolvedOptions"])
     static let jsIntlListFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlListFormatSettings.group.instanceType)] => .jsIntlListFormat) + .object(ofGroup: "IntlListFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
 
+    static let jsIntlNumberFormat = ILType.object(ofGroup: "Intl.NumberFormat", withProperties: [], withMethods: ["format", "formatRange", "formatRangeToParts", "formatToParts", "resolvedOptions"])
+    static let jsIntlNumberFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlNumberFormatSettings.group.instanceType)] => .jsIntlNumberFormat) + .object(ofGroup: "IntlNumberFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
     static let jsIntlLocaleLike = ILType.namedString(ofName: "IntlLocaleString")
+    static let jsIntlUnit = ILType.namedString(ofName: "IntlUnitString")
 }
 
 extension ObjectGroup {
@@ -3031,6 +3051,47 @@ extension ObjectGroup {
         ]
     )
 
+    fileprivate static func numberFormatSignature(_ returnType: ILType) -> [Signature] {
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/format
+        [ILType.number, .bigint, .string].map {
+            [.opt($0)] => returnType
+        }
+    }
+    fileprivate static func numberFormatRangeSignature(_ returnType: ILType) -> [Signature] {
+        [ILType.number, .bigint, .string].flatMap { firstParam in
+            [ILType.number, .bigint, .string].map {
+                [.opt(firstParam), .opt($0)] => returnType
+            }
+        }
+    }
+
+    static let jsIntlNumberFormat = ObjectGroup(
+        name: "Intl.NumberFormat",
+        instanceType: .jsIntlNumberFormat,
+        properties: [:],
+        overloads: [
+            "format": numberFormatSignature(.string),
+            "formatRange": numberFormatRangeSignature(.string),
+            "formatRangeToParts": numberFormatRangeSignature(.jsArray),
+            "formatToParts": numberFormatSignature(.jsArray),
+            "resolvedOptions": [[] => .object()],
+        ]
+    )
+
+    static let jsIntlNumberFormatPrototype = createPrototypeObjectGroup(jsIntlNumberFormat)
+
+    static let jsIntlNumberFormatConstructor = ObjectGroup(
+        name: "IntlNumberFormatConstructor",
+        constructorPath: "Intl.NumberFormat",
+        instanceType: .jsIntlNumberFormatConstructor,
+        properties: [
+            "prototype" : jsIntlNumberFormatPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
 }
 
 extension OptionsBag {
@@ -3038,6 +3099,7 @@ extension OptionsBag {
     fileprivate static let jsIntlNumberingSystemEnum = ILType.enumeration(ofName: "IntlNumberingSystem", withValues: Locale.NumberingSystem.availableNumberingSystems.map { $0.identifier })
     fileprivate static let jsIntlHourCycleEnum = ILType.enumeration(ofName: "IntlHourCycle", withValues: ["h11", "h12", "h23", "h24"])
     fileprivate static let jsIntlLongShortNarrowEnum = ILType.enumeration(ofName: "IntlLongShortNarrow", withValues: ["long", "short", "narrow"])
+    fileprivate static let jsIntlLongShortEnum = ILType.enumeration(ofName: "IntlLongShort", withValues: ["long", "short"])
     fileprivate static let jsIntlNumeric2DigitEnum = ILType.enumeration(ofName: "IntlNumeric2Digit", withValues: ["numeric", "2-digit"])
     fileprivate static let jsIntlMonthEnum = ILType.enumeration(ofName: "IntlMonth", withValues: ["numeric", "2-digit", "long", "short", "narrow"])
     fileprivate static let jsIntlTimeZoneNameEnum = ILType.enumeration(ofName: "IntlTimeZoneName", withValues: ["long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric"])
@@ -3048,6 +3110,16 @@ extension OptionsBag {
     fileprivate static let jsIntlCaseFirstEnum = ILType.enumeration(ofName: "IntlCaseFirst", withValues: ["upper", "lower", "false"])
     fileprivate static let jsIntlCollatorSensitivityEnum = ILType.enumeration(ofName: "IntlCollatorSensitivity", withValues: ["base", "accent", "case", "variant"])
     fileprivate static let jsIntlListFormatTypeEnum = ILType.enumeration(ofName: "IntlListFormatTypeEnum", withValues: ["conjunction", "disjunction", "unit"])
+    fileprivate static let jsIntlNumberFormatStyleEnum = ILType.enumeration(ofName: "IntlNumberFormatStyleEnum", withValues: ["decimal", "currency", "percent", "unit"])
+    fileprivate static let jsIntlCurrencySystemEnum = ILType.enumeration(ofName: "IntlCurrency", withValues: Locale.Currency.isoCurrencies.map { $0.identifier })
+    fileprivate static let jsIntlCurrencyDisplayEnum = ILType.enumeration(ofName: "IntlCurrencyDisplayEnum", withValues: ["code", "symbol", "narrowSymbol", "name"])
+    fileprivate static let jsIntlCurrencySignEnum = ILType.enumeration(ofName: "IntlCurrencySignEnum", withValues: ["standard", "accounting"])
+    fileprivate static let jsIntlRoundingPriorityEnum = ILType.enumeration(ofName: "IntlRoundingPriority", withValues: ["auto", "morePrecision", "lessPrecision"])
+    fileprivate static let jsIntlRoundingModeEnum = ILType.enumeration(ofName: "IntlRoundingMode", withValues: ["ceil", "floor", "expand", "trunc", "halfCeil", "halfFloor", "halfExpand", "halfTrunc", "halfEven"])
+    fileprivate static let jsIntlTrailingZeroDisplayEnum = ILType.enumeration(ofName: "IntlTrailingZeroDisplay", withValues: ["auto", "stripIfInteger"])
+    fileprivate static let jsIntlNumberFormatNotationEnum = ILType.enumeration(ofName: "IntlNumberFormatNotation", withValues: ["standard", "scientific", "engineering", "compact"])
+    fileprivate static let jsIntlNumberFormatGroupingEnum = ILType.enumeration(ofName: "IntlNumberFormatGrouping", withValues: ["always", "auto", "min2", "true", "false"])
+    fileprivate static let jsIntlSignDisplayEnum = ILType.enumeration(ofName: "IntlSignDisplay", withValues: ["auto", "always", "exceptZero", "negative", "never"])
 
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters
     static let jsIntlDateTimeFormatSettings = OptionsBag(
@@ -3100,6 +3172,38 @@ extension OptionsBag {
             "localeMatcher": jsIntlLocaleMatcherEnum,
             "type": jsIntlListFormatTypeEnum,
             "style": jsIntlLongShortNarrowEnum,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/NumberFormat#options
+    static let jsIntlNumberFormatSettings = OptionsBag(
+        name: "IntlNumberFormatSettings",
+        properties: [
+            // locale options
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "numberingSystem": jsIntlNumberingSystemEnum,
+            // style options
+            "style": jsIntlNumberFormatStyleEnum,
+            "currency": jsIntlCurrencySystemEnum,
+            "currencyDisplay": jsIntlCurrencyDisplayEnum,
+            "currencySign": jsIntlCurrencySignEnum,
+            "unit": .jsIntlUnit,
+            "unitDisplay": jsIntlLongShortNarrowEnum,
+            // digit options
+            "minimumIntegerDigits": .integer,
+            "minimumFractionDigits": .integer,
+            "maximumFractionDigits": .integer,
+            "minimumSignificantDigits": .integer,
+            "maximumSignificantDigits": .integer,
+            "roundingPriority": jsIntlRoundingPriorityEnum,
+            "roundingIncrement": .integer,
+            "roundingMode": jsIntlRoundingModeEnum,
+            "trailingZeroDisplay": jsIntlTrailingZeroDisplayEnum,
+            // other options
+            "notation": jsIntlNumberFormatNotationEnum,
+            "compactDisplay": jsIntlLongShortEnum,
+            "useGrouping": jsIntlNumberFormatGroupingEnum,
+            "signDisplay": jsIntlSignDisplayEnum,
         ]
     )
 

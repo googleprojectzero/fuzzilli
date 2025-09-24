@@ -5147,6 +5147,20 @@ public class ProgramBuilder {
         return chooseUniform(from: Locale.availableIdentifiers)
     }
 
+    // Obtained by calling Intl.supportedValuesOf("unit") in a browser
+    fileprivate static let allUnits = ["acre", "bit", "byte", "celsius", "centimeter", "day", "degree", "fahrenheit", "fluid-ounce", "foot", "gallon", "gigabit", "gigabyte", "gram", "hectare", "hour", "inch", "kilobit", "kilobyte", "kilogram", "kilometer", "liter", "megabit", "megabyte", "meter", "microsecond", "mile", "mile-scandinavian", "milliliter", "millimeter", "millisecond", "minute", "month", "nanosecond", "ounce", "percent", "petabyte", "pound", "second", "stone", "terabit", "terabyte", "week", "yard", "year"]
+
+    @discardableResult
+    static func constructIntlUnit() -> String {
+        let firstUnit = chooseUniform(from: allUnits)
+        // Intl is able to format combinations of units too, like hectares-per-gallon
+        if probability(0.7) {
+            return firstUnit
+        } else {
+            return "\(firstUnit)-per-\(chooseUniform(from: allUnits))"
+        }
+    }
+
     // Generic generators for Intl types.
     private func constructIntlType(type: String, optionsBag: OptionsBag) -> Variable {
         let intl = createNamedVariable(forBuiltin: "Intl")
@@ -5177,4 +5191,10 @@ public class ProgramBuilder {
     func constructIntlListFormat() -> Variable {
         return constructIntlType(type: "ListFormat", optionsBag: .jsIntlListFormatSettings)
     }
+
+    @discardableResult
+    func constructIntlNumberFormat() -> Variable {
+        return constructIntlType(type: "NumberFormat", optionsBag: .jsIntlNumberFormatSettings)
+    }
 }
+
