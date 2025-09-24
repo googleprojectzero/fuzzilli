@@ -120,6 +120,10 @@ let v8Profile = Profile(
             args.append("--precise-object-pinning")
         }
 
+        if probability(0.1) {
+            args.append("--handle-weak-ref-weakly-in-minor-gc")
+        }
+
         // Temporarily enable the three flags below with high probability to
         // stress-test JSPI.
         // Lower the probabilities once we have enough coverage.
