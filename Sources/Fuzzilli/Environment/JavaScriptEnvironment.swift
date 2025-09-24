@@ -444,6 +444,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(.jsTemporalCalendarEnum)
         registerEnumeration(ObjectGroup.jsTemporalDirectionParam)
         registerEnumeration(ObjectGroup.jsIntlRelativeTimeFormatUnitEnum)
+        registerEnumeration(ObjectGroup.jsIntlSupportedValuesEnum)
         registerEnumeration(OptionsBag.jsTemporalUnitEnum)
         registerEnumeration(OptionsBag.jsTemporalRoundingModeEnum)
         registerEnumeration(OptionsBag.jsTemporalShowCalendarEnum)
@@ -2943,7 +2944,7 @@ extension OptionsBag {
 // Intl
 extension ILType {
     // Intl types
-    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat", "NumberFormat", "PluralRules", "RelativeTimeFormat", "Segmenter"])
+    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat", "NumberFormat", "PluralRules", "RelativeTimeFormat", "Segmenter"], withMethods: ["getCanonicalLocales", "supportedValuesOf"])
 
     static let jsIntlCollator = ILType.object(ofGroup: "Intl.Collator", withProperties: [], withMethods: ["compare", "resolvedOptions"])
     static let jsIntlCollatorConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlCollatorSettings.group.instanceType)] => .jsIntlCollator) + .object(ofGroup: "IntlCollatorConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
@@ -2973,6 +2974,8 @@ extension ILType {
 }
 
 extension ObjectGroup {
+    static let jsIntlSupportedValuesEnum = ILType.enumeration(ofName: "IntlSupportedValues", withValues: ["calendar", "collation", "currency", "numberingSystem", "timeZone"])
+
     static let jsIntlObject = ObjectGroup(
         name: "Intl",
         instanceType: .jsIntlObject,
@@ -2985,7 +2988,10 @@ extension ObjectGroup {
             "RelativeTimeFormat"  : .jsIntlRelativeTimeFormatConstructor,
             "Segmenter"  : .jsIntlSegmenterConstructor,
         ],
-        methods: [:]
+        methods: [
+            "getCanonicalLocales": [] => .jsArray,
+            "supportedValuesOf": [.plain(jsIntlSupportedValuesEnum)] => .jsArray,
+        ]
     )
 
     static let jsIntlCollator = ObjectGroup(
