@@ -429,6 +429,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsIntlPluralRules)
         registerObjectGroup(.jsIntlPluralRulesConstructor)
         registerObjectGroup(.jsIntlPluralRulesPrototype)
+        registerObjectGroup(.jsIntlRelativeTimeFormat)
+        registerObjectGroup(.jsIntlRelativeTimeFormatConstructor)
+        registerObjectGroup(.jsIntlRelativeTimeFormatPrototype)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -436,6 +439,7 @@ public class JavaScriptEnvironment: ComponentBase {
 
         registerEnumeration(.jsTemporalCalendarEnum)
         registerEnumeration(ObjectGroup.jsTemporalDirectionParam)
+        registerEnumeration(ObjectGroup.jsIntlRelativeTimeFormatUnitEnum)
         registerEnumeration(OptionsBag.jsTemporalUnitEnum)
         registerEnumeration(OptionsBag.jsTemporalRoundingModeEnum)
         registerEnumeration(OptionsBag.jsTemporalShowCalendarEnum)
@@ -449,6 +453,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsIntlHourCycleEnum)
         registerEnumeration(OptionsBag.jsIntlLongShortNarrowEnum)
         registerEnumeration(OptionsBag.jsIntlLongShortEnum)
+        registerEnumeration(OptionsBag.jsIntlAutoAlwaysEnum)
         registerEnumeration(OptionsBag.jsIntlNumeric2DigitEnum)
         registerEnumeration(OptionsBag.jsIntlMonthEnum)
         registerEnumeration(OptionsBag.jsIntlTimeZoneNameEnum)
@@ -492,6 +497,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsIntlListFormatSettings)
         registerOptionsBag(.jsIntlNumberFormatSettings)
         registerOptionsBag(.jsIntlPluralRulesSettings)
+        registerOptionsBag(.jsIntlRelativeTimeFormatSettings)
         registerOptionsBag(.jsIntlLocaleMatcherSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
@@ -2931,7 +2937,7 @@ extension OptionsBag {
 // Intl
 extension ILType {
     // Intl types
-    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat", "NumberFormat", "PluralRules"])
+    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat", "NumberFormat", "PluralRules", "RelativeTimeFormat"])
 
     static let jsIntlCollator = ILType.object(ofGroup: "Intl.Collator", withProperties: [], withMethods: ["compare", "resolvedOptions"])
     static let jsIntlCollatorConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlCollatorSettings.group.instanceType)] => .jsIntlCollator) + .object(ofGroup: "IntlCollatorConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
@@ -2948,6 +2954,9 @@ extension ILType {
     static let jsIntlPluralRules = ILType.object(ofGroup: "Intl.PluralRules", withProperties: [], withMethods: ["select", "selectRange", "resolvedOptions"])
     static let jsIntlPluralRulesConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlPluralRulesSettings.group.instanceType)] => .jsIntlPluralRules) + .object(ofGroup: "IntlPluralRulesConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
 
+    static let jsIntlRelativeTimeFormat = ILType.object(ofGroup: "Intl.RelativeTimeFormat", withProperties: [], withMethods: ["format", "formatToParts", "resolvedOptions"])
+    static let jsIntlRelativeTimeFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlRelativeTimeFormatSettings.group.instanceType)] => .jsIntlRelativeTimeFormat) + .object(ofGroup: "IntlRelativeTimeFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
     static let jsIntlLocaleLike = ILType.namedString(ofName: "IntlLocaleString")
     static let jsIntlUnit = ILType.namedString(ofName: "IntlUnitString")
 }
@@ -2962,6 +2971,7 @@ extension ObjectGroup {
             "ListFormat"  : .jsIntlListFormatConstructor,
             "NumberFormat"  : .jsIntlNumberFormatConstructor,
             "PluralRules"  : .jsIntlPluralRulesConstructor,
+            "RelativeTimeFormat"  : .jsIntlRelativeTimeFormatConstructor,
         ],
         methods: [:]
     )
@@ -3128,6 +3138,34 @@ extension ObjectGroup {
             "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
         ]
     )
+
+    static let jsIntlRelativeTimeFormatUnitEnum = ILType.enumeration(ofName: "IntlRelativeTimeFormatUnit", withValues: ["year", "quarter", "month", "week", "day", "hour", "minute", "second"])
+
+    static let jsIntlRelativeTimeFormat = ObjectGroup(
+        name: "Intl.RelativeTimeFormat",
+        instanceType: .jsIntlRelativeTimeFormat,
+        properties: [:],
+        methods: [
+            "format": [.number, .plain(jsIntlRelativeTimeFormatUnitEnum)] => .string,
+            "formatToParts": [.number, .plain(jsIntlRelativeTimeFormatUnitEnum)] => .jsArray,
+            "resolvedOptions": [] => .object(),
+        ]
+    )
+
+    static let jsIntlRelativeTimeFormatPrototype = createPrototypeObjectGroup(jsIntlRelativeTimeFormat)
+
+    static let jsIntlRelativeTimeFormatConstructor = ObjectGroup(
+        name: "IntlRelativeTimeFormatConstructor",
+        constructorPath: "Intl.RelativeTimeFormat",
+        instanceType: .jsIntlRelativeTimeFormatConstructor,
+        properties: [
+            "prototype" : jsIntlRelativeTimeFormatPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
 }
 
 extension OptionsBag {
@@ -3136,6 +3174,7 @@ extension OptionsBag {
     fileprivate static let jsIntlHourCycleEnum = ILType.enumeration(ofName: "IntlHourCycle", withValues: ["h11", "h12", "h23", "h24"])
     fileprivate static let jsIntlLongShortNarrowEnum = ILType.enumeration(ofName: "IntlLongShortNarrow", withValues: ["long", "short", "narrow"])
     fileprivate static let jsIntlLongShortEnum = ILType.enumeration(ofName: "IntlLongShort", withValues: ["long", "short"])
+    fileprivate static let jsIntlAutoAlwaysEnum = ILType.enumeration(ofName: "IntlAutoAlways", withValues: ["auto", "always"])
     fileprivate static let jsIntlNumeric2DigitEnum = ILType.enumeration(ofName: "IntlNumeric2Digit", withValues: ["numeric", "2-digit"])
     fileprivate static let jsIntlMonthEnum = ILType.enumeration(ofName: "IntlMonth", withValues: ["numeric", "2-digit", "long", "short", "narrow"])
     fileprivate static let jsIntlTimeZoneNameEnum = ILType.enumeration(ofName: "IntlTimeZoneName", withValues: ["long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric"])
@@ -3261,6 +3300,17 @@ extension OptionsBag {
             "roundingIncrement": .integer,
             "roundingMode": jsIntlRoundingModeEnum,
 
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/RelativeTimeFormat/RelativeTimeFormat#options
+    static let jsIntlRelativeTimeFormatSettings = OptionsBag(
+        name: "IntlRelativeTimeFormatSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "numberingSystem": jsIntlNumberingSystemEnum,
+            "style": jsIntlLongShortNarrowEnum,
+            "numeric": jsIntlAutoAlwaysEnum,
         ]
     )
 

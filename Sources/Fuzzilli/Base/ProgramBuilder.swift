@@ -5201,5 +5201,10 @@ public class ProgramBuilder {
     func constructIntlPluralRules() -> Variable {
         return constructIntlType(type: "PluralRules", optionsBag: .jsIntlPluralRulesSettings)
     }
+
+    @discardableResult
+    func constructIntlRelativeTimeFormat() -> Variable {
+        return constructIntlType(type: "RelativeTimeFormat", optionsBag: .jsIntlRelativeTimeFormatSettings)
+    }
 }
 
