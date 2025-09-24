@@ -432,6 +432,10 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsIntlRelativeTimeFormat)
         registerObjectGroup(.jsIntlRelativeTimeFormatConstructor)
         registerObjectGroup(.jsIntlRelativeTimeFormatPrototype)
+        registerObjectGroup(.jsIntlSegmenter)
+        registerObjectGroup(.jsIntlSegmenterConstructor)
+        registerObjectGroup(.jsIntlSegmenterPrototype)
+        registerObjectGroup(.jsIntlSegmenterSegments)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -475,6 +479,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsIntlNumberFormatGroupingEnum)
         registerEnumeration(OptionsBag.jsIntlSignDisplayEnum)
         registerEnumeration(OptionsBag.jsIntlPluralRulesTypeEnum)
+        registerEnumeration(OptionsBag.jsIntlSegmenterGranularityEnum)
         registerEnumeration(OptionsBag.base64Alphabet)
         registerEnumeration(OptionsBag.base64LastChunkHandling)
 
@@ -498,6 +503,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsIntlNumberFormatSettings)
         registerOptionsBag(.jsIntlPluralRulesSettings)
         registerOptionsBag(.jsIntlRelativeTimeFormatSettings)
+        registerOptionsBag(.jsIntlSegmenterSettings)
         registerOptionsBag(.jsIntlLocaleMatcherSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
@@ -2937,7 +2943,7 @@ extension OptionsBag {
 // Intl
 extension ILType {
     // Intl types
-    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat", "NumberFormat", "PluralRules", "RelativeTimeFormat"])
+    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat", "NumberFormat", "PluralRules", "RelativeTimeFormat", "Segmenter"])
 
     static let jsIntlCollator = ILType.object(ofGroup: "Intl.Collator", withProperties: [], withMethods: ["compare", "resolvedOptions"])
     static let jsIntlCollatorConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlCollatorSettings.group.instanceType)] => .jsIntlCollator) + .object(ofGroup: "IntlCollatorConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
@@ -2957,6 +2963,11 @@ extension ILType {
     static let jsIntlRelativeTimeFormat = ILType.object(ofGroup: "Intl.RelativeTimeFormat", withProperties: [], withMethods: ["format", "formatToParts", "resolvedOptions"])
     static let jsIntlRelativeTimeFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlRelativeTimeFormatSettings.group.instanceType)] => .jsIntlRelativeTimeFormat) + .object(ofGroup: "IntlRelativeTimeFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
 
+    static let jsIntlSegmenter = ILType.object(ofGroup: "Intl.Segmenter", withProperties: [], withMethods: ["segment", "resolvedOptions"])
+    static let jsIntlSegmenterConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlSegmenterSettings.group.instanceType)] => .jsIntlSegmenter) + .object(ofGroup: "IntlSegmenterConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlSegmenterSegments = ILType.object(ofGroup: "IntlSegmenterSegments", withProperties: [], withMethods: ["containing"])
+
     static let jsIntlLocaleLike = ILType.namedString(ofName: "IntlLocaleString")
     static let jsIntlUnit = ILType.namedString(ofName: "IntlUnitString")
 }
@@ -2972,6 +2983,7 @@ extension ObjectGroup {
             "NumberFormat"  : .jsIntlNumberFormatConstructor,
             "PluralRules"  : .jsIntlPluralRulesConstructor,
             "RelativeTimeFormat"  : .jsIntlRelativeTimeFormatConstructor,
+            "Segmenter"  : .jsIntlSegmenterConstructor,
         ],
         methods: [:]
     )
@@ -3166,6 +3178,39 @@ extension ObjectGroup {
             "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
         ]
     )
+
+    static let jsIntlSegmenter = ObjectGroup(
+        name: "Intl.Segmenter",
+        instanceType: .jsIntlSegmenter,
+        properties: [:],
+        methods: [
+            "segment": [.string] => .jsIntlSegmenterSegments,
+            "resolvedOptions": [] => .object(),
+        ]
+    )
+
+    static let jsIntlSegmenterPrototype = createPrototypeObjectGroup(jsIntlSegmenter)
+
+    static let jsIntlSegmenterConstructor = ObjectGroup(
+        name: "IntlSegmenterConstructor",
+        constructorPath: "Intl.Segmenter",
+        instanceType: .jsIntlSegmenterConstructor,
+        properties: [
+            "prototype" : jsIntlSegmenterPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+    static let jsIntlSegmenterSegments = ObjectGroup(
+        name: "IntlSegmenterSegments",
+        instanceType: .jsIntlSegmenterSegments,
+        properties: [:],
+        methods: [
+            "containing": [.number] => .object(),
+        ]
+    )
 }
 
 extension OptionsBag {
@@ -3196,6 +3241,7 @@ extension OptionsBag {
     fileprivate static let jsIntlNumberFormatGroupingEnum = ILType.enumeration(ofName: "IntlNumberFormatGrouping", withValues: ["always", "auto", "min2", "true", "false"])
     fileprivate static let jsIntlSignDisplayEnum = ILType.enumeration(ofName: "IntlSignDisplay", withValues: ["auto", "always", "exceptZero", "negative", "never"])
     fileprivate static let jsIntlPluralRulesTypeEnum = ILType.enumeration(ofName: "IntlPluralRulesTypeEnum", withValues: ["cardinal", "ordinal"])
+    fileprivate static let jsIntlSegmenterGranularityEnum = ILType.enumeration(ofName: "IntlSegmenterGranularityEnum", withValues: ["grapheme", "word", "sentence"])
 
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters
     static let jsIntlDateTimeFormatSettings = OptionsBag(
@@ -3311,6 +3357,15 @@ extension OptionsBag {
             "numberingSystem": jsIntlNumberingSystemEnum,
             "style": jsIntlLongShortNarrowEnum,
             "numeric": jsIntlAutoAlwaysEnum,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter/Segmenter#options
+    static let jsIntlSegmenterSettings = OptionsBag(
+        name: "IntlSegmenterSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "granularity": jsIntlSegmenterGranularityEnum,
         ]
     )
 
