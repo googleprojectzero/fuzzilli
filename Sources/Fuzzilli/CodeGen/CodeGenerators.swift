@@ -150,7 +150,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("BuiltinIntlGenerator") { b in
-        let _ = chooseUniform(from: [b.constructIntlDateTimeFormat, b.constructIntlCollator, b.constructIntlListFormat, b.constructIntlNumberFormat, b.constructIntlPluralRules])()
+        let _ = chooseUniform(from: [b.constructIntlDateTimeFormat, b.constructIntlCollator, b.constructIntlListFormat, b.constructIntlNumberFormat, b.constructIntlPluralRules, b.constructIntlRelativeTimeFormat])()
     },
 
     CodeGenerator("HexGenerator") { b in
