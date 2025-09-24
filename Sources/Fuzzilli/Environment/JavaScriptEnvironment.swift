@@ -420,6 +420,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsIntlDateTimeFormat)
         registerObjectGroup(.jsIntlDateTimeFormatConstructor)
         registerObjectGroup(.jsIntlDateTimeFormatPrototype)
+        registerObjectGroup(.jsIntlListFormat)
+        registerObjectGroup(.jsIntlListFormatConstructor)
+        registerObjectGroup(.jsIntlListFormatPrototype)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -448,6 +451,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsIntlCollationEnum)
         registerEnumeration(OptionsBag.jsIntlCaseFirstEnum)
         registerEnumeration(OptionsBag.jsIntlCollatorSensitivityEnum)
+        registerEnumeration(OptionsBag.jsIntlListFormatTypeEnum)
         registerEnumeration(OptionsBag.base64Alphabet)
         registerEnumeration(OptionsBag.base64LastChunkHandling)
 
@@ -467,6 +471,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsTemporalPlainDateToZDTSettings)
         registerOptionsBag(.jsIntlDateTimeFormatSettings)
         registerOptionsBag(.jsIntlCollatorSettings)
+        registerOptionsBag(.jsIntlListFormatSettings)
         registerOptionsBag(.jsIntlLocaleMatcherSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
@@ -2905,13 +2910,16 @@ extension OptionsBag {
 // Intl
 extension ILType {
     // Intl types
-    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator"])
+    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat"])
 
     static let jsIntlCollator = ILType.object(ofGroup: "Intl.Collator", withProperties: [], withMethods: ["compare", "resolvedOptions"])
     static let jsIntlCollatorConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlCollatorSettings.group.instanceType)] => .jsIntlCollator) + .object(ofGroup: "IntlCollatorConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
 
     static let jsIntlDateTimeFormat = ILType.object(ofGroup: "Intl.DateTimeFormat", withProperties: [], withMethods: ["format", "formatRange", "formatRangeToParts", "formatToParts", "resolvedOptions"])
     static let jsIntlDateTimeFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlDateTimeFormatSettings.group.instanceType)] => .jsIntlDateTimeFormat) + .object(ofGroup: "IntlDateTimeFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlListFormat = ILType.object(ofGroup: "Intl.ListFormat", withProperties: [], withMethods: ["format", "formatToParts", "resolvedOptions"])
+    static let jsIntlListFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlListFormatSettings.group.instanceType)] => .jsIntlListFormat) + .object(ofGroup: "IntlListFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
 
     static let jsIntlLocaleLike = ILType.namedString(ofName: "IntlLocaleString")
 }
@@ -2923,6 +2931,7 @@ extension ObjectGroup {
         properties: [
             "Collator"  : .jsIntlCollatorConstructor,
             "DateTimeFormat"  : .jsIntlDateTimeFormatConstructor,
+            "ListFormat"  : .jsIntlListFormatConstructor,
         ],
         methods: [:]
     )
@@ -2996,6 +3005,32 @@ extension ObjectGroup {
         ]
     )
 
+    static let jsIntlListFormat = ObjectGroup(
+        name: "Intl.ListFormat",
+        instanceType: .jsIntlListFormat,
+        properties: [:],
+        methods: [
+            "format": [.plain(.jsArray)] => .string,
+            "formatToParts": [.plain(.jsArray)] => .jsArray,
+            "resolvedOptions": [] => .object(),
+        ]
+    )
+
+    static let jsIntlListFormatPrototype = createPrototypeObjectGroup(jsIntlListFormat)
+
+    static let jsIntlListFormatConstructor = ObjectGroup(
+        name: "IntlListFormatConstructor",
+        constructorPath: "Intl.ListFormat",
+        instanceType: .jsIntlListFormatConstructor,
+        properties: [
+            "prototype" : jsIntlListFormatPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+
 }
 
 extension OptionsBag {
@@ -3012,6 +3047,7 @@ extension OptionsBag {
     fileprivate static let jsIntlCollationEnum = ILType.enumeration(ofName: "IntlCollation", withValues: ["emoji", "pinyin", "stroke"])
     fileprivate static let jsIntlCaseFirstEnum = ILType.enumeration(ofName: "IntlCaseFirst", withValues: ["upper", "lower", "false"])
     fileprivate static let jsIntlCollatorSensitivityEnum = ILType.enumeration(ofName: "IntlCollatorSensitivity", withValues: ["base", "accent", "case", "variant"])
+    fileprivate static let jsIntlListFormatTypeEnum = ILType.enumeration(ofName: "IntlListFormatTypeEnum", withValues: ["conjunction", "disjunction", "unit"])
 
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters
     static let jsIntlDateTimeFormatSettings = OptionsBag(
@@ -3054,6 +3090,16 @@ extension OptionsBag {
             "caseFirst": jsIntlCaseFirstEnum,
             "sensitivity": jsIntlCollatorSensitivityEnum,
             "ignorePunctuation": .boolean,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat/ListFormat#options
+    static let jsIntlListFormatSettings = OptionsBag(
+        name: "IntlListFormatSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "type": jsIntlListFormatTypeEnum,
+            "style": jsIntlLongShortNarrowEnum,
         ]
     )
 
