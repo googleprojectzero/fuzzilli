@@ -5206,5 +5206,10 @@ public class ProgramBuilder {
     func constructIntlRelativeTimeFormat() -> Variable {
         return constructIntlType(type: "RelativeTimeFormat", optionsBag: .jsIntlRelativeTimeFormatSettings)
     }
+
+    @discardableResult
+    func constructIntlSegmenter() -> Variable {
+        return constructIntlType(type: "Segmenter", optionsBag: .jsIntlSegmenterSettings)
+    }
 }
 
