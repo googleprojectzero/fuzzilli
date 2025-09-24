@@ -5173,4 +5173,8 @@ public class ProgramBuilder {
         return constructIntlType(type: "Collator", optionsBag: .jsIntlCollatorSettings)
     }
 
+    @discardableResult
+    func constructIntlListFormat() -> Variable {
+        return constructIntlType(type: "ListFormat", optionsBag: .jsIntlListFormatSettings)
+    }
 }
