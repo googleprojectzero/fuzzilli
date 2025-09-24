@@ -426,6 +426,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsIntlNumberFormat)
         registerObjectGroup(.jsIntlNumberFormatConstructor)
         registerObjectGroup(.jsIntlNumberFormatPrototype)
+        registerObjectGroup(.jsIntlPluralRules)
+        registerObjectGroup(.jsIntlPluralRulesConstructor)
+        registerObjectGroup(.jsIntlPluralRulesPrototype)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -466,6 +469,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsIntlNumberFormatNotationEnum)
         registerEnumeration(OptionsBag.jsIntlNumberFormatGroupingEnum)
         registerEnumeration(OptionsBag.jsIntlSignDisplayEnum)
+        registerEnumeration(OptionsBag.jsIntlPluralRulesTypeEnum)
         registerEnumeration(OptionsBag.base64Alphabet)
         registerEnumeration(OptionsBag.base64LastChunkHandling)
 
@@ -487,6 +491,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsIntlCollatorSettings)
         registerOptionsBag(.jsIntlListFormatSettings)
         registerOptionsBag(.jsIntlNumberFormatSettings)
+        registerOptionsBag(.jsIntlPluralRulesSettings)
         registerOptionsBag(.jsIntlLocaleMatcherSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
@@ -2926,7 +2931,7 @@ extension OptionsBag {
 // Intl
 extension ILType {
     // Intl types
-    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat"])
+    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat", "NumberFormat", "PluralRules"])
 
     static let jsIntlCollator = ILType.object(ofGroup: "Intl.Collator", withProperties: [], withMethods: ["compare", "resolvedOptions"])
     static let jsIntlCollatorConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlCollatorSettings.group.instanceType)] => .jsIntlCollator) + .object(ofGroup: "IntlCollatorConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
@@ -2940,6 +2945,9 @@ extension ILType {
     static let jsIntlNumberFormat = ILType.object(ofGroup: "Intl.NumberFormat", withProperties: [], withMethods: ["format", "formatRange", "formatRangeToParts", "formatToParts", "resolvedOptions"])
     static let jsIntlNumberFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlNumberFormatSettings.group.instanceType)] => .jsIntlNumberFormat) + .object(ofGroup: "IntlNumberFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
 
+    static let jsIntlPluralRules = ILType.object(ofGroup: "Intl.PluralRules", withProperties: [], withMethods: ["select", "selectRange", "resolvedOptions"])
+    static let jsIntlPluralRulesConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlPluralRulesSettings.group.instanceType)] => .jsIntlPluralRules) + .object(ofGroup: "IntlPluralRulesConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
     static let jsIntlLocaleLike = ILType.namedString(ofName: "IntlLocaleString")
     static let jsIntlUnit = ILType.namedString(ofName: "IntlUnitString")
 }
@@ -2952,6 +2960,8 @@ extension ObjectGroup {
             "Collator"  : .jsIntlCollatorConstructor,
             "DateTimeFormat"  : .jsIntlDateTimeFormatConstructor,
             "ListFormat"  : .jsIntlListFormatConstructor,
+            "NumberFormat"  : .jsIntlNumberFormatConstructor,
+            "PluralRules"  : .jsIntlPluralRulesConstructor,
         ],
         methods: [:]
     )
@@ -3092,6 +3102,32 @@ extension ObjectGroup {
             "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
         ]
     )
+
+    static let jsIntlPluralRules = ObjectGroup(
+        name: "Intl.PluralRules",
+        instanceType: .jsIntlPluralRules,
+        properties: [:],
+        methods: [
+            "select": [.number] => .string,
+            "selectRange": [.number, .number] => .string,
+            "resolvedOptions": [] => .object(),
+        ]
+    )
+
+    static let jsIntlPluralRulesPrototype = createPrototypeObjectGroup(jsIntlPluralRules)
+
+    static let jsIntlPluralRulesConstructor = ObjectGroup(
+        name: "IntlPluralRulesConstructor",
+        constructorPath: "Intl.PluralRules",
+        instanceType: .jsIntlPluralRulesConstructor,
+        properties: [
+            "prototype" : jsIntlPluralRulesPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
 }
 
 extension OptionsBag {
@@ -3120,6 +3156,7 @@ extension OptionsBag {
     fileprivate static let jsIntlNumberFormatNotationEnum = ILType.enumeration(ofName: "IntlNumberFormatNotation", withValues: ["standard", "scientific", "engineering", "compact"])
     fileprivate static let jsIntlNumberFormatGroupingEnum = ILType.enumeration(ofName: "IntlNumberFormatGrouping", withValues: ["always", "auto", "min2", "true", "false"])
     fileprivate static let jsIntlSignDisplayEnum = ILType.enumeration(ofName: "IntlSignDisplay", withValues: ["auto", "always", "exceptZero", "negative", "never"])
+    fileprivate static let jsIntlPluralRulesTypeEnum = ILType.enumeration(ofName: "IntlPluralRulesTypeEnum", withValues: ["cardinal", "ordinal"])
 
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters
     static let jsIntlDateTimeFormatSettings = OptionsBag(
@@ -3204,6 +3241,26 @@ extension OptionsBag {
             "compactDisplay": jsIntlLongShortEnum,
             "useGrouping": jsIntlNumberFormatGroupingEnum,
             "signDisplay": jsIntlSignDisplayEnum,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/PluralRules/PluralRules#options
+    static let jsIntlPluralRulesSettings = OptionsBag(
+        name: "IntlPluralRulesSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "type": jsIntlPluralRulesTypeEnum,
+
+            // NumberFormat digit options
+            "minimumIntegerDigits": .integer,
+            "minimumFractionDigits": .integer,
+            "maximumFractionDigits": .integer,
+            "minimumSignificantDigits": .integer,
+            "maximumSignificantDigits": .integer,
+            "roundingPriority": jsIntlRoundingPriorityEnum,
+            "roundingIncrement": .integer,
+            "roundingMode": jsIntlRoundingModeEnum,
+
         ]
     )
 

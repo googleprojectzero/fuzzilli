@@ -5196,5 +5196,10 @@ public class ProgramBuilder {
     func constructIntlNumberFormat() -> Variable {
         return constructIntlType(type: "NumberFormat", optionsBag: .jsIntlNumberFormatSettings)
     }
+
+    @discardableResult
+    func constructIntlPluralRules() -> Variable {
+        return constructIntlType(type: "PluralRules", optionsBag: .jsIntlPluralRulesSettings)
+    }
 }
 
