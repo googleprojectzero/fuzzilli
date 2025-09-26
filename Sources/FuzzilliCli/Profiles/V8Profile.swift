@@ -73,7 +73,7 @@ let v8Profile = Profile(
         //
         // Future features that should sometimes be enabled.
         //
-        if probability(0.25) {
+        if probability(0.1) {
             args.append("--minor-ms")
         }
 
