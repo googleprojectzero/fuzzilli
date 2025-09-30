@@ -500,6 +500,14 @@ public class JavaScriptLifter: Lifter {
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
 
+            case .beginClassInstanceComputedMethod(let op):
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = input(0)
+                w.emit("[\(METHOD)](\(PARAMS)) {")
+                w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
+
             case .beginClassInstanceGetter(let op):
                 let PROPERTY = op.propertyName
                 w.emit("get \(PROPERTY)() {")
@@ -516,6 +524,7 @@ public class JavaScriptLifter: Lifter {
                 bindVariableToThis(instr.innerOutput(0))
 
             case .endClassInstanceMethod,
+                 .endClassInstanceComputedMethod,
                  .endClassInstanceGetter,
                  .endClassInstanceSetter:
                 w.leaveCurrentBlock()
@@ -561,6 +570,14 @@ public class JavaScriptLifter: Lifter {
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
 
+            case .beginClassStaticComputedMethod(let op):
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = input(0)
+                w.emit("static [\(METHOD)](\(PARAMS)) {")
+                w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
+
             case .beginClassStaticGetter(let op):
                 assert(instr.numInnerOutputs == 1)
                 let PROPERTY = op.propertyName
@@ -579,6 +596,7 @@ public class JavaScriptLifter: Lifter {
 
             case .endClassStaticInitializer,
                  .endClassStaticMethod,
+                 .endClassStaticComputedMethod,
                  .endClassStaticGetter,
                  .endClassStaticSetter:
                 w.leaveCurrentBlock()

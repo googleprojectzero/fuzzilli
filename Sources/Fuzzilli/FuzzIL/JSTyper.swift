@@ -1218,9 +1218,11 @@ public struct JSTyper: Analyzer {
              .beginConstructor,
              .beginClassConstructor,
              .beginClassInstanceMethod,
+             .beginClassInstanceComputedMethod,
              .beginClassInstanceGetter,
              .beginClassInstanceSetter,
              .beginClassStaticMethod,
+             .beginClassStaticComputedMethod,
              .beginClassStaticGetter,
              .beginClassStaticSetter,
              .beginClassPrivateInstanceMethod,
@@ -1240,9 +1242,11 @@ public struct JSTyper: Analyzer {
              .endConstructor,
              .endClassConstructor,
              .endClassInstanceMethod,
+             .endClassInstanceComputedMethod,
              .endClassInstanceGetter,
              .endClassInstanceSetter,
              .endClassStaticMethod,
+             .endClassStaticComputedMethod,
              .endClassStaticGetter,
              .endClassStaticSetter,
              .endClassPrivateInstanceMethod,
@@ -1528,6 +1532,11 @@ public struct JSTyper: Analyzer {
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
             dynamicObjectGroupManager.addMethod(methodName: op.methodName, of: .jsClass)
 
+        case .beginClassInstanceComputedMethod(let op):
+            // The first inner output is the explicit |this|
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+
         case .beginClassInstanceGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
@@ -1554,6 +1563,11 @@ public struct JSTyper: Analyzer {
             set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
             dynamicObjectGroupManager.addClassStaticMethod(methodName: op.methodName)
+
+        case .beginClassStaticComputedMethod(let op):
+            // The first inner output is the explicit |this|
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .beginClassStaticGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor

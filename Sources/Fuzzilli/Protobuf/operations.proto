@@ -151,6 +151,13 @@ message BeginClassInstanceMethod {
 message EndClassInstanceMethod {
 }
 
+message BeginClassInstanceComputedMethod {
+    Parameters parameters = 1;
+}
+
+message EndClassInstanceComputedMethod {
+}
+
 message BeginClassInstanceGetter {
     string propertyName = 1;
 }
@@ -191,6 +198,13 @@ message BeginClassStaticMethod {
 }
 
 message EndClassStaticMethod {
+}
+
+message BeginClassStaticComputedMethod {
+    Parameters parameters = 1;
+}
+
+message EndClassStaticComputedMethod {
 }
 
 message BeginClassStaticGetter {

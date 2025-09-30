@@ -632,6 +632,12 @@ extension Instruction: ProtobufConvertible {
                 }
             case .endClassInstanceMethod:
                 $0.endClassInstanceMethod = Fuzzilli_Protobuf_EndClassInstanceMethod()
+            case .beginClassInstanceComputedMethod(let op):
+                $0.beginClassInstanceComputedMethod = Fuzzilli_Protobuf_BeginClassInstanceComputedMethod.with {
+                    $0.parameters = convertParameters(op.parameters)
+                }
+            case .endClassInstanceComputedMethod:
+                $0.endClassInstanceComputedMethod = Fuzzilli_Protobuf_EndClassInstanceComputedMethod()
             case .beginClassInstanceGetter(let op):
                 $0.beginClassInstanceGetter = Fuzzilli_Protobuf_BeginClassInstanceGetter.with { $0.propertyName = op.propertyName }
             case .endClassInstanceGetter:
@@ -663,6 +669,12 @@ extension Instruction: ProtobufConvertible {
                 }
             case .endClassStaticMethod:
                 $0.endClassStaticMethod = Fuzzilli_Protobuf_EndClassStaticMethod()
+            case .beginClassStaticComputedMethod(let op):
+                $0.beginClassStaticComputedMethod = Fuzzilli_Protobuf_BeginClassStaticComputedMethod.with {
+                    $0.parameters = convertParameters(op.parameters)
+                }
+            case .endClassStaticComputedMethod:
+                $0.endClassStaticComputedMethod = Fuzzilli_Protobuf_EndClassStaticComputedMethod()
             case .beginClassStaticGetter(let op):
                 $0.beginClassStaticGetter = Fuzzilli_Protobuf_BeginClassStaticGetter.with { $0.propertyName = op.propertyName }
             case .endClassStaticGetter:
@@ -1897,6 +1909,10 @@ extension Instruction: ProtobufConvertible {
             op = BeginClassInstanceMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
         case .endClassInstanceMethod:
             op = EndClassInstanceMethod()
+        case .beginClassInstanceComputedMethod(let p):
+            op = BeginClassInstanceComputedMethod(parameters: convertParameters(p.parameters))
+        case .endClassInstanceComputedMethod:
+            op = EndClassInstanceComputedMethod()
         case .beginClassInstanceGetter(let p):
             op = BeginClassInstanceGetter(propertyName: p.propertyName)
         case .endClassInstanceGetter:
@@ -1919,6 +1935,10 @@ extension Instruction: ProtobufConvertible {
             op = BeginClassStaticMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
         case .endClassStaticMethod:
             op = EndClassStaticMethod()
+        case .beginClassStaticComputedMethod(let p):
+            op = BeginClassStaticComputedMethod(parameters: convertParameters(p.parameters))
+        case .endClassStaticComputedMethod:
+            op = EndClassStaticComputedMethod()
         case .beginClassStaticGetter(let p):
             op = BeginClassStaticGetter(propertyName: p.propertyName)
         case .endClassStaticGetter:

@@ -355,6 +355,10 @@ message Instruction {
         WasmDefineSignatureType wasmDefineSignatureType = 329;
         CreateNamedDisposableVariable createNamedDisposableVariable = 330;
         CreateNamedAsyncDisposableVariable createNamedAsyncDisposableVariable = 331;
+        BeginClassInstanceComputedMethod beginClassInstanceComputedMethod = 332;
+        EndClassInstanceComputedMethod endClassInstanceComputedMethod = 333;
+        BeginClassStaticComputedMethod beginClassStaticComputedMethod = 334;
+        EndClassStaticComputedMethod endClassStaticComputedMethod = 335;
     }
 }
 

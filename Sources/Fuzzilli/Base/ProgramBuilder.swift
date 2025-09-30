@@ -2513,6 +2513,7 @@ public class ProgramBuilder {
         public fileprivate(set) var instanceElements: [Int64] = []
         public fileprivate(set) var instanceComputedProperties: [Variable] = []
         public fileprivate(set) var instanceMethods: [String] = []
+        public fileprivate(set) var instanceComputedMethods: [Variable] = []
         public fileprivate(set) var instanceGetters: [String] = []
         public fileprivate(set) var instanceSetters: [String] = []
 
@@ -2520,6 +2521,7 @@ public class ProgramBuilder {
         public fileprivate(set) var staticElements: [Int64] = []
         public fileprivate(set) var staticComputedProperties: [Variable] = []
         public fileprivate(set) var staticMethods: [String] = []
+        public fileprivate(set) var staticComputedMethods: [Variable] = []
         public fileprivate(set) var staticGetters: [String] = []
         public fileprivate(set) var staticSetters: [String] = []
 
@@ -2571,6 +2573,13 @@ public class ProgramBuilder {
             b.emit(EndClassInstanceMethod())
         }
 
+        public func addInstanceComputedMethod(_ name: Variable, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
+            let instr = b.emit(BeginClassInstanceComputedMethod(parameters: descriptor.parameters), withInputs: [name])
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassInstanceComputedMethod())
+        }
+
         public func addInstanceGetter(for name: String, _ body: (_ this: Variable) -> ()) {
             let instr = b.emit(BeginClassInstanceGetter(propertyName: name))
             body(instr.innerOutput)
@@ -2609,6 +2618,13 @@ public class ProgramBuilder {
             let instr = b.emit(BeginClassStaticMethod(methodName: name, parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndClassStaticMethod())
+        }
+
+        public func addStaticComputedMethod(_ name: Variable, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
+            let instr = b.emit(BeginClassStaticComputedMethod(parameters: descriptor.parameters), withInputs: [name])
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassStaticComputedMethod())
         }
 
         public func addStaticGetter(for name: String, _ body: (_ this: Variable) -> ()) {
@@ -4668,6 +4684,8 @@ public class ProgramBuilder {
             activeClassDefinitions.top.instanceComputedProperties.append(instr.input(0))
         case .beginClassInstanceMethod(let op):
             activeClassDefinitions.top.instanceMethods.append(op.methodName)
+        case .beginClassInstanceComputedMethod:
+            activeClassDefinitions.top.instanceComputedMethods.append(instr.input(0))
         case .beginClassInstanceGetter(let op):
             activeClassDefinitions.top.instanceGetters.append(op.propertyName)
         case .beginClassInstanceSetter(let op):
@@ -4680,6 +4698,8 @@ public class ProgramBuilder {
             activeClassDefinitions.top.staticComputedProperties.append(instr.input(0))
         case .beginClassStaticMethod(let op):
             activeClassDefinitions.top.staticMethods.append(op.methodName)
+        case .beginClassStaticComputedMethod:
+            activeClassDefinitions.top.staticComputedMethods.append(instr.input(0))
         case .beginClassStaticGetter(let op):
             activeClassDefinitions.top.staticGetters.append(op.propertyName)
         case .beginClassStaticSetter(let op):

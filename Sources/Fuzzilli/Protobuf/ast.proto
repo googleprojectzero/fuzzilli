@@ -72,8 +72,8 @@ message FunctionDeclaration {
     repeated Statement body = 4;
 }
 
-message ClassProperty {
-    oneof key {
+message PropertyKey {
+    oneof body {
         // A "regular" property.
         string name = 1;
         // An element.
@@ -81,9 +81,13 @@ message ClassProperty {
         // A computed property.
         Expression expression = 3;
     }
-    bool isStatic = 4;
+}
+
+message ClassProperty {
+    PropertyKey key = 1;
+    bool isStatic = 2;
     // The value is optional
-    Expression value = 5;
+    Expression value = 3;
 }
 
 message ClassConstructor {
@@ -92,7 +96,7 @@ message ClassConstructor {
 }
 
 message ClassMethod {
-    string name = 1;
+    PropertyKey key = 1;
     bool isStatic = 2;
     repeated Parameter parameters = 3;
     repeated Statement body = 4;
