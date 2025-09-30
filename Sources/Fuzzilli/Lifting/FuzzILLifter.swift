@@ -197,6 +197,15 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndClassInstanceMethod")
 
+        case .beginClassInstanceComputedMethod:
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassInstanceComputedMethod \(input(0)) -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassInstanceComputedMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassInstanceComputedMethod")
+
         case .beginClassInstanceGetter(let op):
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
             w.emit("BeginClassInstanceGetter `\(op.propertyName)` -> \(params)")
@@ -252,6 +261,15 @@ public class FuzzILLifter: Lifter {
         case .endClassStaticMethod:
             w.decreaseIndentionLevel()
             w.emit("EndClassStaticMethod")
+
+        case .beginClassStaticComputedMethod:
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassStaticComputedMethod \(input(0)) -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassStaticComputedMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassStaticComputedMethod")
 
         case .beginClassStaticGetter(let op):
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")

@@ -653,6 +653,10 @@ class LifterTests: XCTestCase {
         let two = b.loadInt(2)
         let baz = b.loadString("baz")
         let baz42 = b.binary(baz, i, with: .Add)
+        let toPrimitive = b.getProperty(
+            "toPrimitive",
+            of: b.createNamedVariable(forBuiltin: "Symbol"))
+        let sm = b.loadString("sm")
         let C = b.buildClassDefinition() { cls in
             cls.addInstanceProperty("foo")
             cls.addInstanceProperty("bar", value: baz)
@@ -666,6 +670,11 @@ class LifterTests: XCTestCase {
                 b.setProperty("foo", of: this, to: params[1])
             }
             cls.addInstanceMethod("m", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                let foo = b.getProperty("foo", of: this)
+                b.doReturn(foo)
+            }
+            cls.addInstanceComputedMethod(toPrimitive, with: .parameters(n: 0)) { params in
                 let this = params[0]
                 let foo = b.getProperty("foo", of: this)
                 b.doReturn(foo)
@@ -687,6 +696,11 @@ class LifterTests: XCTestCase {
             cls.addStaticComputedProperty(baz42)
             cls.addStaticComputedProperty(two, value: baz42)
             cls.addStaticMethod("m", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                let foo = b.getProperty("foo", of: this)
+                b.doReturn(foo)
+            }
+            cls.addInstanceComputedMethod(sm, with: .parameters(n: 0)) { params in
                 let this = params[0]
                 let foo = b.getProperty("foo", of: this)
                 b.doReturn(foo)
@@ -732,7 +746,8 @@ class LifterTests: XCTestCase {
 
         let expected = """
         const v3 = "baz" + 42;
-        class C4 {
+        const v5 = Symbol.toPrimitive;
+        class C7 {
             foo;
             bar = "baz";
             0 = 42;
@@ -740,16 +755,19 @@ class LifterTests: XCTestCase {
             [-1];
             [v3];
             [2] = v3;
-            constructor(a6) {
-                this.foo = a6;
+            constructor(a9) {
+                this.foo = a9;
             }
             m() {
+                return this.foo;
+            }
+            [v5]() {
                 return this.foo;
             }
             get baz() {
                 return 1337;
             }
-            set baz(a12) {
+            set baz(a17) {
             }
             static foo;
             static {
@@ -764,36 +782,39 @@ class LifterTests: XCTestCase {
             static m() {
                 return this.foo;
             }
+            ["sm"]() {
+                return this.foo;
+            }
             static get baz() {
                 return 1337;
             }
-            static set baz(a19) {
+            static set baz(a26) {
             }
             #ifoo;
             #ibar = "baz";
             #im() {
-                const v21 = this.#ifoo;
-                this.#ibar = v21;
-                return v21;
+                const v28 = this.#ifoo;
+                this.#ibar = v28;
+                return v28;
             }
-            #in(a23) {
+            #in(a30) {
                 this.#im();
-                this.#ibar += a23;
+                this.#ibar += a30;
             }
             static #sfoo;
             static #sbar = "baz";
             static #sm() {
-                const v26 = this.#sfoo;
-                this.#sbar = v26;
-                return v26;
+                const v33 = this.#sfoo;
+                this.#sbar = v33;
+                return v33;
             }
-            static #sn(a28) {
+            static #sn(a35) {
                 this.#sm();
-                this.#sbar += a28;
+                this.#sbar += a35;
             }
         }
-        new C4(42);
-        C4 = Uint8Array;
+        new C7(42);
+        C7 = Uint8Array;
 
         """
 

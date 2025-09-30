@@ -864,7 +864,44 @@ public let CodeGenerators: [CodeGenerator] = [
                 b.doReturn(b.randomJsVariable())
                 b.emit(EndClassInstanceMethod())
             },
+        ]),
 
+    CodeGenerator(
+        "ClassInstanceComputedMethodGenerator",
+        [
+            GeneratorStub(
+                "ClassInstanceComputedMethodBeginGenerator",
+                inContext: .single(.classDefinition),
+                provides: [.javascript, .subroutine, .method, .classMethod]
+            ) { b in
+                assert(
+                    b.context.contains(.classDefinition)
+                        && !b.context.contains(.javascript))
+
+                // Try to find a method that hasn't already been added to this class.
+                var methodName = b.randomJsVariable()
+                var attempts = 0
+                repeat {
+                    guard attempts < 10 else { break }
+                    methodName = b.randomJsVariable()
+                    attempts += 1
+                } while b.currentClassDefinition.instanceComputedMethods.contains(
+                    methodName)
+
+                let parameters = b.randomParameters()
+                b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
+                b.emit(
+                    BeginClassInstanceComputedMethod(
+                        parameters: parameters.parameters),
+                    withInputs: [methodName])
+            },
+            GeneratorStub(
+                "ClassInstanceComputedMethodEndGenerator",
+                inContext: .single([.javascript, .subroutine, .method, .classMethod])
+            ) { b in
+                b.doReturn(b.randomJsVariable())
+                b.emit(EndClassInstanceComputedMethod())
+            },
         ]),
 
     CodeGenerator(
@@ -1072,6 +1109,44 @@ public let CodeGenerators: [CodeGenerator] = [
             ) { b in
                 b.doReturn(b.randomJsVariable())
                 b.emit(EndClassStaticMethod())
+            },
+        ]),
+
+    CodeGenerator(
+        "ClassStaticComputedMethodGenerator",
+        [
+            GeneratorStub(
+                "ClassStaticComputedMethodBeginGenerator",
+                inContext: .single(.classDefinition),
+                provides: [.javascript, .subroutine, .method, .classMethod]
+            ) { b in
+                assert(
+                    b.context.contains(.classDefinition)
+                        && !b.context.contains(.javascript))
+
+                // Try to find a method that hasn't already been added to this class.
+                var methodName = b.randomJsVariable()
+                var attempts = 0
+                repeat {
+                    guard attempts < 10 else { break }
+                    methodName = b.randomJsVariable()
+                    attempts += 1
+                } while b.currentClassDefinition.staticComputedMethods.contains(
+                    methodName)
+
+                let parameters = b.randomParameters()
+                b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
+                b.emit(
+                    BeginClassStaticComputedMethod(
+                        parameters: parameters.parameters),
+                    withInputs: [methodName])
+            },
+            GeneratorStub(
+                "ClassStaticComputedMethodEndGenerator",
+                inContext: .single([.javascript, .subroutine, .method, .classMethod])
+            ) { b in
+                b.doReturn(b.randomJsVariable())
+                b.emit(EndClassStaticComputedMethod())
             },
         ]),
 

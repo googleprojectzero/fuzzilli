@@ -752,6 +752,19 @@ final class EndClassInstanceMethod: EndAnySubroutine {
     override var opcode: Opcode { .endClassInstanceMethod(self) }
 }
 
+final class BeginClassInstanceComputedMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassInstanceComputedMethod(self) }
+
+    init(parameters: Parameters) {
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+    }
+}
+
+final class EndClassInstanceComputedMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassInstanceComputedMethod(self) }
+}
+
 final class BeginClassInstanceGetter: BeginAnySubroutine {
     override var opcode: Opcode { .beginClassInstanceGetter(self) }
 
@@ -856,6 +869,19 @@ final class BeginClassStaticMethod: BeginAnySubroutine {
 
 final class EndClassStaticMethod: EndAnySubroutine {
     override var opcode: Opcode { .endClassStaticMethod(self) }
+}
+
+final class BeginClassStaticComputedMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassStaticComputedMethod(self) }
+
+    init(parameters: Parameters) {
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+    }
+}
+
+final class EndClassStaticComputedMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassStaticComputedMethod(self) }
 }
 
 final class BeginClassStaticGetter: BeginAnySubroutine {

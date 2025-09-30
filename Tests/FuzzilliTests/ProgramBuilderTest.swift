@@ -46,7 +46,7 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         let numPrograms = 100
-        let maxExpectedProgramSize = 1000
+        // let maxExpectedProgramSize = 1000
         var sumOfProgramSizes = 0
 
         for _ in 0..<numPrograms {
@@ -685,6 +685,10 @@ class ProgramBuilderTests: XCTestCase {
             cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in }
             XCTAssert(cls.instanceMethods.contains("bar"))
 
+            XCTAssertFalse(cls.instanceComputedMethods.contains(s))
+            cls.addInstanceComputedMethod(s, with: .parameters(n: 0)) { args in }
+            XCTAssert(cls.instanceComputedMethods.contains(s))
+
             XCTAssertFalse(cls.instanceGetters.contains("foobar"))
             cls.addInstanceGetter(for: "foobar") { this in }
             XCTAssert(cls.instanceGetters.contains("foobar"))
@@ -708,6 +712,10 @@ class ProgramBuilderTests: XCTestCase {
             XCTAssertFalse(cls.staticMethods.contains("bar"))
             cls.addStaticMethod("bar", with: .parameters(n: 0)) { args in }
             XCTAssert(cls.staticMethods.contains("bar"))
+
+            XCTAssertFalse(cls.staticComputedMethods.contains(s))
+            cls.addStaticComputedMethod(s, with: .parameters(n: 0)) { args in }
+            XCTAssert(cls.staticComputedMethods.contains(s))
 
             XCTAssertFalse(cls.staticGetters.contains("foobar"))
             cls.addStaticGetter(for: "foobar") { this in }
@@ -759,7 +767,7 @@ class ProgramBuilderTests: XCTestCase {
         }
 
         let program = b.finalize()
-        XCTAssertEqual(program.size, 32)
+        XCTAssertEqual(program.size, 36)
     }
 
     func testSwitchBlockBuilding() {
