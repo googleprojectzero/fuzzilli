@@ -54,4 +54,5 @@ let profiles = [
     "v8holefuzzing": v8HoleFuzzingProfile,
     "serenity": serenityProfile,
     "njs": njsProfile,
+    "workerd": workerdProfile,
 ]
