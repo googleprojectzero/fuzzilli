@@ -48,7 +48,7 @@ RUN cd /tmp && \
     cd v8 && \
     git checkout 11.8.172.18 && \
     gclient sync && \
-    tools/dev/v8gen.py fuzzbuild --args='is_debug=false v8_enable_slow_dchecks=false v8_optimized_debug=false' && \
+    tools/dev/v8gen.py fuzzbuild --args='is_debug=false dcheck_always_on=true v8_static_library=true v8_enable_verify_heap=true v8_fuzzilli=true sanitizer_coverage_flags="trace-pc-guard" target_cpu="x64"' && \
     ninja -C out/fuzzbuild d8
 
 # Copy V8 binary to our app directory
