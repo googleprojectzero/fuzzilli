@@ -73,6 +73,63 @@ class EnvironmentTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "")
     }
 
+    /// Test that all interesting properties on the globalThis object are registered as builtins.
+    func testJSEnvironmentRegisteredBuiltins() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .user, withArguments: [])
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let globalThis = b.createNamedVariable(forBuiltin: "globalThis")
+        let object = b.createNamedVariable(forBuiltin: "Object")
+        let names = b.callMethod("getOwnPropertyNames", on: object, withArgs: [globalThis])
+        let namesString = b.callMethod("join", on: names, withArgs: [b.loadString(",")])
+        b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [namesString])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [])
+        let jsEnvironment = b.fuzzer.environment
+        let result = testExecuteScript(program: jsProg, runner: runner)
+        XCTAssert(result.isSuccess, "\(result.error)\n\(result.output)")
+        var output = result.output
+        XCTAssertEqual(output.removeLast(), "\n")
+
+        // Global builtins available in d8 that should not be fuzzed.
+        let skipped = [
+            "fuzzilli", "testRunner", "quit", "load", "read", "readline", "readbuffer",
+            "writeFile", "write", "print", "printErr", "version", "os", "d8", "arguments", "Realm"
+        ]
+        // Global builtins that we probably should register but haven't done so, yet.
+        let TODO = [
+            "globalThis",
+            "Iterator",
+            "setTimeout",
+            "console",
+            "escape",
+            "unescape",
+            "encodeURIComponent",
+            "encodeURI",
+            "decodeURIComponent",
+            "decodeURI",
+            // https://github.com/tc39/proposal-ecmascript-sharedmem/tree/main
+            "Atomics",
+            // https://github.com/tc39/proposal-explicit-resource-management
+            "DisposableStack",
+            "AsyncDisposableStack",
+            // https://github.com/tc39/proposal-float16array
+            "Float16Array",
+            // Web APIs
+            "performance",
+            "Worker",
+        ]
+        let ignore = Set(skipped + TODO)
+
+        for builtin in output.split(separator: ",") where !ignore.contains(String(builtin)) {
+            XCTAssert(jsEnvironment.builtins.contains(String(builtin)),
+                "Unregistered builtin \(builtin)")
+        }
+    }
+
     func convertTypedArrayToHex(_ b: ProgramBuilder, _ array: Variable) -> Variable {
         let toHex = b.buildArrowFunction(with: .parameters(n: 1)) { args in
             let hex = b.callMethod("toString", on: args[0], withArgs: [b.loadInt(16)])
