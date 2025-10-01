@@ -289,6 +289,7 @@ let v8Profile = Profile(
 
         (WasmStructGenerator,                     15),
         (WasmArrayGenerator,                      15),
+        (PretenureAllocationSiteGenerator,         5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([

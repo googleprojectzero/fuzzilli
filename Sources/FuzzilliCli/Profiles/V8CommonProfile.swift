@@ -135,6 +135,10 @@ public let WasmArrayGenerator = CodeGenerator("WasmArrayGenerator") { b in
     b.eval("%WasmArray()", hasOutput: true);
 }
 
+public let PretenureAllocationSiteGenerator = CodeGenerator("PretenureAllocationSiteGenerator", inputs: .required(.object())) { b, obj in
+    b.eval("%PretenureAllocationSite(%@)", with: [obj]);
+}
+
 public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
     // This template is meant to stress the v8 Map transition mechanisms.
     // Basically, it generates a bunch of CreateObject, GetProperty, SetProperty, FunctionDefinition,
