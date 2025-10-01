@@ -483,36 +483,6 @@ public class ProgramBuilder {
         return probability(0.5) ? randomBuiltinMethodName() : randomCustomMethodName()
     }
 
-    private static func generateConstrained<T: Equatable>(
-            _ generator: () -> T,
-            notIn: any Collection<T>,
-            fallback: () -> T) -> T {
-        var result: T
-        var attempts = 0
-        repeat {
-            if attempts >= 10 {
-                return fallback()
-            }
-            result = generator()
-            attempts += 1
-        } while notIn.contains(result)
-        return result
-    }
-
-    // Generate a string not already contained in `notIn` using the provided `generator`. If it fails
-    // repeatedly, return a random string instead.
-    public func generateString(_ generator: () -> String, notIn: any Collection<String>) -> String {
-        Self.generateConstrained(generator, notIn: notIn,
-            fallback: {String.random(ofLength: Int.random(in: 1...5))})
-    }
-
-    // Find a random variable to use as a string that isn't contained in `notIn`. If it fails
-    // repeatedly, create a random string literal instead.
-    public func findOrGenerateStringLikeVariable(notIn: any Collection<Variable>) -> Variable {
-        return Self.generateConstrained(randomJsVariable, notIn: notIn,
-            fallback: {loadString(String.random(ofLength: Int.random(in: 1...5)))})
-    }
-
     // Settings and constants controlling the behavior of randomParameters() below.
     // This determines how many variables of a given type need to be visible before
     // that type is considered a candidate for a parameter type. For example, if this
