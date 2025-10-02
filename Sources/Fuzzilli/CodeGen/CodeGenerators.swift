@@ -431,7 +431,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let disposableVariable = b.buildObjectLiteral { obj in
             obj.addProperty("value", as: val)
             obj.addComputedMethod(dispose, with: .parameters(n: 0)) { args in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
             }
         }
         b.loadDisposableVariable(disposableVariable)
@@ -448,7 +448,7 @@ public let CodeGenerators: [CodeGenerator] = [
             obj.addProperty("value", as: val)
             obj.addComputedMethod(asyncDispose, with: .parameters(n: 0)) {
                 args in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
             }
         }
         b.loadAsyncDisposableVariable(asyncDisposableVariable)
@@ -861,7 +861,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassInstanceMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassInstanceMethod())
             },
         ]),
@@ -899,7 +899,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassInstanceComputedMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassInstanceComputedMethod())
             },
         ]),
@@ -1107,7 +1107,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassStaticMethodEndGenerator",
                 inContext: .single([.javascript, .classMethod, .subroutine, .method])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassStaticMethod())
             },
         ]),
@@ -1145,7 +1145,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassStaticComputedMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassStaticComputedMethod())
             },
         ]),
@@ -1283,7 +1283,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassPrivateInstanceMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassPrivateInstanceMethod())
             },
         ]),
@@ -1345,7 +1345,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassPrivateStaticMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassPrivateStaticMethod())
             },
 
