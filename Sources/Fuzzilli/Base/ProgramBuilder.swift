@@ -2978,6 +2978,12 @@ public class ProgramBuilder {
         }
     }
 
+    public func maybeReturnRandomJsVariable(_ prob: Double) {
+        if probability(prob) {
+            doReturn(randomJsVariable())
+        }
+    }
+
     @discardableResult
     public func yield(_ value: Variable? = nil) -> Variable {
         if let argument = value {
