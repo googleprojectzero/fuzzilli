@@ -757,7 +757,7 @@ final class BeginClassInstanceComputedMethod: BeginAnySubroutine {
 
     init(parameters: Parameters) {
         // First inner output is the explicit |this| parameter
-        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
@@ -876,7 +876,7 @@ final class BeginClassStaticComputedMethod: BeginAnySubroutine {
 
     init(parameters: Parameters) {
         // First inner output is the explicit |this| parameter
-        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
