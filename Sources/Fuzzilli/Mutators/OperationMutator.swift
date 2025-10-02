@@ -729,8 +729,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmDropElementSegment(_),
              .wasmTableInit(_),
              .wasmTableCopy(_):
-             assert(!instr.isOperationMutable)
-             fatalError("Unexpected Operation")
+             let mutability = instr.isOperationMutable ? "mutable" : "immutable"
+             fatalError("Unexpected operation \(instr.op.opcode), marked as \(mutability)")
         }
 
         // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
