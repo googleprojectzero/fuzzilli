@@ -124,6 +124,11 @@ let v8Profile = Profile(
             args.append("--handle-weak-ref-weakly-in-minor-gc")
         }
 
+        if probability(0.1) {
+            let stackSize = Int.random(in: 54...863)
+            args.append("--stack-size=\(stackSize)")
+        }
+
         // Temporarily enable the three flags below with high probability to
         // stress-test JSPI.
         // Lower the probabilities once we have enough coverage.
