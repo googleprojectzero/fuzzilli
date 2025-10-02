@@ -25,6 +25,7 @@ public class Storage: Module {
     private let failedDir: String
     private let timeOutDir: String
     private let diagnosticsDir: String
+    private let logsDir: String
 
     private let statisticsExportInterval: Double?
 
@@ -41,6 +42,7 @@ public class Storage: Module {
         self.statisticsDir = storageDir + "/stats"
         self.stateFile = storageDir + "/state.bin"
         self.diagnosticsDir = storageDir + "/diagnostics"
+        self.logsDir = storageDir + "/logs"
 
         self.statisticsExportInterval = statisticsExportInterval
 
@@ -58,6 +60,7 @@ public class Storage: Module {
                 try FileManager.default.createDirectory(atPath: failedDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: timeOutDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: diagnosticsDir, withIntermediateDirectories: true)
+                try FileManager.default.createDirectory(atPath: logsDir, withIntermediateDirectories: true)
             }
         } catch {
             logger.fatal("Failed to create storage directories. Is \(storageDir) writable by the current user?")
@@ -116,6 +119,27 @@ public class Storage: Module {
                 let filename = "program_\(self.formatDate())_\(program.id)"
                 self.storeProgram(program, as: filename, in: self.timeOutDir)
             }
+
+            // write logs to disk in diagnostic mode
+            fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
+                let logContent: String
+                let filename = "log_\(fuzzer.id)"
+
+                if ev.origin == fuzzer.id {
+                    logContent = "\n[\(self.formatDate())_\(ev.label)] " + ev.message 
+                } else {
+                    // Mark message as coming from a worker by including its id
+                    let shortId = ev.origin.uuidString.split(separator: "-")[0]
+                    logContent = "\n[\(self.formatDate())_\(shortId)_\(ev.label)] " + ev.message
+                }
+
+                let url = URL(fileURLWithPath: "\(self.logsDir)/\(filename).log")
+                if FileManager.default.fileExists(atPath: url.path) {
+                    self.appendToFile(url, withContent: logContent)
+                } else {
+                    self.createFile(url, withContent: logContent)
+                }
+            }
         }
 
         // If enabled, export fuzzing statistics to disk in regular intervals.
@@ -125,6 +149,30 @@ public class Storage: Module {
             }
             fuzzer.timers.scheduleTask(every: interval) { self.saveStatistics(stats) }
             fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in self.saveStatistics(stats) }
+        }
+    }
+
+    private func appendToFile(_ url: URL, withContent content: String) {
+        guard let data = content.data(using: .utf8) else {
+            logger.error("Failed to convert content to UTF-8 data")
+            return
+        }
+        if let fileHandle = FileHandle(forWritingAtPath: url.path) {
+            defer {
+                fileHandle.closeFile()
+            }
+            fileHandle.seekToEndOfFile()
+            fileHandle.write(data)
+        }
+    }
+
+    private func appendToFile(_ url: URL, withContent content: Data) {
+        if let fileHandle = FileHandle(forWritingAtPath: url.path) {
+            defer {
+                fileHandle.closeFile()
+            }
+            fileHandle.seekToEndOfFile()
+            fileHandle.write(content)
         }
     }
 
