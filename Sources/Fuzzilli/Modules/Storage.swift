@@ -126,11 +126,11 @@ public class Storage: Module {
                 let filename = "log_\(fuzzer.id)"
 
                 if ev.origin == fuzzer.id {
-                    logContent = "\n[\(self.formatDate())_\(ev.label)] " + ev.message 
+                    logContent = "\n[\(self.formatDate())_\(ev.label)] [\(ev.level)] " + ev.message 
                 } else {
                     // Mark message as coming from a worker by including its id
                     let shortId = ev.origin.uuidString.split(separator: "-")[0]
-                    logContent = "\n[\(self.formatDate())_\(shortId)_\(ev.label)] " + ev.message
+                    logContent = "\n[\(self.formatDate())_\(shortId)_\(ev.label)] [\(ev.level)] " + ev.message
                 }
 
                 let url = URL(fileURLWithPath: "\(self.logsDir)/\(filename).log")
