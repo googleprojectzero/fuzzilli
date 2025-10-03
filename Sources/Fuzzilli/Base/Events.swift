@@ -43,6 +43,10 @@ public class Events {
     /// The origin field contains the UUID of the fuzzer instance that originally logged the message.
     public let Log = Event<(origin: UUID, level: LogLevel, label: String, message: String)>()
 
+    /// Signals that a feedback update was dispatched.
+    /// Feedback will be logged w/in Storage
+    public let Feedback = Event<(name: String, content: Data, programId: String)>()
+
     /// Signals that a new (mutated) program has been generated.
     public let ProgramGenerated = Event<Program>()
 

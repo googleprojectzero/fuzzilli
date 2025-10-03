@@ -39,6 +39,9 @@ public class REPRL: ComponentBase, ScriptRunner {
     /// Essentially counts the number of run() invocations
     fileprivate var lastExecId = 0
 
+    /// Track the id of the program currently being executed so outputs can be attributed.
+    fileprivate var currentProgramId: String = ""
+
     /// Buffer to hold scripts, this lets us debug issues that arise if
     /// previous scripts corrupted any state which is discovered in
     /// future executions. This is only used if diagnostics mode is enabled.
@@ -70,6 +73,11 @@ public class REPRL: ComponentBase, ScriptRunner {
         freeCArray(argv, numElems: processArguments.count)
         freeCArray(envp, numElems: env.count)
 
+        // Track current program id via PreExecute event so output can be associated with it.
+        fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { (program, _) in
+            self.currentProgramId = program.id.uuidString
+        }
+
         fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
             reprl_destroy_context(self.reprlContext)
         }
@@ -83,7 +91,7 @@ public class REPRL: ComponentBase, ScriptRunner {
         // Log the current script into the buffer if diagnostics are enabled.
         if fuzzer.config.enableDiagnostics {
             self.scriptBuffer += script + "\n"
-        }
+        }  
 
         lastExecId += 1
 
@@ -180,7 +188,9 @@ class REPRLExecution: Execution {
         assert(outputStreamsAreValid)
         if cachedStdout == nil {
             cachedStdout = String(cString: reprl_fetch_stdout(reprl.reprlContext))
-        }
+            let data = cachedStdout!.data(using: .utf8) ?? Data()
+            reprl.fuzzer.dispatchEvent(reprl.fuzzer.events.Feedback, data: (name: "feedback-updates", content: data, programId: reprl.currentProgramId))
+        } 
         return cachedStdout!
     }
 
@@ -188,6 +198,8 @@ class REPRLExecution: Execution {
         assert(outputStreamsAreValid)
         if cachedStderr == nil {
             cachedStderr = String(cString: reprl_fetch_stderr(reprl.reprlContext))
+            let data = cachedStderr!.data(using: .utf8) ?? Data()
+            reprl.fuzzer.dispatchEvent(reprl.fuzzer.events.Feedback, data: (name: "feedback-updates", content: data, programId: reprl.currentProgramId))
         }
         return cachedStderr!
     }
@@ -196,6 +208,8 @@ class REPRLExecution: Execution {
         assert(outputStreamsAreValid)
         if cachedFuzzout == nil {
             cachedFuzzout = String(cString: reprl_fetch_fuzzout(reprl.reprlContext))
+            let data = cachedFuzzout!.data(using: .utf8) ?? Data()
+            reprl.fuzzer.dispatchEvent(reprl.fuzzer.events.Feedback, data: (name: "feedback-updates", content: data, programId: reprl.currentProgramId))
         }
         return cachedFuzzout!
     }
