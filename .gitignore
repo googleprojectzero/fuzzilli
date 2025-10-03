@@ -6,6 +6,7 @@ Package.resolved
 .vscode
 .*.sw?
 .swiftpm
+/Corpus
 
 # custom GCE configuration
 Cloud/GCE/config.sh
