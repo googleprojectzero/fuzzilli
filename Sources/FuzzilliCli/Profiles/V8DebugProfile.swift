@@ -20,7 +20,7 @@ let v8DebugProfile = Profile(
         var args = [
             "--trace-turbo",
             "--trace-turbo-path=/home/diddy/v8DebugProfileOut",
-            "--trace-feedback-updates"
+            "--trace-feedback-updates",
         ]
         return args
     },

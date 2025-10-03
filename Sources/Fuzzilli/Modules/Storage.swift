@@ -26,6 +26,7 @@ public class Storage: Module {
     private let timeOutDir: String
     private let diagnosticsDir: String
     private let logsDir: String
+    private let feedbackDir: String
 
     private let statisticsExportInterval: Double?
 
@@ -43,6 +44,7 @@ public class Storage: Module {
         self.stateFile = storageDir + "/state.bin"
         self.diagnosticsDir = storageDir + "/diagnostics"
         self.logsDir = storageDir + "/logs"
+        self.feedbackDir = storageDir + "/feedback"
 
         self.statisticsExportInterval = statisticsExportInterval
 
@@ -56,6 +58,7 @@ public class Storage: Module {
             try FileManager.default.createDirectory(atPath: duplicateCrashesDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: corpusDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: statisticsDir, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(atPath: feedbackDir, withIntermediateDirectories: true)
             if fuzzer.config.enableDiagnostics {
                 try FileManager.default.createDirectory(atPath: failedDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: timeOutDir, withIntermediateDirectories: true)
@@ -101,6 +104,38 @@ public class Storage: Module {
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             let filename = "program_\(self.formatDate())_\(ev.program.id)"
             self.storeProgram(ev.program, as: filename, in: self.corpusDir)
+        }
+
+        /// append any lines containing "[Feedback slot ..." from the provided output to a log file.
+        /// The log file will be placed at {storagePath}/logs/feedback-updates_<program.id>.fu if storagePath is configured,
+        /// otherwise ./logs/feedback-updates_<program.id>.fu.
+        fuzzer.registerEventListener(for: fuzzer.events.Feedback) { ev in            
+            let needle = "[Feedback slot"
+            guard let contentStr = String(data: ev.content, encoding: .utf8), contentStr.contains(needle) else { return }
+            
+            do { try FileManager.default.createDirectory(atPath: self.logsDir, withIntermediateDirectories: true)
+            } catch { return }
+            let filename = "\(ev.name)_\(ev.programId)"                         
+            let url = URL(fileURLWithPath: "\(self.feedbackDir)/\(filename).fu") // feedback vector update
+
+            // filter and append lines to the file
+            let lines = contentStr.split(separator: "\n", omittingEmptySubsequences: false)
+            var matched = [String]()
+            for line in lines {
+                if line.contains(needle) {
+                    matched.append(String(line))
+                }
+            }
+            guard !matched.isEmpty else { return }
+
+            let toWrite = matched.joined(separator: "\n") + "\n"
+            if let data = toWrite.data(using: .utf8) {
+                if FileManager.default.fileExists(atPath: url.path) {
+                    self.appendToFile(url, withContent: data)
+                } else {
+                    self.createFile(url, withContent: data)
+                }
+            }
         }
 
         if fuzzer.config.enableDiagnostics {
