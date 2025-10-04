@@ -31,7 +31,7 @@ Options:
     --jobs=n                     : Total number of fuzzing jobs. This will start a main instance and n-1 worker instances.
     --engine=name                : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                    Only the mutation engine should be regarded stable at this point.
-    --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
+    --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov", "redis"
     --logLevel=level             : The log level to use. Valid values: "verbose", "info", "warning", "error", "fatal" (default: "info").
     --maxIterations=n            : Run for the specified number of iterations (default: unlimited).
     --maxRuntimeInHours=n        : Run for the specified number of hours (default: unlimited).
@@ -182,7 +182,7 @@ guard validEngines.contains(engineName) else {
     configError("--engine must be one of \(validEngines)")
 }
 
-let validCorpora = ["basic", "markov"]
+let validCorpora = ["basic", "markov", "redis"]
 guard validCorpora.contains(corpusName) else {
     configError("--corpus must be one of \(validCorpora)")
 }
@@ -206,6 +206,10 @@ if (resume || overwrite) && storagePath == nil {
 
 if corpusName == "markov" && staticCorpus {
     configError("Markov corpus is not compatible with --staticCorpus")
+}
+
+if corpusName == "redis" && staticCorpus {
+    configError("Redis corpus is not compatible with --staticCorpus")
 }
 
 if let path = storagePath {
@@ -484,6 +488,8 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     case "markov":
         corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
+    case "redis":
+        corpus = RedisCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     default:
         logger.fatal("Invalid corpus name provided")
     }
