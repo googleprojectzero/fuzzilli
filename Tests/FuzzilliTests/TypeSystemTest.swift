@@ -1023,6 +1023,16 @@ class TypeSystemTests: XCTestCase {
 
     }
 
+    func testNamedStrings() {
+        let namedA = ILType.namedString(ofName: "A")
+        XCTAssert(namedA.Is(.string))
+        let namedB = ILType.namedString(ofName: "B")
+        XCTAssertEqual(namedA | namedB, .string)
+        XCTAssertEqual(namedA & namedB, .nothing)
+        let objectA = ILType.object(ofGroup: "A", withProperties: ["a"])
+        XCTAssertEqual(namedA & objectA, .nothing)
+    }
+
     func testTypeDescriptions() {
         // Test primitive types
         XCTAssertEqual(ILType.undefined.description, ".undefined")
@@ -1137,6 +1147,12 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(structDef.description,
             ".wasmTypeDef(1 Struct[mutable .wasmf32, " +
             "immutable .wasmRef(null Index 1 Struct), mutable .wasmRef(null Index 0 Array)])")
+        let signatureDesc = WasmSignatureTypeDescription(
+            signature: [.wasmi32, arrayRef] => [structRef, .wasmNullRef], typeGroupIndex: 0)
+        let signatureDef = ILType.wasmTypeDef(description: signatureDesc)
+        XCTAssertEqual(signatureDef.description,
+            ".wasmTypeDef(0 Func[[.wasmi32, .wasmRef(null Index 0 Array)] => " +
+            "[.wasmRef(Index 1 Struct), .wasmRef(.Abstract(null WasmNone))]])")
 
         // A generic index type without a type description.
         // These are e.g. used by the element types for arrays and structs inside the operation as

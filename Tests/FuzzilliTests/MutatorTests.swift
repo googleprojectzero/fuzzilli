@@ -97,4 +97,65 @@ class MutatorTests: XCTestCase {
         XCTAssertEqual(newEndTypeGroupInstructions.count, 1)
         XCTAssertGreaterThan(newEndTypeGroupInstructions[0].numInputs, 1)
     }
+
+    func testCodeGenMutatorNamedStrings() {
+        // A generator that deterministically generates a different value each time.
+        var called = false
+        func generateString() -> String {
+            if called {
+                return "newValue"
+            } else {
+                called = true
+                return "originalValue"
+            }
+        }
+        let mockNamedString = ILType.namedString(ofName: "NamedString");
+
+        let env = JavaScriptEnvironment()
+        env.addNamedStringGenerator(forType: mockNamedString, with: generateString)
+
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+
+        // We need a minimum number of visible variables for codeGeneration.
+        b.loadInt(1)
+        b.loadInt(2)
+
+        let _ = b.findOrGenerateType(mockNamedString)
+        XCTAssert(called)
+
+        let prog = b.finalize()
+
+        let originalLoadInstruction = prog.code.filter { instr in
+            instr.op is LoadString
+        }
+
+        XCTAssertEqual(originalLoadInstruction.count, 1)
+        let originalLoad = originalLoadInstruction[0].op as! LoadString
+        XCTAssertEqual(originalLoad.value, "originalValue")
+
+        // Mutator is probabalistic, try 10 times to ensure we are very likely
+        // to hit the generateString call.
+        let mutator = OperationMutator()
+        for _ in 1...10 {
+            let newBuilder = fuzzer.makeBuilder()
+            newBuilder.adopting(from: prog) {
+                mutator.mutate(originalLoadInstruction[0], newBuilder)
+            }
+
+            let mutatedProg = newBuilder.finalize()
+
+            let newLoadInstruction = mutatedProg.code.filter { instr in
+                instr.op is LoadString
+            }
+
+            XCTAssertEqual(newLoadInstruction.count, 1)
+            let newLoad = newLoadInstruction[0].op as! LoadString
+            if newLoad.value == "newValue" {
+                return;
+            }
+        }
+        XCTFail("Mutator ran 10 times without rerunning custom string generator")
+    }
 }

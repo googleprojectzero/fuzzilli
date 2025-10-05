@@ -47,7 +47,11 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- LoadFloat '\(op.value)'")
 
         case .loadString(let op):
-            w.emit("\(output()) <- LoadString '\(op.value)'")
+            if let customName = op.customName {
+                w.emit("\(output()) <- LoadString '\(op.value)' \(customName)")
+            } else {
+                w.emit("\(output()) <- LoadString '\(op.value)'")
+            }
 
         case .loadRegExp(let op):
             w.emit("\(output()) <- LoadRegExp '\(op.pattern)' '\(op.flags.asString())'")
@@ -73,6 +77,12 @@ public class FuzzILLifter: Lifter {
             } else {
                 w.emit("\(output()) <- CreateNamedVariable '\(op.variableName)', '\(op.declarationMode)'")
             }
+
+        case .createNamedDisposableVariable(let op):
+            w.emit("\(output()) <- CreateNamedDisposableVariable '\(op.variableName)', \(input(0))")
+
+        case .createNamedAsyncDisposableVariable(let op):
+            w.emit("\(output()) <- CreateNamedAsyncDisposableVariable '\(op.variableName)', \(input(0))")
 
         case .loadDisposableVariable:
             w.emit("\(output()) <- LoadDisposableVariable \(input(0))")
@@ -187,6 +197,15 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndClassInstanceMethod")
 
+        case .beginClassInstanceComputedMethod:
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassInstanceComputedMethod \(input(0)) -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassInstanceComputedMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassInstanceComputedMethod")
+
         case .beginClassInstanceGetter(let op):
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
             w.emit("BeginClassInstanceGetter `\(op.propertyName)` -> \(params)")
@@ -242,6 +261,15 @@ public class FuzzILLifter: Lifter {
         case .endClassStaticMethod:
             w.decreaseIndentionLevel()
             w.emit("EndClassStaticMethod")
+
+        case .beginClassStaticComputedMethod:
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassStaticComputedMethod \(input(0)) -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassStaticComputedMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassStaticComputedMethod")
 
         case .beginClassStaticGetter(let op):
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
@@ -1321,6 +1349,10 @@ public class FuzzILLifter: Lifter {
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             let outputs = instr.outputs.map(lift).joined(separator: ", ")
             w.emit("\(outputs) <- WasmEndTypeGroup [\(inputs)]")
+
+        case .wasmDefineSignatureType(let op):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- WasmDefineSignatureType(\(op.signature)) [\(inputs)]")
 
         case .wasmDefineArrayType(let op):
             let typeInput = op.elementType.requiredInputCount() == 1 ? " \(input(0))" : ""

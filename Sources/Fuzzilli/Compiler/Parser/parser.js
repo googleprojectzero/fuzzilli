@@ -34,7 +34,7 @@ function tryReadFile(path) {
 
 // Parse the given JavaScript script and return an AST compatible with Fuzzilli's protobuf-based AST format.
 function parse(script, proto) {
-    let ast = Parser.parse(script, { plugins: ["v8intrinsic"] });
+    let ast = Parser.parse(script, { plugins: ["explicitResourceManagement", "v8intrinsic"] });
 
     function assertNoError(err) {
         if (err) throw err;
@@ -98,12 +98,22 @@ function parse(script, proto) {
 
     function visitVariableDeclaration(node) {
         let kind;
+        let disposable;
         if (node.kind === "var") {
             kind = 0;
+            disposable = false;
         } else if (node.kind === "let") {
             kind = 1;
+            disposable = false;
         } else if (node.kind === "const") {
             kind = 2;
+            disposable = false;
+        } else if (node.kind === "using") {
+            kind = 0;
+            disposable = true;
+        } else if (node.kind === "await using") {
+            kind = 1;
+            disposable = true;
         } else {
             throw "Unknown variable declaration kind: " + node.kind;
         }
@@ -118,7 +128,26 @@ function parse(script, proto) {
             declarations.push(make('VariableDeclarator', outDecl));
         }
 
-        return { kind, declarations };
+        const type = disposable ? 'DisposableVariableDeclaration' : 'VariableDeclaration'
+        return [type, { kind, declarations }];
+    }
+
+    function visitMemberKey(member) {
+        let body = {}
+        if (member.computed) {
+            body.expression = visitExpression(member.key);
+        } else {
+            if (member.key.type === 'Identifier') {
+                body.name = member.key.name;
+            } else if (member.key.type === 'NumericLiteral') {
+                body.index = member.key.value;
+            } else if (member.key.type === 'StringLiteral') {
+                body.name = member.key.value;
+            } else {
+                throw "Unknown member key type: " + member.key.type + " in class declaration";
+            }
+        }
+        return make('PropertyKey', body);
     }
 
     function visitClass(node, isExpression) {
@@ -139,34 +168,19 @@ function parse(script, proto) {
                 if (field.value !== null) {
                   property.value = visitExpression(field.value);
                 }
-                if (field.computed) {
-                    property.expression = visitExpression(field.key);
-                } else {
-                    if (field.key.type === 'Identifier') {
-                        property.name = field.key.name;
-                    } else if (field.key.type === 'NumericLiteral') {
-                        property.index = field.key.value;
-                    } else if (field.key.type === 'StringLiteral') {
-                        property.name = field.key.value;
-                    } else {
-                        throw "Unknown property key type: " + field.key.type + " in class declaration";
-                    }
-                }
+                property.key = visitMemberKey(field);
                 cls.fields.push(make('ClassField', { property: make('ClassProperty', property) }));
             } else if (field.type === 'ClassMethod') {
                 assert(!field.shorthand, 'Expected field.shorthand to be false');
-                assert(!field.computed, 'Expected field.computed to be false');
                 assert(!field.generator, 'Expected field.generator to be false');
                 assert(!field.async, 'Expected field.async to be false');
-                assert(field.key.type === 'Identifier', "Expected field.key.type to be exactly 'Identifier'");
 
                 let method = field;
                 field = {};
-                let name = method.key.name;
                 let isStatic = method.static;
                 if (method.kind === 'constructor') {
                     assert(method.body.type === 'BlockStatement', "Expected method.body.type to be exactly 'BlockStatement'");
-                    assert(name === 'constructor', "Expected name to be exactly 'constructor'");
+                    assert(method.key.name === 'constructor', "Expected name to be exactly 'constructor'");
                     assert(!isStatic, "Expected isStatic to be false");
 
                     let parameters = visitParameters(method.params);
@@ -177,21 +191,28 @@ function parse(script, proto) {
 
                     let parameters = visitParameters(method.params);
                     let body = visitBody(method.body);
-                    field.method = make('ClassMethod', { name, isStatic, parameters, body });
+                    let key = visitMemberKey(method);
+                    field.method = make('ClassMethod', { key, isStatic, parameters, body });
                 } else if (method.kind === 'get') {
+                    assert(!method.computed, 'Expected method.computed to be false');
+                    assert(method.key.type === 'Identifier', "Expected method.key.type to be exactly 'Identifier'");
                     assert(method.params.length === 0, "Expected method.params.length to be exactly 0");
                     assert(!method.generator && !method.async, "Expected both conditions to hold: !method.generator and !method.async");
                     assert(method.body.type === 'BlockStatement', "Expected method.body.type to be exactly 'BlockStatement'");
 
                     let body = visitBody(method.body);
+                    const name = method.key.name;
                     field.getter = make('ClassGetter', { name, isStatic, body });
                 } else if (method.kind === 'set') {
+                    assert(!method.computed, 'Expected method.computed to be false');
+                    assert(method.key.type === 'Identifier', "Expected method.key.type to be exactly 'Identifier'");
                     assert(method.params.length === 1, "Expected method.params.length to be exactly 1");
                     assert(!method.generator && !method.async, "Expected both conditions to hold: !method.generator and !method.async");
                     assert(method.body.type === 'BlockStatement', "Expected method.body.type to be exactly 'BlockStatement'");
 
                     let parameter = visitParameter(method.params[0]);
                     let body = visitBody(method.body);
+                    const name = method.key.name;
                     field.setter = make('ClassSetter', { name, isStatic, parameter, body });
                 } else {
                     throw "Unknown method kind: " + method.kind;
@@ -222,7 +243,7 @@ function parse(script, proto) {
                 return makeStatement('ExpressionStatement', { expression });
             }
             case 'VariableDeclaration': {
-                return makeStatement('VariableDeclaration', visitVariableDeclaration(node));
+                return makeStatement(...visitVariableDeclaration(node));
             }
             case 'FunctionDeclaration': {
                 assert(node.id.type === 'Identifier', "Expected an identifier as function declaration name");
@@ -275,7 +296,9 @@ function parse(script, proto) {
                 let forLoop = {};
                 if (node.init !== null) {
                     if (node.init.type === 'VariableDeclaration') {
-                        forLoop.declaration = make('VariableDeclaration', visitVariableDeclaration(node.init));
+                        let [type, config] = visitVariableDeclaration(node.init);
+                        assert(type != 'DisposableVariableDeclaration', 'Disposable variables in for loops are not yet supported')
+                        forLoop.declaration = make(type, config);
                     } else {
                         forLoop.expression = visitExpression(node.init);
                     }

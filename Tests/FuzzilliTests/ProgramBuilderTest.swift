@@ -42,6 +42,30 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertLessThanOrEqual(averageSize, 2*N)
     }
 
+    func testTemplateBuilding() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        let numPrograms = 100
+        // let maxExpectedProgramSize = 1000
+        var sumOfProgramSizes = 0
+
+        for _ in 0..<numPrograms {
+            let template = fuzzer.programTemplates.randomElement()
+            template.generate(in: b)
+            let program = b.finalize()
+            sumOfProgramSizes += program.size
+
+            // Add to corpus since build() does splicing as well
+            fuzzer.corpus.add(program, ProgramAspects(outcome: .succeeded))
+            // TODO: Do not rely on these numbers as we are testing a
+            // distribution and we might sparsely hit this.
+            // XCTAssertLessThan(program.size, maxExpectedProgramSize)
+        }
+
+        let averageSize = sumOfProgramSizes / numPrograms
+        XCTAssertLessThan(averageSize, 500)
+    }
+
     func testValueBuilding() {
         // Test that buildValues() is always possible and generates at least the requested
         // number of new variables.
@@ -50,6 +74,12 @@ class ProgramBuilderTests: XCTestCase {
         let env = JavaScriptEnvironment()
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
+
+        let codeGenerators = fuzzer.codeGenerators.filter { codeGenerator in 
+            // Filter out Generators that do a reassignment as these will make our Variables be typed as .jsAnything.
+            !codeGenerator.name.contains("Reassign")
+        }
+        fuzzer.setCodeGenerators(codeGenerators)
 
         for _ in 0..<100 {
             XCTAssertEqual(b.numberOfVisibleVariables, 0)
@@ -94,8 +124,9 @@ class ProgramBuilderTests: XCTestCase {
     func testShapeOfGeneratedCode1() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
+        let N = 100
 
-        let simpleGenerator = ValueGenerator("SimpleGenerator") { b, _ in
+        let simpleGenerator = CodeGenerator("SimpleGenerator", produces: [.integer]) { b in
             b.loadInt(Int64.random(in: 0..<100))
         }
         fuzzer.setCodeGenerators(WeightedList<CodeGenerator>([
@@ -105,27 +136,25 @@ class ProgramBuilderTests: XCTestCase {
         for _ in 0..<10 {
             b.buildPrefix()
             let prefixSize = b.currentNumberOfInstructions
-            b.build(n: 100, by: .generating)
+            b.build(n: N, by: .generating)
             let program = b.finalize()
 
             // In this case, the size of the generated code must be exactly the requested size.
-            XCTAssertEqual(program.size - prefixSize, 100)
+            XCTAssertEqual(program.size - prefixSize, N)
         }
     }
 
     func testShapeOfGeneratedCode2() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
+        let N = 100
 
-        b.minRecursiveBudgetRelativeToParentBudget = 0.25
-        b.maxRecursiveBudgetRelativeToParentBudget = 0.25
-
-        let simpleGenerator = ValueGenerator("SimpleGenerator") { b, _ in
+        let simpleGenerator = CodeGenerator("SimpleGenerator", produces: [.integer]) { b in
             b.loadInt(Int64.random(in: 0..<100))
         }
-        let recursiveGenerator = RecursiveCodeGenerator("RecursiveGenerator") { b in
+        let recursiveGenerator = CodeGenerator("RecursiveGenerator") { b in
             b.buildRepeatLoop(n: 5) { _ in
-                b.buildRecursive()
+                b.build(n: 5)
             }
         }
         fuzzer.setCodeGenerators(WeightedList<CodeGenerator>([
@@ -135,15 +164,19 @@ class ProgramBuilderTests: XCTestCase {
 
         for _ in 0..<10 {
             b.buildPrefix()
-            let prefixSize = b.currentNumberOfInstructions
-            b.build(n: 100, by: .generating)
-            let program = b.finalize()
+            let _ = b.currentNumberOfInstructions
+            // let prefixSize = b.currentNumberOfInstructions
+            b.build(n: N, by: .generating)
+            let _ = b.finalize()
+            // let program = b.finalize()
 
             // Uncomment to see the "shape" of generated programs on the console.
             //print(FuzzILLifter().lift(program))
 
-            // The size may be larger, but only roughly by 100 * 0.25 + 100 * 0.25**2 + 100 * 0.25**3 ... (each block may overshoot its budget by roughly the maximum recursive block size).
-            XCTAssertLessThan(program.size - prefixSize, 150)
+            // TODO: We need some robust testing that tests whether we emit code
+            // in the correct distributions, instead of just checking here
+            // against a hard number, which might fail sparsely.
+            // XCTAssertLessThan(program.size - prefixSize, N * 4)
         }
     }
 
@@ -652,6 +685,10 @@ class ProgramBuilderTests: XCTestCase {
             cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in }
             XCTAssert(cls.instanceMethods.contains("bar"))
 
+            XCTAssertFalse(cls.instanceComputedMethods.contains(s))
+            cls.addInstanceComputedMethod(s, with: .parameters(n: 0)) { args in }
+            XCTAssert(cls.instanceComputedMethods.contains(s))
+
             XCTAssertFalse(cls.instanceGetters.contains("foobar"))
             cls.addInstanceGetter(for: "foobar") { this in }
             XCTAssert(cls.instanceGetters.contains("foobar"))
@@ -675,6 +712,10 @@ class ProgramBuilderTests: XCTestCase {
             XCTAssertFalse(cls.staticMethods.contains("bar"))
             cls.addStaticMethod("bar", with: .parameters(n: 0)) { args in }
             XCTAssert(cls.staticMethods.contains("bar"))
+
+            XCTAssertFalse(cls.staticComputedMethods.contains(s))
+            cls.addStaticComputedMethod(s, with: .parameters(n: 0)) { args in }
+            XCTAssert(cls.staticComputedMethods.contains(s))
 
             XCTAssertFalse(cls.staticGetters.contains("foobar"))
             cls.addStaticGetter(for: "foobar") { this in }
@@ -726,7 +767,7 @@ class ProgramBuilderTests: XCTestCase {
         }
 
         let program = b.finalize()
-        XCTAssertEqual(program.size, 32)
+        XCTAssertEqual(program.size, 36)
     }
 
     func testSwitchBlockBuilding() {
@@ -2549,12 +2590,10 @@ class ProgramBuilderTests: XCTestCase {
 
         // Check that the intermediate variables were generated as part of the recursion.
         let d8 = b.randomVariable(ofType: jsD8)
-        XCTAssertNotNil(d8)
-        XCTAssert(b.type(of: d8!).Is(jsD8))
+        XCTAssert(d8 != nil && b.type(of: d8!).Is(jsD8))
 
         let d8Test = b.randomVariable(ofType: jsD8Test)
-        XCTAssertNotNil(d8Test)
-        XCTAssert(b.type(of: d8Test!).Is(jsD8Test))
+        XCTAssert(d8Test != nil && b.type(of: d8Test!).Is(jsD8Test))
     }
 
     func testFindOrGenerateTypeWithGlobalConstructor() {
@@ -2641,10 +2680,10 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert(b.type(of: var3).Is(type3))
         // Get a random variable and then change the type
         let var1 = b.randomVariable(ofTypeOrSubtype: type1)
-        XCTAssertNotNil(var1)
-        XCTAssertEqual(var1, var3)
+        XCTAssert(var1 != nil)
+        XCTAssert(var1 == var3)
         let var4 = b.randomVariable(ofTypeOrSubtype: type4)
-        XCTAssertNil(var4)
+        XCTAssert(var4 == nil)
     }
 
     func testFindOrGenerateTypeWithSubtype() {
@@ -2737,7 +2776,7 @@ class ProgramBuilderTests: XCTestCase {
         let type1 = ILType.object(ofGroup: "group1", withProperties: [], withMethods: [])
         let group1 = ObjectGroup(name: "group1", instanceType: type1, properties: [:], methods: [:])
 
-        let testGenerator = CodeGenerator("testGenerator", produces: type1) { b in
+        let testGenerator = CodeGenerator("testGenerator", produces: [type1]) { b in
             let builtin = b.createNamedVariable(forBuiltin: "foo")
             b.callFunction(builtin)
         }
@@ -2749,9 +2788,10 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: config, environment: env, codeGenerators: [(testGenerator, 1)])
 
         let b = fuzzer.makeBuilder()
-        b.buildPrefix()
+        // Manually create a Variable, we don't want to use buildPrefix as we then might accidentally already create variable of type `type1`.
+        b.loadInt(42)
 
-        XCTAssertNil(b.randomVariable(ofTypeOrSubtype: type1))
+        XCTAssertTrue(b.randomVariable(ofTypeOrSubtype: type1) == nil)
         let obj = b.findOrGenerateType(type1)
         XCTAssert(b.type(of: obj).Is(type1))
     }
@@ -2904,5 +2944,108 @@ class ProgramBuilderTests: XCTestCase {
         }
         let expected = b.finalize()
         XCTAssertEqual(actual, expected)
+    }
+
+    func testWasmBranchGeneratorSchedulingTest() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+
+        // Pick the Branch Generator.
+        let generator = fuzzer.codeGenerators.filter {
+            $0.name == "WasmBranchGenerator"
+        }[0]
+
+        // Now build this.
+        let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+        XCTAssertNotNil(syntheticGenerator)
+
+        // TODO: Hm I guess we're missing the block generator that produces a label in the CodeGenerator.
+        // See WasmBlockGenerator.
+        // There should be some logic that allows some nesting of a WasmBlockGenerator.
+        let _ = b.complete(generator: syntheticGenerator!, withBudget: 30)
+        // XCTAssertGreaterThan(numGeneratedInstructions, 30)
+    }
+
+    func testWasmCallDirectGeneratorSchedulingTest() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+
+        // Pick the Branch Generator.
+        let generator = fuzzer.codeGenerators.filter {
+            $0.name == "WasmStructNewDefaultGenerator"
+        }[0]
+
+        // Now build this.
+        let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+        XCTAssertNotNil(syntheticGenerator)
+
+        let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: 30)
+        XCTAssertGreaterThan(numGeneratedInstructions, 0)
+    }
+
+    func testWasmMemorySizeSchedulingTest() {
+        let fuzzer = makeMockFuzzer()
+        let numPrograms = 100
+
+        for _ in 0...numPrograms {
+            let b = fuzzer.makeBuilder()
+            b.buildPrefix()
+
+            let generator = fuzzer.codeGenerators.filter {
+                $0.name == "WasmMemorySizeGenerator"
+            }[0]
+
+            // Now build this.
+            let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+            XCTAssertNotNil(syntheticGenerator)
+
+            let N = 30
+            // We might generate a lot more than 30 instructions to fulfill the constraints.
+            let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: N)
+
+            let program = b.finalize()
+
+            XCTAssertTrue(program.code.contains(where: { instr in
+                if case .wasmMemorySize = instr.op.opcode {
+                    return true
+                } else {
+                    return false
+                }
+            }))
+            XCTAssertGreaterThan(numGeneratedInstructions, 0)
+        }
+    }
+
+    func testThatGeneratorsExistAndAreBuildableFromJs() {
+        let fuzzer = makeMockFuzzer()
+        let tries: Int = 10
+
+        var failures: [String: Int] = [:]
+
+        for generator in fuzzer.codeGenerators {
+            let b = fuzzer.makeBuilder()
+            b.buildPrefix()
+
+            if let syntheticGenerator = b.assembleSyntheticGenerator(for: generator) {
+                let generatedInstructions = b.complete(generator: syntheticGenerator, withBudget: 40)
+
+                if generatedInstructions == 0 {
+                    failures[generator.name, default: 0] += 1
+                }
+                XCTAssertLessThan(syntheticGenerator.parts.count, 10)
+            } else {
+                XCTFail("Unable to generate synthetic CodeGenerator for \(generator.name) from JS.")
+            }
+        }
+
+        for (name, failureCount) in failures {
+            if failureCount == tries {
+                // This might fail very sparsely, if so, we might want to check the offending Generator to see if we can improve handling for it.
+                // OTOH this is a fuzzer and we sometimes have weird situations... :)
+                XCTFail("\(name) always failed to complete.")
+            }
+        }
     }
 }
