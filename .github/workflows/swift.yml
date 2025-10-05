@@ -18,13 +18,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 25-nightly
-      - uses: swift-actions/setup-swift@v2
+
+      # Is it failing to run tests b/c we're overriding
+      # what swift binary to use?
+      - name: Setup Swift for Ubuntu
+        if: runner.os == 'Linux'
+        uses: swift-actions/setup-swift@v2
         with:
           swift-version: "6.0.3"
-      - name: Swift Version
-        run: swift --version
+
       - uses: actions/checkout@v2
+
       - name: Build
         run: swift build -v
+
       - name: Run tests
         run: swift test -v
