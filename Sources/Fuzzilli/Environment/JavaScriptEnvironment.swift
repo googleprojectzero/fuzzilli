@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 public class JavaScriptEnvironment: ComponentBase {
     // Possible return values of the 'typeof' operator.
     public static let jsTypeNames = ["undefined", "boolean", "number", "string", "symbol", "function", "object", "bigint"]
@@ -295,14 +297,17 @@ public class JavaScriptEnvironment: ComponentBase {
 
     private var builtinTypes: [String: ILType] = [:]
     private var groups: [String: ObjectGroup] = [:]
+    private var enums: [String: ILType] = [:]
 
     // Producing generators, keyed on `type.group`
     private var producingGenerators: [String: (generator: EnvironmentValueGenerator, probability: Double)] = [:]
+    // Named string generators, keyed on `type.group`
+    private var namedStringGenerators: [String: () -> String] = [:]
     private var producingMethods: [ILType: [(group: String, method: String)]] = [:]
     private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
     private var subtypes: [ILType: [ILType]] = [:]
 
-    public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = []) {
+    public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = [], additionalEnumerations: [ILType] = []) {
         super.init(name: "JavaScriptEnvironment")
 
         // Build model of the JavaScript environment
@@ -408,9 +413,80 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsTemporalZonedDateTime)
         registerObjectGroup(.jsTemporalZonedDateTimeConstructor)
         registerObjectGroup(.jsTemporalZonedDateTimePrototype)
+        registerObjectGroup(.jsIntlObject)
+        registerObjectGroup(.jsIntlCollator)
+        registerObjectGroup(.jsIntlCollatorConstructor)
+        registerObjectGroup(.jsIntlCollatorPrototype)
+        registerObjectGroup(.jsIntlDateTimeFormat)
+        registerObjectGroup(.jsIntlDateTimeFormatConstructor)
+        registerObjectGroup(.jsIntlDateTimeFormatPrototype)
+        registerObjectGroup(.jsIntlListFormat)
+        registerObjectGroup(.jsIntlListFormatConstructor)
+        registerObjectGroup(.jsIntlListFormatPrototype)
+        registerObjectGroup(.jsIntlNumberFormat)
+        registerObjectGroup(.jsIntlNumberFormatConstructor)
+        registerObjectGroup(.jsIntlNumberFormatPrototype)
+        registerObjectGroup(.jsIntlPluralRules)
+        registerObjectGroup(.jsIntlPluralRulesConstructor)
+        registerObjectGroup(.jsIntlPluralRulesPrototype)
+        registerObjectGroup(.jsIntlRelativeTimeFormat)
+        registerObjectGroup(.jsIntlRelativeTimeFormatConstructor)
+        registerObjectGroup(.jsIntlRelativeTimeFormatPrototype)
+        registerObjectGroup(.jsIntlSegmenter)
+        registerObjectGroup(.jsIntlSegmenterConstructor)
+        registerObjectGroup(.jsIntlSegmenterPrototype)
+        registerObjectGroup(.jsIntlSegmenterSegments)
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
+        }
+
+        registerEnumeration(.jsTemporalCalendarEnum)
+        registerEnumeration(ObjectGroup.jsTemporalDirectionParam)
+        registerEnumeration(ObjectGroup.jsIntlRelativeTimeFormatUnitEnum)
+        registerEnumeration(ObjectGroup.jsIntlSupportedValuesEnum)
+        registerEnumeration(OptionsBag.jsTemporalUnitEnum)
+        registerEnumeration(OptionsBag.jsTemporalRoundingModeEnum)
+        registerEnumeration(OptionsBag.jsTemporalShowCalendarEnum)
+        registerEnumeration(OptionsBag.jsTemporalShowOffsetEnum)
+        registerEnumeration(OptionsBag.jsTemporalShowTimeZoneEnum)
+        registerEnumeration(OptionsBag.jsTemporalOverflowEnum)
+        registerEnumeration(OptionsBag.jsTemporalDisambiguationEnum)
+        registerEnumeration(OptionsBag.jsTemporalOffsetEnum)
+        registerEnumeration(OptionsBag.jsIntlLocaleMatcherEnum)
+        registerEnumeration(OptionsBag.jsIntlNumberingSystemEnum)
+        registerEnumeration(OptionsBag.jsIntlHourCycleEnum)
+        registerEnumeration(OptionsBag.jsIntlLongShortNarrowEnum)
+        registerEnumeration(OptionsBag.jsIntlLongShortEnum)
+        registerEnumeration(OptionsBag.jsIntlAutoAlwaysEnum)
+        registerEnumeration(OptionsBag.jsIntlNumeric2DigitEnum)
+        registerEnumeration(OptionsBag.jsIntlMonthEnum)
+        registerEnumeration(OptionsBag.jsIntlTimeZoneNameEnum)
+        registerEnumeration(OptionsBag.jsIntlFormatMatcherEnum)
+        registerEnumeration(OptionsBag.jsIntlFullLongMediumShort)
+        registerEnumeration(OptionsBag.jsIntlCollatorUsageEnum)
+        registerEnumeration(OptionsBag.jsIntlCollationEnum)
+        registerEnumeration(OptionsBag.jsIntlCaseFirstEnum)
+        registerEnumeration(OptionsBag.jsIntlCollatorSensitivityEnum)
+        registerEnumeration(OptionsBag.jsIntlListFormatTypeEnum)
+        registerEnumeration(OptionsBag.jsIntlNumberFormatStyleEnum)
+        registerEnumeration(OptionsBag.jsIntlCurrencySystemEnum)
+        registerEnumeration(OptionsBag.jsIntlCurrencyDisplayEnum)
+        registerEnumeration(OptionsBag.jsIntlCurrencySignEnum)
+        registerEnumeration(OptionsBag.jsIntlRoundingPriorityEnum)
+        registerEnumeration(OptionsBag.jsIntlRoundingModeEnum)
+        registerEnumeration(OptionsBag.jsIntlTrailingZeroDisplayEnum)
+        registerEnumeration(OptionsBag.jsIntlNumberFormatNotationEnum)
+        registerEnumeration(OptionsBag.jsIntlNumberFormatGroupingEnum)
+        registerEnumeration(OptionsBag.jsIntlSignDisplayEnum)
+        registerEnumeration(OptionsBag.jsIntlPluralRulesTypeEnum)
+        registerEnumeration(OptionsBag.jsIntlSegmenterGranularityEnum)
+        registerEnumeration(OptionsBag.base64Alphabet)
+        registerEnumeration(OptionsBag.base64LastChunkHandling)
+
+        for enumeration in additionalEnumerations {
+            assert(enumeration.isEnumeration)
+            registerEnumeration(enumeration)
         }
 
         registerOptionsBag(.jsTemporalDifferenceSettingOrRoundTo)
@@ -421,6 +497,15 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsTemporalDurationTotalOfSettings)
         registerOptionsBag(.toBase64Settings)
         registerOptionsBag(.fromBase64Settings)
+        registerOptionsBag(.jsTemporalPlainDateToZDTSettings)
+        registerOptionsBag(.jsIntlDateTimeFormatSettings)
+        registerOptionsBag(.jsIntlCollatorSettings)
+        registerOptionsBag(.jsIntlListFormatSettings)
+        registerOptionsBag(.jsIntlNumberFormatSettings)
+        registerOptionsBag(.jsIntlPluralRulesSettings)
+        registerOptionsBag(.jsIntlRelativeTimeFormatSettings)
+        registerOptionsBag(.jsIntlSegmenterSettings)
+        registerOptionsBag(.jsIntlLocaleMatcherSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
         registerTemporalFieldsObject(.jsTemporalPlainDateLikeObject, forWith: false, dateFields: true, timeFields: false, zonedFields: false)
@@ -433,6 +518,16 @@ public class JavaScriptEnvironment: ComponentBase {
         // This isn't a normal "temporal fields object" but is similar, and needs a similar producing generator
         registerObjectGroup(.jsTemporalDurationLikeObject)
         addProducingGenerator(forType: ObjectGroup.jsTemporalDurationLikeObject.instanceType, with: { b in b.createTemporalDurationFieldsObject() })
+        addNamedStringGenerator(forType: ObjectGroup.jsTemporalTimeZoneLike,
+         with: {
+            if Bool.random() {
+                return ProgramBuilder.randomTimeZoneString()
+            } else {
+                return ProgramBuilder.randomUTCOffsetString(mayHaveSeconds: true)
+            }
+        })
+        addNamedStringGenerator(forType: .jsIntlLocaleLike, with: { ProgramBuilder.constructIntlLocaleString() })
+        addNamedStringGenerator(forType: .jsIntlUnit, with: { ProgramBuilder.constructIntlUnit() })
 
         // Temporal types are produced by a large number of methods; which means findOrGenerateType(), when asked to produce
         // a Temporal type, will tend towards trying to call a method on another Temporal type, which needs more Temporal types,
@@ -498,6 +593,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("NaN", ofType: .jsNaN)
         registerBuiltin("Infinity", ofType: .jsInfinity)
         registerBuiltin("Temporal", ofType: .jsTemporalObject)
+        registerBuiltin("Intl", ofType: .jsIntlObject)
         registerBuiltin("WebAssembly", ofType: ObjectGroup.jsWebAssembly.instanceType)
 
         for (builtin, type) in additionalBuiltins {
@@ -575,7 +671,14 @@ public class JavaScriptEnvironment: ComponentBase {
     //   a lot of these API calls need more Temporal objects, leading to runaway recursion attempting
     //   to generate a large number of Temporal objects. Instead, we bias heavily towards the producing generator.
     public func addProducingGenerator(forType type: ILType, with generator: @escaping EnvironmentValueGenerator, probability: Double = 1.0) {
+        assert(type.Is(.object()), "Producing generators can only be registered for objects, found \(type)")
         producingGenerators[type.group!] = (generator, probability)
+    }
+
+    // Register a generator for a custom named string.
+    public func addNamedStringGenerator(forType type: ILType, with generator: @escaping () -> String) {
+        assert(type.Is(.string), "Named string generators can only be registered for strings, found \(type)")
+        namedStringGenerators[type.group!] = generator
     }
 
     private func addProducingMethod(forType type: ILType, by method: String, on group: String) {
@@ -599,13 +702,20 @@ public class JavaScriptEnvironment: ComponentBase {
         return actualType
     }
 
+    public func registerEnumeration(_ type: ILType) {
+        assert(type.isEnumeration)
+        let group = type.group!
+        assert(enums[group] == nil, "Registered duplicate enum \(group)")
+        enums[group] = type
+    }
+
     public func registerObjectGroup(_ group: ObjectGroup) {
-        assert(groups[group.name] == nil)
+        assert(groups[group.name] == nil, "Registered duplicate enum \(group.name)")
         groups[group.name] = group
         builtinProperties.formUnion(group.properties.keys)
         builtinMethods.formUnion(group.methods.keys)
 
-        //
+        //func register
         // Step 1: Initialize `subtypes`
         //
         subtypes[group.instanceType] = [group.instanceType]
@@ -683,6 +793,13 @@ public class JavaScriptEnvironment: ComponentBase {
 
     public func registerOptionsBag(_ bag: OptionsBag) {
         registerObjectGroup(bag.group)
+
+        for property in bag.properties.values {
+            if property.isEnumeration {
+                assert(enums[property.group!] != nil, "Enum \(property.group!) used in options bag but not registered on the JavaScriptEnvironment")
+            }
+        }
+
         addProducingGenerator(forType: bag.group.instanceType, with: { b in b.createOptionsBag(bag) })
     }
 
@@ -737,6 +854,10 @@ public class JavaScriptEnvironment: ComponentBase {
         return [.forUnknownFunction]
     }
 
+    public func getEnum(ofName name: String) -> ILType? {
+        return enums[name]
+    }
+
     public func getProducingMethods(ofType type: ILType) -> [(group: String, method: String)] {
         guard let array = producingMethods[type] else {
             return []
@@ -749,6 +870,13 @@ public class JavaScriptEnvironment: ComponentBase {
     public func getProducingGenerator(ofType type: ILType) -> (generator: EnvironmentValueGenerator, probability: Double)? {
         type.group.flatMap {producingGenerators[$0]}
     }
+
+    // For named strings, get a generator that is registered as being able to produce this
+    // named string.
+    public func getNamedStringGenerator(ofName name: String) -> (() -> String)? {
+        namedStringGenerators[name]
+    }
+
 
     // If the object group refers to a constructor, get its path.
     public func getPathIfConstructor(ofGroup groupName: String) -> [String]? {
@@ -837,7 +965,12 @@ public struct OptionsBag {
         self.properties = properties
         let properties = properties.mapValues {
             // This list can be expanded over time as long as createOptionsBag() supports this
-            assert($0.isEnumeration || $0.Is(.number | .integer | .boolean) || $0.Is(OptionsBag.jsTemporalRelativeTo), "Found unsupported option type \($0) in options bag \(name)")
+            assert($0.isEnumeration || $0.Is(.number | .integer | .boolean) ||
+                    // Has a producing generator registered
+                    $0.Is(.jsTemporalPlainTime) ||
+                    // Has explicit support in createOptionsBag
+                    $0.Is(OptionsBag.jsTemporalRelativeTo),
+                   "Found unsupported option type \($0) in options bag \(name)")
             return $0 | .undefined;
         }
         self.group = ObjectGroup(name: name, instanceType: nil, properties: properties, overloads: [:])
@@ -1166,8 +1299,17 @@ public extension ObjectGroup {
     // so Fuzzilli can generate sequences like `Date.prototype.getTime.call(new Date())`.
     static func createPrototypeObjectGroup(_ receiver: ObjectGroup) -> ObjectGroup {
         let name = receiver.name + ".prototype"
-        let properties = Dictionary(uniqueKeysWithValues: receiver.methods.map {
+        var properties = Dictionary(uniqueKeysWithValues: receiver.methods.map {
             ($0.0, ILType.unboundFunction($0.1.first, receiver: receiver.instanceType)) })
+        // These functions are getters instead of regular functions, and error when called
+        // on the prototype. We hide them from the prototype object to avoid
+        // generating `let v0 = Intl.DateTimeFormat.prototype.format`.
+        // https://tc39.es/ecma402/#sec-intl.datetimeformat.prototype.format
+        if receiver.name == "Intl.DateTimeFormat" || receiver.name == "Intl.NumberFormat" {
+            properties.removeValue(forKey: "format")
+        } else if receiver.name == "Intl.Collator" {
+            properties.removeValue(forKey: "compare")
+        }
         return ObjectGroup(
             name: name,
             instanceType: .object(ofGroup: name, withProperties: properties.map {$0.0}, withMethods: []),
@@ -2199,6 +2341,13 @@ public extension ObjectGroup {
         return possibleParams.map { [.plain($0)] => .boolean }
     }
 
+    private static func temporalTimeZoneLikeSignature(signature: (ILType) -> Signature) -> [Signature] {
+        return [
+            signature(jsTemporalTimeZoneLike),
+            signature(.jsTemporalZonedDateTime),
+        ]
+    }
+
     /// Object group modelling the JavaScript Temporal builtin
     static let jsTemporalObject = ObjectGroup(
         name: "Temporal",
@@ -2221,14 +2370,13 @@ public extension ObjectGroup {
         name: "Temporal.Now",
         instanceType: .jsTemporalNow,
         properties: [:],
-        methods: [
-            "timeZoneId": [] => .string,
-            "instant": [] => .jsTemporalInstant,
-            // TODO(manishearth, 439921647) Potentially hint to the generator that these are timezone-like
-            "plainDateTimeISO": [.opt(.string)] => .jsTemporalPlainDateTime,
-            "zonedDateTimeISO": [.opt(.string)] => .jsTemporalZonedDateTime,
-            "plainDateISO": [.opt(.string)] => .jsTemporalPlainDate,
-            "plainTimeISO": [.opt(.string)] => .jsTemporalPlainTime,
+        overloads: [
+            "timeZoneId": [[] => .string],
+            "instant": [[] => .jsTemporalInstant],
+            "plainDateTimeISO": temporalTimeZoneLikeSignature { [.opt($0)] => .jsTemporalPlainDateTime },
+            "zonedDateTimeISO": temporalTimeZoneLikeSignature { [.opt($0)] => .jsTemporalZonedDateTime },
+            "plainDateISO": temporalTimeZoneLikeSignature { [.opt($0)] => .jsTemporalPlainDate },
+            "plainTimeISO": temporalTimeZoneLikeSignature { [.opt($0)] => .jsTemporalPlainTime },
         ]
     )
 
@@ -2250,7 +2398,7 @@ public extension ObjectGroup {
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
-            "toZonedDateTimeISO": [[jsTemporalTimeZoneLike] => .jsTemporalZonedDateTime],
+            "toZonedDateTimeISO": temporalTimeZoneLikeSignature { [.plain($0)] => .jsTemporalZonedDateTime },
         ]
     )
 
@@ -2462,7 +2610,9 @@ public extension ObjectGroup {
             "since": temporalUntilSinceSignature(possibleParams: jsTemporalPlainDateLikeParameters),
             "equals": temporalEqualsSignature(possibleParams: jsTemporalPlainDateLikeParameters),
             "toPlainDateTime": jsTemporalPlainTimeLikeParameters.map {[.opt($0)] => .jsTemporalPlainDateTime},
-            "toZonedDateTime": [[.jsAnything] => .jsAnything],
+            "toZonedDateTime": temporalTimeZoneLikeSignature { [.plain($0)] => .jsTemporalZonedDateTime }
+                // Can also accept an object with timezone/time fields
+                + [[.plain(OptionsBag.jsTemporalPlainDateToZDTSettings.group.instanceType)] => .jsTemporalZonedDateTime],
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
@@ -2502,7 +2652,7 @@ public extension ObjectGroup {
             "toString": [[.opt(jsTemporalToStringSettings)] => .string],
             "toJSON": [[] => .string],
             "toLocaleString": [[.opt(.string), .opt(jsTemporalToLocaleStringSettings)] => .string],
-            "toZonedDateTime": [[.string, .opt(OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType)] => .jsTemporalZonedDateTime],
+            "toZonedDateTime": temporalTimeZoneLikeSignature { [.plain($0), .opt(OptionsBag.jsTemporalZonedInterpretationSettings.group.instanceType)] => .jsTemporalZonedDateTime },
             "toPlainDate": [[] => .jsTemporalPlainDate],
             "toPlainTime": [[] => .jsTemporalPlainTime],
         ]
@@ -2687,7 +2837,7 @@ public extension ObjectGroup {
 
     // Stringy objects
     // TODO(manishearth, 439921647) support stringy objects
-    fileprivate static let jsTemporalTimeZoneLike = Parameter.string
+    fileprivate static let jsTemporalTimeZoneLike = ILType.namedString(ofName: "TemporalTimeZoneString")
 
     // Options objects
     fileprivate static let jsTemporalDifferenceSettings = OptionsBag.jsTemporalDifferenceSettingOrRoundTo.group.instanceType
@@ -2779,6 +2929,456 @@ extension OptionsBag {
         name: "TemporalDurationCompareSettingsObject",
         properties: [
             "relativeTo": jsTemporalRelativeTo,
+        ]
+    )
+
+    static let jsTemporalPlainDateToZDTSettings = OptionsBag(
+        name: "TemporalPlainDateToZDTSettings",
+        properties: [
+            "timeZone": ObjectGroup.jsTemporalTimeZoneLike,
+            "plainTime": .jsTemporalPlainTime,
+        ]
+    )
+}
+
+// Intl
+extension ILType {
+    // Intl types
+    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat", "NumberFormat", "PluralRules", "RelativeTimeFormat", "Segmenter"], withMethods: ["getCanonicalLocales", "supportedValuesOf"])
+
+    static let jsIntlCollator = ILType.object(ofGroup: "Intl.Collator", withProperties: [], withMethods: ["compare", "resolvedOptions"])
+    static let jsIntlCollatorConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlCollatorSettings.group.instanceType)] => .jsIntlCollator) + .object(ofGroup: "IntlCollatorConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlDateTimeFormat = ILType.object(ofGroup: "Intl.DateTimeFormat", withProperties: [], withMethods: ["format", "formatRange", "formatRangeToParts", "formatToParts", "resolvedOptions"])
+    static let jsIntlDateTimeFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlDateTimeFormatSettings.group.instanceType)] => .jsIntlDateTimeFormat) + .object(ofGroup: "IntlDateTimeFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlListFormat = ILType.object(ofGroup: "Intl.ListFormat", withProperties: [], withMethods: ["format", "formatToParts", "resolvedOptions"])
+    static let jsIntlListFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlListFormatSettings.group.instanceType)] => .jsIntlListFormat) + .object(ofGroup: "IntlListFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlNumberFormat = ILType.object(ofGroup: "Intl.NumberFormat", withProperties: [], withMethods: ["format", "formatRange", "formatRangeToParts", "formatToParts", "resolvedOptions"])
+    static let jsIntlNumberFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlNumberFormatSettings.group.instanceType)] => .jsIntlNumberFormat) + .object(ofGroup: "IntlNumberFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlPluralRules = ILType.object(ofGroup: "Intl.PluralRules", withProperties: [], withMethods: ["select", "selectRange", "resolvedOptions"])
+    static let jsIntlPluralRulesConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlPluralRulesSettings.group.instanceType)] => .jsIntlPluralRules) + .object(ofGroup: "IntlPluralRulesConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlRelativeTimeFormat = ILType.object(ofGroup: "Intl.RelativeTimeFormat", withProperties: [], withMethods: ["format", "formatToParts", "resolvedOptions"])
+    static let jsIntlRelativeTimeFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlRelativeTimeFormatSettings.group.instanceType)] => .jsIntlRelativeTimeFormat) + .object(ofGroup: "IntlRelativeTimeFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlSegmenter = ILType.object(ofGroup: "Intl.Segmenter", withProperties: [], withMethods: ["segment", "resolvedOptions"])
+    static let jsIntlSegmenterConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlSegmenterSettings.group.instanceType)] => .jsIntlSegmenter) + .object(ofGroup: "IntlSegmenterConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlSegmenterSegments = ILType.object(ofGroup: "IntlSegmenterSegments", withProperties: [], withMethods: ["containing"])
+
+    static let jsIntlLocaleLike = ILType.namedString(ofName: "IntlLocaleString")
+    static let jsIntlUnit = ILType.namedString(ofName: "IntlUnitString")
+}
+
+extension ObjectGroup {
+    static let jsIntlSupportedValuesEnum = ILType.enumeration(ofName: "IntlSupportedValues", withValues: ["calendar", "collation", "currency", "numberingSystem", "timeZone"])
+
+    static let jsIntlObject = ObjectGroup(
+        name: "Intl",
+        instanceType: .jsIntlObject,
+        properties: [
+            "Collator"  : .jsIntlCollatorConstructor,
+            "DateTimeFormat"  : .jsIntlDateTimeFormatConstructor,
+            "ListFormat"  : .jsIntlListFormatConstructor,
+            "NumberFormat"  : .jsIntlNumberFormatConstructor,
+            "PluralRules"  : .jsIntlPluralRulesConstructor,
+            "RelativeTimeFormat"  : .jsIntlRelativeTimeFormatConstructor,
+            "Segmenter"  : .jsIntlSegmenterConstructor,
+        ],
+        methods: [
+            "getCanonicalLocales": [] => .jsArray,
+            "supportedValuesOf": [.plain(jsIntlSupportedValuesEnum)] => .jsArray,
+        ]
+    )
+
+    static let jsIntlCollator = ObjectGroup(
+        name: "Intl.Collator",
+        instanceType: .jsIntlCollator,
+        properties: [:],
+        methods: [
+            "compare": [.string, .string] => .integer,
+            "resolvedOptions": [] => .object(),
+        ]
+    )
+
+    static let jsIntlCollatorPrototype = createPrototypeObjectGroup(jsIntlCollator)
+
+    static let jsIntlCollatorConstructor = ObjectGroup(
+        name: "IntlCollatorConstructor",
+        constructorPath: "Intl.Collator",
+        instanceType: .jsIntlCollatorConstructor,
+        properties: [
+            "prototype" : jsIntlCollatorPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+
+    fileprivate static func dateTimeFormatSignature(_ returnType: ILType) -> [Signature] {
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/format#date
+        // No ZonedDateTime as stated in the docs.
+        [ILType.jsDate, .jsTemporalPlainDate, .jsTemporalPlainTime, .jsTemporalPlainMonthDay, .jsTemporalPlainYearMonth, .jsTemporalPlainDateTime].map {
+            [.opt($0)] => returnType
+        }
+    }
+    fileprivate static func dateTimeFormatRangeSignature(_ returnType: ILType) -> [Signature] {
+        // Docs list all Temporal types except ZDT, but we don't wish to explode the signatures so we just pick
+        // the two main relevant ones.
+        [ILType.jsDate, .jsTemporalPlainDateTime].flatMap { firstParam in
+            [ILType.jsDate, .jsTemporalPlainDateTime].map {
+                [.opt(firstParam), .opt($0)] => returnType
+            }
+        }
+    }
+    static let jsIntlDateTimeFormat = ObjectGroup(
+        name: "Intl.DateTimeFormat",
+        instanceType: .jsIntlDateTimeFormat,
+        properties: [:],
+        overloads: [
+            "format": dateTimeFormatSignature(.string),
+            "formatRange": dateTimeFormatRangeSignature(.string),
+            "formatRangeToParts": dateTimeFormatRangeSignature(.jsArray),
+            "formatToParts": dateTimeFormatSignature(.jsArray),
+            "resolvedOptions": [[] => .object()],
+        ]
+    )
+
+    static let jsIntlDateTimeFormatPrototype = createPrototypeObjectGroup(jsIntlDateTimeFormat)
+
+    static let jsIntlDateTimeFormatConstructor = ObjectGroup(
+        name: "IntlDateTimeFormatConstructor",
+        constructorPath: "Intl.DateTimeFormat",
+        instanceType: .jsIntlDateTimeFormatConstructor,
+        properties: [
+            "prototype" : jsIntlDateTimeFormatPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+
+    static let jsIntlListFormat = ObjectGroup(
+        name: "Intl.ListFormat",
+        instanceType: .jsIntlListFormat,
+        properties: [:],
+        methods: [
+            "format": [.plain(.jsArray)] => .string,
+            "formatToParts": [.plain(.jsArray)] => .jsArray,
+            "resolvedOptions": [] => .object(),
+        ]
+    )
+
+    static let jsIntlListFormatPrototype = createPrototypeObjectGroup(jsIntlListFormat)
+
+    static let jsIntlListFormatConstructor = ObjectGroup(
+        name: "IntlListFormatConstructor",
+        constructorPath: "Intl.ListFormat",
+        instanceType: .jsIntlListFormatConstructor,
+        properties: [
+            "prototype" : jsIntlListFormatPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+
+    fileprivate static func numberFormatSignature(_ returnType: ILType) -> [Signature] {
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/format
+        [ILType.number, .bigint, .string].map {
+            [.opt($0)] => returnType
+        }
+    }
+    fileprivate static func numberFormatRangeSignature(_ returnType: ILType) -> [Signature] {
+        [ILType.number, .bigint, .string].flatMap { firstParam in
+            [ILType.number, .bigint, .string].map {
+                [.opt(firstParam), .opt($0)] => returnType
+            }
+        }
+    }
+
+    static let jsIntlNumberFormat = ObjectGroup(
+        name: "Intl.NumberFormat",
+        instanceType: .jsIntlNumberFormat,
+        properties: [:],
+        overloads: [
+            "format": numberFormatSignature(.string),
+            "formatRange": numberFormatRangeSignature(.string),
+            "formatRangeToParts": numberFormatRangeSignature(.jsArray),
+            "formatToParts": numberFormatSignature(.jsArray),
+            "resolvedOptions": [[] => .object()],
+        ]
+    )
+
+    static let jsIntlNumberFormatPrototype = createPrototypeObjectGroup(jsIntlNumberFormat)
+
+    static let jsIntlNumberFormatConstructor = ObjectGroup(
+        name: "IntlNumberFormatConstructor",
+        constructorPath: "Intl.NumberFormat",
+        instanceType: .jsIntlNumberFormatConstructor,
+        properties: [
+            "prototype" : jsIntlNumberFormatPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+
+    static let jsIntlPluralRules = ObjectGroup(
+        name: "Intl.PluralRules",
+        instanceType: .jsIntlPluralRules,
+        properties: [:],
+        methods: [
+            "select": [.number] => .string,
+            "selectRange": [.number, .number] => .string,
+            "resolvedOptions": [] => .object(),
+        ]
+    )
+
+    static let jsIntlPluralRulesPrototype = createPrototypeObjectGroup(jsIntlPluralRules)
+
+    static let jsIntlPluralRulesConstructor = ObjectGroup(
+        name: "IntlPluralRulesConstructor",
+        constructorPath: "Intl.PluralRules",
+        instanceType: .jsIntlPluralRulesConstructor,
+        properties: [
+            "prototype" : jsIntlPluralRulesPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+
+    static let jsIntlRelativeTimeFormatUnitEnum = ILType.enumeration(ofName: "IntlRelativeTimeFormatUnit", withValues: ["year", "quarter", "month", "week", "day", "hour", "minute", "second"])
+
+    static let jsIntlRelativeTimeFormat = ObjectGroup(
+        name: "Intl.RelativeTimeFormat",
+        instanceType: .jsIntlRelativeTimeFormat,
+        properties: [:],
+        methods: [
+            "format": [.number, .plain(jsIntlRelativeTimeFormatUnitEnum)] => .string,
+            "formatToParts": [.number, .plain(jsIntlRelativeTimeFormatUnitEnum)] => .jsArray,
+            "resolvedOptions": [] => .object(),
+        ]
+    )
+
+    static let jsIntlRelativeTimeFormatPrototype = createPrototypeObjectGroup(jsIntlRelativeTimeFormat)
+
+    static let jsIntlRelativeTimeFormatConstructor = ObjectGroup(
+        name: "IntlRelativeTimeFormatConstructor",
+        constructorPath: "Intl.RelativeTimeFormat",
+        instanceType: .jsIntlRelativeTimeFormatConstructor,
+        properties: [
+            "prototype" : jsIntlRelativeTimeFormatPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+
+    static let jsIntlSegmenter = ObjectGroup(
+        name: "Intl.Segmenter",
+        instanceType: .jsIntlSegmenter,
+        properties: [:],
+        methods: [
+            "segment": [.string] => .jsIntlSegmenterSegments,
+            "resolvedOptions": [] => .object(),
+        ]
+    )
+
+    static let jsIntlSegmenterPrototype = createPrototypeObjectGroup(jsIntlSegmenter)
+
+    static let jsIntlSegmenterConstructor = ObjectGroup(
+        name: "IntlSegmenterConstructor",
+        constructorPath: "Intl.Segmenter",
+        instanceType: .jsIntlSegmenterConstructor,
+        properties: [
+            "prototype" : jsIntlSegmenterPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+    static let jsIntlSegmenterSegments = ObjectGroup(
+        name: "IntlSegmenterSegments",
+        instanceType: .jsIntlSegmenterSegments,
+        properties: [:],
+        methods: [
+            "containing": [.number] => .object(),
+        ]
+    )
+}
+
+extension OptionsBag {
+    fileprivate static let jsIntlLocaleMatcherEnum = ILType.enumeration(ofName: "IntlLocaleMatcher", withValues: ["lookup", "best fit"])
+    fileprivate static let jsIntlNumberingSystemEnum = ILType.enumeration(ofName: "IntlNumberingSystem", withValues: Locale.NumberingSystem.availableNumberingSystems.map { $0.identifier })
+    fileprivate static let jsIntlHourCycleEnum = ILType.enumeration(ofName: "IntlHourCycle", withValues: ["h11", "h12", "h23", "h24"])
+    fileprivate static let jsIntlLongShortNarrowEnum = ILType.enumeration(ofName: "IntlLongShortNarrow", withValues: ["long", "short", "narrow"])
+    fileprivate static let jsIntlLongShortEnum = ILType.enumeration(ofName: "IntlLongShort", withValues: ["long", "short"])
+    fileprivate static let jsIntlAutoAlwaysEnum = ILType.enumeration(ofName: "IntlAutoAlways", withValues: ["auto", "always"])
+    fileprivate static let jsIntlNumeric2DigitEnum = ILType.enumeration(ofName: "IntlNumeric2Digit", withValues: ["numeric", "2-digit"])
+    fileprivate static let jsIntlMonthEnum = ILType.enumeration(ofName: "IntlMonth", withValues: ["numeric", "2-digit", "long", "short", "narrow"])
+    fileprivate static let jsIntlTimeZoneNameEnum = ILType.enumeration(ofName: "IntlTimeZoneName", withValues: ["long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric"])
+    fileprivate static let jsIntlFormatMatcherEnum = ILType.enumeration(ofName: "IntlFormatMatcher", withValues: ["basic", "best fit"])
+    fileprivate static let jsIntlFullLongMediumShort = ILType.enumeration(ofName: "IntlFullLongMediumShort", withValues: ["full", "long", "medium", "short"])
+    fileprivate static let jsIntlCollatorUsageEnum = ILType.enumeration(ofName: "IntlCollatorUsage", withValues: ["sort", "search"])
+    fileprivate static let jsIntlCollationEnum = ILType.enumeration(ofName: "IntlCollation", withValues: ["emoji", "pinyin", "stroke"])
+    fileprivate static let jsIntlCaseFirstEnum = ILType.enumeration(ofName: "IntlCaseFirst", withValues: ["upper", "lower", "false"])
+    fileprivate static let jsIntlCollatorSensitivityEnum = ILType.enumeration(ofName: "IntlCollatorSensitivity", withValues: ["base", "accent", "case", "variant"])
+    fileprivate static let jsIntlListFormatTypeEnum = ILType.enumeration(ofName: "IntlListFormatTypeEnum", withValues: ["conjunction", "disjunction", "unit"])
+    fileprivate static let jsIntlNumberFormatStyleEnum = ILType.enumeration(ofName: "IntlNumberFormatStyleEnum", withValues: ["decimal", "currency", "percent", "unit"])
+    fileprivate static let jsIntlCurrencySystemEnum = ILType.enumeration(ofName: "IntlCurrency", withValues: Locale.Currency.isoCurrencies.map { $0.identifier })
+    fileprivate static let jsIntlCurrencyDisplayEnum = ILType.enumeration(ofName: "IntlCurrencyDisplayEnum", withValues: ["code", "symbol", "narrowSymbol", "name"])
+    fileprivate static let jsIntlCurrencySignEnum = ILType.enumeration(ofName: "IntlCurrencySignEnum", withValues: ["standard", "accounting"])
+    fileprivate static let jsIntlRoundingPriorityEnum = ILType.enumeration(ofName: "IntlRoundingPriority", withValues: ["auto", "morePrecision", "lessPrecision"])
+    fileprivate static let jsIntlRoundingModeEnum = ILType.enumeration(ofName: "IntlRoundingMode", withValues: ["ceil", "floor", "expand", "trunc", "halfCeil", "halfFloor", "halfExpand", "halfTrunc", "halfEven"])
+    fileprivate static let jsIntlTrailingZeroDisplayEnum = ILType.enumeration(ofName: "IntlTrailingZeroDisplay", withValues: ["auto", "stripIfInteger"])
+    fileprivate static let jsIntlNumberFormatNotationEnum = ILType.enumeration(ofName: "IntlNumberFormatNotation", withValues: ["standard", "scientific", "engineering", "compact"])
+    fileprivate static let jsIntlNumberFormatGroupingEnum = ILType.enumeration(ofName: "IntlNumberFormatGrouping", withValues: ["always", "auto", "min2", "true", "false"])
+    fileprivate static let jsIntlSignDisplayEnum = ILType.enumeration(ofName: "IntlSignDisplay", withValues: ["auto", "always", "exceptZero", "negative", "never"])
+    fileprivate static let jsIntlPluralRulesTypeEnum = ILType.enumeration(ofName: "IntlPluralRulesTypeEnum", withValues: ["cardinal", "ordinal"])
+    fileprivate static let jsIntlSegmenterGranularityEnum = ILType.enumeration(ofName: "IntlSegmenterGranularityEnum", withValues: ["grapheme", "word", "sentence"])
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters
+    static let jsIntlDateTimeFormatSettings = OptionsBag(
+        name: "IntlLocaleSettings",
+        properties: [
+            // Locale options
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "calendar": .jsTemporalCalendarEnum,
+            "numberingSystem": jsIntlNumberingSystemEnum,
+            "hour12": .boolean,
+            "hourCycle": jsIntlHourCycleEnum,
+            "timeZone": ObjectGroup.jsTemporalTimeZoneLike,
+            // datetime options
+            "weekday": jsIntlLongShortNarrowEnum,
+            "era": jsIntlLongShortNarrowEnum,
+            "year": jsIntlNumeric2DigitEnum,
+            "month": jsIntlMonthEnum,
+            "day": jsIntlNumeric2DigitEnum,
+            "dayPeriod": jsIntlLongShortNarrowEnum,
+            "hour": jsIntlNumeric2DigitEnum,
+            "minute": jsIntlNumeric2DigitEnum,
+            "second": jsIntlNumeric2DigitEnum,
+            "fractionalSecondDigits": .integer, // Technically only 1-3
+            "timeZoneName": jsIntlTimeZoneNameEnum,
+            "formatMatcher": jsIntlFormatMatcherEnum,
+            // style options
+            "dateStyle": jsIntlFullLongMediumShort,
+            "timeStyle": jsIntlFullLongMediumShort,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Collator/Collator#options
+    static let jsIntlCollatorSettings = OptionsBag(
+        name: "IntlCollatorSettings",
+        properties: [
+            "usage": jsIntlCollatorUsageEnum,
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "collation": jsIntlCollationEnum,
+            "numeric": .boolean,
+            "caseFirst": jsIntlCaseFirstEnum,
+            "sensitivity": jsIntlCollatorSensitivityEnum,
+            "ignorePunctuation": .boolean,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat/ListFormat#options
+    static let jsIntlListFormatSettings = OptionsBag(
+        name: "IntlListFormatSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "type": jsIntlListFormatTypeEnum,
+            "style": jsIntlLongShortNarrowEnum,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/NumberFormat#options
+    static let jsIntlNumberFormatSettings = OptionsBag(
+        name: "IntlNumberFormatSettings",
+        properties: [
+            // locale options
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "numberingSystem": jsIntlNumberingSystemEnum,
+            // style options
+            "style": jsIntlNumberFormatStyleEnum,
+            "currency": jsIntlCurrencySystemEnum,
+            "currencyDisplay": jsIntlCurrencyDisplayEnum,
+            "currencySign": jsIntlCurrencySignEnum,
+            "unit": .jsIntlUnit,
+            "unitDisplay": jsIntlLongShortNarrowEnum,
+            // digit options
+            "minimumIntegerDigits": .integer,
+            "minimumFractionDigits": .integer,
+            "maximumFractionDigits": .integer,
+            "minimumSignificantDigits": .integer,
+            "maximumSignificantDigits": .integer,
+            "roundingPriority": jsIntlRoundingPriorityEnum,
+            "roundingIncrement": .integer,
+            "roundingMode": jsIntlRoundingModeEnum,
+            "trailingZeroDisplay": jsIntlTrailingZeroDisplayEnum,
+            // other options
+            "notation": jsIntlNumberFormatNotationEnum,
+            "compactDisplay": jsIntlLongShortEnum,
+            "useGrouping": jsIntlNumberFormatGroupingEnum,
+            "signDisplay": jsIntlSignDisplayEnum,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/PluralRules/PluralRules#options
+    static let jsIntlPluralRulesSettings = OptionsBag(
+        name: "IntlPluralRulesSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "type": jsIntlPluralRulesTypeEnum,
+
+            // NumberFormat digit options
+            "minimumIntegerDigits": .integer,
+            "minimumFractionDigits": .integer,
+            "maximumFractionDigits": .integer,
+            "minimumSignificantDigits": .integer,
+            "maximumSignificantDigits": .integer,
+            "roundingPriority": jsIntlRoundingPriorityEnum,
+            "roundingIncrement": .integer,
+            "roundingMode": jsIntlRoundingModeEnum,
+
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/RelativeTimeFormat/RelativeTimeFormat#options
+    static let jsIntlRelativeTimeFormatSettings = OptionsBag(
+        name: "IntlRelativeTimeFormatSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "numberingSystem": jsIntlNumberingSystemEnum,
+            "style": jsIntlLongShortNarrowEnum,
+            "numeric": jsIntlAutoAlwaysEnum,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter/Segmenter#options
+    static let jsIntlSegmenterSettings = OptionsBag(
+        name: "IntlSegmenterSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "granularity": jsIntlSegmenterGranularityEnum,
+        ]
+    )
+
+    static let jsIntlLocaleMatcherSettings = OptionsBag(
+        name: "IntlLocaleMatcherSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
         ]
     )
 }

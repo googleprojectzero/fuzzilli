@@ -323,6 +323,14 @@ public class JavaScriptLifter: Lifter {
                 }
                 w.declare(instr.output, as: op.variableName)
 
+            case .createNamedDisposableVariable(let op):
+                w.emit("using \(op.variableName) = \(input(0));");
+                w.declare(instr.output, as: op.variableName)
+
+            case .createNamedAsyncDisposableVariable(let op):
+                w.emit("await using \(op.variableName) = \(input(0));");
+                w.declare(instr.output, as: op.variableName)
+
             case .loadDisposableVariable:
                 let V = w.declare(instr.output);
                 w.emit("using \(V) = \(input(0));");
@@ -492,6 +500,14 @@ public class JavaScriptLifter: Lifter {
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
 
+            case .beginClassInstanceComputedMethod(let op):
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = input(0)
+                w.emit("[\(METHOD)](\(PARAMS)) {")
+                w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
+
             case .beginClassInstanceGetter(let op):
                 let PROPERTY = op.propertyName
                 w.emit("get \(PROPERTY)() {")
@@ -508,6 +524,7 @@ public class JavaScriptLifter: Lifter {
                 bindVariableToThis(instr.innerOutput(0))
 
             case .endClassInstanceMethod,
+                 .endClassInstanceComputedMethod,
                  .endClassInstanceGetter,
                  .endClassInstanceSetter:
                 w.leaveCurrentBlock()
@@ -553,6 +570,14 @@ public class JavaScriptLifter: Lifter {
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
 
+            case .beginClassStaticComputedMethod(let op):
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = input(0)
+                w.emit("static [\(METHOD)](\(PARAMS)) {")
+                w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
+
             case .beginClassStaticGetter(let op):
                 assert(instr.numInnerOutputs == 1)
                 let PROPERTY = op.propertyName
@@ -571,6 +596,7 @@ public class JavaScriptLifter: Lifter {
 
             case .endClassStaticInitializer,
                  .endClassStaticMethod,
+                 .endClassStaticComputedMethod,
                  .endClassStaticGetter,
                  .endClassStaticSetter:
                 w.leaveCurrentBlock()
@@ -1695,6 +1721,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmSimdLoad(_),
                  .wasmBeginTypeGroup(_),
                  .wasmEndTypeGroup(_),
+                 .wasmDefineSignatureType(_),
                  .wasmDefineArrayType(_),
                  .wasmDefineStructType(_),
                  .wasmDefineForwardOrSelfReference(_),

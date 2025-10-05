@@ -65,5 +65,7 @@ let qtjsProfile = Profile(
 
     additionalObjectGroups: [],
 
+    additionalEnumerations: [],
+
     optionalPostProcessor: nil
 )

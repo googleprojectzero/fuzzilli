@@ -127,5 +127,7 @@ let jscProfile = Profile(
 
     additionalObjectGroups: [],
 
+    additionalEnumerations: [],
+
     optionalPostProcessor: nil
 )
