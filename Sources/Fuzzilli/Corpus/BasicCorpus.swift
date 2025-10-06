@@ -100,6 +100,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
 
     /// Returns a random program from this corpus and increases its age by one.
     public func randomElementForMutating() -> Program {
+        assert(programs.count > 0) // if corpus is empty, this mutation will crash
         let idx = Int.random(in: 0..<programs.count)
         ages[idx] += 1
         let program = programs[idx]
