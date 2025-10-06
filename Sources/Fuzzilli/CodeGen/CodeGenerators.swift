@@ -268,7 +268,7 @@ public let CodeGenerators: [CodeGenerator] = [
             }
 
             let o = b.buildObjectLiteral { obj in
-                b.build(n: Int.random(in: 0...10))
+                b.buildRecursive(n: Int.random(in: 0...10))
             }
 
             objType = b.type(of: o)
@@ -344,7 +344,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // Create the class.
         let c = b.buildClassDefinition(withSuperclass: superclass, isExpression: probability(0.3)) { cls in
-            b.build(n: defaultCodeGenerationAmount)
+            b.buildRecursive(n: defaultCodeGenerationAmount)
         }
 
         // And construct a few instances of it.
@@ -2414,7 +2414,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let loopVar = b.loadInt(0)
         b.buildDoWhileLoop(
             do: {
-                b.build(n: defaultCodeGenerationAmount)
+                b.buildRecursive(n: defaultCodeGenerationAmount)
                 b.unary(.PostInc, loopVar)
             },
             while: {
@@ -2462,7 +2462,7 @@ public let CodeGenerators: [CodeGenerator] = [
             // Generate a for-loop without any loop variables.
             let counter = b.loadInt(10)
             b.buildForLoop({}, { b.unary(.PostDec, counter) }) {
-                b.build(n: 4)
+                b.buildRecursive(n: 4)
             }
         } else {
             // Generate a for-loop with two loop variables.
@@ -2475,7 +2475,7 @@ public let CodeGenerators: [CodeGenerator] = [
                     b.unary(.PostDec, vs[1])
                 }
             ) { _ in
-                b.build(n: 4)
+                b.buildRecursive(n: 4)
             }
         }
     },
@@ -2932,7 +2932,7 @@ public let CodeGenerators: [CodeGenerator] = [
             if probability(0.5) {
                 imitation = b.buildObjectLiteral { obj in
                     obj.addMethod("valueOf", with: .parameters(n: 0)) { _ in
-                        b.build(n: 3)
+                        b.buildRecursive(n: 3)
                         b.doReturn(orig)
                     }
                 }
@@ -2943,7 +2943,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 imitation = b.buildObjectLiteral { obj in
                     obj.addComputedMethod(toPrimitive, with: .parameters(n: 0))
                     { _ in
-                        b.build(n: 3)
+                        b.buildRecursive(n: 3)
                         b.doReturn(orig)
                     }
                 }
@@ -2961,14 +2961,14 @@ public let CodeGenerators: [CodeGenerator] = [
                 let constructor = b.getProperty("constructor", of: orig)
                 let cls = b.buildClassDefinition(withSuperclass: constructor, isExpression: probability(0.3)) {
                     _ in
-                    b.build(n: 3)
+                    b.buildRecursive(n: 3)
                 }
                 imitation = b.construct(
                     cls, withArgs: b.randomArguments(forCalling: cls))
             } else {
                 imitation = b.buildObjectLiteral { obj in
                     obj.setPrototype(to: orig)
-                    b.build(n: 3)
+                    b.buildRecursive(n: 3)
                 }
             }
         } else {

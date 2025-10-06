@@ -1933,6 +1933,14 @@ public class ProgramBuilder {
         }
     }
 
+    // Like build(n:by) but forcing BuildingMode to generating. Splicing is an operation that
+    // affects the whole program, so we shouldn't roll a die on every buildRecursive() call in a
+    // code generator whether we'd want to splice an operation into the current block (which happens
+    // with the default mode .generatingAndSplicing).
+    public func buildRecursive(n budget: Int) {
+        build(n: budget, by: .generating)
+    }
+
     /// Run ValueGenerators until we have created at least N new variables.
     /// Returns both the number of generated instructions and of newly created variables.
     @discardableResult
@@ -1998,7 +2006,7 @@ public class ProgramBuilder {
         // We need to update the inputs later, so take note of the visible variables here.
         let oldVisibleVariables = visibleVariables
 
-        build(n: defaultCodeGenerationAmount)
+        build(n: defaultCodeGenerationAmount, by: mode)
 
         let newVisibleVariables = visibleVariables.filter { v in
             let t = type(of: v)
@@ -2111,7 +2119,7 @@ public class ProgramBuilder {
             // Check if we need to or can create types here.
             createRequiredInputVariables(forTypes: inputTypes)
             // Build into the block.
-            build(n: budgetPerYieldPoint)
+            buildRecursive(n: budgetPerYieldPoint)
             // Call the next scheduled stub.
             let _  = callNext()
             numberOfGeneratedInstructions += code.count - codeSizePre

@@ -155,7 +155,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("WasmForwardReferenceGenerator", inContext: .single(.wasmTypeGroup)) { b in
         // TODO(cffsmith): think about this.
-        b.wasmDefineAndResolveForwardReference {b.build(n: defaultCodeGenerationAmount)}
+        b.wasmDefineAndResolveForwardReference {b.buildRecursive(n: defaultCodeGenerationAmount)}
     },
 
     CodeGenerator(
@@ -1289,7 +1289,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 loopCtr, function.consti32(1), binOpKind: .Sub)
             function.wasmReassign(variable: loopCtr, to: result)
 
-            b.build(n: defaultCodeGenerationAmount)
+            b.buildRecursive(n: defaultCodeGenerationAmount)
 
             // Backedge of loop, we continue if it is not equal to zero.
             let isNotZero = function.wasmi32CompareOp(
@@ -1314,7 +1314,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
         function.wasmBuildLoop(with: parameters => outputTypes, args: args) {
             label, loopArgs in
-            b.build(n: defaultCodeGenerationAmount)
+            b.buildRecursive(n: defaultCodeGenerationAmount)
             let loopCtr = function.wasmi32BinOp(
                 args[0], function.consti32(1), binOpKind: .Add)
             let condition = function.wasmi32CompareOp(
@@ -1341,14 +1341,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let recursiveCallCount = 2 + tags.count
         function.wasmBuildLegacyTry(with: parameters => [], args: args) {
             label, args in
-            b.build(n: 4)
+            b.buildRecursive(n: 4)
             for (i, tag) in tags.enumerated() {
                 function.WasmBuildLegacyCatch(tag: tag) { _, _, _ in
-                    b.build(n: 4)
+                    b.buildRecursive(n: 4)
                 }
             }
         } catchAllBody: { label in
-            b.build(n: 4)
+            b.buildRecursive(n: 4)
         }
     },
 
@@ -1368,20 +1368,20 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmBuildLegacyTryWithResult(
             with: signature, args: args,
             body: { label, args in
-                b.build(n: 4)
+                b.buildRecursive(n: 4)
                 return outputTypes.map(function.findOrGenerateWasmVar)
             },
             catchClauses: tags.enumerated().map { i, tag in
                 (
                     tag,
                     { _, _, _ in
-                        b.build(n: 4)
+                        b.buildRecursive(n: 4)
                         return outputTypes.map(function.findOrGenerateWasmVar)
                     }
                 )
             },
             catchAllBody: { label in
-                b.build(n: 4)
+                b.buildRecursive(n: 4)
                 return outputTypes.map(function.findOrGenerateWasmVar)
             })
     },
@@ -1403,20 +1403,20 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmBuildLegacyTryWithResult(
             with: signature, args: args,
             body: { label, args in
-                b.build(n: 4)
+                b.buildRecursive(n: 4)
                 return outputTypes.map(function.findOrGenerateWasmVar)
             },
             catchClauses: tags.enumerated().map { i, tag in
                 (
                     tag,
                     { _, _, _ in
-                        b.build(n: 4)
+                        b.buildRecursive(n: 4)
                         return outputTypes.map(function.findOrGenerateWasmVar)
                     }
                 )
             },
             catchAllBody: { label in
-                b.build(n: 4)
+                b.buildRecursive(n: 4)
                 return outputTypes.map(function.findOrGenerateWasmVar)
             })
     },
@@ -1433,7 +1433,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmBuildLegacyTryDelegateWithResult(
             with: parameters => outputTypes, args: args,
             body: { _, _ in
-                b.build(n: 4)
+                b.buildRecursive(n: 4)
                 return outputTypes.map(function.findOrGenerateWasmVar)
             }, delegate: label)
     },
@@ -1612,7 +1612,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             let results = parameterTypes.map(function.findOrGenerateWasmVar)
             function.wasmEndBlock(
                 outputTypes: signature.outputTypes, args: results)
-            b.build(n: 4)
+            b.buildRecursive(n: 4)
         }
     },
 
@@ -1672,7 +1672,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                     with: tryParameters => tryOutputTypes, args: tryArgs,
                     catches: catches
                 ) { _, _ in
-                    b.build(n: defaultCodeGenerationAmount)
+                    b.buildRecursive(n: defaultCodeGenerationAmount)
                     return tryOutputTypes.map(function.findOrGenerateWasmVar)
                 }
                 outputTypesList.reversed().enumerated().forEach {
@@ -1681,7 +1681,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                         function.findOrGenerateWasmVar)
                     function.wasmEndBlock(
                         outputTypes: outputTypes, args: results)
-                    b.build(n: defaultCodeGenerationAmount)
+                    b.buildRecursive(n: defaultCodeGenerationAmount)
                 }
             }
         ]),
