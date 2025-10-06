@@ -1,4 +1,4 @@
-name: build
+name: build_test
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build_test:
     timeout-minutes: 30
     strategy:
       matrix:
@@ -27,5 +27,11 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build
         run: swift build -v
-      - name: Run tests
+      - name: Run tests with Node.js
         run: swift test -v
+      - name: Install jsvu
+        run: npm install jsvu -g
+      - name: Install d8
+        run: jsvu --os=default --engines=v8
+      - name: Run tests with d8
+        run: FUZZILLI_TEST_SHELL=~/.jsvu/engines/v8/v8 swift test -v
