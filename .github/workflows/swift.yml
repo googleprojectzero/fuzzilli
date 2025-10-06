@@ -34,4 +34,4 @@ jobs:
       - name: Install d8
         run: jsvu --os=default --engines=v8
       - name: Run tests with d8
-        run: FUZZILLI_TEST_SHELL=~/.jsvu/bin/v8 swift test -v
+        run: FUZZILLI_TEST_SHELL=~/.jsvu/engines/v8/v8 swift test -v
