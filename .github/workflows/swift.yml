@@ -12,6 +12,11 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
+        kind: [debug]
+        include:
+          # On linux also build and test release.
+          - os: ubuntu-latest
+            kind: release
 
     runs-on: ${{ matrix.os }}
 
@@ -26,12 +31,12 @@ jobs:
         run: swift --version
       - uses: actions/checkout@v2
       - name: Build
-        run: swift build -v
+        run: swift build -c ${{ matrix.kind }} -v
       - name: Run tests with Node.js
-        run: swift test -v
+        run: swift test -c ${{ matrix.kind }} -v
       - name: Install jsvu
         run: npm install jsvu -g
       - name: Install d8
         run: jsvu --os=default --engines=v8
       - name: Run tests with d8
-        run: FUZZILLI_TEST_SHELL=~/.jsvu/engines/v8/v8 swift test -v
+        run: FUZZILLI_TEST_SHELL=~/.jsvu/engines/v8/v8 swift test -c ${{ matrix.kind }} -v
