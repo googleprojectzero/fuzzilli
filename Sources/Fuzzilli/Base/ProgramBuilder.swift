@@ -3132,6 +3132,15 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func createSymbolProperty(_ name: String) -> Variable {
+        let Symbol = createNamedVariable(forBuiltin: "Symbol")
+        // The Symbol constructor is just a "side effect" and probably
+        // shouldn't be used by following generators.
+        hide(Symbol)
+        return getProperty(name, of: Symbol)
+    }
+
+    @discardableResult
     public func eval(_ string: String, with arguments: [Variable] = [], hasOutput: Bool = false) -> Variable? {
         let instr = emit(Eval(string, numArguments: arguments.count, hasOutput: hasOutput), withInputs: arguments)
         return hasOutput ? instr.output : nil
