@@ -118,12 +118,35 @@ public class Storage: Module {
             let filename = "\(ev.name)_\(ev.programId)"                         
             let url = URL(fileURLWithPath: "\(self.feedbackDir)/\(filename).fu") // feedback vector update
 
-            // filter and append lines to the file
+            // collect complete feedback blocks that start with needle and have balanced brackets
             let lines = contentStr.split(separator: "\n", omittingEmptySubsequences: false)
             var matched = [String]()
+            var currentBlock = ""
+            var openCount = 0
+            var collecting = false
+            
             for line in lines {
-                if line.contains(needle) {
-                    matched.append(String(line))
+                let lineStr = String(line)
+                
+                // start collecting when we find the needle
+                if lineStr.contains(needle) {
+                    collecting = true
+                }
+                
+                if collecting {
+                    currentBlock += lineStr + "\n"
+                    
+                    // count brackets in this line
+                    let opens = lineStr.filter { $0 == "[" }.count
+                    let closes = lineStr.filter { $0 == "]" }.count
+                    openCount += opens - closes
+                    
+                    // when brackets are balanced, we have a complete feedback block
+                    if openCount == 0 && !currentBlock.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        matched.append(currentBlock.trimmingCharacters(in: .whitespacesAndNewlines))
+                        currentBlock = ""
+                        collecting = false
+                    }
                 }
             }
             guard !matched.isEmpty else { return }
@@ -137,6 +160,7 @@ public class Storage: Module {
                 }
             }
         }
+
 
         if fuzzer.config.enableDiagnostics {
             fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
