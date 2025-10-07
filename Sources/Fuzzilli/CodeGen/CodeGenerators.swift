@@ -426,8 +426,7 @@ public let CodeGenerators: [CodeGenerator] = [
         "DisposableVariableGenerator", inContext: .single(.subroutine), inputs: .one
     ) { b, val in
         assert(b.context.contains(.subroutine))
-        let dispose = b.getProperty(
-            "dispose", of: b.createNamedVariable(forBuiltin: "Symbol"))
+        let dispose = b.createSymbolProperty("dispose")
         let disposableVariable = b.buildObjectLiteral { obj in
             obj.addProperty("value", as: val)
             obj.addComputedMethod(dispose, with: .parameters(n: 0)) { args in
@@ -442,8 +441,7 @@ public let CodeGenerators: [CodeGenerator] = [
         inputs: .one
     ) { b, val in
         assert(b.context.contains(.asyncFunction))
-        let asyncDispose = b.getProperty(
-            "asyncDispose", of: b.createNamedVariable(forBuiltin: "Symbol"))
+        let asyncDispose = b.createSymbolProperty("asyncDispose")
         let asyncDisposableVariable = b.buildObjectLiteral { obj in
             obj.addProperty("value", as: val)
             obj.addComputedMethod(asyncDispose, with: .parameters(n: 0)) {
@@ -2672,11 +2670,8 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "WellKnownPropertyLoadGenerator", inputs: .preferred(.object())
     ) { b, obj in
-        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
-        // The Symbol constructor is just a "side effect" of this generator and probably shouldn't be used by following generators.
-        b.hide(Symbol)
-        let name = chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols)
-        let propertyName = b.getProperty(name, of: Symbol)
+        let propertyName = b.createSymbolProperty(
+            chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols))
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.getComputedProperty(propertyName, of: obj, guard: needGuard)
     },
@@ -2684,10 +2679,8 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "WellKnownPropertyStoreGenerator", inputs: .preferred(.object())
     ) { b, obj in
-        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
-        b.hide(Symbol)
-        let name = chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols)
-        let propertyName = b.getProperty(name, of: Symbol)
+        let propertyName = b.createSymbolProperty(
+            chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols))
         let val = b.randomJsVariable()
         b.setComputedProperty(propertyName, of: obj, to: val)
     },
@@ -2937,9 +2930,7 @@ public let CodeGenerators: [CodeGenerator] = [
                     }
                 }
             } else {
-                let toPrimitive = b.getProperty(
-                    "toPrimitive",
-                    of: b.createNamedVariable(forBuiltin: "Symbol"))
+                let toPrimitive = b.createSymbolProperty("toPrimitive")
                 imitation = b.buildObjectLiteral { obj in
                     obj.addComputedMethod(toPrimitive, with: .parameters(n: 0))
                     { _ in
@@ -3081,9 +3072,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("IteratorGenerator", produces: [.iterable]) { b in
-        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
-        b.hide(Symbol)
-        let iteratorSymbol = b.getProperty("iterator", of: Symbol)
+        let iteratorSymbol = b.createSymbolProperty("iterator")
         b.hide(iteratorSymbol)
         let iterableObject = b.buildObjectLiteral { obj in
             obj.addComputedMethod(iteratorSymbol, with: .parameters(n: 0)) {
