@@ -43,6 +43,13 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build
         run: swift build -c ${{ matrix.kind }} -v
+      - name: Install protobuf
+        # Install protoc so the presubmit can also validate the generated *.pb.swift files.
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.kind == 'debug' }}
+        run: sudo apt install -y protobuf-compiler
+      - name: Run presubmit checks
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.kind == 'debug' }}
+        run: python3 Tools/presubmit.py
       - name: Run tests with Node.js
         run: swift test -c ${{ matrix.kind }} -v
       - name: Install jsvu
