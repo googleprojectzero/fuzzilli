@@ -75,7 +75,7 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        let codeGenerators = fuzzer.codeGenerators.filter { codeGenerator in 
+        let codeGenerators = fuzzer.codeGenerators.filter { codeGenerator in
             // Filter out Generators that do a reassignment as these will make our Variables be typed as .jsAnything.
             !codeGenerator.name.contains("Reassign")
         }
