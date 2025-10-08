@@ -518,7 +518,7 @@ class LifterTests: XCTestCase {
         let null = b.loadNull()
         let v4 = b.binary(v3, v1, with: .Add)
         let otherObject = b.createNamedVariable(forBuiltin: "SomeObject")
-        let toPrimitive = b.getProperty("toPrimitive", of: b.createNamedVariable(forBuiltin: "Symbol"))
+        let toPrimitive = b.createSymbolProperty("toPrimitive")
         b.buildObjectLiteral { obj in
             obj.addProperty("p1", as: v1)
             obj.addProperty("__proto__", as: null)
@@ -653,9 +653,7 @@ class LifterTests: XCTestCase {
         let two = b.loadInt(2)
         let baz = b.loadString("baz")
         let baz42 = b.binary(baz, i, with: .Add)
-        let toPrimitive = b.getProperty(
-            "toPrimitive",
-            of: b.createNamedVariable(forBuiltin: "Symbol"))
+        let toPrimitive = b.createSymbolProperty("toPrimitive")
         let sm = b.loadString("sm")
         let C = b.buildClassDefinition() { cls in
             cls.addInstanceProperty("foo")
@@ -1827,8 +1825,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let s = b.loadString("Hello World")
-        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
-        let iterator = b.getProperty("iterator", of: Symbol)
+        let iterator = b.createSymbolProperty("iterator")
         let r = b.callComputedMethod(iterator, on: s)
         b.callMethod("next", on: r)
 
@@ -3168,7 +3165,10 @@ class LifterTests: XCTestCase {
         let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
             let v1 = b.loadInt(1)
             let v2 = b.loadInt(42)
-            let dispose = b.getProperty("dispose", of: b.createNamedVariable(forBuiltin: "Symbol"));
+            let numVariables = b.numberOfVisibleVariables
+            let dispose = b.createSymbolProperty("dispose");
+            // Test that the intermediate variable for "Symbol" stays hidden.
+            XCTAssertEqual(b.numberOfVisibleVariables, numVariables + 1)
             let disposableVariable = b.buildObjectLiteral { obj in
                 obj.addProperty("value", as: v1)
                 obj.addComputedMethod(dispose, with: .parameters(n:0)) { args in
@@ -3220,7 +3220,7 @@ class LifterTests: XCTestCase {
         let f = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
             let v1 = b.loadInt(1)
             let v2 = b.loadInt(42)
-            let asyncDispose = b.getProperty("asyncDispose", of: b.createNamedVariable(forBuiltin: "Symbol"))
+            let asyncDispose = b.createSymbolProperty("asyncDispose")
             let asyncDisposableVariable = b.buildObjectLiteral { obj in
                 obj.addProperty("value", as: v1)
                 obj.addComputedMethod(asyncDispose, with: .parameters(n:0)) { args in

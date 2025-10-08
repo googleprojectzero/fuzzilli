@@ -268,7 +268,7 @@ public let CodeGenerators: [CodeGenerator] = [
             }
 
             let o = b.buildObjectLiteral { obj in
-                b.build(n: Int.random(in: 0...10))
+                b.buildRecursive(n: Int.random(in: 0...10))
             }
 
             objType = b.type(of: o)
@@ -344,7 +344,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // Create the class.
         let c = b.buildClassDefinition(withSuperclass: superclass, isExpression: probability(0.3)) { cls in
-            b.build(n: defaultCodeGenerationAmount)
+            b.buildRecursive(n: defaultCodeGenerationAmount)
         }
 
         // And construct a few instances of it.
@@ -426,12 +426,11 @@ public let CodeGenerators: [CodeGenerator] = [
         "DisposableVariableGenerator", inContext: .single(.subroutine), inputs: .one
     ) { b, val in
         assert(b.context.contains(.subroutine))
-        let dispose = b.getProperty(
-            "dispose", of: b.createNamedVariable(forBuiltin: "Symbol"))
+        let dispose = b.createSymbolProperty("dispose")
         let disposableVariable = b.buildObjectLiteral { obj in
             obj.addProperty("value", as: val)
             obj.addComputedMethod(dispose, with: .parameters(n: 0)) { args in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
             }
         }
         b.loadDisposableVariable(disposableVariable)
@@ -442,13 +441,12 @@ public let CodeGenerators: [CodeGenerator] = [
         inputs: .one
     ) { b, val in
         assert(b.context.contains(.asyncFunction))
-        let asyncDispose = b.getProperty(
-            "asyncDispose", of: b.createNamedVariable(forBuiltin: "Symbol"))
+        let asyncDispose = b.createSymbolProperty("asyncDispose")
         let asyncDisposableVariable = b.buildObjectLiteral { obj in
             obj.addProperty("value", as: val)
             obj.addComputedMethod(asyncDispose, with: .parameters(n: 0)) {
                 args in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
             }
         }
         b.loadAsyncDisposableVariable(asyncDisposableVariable)
@@ -861,7 +859,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassInstanceMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassInstanceMethod())
             },
         ]),
@@ -899,7 +897,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassInstanceComputedMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassInstanceComputedMethod())
             },
         ]),
@@ -1107,7 +1105,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassStaticMethodEndGenerator",
                 inContext: .single([.javascript, .classMethod, .subroutine, .method])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassStaticMethod())
             },
         ]),
@@ -1145,7 +1143,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassStaticComputedMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassStaticComputedMethod())
             },
         ]),
@@ -1283,7 +1281,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassPrivateInstanceMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassPrivateInstanceMethod())
             },
         ]),
@@ -1345,7 +1343,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ClassPrivateStaticMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.doReturn(b.randomJsVariable())
+                b.maybeReturnRandomJsVariable(0.9)
                 b.emit(EndClassPrivateStaticMethod())
             },
 
@@ -2414,7 +2412,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let loopVar = b.loadInt(0)
         b.buildDoWhileLoop(
             do: {
-                b.build(n: defaultCodeGenerationAmount)
+                b.buildRecursive(n: defaultCodeGenerationAmount)
                 b.unary(.PostInc, loopVar)
             },
             while: {
@@ -2462,7 +2460,7 @@ public let CodeGenerators: [CodeGenerator] = [
             // Generate a for-loop without any loop variables.
             let counter = b.loadInt(10)
             b.buildForLoop({}, { b.unary(.PostDec, counter) }) {
-                b.build(n: 4)
+                b.buildRecursive(n: 4)
             }
         } else {
             // Generate a for-loop with two loop variables.
@@ -2475,7 +2473,7 @@ public let CodeGenerators: [CodeGenerator] = [
                     b.unary(.PostDec, vs[1])
                 }
             ) { _ in
-                b.build(n: 4)
+                b.buildRecursive(n: 4)
             }
         }
     },
@@ -2672,11 +2670,8 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "WellKnownPropertyLoadGenerator", inputs: .preferred(.object())
     ) { b, obj in
-        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
-        // The Symbol constructor is just a "side effect" of this generator and probably shouldn't be used by following generators.
-        b.hide(Symbol)
-        let name = chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols)
-        let propertyName = b.getProperty(name, of: Symbol)
+        let propertyName = b.createSymbolProperty(
+            chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols))
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.getComputedProperty(propertyName, of: obj, guard: needGuard)
     },
@@ -2684,10 +2679,8 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "WellKnownPropertyStoreGenerator", inputs: .preferred(.object())
     ) { b, obj in
-        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
-        b.hide(Symbol)
-        let name = chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols)
-        let propertyName = b.getProperty(name, of: Symbol)
+        let propertyName = b.createSymbolProperty(
+            chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols))
         let val = b.randomJsVariable()
         b.setComputedProperty(propertyName, of: obj, to: val)
     },
@@ -2932,18 +2925,16 @@ public let CodeGenerators: [CodeGenerator] = [
             if probability(0.5) {
                 imitation = b.buildObjectLiteral { obj in
                     obj.addMethod("valueOf", with: .parameters(n: 0)) { _ in
-                        b.build(n: 3)
+                        b.buildRecursive(n: 3)
                         b.doReturn(orig)
                     }
                 }
             } else {
-                let toPrimitive = b.getProperty(
-                    "toPrimitive",
-                    of: b.createNamedVariable(forBuiltin: "Symbol"))
+                let toPrimitive = b.createSymbolProperty("toPrimitive")
                 imitation = b.buildObjectLiteral { obj in
                     obj.addComputedMethod(toPrimitive, with: .parameters(n: 0))
                     { _ in
-                        b.build(n: 3)
+                        b.buildRecursive(n: 3)
                         b.doReturn(orig)
                     }
                 }
@@ -2961,14 +2952,14 @@ public let CodeGenerators: [CodeGenerator] = [
                 let constructor = b.getProperty("constructor", of: orig)
                 let cls = b.buildClassDefinition(withSuperclass: constructor, isExpression: probability(0.3)) {
                     _ in
-                    b.build(n: 3)
+                    b.buildRecursive(n: 3)
                 }
                 imitation = b.construct(
                     cls, withArgs: b.randomArguments(forCalling: cls))
             } else {
                 imitation = b.buildObjectLiteral { obj in
                     obj.setPrototype(to: orig)
-                    b.build(n: 3)
+                    b.buildRecursive(n: 3)
                 }
             }
         } else {
@@ -3081,9 +3072,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("IteratorGenerator", produces: [.iterable]) { b in
-        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
-        b.hide(Symbol)
-        let iteratorSymbol = b.getProperty("iterator", of: Symbol)
+        let iteratorSymbol = b.createSymbolProperty("iterator")
         b.hide(iteratorSymbol)
         let iterableObject = b.buildObjectLiteral { obj in
             obj.addComputedMethod(iteratorSymbol, with: .parameters(n: 0)) {
