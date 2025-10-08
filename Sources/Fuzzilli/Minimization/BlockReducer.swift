@@ -38,10 +38,12 @@ struct BlockReducer: Reducer {
 
             case .beginClassConstructor,
                  .beginClassInstanceMethod,
+                 .beginClassInstanceComputedMethod,
                  .beginClassInstanceGetter,
                  .beginClassInstanceSetter,
                  .beginClassStaticInitializer,
                  .beginClassStaticMethod,
+                 .beginClassStaticComputedMethod,
                  .beginClassStaticGetter,
                  .beginClassStaticSetter,
                  .beginClassPrivateInstanceMethod,

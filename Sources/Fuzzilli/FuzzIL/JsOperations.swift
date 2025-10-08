@@ -183,9 +183,11 @@ final class LoadString: JsOperation {
     override var opcode: Opcode { .loadString(self) }
 
     let value: String
+    let customName: String?
 
-    init(value: String) {
+    init(value: String, customName: String? = nil) {
         self.value = value
+        self.customName = customName
         super.init(numOutputs: 1, attributes: [.isMutable])
     }
 }
@@ -322,10 +324,33 @@ final class LoadDisposableVariable: JsOperation {
     }
 }
 
+final class CreateNamedDisposableVariable: JsOperation {
+    override var opcode: Opcode { .createNamedDisposableVariable(self) }
+
+    let variableName: String
+
+    init(_ name: String) {
+        self.variableName = name
+        // TODO: Add support for block context, see details above.
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .subroutine])
+    }
+}
+
 final class LoadAsyncDisposableVariable: JsOperation {
     override var opcode: Opcode { .loadAsyncDisposableVariable(self) }
 
     init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .asyncFunction])
+    }
+}
+
+final class CreateNamedAsyncDisposableVariable: JsOperation {
+    override var opcode: Opcode { .createNamedAsyncDisposableVariable(self) }
+
+    let variableName: String
+
+    init(_ name: String) {
+        self.variableName = name
         super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .asyncFunction])
     }
 }
@@ -727,6 +752,19 @@ final class EndClassInstanceMethod: EndAnySubroutine {
     override var opcode: Opcode { .endClassInstanceMethod(self) }
 }
 
+final class BeginClassInstanceComputedMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassInstanceComputedMethod(self) }
+
+    init(parameters: Parameters) {
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+    }
+}
+
+final class EndClassInstanceComputedMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassInstanceComputedMethod(self) }
+}
+
 final class BeginClassInstanceGetter: BeginAnySubroutine {
     override var opcode: Opcode { .beginClassInstanceGetter(self) }
 
@@ -831,6 +869,19 @@ final class BeginClassStaticMethod: BeginAnySubroutine {
 
 final class EndClassStaticMethod: EndAnySubroutine {
     override var opcode: Opcode { .endClassStaticMethod(self) }
+}
+
+final class BeginClassStaticComputedMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassStaticComputedMethod(self) }
+
+    init(parameters: Parameters) {
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+    }
+}
+
+final class EndClassStaticComputedMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassStaticComputedMethod(self) }
 }
 
 final class BeginClassStaticGetter: BeginAnySubroutine {
@@ -1799,7 +1850,7 @@ final class BeginWith: JsOperation {
     override var opcode: Opcode { .beginWith(self) }
 
     init() {
-        super.init(numInputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .with])
+        super.init(numInputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript])
     }
 }
 
@@ -2536,8 +2587,6 @@ class CreateWasmTag: JsOperation {
 
     init(parameterTypes: [ILType]) {
         self.parameterTypes = parameterTypes
-        // Note that tags in wasm are nominal (differently to types) meaning that two tags with the same input are not
-        // the same, therefore this operation is not considered to be .pure.
         super.init(numOutputs: 1, attributes: [], requiredContext: [.javascript])
     }
 }
@@ -2587,6 +2636,18 @@ class WasmDefineStructType: WasmTypeOperation {
     init(fields: [Field]) {
         self.fields = fields
         let numInputs = fields.map { $0.type.requiredInputCount() }.reduce(0) { $0 + $1 }
+        super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmTypeGroup])
+    }
+}
+
+class WasmDefineSignatureType: WasmTypeOperation {
+    override var opcode: Opcode { .wasmDefineSignatureType(self) }
+    let signature: WasmSignature
+
+    init(signature: WasmSignature) {
+        self.signature = signature
+        let numInputs = (signature.outputTypes + signature.parameterTypes).map {
+            $0.requiredInputCount() }.reduce(0) { $0 + $1 }
         super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmTypeGroup])
     }
 }

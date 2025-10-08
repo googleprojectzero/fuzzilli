@@ -48,6 +48,16 @@ message VariableDeclaration {
     repeated VariableDeclarator declarations = 2;
 }
 
+enum DisposableVariableDeclarationKind {
+    USING = 0;
+    AWAIT_USING = 1;
+}
+
+message DisposableVariableDeclaration {
+    DisposableVariableDeclarationKind kind = 1;
+    repeated VariableDeclarator declarations = 2;
+}
+
 enum FunctionType {
     PLAIN = 0;
     GENERATOR = 1;
@@ -62,8 +72,8 @@ message FunctionDeclaration {
     repeated Statement body = 4;
 }
 
-message ClassProperty {
-    oneof key {
+message PropertyKey {
+    oneof body {
         // A "regular" property.
         string name = 1;
         // An element.
@@ -71,9 +81,13 @@ message ClassProperty {
         // A computed property.
         Expression expression = 3;
     }
-    bool isStatic = 4;
+}
+
+message ClassProperty {
+    PropertyKey key = 1;
+    bool isStatic = 2;
     // The value is optional
-    Expression value = 5;
+    Expression value = 3;
 }
 
 message ClassConstructor {
@@ -82,7 +96,7 @@ message ClassConstructor {
 }
 
 message ClassMethod {
-    string name = 1;
+    PropertyKey key = 1;
     bool isStatic = 2;
     repeated Parameter parameters = 3;
     repeated Statement body = 4;
@@ -251,6 +265,7 @@ message Statement {
         ThrowStatement throwStatement = 18;
         WithStatement withStatement = 19;
         SwitchStatement switchStatement = 20;
+        DisposableVariableDeclaration disposableVariableDeclaration = 21;
     }
 }
 

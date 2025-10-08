@@ -432,6 +432,55 @@ public struct JSTyper: Analyzer {
         }
     }
 
+    mutating func addSignatureType(def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>) {
+        var inputs = inputs.makeIterator()
+        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+
+        // Temporary variable to use by the resolveType capture. It would be nicer to use
+        // higher-order functions for this but resolveType has to be a mutating func which doesn't
+        // seem to work well with escaping functions.
+        var isParameter = true
+        let resolveType = { (i: Int, paramType: ILType) in
+            if paramType.requiredInputCount() == 0 {
+                return paramType
+            }
+            assert(paramType.Is(.wasmRef(.Index(), nullability: true)))
+            let typeDef = inputs.next()!
+            let elementDesc = type(of: typeDef).wasmTypeDefinition!.description!
+            if elementDesc == .selfReference {
+                // Register a resolver callback. See `addArrayType` for details.
+                if isParameter {
+                    selfReferences[typeDef, default: []].append({typer, replacement in
+                        let desc = typer.type(of: def).wasmTypeDefinition!.description as! WasmSignatureTypeDescription
+                        var params = desc.signature.parameterTypes
+                        params[i] = typer.type(of: replacement ?? def)
+                        desc.signature = params => desc.signature.outputTypes
+                    })
+                } else {
+                    selfReferences[typeDef, default: []].append({typer, replacement in
+                        let desc = typer.type(of: def).wasmTypeDefinition!.description as! WasmSignatureTypeDescription
+                        var outputTypes = desc.signature.outputTypes
+                        let nullability = outputTypes[i].wasmReferenceType!.nullability
+                        outputTypes[i] = typer.type(of: replacement ?? def).wasmTypeDefinition!.getReferenceTypeTo(nullability: nullability)
+                        desc.signature = desc.signature.parameterTypes => outputTypes
+                    })
+                }
+
+            }
+            registerTypeGroupDependency(from: tgIndex, to: elementDesc.typeGroupIndex)
+            return type(of: typeDef).wasmTypeDefinition!
+                .getReferenceTypeTo(nullability: paramType.wasmReferenceType!.nullability)
+        }
+
+        let resolvedParameterTypes = signature.parameterTypes.enumerated().map(resolveType)
+        isParameter = false // TODO(mliedtke): Is there a nicer way to capture this?
+        let resolvedOutputTypes = signature.outputTypes.enumerated().map(resolveType)
+        set(def, .wasmTypeDef(description: WasmSignatureTypeDescription(signature: resolvedParameterTypes => resolvedOutputTypes, typeGroupIndex: tgIndex)))
+        if isWithinTypeGroup {
+            typeGroups[typeGroups.count - 1].append(def)
+        }
+    }
+
     mutating func addArrayType(def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil) {
         let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
         let resolvedElementType: ILType
@@ -1169,9 +1218,11 @@ public struct JSTyper: Analyzer {
              .beginConstructor,
              .beginClassConstructor,
              .beginClassInstanceMethod,
+             .beginClassInstanceComputedMethod,
              .beginClassInstanceGetter,
              .beginClassInstanceSetter,
              .beginClassStaticMethod,
+             .beginClassStaticComputedMethod,
              .beginClassStaticGetter,
              .beginClassStaticSetter,
              .beginClassPrivateInstanceMethod,
@@ -1191,9 +1242,11 @@ public struct JSTyper: Analyzer {
              .endConstructor,
              .endClassConstructor,
              .endClassInstanceMethod,
+             .endClassInstanceComputedMethod,
              .endClassInstanceGetter,
              .endClassInstanceSetter,
              .endClassStaticMethod,
+             .endClassStaticComputedMethod,
              .endClassStaticGetter,
              .endClassStaticSetter,
              .endClassPrivateInstanceMethod,
@@ -1368,8 +1421,17 @@ public struct JSTyper: Analyzer {
         case .loadFloat:
             set(instr.output, .float)
 
-        case .loadString:
-            set(instr.output, .jsString)
+        case .loadString(let op):
+            if let customName = op.customName {
+                if let enumTy = environment.getEnum(ofName: customName) {
+                    set(instr.output, enumTy)
+                } else {
+                    set(instr.output, .namedString(ofName: customName))
+                }
+
+            } else {
+                set(instr.output, .jsString)
+            }
 
         case .loadBoolean:
             set(instr.output, .boolean)
@@ -1399,6 +1461,12 @@ public struct JSTyper: Analyzer {
             set(instr.output, type(ofInput: 0))
 
         case .loadAsyncDisposableVariable:
+            set(instr.output, type(ofInput: 0))
+
+        case .createNamedDisposableVariable:
+            set(instr.output, type(ofInput: 0))
+
+        case .createNamedAsyncDisposableVariable:
             set(instr.output, type(ofInput: 0))
 
         case .loadNewTarget:
@@ -1464,6 +1532,11 @@ public struct JSTyper: Analyzer {
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
             dynamicObjectGroupManager.addMethod(methodName: op.methodName, of: .jsClass)
 
+        case .beginClassInstanceComputedMethod(let op):
+            // The first inner output is the explicit |this|
+            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
+
         case .beginClassInstanceGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
@@ -1490,6 +1563,11 @@ public struct JSTyper: Analyzer {
             set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
             dynamicObjectGroupManager.addClassStaticMethod(methodName: op.methodName)
+
+        case .beginClassStaticComputedMethod(let op):
+            // The first inner output is the explicit |this|
+            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .beginClassStaticGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
@@ -1803,6 +1881,9 @@ public struct JSTyper: Analyzer {
                 set(output, state.type(of: input))
             }
             finishTypeGroup()
+
+        case .wasmDefineSignatureType(let op):
+            addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)
 
         case .wasmDefineArrayType(let op):
             let elementRef = op.elementType.requiredInputCount() == 1 ? instr.input(0) : nil

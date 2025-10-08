@@ -518,7 +518,7 @@ class LifterTests: XCTestCase {
         let null = b.loadNull()
         let v4 = b.binary(v3, v1, with: .Add)
         let otherObject = b.createNamedVariable(forBuiltin: "SomeObject")
-        let toPrimitive = b.getProperty("toPrimitive", of: b.createNamedVariable(forBuiltin: "Symbol"))
+        let toPrimitive = b.createSymbolProperty("toPrimitive")
         b.buildObjectLiteral { obj in
             obj.addProperty("p1", as: v1)
             obj.addProperty("__proto__", as: null)
@@ -653,6 +653,8 @@ class LifterTests: XCTestCase {
         let two = b.loadInt(2)
         let baz = b.loadString("baz")
         let baz42 = b.binary(baz, i, with: .Add)
+        let toPrimitive = b.createSymbolProperty("toPrimitive")
+        let sm = b.loadString("sm")
         let C = b.buildClassDefinition() { cls in
             cls.addInstanceProperty("foo")
             cls.addInstanceProperty("bar", value: baz)
@@ -666,6 +668,11 @@ class LifterTests: XCTestCase {
                 b.setProperty("foo", of: this, to: params[1])
             }
             cls.addInstanceMethod("m", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                let foo = b.getProperty("foo", of: this)
+                b.doReturn(foo)
+            }
+            cls.addInstanceComputedMethod(toPrimitive, with: .parameters(n: 0)) { params in
                 let this = params[0]
                 let foo = b.getProperty("foo", of: this)
                 b.doReturn(foo)
@@ -687,6 +694,11 @@ class LifterTests: XCTestCase {
             cls.addStaticComputedProperty(baz42)
             cls.addStaticComputedProperty(two, value: baz42)
             cls.addStaticMethod("m", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                let foo = b.getProperty("foo", of: this)
+                b.doReturn(foo)
+            }
+            cls.addInstanceComputedMethod(sm, with: .parameters(n: 0)) { params in
                 let this = params[0]
                 let foo = b.getProperty("foo", of: this)
                 b.doReturn(foo)
@@ -732,7 +744,8 @@ class LifterTests: XCTestCase {
 
         let expected = """
         const v3 = "baz" + 42;
-        class C4 {
+        const v5 = Symbol.toPrimitive;
+        class C7 {
             foo;
             bar = "baz";
             0 = 42;
@@ -740,16 +753,19 @@ class LifterTests: XCTestCase {
             [-1];
             [v3];
             [2] = v3;
-            constructor(a6) {
-                this.foo = a6;
+            constructor(a9) {
+                this.foo = a9;
             }
             m() {
+                return this.foo;
+            }
+            [v5]() {
                 return this.foo;
             }
             get baz() {
                 return 1337;
             }
-            set baz(a12) {
+            set baz(a17) {
             }
             static foo;
             static {
@@ -764,36 +780,39 @@ class LifterTests: XCTestCase {
             static m() {
                 return this.foo;
             }
+            ["sm"]() {
+                return this.foo;
+            }
             static get baz() {
                 return 1337;
             }
-            static set baz(a19) {
+            static set baz(a26) {
             }
             #ifoo;
             #ibar = "baz";
             #im() {
-                const v21 = this.#ifoo;
-                this.#ibar = v21;
-                return v21;
+                const v28 = this.#ifoo;
+                this.#ibar = v28;
+                return v28;
             }
-            #in(a23) {
+            #in(a30) {
                 this.#im();
-                this.#ibar += a23;
+                this.#ibar += a30;
             }
             static #sfoo;
             static #sbar = "baz";
             static #sm() {
-                const v26 = this.#sfoo;
-                this.#sbar = v26;
-                return v26;
+                const v33 = this.#sfoo;
+                this.#sbar = v33;
+                return v33;
             }
-            static #sn(a28) {
+            static #sn(a35) {
                 this.#sm();
-                this.#sbar += a28;
+                this.#sbar += a35;
             }
         }
-        new C4(42);
-        C4 = Uint8Array;
+        new C7(42);
+        C7 = Uint8Array;
 
         """
 
@@ -1806,8 +1825,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let s = b.loadString("Hello World")
-        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
-        let iterator = b.getProperty("iterator", of: Symbol)
+        let iterator = b.createSymbolProperty("iterator")
         let r = b.callComputedMethod(iterator, on: s)
         b.callMethod("next", on: r)
 
@@ -3138,21 +3156,26 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testLoadDisposableVariableLifting() {
+    // This test is parameterized for normal and named variables with the
+    // respective concrete cases below.
+    func _testDisposableVariableLifting(_ variableName : String, generateVariable: (ProgramBuilder, Variable) -> Void) {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
         let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
             let v1 = b.loadInt(1)
             let v2 = b.loadInt(42)
-            let dispose = b.getProperty("dispose", of: b.createNamedVariable(forBuiltin: "Symbol"));
+            let numVariables = b.numberOfVisibleVariables
+            let dispose = b.createSymbolProperty("dispose");
+            // Test that the intermediate variable for "Symbol" stays hidden.
+            XCTAssertEqual(b.numberOfVisibleVariables, numVariables + 1)
             let disposableVariable = b.buildObjectLiteral { obj in
                 obj.addProperty("value", as: v1)
                 obj.addComputedMethod(dispose, with: .parameters(n:0)) { args in
                     b.doReturn(v2)
                 }
             }
-            b.loadDisposableVariable(disposableVariable)
+            generateVariable(b, disposableVariable)
         }
         b.callFunction(f)
 
@@ -3168,29 +3191,43 @@ class LifterTests: XCTestCase {
                     return 42;
                 },
             };
-            using v7 = v6;
+            using %@ = v6;
         }
         f0();
 
         """
-        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(actual, String(format: expected, variableName))
     }
 
-    func testLoadAsyncDisposableVariableLifting() {
+    func testLoadDisposableVariableLifting() {
+        _testDisposableVariableLifting("v7", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.loadDisposableVariable(v)
+        })
+    }
+
+    func testCreateNamedDisposableVariableLifting() {
+        _testDisposableVariableLifting("dis", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.createNamedDisposableVariable("dis", v)
+        })
+    }
+
+    // This test is parameterized for normal and named variables with the
+    // respective concrete cases below.
+    func _testAsyncDisposableVariableLifting(_ variableName : String, generateVariable: (ProgramBuilder, Variable) -> Void) {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
         let f = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
             let v1 = b.loadInt(1)
             let v2 = b.loadInt(42)
-            let asyncDispose = b.getProperty("asyncDispose", of: b.createNamedVariable(forBuiltin: "Symbol"))
+            let asyncDispose = b.createSymbolProperty("asyncDispose")
             let asyncDisposableVariable = b.buildObjectLiteral { obj in
                 obj.addProperty("value", as: v1)
                 obj.addComputedMethod(asyncDispose, with: .parameters(n:0)) { args in
                     b.doReturn(v2)
                 }
             }
-            b.loadAsyncDisposableVariable(asyncDisposableVariable)
+            generateVariable(b, asyncDisposableVariable)
         }
 
         let g = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
@@ -3210,7 +3247,7 @@ class LifterTests: XCTestCase {
                     return 42;
                 },
             };
-            await using v7 = v6;
+            await using %@ = v6;
         }
         async function f8() {
             await f0();
@@ -3218,7 +3255,19 @@ class LifterTests: XCTestCase {
         f8();
 
         """
-        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(actual, String(format: expected, variableName))
+    }
+
+    func testLoadAsyncDisposableVariableLifting() {
+        _testAsyncDisposableVariableLifting("v7", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.loadAsyncDisposableVariable(v)
+        })
+    }
+
+    func testCreateNamedAsyncDisposableVariableLifting() {
+        _testAsyncDisposableVariableLifting("dis", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.createNamedAsyncDisposableVariable("dis", v)
+        })
     }
 
     func testImportAnalysisMisTypedJS() {

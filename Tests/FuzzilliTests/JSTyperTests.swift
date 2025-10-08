@@ -1824,7 +1824,7 @@ class JSTyperTests: XCTestCase {
 
     func testProducingGenerators() {
         // Make a simple object
-        let mockEnum = ILType.enumeration(ofName: "mockField", withValues: ["mockValue"]);
+        let mockEnum = ILType.enumeration(ofName: "MockEnum", withValues: ["mockValue"]);
         let mockObject = ObjectGroup(
             name: "MockObject",
             instanceType: nil,
@@ -1837,17 +1837,28 @@ class JSTyperTests: XCTestCase {
         // Some things to keep track of how the generator was called
         var callCount = 0
         var returnedVar: Variable? = nil
+        var generatedEnum: Variable? = nil
         // A simple generator
-        func generate(builder: ProgramBuilder) -> Variable {
+        func generateObject(builder: ProgramBuilder) -> Variable {
             callCount += 1
-            let val = builder.loadString("mockValue")
+            let val = builder.loadEnum(mockEnum)
+            generatedEnum = val
             let variable = builder.createObject(with: ["mockField": val])
             returnedVar = variable
             return variable
         }
+
+        let mockNamedString = ILType.namedString(ofName: "NamedString");
+        func generateString() -> String {
+            callCount += 1
+            return "mockStringValue"
+        }
+
         let fuzzer = makeMockFuzzer()
         fuzzer.environment.registerObjectGroup(mockObject)
-        fuzzer.environment.addProducingGenerator(forType: mockObject.instanceType, with: generate)
+        fuzzer.environment.registerEnumeration(mockEnum)
+        fuzzer.environment.addProducingGenerator(forType: mockObject.instanceType, with: generateObject)
+        fuzzer.environment.addNamedStringGenerator(forType: mockNamedString, with: generateString)
         let b = fuzzer.makeBuilder()
         b.buildPrefix()
 
@@ -1857,6 +1868,25 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(callCount, 1)
         // Test that the returned variable matches the generated one
         XCTAssertEqual(variable, returnedVar)
+
+
+        // Try to get it to invoke the string generator
+        let variable2 = b.findOrGenerateType(mockNamedString)
+        // Test that the generator was invoked
+        XCTAssertEqual(callCount, 2)
+
+        // Test that the returned variable gets typed correctly
+        XCTAssert(b.type(of: variable2).Is(mockNamedString))
+        XCTAssertEqual(b.type(of: variable2).group, "NamedString")
+
+        // We already generated a mockEnum, look for it.
+        let foundEnum = b.randomVariable(ofType: mockEnum)!
+        // Test that it picked up the existing generated variable.
+        XCTAssertEqual(generatedEnum, foundEnum)
+
+        // Test that the returned variable gets typed correctly.
+        XCTAssert(b.type(of: foundEnum).Is(mockEnum))
+        XCTAssertEqual(b.type(of: foundEnum).group, "MockEnum")
     }
 
     func testFindConstructor() {

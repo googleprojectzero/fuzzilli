@@ -605,6 +605,16 @@ public class WasmLifter {
                 data += try encodeType(field.type)
                 data += [field.mutability ? 1 : 0]
             }
+        } else if let signatureDesc = desc as? WasmSignatureTypeDescription {
+            data += [0x60]
+            data += Leb128.unsignedEncode(signatureDesc.signature.parameterTypes.count)
+            for parameterType in signatureDesc.signature.parameterTypes {
+                data += try encodeType(parameterType)
+            }
+            data += Leb128.unsignedEncode(signatureDesc.signature.outputTypes.count)
+            for outputType in signatureDesc.signature.outputTypes {
+                data += try encodeType(outputType)
+            }
         } else {
             fatalError("Unsupported WasmTypeDescription!")
         }
@@ -881,7 +891,7 @@ public class WasmLifter {
             }
         }
 
-        // Active element segments 
+        // Active element segments
         for case let .table(instruction) in self.exports {
             let table = instruction!.op as! WasmDefineTable
             let definedEntries = table.definedEntries
