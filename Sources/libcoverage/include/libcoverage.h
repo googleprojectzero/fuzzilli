@@ -55,10 +55,10 @@ struct feedback_nexus_set {
 // Structure of the shared memory region.
 struct shmem_data {
     uint32_t num_edges;
-    unsigned char edges[];
     uint32_t feedback_nexus_count; 
     uint32_t max_feedback_nexus;
     struct feedback_nexus_data feedback_nexus_data[MAX_FEEDBACK_NEXUS];
+    unsigned char edges[];
 };
 
 struct cov_context {
