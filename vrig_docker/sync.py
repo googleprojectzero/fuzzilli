@@ -11,13 +11,18 @@ PG_DSN = os.getenv("PG_DSN", "postgres://fuzzuser:pass@pg:5432/main")
 CREATE_GROUP_OK = {"OK", "BUSYGROUP Consumer Group name already exists"}
 
 UPSERT_SQL = """
-INSERT INTO fuzz_data (key, val, origin, vclock, updated_at)
-VALUES ($1, $2, $3, $4, NOW())
-ON CONFLICT (key) DO UPDATE SET
-  val = CASE WHEN EXCLUDED.vclock >= fuzz_data.vclock THEN EXCLUDED.val ELSE fuzz_data.val END,
-  origin = CASE WHEN EXCLUDED.vclock >= fuzz_data.vclock THEN EXCLUDED.origin ELSE fuzz_data.origin END,
-  vclock = GREATEST(fuzz_data.vclock, EXCLUDED.vclock),
-  updated_at = CASE WHEN EXCLUDED.vclock >= fuzz_data.vclock THEN NOW() ELSE fuzz_data.updated_at END;
+INSERT INTO program (program_base64, fuzzer_id, feedback_vector, turboshaft_ir, coverage_total, created_at)
+VALUES ($1, $2, $3, $4, $5, NOW())
+ON CONFLICT (program_base64) DO UPDATE SET
+  feedback_vector = EXCLUDED.feedback_vector,
+  turboshaft_ir = EXCLUDED.turboshaft_ir,
+  coverage_total = EXCLUDED.coverage_total,
+  created_at = NOW();
+"""
+
+UPDATE_FEEDBACK_SQL = """
+UPDATE program SET feedback_vector = $2
+WHERE program_base64 = $1;
 """
 
 async def ensure_group(r: Redis, stream: str):
@@ -40,17 +45,25 @@ async def consume_stream(label: str, redis_url: str, pg):
             for _, entries in resp:
                 for msg_id, data in entries:
                     op = data.get(b'op', b'').decode()
-                    key = data.get(b'key', b'').decode()
-                    origin = data.get(b'origin', b'').decode()
-                    vclock = int(data.get(b'vclock', b'0').decode() or 0)
+                    program_base64 = data.get(b'program_base64', b'').decode()
+                    
                     if op == "del":
-                        # Represent deletes: write NULL / tombstone (optional)
+                        # Delete program entry
                         await pg.execute(
-                            "DELETE FROM fuzz_data WHERE key=$1 AND vclock <= $2", key, vclock
+                            "DELETE FROM program WHERE program_base64=$1", program_base64
                         )
+                    elif op == "update_feedback":
+                        # Update only the feedback_vector field
+                        feedback_vector = data.get(b'feedback_vector', b'null').decode()
+                        await pg.execute(UPDATE_FEEDBACK_SQL, program_base64, feedback_vector)
                     else:
-                        val = data.get(b'val', b'')
-                        await pg.execute(UPSERT_SQL, key, val, origin, vclock)
+                        # Full upsert (op == "set" or default)
+                        fuzzer_id = int(data.get(b'fuzzer_id', b'0').decode() or 0)
+                        feedback_vector = data.get(b'feedback_vector', b'null').decode()
+                        turboshaft_ir = data.get(b'turboshaft_ir', b'').decode()
+                        coverage_total = float(data.get(b'coverage_total', b'0').decode() or 0)
+                        
+                        await pg.execute(UPSERT_SQL, program_base64, fuzzer_id, feedback_vector, turboshaft_ir, coverage_total)
                     await r.xack(STREAM_NAME, GROUP, msg_id)
         except Exception as e:
             # backoff on errors

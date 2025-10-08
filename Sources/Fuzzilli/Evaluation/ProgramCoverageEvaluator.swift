@@ -20,23 +20,27 @@ public class CovEdgeSet: ProgramAspects {
     private var numEdges: UInt32
     fileprivate var edges: UnsafeMutablePointer<UInt32>?
 
-    init(edges: UnsafeMutablePointer<UInt32>?, numEdges: UInt32) {
+    init(edges: UnsafeMutablePointer<UInt32>?, numEdges: UInt32, hasFeedbackNexusDelta: Bool = false) {
         self.numEdges = numEdges
         self.edges = edges
-        super.init(outcome: .succeeded)
+        super.init(outcome: .succeeded, hasFeedbackNexusDelta: hasFeedbackNexusDelta)
     }
 
     deinit {
         free(edges)
     }
 
-    /// The number of aspects is simply the number of newly discovered coverage edges.
+    /// The number of aspects is the number of newly discovered coverage edges plus feedback nexus delta.
     public override var count: UInt32 {
-        return numEdges
+        return numEdges + (hasFeedbackNexusDelta ? 1 : 0)
     }
 
     public override var description: String {
-        return "new coverage: \(count) newly discovered edge\(count > 1 ? "s" : "") in the CFG of the target"
+        var desc = "new coverage: \(numEdges) newly discovered edge\(numEdges > 1 ? "s" : "") in the CFG of the target"
+        if hasFeedbackNexusDelta {
+            desc += " with feedback nexus delta"
+        }
+        return desc
     }
 
     /// Returns an array of all the newly discovered edges of this CovEdgeSet.
@@ -163,12 +167,24 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             return nil
         }
 
+        // Check for feedback nexus delta separately
+        let feedbackNexusDelta = libcoverage.cov_evaluate_feedback_nexus(&context)
+        
         if result == 1 {
-            return CovEdgeSet(edges: newEdgeSet.edge_indices, numEdges: newEdgeSet.count)
-        } else {
-            assert(newEdgeSet.edge_indices == nil && newEdgeSet.count == 0)
-            return nil
+            // Either new edges found OR feedback nexus delta detected
+            let hasNewEdges = newEdgeSet.count > 0
+            let hasFeedbackDelta = feedbackNexusDelta == 1
+            
+            if hasNewEdges {
+                return CovEdgeSet(edges: newEdgeSet.edge_indices, numEdges: newEdgeSet.count, hasFeedbackNexusDelta: hasFeedbackDelta)
+            } else if hasFeedbackDelta {
+                // Only feedback nexus delta, no new edges
+                return ProgramAspects(outcome: .succeeded, hasFeedbackNexusDelta: true)
+            }
         }
+        
+        assert(newEdgeSet.edge_indices == nil && newEdgeSet.count == 0)
+        return nil
     }
 
     public func evaluateCrash(_ execution: Execution) -> ProgramAspects? {

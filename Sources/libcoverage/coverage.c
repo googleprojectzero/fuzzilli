@@ -133,6 +133,10 @@ void cov_finish_initialization(struct cov_context* context, int should_track_edg
     } else {
         context->edge_count = NULL;
     }
+    
+    // Initialize feedback nexus tracking
+    context->current_feedback_nexus = NULL;
+    context->previous_feedback_nexus = NULL;
 
     // Zeroth edge is ignored, see above.
     clear_edge(context->virgin_bits, 0);
@@ -203,7 +207,15 @@ int cov_evaluate(struct cov_context* context, struct edge_set* new_edges)
     uint32_t num_new_edges = internal_evaluate(context, context->virgin_bits, new_edges);
     // TODO found_edges should also include crash bits
     context->found_edges += num_new_edges;
-    return num_new_edges > 0;
+    
+    // Update feedback nexus data
+    cov_update_feedback_nexus(context);
+    
+    // Check for feedback nexus delta
+    int feedback_nexus_delta = cov_evaluate_feedback_nexus(context);
+    
+    // Return 1 if either new edges found OR feedback nexus delta detected
+    return (num_new_edges > 0) || feedback_nexus_delta;
 }
 
 int cov_evaluate_crash(struct cov_context* context)
@@ -228,6 +240,7 @@ int cov_compare_equal(struct cov_context* context, uint32_t* edges, uint32_t num
 void cov_clear_bitmap(struct cov_context* context)
 {
     memset(context->shmem->edges, 0, context->bitmap_size);
+    clear_feedback_nexus(context);
 }
 
 int cov_get_edge_counts(struct cov_context* context, struct edge_counts* edges)
@@ -264,5 +277,65 @@ void cov_reset_state(struct cov_context* context) {
     clear_edge(context->crash_bits, 0);
 
     context->found_edges = 0;
+    
+    // Reset feedback nexus tracking
+    if (context->current_feedback_nexus) {
+        free(context->current_feedback_nexus->nexus_data);
+        free(context->current_feedback_nexus);
+        context->current_feedback_nexus = NULL;
+    }
+    if (context->previous_feedback_nexus) {
+        free(context->previous_feedback_nexus->nexus_data);
+        free(context->previous_feedback_nexus);
+        context->previous_feedback_nexus = NULL;
+    }
 }
 
+
+
+int cov_evaluate_feedback_nexus(struct cov_context* context) {
+    if (!context->current_feedback_nexus || !context->previous_feedback_nexus) {
+        return 0;
+    }
+    
+    if (context->current_feedback_nexus->count != context->previous_feedback_nexus->count) {
+        return 1; // delta in # of feedback nexus
+    }
+    
+    // check for delta in feedback nexus data
+    for (uint32_t i = 0; i < context->current_feedback_nexus->count; i++) {
+        struct feedback_nexus_data* current = &context->current_feedback_nexus->nexus_data[i];
+        struct feedback_nexus_data* previous = &context->previous_feedback_nexus->nexus_data[i];
+        
+        if (current->vector_address != previous->vector_address ||
+            current->ic_state != previous->ic_state) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void cov_update_feedback_nexus(struct cov_context* context) {
+    if (!context->shmem) return;
+    
+    // allocate current feedback nexus if not already allocated
+    if (!context->current_feedback_nexus) {
+        context->current_feedback_nexus = malloc(sizeof(struct feedback_nexus_set));
+        context->current_feedback_nexus->nexus_data = malloc(sizeof(struct feedback_nexus_data) * MAX_FEEDBACK_NEXUS);
+    }
+    
+    // copy data from shared memory
+    context->current_feedback_nexus->count = context->shmem->feedback_nexus_count;
+    for (uint32_t i = 0; i < context->current_feedback_nexus->count && i < MAX_FEEDBACK_NEXUS; i++) {
+        context->current_feedback_nexus->nexus_data[i] = context->shmem->feedback_nexus_data[i];
+    }
+}
+
+void clear_feedback_nexus(struct cov_context* context) {
+    struct feedback_nexus_set* temp = context->previous_feedback_nexus;
+    context->previous_feedback_nexus = context->current_feedback_nexus;
+    context->current_feedback_nexus = temp;
+    if (context->current_feedback_nexus) {
+        context->current_feedback_nexus->count = 0;
+    }
+}   
