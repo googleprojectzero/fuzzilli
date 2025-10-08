@@ -71,7 +71,7 @@ public class JavaScriptCompiler {
     private func compileClass(_ name : String, superClass: ExpressionNode?, fields : [ClassFieldNode], isExpression : Bool) throws -> Variable {
         // The expressions for property values and computed properties need to be emitted before the class declaration is opened.
         var propertyValues = [Variable]()
-        var computedPropertyKeys = [Variable]()
+        var computedKeys = [Variable]()
         for field in fields {
             guard let field = field.field else {
                 throw CompilerError.invalidNodeError("missing concrete field in class declaration")
@@ -80,15 +80,20 @@ public class JavaScriptCompiler {
                 if property.hasValue {
                     propertyValues.append(try compileExpression(property.value))
                 }
-                if case .expression(let key) = property.key {
-                    computedPropertyKeys.append(try compileExpression(key))
+                if case .expression(let expression) = property.key.body {
+                    computedKeys.append(try compileExpression(expression))
+                }
+            }
+            if case .method(let method) = field {
+                if case .expression(let expression) = method.key.body {
+                    computedKeys.append(try compileExpression(expression))
                 }
             }
         }
 
         // Reverse the arrays since we'll remove the elements in FIFO order.
         propertyValues.reverse()
-        computedPropertyKeys.reverse()
+        computedKeys.reverse()
 
         let classDecl: Instruction
         if let superClass = superClass {
@@ -104,7 +109,7 @@ public class JavaScriptCompiler {
         for field in fields {
             switch field.field! {
             case .property(let property):
-                guard let key = property.key else {
+                guard let key = property.key.body else {
                     throw CompilerError.invalidNodeError("Missing key in class property")
                 }
 
@@ -124,7 +129,7 @@ public class JavaScriptCompiler {
                         op = ClassAddInstanceElement(index: index, hasValue: property.hasValue)
                     }
                 case .expression:
-                    inputs.append(computedPropertyKeys.removeLast())
+                    inputs.append(computedKeys.removeLast())
                     if property.isStatic {
                         op = ClassAddStaticComputedProperty(hasValue: property.hasValue)
                     } else {
@@ -154,10 +159,25 @@ public class JavaScriptCompiler {
             case .method(let method):
                 let parameters = convertParameters(method.parameters)
                 let head: Instruction
-                if method.isStatic {
-                    head = emit(BeginClassStaticMethod(methodName: method.name, parameters: parameters))
-                } else {
-                    head = emit(BeginClassInstanceMethod(methodName: method.name, parameters: parameters))
+
+                guard let key = method.key.body else {
+                    throw CompilerError.invalidNodeError("Missing key in class property")
+                }
+                switch key {
+                case .name(let name):
+                    if method.isStatic {
+                        head = emit(BeginClassStaticMethod(methodName: name, parameters: parameters))
+                    } else {
+                        head = emit(BeginClassInstanceMethod(methodName: name, parameters: parameters))
+                    }
+                case .index:
+                    throw CompilerError.invalidNodeError("Not supported")
+                case .expression:
+                    if method.isStatic {
+                        head = emit(BeginClassStaticComputedMethod(parameters: parameters), withInputs: [computedKeys.removeLast()])
+                    } else {
+                        head = emit(BeginClassInstanceComputedMethod(parameters: parameters), withInputs: [computedKeys.removeLast()])
+                    }
                 }
 
                 try enterNewScope {
@@ -169,10 +189,21 @@ public class JavaScriptCompiler {
                     }
                 }
 
-                if method.isStatic {
-                    emit(EndClassStaticMethod())
-                } else {
-                    emit(EndClassInstanceMethod())
+                switch key {
+                case .name:
+                    if method.isStatic {
+                        emit(EndClassStaticMethod())
+                    } else {
+                        emit(EndClassInstanceMethod())
+                    }
+                case .index:
+                    throw CompilerError.invalidNodeError("Not supported")
+                case .expression:
+                    if method.isStatic {
+                        emit(EndClassStaticComputedMethod())
+                    } else {
+                        emit(EndClassInstanceComputedMethod())
+                    }
                 }
 
             case .getter(let getter):
@@ -238,6 +269,14 @@ public class JavaScriptCompiler {
         return classDecl.output
     }
 
+    private func compileInitialDeclarationValue(_ decl: Compiler_Protobuf_VariableDeclarator) throws -> Variable {
+        if decl.hasValue {
+            return try compileExpression(decl.value)
+        } else {
+            // TODO(saelo): consider caching the `undefined` value for future uses
+            return emit(LoadUndefined()).output
+        }
+    }
 
     private func compileStatement(_ node: StatementNode) throws {
         guard let stmt = node.statement else {
@@ -260,13 +299,7 @@ public class JavaScriptCompiler {
 
         case .variableDeclaration(let variableDeclaration):
             for decl in variableDeclaration.declarations {
-                let initialValue: Variable
-                if decl.hasValue {
-                    initialValue = try compileExpression(decl.value)
-                } else {
-                    // TODO(saelo): consider caching the `undefined` value for future uses
-                    initialValue = emit(LoadUndefined()).output
-                }
+                let initialValue = try compileInitialDeclarationValue(decl)
 
                 let declarationMode: NamedVariableDeclarationMode
                 switch variableDeclaration.kind {
@@ -283,6 +316,23 @@ public class JavaScriptCompiler {
                 let v = emit(CreateNamedVariable(decl.name, declarationMode: declarationMode), withInputs: [initialValue]).output
                 // Variables declared with .var are allowed to overwrite each other.
                 assert(!currentScope.keys.contains(decl.name) || declarationMode == .var)
+                mapOrRemap(decl.name, to: v)
+            }
+
+        case .disposableVariableDeclaration(let variableDeclaration):
+            for decl in variableDeclaration.declarations {
+                let initialValue = try compileInitialDeclarationValue(decl)
+
+                let v: Variable;
+                switch variableDeclaration.kind {
+                case .using:
+                    v = emit(CreateNamedDisposableVariable(decl.name), withInputs: [initialValue]).output
+                case .awaitUsing:
+                    v = emit(CreateNamedAsyncDisposableVariable(decl.name), withInputs: [initialValue]).output
+                case .UNRECOGNIZED(let type):
+                    throw CompilerError.invalidNodeError("invalid disposable variable declaration type \(type)")
+                }
+                assert(!currentScope.keys.contains(decl.name))
                 mapOrRemap(decl.name, to: v)
             }
 
@@ -764,7 +814,7 @@ public class JavaScriptCompiler {
         case .objectExpression(let objectExpression):
             // The expressions for property values and computed properties need to be emitted before the object literal is opened.
             var propertyValues = [Variable]()
-            var computedPropertyKeys = [Variable]()
+            var computedKeys = [Variable]()
             for field in objectExpression.fields {
                 guard let field = field.field else {
                     throw CompilerError.invalidNodeError("missing concrete field in object expression")
@@ -772,18 +822,18 @@ public class JavaScriptCompiler {
                 if case .property(let property) = field {
                     propertyValues.append(try compileExpression(property.value))
                     if case .expression(let expression) = property.key {
-                        computedPropertyKeys.append(try compileExpression(expression))
+                        computedKeys.append(try compileExpression(expression))
                     }
                 } else if case .method(let method) = field {
                     if case .expression(let expression) = method.key {
-                        computedPropertyKeys.append(try compileExpression(expression))
+                        computedKeys.append(try compileExpression(expression))
                     }
                 }
             }
 
             // Reverse the arrays since we'll remove the elements in FIFO order.
             propertyValues.reverse()
-            computedPropertyKeys.reverse()
+            computedKeys.reverse()
 
             // Now build the object literal.
             emit(BeginObjectLiteral())
@@ -800,7 +850,7 @@ public class JavaScriptCompiler {
                     case .index(let index):
                         emit(ObjectLiteralAddElement(index: index), withInputs: inputs)
                     case .expression:
-                        emit(ObjectLiteralAddComputedProperty(), withInputs: [computedPropertyKeys.removeLast()] + inputs)
+                        emit(ObjectLiteralAddComputedProperty(), withInputs: [computedKeys.removeLast()] + inputs)
                     }
                 case .method(let method):
                     let parameters = convertParameters(method.parameters)
@@ -809,7 +859,7 @@ public class JavaScriptCompiler {
                     if case .name(let name) = method.key {
                         instr = emit(BeginObjectLiteralMethod(methodName: name, parameters: parameters))
                     } else {
-                        instr = emit(BeginObjectLiteralComputedMethod(parameters: parameters), withInputs: [computedPropertyKeys.removeLast()])
+                        instr = emit(BeginObjectLiteralComputedMethod(parameters: parameters), withInputs: [computedKeys.removeLast()])
                     }
 
                     try enterNewScope {

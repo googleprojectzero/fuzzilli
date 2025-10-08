@@ -58,17 +58,17 @@ fileprivate let HardenGenerator = CodeGenerator("HardenGenerator", inputs: .requ
     b.callFunction(harden, withArgs: [obj])
 }
 
-fileprivate let ModuleSourceGenerator = RecursiveCodeGenerator("ModuleSourceGenerator") { b in
+fileprivate let ModuleSourceGenerator = CodeGenerator("ModuleSourceGenerator") { b in
     let moduleSourceConstructor = b.createNamedVariable(forBuiltin: "ModuleSource")
 
     let code = b.buildCodeString() {
-        b.buildRecursive()
+        b.build(n: 5)
     }
 
     b.construct(moduleSourceConstructor, withArgs: [code])
 }
 
-fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenerator") { b in
+fileprivate let CompartmentGenerator = CodeGenerator("CompartmentGenerator") { b in
     let compartmentConstructor = b.createNamedVariable(forBuiltin: "Compartment")
 
     var endowments = [String: Variable]()        // may be used as endowments argument or globalLexicals
@@ -84,16 +84,16 @@ fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenera
 	// to do: populate moduleMap
     let moduleMapObject = b.createObject(with: moduleMap)
     let resolveHook = b.buildPlainFunction(with: .parameters(n: 2)) { _ in
-        b.buildRecursive(block: 1, of: 4)
+        b.build(n: 5)
         b.doReturn(b.randomJsVariable())
     }
     let moduleMapHook = b.buildPlainFunction(with: .parameters(n: 1)) { _ in
-        b.buildRecursive(block: 2, of: 4)
+        b.build(n: 5)
         b.doReturn(b.randomJsVariable())
     }
     let loadNowHook = b.dup(moduleMapHook)
     let loadHook = b.buildAsyncFunction(with: .parameters(n: 1)) { _ in
-        b.buildRecursive(block: 3, of: 4)
+        b.build(n: 5)
         b.doReturn(b.randomJsVariable())
     }
     options["resolveHook"] = resolveHook
@@ -111,7 +111,7 @@ fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenera
 
     if probability(0.5) {
         let code = b.buildCodeString() {
-            b.buildRecursive(block: 4, of: 4)
+            b.build(n: 5)
         }
         b.callMethod("evaluate", on: compartment, withArgs: [code])
     }
@@ -131,7 +131,7 @@ fileprivate let UnicodeStringGenerator = CodeGenerator("UnicodeStringGenerator")
 
 fileprivate let CompartmentEvaluateGenerator = CodeGenerator("CompartmentEvaluateGenerator", inputs: .required(.object(ofGroup: "Compartment"))) { b, target in
     let code = b.buildCodeString() {
-        b.buildRecursive()
+        b.build(n: 5)
     }
     b.callMethod("evaluate", on: target, withArgs: [code])
 }
@@ -351,6 +351,8 @@ let xsProfile = Profile(
     ],
 
     additionalObjectGroups: [jsCompartments, jsCompartmentConstructor, jsModuleSources, jsModuleSourceConstructor],
+
+    additionalEnumerations: [],
 
     optionalPostProcessor: nil
 )

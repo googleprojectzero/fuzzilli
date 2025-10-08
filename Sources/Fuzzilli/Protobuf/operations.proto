@@ -35,6 +35,7 @@ message LoadFloat {
 
 message LoadString {
     string value = 1;
+    optional string customName = 2;
 }
 
 message LoadBoolean {
@@ -150,6 +151,13 @@ message BeginClassInstanceMethod {
 message EndClassInstanceMethod {
 }
 
+message BeginClassInstanceComputedMethod {
+    Parameters parameters = 1;
+}
+
+message EndClassInstanceComputedMethod {
+}
+
 message BeginClassInstanceGetter {
     string propertyName = 1;
 }
@@ -190,6 +198,13 @@ message BeginClassStaticMethod {
 }
 
 message EndClassStaticMethod {
+}
+
+message BeginClassStaticComputedMethod {
+    Parameters parameters = 1;
+}
+
+message EndClassStaticComputedMethod {
 }
 
 message BeginClassStaticGetter {
@@ -599,6 +614,14 @@ enum NamedVariableDeclarationMode {
 message CreateNamedVariable {
     string variableName = 1;
     NamedVariableDeclarationMode declarationMode = 2;
+}
+
+message CreateNamedDisposableVariable {
+    string variableName = 1;
+}
+
+message CreateNamedAsyncDisposableVariable {
+    string variableName = 1;
 }
 
 message Eval {
@@ -1473,6 +1496,11 @@ message WasmBeginTypeGroup {
 }
 
 message WasmEndTypeGroup {
+}
+
+message WasmDefineSignatureType {
+    repeated WasmILType parameterTypes = 1;
+    repeated WasmILType outputTypes = 2;
 }
 
 message WasmDefineArrayType {

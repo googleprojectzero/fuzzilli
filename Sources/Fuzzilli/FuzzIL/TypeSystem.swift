@@ -161,6 +161,15 @@ public struct ILType: Hashable {
         return ILType(definiteType: .string, ext: ext)
     }
 
+    /// Constructs an named string: this is a string that typically has some complex format.
+    ///
+    /// Most code will treat these as strings, but the JavaScriptEnvironment can register
+    /// producingGenerators for them so they can be generated more intelligently.
+    public static func namedString(ofName name: String) -> ILType {
+        let ext = TypeExtension(group: name, properties: Set(), methods: Set(), signature: nil, wasmExt: nil)
+        return ILType(definiteType: .string, ext: ext)
+    }
+
     /// An object for which it is not known what properties or methods it has, if any.
     public static let unknownObject: ILType = .object()
 
@@ -484,7 +493,7 @@ public struct ILType: Hashable {
     }
 
     public var isEnumeration : Bool {
-        return Is(.string) && ext != nil
+        return Is(.string) && ext != nil && !ext!.properties.isEmpty
     }
 
     public var group: String? {
@@ -2077,6 +2086,25 @@ class WasmTypeDescription: Hashable, CustomStringConvertible {
 
     public var description: String {
         return format(abbreviate: false)
+    }
+}
+
+class WasmSignatureTypeDescription: WasmTypeDescription {
+    var signature: WasmSignature
+
+    init(signature: WasmSignature, typeGroupIndex: Int) {
+        self.signature = signature
+        super.init(typeGroupIndex: typeGroupIndex, superType: .WasmFunc)
+    }
+
+    override func format(abbreviate: Bool) -> String {
+        let abbreviated = "\(super.format(abbreviate: abbreviate)) Func"
+        if abbreviate {
+            return abbreviated
+        }
+        let paramTypes = signature.parameterTypes.map {$0.abbreviated}.joined(separator: ", ")
+        let outputTypes = signature.outputTypes.map {$0.abbreviated}.joined(separator: ", ")
+        return "\(abbreviated)[[\(paramTypes)] => [\(outputTypes)]]"
     }
 }
 

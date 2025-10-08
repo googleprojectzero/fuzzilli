@@ -22,14 +22,12 @@ public struct Context: OptionSet, Hashable, CaseIterable {
         .method,
         .classMethod,
         .loop,
-        .with,
         .objectLiteral,
         .classDefinition,
         .switchBlock,
         .switchCase,
         .wasm,
         .wasmFunction,
-        .wasmBlock,
         .wasmTypeGroup,
         .empty,
     ]
@@ -59,34 +57,24 @@ public struct Context: OptionSet, Hashable, CaseIterable {
     public static let classMethod       = Context(rawValue: 1 << 5)
     // Inside a loop.
     public static let loop              = Context(rawValue: 1 << 6)
-    // Inside a with statement.
-    public static let with              = Context(rawValue: 1 << 7)
     // Inside an object literal.
-    public static let objectLiteral     = Context(rawValue: 1 << 8)
+    public static let objectLiteral     = Context(rawValue: 1 << 7)
     // Inside a class definition.
-    public static let classDefinition   = Context(rawValue: 1 << 9)
+    public static let classDefinition   = Context(rawValue: 1 << 8)
     // Inside a switch block.
-    public static let switchBlock       = Context(rawValue: 1 << 10)
+    public static let switchBlock       = Context(rawValue: 1 << 9)
     // Inside a switch case.
-    public static let switchCase        = Context(rawValue: 1 << 11)
+    public static let switchCase        = Context(rawValue: 1 << 10)
     // Inside a wasm module
-    public static let wasm              = Context(rawValue: 1 << 12)
+    public static let wasm              = Context(rawValue: 1 << 11)
     // Inside a function in a wasm module
-    public static let wasmFunction      = Context(rawValue: 1 << 13)
-    // Inside a block of a wasm function, allows branches
-    public static let wasmBlock         = Context(rawValue: 1 << 14)
+    public static let wasmFunction      = Context(rawValue: 1 << 12)
     // Inside a wasm recursive type group definition.
-    public static let wasmTypeGroup     = Context(rawValue: 1 << 15)
+    public static let wasmTypeGroup     = Context(rawValue: 1 << 13)
 
     public static let empty             = Context([])
-
-    // These contexts have ValueGenerators and as such we can .buildPrefix in them.
-    public var isValueBuildableContext: Bool {
-        self.contains(.wasmFunction) || self.contains(.javascript)
-    }
-
+    
     public var inWasm: Bool {
-        // .wasmBlock is propagating surrounding context
         self.contains(.wasm) || self.contains(.wasmFunction)
     }
 }
@@ -115,9 +103,6 @@ extension Context: CustomStringConvertible {
         if self.contains(.loop) {
             strings.append(".loop")
         }
-        if self.contains(.with) {
-            strings.append(".with")
-        }
         if self.contains(.objectLiteral) {
             strings.append(".objectLiteral")
         }
@@ -135,9 +120,6 @@ extension Context: CustomStringConvertible {
         }
         if self.contains(.wasmFunction) {
             strings.append(".wasmFunction")
-        }
-        if self.contains(.wasmBlock) {
-            strings.append(".wasmBlock")
         }
         if self.contains(.wasmTypeGroup) {
             strings.append(".wasmTypeGroup")
