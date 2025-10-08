@@ -152,6 +152,12 @@ public class Storage: Module {
             guard !matched.isEmpty else { return }
 
             let toWrite = matched.joined(separator: "\n") + "\n"
+            
+            // Send feedback data to Redis if using RedisCorpus
+            if let redisCorpus = fuzzer.corpus as? RedisCorpus {
+                redisCorpus.updateFeedbackVector(programId: ev.programId, feedbackData: toWrite)
+            }
+            
             if let data = toWrite.data(using: .utf8) {
                 if FileManager.default.fileExists(atPath: url.path) {
                     self.appendToFile(url, withContent: data)

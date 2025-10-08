@@ -9,7 +9,8 @@ public class RedisCorpus: ComponentBase, Collection, Corpus {
     private var ages: RingBuffer<Int>
     private var totalEntryCounter = 0
     private var uniqueBase64Programs: Set<String> = []
-    private var COUNT = 0
+    private var COUNT = 0 // arb count used for determing when to sync from redis
+    private var programIdToBase64: [String: String] = [:]
 
     private var eventLoopGroup: MultiThreadedEventLoopGroup?
     private var redisPool: RedisConnectionPool?
@@ -59,6 +60,7 @@ public class RedisCorpus: ComponentBase, Collection, Corpus {
     }
 
     public func add(_ program: Program, _ : ProgramAspects) {
+        // try to sync from redis if the local corpus when doing an add 
         if checkSizeRedis() {
             receiveFromRedis()
         }
@@ -77,6 +79,7 @@ public class RedisCorpus: ComponentBase, Collection, Corpus {
     }
 
     public func randomElementForSplicing() -> Program {
+        // sync every 200 mutaitons 
         if (COUNT > 200) {
             if checkSizeRedis() {
                 receiveFromRedis()
@@ -92,6 +95,7 @@ public class RedisCorpus: ComponentBase, Collection, Corpus {
     }
 
     public func randomElementForMutating() -> Program {
+        // sync every 200 mutations
         if (COUNT > 200) {
             if checkSizeRedis() {
                 receiveFromRedis()
@@ -156,26 +160,74 @@ public class RedisCorpus: ComponentBase, Collection, Corpus {
     public func index(after i: Int) -> Int {
         return i + 1
     }
+    // public function to update the feedback vector used in the stroage. swift code to sync    
+    public func updateFeedbackVector(programId: String, feedbackData: String) {
+        guard let pool = redisPool else { return }
+        guard let programBase64 = programIdToBase64[programId] else { return }
+        
+        let streamData: [RESPValue] = [
+            RESPValue(from: "stream:fuzz:updates"),
+            RESPValue(from: "*"),
+            RESPValue(from: "op"),
+            RESPValue(from: "update_feedback"),
+            RESPValue(from: "program_base64"),
+            RESPValue(from: programBase64),
+            RESPValue(from: "feedback_vector"),
+            RESPValue(from: feedbackData)
+        ]
+        
+        _ = pool.leaseConnection { (redis: RedisConnection) in
+            redis.send(command: "XADD", with: streamData)
+        }
+    }
 
     private func sendToRedis(index: Int, program: Program, age: Int) {
+        // send to stream using raw redis SEND command used with the python sync.py
+        // then send to lacal redis storage via set
         guard let pool = redisPool else { return }
+        
+        guard let programBase64 = try? encodeProtobufCorpus([program]).base64EncodedString() else { return }
+        uniqueBase64Programs.insert(programBase64)
+        programIdToBase64[program.id.uuidString] = programBase64
+        
+        let coverageTotal: Double
+        if let coverageEvaluator = fuzzer.evaluator as? ProgramCoverageEvaluator {
+            coverageTotal = coverageEvaluator.currentScore * 100.0
+        } else {
+            coverageTotal = 0.0
+        }
+        
+        let streamData: [RESPValue] = [
+            RESPValue(from: "stream:fuzz:updates"),
+            RESPValue(from: "*"),
+            RESPValue(from: "op"),
+            RESPValue(from: "set"),
+            RESPValue(from: "program_base64"),
+            RESPValue(from: programBase64),
+            RESPValue(from: "fuzzer_id"),
+            RESPValue(from: "0"),
+            RESPValue(from: "feedback_vector"),
+            RESPValue(from: "null"),
+            RESPValue(from: "turboshaft_ir"),
+            RESPValue(from: ""),
+            RESPValue(from: "coverage_total"),
+            RESPValue(from: String(format: "%.2f", coverageTotal))
+        ]
+        
         let payload: String = {
-            let b64: String = (try? encodeProtobufCorpus([program]).base64EncodedString()) ?? ""
             let dict: [String: Any] = [
                 "index": index,
-                "program_b64": b64
+                "program_b64": programBase64
             ]
             let data = try! JSONSerialization.data(withJSONObject: dict, options: [])
             return String(data: data, encoding: .utf8) ?? "{}"
         }()
-
-        if let b64 = (try? encodeProtobufCorpus([program]).base64EncodedString()) {
-            uniqueBase64Programs.insert(b64)
-        }
-
+        
         _ = pool.leaseConnection { (redis: RedisConnection) in
-            redis.set("corpus:\(index)", to: payload).flatMap { _ in
-                redis.set("corpus:latest_index", to: String(index))
+            redis.send(command: "XADD", with: streamData).flatMap { _ in
+                redis.set("corpus:\(index)", to: payload).flatMap { _ in
+                    redis.set("corpus:latest_index", to: String(index))
+                }
             }
         }
     }
@@ -222,7 +274,6 @@ public class RedisCorpus: ComponentBase, Collection, Corpus {
                                   let programs = try? decodeProtobufCorpus(programData),
                                   let program = programs.first else { return }
                             
-                            // Check for base64 uniqueness before adding from Redis
                             if !self.uniqueBase64Programs.contains(b64) {
                                 self.uniqueBase64Programs.insert(b64)
                                 self.addInternal(program)
