@@ -110,11 +110,11 @@ public let WorkerGenerator = CodeGenerator("WorkerGenerator") { b in
 
         // Generate a random onmessage handler for incoming messages.
         let onmessageFunction = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            b.build(n: Int.random(in: 2...5))
+            b.buildRecursive(n: Int.random(in: 2...5))
         }
         b.setProperty("onmessage", of: this, to: onmessageFunction)
 
-        b.build(n: Int.random(in: 3...10))
+        b.buildRecursive(n: Int.random(in: 3...10))
     }
     let workerConstructor = b.createNamedVariable(forBuiltin: "Worker")
 
@@ -249,7 +249,7 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
         }
 
         let f = b.buildPlainFunction(with: parameters) { params in
-            b.build(n: Int.random(in: 3...10))
+            b.buildRecursive(n: Int.random(in: 3...10))
             b.doReturn(b.randomJsVariable())
         }
 
