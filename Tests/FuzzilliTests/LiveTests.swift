@@ -24,6 +24,28 @@ class LiveTests: XCTestCase {
     // Set to true to log failing programs
     static let VERBOSE = false
 
+    /// Meta-test ensuring that the test framework can successfully terminate an endless loop.
+    func testEndlessLoopTermination() throws {
+        let runner =  try GetJavaScriptExecutorOrSkipTest()
+
+        let results = try Self.runLiveTest(iterations: 1, withRunner: runner, timeoutInSeconds: 1) { b in
+            b.loadInt(123) // prefix
+
+            let module = b.buildWasmModule() { module in
+                module.addWasmFunction(with: [] => []) { function, label, args in
+                    function.wasmBuildLoop(with: [] => [], args: []) { label, args in
+                        function.wasmBranch(to: label)
+                        return []
+                    }
+                    return []
+                }
+            }
+            b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports(), withArgs: [])
+        }
+        assert(results.failureRate == 1)
+        assert(results.failureMessages.count == 1)
+    }
+
     func testValueGeneration() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
 
@@ -142,7 +164,7 @@ class LiveTests: XCTestCase {
     // The closure can use the ProgramBuilder to emit a program of a specific
     // shape that is then executed with the given runner. We then check that
     // we stay below the maximum failure rate over the given number of iterations.
-    static func runLiveTest(iterations n: Int = 250, withRunner runner: JavaScriptExecutor, body: (ProgramBuilder) -> Void) throws -> (failureRate: Double, failureMessages: [String: Int]) {
+    static func runLiveTest(iterations n: Int = 250, withRunner runner: JavaScriptExecutor, timeoutInSeconds: Int = 5, body: (ProgramBuilder) -> Void) throws -> (failureRate: Double, failureMessages: [String: Int]) {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -178,7 +200,7 @@ class LiveTests: XCTestCase {
         }
 
         DispatchQueue.concurrentPerform(iterations: n) { i in
-            let result = executeAndParseResults(program: programs[i], runner: runner)
+            let result = executeAndParseResults(program: programs[i], runner: runner, timeoutInSeconds: timeoutInSeconds)
             results[i] = result
         }
 
@@ -214,10 +236,11 @@ class LiveTests: XCTestCase {
         }
     }
 
-    static func executeAndParseResults(program: (program: Program, jsProgram: String), runner: JavaScriptExecutor) -> ExecutionResult {
+    static func executeAndParseResults(program: (program: Program, jsProgram: String), runner: JavaScriptExecutor, timeoutInSeconds: Int) -> ExecutionResult {
 
         do {
-            let result = try runner.executeScript(program.jsProgram, withTimeout: 5 * Seconds)
+            let result = try runner.executeScript(program.jsProgram,
+                withTimeout: Double(timeoutInSeconds) * Seconds)
             if result.isFailure {
                 var signature: String? = nil
 

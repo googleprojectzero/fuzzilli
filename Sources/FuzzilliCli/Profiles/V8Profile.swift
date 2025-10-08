@@ -14,7 +14,6 @@
 
 import Fuzzilli
 
-
 let v8Profile = Profile(
     processArgs: { randomize in
         var args = [
@@ -74,7 +73,7 @@ let v8Profile = Profile(
         //
         // Future features that should sometimes be enabled.
         //
-        if probability(0.25) {
+        if probability(0.1) {
             args.append("--minor-ms")
         }
 
@@ -90,10 +89,11 @@ let v8Profile = Profile(
             args.append("--turboshaft-typed-optimizations")
         }
 
-        if probability(0.4) {
+        if probability(0.5) {
             args.append("--turbolev")
-        } else if probability(0.15) {
-            args.append("--turbolev-future")
+            if probability(0.82) {
+                args.append("--turbolev-future")
+            }
         }
 
         if probability(0.1) {
@@ -118,6 +118,15 @@ let v8Profile = Profile(
 
         if probability(0.1) {
             args.append("--precise-object-pinning")
+        }
+
+        if probability(0.1) {
+            args.append("--handle-weak-ref-weakly-in-minor-gc")
+        }
+
+        if probability(0.1) {
+            let stackSize = Int.random(in: 54...863)
+            args.append("--stack-size=\(stackSize)")
         }
 
         // Temporarily enable the three flags below with high probability to
@@ -285,6 +294,7 @@ let v8Profile = Profile(
 
         (WasmStructGenerator,                     15),
         (WasmArrayGenerator,                      15),
+        (PretenureAllocationSiteGenerator,         5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
@@ -309,6 +319,8 @@ let v8Profile = Profile(
     ],
 
     additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],
+
+    additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
 
     optionalPostProcessor: nil
 )

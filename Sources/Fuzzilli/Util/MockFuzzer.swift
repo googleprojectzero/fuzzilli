@@ -117,7 +117,7 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
     let codeGenerators = WeightedList<CodeGenerator>(
         (CodeGenerators + WasmCodeGenerators).map {
             guard let weight = codeGeneratorWeights[$0.name] else {
-                fatalError("Missing weight for code generator \($0.name) in CodeGeneratorWeights.swift")
+                fatalError("Missing weight for CodeGenerator \($0.name) in CodeGeneratorWeights.swift")
             }
             return ($0, weight)
         } + additionalCodeGenerators)
