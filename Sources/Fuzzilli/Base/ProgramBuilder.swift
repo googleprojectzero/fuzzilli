@@ -76,7 +76,7 @@ public class ProgramBuilder {
 
     /// Visible variables management.
     /// The `scopes` stack contains one entry per currently open scope containing all variables created in that scope.
-    private var scopes = Stack<[Variable]>([[]])
+    private(set) var scopes = Stack<[Variable]>([[]])
     /// The `variablesInScope` array simply contains all variables that are currently in scope. It is effectively the `scopes` stack flattened.
     private var variablesInScope = [Variable]()
 
@@ -101,6 +101,17 @@ public class ProgramBuilder {
     /// This needs to be a stack as object literals can be nested, for example if an object
     /// literals is created inside a method/getter/setter of another object literals.
     private var activeObjectLiterals = Stack<ObjectLiteral>()
+
+    /// If we open a new function, we save its Variable here.
+    /// This allows CodeGenerators to refer to their Variable after they emit the
+    /// `End*Function` operation. This allows them to call the function after closing it.
+    /// Since they cannot refer to the Variable as it usually is created in the head part of the Generator.
+    private var lastFunctionVariables = Stack<Variable>()
+
+    /// Just a getter to get the top most, i.e. last function Variable.
+    public var lastFunctionVariable: Variable  {
+        return lastFunctionVariables.top
+    }
 
     /// When building object literals, the state for the current literal is exposed through this member and
     /// can be used to add fields to the literal or to determine if some field already exists.
@@ -132,6 +143,9 @@ public class ProgramBuilder {
     public var currentClassDefinition: ClassDefinition {
         return activeClassDefinitions.top
     }
+
+    /// The remaining CodeGenerators to call as part of a building / CodeGen step, these will "clean up" the state and fix the contexts.
+    public var scheduled: Stack<GeneratorStub> = Stack()
 
     /// Stack of active switch blocks.
     private var activeSwitchBlocks = Stack<SwitchBlock>()
@@ -179,6 +193,10 @@ public class ProgramBuilder {
         self.fuzzer = fuzzer
         self.jsTyper = JSTyper(for: fuzzer.environment)
         self.parent = parent
+
+        if fuzzer.config.logLevel.isAtLeast(.verbose)  {
+            self.buildLog = BuildLog()
+        }
     }
 
     /// Resets this builder.
@@ -195,10 +213,12 @@ public class ProgramBuilder {
         jsTyper.reset()
         activeObjectLiterals.removeAll()
         activeClassDefinitions.removeAll()
+        buildLog?.reset()
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
+        assert(scheduled.isEmpty)
         let program = Program(code: code, parent: parent, comments: comments, contributors: contributors)
         reset()
         return program
@@ -591,7 +611,6 @@ public class ProgramBuilder {
 
     public func findOrGenerateType(_ type: ILType, maxNumberOfVariablesToGenerate: Int = 100) -> Variable {
         assert(context.contains(.javascript))
-//        assert(argumentGenerationVariableBudget == nil)
 
         argumentGenerationVariableBudget.push(numVariables + maxNumberOfVariablesToGenerate)
 
@@ -646,7 +665,11 @@ public class ProgramBuilder {
             (.integer, { return self.loadInt(self.randomInt()) }),
             (.string, {
                 if type.isEnumeration {
-                    return self.loadString(type.enumValues.randomElement()!)
+                    return self.loadEnum(type)
+                }
+                if let typeName = type.group,
+                   let customStringGen = self.fuzzer.environment.getNamedStringGenerator(ofName: typeName) {
+                    return self.loadString(customStringGen(), customName: typeName)
                 }
                 return self.loadString(self.randomString()) }),
             (.boolean, { return self.loadBool(probability(0.5)) }),
@@ -670,6 +693,16 @@ public class ProgramBuilder {
                     // Note that builtin constructors are handled above in the maybeGenerateConstructorAsPath call.
                     return self.randomVariable(forUseAs: .constructor())
                 }),
+            (.wasmTypeDef(), {
+                // Call into the WasmTypeGroup generator (or other that provide a .wasmTypeDef)
+                let generators = self.fuzzer.codeGenerators.filter { gen in
+                    gen.produces.contains { type in
+                        type.Is(.wasmTypeDef())
+                    }
+                }
+                let _ = self.complete(generator: generators.randomElement(), withBudget: 5)
+                return self.randomVariable(ofType: .wasmTypeDef())!
+            }),
             (.object(), {
                 func useMethodToProduce(_ method: (group: String, method: String)) -> Variable {
                     let group = self.fuzzer.environment.type(ofGroup: method.group)
@@ -751,17 +784,22 @@ public class ProgramBuilder {
                 } else if let property = maybeProperty {
                     return usePropertyToProduce(property)
                 }
-                let codeGenerators =
-                    self.fuzzer.codeGenerators.filter({$0.requiredContext.isSubset(of: self.context) &&
-                        !$0.isRecursive && $0.produces != nil && $0.produces!.Is(type)})
-                if codeGenerators.count > 0 {
-                  let generator = codeGenerators.randomElement()
-                  self.run(generator)
-                  // The generator we ran above is supposed to generate the
-                  // requested type. If no variable of that type exists
-                  // now, then either the generator or its annotation is
-                  // wrong.
-                  return self.randomVariable(ofTypeOrSubtype: type)!
+                let generators = self.fuzzer.codeGenerators.filter({
+                    // Right now only use generators that require a single context.
+                    $0.parts.last!.requiredContext.isSingle &&
+                    $0.parts.last!.requiredContext.satisfied(by: self.context) &&
+                    $0.parts.last!.produces.contains(where: { producedType in
+                        producedType.Is(type)
+                    })
+                })
+                if generators.count > 0 {
+                    let generator = generators.randomElement()
+                    let _ = self.complete(generator: generator, withBudget: 10)
+                    // The generator we ran above is supposed to generate the
+                    // requested type. If no variable of that type exists
+                    // now, then either the generator or its annotation is
+                    // wrong.
+                    return self.randomVariable(ofTypeOrSubtype: type)!
                 }
                 // Otherwise this is one of the following:
                 // 1. an object with more type information, i.e. it has a group, but no associated builtin, e.g. we cannot construct it with new.
@@ -1648,12 +1686,6 @@ public class ProgramBuilder {
     // parent budget and the (absolute) threshold for recursive code generation.
     //
 
-    /// The first "knob": this mainly determines the shape of generated code as it determines how large block bodies are relative to their surrounding code.
-    /// This also influences the nesting depth of the generated code, as recursive code generators are only invoked if enough "budget" is still available.
-    /// These are writable so they can be reconfigured in tests.
-    var minRecursiveBudgetRelativeToParentBudget = 0.05
-    var maxRecursiveBudgetRelativeToParentBudget = 0.50
-
     /// The second "knob": the minimum budget required to be able to invoke recursive code generators.
     public static let minBudgetForRecursiveCodeGeneration = 5
 
@@ -1667,24 +1699,102 @@ public class ProgramBuilder {
         case generatingAndSplicing
     }
 
-    // Keeps track of the state of one buildInternal() invocation. These are tracked in a stack, one entry for each recursive call.
-    // This is a class so that updating the currently active state is possible without push/pop.
-    private class BuildingState {
-        let initialBudget: Int
-        let mode: BuildingMode
-        var recursiveBuildingAllowed = true
-        var nextRecursiveBlockOfCurrentGenerator = 1
-        var totalRecursiveBlocksOfCurrentGenerator: Int? = nil
-        // An optional budget for recursive building.
-        var recursiveBudget: Int? = nil
+    struct BuildLog {
+        enum ActionOutcome: CustomStringConvertible {
+            case success
+            case failed(String?)
+            case started
 
-        init(initialBudget: Int, mode: BuildingMode) {
-            assert(initialBudget > 0)
-            self.initialBudget = initialBudget
-            self.mode = mode
+            var description: String {
+                switch self {
+                    case .success:
+                        return "✅"
+                    case .failed(let reason):
+                        if let reason {
+                            return "❌: \(reason)"
+                        } else {
+                            return "❌"
+                        }
+                    case .started:
+                        return "started"
+                }
+            }
+        }
+
+        struct BuildAction {
+            var name: String
+            var outcome = ActionOutcome.started
+            var produces: [ILType]
+        }
+
+        var pendingActions: Stack<BuildAction> = Stack()
+        var actions = [(BuildAction, Int)]()
+        var indent = 0
+
+        mutating func startAction(_ actionName: String, produces: [ILType]) {
+            let action = BuildAction(name: actionName, produces: produces)
+            // Mark this action as `.started`.
+            actions.append((action, indent))
+            // Push the action onto the pending stack, we will need to complete or fail it later.
+            pendingActions.push(action)
+            indent += 1
+        }
+
+        mutating func succeedAction(_ newlyCreatedVariableTypes: [ILType]) {
+            indent -= 1
+            var finishedAction = pendingActions.pop()
+            finishedAction.outcome = .success
+            actions.append((finishedAction, indent))
+            #if DEBUG
+            // Now Check that we've seen these new types.
+            for t in finishedAction.produces {
+                if !newlyCreatedVariableTypes.contains(where: {
+                    $0.Is(t)
+                }) {
+                    var fatalErrorString = ""
+                    fatalErrorString += "Action: \(finishedAction.name)\n"
+                    fatalErrorString += "Action guaranteed it would produce: \(finishedAction.produces)\n"
+                    fatalErrorString += "\(getLogString())\n"
+                    fatalErrorString += "newlyCreatedVariableTypes: \(newlyCreatedVariableTypes) does not contain expected type \(t)"
+                    fatalError(fatalErrorString)
+                }
+            }
+            #endif
+        }
+
+        mutating func reportFailure(reason: String? = nil) {
+            indent -= 1
+            var failedAction = pendingActions.pop()
+            failedAction.outcome = .failed(reason)
+            actions.append((failedAction, indent))
+        }
+
+        func getLogString() -> String {
+            var logString = "Build log:\n"
+            for (action, indent) in actions {
+                let tab = String(repeating: " ", count: indent)
+                logString.append("\(tab)\(action.name): \(action.outcome)\n")
+            }
+            return logString
+        }
+
+        mutating func reset() {
+            assert(pendingActions.isEmpty, "We should have completed all pending build actions, either failed or succeeded.")
+            // This is basically equivalent with the statement above.
+            assert(indent == 0)
+            actions.removeAll()
         }
     }
-    private var buildStack = Stack<BuildingState>()
+
+
+    // The BuildLog records all `run` and `complete` calls on this ProgramBuilder, be it through mutation or generation.
+    #if DEBUG
+    // We definitely want to have the BuildLog in DEBUG builds.
+    var buildLog: BuildLog? = BuildLog()
+    #else
+    // We initialize this depending on the LogLevel in the initializer.
+    var buildLog: BuildLog? = nil
+    #endif
 
     /// Build random code at the current position in the program.
     ///
@@ -1695,117 +1805,41 @@ public class ProgramBuilder {
     /// Building code requires that there are visible variables available as inputs for CodeGenerators or as replacement variables for splicing.
     /// When building new programs, `buildPrefix()` can be used to generate some initial variables. `build()` purposely does not call
     /// `buildPrefix()` itself so that the budget isn't accidentally spent just on prefix code (which is probably less interesting).
-    public func build(n: Int = 1, by mode: BuildingMode = .generatingAndSplicing) {
-        assert(buildStack.isEmpty)
-        buildInternal(initialBuildingBudget: n, mode: mode)
-        assert(buildStack.isEmpty)
-    }
+    public func build(n budget: Int, by buildingMode: BuildingMode = .generatingAndSplicing) {
 
-    /// Recursive code building. Used by CodeGenerators for example to fill the bodies of generated blocks.
-    public func buildRecursive(block: Int = 1, of numBlocks: Int = 1, n optionalBudget: Int? = nil) {
-        assert(!buildStack.isEmpty)
-        let parentState = buildStack.top
+        /// The number of CodeGenerators we want to call per level.
+        let splitFactor = 2
 
-        assert(parentState.mode != .splicing)
-        assert(parentState.recursiveBuildingAllowed)        // If this fails, a recursive CodeGenerator is probably not marked as recursive.
-        assert(numBlocks >= 1)
-        assert(block >= 1 && block <= numBlocks)
-        assert(parentState.nextRecursiveBlockOfCurrentGenerator == block, "next = \(parentState.nextRecursiveBlockOfCurrentGenerator), block = \(block)")
-        assert((parentState.totalRecursiveBlocksOfCurrentGenerator ?? numBlocks) == numBlocks)
-
-        parentState.nextRecursiveBlockOfCurrentGenerator = block + 1
-        parentState.totalRecursiveBlocksOfCurrentGenerator = numBlocks
-
-        // Determine the budget for this recursive call as a fraction of the parent's initial budget.
-        var recursiveBudget: Double
-        if let specifiedBudget = parentState.recursiveBudget {
-            assert(specifiedBudget > 0)
-            recursiveBudget = Double(specifiedBudget)
+        // If the corpus is empty, we have to pick generating here, this is only relevant for the first sample.
+        let mode: BuildingMode = if fuzzer.corpus.isEmpty {
+            .generating
         } else {
-            let factor = Double.random(in: minRecursiveBudgetRelativeToParentBudget...maxRecursiveBudgetRelativeToParentBudget)
-            assert(factor > 0.0 && factor < 1.0)
-            let parentBudget = parentState.initialBudget
-            recursiveBudget = Double(parentBudget) * factor
+            if buildingMode == .generatingAndSplicing {
+                chooseUniform(from: [.generating, .splicing])
+            } else {
+                buildingMode
+            }
         }
 
-        // Now split the budget between all sibling blocks.
-        recursiveBudget /= Double(numBlocks)
-        recursiveBudget.round(.up)
-        assert(recursiveBudget >= 1.0)
-
-        // Finally, if a custom budget was requested, choose the smaller of the two values.
-        if let requestedBudget = optionalBudget {
-            assert(requestedBudget > 0)
-            recursiveBudget = min(recursiveBudget, Double(requestedBudget))
-        }
-
-        buildInternal(initialBuildingBudget: Int(recursiveBudget), mode: parentState.mode)
-    }
-
-    private func buildInternal(initialBuildingBudget: Int, mode: BuildingMode) {
-        assert(initialBuildingBudget > 0)
+        // Now depending on the budget we will do one of these things:
+        // 1. Large budget is still here. Pick a scheduled CodeGenerator, or a random CodeGenerator.
+        //   a. See if we can execute it immediately and call into build if it yields. (and split budgets).
+        //   b. if not, schedule it, pick a generator that get's us closer to the target context.
+        //   c. see if we need to solve input constraints of scheduled generators.
+        // 2. budget is low
+        //   a. Call scheduled GeneratorStubs or return.
 
         // Both splicing and code generation can sometimes fail, for example if no other program with the necessary features exists.
         // To avoid infinite loops, we bail out after a certain number of consecutive failures.
         var consecutiveFailures = 0
 
-        let state = BuildingState(initialBudget: initialBuildingBudget, mode: mode)
-        buildStack.push(state)
-        defer { buildStack.pop() }
-        var remainingBudget = initialBuildingBudget
+        var remainingBudget = budget
 
         // Unless we are only splicing, find all generators that have the required context. We must always have at least one suitable code generator.
         let origContext = context
-        var availableGenerators = WeightedList<CodeGenerator>()
-        if state.mode != .splicing {
-            availableGenerators = fuzzer.codeGenerators.filter({ $0.requiredContext.isSubset(of: origContext) })
-            assert(!availableGenerators.isEmpty)
-        }
-
-        struct BuildLog {
-            enum ActionOutcome {
-                case success
-                case failed
-            }
-
-            struct BuildAction {
-                var action: String
-                var outcome: ActionOutcome?
-            }
-
-            var actions = [BuildAction]()
-
-            mutating func startAction(_ action: String) {
-                // Make sure that we have either completed our last build step or we haven't started any build steps yet.
-                assert(actions.isEmpty || actions[actions.count - 1].outcome != nil)
-                actions.append(BuildAction(action: action))
-            }
-
-            mutating func endAction(withOutcome outcome: ActionOutcome) {
-                assert(!actions.isEmpty && actions[actions.count - 1].outcome == nil)
-                actions[actions.count - 1].outcome = outcome
-            }
-
-        }
-
-        var buildLog = fuzzer.config.logLevel.isAtLeast(.verbose) ? BuildLog() : nil
 
         while remainingBudget > 0 {
             assert(context == origContext, "Code generation or splicing must not change the current context")
-
-            if state.recursiveBuildingAllowed &&
-                remainingBudget < ProgramBuilder.minBudgetForRecursiveCodeGeneration &&
-                availableGenerators.contains(where: { !$0.isRecursive }) {
-                // No more recursion at this point since the remaining budget is too small.
-                state.recursiveBuildingAllowed = false
-                availableGenerators = availableGenerators.filter({ !$0.isRecursive })
-                assert(state.mode == .splicing || !availableGenerators.isEmpty)
-            }
-
-            var mode = state.mode
-            if mode == .generatingAndSplicing {
-                mode = fuzzer.corpus.isEmpty ? .generating : chooseUniform(from: [.generating, .splicing])
-            }
 
             let codeSizeBefore = code.count
             switch mode {
@@ -1814,18 +1848,51 @@ public class ProgramBuilder {
                 // visible Variables. Therefore we should always have some Variables visible if we want to use them.
                 assert(hasVisibleVariables, "CodeGenerators assume that there are visible variables to use. Use buildPrefix() to generate some initial variables in a new program")
 
-                // Reset the code generator specific part of the state.
-                state.nextRecursiveBlockOfCurrentGenerator = 1
-                state.totalRecursiveBlocksOfCurrentGenerator = nil
+                var generator: CodeGenerator? = nil
 
-                // Select a random generator and run it.
-                let generator = availableGenerators.randomElement()
-                buildLog?.startAction(generator.name)
-                run(generator)
+                // If the budget is low, we will pick a CodeGenerator that is directly usable from the current context.
+                // If we still have budget left, we will instead pick any CodeGenerator that is reachable from the current context, which means that we might go from .javascript to .wasmFunction.
+                if remainingBudget < ProgramBuilder.minBudgetForRecursiveCodeGeneration {
+                    generator = fuzzer.codeGenerators.filter({
+                        $0.requiredContext.isSubset(of: context)
+                    }).randomElement()
+
+                    guard generator != nil else {
+                        fatalError("need a callable generator from every context!")
+                    }
+                } else {
+                    var counter = 0
+                    // We now try to assemble a Generator that we want to use.
+                    while generator == nil {
+                        // If we haven't managed to find a suitable CodeGenerator, we will try again but only consider CodeGenerators that are reachable from the current context. This should always work.
+                        if counter == 10 {
+                            generator = fuzzer.codeGenerators.filter({
+                                $0.requiredContext.isSubset(of: context)
+                            }).randomElement()!
+                            break
+                        }
+                        // Select a random CodeGenerator that is reachable from the current context and run it.
+                        let reachableContexts = fuzzer.contextGraph.getReachableContexts(from: context)
+                        let possibleGenerators = fuzzer.codeGenerators.filter({ generator in
+                            reachableContexts.reduce(false) { res, reachable in
+                                return res || generator.requiredContext.isSubset(of: reachable)
+                            }
+                        })
+
+                        assert(!possibleGenerators.isEmpty)
+                        let randomGenerator = possibleGenerators.randomElement()
+                        // After having picked a generator, we might need to nest it in other generators that provide the necessary contexts.
+                        generator = assembleSyntheticGenerator(for: randomGenerator)
+                        counter += 1
+                    }
+                }
+
+                // TODO: think about this and if we want to split this so that we get more CodeGenerators on the same level?
+                let _ = complete(generator: generator!, withBudget: remainingBudget / splitFactor)
 
             case .splicing:
                 let program = fuzzer.corpus.randomElementForSplicing()
-                buildLog?.startAction("splicing")
+                buildLog?.startAction("splicing", produces: [])
                 splice(from: program)
 
             default:
@@ -1836,24 +1903,29 @@ public class ProgramBuilder {
             let emittedInstructions = codeSizeAfter - codeSizeBefore
             remainingBudget -= emittedInstructions
             if emittedInstructions > 0 {
-                buildLog?.endAction(withOutcome: .success)
-                consecutiveFailures = 0
+                if mode == .splicing {
+                    buildLog?.succeedAction([])
+                }
             } else {
-                buildLog?.endAction(withOutcome: .failed)
+                if mode == .splicing {
+                    buildLog?.reportFailure()
+                }
                 consecutiveFailures += 1
                 guard consecutiveFailures < 10 else {
                     // When splicing, this is somewhat expected as we may not find code to splice if we're in a restricted
                     // context (e.g. we're inside a switch, but can't find another program with switch-cases).
                     // However, when generating code this should happen very rarely since we should always be able to
                     // generate code, not matter what context we are currently in.
-                    if state.mode != .splicing {
-                        logger.warning("Too many consecutive failures during code building with mode .\(state.mode). Bailing out.")
-                        if let actions = buildLog?.actions {
-                            logger.verbose("Build log:")
-                            for action in actions {
-                                logger.verbose("    \(action.action): \(action.outcome!)")
-                            }
+                    if mode != .splicing {
+                        if let log = buildLog {
+                            logger.verbose(log.getLogString())
                         }
+                    }
+                    // If we have requested generatingAndSplicing initially and
+                    // then decided to splice and fail here, we generate as a
+                    // fallback.
+                    if buildingMode == .generatingAndSplicing && mode == .splicing {
+                        build(n: budget, by: .generating)
                     }
                     return
                 }
@@ -1865,9 +1937,6 @@ public class ProgramBuilder {
     /// Returns both the number of generated instructions and of newly created variables.
     @discardableResult
     public func buildValues(_ n: Int) -> (generatedInstructions: Int, generatedVariables: Int) {
-        // Either we are in .javascript and see no variables, or we are in a wasm function and also don't see any variables.
-        assert(context.isValueBuildableContext)
-
         var valueGenerators = fuzzer.codeGenerators.filter({ $0.isValueGenerator })
         // Filter for the current context
         valueGenerators = valueGenerators.filter { context.contains($0.requiredContext) }
@@ -1881,18 +1950,17 @@ public class ProgramBuilder {
         // budget and allows us to run code generators when building recursively. We probably don't want to run
         // splicing here since splicing isn't as careful as code generation and may lead to invalid code more quickly.
         // The `initialBudget` isn't really used (since we specify a `recursiveBudget`), so can be an arbitrary value.
-        let state = BuildingState(initialBudget: 2 * n, mode: .generating)
-        state.recursiveBudget = n
-        buildStack.push(state)
-        defer { buildStack.pop() }
+
+        let currentBudget = 2 * n
 
         while numberOfVisibleVariables - previousNumberOfVisibleVariables < n {
-            let generator = valueGenerators.randomElement()
-            assert(generator.requiredContext.isValueBuildableContext && generator.inputs.count == 0)
 
-            state.nextRecursiveBlockOfCurrentGenerator = 1
-            state.totalRecursiveBlocksOfCurrentGenerator = nil
-            let numberOfGeneratedInstructions = run(generator)
+            let generator = valueGenerators.randomElement()
+
+            // Just fully run the generator without yielding back.
+            // Think about changing this and calling into the higher level build logic?
+            // TODO arbitrary budget here right now, change this to some split factor?
+            let numberOfGeneratedInstructions =  self.complete(generator: generator, withBudget: currentBudget / 5)
 
             assert(numberOfGeneratedInstructions > 0, "ValueGenerators must always succeed")
             totalNumberOfGeneratedInstructions += numberOfGeneratedInstructions
@@ -1911,7 +1979,7 @@ public class ProgramBuilder {
     public func buildPrefix() {
         // Each value generators should generate at least 3 variables, and we probably want to run at least a
         // few of them (maybe roughly >= 3), so the number of variables to build shouldn't be set too low.
-        assert(CodeGenerator.numberOfValuesToGenerateByValueGenerators == 3)
+        assert(GeneratorStub.numberOfValuesToGenerateByValueGenerators == 3)
         let numValuesToBuild = Int.random(in: 10...15)
 
         trace("Start of prefix code")
@@ -1930,7 +1998,7 @@ public class ProgramBuilder {
         // We need to update the inputs later, so take note of the visible variables here.
         let oldVisibleVariables = visibleVariables
 
-        build(n: defaultCodeGenerationAmount, by: mode)
+        build(n: defaultCodeGenerationAmount)
 
         let newVisibleVariables = visibleVariables.filter { v in
             let t = type(of: v)
@@ -1948,12 +2016,248 @@ public class ProgramBuilder {
         append(Instruction(newOp, inouts: Array(newInputs) + newOutputs, flags: instr.flags))
     }
 
+    // This function knows its own budget, and splits it to its yield points.
+    public func complete(generator: CodeGenerator, withBudget budget: Int) -> Int {
+        trace("Executing Generator \(generator.expandedName)")
+        let actionName = "Generator: " + generator.expandedName
+        buildLog?.startAction(actionName, produces: generator.produces)
+        let visibleVariablesBefore = visibleVariables
+
+        let depth = scheduled.count
+
+        // Split budget evenly at yield points.
+        let budgetPerYieldPoint = budget / generator.parts.count
+
+        var numberOfGeneratedInstructions = 0
+
+        // calculate all input requirements of this CodeGenerator.
+        let inputTypes = Set(generator.parts.reduce([]) { res, gen in
+            return res + gen.inputs.types
+        })
+
+        var availableTypes = inputTypes.filter {
+            randomVariable(ofType: $0) != nil
+        }
+
+        // Add the current context to the seen Contexts as well.
+        var seenContexts: [Context] = [context]
+
+        let contextsAndTypes = generator.parts.map { ($0.providedContext, $0.inputs.types) }
+
+        // Check if the can be produced along this generator, otherwise we need to bail.
+        for (contexts, types) in contextsAndTypes {
+            // We've seen the current context.
+            for context in contexts {
+                seenContexts.append(context)
+            }
+
+            for type in types {
+                // If we don't have the type available, check if we can produce it in the current context or a seen context.
+                if !availableTypes.contains(where: {
+                    type.Is($0)
+                }) {
+                    // Check if we have generators that can produce the type reachable from this context.
+                    let reachableContexts: Context = seenContexts.reduce(Context.empty) { res, ctx in [res, fuzzer.contextGraph.getReachableContexts(from: ctx).reduce(Context.empty) { res, ctx in [res, ctx]}]
+                    }
+
+                    // Right now this checks if the generator is a subset of the full reachable context (a single bitfield with all reachable contexts).
+                    // TODO: We need to also do some graph thingies here and add our requested types to the queue to see if we can fulfill the requested types. if we see that a generator produces a type, we need to put its input requirements onto the queue and start over?
+                    // Maybe overkill, but also cool.
+                    let callableGenerators = fuzzer.codeGenerators.filter {
+                        $0.requiredContext.isSubset(of: reachableContexts)
+                    }
+
+                    // Filter to see if they produce this type. Crucially to avoid dependency cycles, these also need to be valuegenerators.
+                    let canProduceThisType = callableGenerators.contains(where: { generator in
+                        generator.produces.contains(where: { $0.Is(type) })
+                    })
+
+                    // We cannot run if this is false.
+                    if !canProduceThisType {
+                        // TODO(cffsmith): track some statistics on how often this happens.
+                        buildLog?.reportFailure(reason: "Cannot produce type \(type) starting in original context \(context).")
+                        return 0
+                    } else {
+                        // Mark the type as available.
+                        availableTypes.insert(type)
+                    }
+                }
+            }
+        }
+
+        // Try to create the types that we need for this generator.
+        // At this point we've guaranteed that we can produce the types somewhere along the yield points of this generator.
+        createRequiredInputVariables(forTypes: inputTypes)
+
+        // Push the remaining stubs, we need to call them to close all Contexts properly.
+        for part in generator.tail.reversed() {
+            scheduled.push(part)
+        }
+
+        // This runs the first part of the generator.
+        numberOfGeneratedInstructions += self.run(generator.head)
+
+        // If this generator says it provides a context, it must do so, it cannot fail because we would not be able to continue with the rest of the generator.
+        // TODO(cffsmith): implement some forking / merging mode for the Code Object? that way we could "roll back" some changes.
+        let subsetContext = generator.head.providedContext.reduce(Context.empty) { res, context in
+            return [res, context]
+        }
+
+        assert(subsetContext.isSubset(of: context), "Generators that claim to provide contexts cannot fail to provide those contexts \(generator.head.name).")
+
+        // While our local stack is not removed, we need to call into build and call the scheduled stubs.
+        while scheduled.count > depth {
+            let codeSizePre = code.count
+            // Check if we need to or can create types here.
+            createRequiredInputVariables(forTypes: inputTypes)
+            // Build into the block.
+            build(n: budgetPerYieldPoint)
+            // Call the next scheduled stub.
+            let _  = callNext()
+            numberOfGeneratedInstructions += code.count - codeSizePre
+        }
+
+        if numberOfGeneratedInstructions > 0 {
+            buildLog?.succeedAction(
+                Set(visibleVariables)
+                .subtracting(Set(visibleVariablesBefore))
+                .map(self.type)
+                )
+        } else {
+            buildLog?.reportFailure()
+        }
+
+        // I guess this is kind of implied by the logic above, yet if someone calls an extra closer in build somehow this would catch it.
+        assert(depth == scheduled.count, "Build stack is not balanced")
+        return numberOfGeneratedInstructions
+    }
+
+    // Todo, the context graph could also find ideal paths that allow type creation.
+    private func createRequiredInputVariables(forTypes types: Set<ILType>) {
+        for type in types {
+            if type.Is(.jsAnything) && context.contains(.javascript) {
+                let _ = findOrGenerateType(type)
+            } else {
+                if type.Is(.wasmAnything) && context.contains(.wasmFunction) {
+                    // Check if we can produce it with findOrGenerateWasmVar
+                    let _ = currentWasmFunction.generateRandomWasmVar(ofType: type)
+                }
+                if randomVariable(ofType: type) == nil {
+                    // Check for other CodeGenerators that can produce the given type in this context.
+                    let usableGenerators = fuzzer.codeGenerators.filter {
+                        $0.requiredContext.isSubset(of: context) &&
+                        $0.produces.contains {
+                            $0.Is(type)
+                        }
+                    }
+
+                    // Cannot build type here.
+                    if usableGenerators.isEmpty {
+                        // Continue here though, as we might be able to create Variables for other types.
+                        continue
+                    }
+
+                    let generator = usableGenerators.randomElement()
+
+                    let _ = complete(generator: generator, withBudget: 5)
+                }
+            }
+        }
+    }
+
+    // The `mainGenerator` is the actual generator that we want to run, we now might need to schedule other generators first to reach a necessary context.
+    public func assembleSyntheticGenerator(for mainGenerator: CodeGenerator) -> CodeGenerator? {
+        // We can directly run this CodeGenerator here.
+        if context.contains(mainGenerator.requiredContext) {
+            return mainGenerator
+        }
+
+        // Get all the generators for each edge and pick one of them.
+
+        // We might be in a context that is a union, e.g. .javascript | .subroutine. We then need to get all Paths from both possible single contexts.
+        let paths: [ContextGraph.Path] = Context.allCases.reduce([]) { pathArray, possibleContext in
+
+            if context.contains(possibleContext) {
+                // Walk through generated Graph and find a path.
+                let paths = fuzzer.contextGraph.getCodeGeneratorPaths(from: possibleContext, to: mainGenerator.requiredContext) ?? []
+                return pathArray + paths
+            }
+
+            return pathArray
+        }
+
+        if paths.isEmpty {
+            logger.warning("Found no paths in context \(context) for requested generator \(mainGenerator.name)")
+            return nil
+        }
+
+        // Pick a random path.
+        let path = chooseUniform(from: paths)
+
+        // For each edge in the path, pick a random generator.
+        // This is now a list of CodeGenerators, i.e. pairs of logical units.
+        let generators: [CodeGenerator] = path.randomConcretePath()
+
+        // So we can now assemble a synthetic generator that invokes our picked generator.
+        // We start by taking our first CodeGenerator, that will open the next context that is necessary.
+        // This is an incomplete CodeGenerator right now, as it only contains one part that opens a new context.
+        var syntheticGenerator = generators[0].parts
+
+        // For all other Stubs we will now successively insert the next CodeGenerator stubs into the right "spots".
+        //  <head_generator 1>
+        // We now try to insert the next part of the first CodeGenerator into our synthetic generator.
+        //  <head_generator 1> [some context] <tail_generator 1>
+        // We now go to the next Edge of our path and try to insert that head in the correct spot.
+        // <head_generator 1> [some context] <head_generator 2> [another context] <tail_generator 1>
+        // Since every part of the CodeGenerator requires its previous context, we can insert them in the right spot.
+        // At the very end, we will insert the actual CodeGenerator that we want to call.
+        // This essentially amounts to an insertion sort.
+        // (Because we might have CodeGenerators with multiple parts and different contexts, we cannot do this without sorting)
+        for subGenerator in generators[1...] + [mainGenerator] {
+            for (idx, part) in syntheticGenerator.enumerated() {
+                if part.providedContext.contains(where: { ctx in
+                    subGenerator.head.requiredContext.satisfied(by: ctx)
+                }) {
+                    // Insert this codegenerator here after this stub.
+                    syntheticGenerator.insert(contentsOf: subGenerator.parts, at: idx + 1)
+                    break
+                }
+            }
+        }
+
+        // This is our synthetic CodeGenerator.
+        return CodeGenerator("Synthetic", syntheticGenerator)
+    }
+
+    // Calls the next scheduled generator.
+    private func callNext() -> Int {
+        // Check if we should pass variables to this closer somehow?
+        if !scheduled.isEmpty {
+            let generator = scheduled.pop()
+            let generatedInstructions = self.run(generator)
+
+            let subsetContext = generator.providedContext.reduce(Context.empty) { res, context in
+                return [res, context]
+            }
+
+            assert(subsetContext.isSubset(of: context), "Generators that claim to provide contexts cannot fail to provide those contexts \(generator.name).")
+
+
+            return generatedInstructions
+        } else {
+            return 0
+        }
+    }
+
     /// Runs a code generator in the current context and returns the number of generated instructions.
     @discardableResult
-    private func run(_ generator: CodeGenerator) -> Int {
-        assert(generator.requiredContext.isSubset(of: context))
+    private func run(_ generator: GeneratorStub) -> Int {
+        // Any of the required Context constraints need to be satisfied.
+        assert(generator.requiredContext.satisfied(by: context))
+        let visibleVariablesBefore = visibleVariables
 
         trace("Executing code generator \(generator.name)")
+        buildLog?.startAction(generator.name, produces: generator.produces)
         var inputs = [Variable]()
         switch generator.inputs.mode {
         case .loose:
@@ -1965,6 +2269,11 @@ public class ProgramBuilder {
             for inputType in generator.inputs.types {
                 guard let input = randomVariable(ofType: inputType) else {
                     // Cannot run this generator
+                    if generator.providedContext != [] {
+                        fatalError("This generator is supposed to provide a context but cannot as we've failed to find the necessary inputs.")
+                    }
+                    // This early return also needs to report a failure.
+                    buildLog?.reportFailure(reason: "Cannot find variable that satifies input constraints \(inputType).")
                     return 0
                 }
                 inputs.append(input)
@@ -1975,6 +2284,13 @@ public class ProgramBuilder {
 
         if numGeneratedInstructions > 0 {
             contributors.insert(generator)
+            buildLog?.succeedAction(
+                Set(visibleVariables)
+                .subtracting(Set(visibleVariablesBefore))
+                .map(self.type)
+                )
+        } else {
+            buildLog?.reportFailure(reason: "Generator itself failed to produce any instructions.")
         }
 
         return numGeneratedInstructions
@@ -2004,7 +2320,7 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    private func emit(_ op: Operation, withInputs inputs: [Variable] = [], types: [ILType]? = nil) -> Instruction {
+    public func emit(_ op: Operation, withInputs inputs: [Variable] = [], types: [ILType]? = nil) -> Instruction {
         var inouts = inputs
         for _ in 0..<op.numOutputs {
             inouts.append(nextVariable())
@@ -2047,8 +2363,14 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadString(_ value: String) -> Variable {
-        return emit(LoadString(value: value)).output
+    public func loadString(_ value: String, customName: String? = nil) -> Variable {
+        return emit(LoadString(value: value, customName: customName)).output
+    }
+
+    @discardableResult
+    public func loadEnum(_ type: ILType) -> Variable {
+        assert(type.isEnumeration)
+        return loadString(chooseUniform(from: type.enumValues), customName: type.group)
     }
 
     @discardableResult
@@ -2191,6 +2513,7 @@ public class ProgramBuilder {
         public fileprivate(set) var instanceElements: [Int64] = []
         public fileprivate(set) var instanceComputedProperties: [Variable] = []
         public fileprivate(set) var instanceMethods: [String] = []
+        public fileprivate(set) var instanceComputedMethods: [Variable] = []
         public fileprivate(set) var instanceGetters: [String] = []
         public fileprivate(set) var instanceSetters: [String] = []
 
@@ -2198,6 +2521,7 @@ public class ProgramBuilder {
         public fileprivate(set) var staticElements: [Int64] = []
         public fileprivate(set) var staticComputedProperties: [Variable] = []
         public fileprivate(set) var staticMethods: [String] = []
+        public fileprivate(set) var staticComputedMethods: [Variable] = []
         public fileprivate(set) var staticGetters: [String] = []
         public fileprivate(set) var staticSetters: [String] = []
 
@@ -2249,6 +2573,13 @@ public class ProgramBuilder {
             b.emit(EndClassInstanceMethod())
         }
 
+        public func addInstanceComputedMethod(_ name: Variable, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
+            let instr = b.emit(BeginClassInstanceComputedMethod(parameters: descriptor.parameters), withInputs: [name])
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassInstanceComputedMethod())
+        }
+
         public func addInstanceGetter(for name: String, _ body: (_ this: Variable) -> ()) {
             let instr = b.emit(BeginClassInstanceGetter(propertyName: name))
             body(instr.innerOutput)
@@ -2287,6 +2618,13 @@ public class ProgramBuilder {
             let instr = b.emit(BeginClassStaticMethod(methodName: name, parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndClassStaticMethod())
+        }
+
+        public func addStaticComputedMethod(_ name: Variable, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
+            let instr = b.emit(BeginClassStaticComputedMethod(parameters: descriptor.parameters), withInputs: [name])
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassStaticComputedMethod())
         }
 
         public func addStaticGetter(for name: String, _ body: (_ this: Variable) -> ()) {
@@ -2767,6 +3105,16 @@ public class ProgramBuilder {
     @discardableResult
     public func createNamedVariable(forBuiltin builtinName: String) -> Variable {
         return createNamedVariable(builtinName, declarationMode: .none)
+    }
+
+    @discardableResult
+    public func createNamedDisposableVariable(_ name: String, _ initialValue: Variable) -> Variable {
+        return emit(CreateNamedDisposableVariable(name), withInputs: [initialValue]).output
+    }
+
+    @discardableResult
+    public func createNamedAsyncDisposableVariable(_ name: String, _ initialValue: Variable) -> Variable {
+        return emit(CreateNamedAsyncDisposableVariable(name), withInputs: [initialValue]).output
     }
 
     @discardableResult
@@ -3703,19 +4051,20 @@ public class ProgramBuilder {
                 if type.Is(.wasmGenericRef) {
                     // TODO(cffsmith): Can we improve this once we have better support for ad hoc
                     // code generation in other contexts?
-                    switch type.wasmReferenceType!.kind {
-                        case .Abstract(let heapType):
-                            if heapType == .WasmI31 {
-                                // Prefer generating a non-null value.
-                                return probability(0.2) && type.wasmReferenceType!.nullability
-                                    ? self.wasmRefNull(type: type)
-                                    : self.wasmRefI31(self.consti32(Int32(truncatingIfNeeded: b.randomInt())))
-                            }
-                            assert(type.wasmReferenceType!.nullability)
-                            return self.wasmRefNull(type: type)
-                        case .Index(_):
-                            break // Unimplemented
+                    switch type.wasmReferenceType?.kind {
+                    case .Abstract(let heapType):
+                        if heapType == .WasmI31 {
+                            // Prefer generating a non-null value.
+                            return probability(0.2) && type.wasmReferenceType!.nullability
+                                ? self.wasmRefNull(type: type)
+                                : self.wasmRefI31(self.consti32(Int32(truncatingIfNeeded: b.randomInt())))
                         }
+                        assert(type.wasmReferenceType!.nullability)
+                        return self.wasmRefNull(type: type)
+                    case .Index(_),
+                         .none:
+                        break // Unimplemented
+                    }
                 } else {
                     return nil
                 }
@@ -4063,16 +4412,31 @@ public class ProgramBuilder {
         return (dynamicOffset, alignedStaticOffset)
     }
 
-    public func randomWasmGlobal() -> WasmGlobal {
-        // TODO: Add simd128 and nullrefs.
-        withEqualProbability(
-            {.wasmf32(Float32(self.randomFloat()))},
-            {.wasmf64(self.randomFloat())},
-            {.wasmi32(Int32(truncatingIfNeeded: self.randomInt()))},
-            {.wasmi64(self.randomInt())},
-            {.externref},
-            {.exnref},
-            {.i31ref})
+    /// Produces a WasmGlobal that is valid to create in the given Context.
+    public func randomWasmGlobal(forContext context: Context) -> WasmGlobal {
+        switch context {
+        case .javascript:
+            // These are valid in JS according to: https://webassembly.github.io/spec/js-api/#globals.
+            // TODO: add simd128 and anyfunc.
+            return withEqualProbability(
+                {.wasmf32(Float32(self.randomFloat()))},
+                {.wasmf64(self.randomFloat())},
+                {.wasmi32(Int32(truncatingIfNeeded: self.randomInt()))},
+                {.wasmi64(self.randomInt())},
+                {.externref})
+        case .wasm:
+            // TODO: Add simd128 and nullrefs.
+            return withEqualProbability(
+                {.wasmf32(Float32(self.randomFloat()))},
+                {.wasmf64(self.randomFloat())},
+                {.wasmi32(Int32(truncatingIfNeeded: self.randomInt()))},
+                {.wasmi64(self.randomInt())},
+                {.externref},
+                {.exnref},
+                {.i31ref})
+        default:
+            fatalError("Unsupported context \(context) for a WasmGlobal.")
+        }
     }
 
     public func randomTagParameters() -> [ILType] {
@@ -4171,6 +4535,11 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    func wasmDefineSignatureType(signature: WasmSignature, indexTypes: [Variable]) -> Variable {
+        return emit(WasmDefineSignatureType(signature: signature), withInputs: indexTypes).output
+    }
+
+    @discardableResult
     func wasmDefineArrayType(elementType: ILType, mutability: Bool, indexType: Variable? = nil) -> Variable {
         let inputs = indexType != nil ? [indexType!] : []
         return emit(WasmDefineArrayType(elementType: elementType, mutability: mutability), withInputs: inputs).output
@@ -4235,7 +4604,7 @@ public class ProgramBuilder {
     /// Set the parameter types for the next function, method, or constructor, which must be the the start of a function or method definition.
     /// Parameter types (and signatures in general) are only valid for the duration of the program generation, as they cannot be preserved across mutations.
     /// As such, the parameter types are linked to their instruction through the index of the instruction in the program.
-    private func setParameterTypesForNextSubroutine(_ parameterTypes: ParameterList) {
+    public func setParameterTypesForNextSubroutine(_ parameterTypes: ParameterList) {
         jsTyper.setParameters(forSubroutineStartingAt: code.count, to: parameterTypes)
     }
 
@@ -4315,6 +4684,8 @@ public class ProgramBuilder {
             activeClassDefinitions.top.instanceComputedProperties.append(instr.input(0))
         case .beginClassInstanceMethod(let op):
             activeClassDefinitions.top.instanceMethods.append(op.methodName)
+        case .beginClassInstanceComputedMethod:
+            activeClassDefinitions.top.instanceComputedMethods.append(instr.input(0))
         case .beginClassInstanceGetter(let op):
             activeClassDefinitions.top.instanceGetters.append(op.propertyName)
         case .beginClassInstanceSetter(let op):
@@ -4327,6 +4698,8 @@ public class ProgramBuilder {
             activeClassDefinitions.top.staticComputedProperties.append(instr.input(0))
         case .beginClassStaticMethod(let op):
             activeClassDefinitions.top.staticMethods.append(op.methodName)
+        case .beginClassStaticComputedMethod:
+            activeClassDefinitions.top.staticComputedMethods.append(instr.input(0))
         case .beginClassStaticGetter(let op):
             activeClassDefinitions.top.staticGetters.append(op.propertyName)
         case .beginClassStaticSetter(let op):
@@ -4393,6 +4766,23 @@ public class ProgramBuilder {
              .wasmEndTryTable(_),
              .wasmEndBlock(_):
             activeWasmModule!.blockSignatures.pop()
+        case .beginPlainFunction(_),
+             .beginArrowFunction(_),
+             .beginAsyncArrowFunction(_),
+             .beginAsyncFunction(_),
+             .beginAsyncGeneratorFunction(_),
+             .beginCodeString(_),
+             .beginGeneratorFunction(_):
+            assert(instr.numOutputs == 1)
+            lastFunctionVariables.push(instr.output)
+        case .endPlainFunction(_),
+             .endArrowFunction(_),
+             .endAsyncArrowFunction(_),
+             .endAsyncFunction(_),
+             .endAsyncGeneratorFunction(_),
+             .endCodeString(_),
+             .endGeneratorFunction(_):
+            lastFunctionVariables.pop()
 
         default:
             assert(!instr.op.requiredContext.contains(.objectLiteral))
@@ -4414,7 +4804,7 @@ public class ProgramBuilder {
         // and let the mutator prune things
         let dict: [String : Variable] = bag.properties.filter {_ in probability(0.8)}.mapValues {
             if $0.isEnumeration {
-                return loadString(chooseUniform(from: $0.enumValues))
+                return loadEnum($0)
             // relativeTo doesn't have an ObjectGroup so we cannot just register a producingGenerator for it
             } else if $0.Is(OptionsBag.jsTemporalRelativeTo) {
                 return findOrGenerateType(chooseUniform(from: [.jsTemporalZonedDateTime, .jsTemporalPlainDateTime,
@@ -4442,17 +4832,40 @@ public class ProgramBuilder {
     // Generate a random time zone identifier
     @discardableResult
     func randomTimeZone() -> Variable {
+        return loadString(ProgramBuilder.randomTimeZoneString(), customName: "TemporalTimeZoneString")
+    }
+
+    @discardableResult
+    static func randomTimeZoneString() -> String {
         // Bias towards knownTimeZoneIdentifiers since it's a larger array
         if probability(0.7) {
-            return loadString(chooseUniform(from: TimeZone.knownTimeZoneIdentifiers))
+            return chooseUniform(from: TimeZone.knownTimeZoneIdentifiers)
         } else {
-            return loadString(chooseUniform(from: TimeZone.abbreviationDictionary.keys))
+            return chooseUniform(from: TimeZone.abbreviationDictionary.keys)
         }
     }
 
     @discardableResult
-    func randomUTCOffset() -> Variable {
-        return loadString(randomUTCOffsetString(mayHaveSeconds: true))
+    func randomUTCOffset(mayHaveSeconds: Bool) -> Variable {
+        return loadString(ProgramBuilder.randomUTCOffsetString(mayHaveSeconds: mayHaveSeconds), customName: "TemporalTimeZoneString")
+    }
+
+    @discardableResult
+    static func randomUTCOffsetString(mayHaveSeconds: Bool) -> String {
+        let hours = Int.random(in: 0..<24)
+        // Bias towards zero minutes since that's what most time zones do.
+        let zeroMinutes = probability(0.8)
+        let minutes = zeroMinutes ? 0 : Int.random(in: 0..<60)
+        let plusminus = Bool.random() ? "+" : "-";
+        var offset = String(format: "%@%02d:%02d", plusminus, hours, minutes)
+        if !zeroMinutes && mayHaveSeconds && probability(0.3) {
+            let seconds = Int.random(in: 0..<60)
+            offset = String(format: "%@:%02d", offset, seconds)
+            if  probability(0.3) {
+                offset = String(format: "%@:.%09d", offset, Int.random(in: 0...999999999))
+            }
+        }
+        return offset
     }
 
     // Generate an object with fields from
@@ -4582,7 +4995,7 @@ public class ProgramBuilder {
             if (!forWith) {
                 if Bool.random() {
                     // Time zones can be offsets, but cannot have seconds
-                    generatedOffset = loadString(randomUTCOffsetString(mayHaveSeconds: false))
+                    generatedOffset = randomUTCOffset(mayHaveSeconds: false)
                     properties["timeZone"] = generatedOffset
                 } else {
                     properties["timeZone"] = randomTimeZone()
@@ -4599,7 +5012,7 @@ public class ProgramBuilder {
                 properties["offset"] = generatedOffset!
             } else if probability(0.3) {
                 // Otherwise, with a low probability, generate a random offset.
-                properties["offset"] = loadString(randomUTCOffsetString(mayHaveSeconds: true))
+                properties["offset"] = randomUTCOffset(mayHaveSeconds: true)
             }
         }
         return createObject(with: properties)
@@ -4748,23 +5161,75 @@ public class ProgramBuilder {
         }
     }
 
-}
+    @discardableResult
+    static func constructIntlLocaleString() -> String {
+        // TODO(Manishearth) Generate more interesting locales than just the builtins
+        return chooseUniform(from: Locale.availableIdentifiers)
+    }
 
+    // Obtained by calling Intl.supportedValuesOf("unit") in a browser
+    fileprivate static let allUnits = ["acre", "bit", "byte", "celsius", "centimeter", "day", "degree", "fahrenheit", "fluid-ounce", "foot", "gallon", "gigabit", "gigabyte", "gram", "hectare", "hour", "inch", "kilobit", "kilobyte", "kilogram", "kilometer", "liter", "megabit", "megabyte", "meter", "microsecond", "mile", "mile-scandinavian", "milliliter", "millimeter", "millisecond", "minute", "month", "nanosecond", "ounce", "percent", "petabyte", "pound", "second", "stone", "terabit", "terabyte", "week", "yard", "year"]
 
-
-fileprivate func randomUTCOffsetString(mayHaveSeconds: Bool) -> String {
-    let hours = Int.random(in: 0..<24)
-    // Bias towards zero minutes since that's what most time zones do.
-    let zeroMinutes = probability(0.8)
-    let minutes = zeroMinutes ? 0 : Int.random(in: 0..<60)
-    let plusminus = Bool.random() ? "+" : "-";
-    var offset = String(format: "%@%02d:%02d", plusminus, hours, minutes)
-    if !zeroMinutes && mayHaveSeconds && probability(0.3) {
-        let seconds = Int.random(in: 0..<60)
-        offset = String(format: "%@:%02d", offset, seconds)
-        if  probability(0.3) {
-            offset = String(format: "%@:.%09d", offset, Int.random(in: 0...999999999))
+    @discardableResult
+    static func constructIntlUnit() -> String {
+        let firstUnit = chooseUniform(from: allUnits)
+        // Intl is able to format combinations of units too, like hectares-per-gallon
+        if probability(0.7) {
+            return firstUnit
+        } else {
+            return "\(firstUnit)-per-\(chooseUniform(from: allUnits))"
         }
     }
-    return offset
+
+    // Generic generators for Intl types.
+    private func constructIntlType(type: String, optionsBag: OptionsBag) -> Variable {
+        let intl = createNamedVariable(forBuiltin: "Intl")
+        let constructor = getProperty(type, of: intl)
+
+        var args: [Variable] = []
+        if probability(0.7) {
+            args.append(findOrGenerateType(.jsIntlLocaleLike))
+
+            if probability(0.7) {
+                args.append(createOptionsBag(optionsBag))
+            }
+        }
+        return construct(constructor, withArgs: args)
+    }
+
+    @discardableResult
+    func constructIntlDateTimeFormat() -> Variable {
+        return constructIntlType(type: "DateTimeFormat", optionsBag: .jsIntlDateTimeFormatSettings)
+    }
+
+    @discardableResult
+    func constructIntlCollator() -> Variable {
+        return constructIntlType(type: "Collator", optionsBag: .jsIntlCollatorSettings)
+    }
+
+    @discardableResult
+    func constructIntlListFormat() -> Variable {
+        return constructIntlType(type: "ListFormat", optionsBag: .jsIntlListFormatSettings)
+    }
+
+    @discardableResult
+    func constructIntlNumberFormat() -> Variable {
+        return constructIntlType(type: "NumberFormat", optionsBag: .jsIntlNumberFormatSettings)
+    }
+
+    @discardableResult
+    func constructIntlPluralRules() -> Variable {
+        return constructIntlType(type: "PluralRules", optionsBag: .jsIntlPluralRulesSettings)
+    }
+
+    @discardableResult
+    func constructIntlRelativeTimeFormat() -> Variable {
+        return constructIntlType(type: "RelativeTimeFormat", optionsBag: .jsIntlRelativeTimeFormatSettings)
+    }
+
+    @discardableResult
+    func constructIntlSegmenter() -> Variable {
+        return constructIntlType(type: "Segmenter", optionsBag: .jsIntlSegmenterSettings)
+    }
 }
+

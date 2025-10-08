@@ -51,6 +51,18 @@ public class OperationMutator: BaseInstructionMutator {
         case .loadFloat(_):
             newOp = LoadFloat(value: b.randomFloat())
         case .loadString(let op):
+            if let customName = op.customName {
+                // Half the time we want to just hit the regular path
+                if Bool.random() {
+                    if let type = b.fuzzer.environment.getEnum(ofName: customName) {
+                        newOp = LoadString(value: chooseUniform(from: type.enumValues), customName: customName)
+                        break
+                    } else if let gen = b.fuzzer.environment.getNamedStringGenerator(ofName: customName) {
+                        newOp = LoadString(value: gen(), customName: customName)
+                        break
+                    }
+                }
+            }
             let charSetAlNum = Array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
             // TODO(mliedtke): Should we also use some more esoteric characters in initial string
             // creation, e.g. ProgramBuilder.randomString?
@@ -84,6 +96,8 @@ public class OperationMutator: BaseInstructionMutator {
                     return result
                 }
             )
+            // Note: This explicitly discards customName since we may have created a string that no longer
+            // matches the original schema.
             newOp = LoadString(value: newString)
         case .loadRegExp(let op):
             newOp = withEqualProbability({
@@ -516,6 +530,10 @@ public class OperationMutator: BaseInstructionMutator {
              .beginClassConstructor(_),
              .endClassConstructor(_),
              .classAddInstanceComputedProperty(_),
+             .beginClassInstanceComputedMethod(_),
+             .endClassInstanceComputedMethod(_),
+             .beginClassStaticComputedMethod(_),
+             .endClassStaticComputedMethod(_),
              .endClassInstanceMethod(_),
              .endClassInstanceGetter(_),
              .endClassInstanceSetter(_),
@@ -615,6 +633,8 @@ public class OperationMutator: BaseInstructionMutator {
              .explore(_),
              .probe(_),
              .fixup(_),
+             .createNamedDisposableVariable(_),
+             .createNamedAsyncDisposableVariable(_),
              .loadDisposableVariable(_),
              .loadAsyncDisposableVariable(_),
              .void(_),
@@ -691,6 +711,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmEndTypeGroup(_),
              .wasmDefineArrayType(_),
              .wasmDefineStructType(_),
+             .wasmDefineSignatureType(_),
              .wasmDefineForwardOrSelfReference(_),
              .wasmResolveForwardReference(_),
              .wasmArrayNewFixed(_),
@@ -708,8 +729,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmDropElementSegment(_),
              .wasmTableInit(_),
              .wasmTableCopy(_):
-             assert(!instr.isOperationMutable)
-             fatalError("Unexpected Operation")
+             let mutability = instr.isOperationMutable ? "mutable" : "immutable"
+             fatalError("Unexpected operation \(instr.op.opcode), marked as \(mutability)")
         }
 
         // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.

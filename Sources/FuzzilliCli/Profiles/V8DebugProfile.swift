@@ -95,5 +95,8 @@ let v8DebugProfile = Profile(
 
     additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],
 
+    // The other v8 configs have this as well
+    additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
+
     optionalPostProcessor: nil
 )

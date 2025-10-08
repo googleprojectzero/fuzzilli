@@ -23,7 +23,7 @@ fileprivate struct ValueGeneratorAdapter: GeneratorAdapter {
     let f: ValueGeneratorFunc
     func run(in b: ProgramBuilder, with inputs: [Variable]) {
         assert(inputs.isEmpty)
-        f(b, CodeGenerator.numberOfValuesToGenerateByValueGenerators)
+        f(b, GeneratorStub.numberOfValuesToGenerateByValueGenerators)
     }
 }
 
@@ -77,19 +77,16 @@ fileprivate struct GeneratorAdapter4Args: GeneratorAdapter {
     }
 }
 
-public class CodeGenerator: Contributor {
+public class GeneratorStub: Contributor {
     /// Whether this code generator is a value generator. A value generator will create at least one new variable containing
     /// a newly created value (e.g. a primitive value or some kind of object). Further, value generators must be able to
     /// run even if there are no existing variables. This way, they can be used to "bootstrap" code generation.
-    public let isValueGenerator: Bool
+    public var isValueStub: Bool {
+        self.inputs.isEmpty && !self.produces.isEmpty
+    }
 
     /// How many different values of the same type ValueGenerators should aim to generate.
     public static let numberOfValuesToGenerateByValueGenerators = 3
-
-    /// Whether this code generator is recursive, i.e. will generate further code for example to generate the body of a block.
-    /// This is used to determie whether to run a certain code generator. For example, if only a few more instructions should
-    /// be generated during program building, calling a recursive code generator will likely result in too many instructions.
-    public let isRecursive: Bool
 
     /// Describes the inputs expected by a CodeGenerator.
     public struct Inputs {
@@ -109,6 +106,10 @@ public class CodeGenerator: Contributor {
         public let mode: Mode
         public var count: Int {
             return types.count
+        }
+
+        public var isEmpty: Bool {
+            types.count == 0
         }
 
         // No inputs.
@@ -164,27 +165,92 @@ public class CodeGenerator: Contributor {
     /// The inputs expected by this generator.
     public let inputs: Inputs
 
-    public let produces: ILType?
+    /// The types this CodeGenerator produces
+    /// ProgramBuilding will assert that these types are (newly) available after running this CodeGenerator.
+    public let produces: [ILType]
+
+    public enum ContextRequirement {
+        // If this GeneratorStub has a single Context requirement, which may still be comprised of multiple Context values.
+        // E.g. .single([.javascript | .method]) or .single([.javascript, .method]) (they're equivalent).
+        case single(Context)
+        // If this GeneratorStub has any one of the Context requirements.
+        // E.g. .either([.javascript, .classDefinition]) which is basically either one of .javascript or .classDefinition
+        case either([Context])
+
+        var isSingle : Bool {
+            self.getSingle() != nil
+        }
+
+        var isJavascript: Bool {
+            self.getSingle() == .javascript
+        }
+
+        func getSingle() -> Context? {
+            switch self {
+                case .single(let ctx):
+                    return ctx
+                default:
+                    return nil
+            }
+        }
+
+        // Whether the ContextRequirement is satisified for the given (current) context.
+        func satisfied(by context: Context) -> Bool {
+            switch self {
+                case .single(let ctx):
+                    return ctx.isSubset(of: context)
+                case .either(let ctxs):
+                    // We do this check here since we cannot check on construction whether we have used .either correctly.
+                    assert(ctxs.count > 1, "Something seems wrong, one should have more than a single context here")
+                    // Any of the Contexts needs to be satisfied.
+                    return ctxs.contains(where: { ctx in
+                        ctx.isSubset(of: context)
+                    })
+            }
+        }
+
+        // Whether the provided Context is exactly the required context.
+        // Usually this means that if it is `.either` all the those Contexts need to be there.
+        // This is used in consistency checking in `ContextGraph` initialization where a previous generator might open multiple contexts.
+        func matches(_ context: Context) -> Bool {
+            switch self {
+                case .single(let ctx):
+                    return ctx == context
+                case .either(let ctxs):
+                    // We do this check here since we cannot check on construction whether we have used .either correctly.
+                    assert(ctxs.count > 1, "Something seems wrong, one should have more than a single context here")
+                    // All contexts need to be in the current context.
+                    return ctxs.allSatisfy { ctx in
+                        ctx.isSubset(of: context)
+                    }
+            }
+        }
+    }
 
     /// The contexts in which this code generator can run.
-    /// This code generator will only be executed if requiredContext.isSubset(of: currentContext)
-    public let requiredContext: Context
+    /// This is an Array of subsets of Contexts, one of them has to be runnable.
+    /// An invariant is now, that a Generator *cannot* `provide` any Context if it might open either one of multiple Contexts.
+    /// We are checking the other direction of this in the initialization of `ContextGraph`.
+    /// This code generator will only be executed if any requiredContext.isSubset(of: currentContext)
+    public let requiredContext: ContextRequirement
+
+    /// The context that is provided by running this Generator.
+    /// This is always a list of the single contexts that are provided, e.g. [.javascript]
+    public let providedContext: [Context]
 
     /// Warpper around the actual generator function called.
     private let adapter: GeneratorAdapter
 
-    fileprivate init(name: String, isValueGenerator: Bool, isRecursive: Bool, inputs: Inputs, produces: ILType? = nil, context: Context, adapter: GeneratorAdapter) {
-        assert(!isValueGenerator || context.isValueBuildableContext)
-        assert(!isValueGenerator || inputs.count == 0)
-        assert(inputs.count == adapter.expectedNumberOfInputs)
+    fileprivate init(name: String, inputs: Inputs, produces: [ILType] = [], context: ContextRequirement, providedContext: [Context] = [], adapter: GeneratorAdapter) {
 
-        self.isValueGenerator = isValueGenerator
-        self.isRecursive = isRecursive
         self.inputs = inputs
         self.produces = produces
         self.requiredContext = context
+        self.providedContext = providedContext
         self.adapter = adapter
         super.init(name: name)
+
+        assert(inputs.count == adapter.expectedNumberOfInputs)
     }
 
     /// Execute this code generator, generating new code at the current position in the ProgramBuilder.
@@ -199,56 +265,120 @@ public class CodeGenerator: Contributor {
         return addedInstructions
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, produces: ILType? = nil, _ f: @escaping GeneratorFuncNoArgs) {
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: .none, produces: produces, context: context, adapter: GeneratorAdapterNoArgs(f: f))
+    public convenience init(_ name: String, inContext context: ContextRequirement = .single(.javascript), produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFuncNoArgs) {
+        self.init(name: name, inputs: .none, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapterNoArgs(f: f))
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, produces: ILType? = nil, _ f: @escaping GeneratorFunc1Arg) {
+    public convenience init(_ name: String, inContext context: ContextRequirement = .single(.javascript), inputs: Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc1Arg) {
         assert(inputs.count == 1)
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, produces: produces, context: context, adapter: GeneratorAdapter1Arg(f: f))
+        self.init(name: name, inputs: inputs, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapter1Arg(f: f))
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, produces: ILType? = nil, _ f: @escaping GeneratorFunc2Args) {
+    public convenience init(_ name: String, inContext context: ContextRequirement = .single(.javascript), inputs: Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc2Args) {
         assert(inputs.count == 2)
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, produces: produces, context: context, adapter: GeneratorAdapter2Args(f: f))
+        self.init(name: name, inputs: inputs, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapter2Args(f: f))
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, produces: ILType? = nil, _ f: @escaping GeneratorFunc3Args) {
+    public convenience init(_ name: String, inContext context: ContextRequirement = .single(.javascript), inputs: Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc3Args) {
         assert(inputs.count == 3)
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, produces: produces, context: context, adapter: GeneratorAdapter3Args(f: f))
+        self.init(name: name, inputs: inputs, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapter3Args(f: f))
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, produces: ILType? = nil, _ f: @escaping GeneratorFunc4Args) {
+    public convenience init(_ name: String, inContext context: ContextRequirement = .single(.javascript), inputs: Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc4Args) {
         assert(inputs.count == 4)
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, produces: produces, context: context, adapter: GeneratorAdapter4Args(f: f))
+        self.init(name: name, inputs: inputs, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapter4Args(f: f))
     }
 }
 
-// Constructors for recursive CodeGenerators.
-public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, _ f: @escaping GeneratorFuncNoArgs) -> CodeGenerator {
-    return CodeGenerator(name: name, isValueGenerator: false, isRecursive: true, inputs: .none, context: context, adapter: GeneratorAdapterNoArgs(f: f))
+public class CodeGenerator {
+    let parts: [GeneratorStub]
+    public let name: String
+    // This is a pre-calculated array of contexts that is provided by this CodeGenerator
+    // Here, I think we might have different Contexts that each yield point could provide, e.g. [.javascript | .subroutine, .wasmFunction]. Unsure if there is a situation where this matters? instead of having .javascript | .subroutine | .wasmFunction?
+    public let providedContexts: [Context]
+
+
+    public init(_ name: String, _ generators: [GeneratorStub]) {
+        self.parts = generators
+        self.name = name
+
+        // Calculate all contexts provided at any time by this CodeGenerator.
+        var ctxSet = Set<Context>()
+        generators.forEach { gen in
+            gen.providedContext.forEach { ctx in
+                ctxSet.insert(ctx)
+            }
+        }
+
+        self.providedContexts = Array(ctxSet)
+    }
+
+    // This essentially means that all stubs have no requirements.
+    // Usually there is only a single element in the CodeGenerator if it is a ValueGenerator.
+    public var isValueGenerator: Bool {
+        return self.parts.allSatisfy {$0.isValueStub}
+    }
+
+    // This is the context required by the first part of the CodeGenerator.
+    public var requiredContext: Context {
+        // This has to be a single one for the first Generator.
+        // Current limitation of the Generation Logic.
+        assert(self.parts.first!.requiredContext.isSingle)
+        return self.parts.first!.requiredContext.getSingle()!
+    }
+
+    // TODO(cffsmith): Maybe return an array of ILType Arrays, essentially describing at which yield point which type is available?
+    // This would allow us to maybe use "innerOutputs" to find suitable points to insert other Generators (that require such types).
+    // Slight complication is that some variables will only be in scope inside the CodeGenerator, e.g. if there is an EndWasmModule somewhere all Wasm variables will go out of scope.
+    public var produces: [ILType] {
+        return self.parts.last!.produces
+    }
+
+    public var head: GeneratorStub {
+        return self.parts.first!
+    }
+
+    // The tail of this CodeGenerator.
+    public var tail: Array<GeneratorStub>.SubSequence {
+        return self.parts[1...]
+    }
+
+    public var expandedName : String {
+        if self.name == "Synthetic" {
+            return "Synthetic(\(self.parts.map{$0.name}.joined(separator: ",")))"
+        } else {
+            return self.name
+        }
+    }
+
+    public convenience init(_ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript), produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFuncNoArgs) {
+        self.init(name, [GeneratorStub(name: name, inputs: .none, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapterNoArgs(f: f))])
+    }
+
+    public convenience init(_ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript), inputs: GeneratorStub.Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc1Arg) {
+        assert(inputs.count == 1)
+        self.init(name, [GeneratorStub(name: name, inputs: inputs, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapter1Arg(f: f))])
+    }
+
+    public convenience init(_ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript), inputs: GeneratorStub.Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc2Args) {
+        assert(inputs.count == 2)
+        self.init(name, [GeneratorStub(name: name, inputs: inputs, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapter2Args(f: f))])
+    }
+
+    public convenience init(_ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript), inputs: GeneratorStub.Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc3Args) {
+        assert(inputs.count == 3)
+        self.init(name, [GeneratorStub(name: name, inputs: inputs, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapter3Args(f: f))])
+    }
+
+    public convenience init(_ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript), inputs: GeneratorStub.Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc4Args) {
+        assert(inputs.count == 4)
+        self.init(name, [GeneratorStub(name: name, inputs: inputs, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapter4Args(f: f))])
+    }
 }
 
-public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, inputs: CodeGenerator.Inputs, _ f: @escaping GeneratorFunc1Arg) -> CodeGenerator {
-    assert(inputs.count == 1)
-    return CodeGenerator(name: name, isValueGenerator: false, isRecursive: true, inputs: inputs, context: context, adapter: GeneratorAdapter1Arg(f: f))
-}
-
-public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, inputs: CodeGenerator.Inputs, _ f: @escaping GeneratorFunc2Args) -> CodeGenerator {
-    assert(inputs.count == 2)
-    return CodeGenerator(name: name, isValueGenerator: false, isRecursive: true, inputs: inputs, context: context, adapter: GeneratorAdapter2Args(f: f))
-}
-
-// Constructors for ValueGenerators. A ValueGenerator is a CodeGenerator that produces one or more variables containing newly created values/objects.
-// Further, a ValueGenerator must be able to run when there are no existing variables so that it can be used to bootstrap code generation.
-public func ValueGenerator(_ name: String, _ f: @escaping ValueGeneratorFunc) -> CodeGenerator {
-    return CodeGenerator(name: name, isValueGenerator: true, isRecursive: false, inputs: .none, context: .javascript, adapter: ValueGeneratorAdapter(f: f))
-}
-
-public func ValueGenerator(_ name: String, inContext context: Context, _ f: @escaping ValueGeneratorFunc) -> CodeGenerator {
-    return CodeGenerator(name: name, isValueGenerator: true, isRecursive: false, inputs: .none, context: context, adapter: ValueGeneratorAdapter(f: f))
-}
-
-public func RecursiveValueGenerator(_ name: String, _ f: @escaping ValueGeneratorFunc) -> CodeGenerator {
-    return CodeGenerator(name: name, isValueGenerator: true, isRecursive: true, inputs: .none, context: .javascript, adapter: ValueGeneratorAdapter(f: f))
+extension CodeGenerator: CustomStringConvertible {
+    public var description: String {
+        let names = self.parts.map { $0.name }
+        return names.joined(separator: ",")
+    }
 }

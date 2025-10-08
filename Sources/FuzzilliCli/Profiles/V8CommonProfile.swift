@@ -96,7 +96,7 @@ public let TurbofanVerifyTypeGenerator = CodeGenerator("TurbofanVerifyTypeGenera
     b.eval("%VerifyType(%@)", with: [v])
 }
 
-public let WorkerGenerator = RecursiveCodeGenerator("WorkerGenerator") { b in
+public let WorkerGenerator = CodeGenerator("WorkerGenerator") { b in
     let workerSignature = Signature(withParameterCount: Int.random(in: 0...3))
 
     // TODO(cffsmith): currently Fuzzilli does not know that this code is sent
@@ -110,11 +110,11 @@ public let WorkerGenerator = RecursiveCodeGenerator("WorkerGenerator") { b in
 
         // Generate a random onmessage handler for incoming messages.
         let onmessageFunction = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            b.buildRecursive(block: 1, of: 2)
+            b.build(n: Int.random(in: 2...5))
         }
         b.setProperty("onmessage", of: this, to: onmessageFunction)
 
-        b.buildRecursive(block: 2, of: 2)
+        b.build(n: Int.random(in: 3...10))
     }
     let workerConstructor = b.createNamedVariable(forBuiltin: "Worker")
 
@@ -133,6 +133,10 @@ public let WasmStructGenerator = CodeGenerator("WasmStructGenerator") { b in
 
 public let WasmArrayGenerator = CodeGenerator("WasmArrayGenerator") { b in
     b.eval("%WasmArray()", hasOutput: true);
+}
+
+public let PretenureAllocationSiteGenerator = CodeGenerator("PretenureAllocationSiteGenerator", inputs: .required(.object())) { b, obj in
+    b.eval("%PretenureAllocationSite(%@)", with: [obj]);
 }
 
 public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
@@ -169,37 +173,33 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
     }
 
     // Temporarily overwrite the active code generators with the following generators...
-    let primitiveValueGenerator = ValueGenerator("PrimitiveValue") { b, n in
-        for _ in 0..<n {
-            // These should roughly correspond to the supported property representations of the engine.
-            withEqualProbability({
-                b.loadInt(b.randomInt())
-            }, {
-                b.loadFloat(b.randomFloat())
-            }, {
-                b.loadString(b.randomString())
-            })
-        }
+    let primitiveCodeGenerator = CodeGenerator("PrimitiveValue", produces: [.primitive]) { b in
+        // These should roughly correspond to the supported property representations of the engine.
+        withEqualProbability({
+            b.loadInt(b.randomInt())
+        }, {
+            b.loadFloat(b.randomFloat())
+        }, {
+            b.loadString(b.randomString())
+        })
     }
-    let createObjectGenerator = ValueGenerator("CreateObject") { b, n in
-        for _ in 0..<n {
-            let (properties, values) = randomProperties(in: b)
-            let obj = b.createObject(with: Dictionary(uniqueKeysWithValues: zip(properties, values)))
-            assert(b.type(of: obj).Is(objType))
-        }
+    let createObjectGenerator = CodeGenerator("CreateObject", produces: [.object()]) { b in
+        let (properties, values) = randomProperties(in: b)
+        let obj = b.createObject(with: Dictionary(uniqueKeysWithValues: zip(properties, values)))
+        assert(b.type(of: obj).Is(objType))
     }
-    let objectMakerGenerator = ValueGenerator("ObjectMaker") { b, n in
+    let objectMakerGenerator = CodeGenerator("ObjectMaker") { b in
         let f = b.buildPlainFunction(with: b.randomParameters()) { args in
             let (properties, values) = randomProperties(in: b)
             let o = b.createObject(with: Dictionary(uniqueKeysWithValues: zip(properties, values)))
             b.doReturn(o)
         }
-        for _ in 0..<n {
+        for _ in 0..<3 {
             let obj = b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
             assert(b.type(of: obj).Is(objType))
         }
     }
-    let objectConstructorGenerator = ValueGenerator("ObjectConstructor") { b, n in
+    let objectConstructorGenerator = CodeGenerator("ObjectConstructor") { b in
         let c = b.buildConstructor(with: b.randomParameters()) { args in
             let this = args[0]
             let (properties, values) = randomProperties(in: b)
@@ -207,12 +207,12 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
                 b.setProperty(p, of: this, to: v)
             }
         }
-        for _ in 0..<n {
+        for _ in 0..<3 {
             let obj = b.construct(c, withArgs: b.randomArguments(forCalling: c))
             assert(b.type(of: obj).Is(objType))
         }
     }
-    let objectClassGenerator = ValueGenerator("ObjectClassGenerator") { b, n in
+    let objectClassGenerator = CodeGenerator("ObjectClassGenerator") { b in
         let superclass = b.hasVisibleVariables && probability(0.5) ? b.randomVariable(ofType: .constructor()) : nil
         let (properties, values) = randomProperties(in: b)
         let cls = b.buildClassDefinition(withSuperclass: superclass) { cls in
@@ -220,7 +220,7 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
                 cls.addInstanceProperty(p, value: v)
             }
         }
-        for _ in 0..<n {
+        for _ in 0..<3 {
             let obj = b.construct(cls)
             assert(b.type(of: obj).Is(objType))
         }
@@ -240,7 +240,7 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
         assert(b.type(of: obj).Is(objType))
         b.configureProperty(chooseUniform(from: propertyNames), of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomJsVariable()))
     }
-    let functionDefinitionGenerator = RecursiveCodeGenerator("FunctionDefinition") { b in
+    let functionDefinitionGenerator = CodeGenerator("FunctionDefinition") { b in
         // We use either a randomly generated signature or a fixed on that ensures we use our object type frequently.
         var parameters = b.randomParameters()
         let haveVisibleObjects = b.visibleVariables.contains(where: { b.type(of: $0).Is(objType) })
@@ -249,7 +249,7 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
         }
 
         let f = b.buildPlainFunction(with: parameters) { params in
-            b.buildRecursive()
+            b.build(n: Int.random(in: 3...10))
             b.doReturn(b.randomJsVariable())
         }
 
@@ -279,7 +279,7 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
 
     let prevCodeGenerators = b.fuzzer.codeGenerators
     b.fuzzer.setCodeGenerators(WeightedList<CodeGenerator>([
-        (primitiveValueGenerator,     2),
+        (primitiveCodeGenerator,     2),
         (createObjectGenerator,       1),
         (objectMakerGenerator,        1),
         (objectConstructorGenerator,  1),
@@ -294,7 +294,7 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
         (functionJitCallGenerator,    2)
     ]))
 
-    // ... run some of the ValueGenerators to create some initial objects ...
+    // ... run some of the CodeGenerators to create some initial objects ...
     b.buildPrefix()
     // ... and generate a bunch of code.
     b.build(n: 100, by: .generating)
