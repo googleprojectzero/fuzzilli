@@ -1,0 +1,64 @@
+# Stage 1: Build our v8 build
+FROM docker.io/ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SHELL=bash
+
+RUN apt-get -y update && apt-get -y upgrade
+RUN apt-get install -y python3 git curl sudo
+
+RUN useradd -m builder
+
+# Fetch v8 source code
+WORKDIR /home/builder
+RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+ENV PATH="${PATH}:/home/builder/depot_tools"
+
+RUN mkdir v8 && cd v8 && fetch v8 && gclient sync
+WORKDIR /home/builder/v8/v8
+
+RUN ./build/install-build-deps.sh
+RUN gn gen out/fuzzbuild --args='is_debug=false dcheck_always_on=true v8_static_library=true v8_enable_verify_heap=true v8_fuzzilli=true sanitizer_coverage_flags="trace-pc-guard" target_cpu="x64"' && \
+    ninja -C out/fuzzbuild d8
+
+########################
+# Stage 2: Build Fuzzili
+FROM docker.io/swift:latest
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SHELL=bash
+
+RUN apt-get -y update && apt-get -y upgrade
+
+RUN useradd -m builder
+WORKDIR /home/builder
+
+ADD .. fuzzillai
+
+# build Fuzzilai
+RUN cd fuzzillai && swift test && swift build -c release
+
+#####################
+# Stage 3: Run itself
+FROM docker.io/swift:latest
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SHELL=bash
+
+RUN apt-get -y update && apt-get -y upgrade
+RUN apt-get install -y redis-server
+
+RUN useradd -m app
+
+WORKDIR /home/app
+
+# Copy everything we've build
+COPY --from=0 /home/builder/v8/v8/out/fuzzbuild fuzzbuild
+COPY --from=1 /home/builder/fuzzillai/.build/release/ Fuzzilli
+#COPY --from=1 /home/builder/fuzzillai/.build/release/REPRLRun app/REPRLRun
+
+RUN mkdir -p ./Corpus
+
+EXPOSE 6379
+
+CMD ["sh", "-c", "redis-server --daemonize yes && Fuzzilli --profile=v8debug --engine=multi --resume --corpus=basic --storagePath=./Corpus ./d8"]
