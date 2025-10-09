@@ -60,6 +60,9 @@ let v8Profile = Profile(
         // Note that this flag only affects WebAssembly.
         if probability(0.5) {
             args.append("--no-liftoff")
+            if probability(0.3) {
+                args.append("--wasm-assert-types")
+            }
         }
 
         // This greatly helps the fuzzer to decide inlining wasm functions into each other when
