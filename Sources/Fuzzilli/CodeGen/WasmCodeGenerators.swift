@@ -632,9 +632,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // For funcref tables, we need to look for functions to populate the entries.
         // These are going to be either wasm function definitions (.wasmFunctionDef()) or JS functions (.function()).
         // TODO(manoskouk): When we have support for constant expressions, consider looking for .wasmFuncRef instead.
-        let expectedEntryType =
-            elementType == .wasmFuncRef
-            ? .wasmFunctionDef() | .function() : .object()
+        let expectedEntryType = module.getEntryTypeForTable(elementType: elementType)
 
         // Currently, only generate entries for funcref tables.
         // TODO(manoskouk): Generalize this.
@@ -667,13 +665,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmDefineElementSegmentGenerator", inContext: .single(.wasm)) { b in
-        let elementsType: ILType = .wasmFunctionDef() | .function()
-        if b.randomVariable(ofType: elementsType) == nil {
+        let expectedEntryType = b.currentWasmModule.getEntryTypeForTable(elementType: ILType.wasmFuncRef)
+        if b.randomVariable(ofType: expectedEntryType) == nil {
             return
         }
 
-        var elements: [Variable] = (0...Int.random(in: 0...8)).map {_ in b.randomVariable(ofType: elementsType)!}
-        b.currentWasmModule.addElementSegment(elementsType: elementsType, elements: elements)
+        var elements: [Variable] = (0...Int.random(in: 0...8)).map {_ in b.randomVariable(ofType: expectedEntryType)!}
+        b.currentWasmModule.addElementSegment(elements: elements)
     },
 
     CodeGenerator("WasmDropElementSegmentGenerator", inContext: .single(.wasmFunction), inputs: .required(.wasmElementSegment())) { b, elementSegment in

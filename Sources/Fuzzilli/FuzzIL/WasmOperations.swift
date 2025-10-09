@@ -813,7 +813,7 @@ final class WasmDefineTable: WasmOperation {
 final class WasmDefineElementSegment: WasmOperation {
     override var opcode: Opcode { .wasmDefineElementSegment(self) }
 
-    public let size: UInt32
+    let size: UInt32
 
     init(size: UInt32) {
         self.size = size
