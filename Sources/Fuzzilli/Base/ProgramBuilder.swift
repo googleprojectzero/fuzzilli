@@ -3823,17 +3823,20 @@ public class ProgramBuilder {
         }
 
         public func wasmTableInit(elementSegment: Variable, table: Variable, tableOffset: Variable, elementSegmentOffset: Variable, nrOfElementsToUpdate: Variable) {
-            // TODO: b/427115604 - assert that table.elemType IS_SUBTYPE_OF elementSegment.elemType (depending on refactor outcome).
+            let elementSegmentType = ILType.wasmFuncRef
+            let tableElemType = b.type(of: table).wasmTableType!.elementType
+            assert(elementSegmentType.Is(tableElemType))
+
             let addrType = b.type(of: table).wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
             b.emit(WasmTableInit(), withInputs: [elementSegment, table, tableOffset, elementSegmentOffset, nrOfElementsToUpdate],
-                types: [.wasmElementSegment(), .object(ofGroup: "WasmTable"), addrType, addrType, addrType])
+                types: [.wasmElementSegment(), .object(ofGroup: "WasmTable"), addrType, .wasmi32, .wasmi32])
         }
 
         public func wasmTableCopy(dstTable: Variable, srcTable: Variable, dstOffset: Variable, srcOffset: Variable, count: Variable) {
-            // TODO: b/427115604 - assert that srcTable.elemType IS_SUBTYPE_OF dstTable.elemType (depending on refactor outcome).
             let dstTableType = b.type(of: dstTable).wasmTableType!
             let srcTableType = b.type(of: srcTable).wasmTableType!
             assert(dstTableType.isTable64 == srcTableType.isTable64)
+            assert(srcTableType.elementType.Is(dstTableType.elementType))
 
             let addrType = dstTableType.isTable64 ? ILType.wasmi64 : ILType.wasmi32
             b.emit(WasmTableCopy(), withInputs: [dstTable, srcTable, dstOffset, srcOffset, count],
@@ -4354,20 +4357,26 @@ public class ProgramBuilder {
 
         @discardableResult
         public func addTable(elementType: ILType, minSize: Int, maxSize: Int? = nil, definedEntries: [WasmTableType.IndexInTableAndWasmSignature] = [], definedEntryValues: [Variable] = [], isTable64: Bool) -> Variable {
-            let inputTypes = if elementType == .wasmFuncRef {
-                Array(repeating: .wasmFunctionDef() | .function(), count: definedEntries.count)
-            } else {
-                [ILType]()
-            }
+            let inputTypes = Array(repeating: getEntryTypeForTable(elementType: elementType), count: definedEntries.count)
             return b.emit(WasmDefineTable(elementType: elementType, limits: Limits(min: minSize, max: maxSize), definedEntries: definedEntries, isTable64: isTable64),
                 withInputs: definedEntryValues, types: inputTypes).output
         }
 
         @discardableResult
-        public func addElementSegment(elementsType: ILType,  elements: [Variable]) -> Variable {
-            let inputTypes = Array(repeating: elementsType, count: elements.count)
+        public func addElementSegment(elements: [Variable]) -> Variable {
+            let inputTypes = Array(repeating: getEntryTypeForTable(elementType: ILType.wasmFuncRef), count: elements.count)
             return b.emit(WasmDefineElementSegment(size: UInt32(elements.count)), withInputs: elements, types: inputTypes).output
         }
+
+        public func getEntryTypeForTable(elementType: ILType) -> ILType {
+            switch elementType {
+                case .wasmFuncRef:
+                    return .wasmFunctionDef() | .function()
+                default:
+                    return .object()
+            }
+        }
+
 
         // This result can be ignored right now, as we can only define one memory per module
         // Also this should be tracked like a global / table.

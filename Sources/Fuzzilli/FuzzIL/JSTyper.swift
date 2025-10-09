@@ -728,8 +728,9 @@ public struct JSTyper: Analyzer {
                 type(of: instr.input(0)).wasmElementSegmentType!.markAsDropped()
             case .wasmTableInit(_),
                  .wasmTableCopy(_):
-                // TODO(427115604): - implement both init and copy instructions.
-                break
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
+                // Ignore changed function signatures - it is too hard to reason about them statically.
             case .wasmDefineMemory(let op):
                 setType(of: instr.output, to: op.wasmMemory)
                 registerWasmMemoryUse(for: instr.output)
