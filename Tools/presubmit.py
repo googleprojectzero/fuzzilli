@@ -2,6 +2,10 @@ import os
 import shutil
 import subprocess
 
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent.parent.resolve()
+
 KNOWN_PROTO_FILES = [
     "program.proto",
     "operations.proto",
@@ -11,7 +15,11 @@ KNOWN_PROTO_FILES = [
 
 def check_git_clean():
     """Check that the git repository does not have any uncommitted changes."""
-    result = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], capture_output=True, check=True)
+    result = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=no"],
+        cwd=BASE_DIR,
+        capture_output=True,
+        check=True)
     assert result.stdout.decode().strip() == "", f"Unexpected modified files: {result.stdout.decode()}"
 
 def check_proto():
