@@ -1965,7 +1965,6 @@ public let CodeGenerators: [CodeGenerator] = [
             c, withArgs: arguments, spreading: spreads, guard: needGuard)
     },
 
-    // TODO(mliedtke): Improve generateTypeInternal to support .unboundFunction()
     CodeGenerator("UnboundFunctionCallGenerator", inputs: .preferred(.unboundFunction())) { b, f in
         let (arguments, argsMatch) = b.randomArguments(forCallingGuardableFunction: f)
         let fctType = b.type(of: f)
@@ -1976,7 +1975,6 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod("call", on: f, withArgs: [receiver] + arguments, guard: needGuard)
     },
 
-    // TODO(mliedtke): Improve generateTypeInternal to support .unboundFunction()
     CodeGenerator("UnboundFunctionApplyGenerator", inputs: .preferred(.unboundFunction())) { b, f in
         let (arguments, argsMatch) = b.randomArguments(forCallingGuardableFunction: f)
         let fctType = b.type(of: f)
@@ -1987,7 +1985,6 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod("apply", on: f, withArgs: [receiver, b.createArray(with: arguments)], guard: needGuard)
     },
 
-    // TODO(mliedtke): Improve generateTypeInternal to support .unboundFunction()
     CodeGenerator("UnboundFunctionBindGenerator", inputs: .required(.unboundFunction())) { b, f in
         let arguments = b.randomArguments(forCalling: f)
         let fctType = b.type(of: f)
