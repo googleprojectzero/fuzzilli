@@ -16,7 +16,7 @@ KNOWN_PROTO_FILES = [
 def check_git_clean():
     """Check that the git repository does not have any uncommitted changes."""
     result = subprocess.run(
-        ["git", "status", "--porcelain", "--untracked-files=no"],
+        ["git", "diff", "--name-only"],
         cwd=BASE_DIR,
         capture_output=True,
         check=True)
@@ -25,7 +25,7 @@ def check_git_clean():
 def check_proto():
     """Check that program.proto is up-to-date."""
     print("Checking generated protobuf files...")
-    proto_dir = "Sources/Fuzzilli/Protobuf"
+    proto_dir = BASE_DIR / "Sources/Fuzzilli/Protobuf"
     subprocess.run(["python3", "./gen_programproto.py"], cwd=proto_dir, check=True)
     # gen_programproto.py should be a no-op.
     check_git_clean()
@@ -34,8 +34,8 @@ def check_proto():
         print("Skipping protobuf validation as protoc is not available.")
         return
 
-    swift_protobuf_path = os.getcwd() + "/.build/checkouts/swift-protobuf"
-    assert os.path.exists(swift_protobuf_path), \
+    swift_protobuf_path = BASE_DIR / ".build/checkouts/swift-protobuf"
+    assert swift_protobuf_path.exists(), \
         "The presubmit requires a swift-protobuf checkout, e.g. via \"swift build\""
     # Build swift-protobuf (for simplicity reuse the fetched repository from the swift-protobuf library).
     # Use a debug build as running it is very quick while building it with reelase might be slow.
