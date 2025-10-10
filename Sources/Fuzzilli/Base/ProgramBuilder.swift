@@ -686,6 +686,13 @@ public class ProgramBuilder {
                     // Note that builtin constructors are handled above in the maybeGenerateConstructorAsPath call.
                     return self.randomVariable(forUseAs: .function())
                 }),
+            (.unboundFunction(), {
+                // TODO: We have the same issue as above for functions.
+                // First try to find an existing unbound function. if not present, try to find any
+                // function. Using any function as an unbound function is fine, it just misses the
+                // information about the receiver type (which for many functions doesn't matter).
+                return self.randomVariable(ofType: .unboundFunction()) ?? self.randomVariable(forUseAs: .function())
+            }),
             (.undefined, { return self.loadUndefined() }),
             (.constructor(), {
                     // TODO: We have the same issue as above for functions.
