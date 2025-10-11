@@ -39,6 +39,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=bash
 
 RUN apt-get -y update && apt-get -y upgrade
+RUN apt-get -y install nodejs
 
 RUN useradd -m builder
 WORKDIR /home/builder

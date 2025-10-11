@@ -18,6 +18,13 @@ The basic steps to use this fuzzer are:
 
 Building and running Fuzzilli and the supported JavaScript engines inside Docker and on Google Compute Engine is [also supported](./Cloud).
 
+## Running in Production
+
+The basic steps for running the fuzzilAI fuzzer is:
+
+1. `docker build -t fuzzillai -f Cloud/VRIG/Dockerfile .`
+2. `docker run fuzzillai:latest`
+
 ### Hacking
 
 Check out [main.swift](Sources/FuzzilliCli/main.swift) to see a usage example of the Fuzzilli library and play with the various configuration options. Next, take a look at [Fuzzer.swift](Sources/Fuzzilli/Fuzzer.swift) for the highlevel fuzzing logic. From there dive into any part that seems interesting.
