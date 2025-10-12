@@ -1,0 +1,208 @@
+// ===== [ Program BE70EF33-67B1-40FE-A12D-03E76D432305 ] =====
+// Start of prefix code
+// Executing code generator StringGenerator
+v0 <- LoadString '9223372036854775807'
+v1 <- LoadString 'getYear'
+v2 <- LoadString 'valueOf'
+// Code generator finished
+// Executing code generator TypedArrayGenerator
+v3 <- LoadInteger '7'
+v4 <- CreateNamedVariable 'BigInt64Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '64'
+v7 <- CreateNamedVariable 'Uint8Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- LoadInteger '3542'
+v10 <- CreateNamedVariable 'BigUint64Array', 'none'
+v11 <- Construct v10, [v9]
+// Code generator finished
+// Executing code generator StringGenerator
+v12 <- LoadString 'undefined'
+v13 <- LoadString 'function'
+v14 <- LoadString 'sBO'
+// Code generator finished
+// End of prefix code. 15 variables are now visible
+v15 <- CreateFloatArray [0.8736803331782504, 1.7976931348623157e+308, -1.1505442821503465e+308, inf, -1.6109113963497646e+308, -7.887699532142055e+307]
+v16 <- CreateFloatArray [-0.8660898762485854, 13621.674087673076, 0.0, -1e-15, 0.8622291419159739, -3.0, 2.0, 0.9586794051194628]
+v17 <- BinaryOperation v16, '>>>', v15
+
+
+// ===== [ Program A912CE3C-D2AD-44AF-9BCB-489DDF3A5A5F ] =====
+// Mutating BE70EF33-67B1-40FE-A12D-03E76D432305 with SpliceMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadString '9223372036854775807'
+v1 <- LoadString 'getYear'
+v2 <- LoadString 'valueOf'
+v3 <- LoadInteger '7'
+v4 <- CreateNamedVariable 'BigInt64Array', 'none'
+// Splicing instruction 1 (EndClassDefinition) from 39BACAD1-B129-4793-BDAE-1F3D1A641774
+v5 <- BeginClassDefinition (decl)
+EndClassDefinition
+// Splicing done
+// Splicing instruction 17 (EndPlainFunction) from AEC1AFEC-92A3-4E1B-B4C7-FEDDF89E5DE4
+v6 <- CreateIntArray [-9223372036854775807, 31754, -1583478162, 2061316964, -4096, -9007199254740990, 65535, -1857689020, -9223372036854775807, 9]
+v7 <- LoadUndefined
+v8 <- BeginPlainFunction -> v9, v10
+    SetElement v7, '7', v7
+    v11 <- CreateNamedVariable 'Symbol', 'none'
+    BeginObjectLiteral
+    v12 <- EndObjectLiteral
+    v13 <- LoadDisposableVariable v12
+    Return v6
+EndPlainFunction
+// Splicing done
+v14 <- Construct v4, [v3]
+v15 <- LoadInteger '64'
+// Splicing instruction 8 (Construct) from 229B6E81-CCB2-4F4A-95B6-6E533C34FF5A
+v16 <- LoadInteger '3579'
+v17 <- CreateNamedVariable 'Int8Array', 'none'
+v18 <- Construct v17, [v16]
+// Splicing done
+// Splicing instruction 44 (EndObjectLiteral) from 6B35F0EB-51B0-4984-94EF-70353534753D
+BeginObjectLiteral
+v19 <- EndObjectLiteral
+// Splicing done
+v20 <- CreateNamedVariable 'Uint8Array', 'none'
+v21 <- Construct v20, [v15]
+// Splicing instruction 22 (CallMethod) from BB00504F-DE1E-4CF2-802B-17E056A601DC
+v22 <- LoadFloat '-696.8889546228363'
+v23 <- CallMethod (guarded) v22, 'call', []
+// Splicing done
+// Splicing instruction 18 (BinaryOperation) from 87F55237-7707-43D0-94F9-12F45112F5D2
+v24 <- LoadString 'p'
+v25 <- BinaryOperation v24, '+', v3
+// Splicing done
+// Splicing instruction 18 (CallFunction) from AEC1AFEC-92A3-4E1B-B4C7-FEDDF89E5DE4
+v26 <- CreateIntArray [-9223372036854775807, 31754, -1583478162, 2061316964, -4096, -9007199254740990, 65535, -1857689020, -9223372036854775807, 9]
+v27 <- LoadUndefined
+v28 <- BeginPlainFunction -> v29, v30
+    SetElement v27, '7', v27
+    v31 <- CreateNamedVariable 'Symbol', 'none'
+    BeginObjectLiteral
+    v32 <- EndObjectLiteral
+    v33 <- LoadDisposableVariable v32
+    Return v26
+EndPlainFunction
+v34 <- CallFunction (guarded) v28, []
+// Splicing done
+v35 <- LoadInteger '3542'
+v36 <- CreateNamedVariable 'BigUint64Array', 'none'
+v37 <- Construct v36, [v35]
+// Splicing instruction 2 (BinaryOperation) from FE2CA067-C687-437C-BC77-C9C435A67F45
+v38 <- CreateFloatArray [0.8736803331782504, 1.7976931348623157e+308, -1.1505442821503465e+308, inf, -1.6109113963497646e+308, -7.887699532142055e+307]
+v39 <- CreateFloatArray [-0.8660898762485854, 13621.674087673076, 0.0, -1e-15, 0.8622291419159739, -3.0, 2.0, 0.9586794051194628]
+v40 <- BinaryOperation v39, '>>>', v38
+// Splicing done
+// Splicing instruction 6 (Construct) from E189028F-7C38-4901-8A9C-67449FF70BFA
+v41 <- LoadRegExp '\xed\xa0\x80((\xed\xb0\x80)\x01Ca\W?)?' 'ysiu'
+v42 <- BeginClassDefinition (decl)
+    ClassAddInstanceComputedProperty v41
+EndClassDefinition
+v43 <- Construct v42, []
+// Splicing done
+v44 <- LoadString 'undefined'
+// Splicing instruction 81 (Construct) from A85FFB59-423B-4C09-92A1-3F58C2D1D354
+v45 <- LoadInteger '-3'
+v46 <- LoadInteger '9'
+v47 <- BeginPlainFunction -> 
+EndPlainFunction
+v48 <- BeginConstructor -> v49, v50, v51
+    v52 <- GetProperty (guarded) v49, 'constructor'
+    v53 <- Construct (guarded) v52, [v48, v48]
+    v54 <- UnaryOperation v50, '--'
+    v55 <- CallFunction (guarded) v51, []
+    v56 <- GetProperty v51, 'arguments'
+    v57 <- BinaryOperation v56, '??', v56
+EndConstructor
+v58 <- Construct v48, [v46, v47]
+v59 <- GetProperty (guarded) v58, 'constructor'
+v60 <- Construct (guarded) v59, [v47, v45]
+// Splicing done
+v61 <- LoadString 'function'
+// Splicing instruction 2 (CallFunction) from AE8DD49B-37EE-48CD-BEC9-36F59A5BFEB9
+v62 <- CreateNamedVariable 'BigInt64Array', 'none'
+v63 <- GetProperty v62, 'constructor'
+v64 <- CallFunction v63, []
+// Splicing done
+// Splicing instruction 8 (BinaryOperation) from EA11BA73-8395-4B24-A1EF-D51679D3A2B9
+v65 <- LoadInteger '-329944313'
+v66 <- LoadFloat '4.0'
+v67 <- BinaryOperation v65, '|', v66
+// Splicing done
+v68 <- LoadString 'sBO'
+v69 <- CreateFloatArray [0.8736803331782504, 1.7976931348623157e+308, -1.1505442821503465e+308, inf, -1.6109113963497646e+308, -7.887699532142055e+307]
+// Splicing instruction 9 (EndObjectLiteral) from 1426A16B-F3A3-489B-81E1-C014DA9BD061
+v70 <- LoadInteger '1073741824'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v70
+v71 <- EndObjectLiteral
+// Splicing done
+// Splicing instruction 20 (Construct) from F8CC6B2A-6F8A-4447-B885-AA83DF93EE09
+v72 <- LoadString 'Z'
+v73 <- LoadString '7y'
+v74 <- CreateNamedVariable 'Date', 'none'
+v75 <- Construct v74, [v72]
+v76 <- BeginClassDefinition (decl) v74
+    BeginClassConstructor -> v77, v78, v79
+        CallSuperConstructor [v73]
+        v80 <- BinaryOperation v75, '*', v72
+    EndClassConstructor
+    BeginClassStaticMethod 'n' -> v81, v82, v83, v84
+        v85 <- LoadArguments
+        v86 <- CreateArray [v82, v82, v82]
+        v87 <- CreateArray [v72, v86]
+    EndClassStaticMethod
+EndClassDefinition
+v88 <- Construct v76, []
+// Splicing done
+v89 <- CreateFloatArray [-0.8660898762485854, 13621.674087673076, 0.0, -1e-15, 0.8622291419159739, -3.0, 2.0, 0.9586794051194628]
+v90 <- BinaryOperation v89, '>>>', v69
+// Program may be interesting due to new coverage: 4948 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 3659E125-C864-4B80-9C62-6202D31235ED ] =====
+// Minimizing A912CE3C-D2AD-44AF-9BCB-489DDF3A5A5F
+v0 <- LoadInteger '7'
+v1 <- CreateNamedVariable 'BigInt64Array', 'none'
+v2 <- BeginClassDefinition (decl)
+EndClassDefinition
+v3 <- CreateIntArray [-9223372036854775807, 31754, -1583478162, 2061316964, -4096, -9007199254740990, 65535, -1857689020, -9223372036854775807, 9]
+v4 <- BeginPlainFunction -> v5, v6
+    Return v3
+EndPlainFunction
+v7 <- Construct v1, [v0]
+v8 <- LoadInteger '64'
+v9 <- LoadInteger '3579'
+v10 <- CreateNamedVariable 'Int8Array', 'none'
+v11 <- Construct v10, [v9]
+BeginObjectLiteral
+v12 <- EndObjectLiteral
+v13 <- CreateNamedVariable 'Uint8Array', 'none'
+v14 <- Construct v13, [v8]
+v15 <- LoadFloat '-696.8889546228363'
+v16 <- CallMethod (guarded) v15, 'call', [v15, v15, v10]
+v17 <- LoadString 'p'
+v18 <- BinaryOperation v17, '+', v0
+v19 <- CreateIntArray [-9223372036854775807, 31754, -1583478162, 2061316964, -4096, -9007199254740990, 65535, -1857689020, -9223372036854775807, 9]
+v20 <- BeginPlainFunction -> v21, v22
+    Return v19
+EndPlainFunction
+v23 <- CallFunction (guarded) v20, []
+v24 <- LoadInteger '3542'
+v25 <- CreateNamedVariable 'BigUint64Array', 'none'
+v26 <- Construct v25, [v24]
+v27 <- CreateFloatArray [0.8736803331782504, 1.7976931348623157e+308, -1.1505442821503465e+308, inf, -1.6109113963497646e+308, -7.887699532142055e+307]
+v28 <- CreateFloatArray [-0.8660898762485854, 13621.674087673076, 0.0, -1e-15, 0.8622291419159739, -3.0, 2.0, 0.9586794051194628]
+v29 <- BinaryOperation v28, '>>>', v27
+v30 <- LoadRegExp '\xed\xa0\x80((\xed\xb0\x80)\x01Ca\W?)?' 'ysiu'
+v31 <- BeginClassDefinition (decl)
+    ClassAddInstanceComputedProperty v30
+EndClassDefinition
+v32 <- GetProperty v1, 'constructor'
+v33 <- CallFunction v32, []
+v34 <- LoadString 'Z'
+v35 <- CreateNamedVariable 'Date', 'none'
+v36 <- Construct v35, [v34]
+// Program is interesting due to new coverage: 10 newly discovered edges in the CFG of the target
+
+

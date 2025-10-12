@@ -1,0 +1,211 @@
+// ===== [ Program E1F9A21C-BDD4-41EB-9C65-F3F74E8FDF24 ] =====
+// Start of prefix code
+// Executing code generator FloatArrayGenerator
+v0 <- CreateFloatArray [1000000000000.0]
+v1 <- CreateFloatArray [0.8068826472144474, 5.0, 7.772400088854777, 4.0, 903.8510312662211, 1e-15, 1.0, 477542.5203952552, -1000.0]
+v2 <- CreateFloatArray [112050.22183828312, -2.2250738585072014e-308, -1000000000000.0]
+// Code generator finished
+// Executing code generator TrivialFunctionGenerator
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+// Code generator finished
+// Executing code generator UndefinedGenerator
+v4 <- LoadUndefined
+// Code generator finished
+// Executing code generator TrivialFunctionGenerator
+v5 <- BeginPlainFunction -> 
+    Return v2
+EndPlainFunction
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v6 <- BeginConstructor -> v7, v8, v9, v10, v11
+    SetProperty v7, 'a', v11
+EndConstructor
+v12 <- Construct v6, [v6, v4, v2, v0]
+v13 <- Construct v6, [v12, v12, v0, v0]
+v14 <- Construct v6, [v5, v4, v1, v1]
+// Code generator finished
+// Executing code generator RegExpGenerator
+v15 <- LoadRegExp '(\xed\xb0\x80)\x01' 'dsu'
+v16 <- LoadRegExp '[P(?:ab)?]' 'u'
+v17 <- LoadRegExp '[x]k(?:ab){4,7}ma|b6?' 'dyvi'
+// Code generator finished
+// End of prefix code. 13 variables are now visible
+v18 <- LoadInteger '95521319'
+v19 <- CreateArray [v18, v18]
+v20 <- LoadString '-28641'
+v21 <- BeginPlainFunction -> v22, v23, v24, v25
+    v26 <- CallMethod v25, 'flat', [v21, v22, v23, v21, v23]
+    v27 <- CallMethod v26, 'fill', [v23]
+    Return v25
+EndPlainFunction
+v28 <- BeginConstructor -> v29, v30, v31
+    v32 <- CallMethod v29, 'toString', []
+    v33 <- CallMethod v32, 'toLocaleUpperCase', []
+    v34 <- BeginClassDefinition (exp)
+    EndClassDefinition
+    BeginObjectLiteral
+    v35 <- EndObjectLiteral
+    v36 <- CreateNamedVariable 'Reflect', 'none'
+    v37 <- CallMethod v36, 'ownKeys', [v36]
+    v38 <- CreateArray [v35, v36, v34, v31]
+    v39 <- CallMethod (guarded) v38, 'every', [v20]
+    v40 <- CallMethod v36, 'construct', [v21, v38]
+EndConstructor
+v41 <- Construct v28, [v18, v19]
+
+
+// ===== [ Program 45CB2C61-167D-4B51-B5EC-DD35CFC3E00D ] =====
+// Mutating E1F9A21C-BDD4-41EB-9C65-F3F74E8FDF24 with SpliceMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- CreateFloatArray [1000000000000.0]
+v1 <- CreateFloatArray [0.8068826472144474, 5.0, 7.772400088854777, 4.0, 903.8510312662211, 1e-15, 1.0, 477542.5203952552, -1000.0]
+v2 <- CreateFloatArray [112050.22183828312, -2.2250738585072014e-308, -1000000000000.0]
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v4 <- LoadUndefined
+v5 <- BeginPlainFunction -> 
+    Return v2
+EndPlainFunction
+// Splicing instruction 3 (CreateArray) from 28BA81BF-E72E-4FAB-AD5D-C3F4454A68CE
+v6 <- CreateFloatArray [-606.4815784278328, 1000.0, -1000.0, -1.0, 0.5349240714521031, 1.6973136633114585e+307]
+v7 <- CreateFloatArray [167438.28782886942, inf, 4.4431693981134875e+307]
+v8 <- CreateArray [v7, v7, v6, v7, v6]
+// Splicing done
+// Splicing instruction 64 (CallMethod) from B6CEBAAF-B608-4FEC-9EDB-97E0679E3CDF
+v9 <- LoadString '-05:00'
+v10 <- LoadString 'Pacific/Pitcairn'
+v11 <- LoadString '+22:00'
+v12 <- BeginPlainFunction -> v13, v14
+    BeginObjectLiteral
+        ObjectLiteralAddElement `9`, v10
+        BeginObjectLiteralMethod `valueOf` -> v15, v16, v17, v18
+            Reassign v10, v17
+            BeginForLoopInitializer
+                v19 <- LoadInteger '0'
+                v20 <- LoadInteger '10'
+            BeginForLoopCondition -> v21, v22
+                v23 <- Compare v21, '<', v22
+            BeginForLoopAfterthought v23 -> v24, v25
+                v26 <- UnaryOperation v24, '++'
+                v27 <- UnaryOperation v25, '--'
+            BeginForLoopBody -> v28, v29
+            EndForLoop
+            SetComputedSuperProperty v15, v16
+            v30 <- Construct (guarded) v16, []
+            v31 <- GetProperty v9, 'length'
+            Return v18
+        EndObjectLiteralMethod
+    v32 <- EndObjectLiteral
+    Return v32
+EndPlainFunction
+v33 <- CallFunction v12, [v11, v9]
+v34 <- CreateFloatArray [-373832.123721624, -1000.0, -4.482210560378615, 1.0, 1.7976931348623157e+308, 2.2250738585072014e-308, -1000.0, -2.2250738585072014e-308, 0.2619068003763766]
+v35 <- GetElement v34, '2'
+v36 <- CallFunction (guarded) v12, [v35, v35]
+v37 <- BeginClassDefinition (decl)
+    BeginClassInstanceMethod 'o' -> v38, v39
+    EndClassInstanceMethod
+    ClassAddInstanceProperty 'd'
+EndClassDefinition
+v40 <- CreateNamedVariable 'Date', 'none'
+v41 <- GetProperty v40, 'toTemporalInstant'
+v42 <- CallMethod (guarded) v41, 'apply', [v37, v35, v41]
+// Splicing done
+v43 <- BeginConstructor -> v44, v45, v46, v47, v48
+    SetProperty v44, 'a', v48
+EndConstructor
+v49 <- Construct v43, [v43, v4, v2, v0]
+v50 <- Construct v43, [v49, v49, v0, v0]
+v51 <- Construct v43, [v5, v4, v1, v1]
+v52 <- LoadRegExp '(\xed\xb0\x80)\x01' 'dsu'
+v53 <- LoadRegExp '[P(?:ab)?]' 'u'
+v54 <- LoadRegExp '[x]k(?:ab){4,7}ma|b6?' 'dyvi'
+v55 <- LoadInteger '95521319'
+v56 <- CreateArray [v55, v55]
+v57 <- LoadString '-28641'
+v58 <- BeginPlainFunction -> v59, v60, v61, v62
+    v63 <- CallMethod v62, 'flat', [v58, v59, v60, v58, v60]
+    v64 <- CallMethod v63, 'fill', [v60]
+    Return v62
+EndPlainFunction
+v65 <- BeginConstructor -> v66, v67, v68
+    v69 <- CallMethod v66, 'toString', []
+    v70 <- CallMethod v69, 'toLocaleUpperCase', []
+    v71 <- BeginClassDefinition (exp)
+    EndClassDefinition
+    BeginObjectLiteral
+    v72 <- EndObjectLiteral
+    v73 <- CreateNamedVariable 'Reflect', 'none'
+    // Splicing instruction 23 (Return) from 3659E125-C864-4B80-9C62-6202D31235ED
+    v74 <- CreateIntArray [-9223372036854775807, 31754, -1583478162, 2061316964, -4096, -9007199254740990, 65535, -1857689020, -9223372036854775807, 9]
+    Return v74
+    // Splicing done
+    // Splicing instruction 8 (BeginPlainFunction) from FF746F09-D414-4EAB-AA5C-24661D342076
+    v75 <- CreateNamedVariable 'Uint16Array', 'none'
+    v76 <- Construct v75, []
+    v77 <- LoadInteger '3'
+    v78 <- CreateNamedVariable 'BigUint64Array', 'none'
+    v79 <- LoadInteger '1907'
+    v80 <- CreateNamedVariable 'Int16Array', 'none'
+    v81 <- Construct v80, [v79]
+    v82 <- BeginPlainFunction -> v83, v84, v85, v86
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `a`, v84
+            ObjectLiteralAddProperty `h`, v83
+            ObjectLiteralSetPrototype v76
+            ObjectLiteralCopyProperties v85
+            BeginObjectLiteralGetter `f` -> v87
+                v88 <- CallMethod (guarded) v87, 'toString', [v81, v77, v78, v87]
+                v89 <- GetComputedSuperProperty v79
+                v90 <- LoadString 'toString'
+                v91 <- CallComputedMethod (guarded) v89, v90, []
+                Return v83
+            EndObjectLiteralGetter
+        v92 <- EndObjectLiteral
+        Return v92
+    EndPlainFunction
+    // Splicing done
+    v93 <- CallMethod v73, 'ownKeys', [v73]
+    v94 <- CreateArray [v72, v73, v71, v68]
+    v95 <- CallMethod (guarded) v94, 'every', [v57]
+    v96 <- CallMethod v73, 'construct', [v58, v94]
+    // Splicing instruction 1 (EndClassDefinition) from C937B217-899E-4B59-B17B-C8C7896698ED
+    v97 <- BeginClassDefinition (decl)
+    EndClassDefinition
+    // Splicing done
+    // Splicing instruction 7 (DestructObjectAndReassign) from 6E0EC0BD-69A5-4C00-BCA3-5CCA084A567A
+    v98 <- LoadInteger '-4294967297'
+    v99 <- LoadInteger '-1433181786'
+    v100 <- LoadInteger '2098'
+    v101 <- CreateNamedVariable 'Int32Array', 'none'
+    v102 <- Construct v101, [v100]
+    v103 <- LoadInteger '16'
+    v104 <- CreateNamedVariable 'Float64Array', 'none'
+    {buffer:v98,byteLength:v99,h:v104,...v103} <- DestructObjectAndReassign v102
+    // Splicing done
+EndConstructor
+v105 <- Construct v65, [v55, v56]
+// Program may be interesting due to new coverage: 18165 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 30D96F92-292B-4F35-964D-994B9A52DB99 ] =====
+// Minimizing 45CB2C61-167D-4B51-B5EC-DD35CFC3E00D
+v0 <- LoadUndefined
+v1 <- LoadString '-05:00'
+v2 <- LoadString 'Pacific/Pitcairn'
+v3 <- LoadString '+22:00'
+v4 <- CreateNamedVariable 'Date', 'none'
+v5 <- LoadRegExp '[x]k(?:ab){4,7}ma|b6?' 'dyvi'
+v6 <- BeginConstructor -> v7, v8, v9
+    v10 <- BeginClassDefinition (exp)
+    EndClassDefinition
+    v11 <- BeginPlainFunction -> v12, v13, v14, v15
+        Return v7
+    EndPlainFunction
+EndConstructor
+// Program is interesting due to new coverage: 3 newly discovered edges in the CFG of the target
+
+

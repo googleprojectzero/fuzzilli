@@ -1,0 +1,191 @@
+// ===== [ Program 393E95CE-E1C3-4E45-9F46-EE5CC4109E72 ] =====
+// Start of prefix code
+// Executing code generator IntegerGenerator
+v0 <- LoadInteger '5'
+v1 <- LoadInteger '128'
+v2 <- LoadInteger '1969918258'
+// Code generator finished
+// Executing code generator TypedArrayGenerator
+v3 <- LoadInteger '3'
+v4 <- CreateNamedVariable 'Float64Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '1774'
+v7 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v8 <- Construct v7, [v6]
+v9 <- LoadInteger '129'
+v10 <- CreateNamedVariable 'Int16Array', 'none'
+v11 <- Construct v10, [v9]
+// Code generator finished
+// Executing code generator FloatGenerator
+v12 <- LoadFloat '0.42583611167060453'
+v13 <- LoadFloat '-6.842147576444186'
+v14 <- LoadFloat '334922.281372166'
+// Code generator finished
+// End of prefix code. 15 variables are now visible
+v15 <- LoadFloat '4.576737267287978e+307'
+v16 <- BeginPlainFunction -> 
+EndPlainFunction
+v17 <- LoadBigInt '2147483649'
+v18 <- CreateFloatArray [0.32814409159124835, 4.0, 0.9942312345185276, -356.1747980285468, -8.24329085875172, -0.0, 3.545484683603069e+307]
+v19 <- CreateFloatArray [0.8209340250367375, -836277.6011652886, 986946.9596903422, -133.7489528330293]
+v20 <- LoadRegExp 'tU(?:a*)+' 'ysgu'
+v21 <- LoadRegExp '[x\dz]Vv\u{12345}+' 'dygimu'
+v22 <- LoadRegExp '(?=)L.(a\1)+' 'dyvsg'
+v23 <- LoadRegExp 'Qa(?!bbb|bb)c\u0060?' 'dsm'
+v24 <- LoadRegExp 'Ca?[\111]' 'ym'
+v25 <- LoadRegExp '([\cz]?)' 'dgm'
+v26 <- LoadUndefined
+Reassign v26, v25
+v27 <- GetProperty v25, 'unicodeSets'
+v28 <- LoadInteger '16'
+v29 <- CreateNamedVariable 'Uint8Array', 'none'
+v30 <- CallFunction (guarded) v29, [v28, v23, v25]
+v31 <- Construct v29, []
+v32 <- LoadInteger '16'
+v33 <- CreateNamedVariable 'BigUint64Array', 'none'
+v34 <- Construct (guarded) v33, [v29, v29]
+v35 <- Construct v33, []
+v36 <- LoadInteger '2'
+v37 <- Construct (guarded) v29, [v36, v23, v23]
+v38 <- GetElement v37, '1'
+v39 <- CreateArray []
+v40 <- LoadInteger '16'
+v41 <- CreateNamedVariable 'Float64Array', 'none'
+v42 <- LoadInteger '10'
+v43 <- CreateNamedVariable 'Uint16Array', 'none'
+v44 <- LoadInteger '167'
+v45 <- CreateNamedVariable 'Float32Array', 'none'
+v46 <- BinaryOperation v45, '%', v39
+v47 <- BinaryOperation v40, '**', v41
+v48 <- CallFunction (guarded) v47, [v43, v47, v46, v42, v46]
+v49 <- LoadFloat '2.0'
+v50 <- CreateNamedVariable 'Symbol', 'none'
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v50 -> v51
+    EndObjectLiteralComputedMethod
+v52 <- EndObjectLiteral
+
+
+// ===== [ Program 7D360A00-9D1C-4F80-9F61-36407830CC56 ] =====
+// Mutating 393E95CE-E1C3-4E45-9F46-EE5CC4109E72 with CodeGenMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '5'
+v1 <- LoadInteger '128'
+v2 <- LoadInteger '1969918258'
+v3 <- LoadInteger '3'
+v4 <- CreateNamedVariable 'Float64Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '1774'
+v7 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v8 <- Construct v7, [v6]
+v9 <- LoadInteger '129'
+v10 <- CreateNamedVariable 'Int16Array', 'none'
+v11 <- Construct v10, [v9]
+v12 <- LoadFloat '0.42583611167060453'
+v13 <- LoadFloat '-6.842147576444186'
+v14 <- LoadFloat '334922.281372166'
+v15 <- LoadFloat '4.576737267287978e+307'
+v16 <- BeginPlainFunction -> 
+EndPlainFunction
+v17 <- LoadBigInt '2147483649'
+v18 <- CreateFloatArray [0.32814409159124835, 4.0, 0.9942312345185276, -356.1747980285468, -8.24329085875172, -0.0, 3.545484683603069e+307]
+// Executing code generator ApiMethodCallGenerator
+BeginTry
+    v19 <- CreateNamedVariable 'Proxy', 'none'
+    v20 <- LoadBigInt '-2'
+    v21 <- CallMethod v18, 'unshift', [v19, v20, v15]
+BeginCatch -> v22
+EndTryCatch
+// Code generator finished
+v23 <- CreateFloatArray [0.8209340250367375, -836277.6011652886, 986946.9596903422, -133.7489528330293]
+// Executing code generator ComputedPropertyRetrievalGenerator
+v24 <- GetComputedProperty v5, v13
+// Code generator finished
+// Executing code generator PropertyRemovalGenerator
+v25 <- DeleteProperty (guarded) v8, 'length'
+// Code generator finished
+// Executing code generator ResizableArrayBufferGenerator
+v26 <- CreateNamedVariable 'ArrayBuffer', 'none'
+v27 <- LoadInteger '895'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v27
+v28 <- EndObjectLiteral
+v29 <- LoadInteger '127'
+v30 <- Construct v26, [v29, v28]
+v31 <- CreateNamedVariable 'BigInt64Array', 'none'
+v32 <- Construct v31, [v30]
+// Code generator finished
+v33 <- LoadRegExp 'tU(?:a*)+' 'ysgu'
+v34 <- LoadRegExp '[x\dz]Vv\u{12345}+' 'dygimu'
+v35 <- LoadRegExp '(?=)L.(a\1)+' 'dyvsg'
+v36 <- LoadRegExp 'Qa(?!bbb|bb)c\u0060?' 'dsm'
+v37 <- LoadRegExp 'Ca?[\111]' 'ym'
+v38 <- LoadRegExp '([\cz]?)' 'dgm'
+v39 <- LoadUndefined
+Reassign v39, v38
+v40 <- GetProperty v38, 'unicodeSets'
+v41 <- LoadInteger '16'
+v42 <- CreateNamedVariable 'Uint8Array', 'none'
+v43 <- CallFunction (guarded) v42, [v41, v36, v38]
+v44 <- Construct v42, []
+v45 <- LoadInteger '16'
+v46 <- CreateNamedVariable 'BigUint64Array', 'none'
+v47 <- Construct (guarded) v46, [v42, v42]
+v48 <- Construct v46, []
+v49 <- LoadInteger '2'
+// Executing code generator UnaryOperationGenerator
+v50 <- UnaryOperation '-', v8
+// Code generator finished
+// Executing code generator InGenerator
+v51 <- TestIn v50, v28
+// Code generator finished
+// Executing code generator FunctionBindGenerator
+v52 <- BindFunction v16, v47
+// Code generator finished
+// Executing code generator ApiMethodCallGenerator
+BeginTry
+    v53 <- LoadString 'd4e'
+    v54 <- CallMethod v35, 'compile', [v53]
+BeginCatch -> v55
+EndTryCatch
+// Code generator finished
+v56 <- Construct (guarded) v42, [v49, v36, v36]
+v57 <- GetElement v56, '1'
+v58 <- CreateArray []
+v59 <- LoadInteger '16'
+v60 <- CreateNamedVariable 'Float64Array', 'none'
+v61 <- LoadInteger '10'
+v62 <- CreateNamedVariable 'Uint16Array', 'none'
+v63 <- LoadInteger '167'
+v64 <- CreateNamedVariable 'Float32Array', 'none'
+v65 <- BinaryOperation v64, '%', v58
+v66 <- BinaryOperation v59, '**', v60
+v67 <- CallFunction (guarded) v66, [v62, v66, v65, v61, v65]
+v68 <- LoadFloat '2.0'
+v69 <- CreateNamedVariable 'Symbol', 'none'
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v69 -> v70
+    EndObjectLiteralComputedMethod
+v71 <- EndObjectLiteral
+// Program may be interesting due to new coverage: 3040 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program C8089C9B-2AD0-44D8-B7D8-0F54F6D7D93A ] =====
+// Minimizing 7D360A00-9D1C-4F80-9F61-36407830CC56
+v0 <- CreateNamedVariable 'Float64Array', 'none'
+v1 <- Construct v0, [v0, v0]
+v2 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v3 <- Construct v2, [v1, v2, v0]
+v4 <- LoadFloat '-6.842147576444186'
+v5 <- CreateFloatArray [0.32814409159124835, 4.0, 0.9942312345185276, -356.1747980285468, -8.24329085875172, -0.0, 3.545484683603069e+307]
+v6 <- CreateNamedVariable 'Proxy', 'none'
+v7 <- LoadBigInt '-2'
+v8 <- CallMethod v5, 'unshift', [v6, v7]
+v9 <- GetComputedProperty v1, v4
+v10 <- DeleteProperty v3, 'length'
+BeginObjectLiteral
+v11 <- EndObjectLiteral
+v12 <- TestIn v3, v11
+// Program is interesting due to new coverage: 110 newly discovered edges in the CFG of the target
+
+

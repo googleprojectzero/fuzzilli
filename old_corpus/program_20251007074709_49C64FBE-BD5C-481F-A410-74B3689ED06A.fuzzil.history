@@ -1,0 +1,135 @@
+// ===== [ Program A00C203C-4AE1-4EE3-B786-7D6B4391A818 ] =====
+// Start of prefix code
+// Executing code generator BuiltinObjectInstanceGenerator
+v0 <- CreateNamedVariable 'Set', 'none'
+v1 <- Construct v0, []
+// Code generator finished
+// Executing code generator IntegerGenerator
+v2 <- LoadInteger '-16493'
+v3 <- LoadInteger '8'
+v4 <- LoadInteger '-42347'
+// Code generator finished
+// Executing code generator ObjectBuilderFunctionGenerator
+v5 <- BeginPlainFunction -> v6
+    BeginObjectLiteral
+        // Executing code generator ObjectLiteralPrototypeGenerator
+        ObjectLiteralSetPrototype v1
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `a`, v4
+        // Code generator finished
+        // Executing code generator ObjectLiteralGetterGenerator
+        BeginObjectLiteralGetter `h` -> v7
+            // Executing code generator ConstructWithDifferentNewTargetGenerator
+            v8 <- CreateNamedVariable 'Reflect', 'none'
+            v9 <- CreateArray [v8]
+            v10 <- CallMethod v8, 'construct', [v0, v9, v0]
+            // Code generator finished
+            // Executing code generator MethodCallWithDifferentThisGenerator
+            v11 <- CreateNamedVariable 'Reflect', 'none'
+            v12 <- CreateArray [v9]
+            v13 <- GetProperty v1, 'has'
+            v14 <- CallMethod v11, 'apply', [v13, v1, v12]
+            // Code generator finished
+            Return v4
+        EndObjectLiteralGetter
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `d`, v4
+        // Code generator finished
+        // Executing code generator ObjectLiteralElementGenerator
+        ObjectLiteralAddElement `4`, v0
+        // Code generator finished
+    v15 <- EndObjectLiteral
+    Return v15
+EndPlainFunction
+v16 <- CallFunction v5, [v3]
+v17 <- CallFunction v5, [v3]
+v18 <- CallFunction v5, [v4]
+// Code generator finished
+// Executing code generator FloatGenerator
+v19 <- LoadFloat '-1.7976931348623157e+308'
+v20 <- LoadFloat '1000000000.0'
+v21 <- LoadFloat '2.220446049250313e-16'
+// Code generator finished
+// Executing code generator ArrayGenerator
+v22 <- CreateArray [v17, v2]
+v23 <- CreateArray [v5, v19, v0]
+v24 <- CreateArray [v16, v4]
+// Code generator finished
+// End of prefix code. 15 variables are now visible
+v25 <- LoadString '+05:00'
+v26 <- LoadString 'PST'
+v27 <- CreateArray [v26, v25, v26, v25]
+v28 <- BeginClassDefinition (decl)
+    BeginClassConstructor -> v29, v30, v31
+        SetComputedSuperProperty v27, v27
+    EndClassConstructor
+EndClassDefinition
+v32 <- Construct v28, [v27, v27]
+v33 <- BinaryOperation v25, '-', v32
+
+
+// ===== [ Program 0A1413D6-2920-40BA-BFD0-1ADF5BF3E6F6 ] =====
+// Mutating A00C203C-4AE1-4EE3-B786-7D6B4391A818 with OperationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- CreateNamedVariable 'Set', 'none'
+v1 <- Construct v0, []
+v2 <- LoadInteger '-16493'
+v3 <- LoadInteger '8'
+v4 <- LoadInteger '-42347'
+v5 <- BeginPlainFunction -> v6
+    BeginObjectLiteral
+        ObjectLiteralSetPrototype v1
+        // Mutating next operation
+        ObjectLiteralAddProperty `roundingIncrement`, v4
+        BeginObjectLiteralGetter `h` -> v7
+            v8 <- CreateNamedVariable 'Reflect', 'none'
+            v9 <- CreateArray [v8]
+            v10 <- CallMethod v8, 'construct', [v0, v9, v0]
+            v11 <- CreateNamedVariable 'Reflect', 'none'
+            v12 <- CreateArray [v9]
+            v13 <- GetProperty v1, 'has'
+            // Mutating next operation
+            v14 <- CallMethod v11, 'apply', [v13, v1, v12, v7]
+            Return v4
+        EndObjectLiteralGetter
+        ObjectLiteralAddProperty `d`, v4
+        ObjectLiteralAddElement `4`, v0
+    v15 <- EndObjectLiteral
+    Return v15
+EndPlainFunction
+v16 <- CallFunction v5, [v3]
+v17 <- CallFunction v5, [v3]
+v18 <- CallFunction v5, [v4]
+v19 <- LoadFloat '-1.7976931348623157e+308'
+v20 <- LoadFloat '1000000000.0'
+// Mutating next operation
+v21 <- LoadFloat '-inf'
+v22 <- CreateArray [v17, v2]
+v23 <- CreateArray [v5, v19, v0]
+// Mutating next operation
+v24 <- CreateArray [v16, v4, v3]
+v25 <- LoadString '+05:00'
+v26 <- LoadString 'PST'
+v27 <- CreateArray [v26, v25, v26, v25]
+v28 <- BeginClassDefinition (decl)
+    BeginClassConstructor -> v29, v30, v31
+        SetComputedSuperProperty v27, v27
+    EndClassConstructor
+EndClassDefinition
+v32 <- Construct v28, [v27, v27]
+v33 <- BinaryOperation v25, '-', v32
+// Program may be interesting due to new coverage: 2953 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 49C64FBE-BD5C-481F-A410-74B3689ED06A ] =====
+// Minimizing 0A1413D6-2920-40BA-BFD0-1ADF5BF3E6F6
+v0 <- CreateNamedVariable 'Set', 'none'
+v1 <- Construct v0, []
+BeginObjectLiteral
+    ObjectLiteralSetPrototype v1
+v2 <- EndObjectLiteral
+// Program is interesting due to new coverage: 7 newly discovered edges in the CFG of the target
+
+

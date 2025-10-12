@@ -1,0 +1,122 @@
+// ===== [ Program 52305167-36CB-4A93-AFFE-646FDC7DE0AE ] =====
+// Start of prefix code
+// Executing code generator IntArrayGenerator
+v0 <- CreateIntArray [46120, 2147483647, -9223372036854775808, 268435456, 2007, 1073741823, 13, 9007199254740990, -433463816, 10]
+v1 <- CreateIntArray [-9223372036854775808, -9007199254740990, 26357, 5, -6, 327015014, 578605107, -1114854853, 2]
+v2 <- CreateIntArray [1024, 128, 1721558075, 255]
+// Code generator finished
+// Executing code generator TypedArrayGenerator
+v3 <- LoadInteger '4023'
+v4 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '4096'
+v7 <- CreateNamedVariable 'BigInt64Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- LoadInteger '3'
+v10 <- CreateNamedVariable 'Int8Array', 'none'
+v11 <- Construct v10, [v9]
+// Code generator finished
+// End of prefix code. 12 variables are now visible
+v12 <- LoadFloat '2.220446049250313e-16'
+v13 <- LoadInteger '-1828752785'
+v14 <- LoadFloat '745.8806114719878'
+v15 <- BeginClassDefinition (exp)
+    BeginClassConstructor -> v16, v17
+        BeginObjectLiteral
+        v18 <- EndObjectLiteral
+        SetProperty v18, 'g', v17
+        SetProperty v18, 'a', v12
+        BeginObjectLiteral
+        v19 <- EndObjectLiteral
+        SetProperty v19, 'g', v17
+        SetProperty v19, 'c', v14
+    EndClassConstructor
+EndClassDefinition
+v20 <- Construct v15, [v15]
+v21 <- Construct v15, []
+v22 <- LoadInteger '16'
+v23 <- CreateNamedVariable 'Float64Array', 'none'
+v24 <- LoadInteger '10'
+v25 <- CreateNamedVariable 'Uint16Array', 'none'
+v26 <- LoadInteger '167'
+v27 <- CreateNamedVariable 'Float32Array', 'none'
+v28 <- CreateNamedVariable 'Symbol', 'none'
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v28 -> v29
+    EndObjectLiteralComputedMethod
+v30 <- EndObjectLiteral
+
+
+// ===== [ Program 39D8528B-BD4E-44EC-8C6A-28D9C41831FA ] =====
+// Mutating 52305167-36CB-4A93-AFFE-646FDC7DE0AE with ProbingMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- CreateIntArray [46120, 2147483647, -9223372036854775808, 268435456, 2007, 1073741823, 13, 9007199254740990, -433463816, 10]
+v1 <- CreateIntArray [-9223372036854775808, -9007199254740990, 26357, 5, -6, 327015014, 578605107, -1114854853, 2]
+v2 <- CreateIntArray [1024, 128, 1721558075, 255]
+v3 <- LoadInteger '4023'
+v4 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '4096'
+v7 <- CreateNamedVariable 'BigInt64Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- LoadInteger '3'
+v10 <- CreateNamedVariable 'Int8Array', 'none'
+v11 <- Construct v10, [v9]
+v12 <- LoadFloat '2.220446049250313e-16'
+v13 <- LoadInteger '-1828752785'
+v14 <- LoadFloat '745.8806114719878'
+v15 <- BeginClassDefinition (exp)
+    BeginClassConstructor -> v16, v17
+        BeginObjectLiteral
+        v18 <- EndObjectLiteral
+        // Probing value v18
+        SetProperty v18, 'g', v5
+        // Probing finished
+        SetProperty v18, 'g', v17
+        SetProperty v18, 'a', v12
+        BeginObjectLiteral
+        v19 <- EndObjectLiteral
+        // Probing value v19
+        SetProperty v19, 'c', v3
+        // Probing finished
+        SetProperty v19, 'g', v17
+        SetProperty v19, 'c', v14
+    EndClassConstructor
+EndClassDefinition
+v20 <- Construct v15, [v15]
+v21 <- Construct v15, []
+v22 <- LoadInteger '16'
+v23 <- CreateNamedVariable 'Float64Array', 'none'
+v24 <- LoadInteger '10'
+v25 <- CreateNamedVariable 'Uint16Array', 'none'
+v26 <- LoadInteger '167'
+v27 <- CreateNamedVariable 'Float32Array', 'none'
+v28 <- CreateNamedVariable 'Symbol', 'none'
+// Probing value v28
+SetProperty v28, 'toString', v28
+// Probing finished
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v28 -> v29
+    EndObjectLiteralComputedMethod
+v30 <- EndObjectLiteral
+// Program may be interesting due to new coverage: 2648 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program F1D29A41-7FB9-41DB-BFDC-EA75F0F4E7BA ] =====
+// Minimizing 39D8528B-BD4E-44EC-8C6A-28D9C41831FA
+v0 <- LoadInteger '4023'
+v1 <- LoadFloat '745.8806114719878'
+v2 <- BeginClassDefinition (exp)
+    BeginClassConstructor -> v3, v4
+        BeginObjectLiteral
+        v5 <- EndObjectLiteral
+        SetProperty v5, 'c', v0
+        SetProperty v5, 'g', v4
+        SetProperty v5, 'c', v1
+    EndClassConstructor
+EndClassDefinition
+v6 <- Construct v2, []
+v7 <- Construct v2, []
+// Program is interesting due to new coverage: 9 newly discovered edges in the CFG of the target
+
+

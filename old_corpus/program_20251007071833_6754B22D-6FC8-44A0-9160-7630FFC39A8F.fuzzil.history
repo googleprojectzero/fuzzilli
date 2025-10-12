@@ -1,0 +1,119 @@
+// ===== [ Program 110BF64D-BDED-4B08-8A82-9951EEAF0857 ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator ClassDefinitionGenerator
+v0 <- LoadString 'g'
+v1 <- LoadFloat '1.0'
+v2 <- LoadInteger '-268435456'
+v3 <- BeginClassDefinition (decl)
+    // Executing code generator ClassInstanceMethodGenerator
+    BeginClassInstanceMethod 'n' -> v4, v5
+        // Executing code generator FunctionBindGenerator
+        // Executing code generator BinaryOperationGenerator
+        v6 <- BinaryOperation v1, '*', v4
+        // Code generator finished
+        // Executing code generator PrototypeAccessGenerator
+        v7 <- GetProperty (guarded) v5, '__proto__'
+        // Code generator finished
+        // Executing code generator ConstructorCallGenerator
+        v8 <- Construct (guarded) v7, [v5, v2, v7]
+        // Code generator finished
+        Return v8
+    EndClassInstanceMethod
+    // Code generator finished
+    // Executing code generator ClassStaticPropertyGenerator
+    ClassAddStaticProperty 'a' v2
+    // Code generator finished
+    // Executing code generator ClassInstancePropertyGenerator
+    ClassAddInstanceProperty 'a'
+    // Code generator finished
+    // Executing code generator ClassPrivateStaticPropertyGenerator
+    ClassAddPrivateStaticProperty 'd' v2
+    // Code generator finished
+    // Executing code generator ClassInstanceComputedPropertyGenerator
+    ClassAddInstanceComputedProperty v2
+    // Code generator finished
+EndClassDefinition
+v9 <- Construct v3, []
+v10 <- Construct v3, []
+v11 <- Construct v3, []
+// Code generator finished
+// Executing code generator ObjectBuilderFunctionGenerator
+v12 <- BeginPlainFunction -> v13, v14, v15
+    BeginObjectLiteral
+        // Executing code generator ObjectLiteralMethodGenerator
+        BeginObjectLiteralMethod `valueOf` -> v16, v17, v18, v19
+            // Executing code generator BinaryOperationGenerator
+            v20 <- BinaryOperation v13, '&&', v18
+            // Code generator finished
+            // Executing code generator NumberComputationGenerator
+            v21 <- CreateNamedVariable 'Math', 'none'
+            v22 <- LoadInteger '536870887'
+            v23 <- CallMethod v21, 'imul', [v1, v1]
+            v24 <- UnaryOperation '~', v22
+            v25 <- BinaryOperation v22, '|', v24
+            v26 <- BinaryOperation v25, '&&', v22
+            v27 <- BinaryOperation v26, '&&', v22
+            v28 <- CallMethod v21, 'log10', [v25]
+            // Code generator finished
+            Return v24
+        EndObjectLiteralMethod
+        // Code generator finished
+    v29 <- EndObjectLiteral
+    Return v29
+EndPlainFunction
+v30 <- CallFunction v12, [v1, v0, v10]
+v31 <- CallFunction v12, [v2, v30, v10]
+v32 <- CallFunction v12, [v2, v12, v11]
+// Code generator finished
+// End of prefix code. 11 variables are now visible
+// Executing code generator UnboundFunctionBindGenerator
+// Executing code generator PlainFunctionGenerator
+v33 <- BeginPlainFunction -> v34, v35, v36, v37
+    // Executing code generator ComputedPropertyAssignmentGenerator
+    SetComputedProperty v35, v34, v36
+    // Code generator finished
+    // Executing code generator BigIntGenerator
+    v38 <- LoadBigInt '-4096'
+    v39 <- LoadBigInt '512'
+    v40 <- LoadBigInt '-542040149'
+    // Code generator finished
+    Return v40
+EndPlainFunction
+v41 <- CallFunction (guarded) v33, [v9, v10, v30, v9]
+// Code generator finished
+// Executing code generator DestructArrayAndReassignGenerator
+[v11,,v10] <- DestructArrayAndReassign v0
+// Code generator finished
+// Executing code generator FunctionCallGenerator
+v42 <- CallFunction (guarded) v33, [v9, v10, v31, v9]
+// Program may be interesting due to new coverage: 4804 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 6754B22D-6FC8-44A0-9160-7630FFC39A8F ] =====
+// Minimizing 110BF64D-BDED-4B08-8A82-9951EEAF0857
+v0 <- BeginClassDefinition (decl)
+EndClassDefinition
+v1 <- Construct v0, []
+v2 <- BeginPlainFunction -> v3, v4, v5
+    BeginObjectLiteral
+        BeginObjectLiteralMethod `valueOf` -> v6, v7, v8, v9
+            Return v9
+        EndObjectLiteralMethod
+    v10 <- EndObjectLiteral
+    Return v2
+EndPlainFunction
+v11 <- CallFunction v2, []
+v12 <- CallFunction v2, []
+v13 <- BeginPlainFunction -> v14, v15, v16, v17
+    SetComputedProperty v15, v14, v16
+    v18 <- LoadBigInt '-542040149'
+    Return v18
+EndPlainFunction
+v19 <- CallFunction v13, [v1, v0]
+v20 <- CallFunction (guarded) v13, [v1]
+// Program is interesting due to new coverage: 149 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 114 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 298 newly discovered edges in the CFG of the target
+
+

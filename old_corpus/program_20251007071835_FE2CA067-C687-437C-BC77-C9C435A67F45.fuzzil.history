@@ -1,0 +1,56 @@
+// ===== [ Program 9BE8BF44-E468-4764-AE63-55B66A80B7FE ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator IntegerGenerator
+v0 <- LoadInteger '-4294967295'
+v1 <- LoadInteger '268435441'
+v2 <- LoadInteger '-9223372036854775807'
+// Code generator finished
+// Executing code generator FloatArrayGenerator
+v3 <- CreateFloatArray [0.8736803331782504, 1.7976931348623157e+308, -1.1505442821503465e+308, inf, -1.6109113963497646e+308, -7.887699532142055e+307]
+v4 <- CreateFloatArray [-0.8660898762485854, 13621.674087673076, 0.0, -1e-15, 0.8622291419159739, -3.0, 2.0, 0.9586794051194628]
+v5 <- CreateFloatArray [-941.9287723283767]
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v6 <- BeginConstructor -> v7, v8, v9, v10, v11
+    SetProperty v7, 'f', v10
+EndConstructor
+v12 <- Construct v6, [v1, v6, v4, v0]
+v13 <- Construct v6, [v0, v12, v4, v6]
+v14 <- Construct v6, [v1, v1, v4, v1]
+// Code generator finished
+// Executing code generator FloatGenerator
+v15 <- LoadFloat '827.2566102619278'
+v16 <- LoadFloat '634.1105909848693'
+v17 <- LoadFloat '0.19802894894383039'
+// Code generator finished
+// End of prefix code. 13 variables are now visible
+// Executing code generator ArrayWithSpreadGenerator
+v18 <- CreateArrayWithSpread [v2, v1]
+// Code generator finished
+// Executing code generator BinaryOperationGenerator
+v19 <- BinaryOperation v12, '>>>', v3
+// Code generator finished
+// Executing code generator NumberComputationGenerator
+v20 <- CreateNamedVariable 'Math', 'none'
+v21 <- LoadInteger '-12'
+v22 <- LoadFloat '1.0'
+v23 <- BinaryOperation v12, '%', v12
+v24 <- UnaryOperation '++', v22
+v25 <- UnaryOperation '+', v23
+v26 <- UnaryOperation '-', v24
+v27 <- UnaryOperation '++', v22
+v28 <- CallMethod v20, 'log', [v26]
+// Program may be interesting due to new coverage: 2879 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program FE2CA067-C687-437C-BC77-C9C435A67F45 ] =====
+// Minimizing 9BE8BF44-E468-4764-AE63-55B66A80B7FE
+v0 <- CreateFloatArray [0.8736803331782504, 1.7976931348623157e+308, -1.1505442821503465e+308, inf, -1.6109113963497646e+308, -7.887699532142055e+307]
+v1 <- CreateFloatArray [-0.8660898762485854, 13621.674087673076, 0.0, -1e-15, 0.8622291419159739, -3.0, 2.0, 0.9586794051194628]
+v2 <- BinaryOperation v1, '>>>', v0
+// Program is interesting due to new coverage: 4 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 7 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 10 newly discovered edges in the CFG of the target
+
+

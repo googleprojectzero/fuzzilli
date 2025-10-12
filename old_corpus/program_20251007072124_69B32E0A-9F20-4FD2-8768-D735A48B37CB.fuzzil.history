@@ -1,0 +1,152 @@
+// ===== [ Program 6CD6D53B-61F5-4334-86F8-374E73BA3476 ] =====
+// Start of prefix code
+// Executing code generator TypedArrayGenerator
+v0 <- LoadInteger '4'
+v1 <- CreateNamedVariable 'Float64Array', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '8'
+v4 <- CreateNamedVariable 'Uint32Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '3466'
+v7 <- CreateNamedVariable 'BigUint64Array', 'none'
+v8 <- Construct v7, [v6]
+// Code generator finished
+// Executing code generator IntegerGenerator
+v9 <- LoadInteger '1584124474'
+v10 <- LoadInteger '-172711894'
+v11 <- LoadInteger '268435456'
+// Code generator finished
+// Executing code generator IntegerGenerator
+v12 <- LoadInteger '-2'
+v13 <- LoadInteger '-294266301'
+v14 <- LoadInteger '1073741824'
+// Code generator finished
+// End of prefix code. 15 variables are now visible
+v15 <- CreateArray []
+v16 <- LoadInteger '16'
+v17 <- CreateNamedVariable 'Float64Array', 'none'
+v18 <- Construct v17, [v16]
+v19 <- LoadInteger '10'
+v20 <- CreateNamedVariable 'Uint16Array', 'none'
+v21 <- Construct v20, [v19]
+v22 <- LoadInteger '167'
+v23 <- CreateNamedVariable 'Float32Array', 'none'
+v24 <- Construct v23, [v22]
+v25 <- BinaryOperation v24, '%', v15
+v26 <- BinaryOperation v16, '**', v17
+v27 <- CallFunctionWithSpread (guarded) v26, [v20, v26, v25, ...v19, v25]
+v28 <- CreateFloatArray [-1.7976931348623157e+308, -1.0, -1.542336848203849e+308, -1000000.0]
+v29 <- CreateFloatArray [0.8888880580307695, 928.3092772365194, 575906.016845972]
+v30 <- CreateFloatArray [-4.040166588692994e+307, 1.4451193261714297e+308, 365.4711631336927, -1e-15, -1.2605239855133288e+308, 668.1225795165637, -464.7093912232458, 1.7976931348623157e+308, -1000000000000.0, -1.0]
+v31 <- CreateNamedVariable 'Symbol', 'none'
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v31 -> v32
+        v33 <- LoadInteger '10'
+        BeginObjectLiteral
+            BeginObjectLiteralMethod `next` -> v34
+                v35 <- UnaryOperation v33, '--'
+                BeginObjectLiteral
+                    ObjectLiteralAddProperty `done`, v33
+                    ObjectLiteralAddProperty `value`, v33
+                v36 <- EndObjectLiteral
+                Return v36
+            EndObjectLiteralMethod
+        v37 <- EndObjectLiteral
+    EndObjectLiteralComputedMethod
+v38 <- EndObjectLiteral
+
+
+// ===== [ Program CF469FDC-42BB-4FFF-BD20-F77512C21387 ] =====
+// Mutating 6CD6D53B-61F5-4334-86F8-374E73BA3476 with InputMutator (loose)
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '4'
+v1 <- CreateNamedVariable 'Float64Array', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '8'
+v4 <- CreateNamedVariable 'Uint32Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '3466'
+v7 <- CreateNamedVariable 'BigUint64Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- LoadInteger '1584124474'
+v10 <- LoadInteger '-172711894'
+v11 <- LoadInteger '268435456'
+v12 <- LoadInteger '-2'
+v13 <- LoadInteger '-294266301'
+v14 <- LoadInteger '1073741824'
+v15 <- CreateArray []
+v16 <- LoadInteger '16'
+v17 <- CreateNamedVariable 'Float64Array', 'none'
+v18 <- Construct v17, [v16]
+v19 <- LoadInteger '10'
+v20 <- CreateNamedVariable 'Uint16Array', 'none'
+v21 <- Construct v20, [v19]
+v22 <- LoadInteger '167'
+v23 <- CreateNamedVariable 'Float32Array', 'none'
+v24 <- Construct v23, [v22]
+v25 <- BinaryOperation v24, '%', v15
+v26 <- BinaryOperation v16, '**', v17
+v27 <- CallFunctionWithSpread (guarded) v26, [v20, v26, v25, ...v19, v25]
+v28 <- CreateFloatArray [-1.7976931348623157e+308, -1.0, -1.542336848203849e+308, -1000000.0]
+v29 <- CreateFloatArray [0.8888880580307695, 928.3092772365194, 575906.016845972]
+v30 <- CreateFloatArray [-4.040166588692994e+307, 1.4451193261714297e+308, 365.4711631336927, -1e-15, -1.2605239855133288e+308, 668.1225795165637, -464.7093912232458, 1.7976931348623157e+308, -1000000000000.0, -1.0]
+v31 <- CreateNamedVariable 'Symbol', 'none'
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v31 -> v32
+        v33 <- LoadInteger '10'
+        BeginObjectLiteral
+            BeginObjectLiteralMethod `next` -> v34
+                // Replacing input 0 (v33) with v27
+                v35 <- UnaryOperation v27, '--'
+                BeginObjectLiteral
+                    ObjectLiteralAddProperty `done`, v33
+                    // Replacing input 0 (v33) with v35
+                    ObjectLiteralAddProperty `value`, v35
+                v36 <- EndObjectLiteral
+                Return v36
+            EndObjectLiteralMethod
+        v37 <- EndObjectLiteral
+    EndObjectLiteralComputedMethod
+v38 <- EndObjectLiteral
+// Program may be interesting due to new coverage: 2705 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 69B32E0A-9F20-4FD2-8768-D735A48B37CB ] =====
+// Minimizing CF469FDC-42BB-4FFF-BD20-F77512C21387
+v0 <- LoadInteger '4'
+v1 <- CreateNamedVariable 'Float64Array', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '8'
+v4 <- CreateNamedVariable 'Uint32Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '3466'
+v7 <- CreateNamedVariable 'BigUint64Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- CreateArray []
+v10 <- LoadInteger '16'
+v11 <- Construct v1, [v10]
+v12 <- LoadInteger '10'
+v13 <- CreateNamedVariable 'Uint16Array', 'none'
+v14 <- Construct v13, [v12]
+v15 <- LoadInteger '167'
+v16 <- CreateNamedVariable 'Float32Array', 'none'
+v17 <- Construct v16, [v15]
+v18 <- BinaryOperation v17, '%', v9
+v19 <- BinaryOperation v10, '**', v1
+v20 <- CallFunctionWithSpread (guarded) v19, [v13, v19, v18, ...v12, v18]
+v21 <- CreateFloatArray [-1.7976931348623157e+308, -1.0, -1.542336848203849e+308, -1000000.0]
+v22 <- CreateFloatArray [0.8888880580307695, 928.3092772365194, 575906.016845972]
+v23 <- CreateFloatArray [-4.040166588692994e+307, 1.4451193261714297e+308, 365.4711631336927, -1e-15, -1.2605239855133288e+308, 668.1225795165637, -464.7093912232458, 1.7976931348623157e+308, -1000000000000.0, -1.0]
+v24 <- CreateNamedVariable 'Symbol', 'none'
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v24 -> v25
+        BeginObjectLiteral
+            BeginObjectLiteralMethod `next` -> v26
+                v27 <- UnaryOperation v20, '--'
+            EndObjectLiteralMethod
+        v28 <- EndObjectLiteral
+    EndObjectLiteralComputedMethod
+v29 <- EndObjectLiteral
+// Program is interesting due to new coverage: 1 newly discovered edge in the CFG of the target
+
+

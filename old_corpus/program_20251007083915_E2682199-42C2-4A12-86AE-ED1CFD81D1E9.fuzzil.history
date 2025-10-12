@@ -1,0 +1,262 @@
+// ===== [ Program 79C27427-D8E5-437D-8522-FF22711CC00E ] =====
+// Start of prefix code
+// Executing code generator TypedArrayGenerator
+v0 <- LoadInteger '257'
+v1 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '127'
+v4 <- CreateNamedVariable 'Int8Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '0'
+v7 <- CreateNamedVariable 'Uint8Array', 'none'
+v8 <- Construct v7, [v6]
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v9 <- BeginClassDefinition (decl)
+    // Executing code generator ClassPrivateInstanceMethodGenerator
+    BeginClassPrivateInstanceMethod 'valueOf' -> v10, v11, v12, v13
+        // Executing code generator UnaryOperationGenerator
+        v14 <- UnaryOperation '--', v10
+        // Code generator finished
+        // Executing code generator PrivatePropertyUpdateGenerator
+        // Code generator finished
+        // Executing code generator DisposableVariableGenerator
+        v15 <- CreateNamedVariable 'Symbol', 'none'
+        v16 <- GetProperty v15, 'dispose'
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `value`, v7
+            BeginObjectLiteralComputedMethod v16 -> v17
+                Return v14
+            EndObjectLiteralComputedMethod
+        v18 <- EndObjectLiteral
+        v19 <- LoadDisposableVariable v18
+        // Code generator finished
+        Return v19
+    EndClassPrivateInstanceMethod
+    // Code generator finished
+    // Executing code generator ClassPrivateInstancePropertyGenerator
+    ClassAddPrivateInstanceProperty 'b' v0
+    // Code generator finished
+EndClassDefinition
+v20 <- Construct v9, []
+v21 <- Construct v9, []
+v22 <- Construct v9, []
+// Code generator finished
+// Executing code generator StringGenerator
+v23 <- LoadString 'number'
+v24 <- LoadString 'withTimeZone'
+v25 <- LoadString 'string'
+// Code generator finished
+// End of prefix code. 16 variables are now visible
+v26 <- LoadFloat '0.8484250122429354'
+v27 <- LoadFloat '-1.7976931348623157e+308'
+v28 <- LoadFloat '0.0'
+v29 <- BeginPlainFunction -> v30
+    BeginObjectLiteral
+        ObjectLiteralAddProperty `a`, v28
+        ObjectLiteralAddElement `10`, v27
+        ObjectLiteralAddComputedProperty v26, v26
+        ObjectLiteralAddProperty `b`, v27
+        BeginObjectLiteralComputedMethod v30 -> v31, v32, v33
+            UpdateSuperProperty 'e', '||', v27
+            BeginTry
+            BeginCatch -> v34
+            EndTryCatch
+        EndObjectLiteralComputedMethod
+    v35 <- EndObjectLiteral
+EndPlainFunction
+v36 <- LoadInteger '-3'
+v37 <- BeginConstructor -> v38, v39, v40
+EndConstructor
+v41 <- LoadInteger '9'
+v42 <- BeginPlainFunction -> 
+EndPlainFunction
+v43 <- BeginConstructor -> v44, v45, v46
+    v47 <- GetProperty (guarded) v44, 'constructor'
+    v48 <- Construct (guarded) v47, [v43, v43]
+    v49 <- UnaryOperation v45, '--'
+    v50 <- CallFunction (guarded) v46, []
+    v51 <- GetProperty v46, 'arguments'
+    v52 <- BinaryOperation v51, '??', v51
+EndConstructor
+v53 <- Construct v43, [v41, v42]
+v54 <- GetProperty (guarded) v53, 'constructor'
+v55 <- Construct (guarded) v54, [v42, v36]
+v56 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+v57 <- CallMethod (guarded) v56, 'exec', []
+v58 <- LoadRegExp 'zixyz{1,32}' 'ysgimu'
+v59 <- GetProperty v58, 'constructor'
+v60 <- CallFunction (guarded) v59, [v36, v37]
+
+
+// ===== [ Program 781F3CE5-2A45-4B3A-BDE9-3AF6519D9189 ] =====
+// Mutating 79C27427-D8E5-437D-8522-FF22711CC00E with CodeGenMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '257'
+v1 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '127'
+v4 <- CreateNamedVariable 'Int8Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '0'
+v7 <- CreateNamedVariable 'Uint8Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- BeginClassDefinition (decl)
+    BeginClassPrivateInstanceMethod 'valueOf' -> v10, v11, v12, v13
+        v14 <- UnaryOperation '--', v10
+        v15 <- CreateNamedVariable 'Symbol', 'none'
+        v16 <- GetProperty v15, 'dispose'
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `value`, v7
+            BeginObjectLiteralComputedMethod v16 -> v17
+                Return v14
+            EndObjectLiteralComputedMethod
+        v18 <- EndObjectLiteral
+        v19 <- LoadDisposableVariable v18
+        Return v19
+    EndClassPrivateInstanceMethod
+    ClassAddPrivateInstanceProperty 'b' v0
+EndClassDefinition
+v20 <- Construct v9, []
+v21 <- Construct v9, []
+v22 <- Construct v9, []
+v23 <- LoadString 'number'
+v24 <- LoadString 'withTimeZone'
+v25 <- LoadString 'string'
+v26 <- LoadFloat '0.8484250122429354'
+v27 <- LoadFloat '-1.7976931348623157e+308'
+v28 <- LoadFloat '0.0'
+v29 <- BeginPlainFunction -> v30
+    BeginObjectLiteral
+        ObjectLiteralAddProperty `a`, v28
+        ObjectLiteralAddElement `10`, v27
+        ObjectLiteralAddComputedProperty v26, v26
+        ObjectLiteralAddProperty `b`, v27
+        BeginObjectLiteralComputedMethod v30 -> v31, v32, v33
+            UpdateSuperProperty 'e', '||', v27
+            BeginTry
+            BeginCatch -> v34
+            EndTryCatch
+        EndObjectLiteralComputedMethod
+    v35 <- EndObjectLiteral
+EndPlainFunction
+v36 <- LoadInteger '-3'
+v37 <- BeginConstructor -> v38, v39, v40
+EndConstructor
+v41 <- LoadInteger '9'
+v42 <- BeginPlainFunction -> 
+EndPlainFunction
+v43 <- BeginConstructor -> v44, v45, v46
+    v47 <- GetProperty (guarded) v44, 'constructor'
+    v48 <- Construct (guarded) v47, [v43, v43]
+    v49 <- UnaryOperation v45, '--'
+    v50 <- CallFunction (guarded) v46, []
+    v51 <- GetProperty v46, 'arguments'
+    v52 <- BinaryOperation v51, '??', v51
+EndConstructor
+v53 <- Construct v43, [v41, v42]
+v54 <- GetProperty (guarded) v53, 'constructor'
+v55 <- Construct (guarded) v54, [v42, v36]
+v56 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+v57 <- CallMethod (guarded) v56, 'exec', []
+v58 <- LoadRegExp 'zixyz{1,32}' 'ysgimu'
+// Executing code generator DupGenerator
+v59 <- Dup v56
+// Code generator finished
+// Executing code generator UpdateGenerator
+Update v54, '>>>', v59
+// Code generator finished
+// Executing code generator FunctionCallGenerator
+v60 <- CallFunction (guarded) v29, [v29]
+// Code generator finished
+// Executing code generator PropertyRetrievalGenerator
+v61 <- GetProperty (guarded) v57, 'c'
+// Code generator finished
+// Executing code generator ComputedPropertyUpdateGenerator
+UpdateComputedProperty v55, v36, '+',v27
+// Code generator finished
+v62 <- GetProperty v58, 'constructor'
+v63 <- CallFunction (guarded) v62, [v36, v37]
+// Program may be interesting due to new coverage: 19334 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program E2682199-42C2-4A12-86AE-ED1CFD81D1E9 ] =====
+// Minimizing 781F3CE5-2A45-4B3A-BDE9-3AF6519D9189
+v0 <- LoadInteger '257'
+v1 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '127'
+v4 <- CreateNamedVariable 'Int8Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '0'
+v7 <- CreateNamedVariable 'Uint8Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- BeginClassDefinition (decl)
+    BeginClassPrivateInstanceMethod 'valueOf' -> v10, v11, v12, v13
+        v14 <- UnaryOperation '--', v10
+        v15 <- CreateNamedVariable 'Symbol', 'none'
+        v16 <- GetProperty v15, 'dispose'
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `value`, v7
+            BeginObjectLiteralComputedMethod v16 -> v17
+                Return v14
+            EndObjectLiteralComputedMethod
+        v18 <- EndObjectLiteral
+        v19 <- LoadDisposableVariable v18
+        Return v19
+    EndClassPrivateInstanceMethod
+    ClassAddPrivateInstanceProperty 'b' v0
+EndClassDefinition
+v20 <- Construct v9, []
+v21 <- Construct v9, []
+v22 <- Construct v9, []
+v23 <- LoadString 'number'
+v24 <- LoadString 'withTimeZone'
+v25 <- LoadString 'string'
+v26 <- LoadFloat '0.8484250122429354'
+v27 <- LoadFloat '-1.7976931348623157e+308'
+v28 <- LoadFloat '0.0'
+v29 <- BeginPlainFunction -> v30
+    BeginObjectLiteral
+        ObjectLiteralAddProperty `a`, v28
+        ObjectLiteralAddElement `10`, v27
+        ObjectLiteralAddComputedProperty v26, v26
+        ObjectLiteralAddProperty `b`, v27
+        BeginObjectLiteralComputedMethod v30 -> v31, v32, v33
+            UpdateSuperProperty 'e', '||', v27
+            BeginTry
+            BeginCatch -> v34
+            EndTryCatch
+        EndObjectLiteralComputedMethod
+    v35 <- EndObjectLiteral
+EndPlainFunction
+v36 <- LoadInteger '-3'
+v37 <- BeginConstructor -> v38, v39, v40
+EndConstructor
+v41 <- LoadInteger '9'
+v42 <- BeginPlainFunction -> 
+EndPlainFunction
+v43 <- BeginConstructor -> v44, v45, v46
+    v47 <- GetProperty (guarded) v44, 'constructor'
+    v48 <- Construct (guarded) v47, [v43, v43]
+    v49 <- UnaryOperation v45, '--'
+    v50 <- CallFunction (guarded) v46, []
+    v51 <- GetProperty v46, 'arguments'
+    v52 <- BinaryOperation v51, '??', v51
+EndConstructor
+v53 <- Construct v43, [v41, v42]
+v54 <- GetProperty (guarded) v53, 'constructor'
+v55 <- Construct (guarded) v54, [v42, v36]
+v56 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+v57 <- CallMethod (guarded) v56, 'exec', []
+v58 <- LoadRegExp 'zixyz{1,32}' 'ysgimu'
+v59 <- Dup v56
+Update v54, '>>>', v59
+v60 <- CallFunction (guarded) v29, [v29]
+v61 <- GetProperty (guarded) v57, 'c'
+UpdateComputedProperty v55, v36, '+',v27
+v62 <- GetProperty v58, 'constructor'
+v63 <- CallFunction (guarded) v62, [v36, v37]
+// Program is interesting due to new coverage: 7 newly discovered edges in the CFG of the target
+
+

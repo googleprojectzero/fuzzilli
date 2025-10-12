@@ -1,0 +1,272 @@
+// ===== [ Program E645FFA6-9D03-4C1F-9959-12FB33C740C8 ] =====
+// Start of prefix code
+// Executing code generator IntegerGenerator
+v0 <- LoadInteger '129'
+v1 <- LoadInteger '195280295'
+v2 <- LoadInteger '45412'
+// Code generator finished
+// Executing code generator TimeZoneIdGenerator
+v3 <- LoadString '+03:00'
+v4 <- LoadString 'Europe/Vatican'
+v5 <- LoadString '-17:00'
+// Code generator finished
+// Executing code generator TypedArrayGenerator
+v6 <- LoadInteger '128'
+v7 <- CreateNamedVariable 'Uint16Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- LoadInteger '512'
+v10 <- CreateNamedVariable 'Int16Array', 'none'
+v11 <- Construct v10, [v9]
+v12 <- LoadInteger '10'
+v13 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v14 <- Construct v13, [v12]
+// Code generator finished
+// End of prefix code. 15 variables are now visible
+v15 <- BeginPlainFunction -> 
+EndPlainFunction
+v16 <- CreateNamedVariable 'Date', 'none'
+v17 <- BeginClassDefinition (decl) v15
+    BeginClassInstanceMethod 'm' -> v18, v19
+    EndClassInstanceMethod
+    ClassAddInstanceElement '4231758948' v16
+    ClassAddInstanceProperty 'h' v16
+    ClassAddInstanceElement '3277'
+EndClassDefinition
+v20 <- Construct v17, []
+v21 <- CreateNamedVariable 'Math', 'none'
+v22 <- LoadInteger '-5'
+v23 <- CallMethod v21, 'asinh', [v22]
+
+
+// ===== [ Program F2FD27F4-C826-46A6-A388-C6A43263B927 ] =====
+// Mutating E645FFA6-9D03-4C1F-9959-12FB33C740C8 with InputMutator (loose)
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '129'
+v1 <- LoadInteger '195280295'
+v2 <- LoadInteger '45412'
+v3 <- LoadString '+03:00'
+v4 <- LoadString 'Europe/Vatican'
+v5 <- LoadString '-17:00'
+v6 <- LoadInteger '128'
+v7 <- CreateNamedVariable 'Uint16Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- LoadInteger '512'
+v10 <- CreateNamedVariable 'Int16Array', 'none'
+v11 <- Construct v10, [v9]
+v12 <- LoadInteger '10'
+v13 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v14 <- Construct v13, [v12]
+v15 <- BeginPlainFunction -> 
+EndPlainFunction
+v16 <- CreateNamedVariable 'Date', 'none'
+v17 <- BeginClassDefinition (decl) v15
+    BeginClassInstanceMethod 'm' -> v18, v19
+    EndClassInstanceMethod
+    // Replacing input 0 (v16) with v4
+    ClassAddInstanceElement '4231758948' v4
+    ClassAddInstanceProperty 'h' v16
+    ClassAddInstanceElement '3277'
+EndClassDefinition
+v20 <- Construct v17, []
+v21 <- CreateNamedVariable 'Math', 'none'
+v22 <- LoadInteger '-5'
+v23 <- CallMethod v21, 'asinh', [v22]
+// Program may be interesting due to new coverage: 2574 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 7E2BE0FD-F0D4-4914-A5BE-441FDE741B5C ] =====
+// Mutating F2FD27F4-C826-46A6-A388-C6A43263B927 with ExplorationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '129'
+v1 <- LoadInteger '195280295'
+v2 <- LoadInteger '45412'
+v3 <- LoadString '+03:00'
+v4 <- LoadString 'Europe/Vatican'
+v5 <- LoadString '-17:00'
+v6 <- LoadInteger '128'
+v7 <- CreateNamedVariable 'Uint16Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- LoadInteger '512'
+v10 <- CreateNamedVariable 'Int16Array', 'none'
+v11 <- Construct v10, [v9]
+v12 <- LoadInteger '10'
+v13 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+// Exploring value v13
+v14 <- Construct (guarded) v13, [v3, v3, v4]
+// Exploring finished
+v15 <- Construct v13, [v12]
+v16 <- BeginPlainFunction -> 
+EndPlainFunction
+// Exploring value v16
+v17 <- CallFunction (guarded) v16, []
+// Exploring finished
+v18 <- CreateNamedVariable 'Date', 'none'
+v19 <- BeginClassDefinition (decl) v16
+    BeginClassInstanceMethod 'm' -> v20, v21
+    EndClassInstanceMethod
+    ClassAddInstanceElement '4231758948' v4
+    ClassAddInstanceProperty 'h' v18
+    ClassAddInstanceElement '3277'
+EndClassDefinition
+// Exploring value v19
+v22 <- GetProperty v19, 'prototype'
+// Exploring finished
+v23 <- Construct v19, []
+v24 <- CreateNamedVariable 'Math', 'none'
+// Exploring value v24
+v25 <- CallMethod (guarded) v24, 'tan', [v7]
+// Exploring finished
+v26 <- LoadInteger '-5'
+// Exploring value v26
+v27 <- Compare v26, '!=', v26
+// Exploring finished
+v28 <- CallMethod v24, 'asinh', [v26]
+// Exploring value v28
+v29 <- BinaryOperation v28, '>>>', v28
+// Program may be interesting due to new coverage: 2850 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 17D2BCBA-24A5-49DF-8F49-02A1D83ECDC4 ] =====
+// Mutating 7E2BE0FD-F0D4-4914-A5BE-441FDE741B5C with InputMutator (loose)
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '129'
+v1 <- LoadInteger '195280295'
+v2 <- LoadInteger '45412'
+v3 <- LoadString '+03:00'
+v4 <- LoadString 'Europe/Vatican'
+v5 <- LoadString '-17:00'
+v6 <- LoadInteger '128'
+v7 <- CreateNamedVariable 'Uint16Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- LoadInteger '512'
+v10 <- CreateNamedVariable 'Int16Array', 'none'
+v11 <- Construct v10, [v9]
+v12 <- LoadInteger '10'
+v13 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v14 <- Construct (guarded) v13, [v3, v3, v4]
+// Replacing input 0 (v13) with v7
+v15 <- Construct v7, [v12]
+v16 <- BeginPlainFunction -> 
+EndPlainFunction
+v17 <- CallFunction (guarded) v16, []
+v18 <- CreateNamedVariable 'Date', 'none'
+v19 <- BeginClassDefinition (decl) v16
+    BeginClassInstanceMethod 'm' -> v20, v21
+    EndClassInstanceMethod
+    // Replacing input 0 (v4) with v16
+    ClassAddInstanceElement '4231758948' v16
+    ClassAddInstanceProperty 'h' v18
+    ClassAddInstanceElement '3277'
+EndClassDefinition
+v22 <- GetProperty v19, 'prototype'
+v23 <- Construct v19, []
+v24 <- CreateNamedVariable 'Math', 'none'
+// Replacing input 0 (v24) with v24
+v25 <- CallMethod (guarded) v24, 'tan', [v7]
+v26 <- LoadInteger '-5'
+v27 <- Compare v26, '!=', v26
+v28 <- CallMethod v24, 'asinh', [v26]
+v29 <- BinaryOperation v28, '>>>', v28
+// Program may be interesting due to new coverage: 2822 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program F244292D-C6E8-4136-87EB-F38F38E41C5D ] =====
+// Mutating 17D2BCBA-24A5-49DF-8F49-02A1D83ECDC4 with ExplorationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '129'
+v1 <- LoadInteger '195280295'
+v2 <- LoadInteger '45412'
+v3 <- LoadString '+03:00'
+v4 <- LoadString 'Europe/Vatican'
+v5 <- LoadString '-17:00'
+v6 <- LoadInteger '128'
+v7 <- CreateNamedVariable 'Uint16Array', 'none'
+v8 <- Construct v7, [v6]
+// Exploring value v8
+SetElement v8, '102', v8
+// Exploring finished
+v9 <- LoadInteger '512'
+v10 <- CreateNamedVariable 'Int16Array', 'none'
+// Exploring value v10
+v11 <- GetProperty v10, 'length'
+// Exploring finished
+v12 <- Construct v10, [v9]
+v13 <- LoadInteger '10'
+// Exploring value v13
+v14 <- BinaryOperation v13, '>>', v13
+// Exploring finished
+v15 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v16 <- Construct (guarded) v15, [v3, v3, v4]
+v17 <- Construct v7, [v13]
+// Exploring value v17
+v18 <- GetProperty (guarded) v17, 'map'
+v19 <- Construct (guarded) v18, [v5]
+// Exploring finished
+v20 <- BeginPlainFunction -> 
+EndPlainFunction
+v21 <- CallFunction (guarded) v20, []
+// Exploring value v21
+v22 <- BinaryOperation v21, '??', v21
+// Exploring finished
+v23 <- CreateNamedVariable 'Date', 'none'
+// Exploring value v23
+v24 <- GetProperty (guarded) v23, 'UTC'
+v25 <- Construct (guarded) v24, [v15, v5, v1, v4, v4, v15, v23]
+// Exploring finished
+v26 <- BeginClassDefinition (decl) v20
+    BeginClassInstanceMethod 'm' -> v27, v28
+    EndClassInstanceMethod
+    ClassAddInstanceElement '4231758948' v20
+    ClassAddInstanceProperty 'h' v23
+    ClassAddInstanceElement '3277'
+EndClassDefinition
+// Exploring value v26
+v29 <- GetProperty v26, 'name'
+// Exploring finished
+v30 <- GetProperty v26, 'prototype'
+v31 <- Construct v26, []
+v32 <- CreateNamedVariable 'Math', 'none'
+v33 <- CallMethod (guarded) v32, 'tan', [v7]
+// Exploring value v33
+v34 <- BinaryOperation v33, '-', v33
+// Exploring finished
+v35 <- LoadInteger '-5'
+v36 <- Compare v35, '!=', v35
+v37 <- CallMethod v32, 'asinh', [v35]
+v38 <- BinaryOperation v37, '>>>', v37
+// Program may be interesting due to new coverage: 2965 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 877B4EF0-8943-4E42-98B8-C092DCA83E9E ] =====
+// Minimizing F244292D-C6E8-4136-87EB-F38F38E41C5D
+v0 <- LoadInteger '195280295'
+v1 <- LoadString '+03:00'
+v2 <- LoadString 'Europe/Vatican'
+v3 <- LoadString '-17:00'
+v4 <- LoadInteger '128'
+v5 <- CreateNamedVariable 'Uint16Array', 'none'
+v6 <- Construct v5, [v4]
+SetElement v6, '102', v6
+v7 <- LoadInteger '512'
+v8 <- CreateNamedVariable 'Int16Array', 'none'
+v9 <- GetProperty v8, 'length'
+v10 <- Construct v8, [v7]
+v11 <- LoadInteger '10'
+v12 <- BinaryOperation v11, '>>', v11
+v13 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v14 <- CallFunction (guarded) v13, [v1, v1, v2]
+v15 <- Construct v5, [v11]
+v16 <- GetProperty (guarded) v15, 'map'
+v17 <- CallFunction (guarded) v16, [v3]
+v18 <- BeginPlainFunction -> 
+EndPlainFunction
+v19 <- CallFunction (guarded) v18, []
+v20 <- BinaryOperation v19, '??', v19
+v21 <- CreateNamedVariable 'Date', 'none'
+v22 <- GetProperty (guarded) v21, 'UTC'
+v23 <- CallFunction (guarded) v22, [v13, v3, v0, v2, v2, v13, v21]
+v24 <- BeginClassDefinition (decl) v18
+EndClassDefinition
+// Program is interesting due to new coverage: 1 newly discovered edge in the CFG of the target
+
+

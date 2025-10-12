@@ -139,6 +139,10 @@ void cov_finish_initialization(struct cov_context* context, int should_track_edg
     context->current_feedback_nexus = NULL;
     context->previous_feedback_nexus = NULL;
 
+    // Initialize turbofan optimization bits tracking
+    context->turbofan_optimization_bits_current = 0;
+    context->turbofan_optimization_bits_previous = 0;
+
     // Zeroth edge is ignored, see above.
     clear_edge(context->virgin_bits, 0);
     clear_edge(context->crash_bits, 0);
@@ -213,12 +217,18 @@ int cov_evaluate(struct cov_context* context, struct edge_set* new_edges)
     
     // Update feedback nexus data
     cov_update_feedback_nexus(context);
-    
+
+    // Update optimization bits from shared memory
+    cov_update_optimization_bits(context);
+
     // Check for feedback nexus delta
     int feedback_nexus_delta = cov_evaluate_feedback_nexus(context);
     
+    // Check for turbofan or maglev optimization bits delta
+    int optimization_bits_delta = cov_evaluate_optimization_bits(context);
+
     // Return 1 if either new edges found OR feedback nexus delta detected
-    return (num_new_edges > 0) || feedback_nexus_delta;
+    return (num_new_edges > 0) || feedback_nexus_delta || optimization_bits_delta;
 }
 
 int cov_evaluate_crash(struct cov_context* context)
@@ -249,6 +259,7 @@ void cov_clear_bitmap(struct cov_context* context)
     unsigned char* edges_ptr = (unsigned char*)context->shmem + offsetof(struct shmem_data, edges);
     memset(edges_ptr, 0, context->bitmap_size);
     clear_feedback_nexus(context);
+    clear_optimization_bits(context);
 }
 
 int cov_get_edge_counts(struct cov_context* context, struct edge_counts* edges)
@@ -297,9 +308,15 @@ void cov_reset_state(struct cov_context* context) {
         free(context->previous_feedback_nexus);
         context->previous_feedback_nexus = NULL;
     }
+
+    // Reset turbofan optimization bits tracking
+    context->turbofan_optimization_bits_current = 0;
+    context->turbofan_optimization_bits_previous = 0;
+
+    // // Reset maglev optimization bits tracking
+    // context->maglev_optimization_bits_current = 0;
+    // context->maglev_optimization_bits_previous = 0;
 }
-
-
 
 int cov_evaluate_feedback_nexus(struct cov_context* context) {
     if (!context->current_feedback_nexus || !context->previous_feedback_nexus) {
@@ -347,3 +364,21 @@ void clear_feedback_nexus(struct cov_context* context) {
         context->current_feedback_nexus->count = 0;
     }
 }   
+
+int cov_evaluate_optimization_bits(struct cov_context* context) {
+    if (!context->shmem) return 0;
+    return (context->turbofan_optimization_bits_current != context->turbofan_optimization_bits_previous);
+}
+
+void cov_update_optimization_bits(struct cov_context* context) {
+    if (!context->shmem) return;
+    context->turbofan_optimization_bits_current = context->shmem->turbofan_optimization_bits;
+    // context->maglev_optimization_bits_current = context->shmem->maglev_optimization_bits;
+}
+
+void clear_optimization_bits(struct cov_context* context) {
+    context->turbofan_optimization_bits_previous = context->turbofan_optimization_bits_current;
+    context->turbofan_optimization_bits_current = 0;
+    // context->maglev_optimization_bits_previous = context->maglev_optimization_bits_current;
+    // context->maglev_optimization_bits_current = 0;
+}

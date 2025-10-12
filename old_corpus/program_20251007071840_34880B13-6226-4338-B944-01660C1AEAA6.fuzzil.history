@@ -1,0 +1,67 @@
+// ===== [ Program 9B28B2C8-ED90-497C-856D-5473CF9992D8 ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator TrivialFunctionGenerator
+v0 <- BeginPlainFunction -> 
+EndPlainFunction
+// Code generator finished
+// Executing code generator IntegerGenerator
+v1 <- LoadInteger '9007199254740992'
+v2 <- LoadInteger '-9116'
+v3 <- LoadInteger '-41840'
+// Code generator finished
+// Executing code generator FloatGenerator
+v4 <- LoadFloat '0.6150267507644459'
+v5 <- LoadFloat '-1.3155524036647507e+308'
+v6 <- LoadFloat '1.7976931348623157e+308'
+// Code generator finished
+// Executing code generator FloatArrayGenerator
+v7 <- CreateFloatArray [-4.0, -4.0, 933474.0442361895, 1.1190283038203854e+308, 1000000000000.0, 33870.76220817864, -6.621157678492814e+307, -0.0, -2.0110873526221854e+307, -2.0]
+v8 <- CreateFloatArray [3.0, -192.8227012811177, 0.3580000814063361, 1.7976931348623157e+308, -416881.8486832313, 2.2250738585072014e-308, 1000000000.0, -2.0, 226461.34273332497]
+v9 <- CreateFloatArray [1.759112812125645, 5.0, 140.8246621008875, 1000.0, -2.2250738585072014e-308]
+// Code generator finished
+// Executing code generator FloatGenerator
+v10 <- LoadFloat '1e-15'
+v11 <- LoadFloat '2.220446049250313e-16'
+v12 <- LoadFloat '0.5453870250012162'
+// Code generator finished
+// End of prefix code. 13 variables are now visible
+// Executing code generator ReassignmentGenerator
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v13 <- BeginClassDefinition (exp) v0
+    // Executing code generator ClassInstanceElementGenerator
+    ClassAddInstanceElement '8' v0
+    // Code generator finished
+    // Executing code generator ClassInstanceElementGenerator
+    ClassAddInstanceElement '2147483647'
+    // Code generator finished
+    // Executing code generator ClassStaticPropertyGenerator
+    ClassAddStaticProperty 'c'
+    // Code generator finished
+EndClassDefinition
+v14 <- Construct v13, []
+v15 <- Construct v13, []
+v16 <- Construct v13, []
+// Code generator finished
+// Executing code generator TimeZoneIdGenerator
+v17 <- LoadString '+19:00'
+v18 <- LoadString '-02:00'
+v19 <- LoadString '-11:00'
+// Program may be interesting due to new coverage: 3354 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 34880B13-6226-4338-B944-01660C1AEAA6 ] =====
+// Minimizing 9B28B2C8-ED90-497C-856D-5473CF9992D8
+v0 <- BeginPlainFunction -> 
+EndPlainFunction
+v1 <- BeginClassDefinition (exp) v0
+    ClassAddInstanceElement '8' v0
+    ClassAddInstanceElement '2147483647'
+EndClassDefinition
+v2 <- Construct v1, []
+// Program is interesting due to new coverage: 99 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 29 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 1 newly discovered edge in the CFG of the target
+
+

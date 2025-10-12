@@ -1,0 +1,65 @@
+// ===== [ Program 61E6683D-A335-45D3-BDAA-90C8D39E0AC7 ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator TypedArrayGenerator
+v0 <- LoadInteger '251'
+v1 <- CreateNamedVariable 'Uint32Array', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '1419'
+v4 <- CreateNamedVariable 'Int32Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '3874'
+v7 <- CreateNamedVariable 'Int32Array', 'none'
+v8 <- Construct v7, [v6]
+// Code generator finished
+// Executing code generator ArrayGenerator
+v9 <- CreateArray [v8, v0, v8, v3, v8]
+v10 <- CreateArray [v0, v9, v2, v0]
+v11 <- CreateArray [v10, v10, v10]
+// Code generator finished
+// End of prefix code. 12 variables are now visible
+// Executing code generator AsyncFunctionGenerator
+v12 <- BeginAsyncFunction -> v13, v14, v15, v16
+    // Executing code generator ComputedPropertyConfigurationGenerator
+    // Code generator finished
+    // Executing code generator ApiConstructorCallGenerator
+    BeginTry
+        v17 <- Construct v1, []
+    BeginCatch -> v18
+    EndTryCatch
+    // Code generator finished
+    v19 <- Await v16
+    Return v19
+EndAsyncFunction
+v20 <- CallFunction (guarded) v12, [v0, v10, v1, v6]
+// Code generator finished
+// Executing code generator TypedArrayGenerator
+v21 <- LoadInteger '15'
+v22 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v23 <- Construct v22, [v21]
+v24 <- LoadInteger '512'
+v25 <- CreateNamedVariable 'BigUint64Array', 'none'
+v26 <- Construct v25, [v24]
+v27 <- LoadInteger '3'
+v28 <- CreateNamedVariable 'Int16Array', 'none'
+v29 <- Construct v28, [v27]
+// Program may be interesting due to new coverage: 5257 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 896306D5-74C1-4E63-BE50-61B828E8842F ] =====
+// Minimizing 61E6683D-A335-45D3-BDAA-90C8D39E0AC7
+v0 <- LoadInteger '251'
+v1 <- CreateNamedVariable 'Uint32Array', 'none'
+v2 <- LoadInteger '3874'
+v3 <- CreateNamedVariable 'Int32Array', 'none'
+v4 <- Construct v3, [v2]
+v5 <- CreateArray [v0, v4, v1, v0]
+v6 <- BeginAsyncFunction -> v7, v8, v9, v10
+    v11 <- Await v10
+EndAsyncFunction
+v12 <- CallFunction v6, [v0]
+// Program is interesting due to new coverage: 122 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 71 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 67 newly discovered edges in the CFG of the target
+
+

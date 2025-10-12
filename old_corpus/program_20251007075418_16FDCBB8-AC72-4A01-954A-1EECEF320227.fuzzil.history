@@ -1,0 +1,170 @@
+// ===== [ Program A6F74EF4-38F5-40DC-AFD1-CF5E39977A75 ] =====
+// Start of prefix code
+// Executing code generator BigIntGenerator
+v0 <- LoadBigInt '-63907'
+v1 <- LoadBigInt '13'
+v2 <- LoadBigInt '9223372036854775807'
+// Code generator finished
+// Executing code generator IntArrayGenerator
+v3 <- CreateIntArray [2147483647, 536870912, 1073741824, -2, 1380087778, 1721788652, 7, 7098, 102802128]
+v4 <- CreateIntArray [-7, -1729, 127, 65535]
+v5 <- CreateIntArray [127, 10, -65537, -65536, 12, 127, -8, -9223372036854775808, 536870887]
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v6 <- BeginClassDefinition (exp)
+    // Executing code generator ClassStaticMethodGenerator
+    BeginClassStaticMethod 'm' -> v7, v8, v9, v10
+        // Executing code generator ElementUpdateGenerator
+        UpdateElement v5, '10000', '**', v9
+        // Code generator finished
+        // Executing code generator MethodCallGenerator
+        v11 <- CallMethod (guarded) v7, 'm', [v9, v10, v0, v7]
+        // Code generator finished
+        // Executing code generator UpdateGenerator
+        Update v4, '-', v3
+        // Code generator finished
+        // Executing code generator ConstructorCallGenerator
+        v12 <- Construct (guarded) v11, [v3, v2]
+        // Code generator finished
+        Return v2
+    EndClassStaticMethod
+    // Code generator finished
+    // Executing code generator ClassInstanceComputedPropertyGenerator
+    ClassAddInstanceComputedProperty v0
+    // Code generator finished
+    // Executing code generator ClassStaticComputedPropertyGenerator
+    ClassAddStaticComputedProperty v2 v1
+    // Code generator finished
+    // Executing code generator ClassInstanceComputedPropertyGenerator
+    ClassAddInstanceComputedProperty v5 v2
+    // Code generator finished
+EndClassDefinition
+v13 <- Construct v6, []
+v14 <- Construct v6, []
+v15 <- Construct v6, []
+// Code generator finished
+// End of prefix code. 10 variables are now visible
+v16 <- LoadString 'Z'
+v17 <- CreateNamedVariable 'Date', 'none'
+SetProperty v17, 'valueOf', v17
+v18 <- BeginClassDefinition (decl) v17
+    BeginClassConstructor -> v19, v20, v21
+        CallSuperConstructor []
+        v22 <- BinaryOperation v17, '*', v16
+    EndClassConstructor
+EndClassDefinition
+v23 <- Construct v18, []
+v24 <- CreateFloatArray [-373832.123721624, -1000.0, -4.482210560378615, 1.0, 1.7976931348623157e+308, 2.2250738585072014e-308, -1000.0, -2.2250738585072014e-308, 0.2619068003763766]
+v25 <- GetElement v24, '2'
+v26 <- BeginClassDefinition (decl)
+EndClassDefinition
+v27 <- CallMethod (guarded) v17, 'apply', [v26, v25]
+
+
+// ===== [ Program AA4E1F1C-C05E-4197-80CF-A2E98A439E70 ] =====
+// Mutating A6F74EF4-38F5-40DC-AFD1-CF5E39977A75 with OperationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadBigInt '-63907'
+v1 <- LoadBigInt '13'
+v2 <- LoadBigInt '9223372036854775807'
+v3 <- CreateIntArray [2147483647, 536870912, 1073741824, -2, 1380087778, 1721788652, 7, 7098, 102802128]
+v4 <- CreateIntArray [-7, -1729, 127, 65535]
+v5 <- CreateIntArray [127, 10, -65537, -65536, 12, 127, -8, -9223372036854775808, 536870887]
+v6 <- BeginClassDefinition (exp)
+    // Mutating next operation
+    BeginClassStaticMethod 'valueOf' -> v7, v8, v9, v10
+        UpdateElement v5, '10000', '**', v9
+        v11 <- CallMethod (guarded) v7, 'm', [v9, v10, v0, v7]
+        Update v4, '-', v3
+        // Mutating next operation
+        v12 <- Construct (guarded) v11, [v3, v2, v7, v6, v7]
+        Return v2
+    EndClassStaticMethod
+    ClassAddInstanceComputedProperty v0
+    ClassAddStaticComputedProperty v2 v1
+    ClassAddInstanceComputedProperty v5 v2
+EndClassDefinition
+v13 <- Construct v6, []
+v14 <- Construct v6, []
+v15 <- Construct v6, []
+v16 <- LoadString 'Z'
+v17 <- CreateNamedVariable 'Date', 'none'
+SetProperty v17, 'valueOf', v17
+v18 <- BeginClassDefinition (decl) v17
+    BeginClassConstructor -> v19, v20, v21
+        // Mutating next operation
+        CallSuperConstructor [v21, v17]
+        v22 <- BinaryOperation v17, '*', v16
+    EndClassConstructor
+EndClassDefinition
+v23 <- Construct v18, []
+v24 <- CreateFloatArray [-373832.123721624, -1000.0, -4.482210560378615, 1.0, 1.7976931348623157e+308, 2.2250738585072014e-308, -1000.0, -2.2250738585072014e-308, 0.2619068003763766]
+v25 <- GetElement v24, '2'
+v26 <- BeginClassDefinition (decl)
+EndClassDefinition
+v27 <- CallMethod (guarded) v17, 'apply', [v26, v25]
+// Program may be interesting due to new coverage: 3087 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 64B21C15-7AA5-4C81-86BE-D8EBF21D7263 ] =====
+// Mutating AA4E1F1C-C05E-4197-80CF-A2E98A439E70 with ProbingMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadBigInt '-63907'
+v1 <- LoadBigInt '13'
+v2 <- LoadBigInt '9223372036854775807'
+v3 <- CreateIntArray [2147483647, 536870912, 1073741824, -2, 1380087778, 1721788652, 7, 7098, 102802128]
+v4 <- CreateIntArray [-7, -1729, 127, 65535]
+v5 <- CreateIntArray [127, 10, -65537, -65536, 12, 127, -8, -9223372036854775808, 536870887]
+v6 <- BeginClassDefinition (exp)
+    BeginClassStaticMethod 'valueOf' -> v7, v8, v9, v10
+        UpdateElement v5, '10000', '**', v9
+        v11 <- CallMethod (guarded) v7, 'm', [v9, v10, v0, v7]
+        Update v4, '-', v3
+        v12 <- Construct (guarded) v11, [v3, v2, v7, v6, v7]
+        Return v2
+    EndClassStaticMethod
+    ClassAddInstanceComputedProperty v0
+    ClassAddStaticComputedProperty v2 v1
+    ClassAddInstanceComputedProperty v5 v2
+EndClassDefinition
+v13 <- Construct v6, []
+v14 <- Construct v6, []
+v15 <- Construct v6, []
+v16 <- LoadString 'Z'
+v17 <- CreateNamedVariable 'Date', 'none'
+// Probing value v17
+v18 <- CreateNamedVariable 'Symbol', 'none'
+v19 <- GetProperty v18, 'toPrimitive'
+ConfigureComputedProperty v17, v19, 'PropertyFlags(rawValue: 1)', 'value' [["v17"]]
+// Probing finished
+SetProperty v17, 'valueOf', v17
+v20 <- BeginClassDefinition (decl) v17
+    BeginClassConstructor -> v21, v22, v23
+        CallSuperConstructor [v23, v17]
+        v24 <- BinaryOperation v17, '*', v16
+    EndClassConstructor
+EndClassDefinition
+v25 <- Construct v20, []
+v26 <- CreateFloatArray [-373832.123721624, -1000.0, -4.482210560378615, 1.0, 1.7976931348623157e+308, 2.2250738585072014e-308, -1000.0, -2.2250738585072014e-308, 0.2619068003763766]
+v27 <- GetElement v26, '2'
+v28 <- BeginClassDefinition (decl)
+EndClassDefinition
+v29 <- CallMethod (guarded) v17, 'apply', [v28, v27]
+// Program may be interesting due to new coverage: 3545 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 16FDCBB8-AC72-4A01-954A-1EECEF320227 ] =====
+// Minimizing 64B21C15-7AA5-4C81-86BE-D8EBF21D7263
+v0 <- CreateNamedVariable 'Date', 'none'
+v1 <- CreateNamedVariable 'Symbol', 'none'
+v2 <- GetProperty v1, 'toPrimitive'
+ConfigureComputedProperty v0, v2, 'PropertyFlags(rawValue: 1)', 'value' [["v0"]]
+v3 <- BeginClassDefinition (decl) v0
+    BeginClassConstructor -> v4, v5, v6
+        CallSuperConstructor [v6, v0]
+    EndClassConstructor
+EndClassDefinition
+v7 <- Construct v3, []
+// Program is interesting due to new coverage: 5 newly discovered edges in the CFG of the target
+
+

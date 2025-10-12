@@ -1,0 +1,274 @@
+// ===== [ Program 24252657-D53B-4941-AD44-444EECDE347F ] =====
+// Start of prefix code
+// Executing code generator ArrayGenerator
+v0 <- CreateArray []
+// Code generator finished
+// Executing code generator IntArrayGenerator
+v1 <- CreateIntArray [4096, 62895]
+v2 <- CreateIntArray [268435439, 22208, -16, 7, -9007199254740992, 44429]
+v3 <- CreateIntArray [785291278, 9223372036854775807]
+// Code generator finished
+// Executing code generator TypedArrayGenerator
+v4 <- LoadInteger '83'
+v5 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v6 <- Construct v5, [v4]
+v7 <- LoadInteger '223'
+v8 <- CreateNamedVariable 'Int8Array', 'none'
+v9 <- Construct v8, [v7]
+v10 <- LoadInteger '64'
+v11 <- CreateNamedVariable 'Int8Array', 'none'
+v12 <- Construct v11, [v10]
+// Code generator finished
+// Executing code generator IntegerGenerator
+v13 <- LoadInteger '-6'
+v14 <- LoadInteger '-9007199254740991'
+v15 <- LoadInteger '6'
+// Code generator finished
+// End of prefix code. 16 variables are now visible
+v16 <- LoadInteger '15413'
+v17 <- BeginClassDefinition (exp)
+    BeginClassStaticMethod 'valueOf' -> v18, v19, v20
+        SetComputedSuperProperty v16, v18
+    EndClassStaticMethod
+EndClassDefinition
+v21 <- LoadInteger '16'
+BeginRepeatLoop '5'
+    v22 <- LoadInteger '1073741824'
+    v23 <- UnaryOperation '++', v21
+    v24 <- CreateNamedVariable 'Int8Array', 'none'
+    Reassign v24, v22
+EndRepeatLoop
+v25 <- LoadFloat '-696.8889546228363'
+v26 <- CallMethod (guarded) v25, 'call', [v25, v25]
+
+
+// ===== [ Program 35918AFB-D6C9-4286-9A2B-73A7DC3CE01B ] =====
+// Mutating 24252657-D53B-4941-AD44-444EECDE347F with SpliceMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- CreateArray []
+v1 <- CreateIntArray [4096, 62895]
+v2 <- CreateIntArray [268435439, 22208, -16, 7, -9007199254740992, 44429]
+v3 <- CreateIntArray [785291278, 9223372036854775807]
+// Splicing instruction 22 (BeginClassDefinition) from 072C415C-8ECA-4229-81AA-88ECBEF846CF
+v4 <- BeginClassDefinition (exp)
+EndClassDefinition
+// Splicing done
+// Splicing instruction 93 (SetProperty) from 1D7413F5-1D84-4C6F-8A9D-1566C1BD038B
+v5 <- BeginConstructor -> v6
+    SetProperty v6, 'a', v6
+EndConstructor
+// Splicing done
+v7 <- LoadInteger '83'
+v8 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v9 <- Construct v8, [v7]
+v10 <- LoadInteger '223'
+v11 <- CreateNamedVariable 'Int8Array', 'none'
+v12 <- Construct v11, [v10]
+v13 <- LoadInteger '64'
+v14 <- CreateNamedVariable 'Int8Array', 'none'
+v15 <- Construct v14, [v13]
+v16 <- LoadInteger '-6'
+v17 <- LoadInteger '-9007199254740991'
+v18 <- LoadInteger '6'
+v19 <- LoadInteger '15413'
+v20 <- BeginClassDefinition (exp)
+    BeginClassStaticMethod 'valueOf' -> v21, v22, v23
+        SetComputedSuperProperty v19, v21
+    EndClassStaticMethod
+EndClassDefinition
+v24 <- LoadInteger '16'
+BeginRepeatLoop '5'
+    v25 <- LoadInteger '1073741824'
+    v26 <- UnaryOperation '++', v24
+    v27 <- CreateNamedVariable 'Int8Array', 'none'
+    Reassign v27, v25
+EndRepeatLoop
+v28 <- LoadFloat '-696.8889546228363'
+v29 <- CallMethod (guarded) v28, 'call', [v28, v28]
+// Program may be interesting due to new coverage: 2572 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 3C344B92-A5D6-4BE5-86B9-3B802404C07D ] =====
+// Mutating 35918AFB-D6C9-4286-9A2B-73A7DC3CE01B with SpliceMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- CreateArray []
+v1 <- CreateIntArray [4096, 62895]
+v2 <- CreateIntArray [268435439, 22208, -16, 7, -9007199254740992, 44429]
+v3 <- CreateIntArray [785291278, 9223372036854775807]
+v4 <- BeginClassDefinition (exp)
+    // Splicing instruction 133 (EndClassInstanceMethod) from DA967556-47AB-415A-9228-26BBA4C83DB5
+    BeginClassInstanceMethod 'o' -> v5, v6
+    EndClassInstanceMethod
+    // Splicing done
+    // Splicing instruction 18 (BeginClassStaticMethod) from E378FD9B-0147-4588-AC3D-C5ED75876C98
+    BeginClassStaticMethod 'toString' -> v7
+        SetComputedSuperProperty v1, v1
+        v8 <- CreateNamedVariable 'Math', 'none'
+        v9 <- LoadInteger '4294967296'
+        v10 <- LoadInteger '-109524960'
+        v11 <- LoadInteger '78'
+        v12 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+    EndClassStaticMethod
+    // Splicing done
+EndClassDefinition
+v13 <- BeginConstructor -> v14
+    SetProperty v14, 'a', v14
+EndConstructor
+v15 <- LoadInteger '83'
+v16 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v17 <- Construct v16, [v15]
+v18 <- LoadInteger '223'
+v19 <- CreateNamedVariable 'Int8Array', 'none'
+v20 <- Construct v19, [v18]
+v21 <- LoadInteger '64'
+v22 <- CreateNamedVariable 'Int8Array', 'none'
+v23 <- Construct v22, [v21]
+v24 <- LoadInteger '-6'
+v25 <- LoadInteger '-9007199254740991'
+v26 <- LoadInteger '6'
+v27 <- LoadInteger '15413'
+v28 <- BeginClassDefinition (exp)
+    BeginClassStaticMethod 'valueOf' -> v29, v30, v31
+        SetComputedSuperProperty v27, v29
+    EndClassStaticMethod
+EndClassDefinition
+v32 <- LoadInteger '16'
+BeginRepeatLoop '5'
+    v33 <- LoadInteger '1073741824'
+    // Splicing instruction 1 (BeginObjectLiteral) from EBDABACB-7807-4E68-9465-0F47C4F8D826
+    v34 <- LoadString 'find'
+    BeginObjectLiteral
+        ObjectLiteralCopyProperties v34
+    v35 <- EndObjectLiteral
+    // Splicing done
+    // Splicing instruction 28 (CallFunction) from C6A19319-44EE-436B-9051-9EF112BAED5A
+    v36 <- BeginClassDefinition (exp)
+        BeginClassStaticGetter `b` -> v37
+        EndClassStaticGetter
+    EndClassDefinition
+    v38 <- CallFunction (guarded) v36, []
+    // Splicing done
+    v39 <- UnaryOperation '++', v32
+    v40 <- CreateNamedVariable 'Int8Array', 'none'
+    // Splicing instruction 27 (DeleteProperty) from 99C7BAE4-8274-4B52-84A2-8988B6A59A5B
+    v41 <- BeginClassDefinition (exp)
+        BeginClassStaticGetter `b` -> v42
+        EndClassStaticGetter
+    EndClassDefinition
+    v43 <- Construct v41, []
+    v44 <- DeleteProperty v43, 'f'
+    // Splicing done
+    Reassign v40, v33
+EndRepeatLoop
+v45 <- LoadFloat '-696.8889546228363'
+v46 <- CallMethod (guarded) v45, 'call', [v45, v45]
+// Program may be interesting due to new coverage: 2950 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 8A902B62-AA71-489D-81B6-2F4C50B1530D ] =====
+// Mutating 3C344B92-A5D6-4BE5-86B9-3B802404C07D with ExplorationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- CreateArray []
+v1 <- CreateIntArray [4096, 62895]
+v2 <- CreateIntArray [268435439, 22208, -16, 7, -9007199254740992, 44429]
+v3 <- CreateIntArray [785291278, 9223372036854775807]
+// Exploring value v3
+v4 <- GetElement v3, '1'
+// Exploring finished
+v5 <- BeginClassDefinition (exp)
+    BeginClassInstanceMethod 'o' -> v6, v7
+    EndClassInstanceMethod
+    BeginClassStaticMethod 'toString' -> v8
+        SetComputedSuperProperty v1, v1
+        v9 <- CreateNamedVariable 'Math', 'none'
+        v10 <- LoadInteger '4294967296'
+        v11 <- LoadInteger '-109524960'
+        v12 <- LoadInteger '78'
+        v13 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+    EndClassStaticMethod
+EndClassDefinition
+// Exploring value v5
+v14 <- GetProperty v5, 'length'
+// Exploring finished
+v15 <- BeginConstructor -> v16
+    SetProperty v16, 'a', v16
+EndConstructor
+v17 <- LoadInteger '83'
+v18 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v19 <- Construct v18, [v17]
+v20 <- LoadInteger '223'
+// Exploring value v20
+v21 <- BinaryOperation v20, '^', v20
+// Exploring finished
+v22 <- CreateNamedVariable 'Int8Array', 'none'
+v23 <- Construct v22, [v20]
+v24 <- LoadInteger '64'
+v25 <- CreateNamedVariable 'Int8Array', 'none'
+// Exploring value v25
+v26 <- Construct (guarded) v25, [v19, v19, v24]
+// Exploring finished
+v27 <- Construct v25, [v24]
+v28 <- LoadInteger '-6'
+// Exploring value v28
+v29 <- UnaryOperation v28, '--'
+// Exploring finished
+v30 <- LoadInteger '-9007199254740991'
+v31 <- LoadInteger '6'
+v32 <- LoadInteger '15413'
+v33 <- BeginClassDefinition (exp)
+    BeginClassStaticMethod 'valueOf' -> v34, v35, v36
+        SetComputedSuperProperty v32, v34
+    EndClassStaticMethod
+EndClassDefinition
+v37 <- LoadInteger '16'
+BeginRepeatLoop '5'
+    v38 <- LoadInteger '1073741824'
+    // Exploring value v38
+    v39 <- BinaryOperation v38, '<<', v38
+    // Exploring finished
+    v40 <- LoadString 'find'
+    BeginObjectLiteral
+        ObjectLiteralCopyProperties v40
+    v41 <- EndObjectLiteral
+    v42 <- BeginClassDefinition (exp)
+        BeginClassStaticGetter `b` -> v43
+        EndClassStaticGetter
+    EndClassDefinition
+    v44 <- CallFunction (guarded) v42, []
+    v45 <- UnaryOperation '++', v37
+    v46 <- CreateNamedVariable 'Int8Array', 'none'
+    v47 <- BeginClassDefinition (exp)
+        BeginClassStaticGetter `b` -> v48
+        EndClassStaticGetter
+    EndClassDefinition
+    // Exploring value v47
+    v49 <- CallFunction (guarded) v47, []
+    // Exploring finished
+    v50 <- Construct v47, []
+    // Exploring value v50
+    v51 <- GetProperty (guarded) v50, '__lookupGetter__'
+    v52 <- Construct (guarded) v51, [v47]
+    // Exploring finished
+    v53 <- DeleteProperty v50, 'f'
+    Reassign v46, v38
+EndRepeatLoop
+v54 <- LoadFloat '-696.8889546228363'
+// Exploring value v54
+v55 <- BinaryOperation v54, '-', v54
+// Exploring finished
+v56 <- CallMethod (guarded) v54, 'call', [v54, v54]
+// Exploring value v56
+v57 <- BinaryOperation v56, '??', v56
+// Program may be interesting due to new coverage: 3100 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program A5CB8E3E-2482-47D6-A505-4D0755A8DDFC ] =====
+// Minimizing 8A902B62-AA71-489D-81B6-2F4C50B1530D
+v0 <- LoadInteger '83'
+v1 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v2 <- Construct v1, [v0]
+v3 <- CreateNamedVariable 'Int8Array', 'none'
+v4 <- Construct v3, [v2]
+// Program is interesting due to new coverage: 36 newly discovered edges in the CFG of the target
+
+

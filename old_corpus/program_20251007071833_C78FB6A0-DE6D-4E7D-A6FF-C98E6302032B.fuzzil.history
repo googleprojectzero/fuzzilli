@@ -1,0 +1,100 @@
+// ===== [ Program 594A68A2-5056-4713-B0DE-71D675E98DC3 ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator FloatGenerator
+v0 <- LoadFloat '-535697.392102279'
+v1 <- LoadFloat '-0.0'
+v2 <- LoadFloat '-1000000000000.0'
+// Code generator finished
+// Executing code generator IntegerGenerator
+v3 <- LoadInteger '2147483649'
+v4 <- LoadInteger '2030361561'
+v5 <- LoadInteger '1560707596'
+// Code generator finished
+// Executing code generator BuiltinObjectInstanceGenerator
+v6 <- CreateNamedVariable 'Array', 'none'
+v7 <- LoadInteger '9'
+v8 <- Construct v6, [v7]
+// Code generator finished
+// Executing code generator IntegerGenerator
+v9 <- LoadInteger '-1750366118'
+v10 <- LoadInteger '-56122'
+v11 <- LoadInteger '-4'
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v12 <- BeginClassDefinition (decl)
+    // Executing code generator ClassInstanceMethodGenerator
+    BeginClassInstanceMethod 'p' -> v13, v14, v15, v16
+        // Executing code generator MethodCallGenerator
+        v17 <- CallMethod (guarded) v13, 'reverse', []
+        // Code generator finished
+        // Executing code generator ApiFunctionCallGenerator
+        BeginTry
+            v18 <- CallFunction v6, [v16]
+        BeginCatch -> v19
+        EndTryCatch
+        // Code generator finished
+        Return v17
+    EndClassInstanceMethod
+    // Code generator finished
+    // Executing code generator ClassInstancePropertyGenerator
+    ClassAddInstanceProperty 'h' v1
+    // Code generator finished
+    // Executing code generator ClassStaticElementGenerator
+    ClassAddStaticElement '163' v7
+    // Code generator finished
+    // Executing code generator ClassInstanceComputedPropertyGenerator
+    ClassAddInstanceComputedProperty v1 v10
+    // Code generator finished
+    // Executing code generator ClassPrivateInstancePropertyGenerator
+    ClassAddPrivateInstanceProperty 'f' v3
+    // Code generator finished
+    // Executing code generator ClassPrivateStaticPropertyGenerator
+    ClassAddPrivateStaticProperty 'g'
+    // Code generator finished
+EndClassDefinition
+v20 <- Construct v12, []
+v21 <- Construct v12, []
+v22 <- Construct v12, []
+// Code generator finished
+// End of prefix code. 16 variables are now visible
+// Executing code generator InstanceOfGenerator
+v23 <- TestInstanceOf v3, v12
+// Code generator finished
+// Executing code generator IntegerGenerator
+v24 <- LoadInteger '0'
+v25 <- LoadInteger '-1073741824'
+v26 <- LoadInteger '2147483647'
+// Code generator finished
+// Executing code generator MethodCallGenerator
+v27 <- CallMethod v8, 'map', [v6, v8]
+// Code generator finished
+// Executing code generator FunctionCallGenerator
+v28 <- CallFunction (guarded) v6, [v25]
+// Code generator finished
+// Executing code generator DestructArrayAndReassignGenerator
+[] <- DestructArrayAndReassign v8
+// Code generator finished
+// Executing code generator BuiltinObjectPrototypeCallGenerator
+v29 <- CreateNamedVariable 'Promise', 'none'
+v30 <- GetProperty v29, 'prototype'
+v31 <- GetProperty v30, 'finally'
+v32 <- CreateArray [v28]
+v33 <- CallMethod (guarded) v31, 'apply', [v28, v32]
+// Program may be interesting due to new coverage: 3772 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program C78FB6A0-DE6D-4E7D-A6FF-C98E6302032B ] =====
+// Minimizing 594A68A2-5056-4713-B0DE-71D675E98DC3
+v0 <- CreateNamedVariable 'Array', 'none'
+v1 <- LoadInteger '-1073741824'
+v2 <- CallFunction (guarded) v0, [v1]
+v3 <- CreateNamedVariable 'Promise', 'none'
+v4 <- GetProperty v3, 'prototype'
+v5 <- GetProperty v4, 'finally'
+v6 <- CallMethod (guarded) v5, 'apply', []
+// Program is interesting due to new coverage: 57 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 52 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 121 newly discovered edges in the CFG of the target
+
+

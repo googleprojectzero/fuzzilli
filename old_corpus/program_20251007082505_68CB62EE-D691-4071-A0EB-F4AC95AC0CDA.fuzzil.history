@@ -1,0 +1,148 @@
+// ===== [ Program 846B6F18-EFF7-435E-A40C-D53298CDD0E1 ] =====
+// Start of prefix code
+// Executing code generator TimeZoneIdGenerator
+v0 <- LoadString '-03:00'
+v1 <- LoadString 'TRT'
+v2 <- LoadString '-18:00'
+// Code generator finished
+// Executing code generator RegExpGenerator
+v3 <- LoadRegExp 'wWa\W' 'dyvgim'
+v4 <- LoadRegExp 'N\1(a)' 'ymu'
+v5 <- LoadRegExp '\c_U' 'dym'
+// Code generator finished
+// Executing code generator FloatArrayGenerator
+v6 <- CreateFloatArray [0.6790167692871835, -630.7883059811013, 4.0, 0.4029470164711323, 4.8678646824372755, 0.3949194908740281]
+v7 <- CreateFloatArray [-175724.845104301, 173748.93086012732, 0.5091933721927673, 1000.0]
+v8 <- CreateFloatArray [-889.2562286455587, 38.20698863194616, -900.1594690882797]
+// Code generator finished
+// Executing code generator BuiltinObjectInstanceGenerator
+v9 <- CreateNamedVariable 'WeakMap', 'none'
+v10 <- Construct v9, []
+// Code generator finished
+// Executing code generator StringGenerator
+v11 <- LoadString 'm'
+v12 <- LoadString 'vHsTI'
+v13 <- LoadString 'd'
+// Code generator finished
+// End of prefix code. 14 variables are now visible
+v14 <- CreateNamedVariable 'Date', 'none'
+v15 <- Construct v14, []
+v16 <- CreateIntArray [9223372036854775807, -1, -2116250539, -256]
+v17 <- LoadInteger '1674635913'
+v18 <- LoadInteger '9007199254740991'
+v19 <- BeginConstructor -> v20, v21, v22, v23
+EndConstructor
+v24 <- LoadInteger '-51620'
+v25 <- LoadInteger '-2'
+ConfigureComputedProperty v19, v16, 'PropertyFlags(rawValue: 0)', 'getterSetter' [["v14", "v14"]]
+v26 <- CallMethod v16, 'findLast', [v14]
+
+
+// ===== [ Program DFA444BE-A7F6-43B0-8657-BE36FD9C0039 ] =====
+// Mutating 846B6F18-EFF7-435E-A40C-D53298CDD0E1 with ExplorationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadString '-03:00'
+v1 <- LoadString 'TRT'
+v2 <- LoadString '-18:00'
+v3 <- LoadRegExp 'wWa\W' 'dyvgim'
+v4 <- LoadRegExp 'N\1(a)' 'ymu'
+// Exploring value v4
+SetProperty v4, 'dotAll', v4
+// Exploring finished
+v5 <- LoadRegExp '\c_U' 'dym'
+v6 <- CreateFloatArray [0.6790167692871835, -630.7883059811013, 4.0, 0.4029470164711323, 4.8678646824372755, 0.3949194908740281]
+v7 <- CreateFloatArray [-175724.845104301, 173748.93086012732, 0.5091933721927673, 1000.0]
+v8 <- CreateFloatArray [-889.2562286455587, 38.20698863194616, -900.1594690882797]
+// Exploring value v8
+v9 <- CallMethod (guarded) v8, 'unshift', [v6]
+// Exploring finished
+v10 <- CreateNamedVariable 'WeakMap', 'none'
+v11 <- Construct v10, []
+v12 <- LoadString 'm'
+v13 <- LoadString 'vHsTI'
+// Exploring value v13
+v14 <- CallMethod (guarded) v13, 'charCodeAt', [v13]
+// Exploring finished
+v15 <- LoadString 'd'
+// Exploring value v15
+v16 <- CallMethod (guarded) v15, 'fontcolor', [v5]
+// Exploring finished
+v17 <- CreateNamedVariable 'Date', 'none'
+v18 <- Construct v17, []
+v19 <- CreateIntArray [9223372036854775807, -1, -2116250539, -256]
+v20 <- LoadInteger '1674635913'
+v21 <- LoadInteger '9007199254740991'
+v22 <- BeginConstructor -> v23, v24, v25, v26
+EndConstructor
+// Exploring value v22
+v27 <- CallFunction (guarded) v22, [v7, v11, v6]
+// Exploring finished
+v28 <- LoadInteger '-51620'
+v29 <- LoadInteger '-2'
+ConfigureComputedProperty v22, v19, 'PropertyFlags(rawValue: 0)', 'getterSetter' [["v17", "v17"]]
+v30 <- CallMethod v19, 'findLast', [v17]
+// Program may be interesting due to new coverage: 2531 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 3B6C624B-98CE-4BCF-BFE5-06D6AB679BEE ] =====
+// Mutating DFA444BE-A7F6-43B0-8657-BE36FD9C0039 with ProbingMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadString '-03:00'
+v1 <- LoadString 'TRT'
+v2 <- LoadString '-18:00'
+v3 <- LoadRegExp 'wWa\W' 'dyvgim'
+v4 <- LoadRegExp 'N\1(a)' 'ymu'
+// Probing value v4
+// Probing finished
+SetProperty v4, 'dotAll', v4
+v5 <- LoadRegExp '\c_U' 'dym'
+// Probing value v5
+v6 <- BeginPlainFunction -> v7, v8
+    // Splicing instruction 120 (Return) from 72C2E7CD-AB6B-4B96-958B-94EDE9F5E5F7
+    v9 <- BeginPlainFunction -> v10, v11
+        Return v10
+    EndPlainFunction
+    // Splicing done
+    Return v1
+EndPlainFunction
+SetProperty v5, 'toString', v6
+// Probing finished
+v12 <- CreateFloatArray [0.6790167692871835, -630.7883059811013, 4.0, 0.4029470164711323, 4.8678646824372755, 0.3949194908740281]
+v13 <- CreateFloatArray [-175724.845104301, 173748.93086012732, 0.5091933721927673, 1000.0]
+v14 <- CreateFloatArray [-889.2562286455587, 38.20698863194616, -900.1594690882797]
+// Probing value v14
+SetElement v14, '3', v2
+// Probing finished
+v15 <- CallMethod (guarded) v14, 'unshift', [v12]
+v16 <- CreateNamedVariable 'WeakMap', 'none'
+v17 <- Construct v16, []
+v18 <- LoadString 'm'
+v19 <- LoadString 'vHsTI'
+v20 <- CallMethod (guarded) v19, 'charCodeAt', [v19]
+v21 <- LoadString 'd'
+v22 <- CallMethod (guarded) v21, 'fontcolor', [v5]
+v23 <- CreateNamedVariable 'Date', 'none'
+v24 <- Construct v23, []
+v25 <- CreateIntArray [9223372036854775807, -1, -2116250539, -256]
+v26 <- LoadInteger '1674635913'
+v27 <- LoadInteger '9007199254740991'
+v28 <- BeginConstructor -> v29, v30, v31, v32
+EndConstructor
+v33 <- CallFunction (guarded) v28, [v13, v17, v12]
+v34 <- LoadInteger '-51620'
+v35 <- LoadInteger '-2'
+ConfigureComputedProperty v28, v25, 'PropertyFlags(rawValue: 0)', 'getterSetter' [["v23", "v23"]]
+v36 <- CallMethod v25, 'findLast', [v23]
+// Program may be interesting due to new coverage: 2771 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 68CB62EE-D691-4071-A0EB-F4AC95AC0CDA ] =====
+// Minimizing 3B6C624B-98CE-4BCF-BFE5-06D6AB679BEE
+v0 <- LoadString '-18:00'
+v1 <- CreateFloatArray [0.6790167692871835, -630.7883059811013, 4.0, 0.4029470164711323, 4.8678646824372755, 0.3949194908740281]
+v2 <- CreateFloatArray [-889.2562286455587, 38.20698863194616, -900.1594690882797]
+SetElement v2, '3', v0
+v3 <- CallMethod v2, 'unshift', [v1]
+// Program is interesting due to new coverage: 26 newly discovered edges in the CFG of the target
+
+

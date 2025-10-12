@@ -1,0 +1,246 @@
+// ===== [ Program D412C5FE-2BE6-4757-AEA0-7F7154C3609A ] =====
+// Start of prefix code
+// Executing code generator ClassDefinitionGenerator
+v0 <- LoadFloat '1000.0'
+v1 <- LoadInteger '9'
+v2 <- LoadFloat '-3.556545897030605'
+v3 <- BeginClassDefinition (exp)
+    // Executing code generator ClassInstanceComputedPropertyGenerator
+    ClassAddInstanceComputedProperty v1 v0
+    // Code generator finished
+    // Executing code generator ClassConstructorGenerator
+    BeginClassConstructor -> v4, v5
+        // Executing code generator FunctionCallGenerator
+        v6 <- CallFunction (guarded) v5, [v5, v5, v5]
+        // Code generator finished
+        // Executing code generator ElementAssignmentGenerator
+        SetElement v4, '1073741824', v0
+        // Code generator finished
+        // Executing code generator PrototypeAccessGenerator
+        v7 <- GetProperty v4, '__proto__'
+        // Code generator finished
+        // Executing code generator PropertyRetrievalGenerator
+        v8 <- GetProperty v4, 'a'
+        // Code generator finished
+        // Executing code generator ComputedPropertyRetrievalGenerator
+        v9 <- GetComputedProperty (guarded) v8, v4
+        // Code generator finished
+        // Executing code generator DisposableVariableGenerator
+        v10 <- CreateNamedVariable 'Symbol', 'none'
+        v11 <- GetProperty v10, 'dispose'
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `value`, v5
+            BeginObjectLiteralComputedMethod v11 -> v12
+                Return v12
+            EndObjectLiteralComputedMethod
+        v13 <- EndObjectLiteral
+        v14 <- LoadDisposableVariable v13
+        // Code generator finished
+    EndClassConstructor
+    // Code generator finished
+EndClassDefinition
+v15 <- Construct v3, [v1]
+v16 <- Construct v3, [v2]
+v17 <- Construct v3, [v15]
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v18 <- BeginClassDefinition (decl) v3
+    // Executing code generator ClassInstancePropertyGenerator
+    ClassAddInstanceProperty 'd'
+    // Code generator finished
+    // Executing code generator ClassPrivateInstancePropertyGenerator
+    ClassAddPrivateInstanceProperty 'd'
+    // Code generator finished
+    // Executing code generator ClassInstanceMethodGenerator
+    BeginClassInstanceMethod 'm' -> v19, v20, v21, v22, v23
+        // Executing code generator IntegerGenerator
+        v24 <- LoadInteger '-65535'
+        v25 <- LoadInteger '1037971333'
+        v26 <- LoadInteger '-1089203896'
+        // Code generator finished
+        Return v20
+    EndClassInstanceMethod
+    // Code generator finished
+    // Executing code generator ClassPrivateInstanceMethodGenerator
+    BeginClassPrivateInstanceMethod 'o' -> v27, v28, v29, v30
+        // Executing code generator UpdateGenerator
+        Update v27, '**', v17
+        // Code generator finished
+        // Executing code generator UnboundFunctionBindGenerator
+        // Executing code generator SuperPropertyUpdateGenerator
+        UpdateSuperProperty 'c', '/', v2
+        // Code generator finished
+        // Executing code generator DupGenerator
+        v31 <- Dup v30
+        // Code generator finished
+        // Executing code generator ApiConstructorCallGenerator
+        BeginTry
+            v32 <- Construct v3, [v17]
+        BeginCatch -> v33
+        EndTryCatch
+        // Code generator finished
+        Return v31
+    EndClassPrivateInstanceMethod
+    // Code generator finished
+EndClassDefinition
+v34 <- Construct v18, []
+v35 <- Construct v18, []
+v36 <- Construct v18, []
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v37 <- BeginClassDefinition (decl)
+    // Executing code generator ClassStaticElementGenerator
+    ClassAddStaticElement '0'
+    // Code generator finished
+    // Executing code generator ClassStaticMethodGenerator
+    BeginClassStaticMethod 'n' -> v38, v39, v40
+        // Executing code generator ObjectHierarchyGenerator
+        BeginObjectLiteral
+        v41 <- EndObjectLiteral
+        SetProperty v41, 'g', v34
+        BeginObjectLiteral
+        v42 <- EndObjectLiteral
+        SetProperty v42, 'g', v34
+        SetProperty v42, 'd', v39
+        BeginObjectLiteral
+        v43 <- EndObjectLiteral
+        SetProperty v43, 'g', v34
+        SetProperty v43, 'd', v39
+        SetProperty v43, 'e', v40
+        BeginObjectLiteral
+        v44 <- EndObjectLiteral
+        SetProperty v44, 'g', v34
+        SetProperty v44, 'd', v39
+        SetProperty v44, 'e', v34
+        // Code generator finished
+        Return v42
+    EndClassStaticMethod
+    // Code generator finished
+EndClassDefinition
+v45 <- Construct v37, []
+v46 <- Construct v37, []
+v47 <- Construct v37, []
+// Code generator finished
+// End of prefix code. 15 variables are now visible
+v48 <- LoadInteger '3904'
+v49 <- CreateNamedVariable 'Uint8Array', 'none'
+v50 <- Construct v49, [v48]
+SetElement v50, '1880', v50
+
+
+// ===== [ Program 80775726-6064-447C-B3B6-C4CDF2083DAE ] =====
+// Mutating D412C5FE-2BE6-4757-AEA0-7F7154C3609A with InputMutator (aware)
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadFloat '1000.0'
+v1 <- LoadInteger '9'
+v2 <- LoadFloat '-3.556545897030605'
+v3 <- BeginClassDefinition (exp)
+    ClassAddInstanceComputedProperty v1 v0
+    BeginClassConstructor -> v4, v5
+        v6 <- CallFunction (guarded) v5, [v5, v5, v5]
+        SetElement v4, '1073741824', v0
+        // Replacing input 0 (v4) with v4
+        v7 <- GetProperty v4, '__proto__'
+        // Replacing input 0 (v4) with v4
+        v8 <- GetProperty v4, 'a'
+        v9 <- GetComputedProperty (guarded) v8, v4
+        v10 <- CreateNamedVariable 'Symbol', 'none'
+        v11 <- GetProperty v10, 'dispose'
+        BeginObjectLiteral
+            // Replacing input 0 (v5) with v6
+            ObjectLiteralAddProperty `value`, v6
+            BeginObjectLiteralComputedMethod v11 -> v12
+                Return v12
+            EndObjectLiteralComputedMethod
+        v13 <- EndObjectLiteral
+        v14 <- LoadDisposableVariable v13
+    EndClassConstructor
+EndClassDefinition
+v15 <- Construct v3, [v1]
+// Replacing input 1 (v2) with v0
+v16 <- Construct v3, [v0]
+v17 <- Construct v3, [v15]
+v18 <- BeginClassDefinition (decl) v3
+    ClassAddInstanceProperty 'd'
+    ClassAddPrivateInstanceProperty 'd'
+    BeginClassInstanceMethod 'm' -> v19, v20, v21, v22, v23
+        v24 <- LoadInteger '-65535'
+        v25 <- LoadInteger '1037971333'
+        v26 <- LoadInteger '-1089203896'
+        Return v20
+    EndClassInstanceMethod
+    BeginClassPrivateInstanceMethod 'o' -> v27, v28, v29, v30
+        Update v27, '**', v17
+        UpdateSuperProperty 'c', '/', v2
+        v31 <- Dup v30
+        BeginTry
+            // Replacing input 0 (v3) with v31
+            v32 <- Construct v31, [v17]
+        BeginCatch -> v33
+        EndTryCatch
+        Return v31
+    EndClassPrivateInstanceMethod
+EndClassDefinition
+// Replacing input 0 (v18) with v18
+v34 <- Construct v18, []
+v35 <- Construct v18, []
+v36 <- Construct v18, []
+v37 <- BeginClassDefinition (decl)
+    ClassAddStaticElement '0'
+    BeginClassStaticMethod 'n' -> v38, v39, v40
+        BeginObjectLiteral
+        v41 <- EndObjectLiteral
+        SetProperty v41, 'g', v34
+        BeginObjectLiteral
+        v42 <- EndObjectLiteral
+        SetProperty v42, 'g', v34
+        SetProperty v42, 'd', v39
+        BeginObjectLiteral
+        v43 <- EndObjectLiteral
+        SetProperty v43, 'g', v34
+        SetProperty v43, 'd', v39
+        SetProperty v43, 'e', v40
+        BeginObjectLiteral
+        v44 <- EndObjectLiteral
+        // Replacing input 1 (v34) with v36
+        SetProperty v44, 'g', v36
+        SetProperty v44, 'd', v39
+        SetProperty v44, 'e', v34
+        Return v42
+    EndClassStaticMethod
+EndClassDefinition
+// Replacing input 0 (v37) with v37
+v45 <- Construct v37, []
+v46 <- Construct v37, []
+v47 <- Construct v37, []
+v48 <- LoadInteger '3904'
+v49 <- CreateNamedVariable 'Uint8Array', 'none'
+v50 <- Construct v49, [v48]
+SetElement v50, '1880', v50
+// Program may be interesting due to new coverage: 3434 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program E5975B83-7B66-4043-8049-FBC10AD97F64 ] =====
+// Minimizing 80775726-6064-447C-B3B6-C4CDF2083DAE
+v0 <- LoadFloat '1000.0'
+v1 <- LoadInteger '9'
+v2 <- BeginClassDefinition (exp)
+    ClassAddInstanceComputedProperty v1 v0
+    BeginClassConstructor -> v3, v4
+        v5 <- CallFunction (guarded) v4, [v1]
+        SetElement v3, '1073741824', v0
+        v6 <- GetComputedProperty (guarded) v3, v3
+        v7 <- CreateNamedVariable 'Symbol', 'none'
+        v8 <- GetProperty v7, 'dispose'
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `value`, v5
+            BeginObjectLiteralComputedMethod v8 -> v9
+            EndObjectLiteralComputedMethod
+        v10 <- EndObjectLiteral
+        v11 <- LoadDisposableVariable v10
+    EndClassConstructor
+EndClassDefinition
+v12 <- Construct v2, [v1]
+// Program is interesting due to new coverage: 19 newly discovered edges in the CFG of the target
+
+

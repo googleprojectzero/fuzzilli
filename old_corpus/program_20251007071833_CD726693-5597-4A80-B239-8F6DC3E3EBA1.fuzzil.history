@@ -1,0 +1,107 @@
+// ===== [ Program 3F74F135-E65F-4F73-9506-222BC86E890B ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator TypedArrayGenerator
+v0 <- LoadInteger '1000'
+v1 <- CreateNamedVariable 'Int8Array', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '0'
+v4 <- CreateNamedVariable 'Int16Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '15'
+v7 <- CreateNamedVariable 'Int32Array', 'none'
+v8 <- Construct v7, [v6]
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v9 <- BeginClassDefinition (decl)
+    // Executing code generator ClassInstancePropertyGenerator
+    ClassAddInstanceProperty 'h' v1
+    // Code generator finished
+    // Executing code generator ClassStaticComputedPropertyGenerator
+    ClassAddStaticComputedProperty v5
+    // Code generator finished
+    // Executing code generator ClassPrivateInstancePropertyGenerator
+    ClassAddPrivateInstanceProperty 'b'
+    // Code generator finished
+    // Executing code generator ClassInstanceElementGenerator
+    ClassAddInstanceElement '9'
+    // Code generator finished
+    // Executing code generator ClassPrivateStaticPropertyGenerator
+    ClassAddPrivateStaticProperty 'd' v0
+    // Code generator finished
+    // Executing code generator ClassStaticComputedPropertyGenerator
+    ClassAddStaticComputedProperty v1
+    // Code generator finished
+    // Executing code generator ClassStaticElementGenerator
+    ClassAddStaticElement '-1'
+    // Code generator finished
+    // Executing code generator ClassPrivateInstancePropertyGenerator
+    ClassAddPrivateInstanceProperty 'c' v2
+    // Code generator finished
+    // Executing code generator ClassStaticComputedPropertyGenerator
+    ClassAddStaticComputedProperty v0 v1
+    // Code generator finished
+    // Executing code generator ClassPrivateInstancePropertyGenerator
+    ClassAddPrivateInstanceProperty 'f'
+    // Code generator finished
+    // Executing code generator ClassPrivateStaticPropertyGenerator
+    ClassAddPrivateStaticProperty 'g'
+    // Code generator finished
+EndClassDefinition
+v10 <- Construct v9, []
+v11 <- Construct v9, []
+v12 <- Construct v9, []
+// Code generator finished
+// End of prefix code. 13 variables are now visible
+// Executing code generator RegExpGenerator
+v13 <- LoadRegExp '[(?:a+)+]' 'dygimu'
+v14 <- LoadRegExp 'foo(?=bar)bazc(a)X?' 'dgmu'
+v15 <- LoadRegExp 'z' 'dgimu'
+// Code generator finished
+// Executing code generator ApiFunctionCallGenerator
+// Executing code generator DestructObjectGenerator
+{h:v16,} <- DestructObject v10
+// Code generator finished
+// Executing code generator PropertyRetrievalGenerator
+v17 <- GetProperty v12, 'h'
+// Code generator finished
+// Executing code generator BuiltinObjectPrototypeCallGenerator
+v18 <- CreateNamedVariable 'String', 'none'
+v19 <- GetProperty v18, 'prototype'
+v20 <- GetProperty v19, 'includes'
+v21 <- CallMethod (guarded) v20, 'call', [v14, v18]
+// Code generator finished
+// Executing code generator ReassignmentGenerator
+// Code generator finished
+// Executing code generator PropertyRetrievalGenerator
+v22 <- GetProperty v8, 'buffer'
+// Program may be interesting due to new coverage: 6725 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program CD726693-5597-4A80-B239-8F6DC3E3EBA1 ] =====
+// Minimizing 3F74F135-E65F-4F73-9506-222BC86E890B
+v0 <- LoadInteger '1000'
+v1 <- CreateNamedVariable 'Int8Array', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '15'
+v4 <- CreateNamedVariable 'Int32Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- BeginClassDefinition (decl)
+    ClassAddInstanceProperty 'h' v1
+    ClassAddPrivateInstanceProperty 'b'
+    ClassAddStaticComputedProperty v1
+    ClassAddStaticComputedProperty v0 v1
+EndClassDefinition
+v7 <- Construct v6, []
+v8 <- LoadRegExp '[(?:a+)+]' 'dygimu'
+v9 <- LoadRegExp 'foo(?=bar)bazc(a)X?' 'dgmu'
+v10 <- CreateNamedVariable 'String', 'none'
+v11 <- GetProperty v10, 'prototype'
+v12 <- GetProperty v11, 'includes'
+v13 <- CallMethod v12, 'call', [v9]
+v14 <- GetProperty v5, 'buffer'
+// Program is interesting due to new coverage: 448 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 96 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 268 newly discovered edges in the CFG of the target
+
+

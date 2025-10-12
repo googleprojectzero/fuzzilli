@@ -1,0 +1,71 @@
+// ===== [ Program 9C6F9EC6-5958-4C21-89A9-98B4DCF5E8EB ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator FloatArrayGenerator
+v0 <- CreateFloatArray [4.0, 0.3670687051052337, 0.4539300873633457]
+v1 <- CreateFloatArray [1000.0, 2.2250738585072014e-308, 6.36462222482665, -2.0, -1e-15, 983980.1792295252, -1.5477972399952696e+308, -1.0, -820.5340337675209, -1.7976931348623157e+308]
+v2 <- CreateFloatArray [inf, -9.883346890120722, 0.4674031976055496]
+// Code generator finished
+// Executing code generator IntArrayGenerator
+v3 <- CreateIntArray [-9223372036854775807, 16, -9223372036854775808, 65535, 14, -65535, 11, -10]
+v4 <- CreateIntArray [-427856331, 14425, 8, 415510205, -1195450199]
+v5 <- CreateIntArray [-2, 1412053537, -4294967295, 1435490861, -256, -46402, 1524943167, 53470, 1073741824]
+// Code generator finished
+// Executing code generator StringGenerator
+v6 <- LoadString 'd'
+v7 <- LoadString 'undefined'
+v8 <- LoadString 'object'
+// Code generator finished
+// Executing code generator IntArrayGenerator
+v9 <- CreateIntArray [-4096, -15, 14, -1091, 54474, 2147483647, -65537, -8]
+v10 <- CreateIntArray [-16, 1529213744, 13, -803663744, 25129, -2147483648, 2, 522311027]
+v11 <- CreateIntArray [4294967295, -665586765, 536870887, -1073741824, -1, 127, 1073741824, 268435440, 9, 10000]
+// Code generator finished
+// End of prefix code. 12 variables are now visible
+// Executing code generator TrivialFunctionGenerator
+v12 <- BeginPlainFunction -> 
+    Return v11
+EndPlainFunction
+// Code generator finished
+// Executing code generator ImitationGenerator
+BeginObjectLiteral
+    ObjectLiteralSetPrototype v9
+    // Executing code generator ObjectLiteralCopyPropertiesGenerator
+    ObjectLiteralCopyProperties v9
+    // Code generator finished
+    // Executing code generator ObjectLiteralPropertyGenerator
+    ObjectLiteralAddProperty `h`, v5
+    // Code generator finished
+v13 <- EndObjectLiteral
+// Code generator finished
+// Executing code generator ResizableArrayBufferGenerator
+v14 <- CreateNamedVariable 'ArrayBuffer', 'none'
+v15 <- LoadInteger '4255489755'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v15
+v16 <- EndObjectLiteral
+v17 <- LoadInteger '256'
+v18 <- Construct v14, [v17, v16]
+v19 <- CreateNamedVariable 'Int8Array', 'none'
+v20 <- Construct v19, [v18]
+// Program may be interesting due to new coverage: 2378 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 362450D7-1337-41BC-955C-EF492AEF90DB ] =====
+// Minimizing 9C6F9EC6-5958-4C21-89A9-98B4DCF5E8EB
+v0 <- CreateIntArray [-4096, -15, 14, -1091, 54474, 2147483647, -65537, -8]
+BeginObjectLiteral
+    ObjectLiteralCopyProperties v0
+v1 <- EndObjectLiteral
+v2 <- CreateNamedVariable 'ArrayBuffer', 'none'
+v3 <- LoadInteger '4255489755'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v3
+v4 <- EndObjectLiteral
+v5 <- LoadInteger '256'
+v6 <- Construct v2, [v5, v4]
+// Program is interesting due to new coverage: 52 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 775 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 32 newly discovered edges in the CFG of the target
+
+

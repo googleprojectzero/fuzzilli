@@ -1,0 +1,204 @@
+// ===== [ Program 8EC349CB-84FB-4F46-97D3-5EEF60FCFC15 ] =====
+// Start of prefix code
+// Executing code generator FloatGenerator
+v0 <- LoadFloat '0.8484250122429354'
+v1 <- LoadFloat '-1.7976931348623157e+308'
+v2 <- LoadFloat '0.0'
+// Code generator finished
+// Executing code generator ObjectBuilderFunctionGenerator
+v3 <- BeginPlainFunction -> v4
+    BeginObjectLiteral
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `a`, v2
+        // Code generator finished
+        // Executing code generator ObjectLiteralElementGenerator
+        ObjectLiteralAddElement `10`, v1
+        // Code generator finished
+        // Executing code generator ObjectLiteralComputedPropertyGenerator
+        ObjectLiteralAddComputedProperty v0, v0
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `b`, v1
+        // Code generator finished
+        // Executing code generator ObjectLiteralComputedMethodGenerator
+        BeginObjectLiteralComputedMethod v4 -> v5, v6, v7
+            // Executing code generator SuperPropertyUpdateGenerator
+            UpdateSuperProperty 'e', '||', v1
+            // Code generator finished
+            // Executing code generator ApiMethodCallGenerator
+            BeginTry
+                v8 <- CallMethod v5, 'toString', [v4, v5]
+            BeginCatch -> v9
+            EndTryCatch
+            // Code generator finished
+            Return v7
+        EndObjectLiteralComputedMethod
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `f`, v1
+        // Code generator finished
+    v10 <- EndObjectLiteral
+    Return v10
+EndPlainFunction
+v11 <- CallFunction v3, [v1]
+v12 <- CallFunction v3, [v2]
+v13 <- CallFunction v3, [v1]
+// Code generator finished
+// Executing code generator IntegerGenerator
+v14 <- LoadInteger '-3'
+v15 <- LoadInteger '-9223372036854775808'
+v16 <- LoadInteger '-4294967296'
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v17 <- BeginConstructor -> v18, v19, v20
+    SetProperty v18, 'f', v19
+EndConstructor
+v21 <- Construct v17, [v16, v0]
+v22 <- Construct v17, [v14, v2]
+v23 <- Construct v17, [v14, v2]
+// Code generator finished
+// End of prefix code. 14 variables are now visible
+v24 <- LoadInteger '1073741824'
+v25 <- LoadInteger '64440'
+v26 <- LoadInteger '9'
+v27 <- BeginPlainFunction -> 
+EndPlainFunction
+v28 <- BeginConstructor -> v29, v30, v31
+    v32 <- GetProperty v31, 'arguments'
+EndConstructor
+v33 <- Construct v28, [v26, v27]
+v34 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+v35 <- LoadRegExp '\1\2(a(?:\1(b\1\2))\2)\1' 'dgimu'
+v36 <- LoadRegExp 'zixyz{1,32}' 'ysgimu'
+
+
+// ===== [ Program 9FD2878A-DC61-46BA-AF38-BC115FA4E889 ] =====
+// Mutating 8EC349CB-84FB-4F46-97D3-5EEF60FCFC15 with ExplorationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadFloat '0.8484250122429354'
+v1 <- LoadFloat '-1.7976931348623157e+308'
+v2 <- LoadFloat '0.0'
+v3 <- BeginPlainFunction -> v4
+    BeginObjectLiteral
+        ObjectLiteralAddProperty `a`, v2
+        ObjectLiteralAddElement `10`, v1
+        ObjectLiteralAddComputedProperty v0, v0
+        ObjectLiteralAddProperty `b`, v1
+        BeginObjectLiteralComputedMethod v4 -> v5, v6, v7
+            UpdateSuperProperty 'e', '||', v1
+            BeginTry
+                v8 <- CallMethod v5, 'toString', [v4, v5]
+            BeginCatch -> v9
+            EndTryCatch
+            Return v7
+        EndObjectLiteralComputedMethod
+        ObjectLiteralAddProperty `f`, v1
+    v10 <- EndObjectLiteral
+    Return v10
+EndPlainFunction
+v11 <- CallFunction v3, [v1]
+v12 <- CallFunction v3, [v2]
+v13 <- CallFunction v3, [v1]
+v14 <- LoadInteger '-3'
+// Exploring value v14
+v15 <- BinaryOperation v14, '+', v14
+// Exploring finished
+v16 <- LoadInteger '-9223372036854775808'
+v17 <- LoadInteger '-4294967296'
+v18 <- BeginConstructor -> v19, v20, v21
+    SetProperty v19, 'f', v20
+EndConstructor
+// Exploring value v18
+v22 <- Construct (guarded) v18, [v17, v12]
+// Exploring finished
+v23 <- Construct v18, [v17, v0]
+v24 <- Construct v18, [v14, v2]
+v25 <- Construct v18, [v14, v2]
+v26 <- LoadInteger '1073741824'
+v27 <- LoadInteger '64440'
+v28 <- LoadInteger '9'
+v29 <- BeginPlainFunction -> 
+EndPlainFunction
+v30 <- BeginConstructor -> v31, v32, v33
+    // Exploring value v31
+    v34 <- GetProperty (guarded) v31, 'constructor'
+    v35 <- Construct (guarded) v34, [v30, v30]
+    // Exploring finished
+    // Exploring value v32
+    v36 <- UnaryOperation v32, '--'
+    // Exploring finished
+    // Exploring value v33
+    v37 <- CallFunction (guarded) v33, []
+    // Exploring finished
+    v38 <- GetProperty v33, 'arguments'
+    // Exploring value v38
+    v39 <- BinaryOperation v38, '??', v38
+    // Exploring finished
+EndConstructor
+// Exploring value v30
+SetProperty v30, 'e', v30
+// Exploring finished
+v40 <- Construct v30, [v28, v29]
+// Exploring value v40
+v41 <- GetProperty (guarded) v40, 'constructor'
+v42 <- Construct (guarded) v41, [v29, v14]
+// Exploring finished
+v43 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+// Exploring value v43
+v44 <- CallMethod (guarded) v43, 'exec', [v11]
+// Exploring finished
+v45 <- LoadRegExp '\1\2(a(?:\1(b\1\2))\2)\1' 'dgimu'
+// Exploring value v45
+SetProperty v45, 'h', v45
+// Exploring finished
+v46 <- LoadRegExp 'zixyz{1,32}' 'ysgimu'
+// Exploring value v46
+v47 <- GetProperty (guarded) v46, 'constructor'
+v48 <- Construct (guarded) v47, [v14, v18]
+// Program may be interesting due to new coverage: 4924 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program D426708C-F4A6-451B-B911-74BC4BF089D8 ] =====
+// Minimizing 9FD2878A-DC61-46BA-AF38-BC115FA4E889
+v0 <- LoadFloat '0.8484250122429354'
+v1 <- LoadFloat '-1.7976931348623157e+308'
+v2 <- LoadFloat '0.0'
+v3 <- BeginPlainFunction -> v4
+    BeginObjectLiteral
+        ObjectLiteralAddProperty `a`, v2
+        ObjectLiteralAddElement `10`, v1
+        ObjectLiteralAddComputedProperty v0, v0
+        ObjectLiteralAddProperty `b`, v1
+        BeginObjectLiteralComputedMethod v4 -> v5, v6, v7
+            UpdateSuperProperty 'e', '||', v1
+            BeginTry
+            BeginCatch -> v8
+            EndTryCatch
+        EndObjectLiteralComputedMethod
+    v9 <- EndObjectLiteral
+EndPlainFunction
+v10 <- LoadInteger '-3'
+v11 <- BeginConstructor -> v12, v13, v14
+EndConstructor
+v15 <- LoadInteger '9'
+v16 <- BeginPlainFunction -> 
+EndPlainFunction
+v17 <- BeginConstructor -> v18, v19, v20
+    v21 <- GetProperty (guarded) v18, 'constructor'
+    v22 <- Construct (guarded) v21, [v17, v17]
+    v23 <- UnaryOperation v19, '--'
+    v24 <- CallFunction (guarded) v20, []
+    v25 <- GetProperty v20, 'arguments'
+    v26 <- BinaryOperation v25, '??', v25
+EndConstructor
+v27 <- Construct v17, [v15, v16]
+v28 <- GetProperty (guarded) v27, 'constructor'
+v29 <- Construct (guarded) v28, [v16, v10]
+v30 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+v31 <- CallMethod (guarded) v30, 'exec', []
+v32 <- LoadRegExp 'zixyz{1,32}' 'ysgimu'
+v33 <- GetProperty v32, 'constructor'
+v34 <- CallFunction (guarded) v33, [v10, v11]
+// Program is interesting due to new coverage: 822 newly discovered edges in the CFG of the target
+
+
