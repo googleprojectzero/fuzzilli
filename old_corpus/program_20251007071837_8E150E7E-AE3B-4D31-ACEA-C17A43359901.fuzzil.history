@@ -1,0 +1,129 @@
+// ===== [ Program 71372AC7-EA2F-464D-9C40-5E05753E466B ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator ClassDefinitionGenerator
+v0 <- LoadFloat '-2.2250738585072014e-308'
+v1 <- LoadString 'object'
+v2 <- LoadFloat '-4.1963218238429866e+307'
+v3 <- BeginClassDefinition (exp)
+    // Executing code generator ClassStaticPropertyGenerator
+    ClassAddStaticProperty 'd' v1
+    // Code generator finished
+    // Executing code generator ClassInstanceComputedPropertyGenerator
+    ClassAddInstanceComputedProperty v2 v1
+    // Code generator finished
+    // Executing code generator ClassInstancePropertyGenerator
+    ClassAddInstanceProperty 'h' v1
+    // Code generator finished
+    // Executing code generator ClassPrivateInstanceMethodGenerator
+    BeginClassPrivateInstanceMethod 'n' -> v4, v5
+        // Executing code generator NamedVariableGenerator
+        v6 <- CreateNamedVariable 'd', 'const', v5
+        // Code generator finished
+        // Executing code generator PrivatePropertyRetrievalGenerator
+        // Code generator finished
+        // Executing code generator ElementKindChangeGenerator
+        SetElement v5, '2', v4
+        // Code generator finished
+        // Executing code generator PrivatePropertyAssignmentGenerator
+        // Code generator finished
+        // Executing code generator ElementKindChangeGenerator
+        SetElement v0, '6', v5
+        // Code generator finished
+        // Executing code generator SuperPropertyAssignmentGenerator
+        SetSuperProperty 'g', v4
+        // Code generator finished
+        // Executing code generator ReassignmentGenerator
+        Reassign v6, v1
+        // Code generator finished
+        // Executing code generator ElementUpdateGenerator
+        UpdateElement v1, '13', '>>>', v5
+        // Code generator finished
+        // Executing code generator ElementAssignmentGenerator
+        SetElement v1, '8', v4
+        // Code generator finished
+        Return v0
+    EndClassPrivateInstanceMethod
+    // Code generator finished
+    // Executing code generator ClassPrivateStaticPropertyGenerator
+    ClassAddPrivateStaticProperty 'g'
+    // Code generator finished
+    // Executing code generator ClassStaticPropertyGenerator
+    ClassAddStaticProperty 'h'
+    // Code generator finished
+EndClassDefinition
+v7 <- Construct v3, []
+v8 <- Construct v3, []
+v9 <- Construct v3, []
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v10 <- BeginConstructor -> v11, v12, v13
+    SetProperty v11, 'a', v12
+    SetProperty v11, 'd', v3
+    SetProperty v11, 'c', v2
+EndConstructor
+v14 <- Construct v10, [v2, v3]
+v15 <- Construct v10, [v0, v1]
+v16 <- Construct v10, [v15, v3]
+// Code generator finished
+// Executing code generator BuiltinObjectInstanceGenerator
+v17 <- CreateNamedVariable 'Date', 'none'
+v18 <- Construct v17, []
+// Code generator finished
+// Executing code generator BuiltinObjectInstanceGenerator
+v19 <- CreateNamedVariable 'Map', 'none'
+v20 <- Construct v19, []
+// Code generator finished
+// End of prefix code. 15 variables are now visible
+// Executing code generator ObjectLiteralGenerator
+BeginObjectLiteral
+    // Executing code generator ObjectLiteralComputedPropertyGenerator
+    ObjectLiteralAddComputedProperty v16, v19
+    // Code generator finished
+    // Executing code generator ObjectLiteralPropertyGenerator
+    ObjectLiteralAddProperty `b`, v0
+    // Code generator finished
+    // Executing code generator ObjectLiteralPropertyGenerator
+    ObjectLiteralAddProperty `h`, v8
+    // Code generator finished
+    // Executing code generator ObjectLiteralComputedPropertyGenerator
+    ObjectLiteralAddComputedProperty v17, v0
+    // Code generator finished
+    // Executing code generator ObjectLiteralPrototypeGenerator
+    ObjectLiteralSetPrototype v9
+    // Code generator finished
+v21 <- EndObjectLiteral
+// Code generator finished
+// Executing code generator ResizableArrayBufferGenerator
+v22 <- CreateNamedVariable 'ArrayBuffer', 'none'
+v23 <- LoadInteger '64'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v23
+v24 <- EndObjectLiteral
+v25 <- LoadInteger '64'
+v26 <- Construct v22, [v25, v24]
+v27 <- CreateNamedVariable 'Uint8Array', 'none'
+v28 <- Construct v27, [v26]
+// Program may be interesting due to new coverage: 3912 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 8E150E7E-AE3B-4D31-ACEA-C17A43359901 ] =====
+// Minimizing 71372AC7-EA2F-464D-9C40-5E05753E466B
+v0 <- LoadFloat '-2.2250738585072014e-308'
+v1 <- BeginClassDefinition (exp)
+    BeginClassPrivateInstanceMethod 'n' -> v2, v3
+    EndClassPrivateInstanceMethod
+EndClassDefinition
+v4 <- BeginConstructor -> v5, v6, v7
+    SetProperty v5, 'a', v6
+EndConstructor
+v8 <- Construct v4, [v0]
+v9 <- Construct v4, [v8]
+BeginObjectLiteral
+    ObjectLiteralSetPrototype v1
+v10 <- EndObjectLiteral
+// Program is interesting due to new coverage: 24 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 10 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 10 newly discovered edges in the CFG of the target
+
+

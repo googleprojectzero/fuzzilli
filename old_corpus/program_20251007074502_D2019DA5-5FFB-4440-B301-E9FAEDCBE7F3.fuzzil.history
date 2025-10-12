@@ -1,0 +1,227 @@
+// ===== [ Program 5306FBB7-0CA7-41C6-BE6E-09101644B4DD ] =====
+// Start of prefix code
+// Executing code generator BooleanGenerator
+v0 <- LoadBoolean 'false'
+// Code generator finished
+// Executing code generator TrivialFunctionGenerator
+v1 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v2 <- BeginConstructor -> v3, v4, v5
+    SetProperty v3, 'd', v5
+    SetProperty v3, 'a', v4
+    SetProperty v3, 'f', v5
+EndConstructor
+v6 <- Construct v2, [v1, v1]
+v7 <- Construct v2, [v2, v6]
+v8 <- Construct v2, [v1, v2]
+// Code generator finished
+// Executing code generator IntegerGenerator
+v9 <- LoadInteger '-1901850357'
+v10 <- LoadInteger '43916'
+v11 <- LoadInteger '1073741824'
+// Code generator finished
+// Executing code generator IntegerGenerator
+v12 <- LoadInteger '-14'
+v13 <- LoadInteger '-2103368433'
+v14 <- LoadInteger '-547227923'
+// Code generator finished
+// End of prefix code. 12 variables are now visible
+v15 <- LoadInteger '1000'
+v16 <- CreateNamedVariable 'Int8Array', 'none'
+v17 <- Construct v16, [v15]
+v18 <- LoadInteger '15'
+v19 <- CreateNamedVariable 'Int32Array', 'none'
+v20 <- Construct v19, [v18]
+v21 <- BeginClassDefinition (decl)
+    ClassAddInstanceProperty 'h' v16
+    ClassAddPrivateInstanceProperty 'b'
+    ClassAddStaticComputedProperty v16
+    ClassAddStaticComputedProperty v15 v16
+EndClassDefinition
+v22 <- Construct v21, []
+v23 <- LoadRegExp '[(?:a+)+]' 'dygimu'
+v24 <- LoadRegExp 'foo(?=bar)bazc(a)X?' 'dgmu'
+v25 <- CreateNamedVariable 'String', 'none'
+v26 <- GetProperty v25, 'prototype'
+v27 <- GetProperty v26, 'includes'
+v28 <- CallMethod v27, 'call', [v24]
+v29 <- GetProperty v20, 'buffer'
+
+
+// ===== [ Program C947E150-9E81-4DE4-A2BF-B677196F0BBD ] =====
+// Mutating 5306FBB7-0CA7-41C6-BE6E-09101644B4DD with SpliceMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadBoolean 'false'
+// Splicing instruction 31 (Construct) from CA964EE8-6F9D-4439-AED8-3C36C88F839F
+v1 <- LoadInteger '2098'
+v2 <- CreateNamedVariable 'Int32Array', 'none'
+v3 <- Construct v2, [v1]
+// Splicing done
+// Splicing instruction 2 (Construct) from 2B72C2F2-40AA-4309-9DA8-410A33CB9F78
+v4 <- CreateNamedVariable 'Float64Array', 'none'
+v5 <- Construct v4, [v1]
+// Splicing done
+v6 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v7 <- BeginConstructor -> v8, v9, v10
+    SetProperty v8, 'd', v10
+    SetProperty v8, 'a', v9
+    SetProperty v8, 'f', v10
+EndConstructor
+v11 <- Construct v7, [v6, v6]
+v12 <- Construct v7, [v7, v11]
+v13 <- Construct v7, [v6, v7]
+v14 <- LoadInteger '-1901850357'
+// Splicing instruction 27 (Construct) from F8CC6B2A-6F8A-4447-B885-AA83DF93EE09
+v15 <- CreateFloatArray [9.88496591383436e+307, -0.0, 9.645811590416322, -2.2250738585072014e-308, -882877.4954994294, nan, 7.540716606719762, 781.9769262846953, -7.004326735250661e+306]
+v16 <- CreateNamedVariable 'Uint16Array', 'none'
+v17 <- Construct v16, [v15]
+// Splicing done
+// Splicing instruction 11 (SetProperty) from 7762B42B-02BD-40B7-A965-2A9F536ECC9C
+v18 <- LoadInteger '684504293'
+SetProperty v17, 'a', v18
+// Splicing done
+v19 <- LoadInteger '43916'
+v20 <- LoadInteger '1073741824'
+v21 <- LoadInteger '-14'
+v22 <- LoadInteger '-2103368433'
+v23 <- LoadInteger '-547227923'
+v24 <- LoadInteger '1000'
+v25 <- CreateNamedVariable 'Int8Array', 'none'
+v26 <- Construct v25, [v24]
+v27 <- LoadInteger '15'
+v28 <- CreateNamedVariable 'Int32Array', 'none'
+// Splicing instruction 8 (Construct) from B37CBB7A-6460-46AC-84E7-712927C658C7
+v29 <- LoadInteger '9'
+v30 <- BeginPlainFunction -> 
+EndPlainFunction
+v31 <- BeginConstructor -> v32, v33, v34
+    v35 <- GetProperty v34, 'arguments'
+EndConstructor
+v36 <- Construct v31, [v29, v30]
+// Splicing done
+v37 <- Construct v28, [v27]
+v38 <- BeginClassDefinition (decl)
+    ClassAddInstanceProperty 'h' v25
+    ClassAddPrivateInstanceProperty 'b'
+    ClassAddStaticComputedProperty v25
+    ClassAddStaticComputedProperty v24 v25
+EndClassDefinition
+v39 <- Construct v38, []
+v40 <- LoadRegExp '[(?:a+)+]' 'dygimu'
+v41 <- LoadRegExp 'foo(?=bar)bazc(a)X?' 'dgmu'
+v42 <- CreateNamedVariable 'String', 'none'
+v43 <- GetProperty v42, 'prototype'
+v44 <- GetProperty v43, 'includes'
+v45 <- CallMethod v44, 'call', [v41]
+v46 <- GetProperty v37, 'buffer'
+// Splicing instruction 10 (BeginRepeatLoop) from D39B2B58-285F-45C5-A6A7-59C62E9BBFA3
+v47 <- LoadFloat '1e-15'
+v48 <- BeginConstructor -> v49, v50, v51, v52, v53
+    SetProperty v49, 'p6', v47
+    SetProperty v49, 'c', v50
+EndConstructor
+v54 <- Construct v48, []
+BeginRepeatLoop '10' -> v55
+    v56 <- LoadString 'p'
+    v57 <- BinaryOperation v56, '+', v55
+    SetComputedProperty v54, v57, v55
+EndRepeatLoop
+// Program may be interesting due to new coverage: 18341 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 7A6F9EB3-D3C6-428B-92A9-C5CF40CB0D1C ] =====
+// Mutating C947E150-9E81-4DE4-A2BF-B677196F0BBD with InputMutator (loose)
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadBoolean 'false'
+v1 <- LoadInteger '2098'
+v2 <- CreateNamedVariable 'Int32Array', 'none'
+// Replacing input 1 (v1) with v1
+v3 <- Construct v2, [v1]
+v4 <- CreateNamedVariable 'Float64Array', 'none'
+v5 <- Construct v4, [v1]
+v6 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v7 <- BeginConstructor -> v8, v9, v10
+    SetProperty v8, 'd', v10
+    SetProperty v8, 'a', v9
+    SetProperty v8, 'f', v10
+EndConstructor
+v11 <- Construct v7, [v6, v6]
+v12 <- Construct v7, [v7, v11]
+// Replacing input 2 (v7) with v2
+v13 <- Construct v7, [v6, v2]
+v14 <- LoadInteger '-1901850357'
+v15 <- CreateFloatArray [9.88496591383436e+307, -0.0, 9.645811590416322, -2.2250738585072014e-308, -882877.4954994294, nan, 7.540716606719762, 781.9769262846953, -7.004326735250661e+306]
+v16 <- CreateNamedVariable 'Uint16Array', 'none'
+v17 <- Construct v16, [v15]
+v18 <- LoadInteger '684504293'
+SetProperty v17, 'a', v18
+v19 <- LoadInteger '43916'
+v20 <- LoadInteger '1073741824'
+v21 <- LoadInteger '-14'
+v22 <- LoadInteger '-2103368433'
+v23 <- LoadInteger '-547227923'
+v24 <- LoadInteger '1000'
+v25 <- CreateNamedVariable 'Int8Array', 'none'
+// Replacing input 0 (v25) with v16
+v26 <- Construct v16, [v24]
+v27 <- LoadInteger '15'
+v28 <- CreateNamedVariable 'Int32Array', 'none'
+v29 <- LoadInteger '9'
+v30 <- BeginPlainFunction -> 
+EndPlainFunction
+v31 <- BeginConstructor -> v32, v33, v34
+    v35 <- GetProperty v34, 'arguments'
+EndConstructor
+// Replacing input 1 (v29) with v21
+v36 <- Construct v31, [v21, v30]
+v37 <- Construct v28, [v27]
+v38 <- BeginClassDefinition (decl)
+    ClassAddInstanceProperty 'h' v25
+    ClassAddPrivateInstanceProperty 'b'
+    ClassAddStaticComputedProperty v25
+    ClassAddStaticComputedProperty v24 v25
+EndClassDefinition
+v39 <- Construct v38, []
+v40 <- LoadRegExp '[(?:a+)+]' 'dygimu'
+v41 <- LoadRegExp 'foo(?=bar)bazc(a)X?' 'dgmu'
+v42 <- CreateNamedVariable 'String', 'none'
+v43 <- GetProperty v42, 'prototype'
+v44 <- GetProperty v43, 'includes'
+v45 <- CallMethod v44, 'call', [v41]
+v46 <- GetProperty v37, 'buffer'
+v47 <- LoadFloat '1e-15'
+v48 <- BeginConstructor -> v49, v50, v51, v52, v53
+    SetProperty v49, 'p6', v47
+    SetProperty v49, 'c', v50
+EndConstructor
+v54 <- Construct v48, []
+BeginRepeatLoop '10' -> v55
+    v56 <- LoadString 'p'
+    // Replacing input 0 (v56) with v31
+    v57 <- BinaryOperation v31, '+', v55
+    // Replacing input 2 (v55) with v48
+    SetComputedProperty v54, v57, v48
+EndRepeatLoop
+// Program may be interesting due to new coverage: 3340 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program D2019DA5-5FFB-4440-B301-E9FAEDCBE7F3 ] =====
+// Minimizing 7A6F9EB3-D3C6-428B-92A9-C5CF40CB0D1C
+v0 <- BeginConstructor -> v1, v2, v3
+EndConstructor
+v4 <- BeginConstructor -> v5, v6, v7, v8, v9
+EndConstructor
+BeginRepeatLoop '5' -> v10
+    v11 <- BinaryOperation v0, '+', v10
+    SetComputedProperty v4, v11, v4
+EndRepeatLoop
+// Program is interesting due to new coverage: 4 newly discovered edges in the CFG of the target
+
+

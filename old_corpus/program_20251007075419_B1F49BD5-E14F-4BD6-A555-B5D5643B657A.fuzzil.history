@@ -1,0 +1,112 @@
+// ===== [ Program 7FFEE885-9F17-42B0-8B9D-CBFB383EFF2E ] =====
+// Start of prefix code
+// Executing code generator ArrayGenerator
+v0 <- CreateArray []
+// Code generator finished
+// Executing code generator FloatGenerator
+v1 <- LoadFloat 'nan'
+v2 <- LoadFloat '-2.468118628446854'
+v3 <- LoadFloat '-738.5392134199968'
+// Code generator finished
+// Executing code generator BigIntGenerator
+v4 <- LoadBigInt '1000'
+v5 <- LoadBigInt '15'
+v6 <- LoadBigInt '4096'
+// Code generator finished
+// Executing code generator TypedArrayGenerator
+v7 <- LoadInteger '1024'
+v8 <- CreateNamedVariable 'Int16Array', 'none'
+v9 <- Construct v8, [v7]
+v10 <- LoadInteger '1890'
+v11 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v12 <- Construct v11, [v10]
+v13 <- LoadInteger '4'
+v14 <- CreateNamedVariable 'Int8Array', 'none'
+v15 <- Construct v14, [v13]
+// Code generator finished
+// End of prefix code. 16 variables are now visible
+v16 <- LoadInteger '268435440'
+v17 <- LoadInteger '3212'
+v18 <- CreateNamedVariable 'Uint16Array', 'none'
+v19 <- LoadInteger '1'
+v20 <- CreateNamedVariable 'Int8Array', 'none'
+v21 <- LoadInteger '3'
+v22 <- CreateNamedVariable 'Float64Array', 'none'
+v23 <- CreateNamedVariable 'Uint8Array', 'none'
+v24 <- LoadInteger '2'
+v25 <- LoadInteger '476388605'
+v26 <- LoadInteger '536870912'
+v27 <- LoadInteger '-1073741824'
+v28 <- LoadBigInt '1073741824'
+v29 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v30 <- LoadFloat '3.8607079113389884e+307'
+v31 <- LoadInteger '-21994'
+v32 <- LoadInteger '684504293'
+v33 <- BeginPlainFunction -> 
+    BeginObjectLiteral
+        ObjectLiteralAddProperty `set`, v33
+    v34 <- EndObjectLiteral
+    Return v34
+EndPlainFunction
+v35 <- CreateNamedVariable 'Proxy', 'none'
+v36 <- LoadInteger '5'
+
+
+// ===== [ Program 91918207-D2A6-4E4F-9EF3-AB2177AD5E01 ] =====
+// Mutating 7FFEE885-9F17-42B0-8B9D-CBFB383EFF2E with InputMutator (loose)
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- CreateArray []
+v1 <- LoadFloat 'nan'
+v2 <- LoadFloat '-2.468118628446854'
+v3 <- LoadFloat '-738.5392134199968'
+v4 <- LoadBigInt '1000'
+v5 <- LoadBigInt '15'
+v6 <- LoadBigInt '4096'
+v7 <- LoadInteger '1024'
+v8 <- CreateNamedVariable 'Int16Array', 'none'
+v9 <- Construct v8, [v7]
+v10 <- LoadInteger '1890'
+v11 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+// Replacing input 1 (v10) with v11
+v12 <- Construct v11, [v11]
+v13 <- LoadInteger '4'
+v14 <- CreateNamedVariable 'Int8Array', 'none'
+// Replacing input 1 (v13) with v14
+v15 <- Construct v14, [v14]
+v16 <- LoadInteger '268435440'
+v17 <- LoadInteger '3212'
+v18 <- CreateNamedVariable 'Uint16Array', 'none'
+v19 <- LoadInteger '1'
+v20 <- CreateNamedVariable 'Int8Array', 'none'
+v21 <- LoadInteger '3'
+v22 <- CreateNamedVariable 'Float64Array', 'none'
+v23 <- CreateNamedVariable 'Uint8Array', 'none'
+v24 <- LoadInteger '2'
+v25 <- LoadInteger '476388605'
+v26 <- LoadInteger '536870912'
+v27 <- LoadInteger '-1073741824'
+v28 <- LoadBigInt '1073741824'
+v29 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v30 <- LoadFloat '3.8607079113389884e+307'
+v31 <- LoadInteger '-21994'
+v32 <- LoadInteger '684504293'
+v33 <- BeginPlainFunction -> 
+    BeginObjectLiteral
+        // Replacing input 0 (v33) with v23
+        ObjectLiteralAddProperty `set`, v23
+    v34 <- EndObjectLiteral
+    // Replacing input 0 (v34) with v34
+    Return v34
+EndPlainFunction
+v35 <- CreateNamedVariable 'Proxy', 'none'
+v36 <- LoadInteger '5'
+// Program may be interesting due to new coverage: 1747 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program B1F49BD5-E14F-4BD6-A555-B5D5643B657A ] =====
+// Minimizing 91918207-D2A6-4E4F-9EF3-AB2177AD5E01
+v0 <- CreateNamedVariable 'Int8Array', 'none'
+v1 <- Construct v0, [v0]
+// Program is interesting due to new coverage: 17 newly discovered edges in the CFG of the target
+
+

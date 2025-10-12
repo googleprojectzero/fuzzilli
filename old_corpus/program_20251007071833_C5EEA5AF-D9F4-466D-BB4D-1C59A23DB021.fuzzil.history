@@ -1,0 +1,98 @@
+// ===== [ Program FF4CDB36-6273-4056-8395-098BD1CAC5BA ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator TrivialFunctionGenerator
+v0 <- BeginPlainFunction -> 
+EndPlainFunction
+// Code generator finished
+// Executing code generator BuiltinObjectInstanceGenerator
+v1 <- CreateNamedVariable 'Date', 'none'
+v2 <- Construct v1, []
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v3 <- BeginClassDefinition (decl) v0
+    // Executing code generator ClassStaticPropertyGenerator
+    ClassAddStaticProperty 'c'
+    // Code generator finished
+    // Executing code generator ClassInstanceMethodGenerator
+    BeginClassInstanceMethod 'm' -> v4, v5
+        // Executing code generator ComputedSuperPropertyRetrievalGenerator
+        v6 <- GetComputedSuperProperty v4
+        // Code generator finished
+        // Executing code generator ApiMethodCallGenerator
+        BeginTry
+            v7 <- CallMethod v4, 'ownKeys', [v1, v0]
+        BeginCatch -> v8
+        EndTryCatch
+        // Code generator finished
+        Return v6
+    EndClassInstanceMethod
+    // Code generator finished
+    // Executing code generator ClassInstanceElementGenerator
+    ClassAddInstanceElement '4231758948' v2
+    // Code generator finished
+    // Executing code generator ClassInstancePropertyGenerator
+    ClassAddInstanceProperty 'h' v2
+    // Code generator finished
+    // Executing code generator ClassInstanceElementGenerator
+    ClassAddInstanceElement '3277'
+    // Code generator finished
+EndClassDefinition
+v9 <- Construct v3, []
+v10 <- Construct v3, []
+v11 <- Construct v3, []
+// Code generator finished
+// Executing code generator TypedArrayGenerator
+v12 <- LoadInteger '3125'
+v13 <- CreateNamedVariable 'Float32Array', 'none'
+v14 <- Construct v13, [v12]
+v15 <- LoadInteger '255'
+v16 <- CreateNamedVariable 'Int32Array', 'none'
+v17 <- Construct v16, [v15]
+v18 <- LoadInteger '255'
+v19 <- CreateNamedVariable 'Int32Array', 'none'
+v20 <- Construct v19, [v18]
+// Code generator finished
+// End of prefix code. 16 variables are now visible
+// Executing code generator FunctionCallGenerator
+v21 <- CallFunction v0, []
+// Code generator finished
+// Executing code generator DupGenerator
+v22 <- Dup v21
+// Code generator finished
+// Executing code generator TernaryOperationGenerator
+v23 <- Compare v12, '!=', v22
+v24 <- TernaryOperation v23, v12, v22
+// Code generator finished
+// Executing code generator NumberComputationGenerator
+v25 <- CreateNamedVariable 'Math', 'none'
+v26 <- LoadInteger '-5'
+v27 <- LoadFloat '-3.0'
+v28 <- BinaryOperation v1, '|', v11
+v29 <- CallMethod v25, 'round', [v11]
+v30 <- CallMethod v25, 'sqrt', [v27]
+v31 <- CallMethod v25, 'asinh', [v26]
+// Program may be interesting due to new coverage: 3493 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program C5EEA5AF-D9F4-466D-BB4D-1C59A23DB021 ] =====
+// Minimizing FF4CDB36-6273-4056-8395-098BD1CAC5BA
+v0 <- BeginPlainFunction -> 
+EndPlainFunction
+v1 <- CreateNamedVariable 'Date', 'none'
+v2 <- BeginClassDefinition (decl) v0
+    BeginClassInstanceMethod 'm' -> v3, v4
+    EndClassInstanceMethod
+    ClassAddInstanceElement '4231758948' v1
+    ClassAddInstanceProperty 'h' v1
+    ClassAddInstanceElement '3277'
+EndClassDefinition
+v5 <- Construct v2, []
+v6 <- CreateNamedVariable 'Math', 'none'
+v7 <- LoadInteger '-5'
+v8 <- CallMethod v6, 'asinh', [v7]
+// Program is interesting due to new coverage: 31 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 36 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 91 newly discovered edges in the CFG of the target
+
+

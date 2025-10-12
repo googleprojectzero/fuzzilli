@@ -1,0 +1,64 @@
+// ===== [ Program 68BEE507-5C5E-474A-B548-82DA0B5ADC0C ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator TypedArrayGenerator
+v0 <- LoadInteger '5'
+v1 <- CreateNamedVariable 'Float32Array', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '1'
+v4 <- CreateNamedVariable 'Uint32Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '8'
+v7 <- CreateNamedVariable 'Int16Array', 'none'
+v8 <- Construct v7, [v6]
+// Code generator finished
+// Executing code generator StringGenerator
+v9 <- LoadString 'number'
+v10 <- LoadString 'o'
+v11 <- LoadString 'e'
+// Code generator finished
+// End of prefix code. 12 variables are now visible
+// Executing code generator IntegerGenerator
+v12 <- LoadInteger '2018109878'
+v13 <- LoadInteger '-355212154'
+v14 <- LoadInteger '1'
+// Code generator finished
+// Executing code generator ComputedPropertyUpdateGenerator
+UpdateComputedProperty v9, v4, '^',v0
+// Code generator finished
+// Executing code generator ReassignmentGenerator
+// Code generator finished
+// Executing code generator FastToSlowPropertiesGenerator
+BeginRepeatLoop '32' -> v15
+    v16 <- LoadString 'p'
+    v17 <- BinaryOperation v16, '+', v15
+    SetComputedProperty v2, v17, v15
+EndRepeatLoop
+// Code generator finished
+// Executing code generator ArrayGenerator
+v18 <- CreateArray [v9]
+v19 <- CreateArray [v9]
+v20 <- CreateArray [v5, v6, v18]
+// Program may be interesting due to new coverage: 3870 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program A6AEFF56-39CF-448C-A918-17A17CD350B9 ] =====
+// Minimizing 68BEE507-5C5E-474A-B548-82DA0B5ADC0C
+v0 <- LoadInteger '5'
+v1 <- CreateNamedVariable 'Float32Array', 'none'
+v2 <- Construct v1, []
+v3 <- CreateNamedVariable 'Uint32Array', 'none'
+v4 <- LoadString 'number'
+UpdateComputedProperty v4, v3, '^',v0
+BeginRepeatLoop '25' -> v5
+    v6 <- LoadString 'p'
+    v7 <- BinaryOperation v6, '+', v5
+    SetComputedProperty v2, v7, v5
+EndRepeatLoop
+v8 <- CreateArray [v4]
+v9 <- CreateArray [v3]
+// Program is interesting due to new coverage: 113 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 759 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 460 newly discovered edges in the CFG of the target
+
+

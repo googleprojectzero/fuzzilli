@@ -1,0 +1,132 @@
+// ===== [ Program 0AA3A1D4-1CEA-4435-99DC-B0FDDE07A896 ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator TypedArrayGenerator
+v0 <- LoadInteger '78'
+v1 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '563'
+v4 <- CreateNamedVariable 'BigUint64Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '257'
+v7 <- CreateNamedVariable 'Int8Array', 'none'
+v8 <- Construct v7, [v6]
+// Code generator finished
+// Executing code generator ObjectBuilderFunctionGenerator
+v9 <- BeginPlainFunction -> v10, v11
+    BeginObjectLiteral
+        // Executing code generator ObjectLiteralCopyPropertiesGenerator
+        ObjectLiteralCopyProperties v8
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `f`, v4
+        // Code generator finished
+        // Executing code generator ObjectLiteralCopyPropertiesGenerator
+        ObjectLiteralCopyProperties v2
+        // Code generator finished
+        // Executing code generator ObjectLiteralPrototypeGenerator
+        ObjectLiteralSetPrototype v2
+        // Code generator finished
+        // Executing code generator ObjectLiteralComputedPropertyGenerator
+        ObjectLiteralAddComputedProperty v10, v2
+        // Code generator finished
+        // Executing code generator ObjectLiteralComputedMethodGenerator
+        BeginObjectLiteralComputedMethod v5 -> v12, v13, v14, v15
+            // Executing code generator SubroutineReturnGenerator
+            Return v13
+            // Code generator finished
+            // Executing code generator VoidGenerator
+            v16 <- Void_ v0
+            // Code generator finished
+            Return v13
+        EndObjectLiteralComputedMethod
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `h`, v6
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `a`, v6
+        // Code generator finished
+        // Executing code generator ObjectLiteralElementGenerator
+        ObjectLiteralAddElement `5`, v7
+        // Code generator finished
+        // Executing code generator ObjectLiteralComputedPropertyGenerator
+        ObjectLiteralAddComputedProperty v1, v10
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `c`, v10
+        // Code generator finished
+    v17 <- EndObjectLiteral
+    Return v17
+EndPlainFunction
+v18 <- CallFunction v9, [v6, v0]
+v19 <- CallFunction v9, [v6, v3]
+v20 <- CallFunction v9, [v6, v6]
+// Code generator finished
+// Executing code generator FloatGenerator
+v21 <- LoadFloat '1.0'
+v22 <- LoadFloat '1.0'
+v23 <- LoadFloat '0.33894608105673396'
+// Code generator finished
+// End of prefix code. 16 variables are now visible
+// Executing code generator ElementRetrievalGenerator
+v24 <- GetElement v8, '6'
+// Code generator finished
+// Executing code generator BuiltinObjectInstanceGenerator
+v25 <- CreateNamedVariable 'Date', 'none'
+v26 <- Construct v25, []
+// Code generator finished
+// Executing code generator ReassignmentGenerator
+// Code generator finished
+// Executing code generator ReassignmentGenerator
+// Code generator finished
+// Executing code generator NumberComputationGenerator
+v27 <- CreateNamedVariable 'Math', 'none'
+v28 <- LoadInteger '-1'
+v29 <- LoadInteger '4096'
+v30 <- LoadFloat 'nan'
+v31 <- UnaryOperation v29, '--'
+v32 <- UnaryOperation v21, '--'
+v33 <- CallMethod v27, 'log', [v28]
+v34 <- BinaryOperation v29, '>>>', v21
+v35 <- BinaryOperation v21, '-', v21
+v36 <- UnaryOperation '--', v21
+v37 <- UnaryOperation '!', v28
+// Program may be interesting due to new coverage: 3987 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program CFBA0842-A844-447E-A616-3A7EEC206DB2 ] =====
+// Minimizing 0AA3A1D4-1CEA-4435-99DC-B0FDDE07A896
+v0 <- LoadInteger '78'
+v1 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v2 <- Construct v1, [v0]
+v3 <- LoadInteger '563'
+v4 <- CreateNamedVariable 'BigUint64Array', 'none'
+v5 <- Construct v4, [v3]
+v6 <- LoadInteger '257'
+v7 <- CreateNamedVariable 'Int8Array', 'none'
+v8 <- Construct v7, [v6]
+v9 <- BeginPlainFunction -> v10, v11
+    BeginObjectLiteral
+        ObjectLiteralCopyProperties v8
+        ObjectLiteralAddProperty `f`, v4
+        ObjectLiteralCopyProperties v2
+        ObjectLiteralSetPrototype v2
+        BeginObjectLiteralComputedMethod v5 -> v12, v13, v14, v15
+        EndObjectLiteralComputedMethod
+        ObjectLiteralAddElement `5`, v7
+        ObjectLiteralAddComputedProperty v1, v10
+    v16 <- EndObjectLiteral
+    Return v16
+EndPlainFunction
+v17 <- CallFunction v9, [v6]
+v18 <- CallFunction v9, [v6]
+v19 <- GetElement v8, '6'
+v20 <- CreateNamedVariable 'Math', 'none'
+v21 <- LoadInteger '-1'
+v22 <- CallMethod v20, 'log', [v21]
+// Program is interesting due to new coverage: 543 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 297 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 36 newly discovered edges in the CFG of the target
+
+

@@ -1,0 +1,234 @@
+// ===== [ Program 2D505A1E-04CB-4775-819D-CD0B9DC4C144 ] =====
+// Start of prefix code
+// Executing code generator FloatGenerator
+v0 <- LoadFloat '-2.0'
+v1 <- LoadFloat '1.2397726966665674e+308'
+v2 <- LoadFloat '0.013560799105835186'
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v3 <- BeginConstructor -> v4, v5
+    SetProperty v4, 'g', v0
+    SetProperty v4, 'd', v1
+EndConstructor
+v6 <- Construct v3, [v0]
+v7 <- Construct v3, [v2]
+v8 <- Construct v3, [v2]
+// Code generator finished
+// Executing code generator TypedArrayGenerator
+v9 <- LoadInteger '3380'
+v10 <- CreateNamedVariable 'Int16Array', 'none'
+v11 <- Construct v10, [v9]
+v12 <- LoadInteger '9'
+v13 <- CreateNamedVariable 'Uint16Array', 'none'
+v14 <- Construct v13, [v12]
+v15 <- LoadInteger '261'
+v16 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v17 <- Construct v16, [v15]
+// Code generator finished
+// End of prefix code. 16 variables are now visible
+v18 <- LoadBoolean 'true'
+v19 <- CreateIntArray [-69232989, 716822506, 3, -10, -6506]
+v20 <- CreateIntArray [-11, -9, -1627167252, 536870912, 224770006]
+v21 <- CreateIntArray [-65537]
+v22 <- BeginClassDefinition (exp)
+    BeginClassInstanceMethod 'm' -> v23, v24
+        v25 <- CreateNamedVariable 'Symbol', 'none'
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `value`, v19
+            BeginObjectLiteralComputedMethod v25 -> v26
+            EndObjectLiteralComputedMethod
+        v27 <- EndObjectLiteral
+        v28 <- LoadDisposableVariable v27
+    EndClassInstanceMethod
+    ClassAddPrivateInstanceProperty 'f'
+    ClassAddInstanceElement '3'
+    ClassAddStaticProperty 'g'
+EndClassDefinition
+v29 <- GetProperty (guarded) v22, 'toString'
+v30 <- CallFunction (guarded) v29, []
+v31 <- Construct v22, []
+v32 <- Construct v22, []
+v33 <- Construct v22, []
+v34 <- BeginPlainFunction -> v35, v36
+    BeginObjectLiteral
+        ObjectLiteralCopyProperties v33
+        BeginObjectLiteralComputedMethod v20 -> v37, v38, v39
+        EndObjectLiteralComputedMethod
+        BeginObjectLiteralSetter `d` -> v40, v41
+            v42 <- CallSuperMethod 'setUint32', [v19, v32]
+            v43 <- LoadInteger '-268435456'
+            v44 <- LoadInteger '0'
+        EndObjectLiteralSetter
+    v45 <- EndObjectLiteral
+    Return v45
+EndPlainFunction
+v46 <- CallFunction v34, [v31, v31]
+SetElement v46, '482618132', v46
+v47 <- CreateIntArray [-9, 2147483648, -9007199254740990, 9, 1000, -4645, 4096, -65537]
+v48 <- CallMethod (guarded) v47, 'with', [v21]
+
+
+// ===== [ Program EFF5D3A7-4E00-40D0-B71E-4177465DBFEA ] =====
+// Mutating 2D505A1E-04CB-4775-819D-CD0B9DC4C144 with CodeGenMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadFloat '-2.0'
+v1 <- LoadFloat '1.2397726966665674e+308'
+v2 <- LoadFloat '0.013560799105835186'
+v3 <- BeginConstructor -> v4, v5
+    SetProperty v4, 'g', v0
+    SetProperty v4, 'd', v1
+EndConstructor
+v6 <- Construct v3, [v0]
+v7 <- Construct v3, [v2]
+v8 <- Construct v3, [v2]
+v9 <- LoadInteger '3380'
+v10 <- CreateNamedVariable 'Int16Array', 'none'
+v11 <- Construct v10, [v9]
+v12 <- LoadInteger '9'
+// Executing code generator IfElseGenerator
+BeginIf v1
+    // Executing code generator PrototypeAccessGenerator
+    v13 <- GetProperty v11, '__proto__'
+    // Code generator finished
+    // Executing code generator FunctionCallGenerator
+    v14 <- CallFunction (guarded) v13, [v12, v13]
+    // Code generator finished
+BeginElse
+    // Executing code generator BuiltinObjectInstanceGenerator
+    v15 <- CreateNamedVariable 'WeakSet', 'none'
+    v16 <- Construct v15, []
+    // Code generator finished
+EndIf
+// Code generator finished
+v17 <- CreateNamedVariable 'Uint16Array', 'none'
+v18 <- Construct v17, [v12]
+v19 <- LoadInteger '261'
+v20 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v21 <- Construct v20, [v19]
+v22 <- LoadBoolean 'true'
+v23 <- CreateIntArray [-69232989, 716822506, 3, -10, -6506]
+v24 <- CreateIntArray [-11, -9, -1627167252, 536870912, 224770006]
+v25 <- CreateIntArray [-65537]
+v26 <- BeginClassDefinition (exp)
+    BeginClassInstanceMethod 'm' -> v27, v28
+        v29 <- CreateNamedVariable 'Symbol', 'none'
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `value`, v23
+            BeginObjectLiteralComputedMethod v29 -> v30
+            EndObjectLiteralComputedMethod
+        v31 <- EndObjectLiteral
+        v32 <- LoadDisposableVariable v31
+    EndClassInstanceMethod
+    ClassAddPrivateInstanceProperty 'f'
+    ClassAddInstanceElement '3'
+    ClassAddStaticProperty 'g'
+EndClassDefinition
+v33 <- GetProperty (guarded) v26, 'toString'
+v34 <- CallFunction (guarded) v33, []
+v35 <- Construct v26, []
+// Executing code generator GrowableSharedArrayBufferGenerator
+v36 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v37 <- LoadInteger '153'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v37
+v38 <- EndObjectLiteral
+v39 <- LoadInteger '153'
+v40 <- Construct v36, [v39, v38]
+v41 <- CreateNamedVariable 'Uint8Array', 'none'
+v42 <- Construct v41, [v40]
+// Code generator finished
+v43 <- Construct v26, []
+v44 <- Construct v26, []
+v45 <- BeginPlainFunction -> v46, v47
+    BeginObjectLiteral
+        ObjectLiteralCopyProperties v44
+        BeginObjectLiteralComputedMethod v24 -> v48, v49, v50
+        EndObjectLiteralComputedMethod
+        BeginObjectLiteralSetter `d` -> v51, v52
+            v53 <- CallSuperMethod 'setUint32', [v23, v43]
+            // Executing code generator ElementAssignmentGenerator
+            SetElement v47, '243', v46
+            // Code generator finished
+            // Executing code generator PrototypeAccessGenerator
+            v54 <- GetProperty v41, '__proto__'
+            // Code generator finished
+            // Executing code generator NumberComputationGenerator
+            v55 <- CreateNamedVariable 'Math', 'none'
+            v56 <- LoadInteger '-2147483648'
+            v57 <- LoadFloat '-560.5111744936762'
+            v58 <- CallMethod v55, 'sign', [v57]
+            v59 <- BinaryOperation v57, '<<', v11
+            v60 <- UnaryOperation '~', v56
+            v61 <- CallMethod v55, 'log2', [v57]
+            v62 <- CallMethod v55, 'atan', [v56]
+            v63 <- CallMethod v55, 'acosh', [v57]
+            // Code generator finished
+            v64 <- LoadInteger '-268435456'
+            v65 <- LoadInteger '0'
+        EndObjectLiteralSetter
+    v66 <- EndObjectLiteral
+    Return v66
+EndPlainFunction
+v67 <- CallFunction v45, [v35, v35]
+SetElement v67, '482618132', v67
+v68 <- CreateIntArray [-9, 2147483648, -9007199254740990, 9, 1000, -4645, 4096, -65537]
+v69 <- CallMethod (guarded) v68, 'with', [v25]
+// Program may be interesting due to new coverage: 3650 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 7971F709-FDA4-46DD-84E2-200391C10D9F ] =====
+// Minimizing EFF5D3A7-4E00-40D0-B71E-4177465DBFEA
+v0 <- LoadFloat '-2.0'
+v1 <- LoadFloat '1.2397726966665674e+308'
+v2 <- LoadFloat '0.013560799105835186'
+v3 <- BeginConstructor -> v4, v5
+EndConstructor
+v6 <- Construct v3, [v0]
+v7 <- Construct v3, [v2]
+v8 <- Construct v3, [v2]
+v9 <- LoadInteger '3380'
+v10 <- CreateNamedVariable 'Int16Array', 'none'
+v11 <- Construct v10, [v9]
+v12 <- LoadInteger '9'
+BeginIf v1
+    v13 <- GetProperty v11, '__proto__'
+    v14 <- CallFunction (guarded) v13, [v12, v13]
+BeginElse
+    v15 <- CreateNamedVariable 'WeakSet', 'none'
+    v16 <- CallFunction v15, [v11]
+EndIf
+v17 <- CreateNamedVariable 'Uint16Array', 'none'
+v18 <- Construct v17, [v12]
+v19 <- LoadInteger '261'
+v20 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v21 <- Construct v20, [v19]
+v22 <- CreateIntArray [-69232989, 716822506, 3, -10, -6506]
+v23 <- CreateIntArray [-11, -9, -1627167252, 536870912, 224770006]
+v24 <- CreateIntArray [-65537]
+v25 <- BeginClassDefinition (exp)
+    BeginClassInstanceMethod 'm' -> v26, v27
+        v28 <- CreateNamedVariable 'Symbol', 'none'
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `value`, v22
+            BeginObjectLiteralComputedMethod v28 -> v29
+            EndObjectLiteralComputedMethod
+        v30 <- EndObjectLiteral
+        v31 <- LoadDisposableVariable v30
+    EndClassInstanceMethod
+    ClassAddPrivateInstanceProperty 'f'
+    ClassAddStaticProperty 'g'
+EndClassDefinition
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v23 -> v32, v33, v34
+    EndObjectLiteralComputedMethod
+    BeginObjectLiteralSetter `d` -> v35, v36
+        v37 <- LoadInteger '-2147483648'
+        v38 <- UnaryOperation '~', v37
+    EndObjectLiteralSetter
+v39 <- EndObjectLiteral
+SetElement v39, '482618132', v39
+v40 <- CreateIntArray [-9, 2147483648, -9007199254740990, 9, 1000, -4645, 4096, -65537]
+v41 <- CallMethod (guarded) v40, 'with', [v24]
+// Program is interesting due to new coverage: 8 newly discovered edges in the CFG of the target
+
+

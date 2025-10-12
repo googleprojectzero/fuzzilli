@@ -1,0 +1,53 @@
+// ===== [ Program E9BA3D8B-1080-436A-9BC8-DFB55DE63A80 ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator FloatGenerator
+v0 <- LoadFloat '-8.088488338935901'
+v1 <- LoadFloat '-203.3985930655831'
+v2 <- LoadFloat 'nan'
+// Code generator finished
+// Executing code generator ArrayGenerator
+v3 <- CreateArray [v2, v2]
+v4 <- CreateArray [v2]
+v5 <- CreateArray [v4, v0, v3]
+// Code generator finished
+// Executing code generator FloatArrayGenerator
+v6 <- CreateFloatArray [5.381467365036634e+307, 2.2250738585072014e-308, 992109.0439283121, 0.8330764682223211, 4.0]
+v7 <- CreateFloatArray [603057.8780292345, 4.0, 2.220446049250313e-16, 5.0, 509830.6062725275]
+v8 <- CreateFloatArray [2.2250738585072014e-308]
+// Code generator finished
+// Executing code generator IntegerGenerator
+v9 <- LoadInteger '1073741825'
+v10 <- LoadInteger '2'
+v11 <- LoadInteger '9007199254740990'
+// Code generator finished
+// End of prefix code. 12 variables are now visible
+// Executing code generator NumberComputationGenerator
+v12 <- CreateNamedVariable 'Math', 'none'
+v13 <- LoadInteger '255'
+v14 <- LoadInteger '-2147483648'
+v15 <- LoadFloat '1e-15'
+v16 <- CallMethod v12, 'log1p', [v13]
+v17 <- BinaryOperation v6, '+', v6
+v18 <- UnaryOperation '+', v14
+v19 <- UnaryOperation '--', v18
+v20 <- BinaryOperation v10, '-', v19
+v21 <- UnaryOperation '+', v17
+// Program may be interesting due to new coverage: 2451 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program A169C426-D69D-4FB5-B53D-2ADCCB68D7D6 ] =====
+// Minimizing E9BA3D8B-1080-436A-9BC8-DFB55DE63A80
+v0 <- LoadFloat 'nan'
+v1 <- CreateArray [v0, v0]
+v2 <- CreateArray [v0]
+v3 <- CreateFloatArray [5.381467365036634e+307, 2.2250738585072014e-308, 992109.0439283121, 0.8330764682223211, 4.0]
+v4 <- CreateNamedVariable 'Math', 'none'
+v5 <- LoadInteger '255'
+v6 <- CallMethod v4, 'log1p', [v5]
+v7 <- UnaryOperation '+', v3
+// Program is interesting due to new coverage: 29 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 122 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 94 newly discovered edges in the CFG of the target
+
+

@@ -1,0 +1,99 @@
+// ===== [ Program 32865FF5-C21F-4C4C-98CA-E6535DD5A6A5 ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator BigIntGenerator
+v0 <- LoadBigInt '127'
+v1 <- LoadBigInt '3'
+v2 <- LoadBigInt '255'
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v3 <- BeginConstructor -> v4, v5, v6
+    SetProperty v4, 'e', v6
+    SetProperty v4, 'c', v6
+    SetProperty v4, 'f', v6
+EndConstructor
+v7 <- Construct v3, [v0, v2]
+v8 <- Construct v3, [v1, v2]
+v9 <- Construct v3, [v2, v2]
+// Code generator finished
+// Executing code generator FloatGenerator
+v10 <- LoadFloat '-inf'
+v11 <- LoadFloat '-940295.4110529269'
+v12 <- LoadFloat '-2.220446049250313e-16'
+// Code generator finished
+// Executing code generator RegExpGenerator
+v13 <- LoadRegExp '(eDa)' 'dyvg'
+v14 <- LoadRegExp '\xed\xa0\x801poc?' 'dsgimu'
+v15 <- LoadRegExp '(?:ab)|cde(?:ab|cde)+' 'smu'
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v16 <- BeginClassDefinition (decl)
+    // Executing code generator ClassInstanceMethodGenerator
+    BeginClassInstanceMethod 'toString' -> v17, v18, v19, v20, v21
+        // Executing code generator NullGenerator
+        v22 <- LoadNull
+        // Code generator finished
+        // Executing code generator DestructArrayAndReassignGenerator
+        [] <- DestructArrayAndReassign v18
+        // Code generator finished
+        // Executing code generator IntegerGenerator
+        v23 <- LoadInteger '24351'
+        v24 <- LoadInteger '2117427804'
+        v25 <- LoadInteger '9223372036854775807'
+        // Code generator finished
+        // Executing code generator LengthChangeGenerator
+        v26 <- LoadInteger '3854824921'
+        SetProperty v14, 'length', v26
+        // Code generator finished
+        // Executing code generator ForceMaglevCompilationGenerator
+        // Executing code generator FastToSlowPropertiesGenerator
+        BeginRepeatLoop '32' -> v27
+            v28 <- LoadString 'p'
+            v29 <- BinaryOperation v28, '+', v27
+            SetComputedProperty v19, v29, v27
+        EndRepeatLoop
+        // Code generator finished
+        Return v22
+    EndClassInstanceMethod
+    // Code generator finished
+EndClassDefinition
+v30 <- Construct v16, []
+v31 <- Construct v16, []
+v32 <- Construct v16, []
+// Code generator finished
+// End of prefix code. 17 variables are now visible
+// Executing code generator StringGenerator
+v33 <- LoadString 'undefined'
+v34 <- LoadString 'MAX_VALUE'
+v35 <- LoadString 'b'
+// Code generator finished
+// Executing code generator GrowableSharedArrayBufferGenerator
+v36 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v37 <- LoadInteger '10000'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v37
+v38 <- EndObjectLiteral
+v39 <- LoadInteger '10'
+v40 <- Construct v36, [v39, v38]
+v41 <- CreateNamedVariable 'Int8Array', 'none'
+v42 <- Construct v41, [v40]
+// Program may be interesting due to new coverage: 4464 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 1333DB36-5742-40E9-B6BB-A77532FCB4BF ] =====
+// Minimizing 32865FF5-C21F-4C4C-98CA-E6535DD5A6A5
+v0 <- LoadRegExp '\xed\xa0\x801poc?' 'dsgimu'
+v1 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v2 <- LoadInteger '10000'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v2
+v3 <- EndObjectLiteral
+v4 <- LoadInteger '10'
+v5 <- Construct v1, [v4, v3]
+v6 <- CreateNamedVariable 'Int8Array', 'none'
+v7 <- Construct v6, [v5]
+// Program is interesting due to new coverage: 232 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 103 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 47 newly discovered edges in the CFG of the target
+
+

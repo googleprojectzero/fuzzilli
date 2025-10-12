@@ -1,0 +1,93 @@
+// ===== [ Program 7B20E83A-CEC6-4278-8C41-3699C19B9AFB ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator TimeZoneIdGenerator
+v0 <- LoadString 'HKT'
+v1 <- LoadString '+05:00'
+v2 <- LoadString 'PST'
+// Code generator finished
+// Executing code generator ArrayGenerator
+v3 <- CreateArray [v2]
+v4 <- CreateArray [v2, v1, v2, v1]
+v5 <- CreateArray [v4]
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v6 <- BeginClassDefinition (decl)
+    // Executing code generator ClassConstructorGenerator
+    BeginClassConstructor -> v7, v8, v9
+        // Executing code generator UpdateGenerator
+        Update v7, '+', v7
+        // Code generator finished
+        // Executing code generator ComputedSuperPropertyAssignmentGenerator
+        SetComputedSuperProperty v5, v5
+        // Code generator finished
+    EndClassConstructor
+    // Code generator finished
+    // Executing code generator ClassInstanceGetterGenerator
+    BeginClassInstanceGetter `f` -> v10
+        // Executing code generator ConstructorCallGenerator
+        v11 <- Construct (guarded) v0, [v2, v10]
+        // Code generator finished
+        // Executing code generator FloatGenerator
+        v12 <- LoadFloat '340.3879418535628'
+        v13 <- LoadFloat '5.0'
+        v14 <- LoadFloat '2.2250738585072014e-308'
+        // Code generator finished
+        Return v10
+    EndClassInstanceGetter
+    // Code generator finished
+EndClassDefinition
+v15 <- Construct v6, [v3, v1]
+v16 <- Construct v6, [v4, v15]
+v17 <- Construct v6, [v5, v1]
+// Code generator finished
+// End of prefix code. 10 variables are now visible
+// Executing code generator BinaryOperationGenerator
+v18 <- BinaryOperation v1, '-', v17
+// Code generator finished
+// Executing code generator CompareWithIfElseGenerator
+v19 <- Compare v4, '<', v15
+BeginIf v19
+    // Executing code generator ComputedPropertyAssignmentGenerator
+    SetComputedProperty v3, v16, v1
+    // Code generator finished
+    // Executing code generator NumberComputationGenerator
+    v20 <- CreateNamedVariable 'Math', 'none'
+    v21 <- LoadInteger '-9223372036854775808'
+    v22 <- LoadInteger '-58525'
+    v23 <- UnaryOperation '!', v5
+    v24 <- UnaryOperation '--', v19
+    v25 <- BinaryOperation v22, '??', v21
+    // Code generator finished
+BeginElse
+    // Executing code generator NumberComputationGenerator
+    v26 <- CreateNamedVariable 'Math', 'none'
+    v27 <- LoadInteger '-18111'
+    v28 <- LoadFloat '862672.6403676437'
+    v29 <- CallMethod v26, 'fround', [v28]
+    v30 <- BinaryOperation v15, '*', v27
+    v31 <- BinaryOperation v5, '%', v15
+    v32 <- BinaryOperation v30, '**', v15
+    v33 <- BinaryOperation v28, '&&', v27
+    // Code generator finished
+EndIf
+// Program may be interesting due to new coverage: 3565 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 134F541A-D484-4DE2-85C4-A6F841289952 ] =====
+// Minimizing 7B20E83A-CEC6-4278-8C41-3699C19B9AFB
+v0 <- LoadString '+05:00'
+v1 <- LoadString 'PST'
+v2 <- CreateArray [v1, v0, v1, v0]
+v3 <- BeginClassDefinition (decl)
+    BeginClassConstructor -> v4, v5, v6
+        SetComputedSuperProperty v2, v2
+    EndClassConstructor
+EndClassDefinition
+v7 <- Construct v3, [v2, v2]
+v8 <- BinaryOperation v0, '-', v7
+// Program is interesting due to new coverage: 20 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 59 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 74 newly discovered edges in the CFG of the target
+
+

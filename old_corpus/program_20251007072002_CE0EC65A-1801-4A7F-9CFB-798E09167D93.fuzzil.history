@@ -1,0 +1,376 @@
+// ===== [ Program 3C4CF409-985F-4FF2-8317-71435997D939 ] =====
+// Start of prefix code
+// Executing code generator FloatGenerator
+v0 <- LoadFloat '4.576737267287978e+307'
+v1 <- LoadFloat '-0.0'
+v2 <- LoadFloat '435.78586447325097'
+// Code generator finished
+// Executing code generator TrivialFunctionGenerator
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+// Code generator finished
+// Executing code generator BigIntGenerator
+v4 <- LoadBigInt '1073741824'
+v5 <- LoadBigInt '2147483649'
+v6 <- LoadBigInt '8'
+// Code generator finished
+// Executing code generator FloatArrayGenerator
+v7 <- CreateFloatArray [0.32814409159124835, 4.0, 0.9942312345185276, -356.1747980285468, -8.24329085875172, -0.0, 3.545484683603069e+307]
+v8 <- CreateFloatArray [0.0699817657606816, 1e-15, -5.0, -296573.4769477659]
+v9 <- CreateFloatArray [0.8209340250367375, -836277.6011652886, 986946.9596903422, -133.7489528330293]
+// Code generator finished
+// Executing code generator RegExpGenerator
+v10 <- LoadRegExp 'tU(?:a*)+' 'ysgu'
+v11 <- LoadRegExp '[x\dz]Vv\u{12345}+' 'dygimu'
+v12 <- LoadRegExp '(?=)L.(a\1)+' 'dyvsg'
+// Code generator finished
+// End of prefix code. 13 variables are now visible
+v13 <- LoadRegExp 'Qa(?!bbb|bb)c\u0060?' 'dsm'
+v14 <- LoadRegExp 'Ca?[\111]' 'ym'
+v15 <- LoadRegExp '([\cz]?)' 'dgm'
+v16 <- BeginPlainFunction -> 
+    Return v15
+EndPlainFunction
+v17 <- CallFunction (guarded) v16, []
+v18 <- GetProperty v17, 'unicodeSets'
+v19 <- LoadInteger '16'
+v20 <- CreateNamedVariable 'Uint8Array', 'none'
+v21 <- Construct (guarded) v20, [v19, v13, v15]
+v22 <- Construct v20, [v19]
+v23 <- LoadInteger '16'
+v24 <- CreateNamedVariable 'BigUint64Array', 'none'
+v25 <- Construct (guarded) v24, [v20, v20, v20]
+v26 <- Construct v24, [v23]
+v27 <- LoadInteger '2'
+v28 <- Construct (guarded) v20, [v27, v13, v13]
+v29 <- GetElement v28, '1'
+v30 <- Construct v20, [v27]
+v31 <- CreateArray []
+v32 <- LoadInteger '16'
+v33 <- CreateNamedVariable 'Float64Array', 'none'
+v34 <- Construct v33, [v32]
+v35 <- LoadInteger '10'
+v36 <- BinaryOperation v35, '%', v35
+v37 <- CreateNamedVariable 'Uint16Array', 'none'
+v38 <- Construct (guarded) v37, [v27, v27, v27]
+v39 <- Construct v37, [v35]
+v40 <- LoadInteger '167'
+v41 <- CreateNamedVariable 'Float32Array', 'none'
+SetProperty v41, 'prototype', v41
+v42 <- Construct v41, [v40]
+SetElement v42, '116', v42
+v43 <- BinaryOperation v42, '%', v31
+v44 <- CreateNamedVariable 'Number', 'none'
+v45 <- GetProperty v44, 'length'
+v46 <- CallMethod v44, 'isNaN', [v43]
+v47 <- UnaryOperation '!', v46
+v48 <- BinaryOperation v32, '**', v33
+v49 <- UnaryOperation v48, '--'
+v50 <- CallFunctionWithSpread (guarded) v48, [v37, v48, v43, ...v35, v43]
+v51 <- BinaryOperation v50, '??', v50
+v52 <- BinaryOperation v50, '??', v50
+v53 <- BinaryOperation v52, '??', v52
+v54 <- CreateFloatArray [0.8888880580307695, 928.3092772365194, 575906.016845972]
+v55 <- CallMethod (guarded) v54, 'slice', [v19, v19]
+v56 <- CreateFloatArray [-4.040166588692994e+307, 1.4451193261714297e+308, 365.4711631336927, -1e-15, -1.2605239855133288e+308, 668.1225795165637, -464.7093912232458, 1.7976931348623157e+308, -1000000000000.0, -1.0]
+SetElement v56, '7', v56
+v57 <- CreateNamedVariable 'Symbol', 'none'
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v57 -> v58
+    EndObjectLiteralComputedMethod
+v59 <- EndObjectLiteral
+
+
+// ===== [ Program FF5440A9-95DC-47ED-A1E7-0362F3A5D836 ] =====
+// Mutating 3C4CF409-985F-4FF2-8317-71435997D939 with CombineMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadFloat '4.576737267287978e+307'
+v1 <- LoadFloat '-0.0'
+v2 <- LoadFloat '435.78586447325097'
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v4 <- LoadBigInt '1073741824'
+v5 <- LoadBigInt '2147483649'
+v6 <- LoadBigInt '8'
+v7 <- CreateFloatArray [0.32814409159124835, 4.0, 0.9942312345185276, -356.1747980285468, -8.24329085875172, -0.0, 3.545484683603069e+307]
+v8 <- CreateFloatArray [0.0699817657606816, 1e-15, -5.0, -296573.4769477659]
+v9 <- CreateFloatArray [0.8209340250367375, -836277.6011652886, 986946.9596903422, -133.7489528330293]
+v10 <- LoadRegExp 'tU(?:a*)+' 'ysgu'
+v11 <- LoadRegExp '[x\dz]Vv\u{12345}+' 'dygimu'
+v12 <- LoadRegExp '(?=)L.(a\1)+' 'dyvsg'
+v13 <- LoadRegExp 'Qa(?!bbb|bb)c\u0060?' 'dsm'
+v14 <- LoadRegExp 'Ca?[\111]' 'ym'
+v15 <- LoadRegExp '([\cz]?)' 'dgm'
+v16 <- BeginPlainFunction -> 
+    Return v15
+EndPlainFunction
+v17 <- CallFunction (guarded) v16, []
+v18 <- GetProperty v17, 'unicodeSets'
+v19 <- LoadInteger '16'
+v20 <- CreateNamedVariable 'Uint8Array', 'none'
+v21 <- Construct (guarded) v20, [v19, v13, v15]
+v22 <- Construct v20, [v19]
+v23 <- LoadInteger '16'
+v24 <- CreateNamedVariable 'BigUint64Array', 'none'
+v25 <- Construct (guarded) v24, [v20, v20, v20]
+v26 <- Construct v24, [v23]
+v27 <- LoadInteger '2'
+v28 <- Construct (guarded) v20, [v27, v13, v13]
+v29 <- GetElement v28, '1'
+v30 <- Construct v20, [v27]
+v31 <- CreateArray []
+v32 <- LoadInteger '16'
+v33 <- CreateNamedVariable 'Float64Array', 'none'
+v34 <- Construct v33, [v32]
+v35 <- LoadInteger '10'
+v36 <- BinaryOperation v35, '%', v35
+v37 <- CreateNamedVariable 'Uint16Array', 'none'
+v38 <- Construct (guarded) v37, [v27, v27, v27]
+v39 <- Construct v37, [v35]
+v40 <- LoadInteger '167'
+v41 <- CreateNamedVariable 'Float32Array', 'none'
+SetProperty v41, 'prototype', v41
+v42 <- Construct v41, [v40]
+SetElement v42, '116', v42
+v43 <- BinaryOperation v42, '%', v31
+v44 <- CreateNamedVariable 'Number', 'none'
+v45 <- GetProperty v44, 'length'
+v46 <- CallMethod v44, 'isNaN', [v43]
+v47 <- UnaryOperation '!', v46
+v48 <- BinaryOperation v32, '**', v33
+v49 <- UnaryOperation v48, '--'
+v50 <- CallFunctionWithSpread (guarded) v48, [v37, v48, v43, ...v35, v43]
+v51 <- BinaryOperation v50, '??', v50
+// Inserting program 54A474B1-5AF7-4817-A7DE-82758CA8A587
+v52 <- CreateFloatArray [-396556.0347509007]
+v53 <- CreateFloatArray [160225.88356964802, 1000.0, 213211.8910050979, 2.220446049250313e-16, -904182.0971368359, -inf, -3.7155044582569996, 0.883337671869206]
+v54 <- CreateFloatArray [0.7634064314666795, -1.757189086955064, 3.0, 1e-15]
+v55 <- BeginPlainFunction -> 
+    Return v54
+EndPlainFunction
+v56 <- BeginClassDefinition (decl)
+    BeginClassInstanceMethod 'o' -> v57, v58
+        v59 <- CreateNamedVariable 'Math', 'none'
+        v60 <- LoadInteger '-2147483647'
+        v61 <- LoadInteger '-4294967295'
+        v62 <- BinaryOperation v61, '*', v60
+        v63 <- CallMethod v59, 'atan2', [v61, v62]
+        v64 <- CallMethod v59, 'random', []
+        Return v61
+    EndClassInstanceMethod
+    ClassAddInstanceProperty 'd'
+    ClassAddPrivateInstanceProperty 'e' v54
+    ClassAddStaticComputedProperty v54
+    ClassAddStaticProperty 'f' v54
+EndClassDefinition
+v65 <- Construct v56, []
+v66 <- Construct v56, []
+v67 <- LoadFloat '2.0'
+v68 <- CreateNamedVariable 'Date', 'none'
+v69 <- GetProperty v68, 'prototype'
+v70 <- GetProperty v69, 'toTemporalInstant'
+v71 <- CreateArray []
+v72 <- CallMethod (guarded) v70, 'apply', []
+v73 <- BinaryOperation v50, '??', v50
+v74 <- BinaryOperation v73, '??', v73
+v75 <- CreateFloatArray [0.8888880580307695, 928.3092772365194, 575906.016845972]
+v76 <- CallMethod (guarded) v75, 'slice', [v19, v19]
+v77 <- CreateFloatArray [-4.040166588692994e+307, 1.4451193261714297e+308, 365.4711631336927, -1e-15, -1.2605239855133288e+308, 668.1225795165637, -464.7093912232458, 1.7976931348623157e+308, -1000000000000.0, -1.0]
+SetElement v77, '7', v77
+v78 <- CreateNamedVariable 'Symbol', 'none'
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v78 -> v79
+    EndObjectLiteralComputedMethod
+v80 <- EndObjectLiteral
+// Program may be interesting due to new coverage: 4169 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program A7394500-751E-4B8C-8E56-16936B636791 ] =====
+// Mutating FF5440A9-95DC-47ED-A1E7-0362F3A5D836 with ProbingMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadFloat '4.576737267287978e+307'
+v1 <- LoadFloat '-0.0'
+v2 <- LoadFloat '435.78586447325097'
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v4 <- LoadBigInt '1073741824'
+v5 <- LoadBigInt '2147483649'
+v6 <- LoadBigInt '8'
+v7 <- CreateFloatArray [0.32814409159124835, 4.0, 0.9942312345185276, -356.1747980285468, -8.24329085875172, -0.0, 3.545484683603069e+307]
+v8 <- CreateFloatArray [0.0699817657606816, 1e-15, -5.0, -296573.4769477659]
+v9 <- CreateFloatArray [0.8209340250367375, -836277.6011652886, 986946.9596903422, -133.7489528330293]
+v10 <- LoadRegExp 'tU(?:a*)+' 'ysgu'
+v11 <- LoadRegExp '[x\dz]Vv\u{12345}+' 'dygimu'
+v12 <- LoadRegExp '(?=)L.(a\1)+' 'dyvsg'
+v13 <- LoadRegExp 'Qa(?!bbb|bb)c\u0060?' 'dsm'
+v14 <- LoadRegExp 'Ca?[\111]' 'ym'
+v15 <- LoadRegExp '([\cz]?)' 'dgm'
+v16 <- BeginPlainFunction -> 
+    Return v15
+EndPlainFunction
+v17 <- CallFunction (guarded) v16, []
+v18 <- GetProperty v17, 'unicodeSets'
+v19 <- LoadInteger '16'
+v20 <- CreateNamedVariable 'Uint8Array', 'none'
+v21 <- Construct (guarded) v20, [v19, v13, v15]
+v22 <- Construct v20, [v19]
+v23 <- LoadInteger '16'
+v24 <- CreateNamedVariable 'BigUint64Array', 'none'
+v25 <- Construct (guarded) v24, [v20, v20, v20]
+v26 <- Construct v24, [v23]
+v27 <- LoadInteger '2'
+v28 <- Construct (guarded) v20, [v27, v13, v13]
+v29 <- GetElement v28, '1'
+v30 <- Construct v20, [v27]
+v31 <- CreateArray []
+v32 <- LoadInteger '16'
+v33 <- CreateNamedVariable 'Float64Array', 'none'
+v34 <- Construct v33, [v32]
+v35 <- LoadInteger '10'
+v36 <- BinaryOperation v35, '%', v35
+v37 <- CreateNamedVariable 'Uint16Array', 'none'
+v38 <- Construct (guarded) v37, [v27, v27, v27]
+v39 <- Construct v37, [v35]
+v40 <- LoadInteger '167'
+v41 <- CreateNamedVariable 'Float32Array', 'none'
+SetProperty v41, 'prototype', v41
+v42 <- Construct v41, [v40]
+// Probing value v42
+SetProperty v42, 'valueOf', v3
+// Probing finished
+SetElement v42, '116', v42
+v43 <- BinaryOperation v42, '%', v31
+v44 <- CreateNamedVariable 'Number', 'none'
+v45 <- GetProperty v44, 'length'
+v46 <- CallMethod v44, 'isNaN', [v43]
+v47 <- UnaryOperation '!', v46
+v48 <- BinaryOperation v32, '**', v33
+v49 <- UnaryOperation v48, '--'
+v50 <- CallFunctionWithSpread (guarded) v48, [v37, v48, v43, ...v35, v43]
+v51 <- BinaryOperation v50, '??', v50
+v52 <- CreateFloatArray [-396556.0347509007]
+v53 <- CreateFloatArray [160225.88356964802, 1000.0, 213211.8910050979, 2.220446049250313e-16, -904182.0971368359, -inf, -3.7155044582569996, 0.883337671869206]
+v54 <- CreateFloatArray [0.7634064314666795, -1.757189086955064, 3.0, 1e-15]
+// Probing value v54
+v55 <- CreateNamedVariable 'Symbol', 'none'
+v56 <- GetProperty v55, 'toPrimitive'
+SetComputedProperty v54, v56, v3
+// Probing finished
+v57 <- BeginPlainFunction -> 
+    Return v54
+EndPlainFunction
+v58 <- BeginClassDefinition (decl)
+    BeginClassInstanceMethod 'o' -> v59, v60
+        v61 <- CreateNamedVariable 'Math', 'none'
+        v62 <- LoadInteger '-2147483647'
+        v63 <- LoadInteger '-4294967295'
+        v64 <- BinaryOperation v63, '*', v62
+        v65 <- CallMethod v61, 'atan2', [v63, v64]
+        v66 <- CallMethod v61, 'random', []
+        Return v63
+    EndClassInstanceMethod
+    ClassAddInstanceProperty 'd'
+    ClassAddPrivateInstanceProperty 'e' v54
+    ClassAddStaticComputedProperty v54
+    ClassAddStaticProperty 'f' v54
+EndClassDefinition
+v67 <- Construct v58, []
+v68 <- Construct v58, []
+v69 <- LoadFloat '2.0'
+v70 <- CreateNamedVariable 'Date', 'none'
+v71 <- GetProperty v70, 'prototype'
+v72 <- GetProperty v71, 'toTemporalInstant'
+v73 <- CreateArray []
+v74 <- CallMethod (guarded) v72, 'apply', []
+v75 <- BinaryOperation v50, '??', v50
+v76 <- BinaryOperation v75, '??', v75
+v77 <- CreateFloatArray [0.8888880580307695, 928.3092772365194, 575906.016845972]
+// Probing value v77
+SetProperty v77, 'constructor', v16
+// Probing finished
+v78 <- CallMethod (guarded) v77, 'slice', [v19, v19]
+v79 <- CreateFloatArray [-4.040166588692994e+307, 1.4451193261714297e+308, 365.4711631336927, -1e-15, -1.2605239855133288e+308, 668.1225795165637, -464.7093912232458, 1.7976931348623157e+308, -1000000000000.0, -1.0]
+SetElement v79, '7', v79
+v80 <- CreateNamedVariable 'Symbol', 'none'
+BeginObjectLiteral
+    BeginObjectLiteralComputedMethod v80 -> v81
+    EndObjectLiteralComputedMethod
+v82 <- EndObjectLiteral
+// Program may be interesting due to new coverage: 4183 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program CE0EC65A-1801-4A7F-9CFB-798E09167D93 ] =====
+// Minimizing A7394500-751E-4B8C-8E56-16936B636791
+v0 <- LoadFloat '4.576737267287978e+307'
+v1 <- LoadFloat '-0.0'
+v2 <- LoadFloat '435.78586447325097'
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v4 <- LoadBigInt '1073741824'
+v5 <- LoadBigInt '2147483649'
+v6 <- LoadBigInt '8'
+v7 <- CreateFloatArray [0.32814409159124835, 4.0, 0.9942312345185276, -356.1747980285468, -8.24329085875172, -0.0, 3.545484683603069e+307]
+v8 <- CreateFloatArray [0.0699817657606816, 1e-15, -5.0, -296573.4769477659]
+v9 <- CreateFloatArray [0.8209340250367375, -836277.6011652886, 986946.9596903422, -133.7489528330293]
+v10 <- LoadRegExp 'tU(?:a*)+' 'ysgu'
+v11 <- LoadRegExp '[x\dz]Vv\u{12345}+' 'dygimu'
+v12 <- LoadRegExp '(?=)L.(a\1)+' 'dyvsg'
+v13 <- LoadRegExp 'Qa(?!bbb|bb)c\u0060?' 'dsm'
+v14 <- LoadRegExp 'Ca?[\111]' 'ym'
+v15 <- LoadRegExp '([\cz]?)' 'dgm'
+v16 <- BeginPlainFunction -> 
+    Return v15
+EndPlainFunction
+v17 <- CallFunction (guarded) v16, []
+v18 <- GetProperty v17, 'unicodeSets'
+v19 <- LoadInteger '16'
+v20 <- CreateNamedVariable 'Uint8Array', 'none'
+v21 <- Construct v20, []
+v22 <- Construct v20, []
+v23 <- LoadInteger '16'
+v24 <- CreateNamedVariable 'BigUint64Array', 'none'
+v25 <- CallFunction (guarded) v24, [v12, v17, v18]
+v26 <- Construct v24, [v12, v23, v18]
+v27 <- LoadInteger '2'
+v28 <- Construct (guarded) v20, []
+v29 <- GetElement v28, '1'
+v30 <- Construct v20, []
+v31 <- CreateArray [v23, v23]
+v32 <- LoadInteger '16'
+v33 <- CreateNamedVariable 'Float64Array', 'none'
+v34 <- Construct v33, [v19, v17, v19]
+v35 <- LoadInteger '10'
+v36 <- BinaryOperation v35, '%', v35
+v37 <- CreateNamedVariable 'Uint16Array', 'none'
+v38 <- Construct v37, [v15]
+v39 <- Construct v37, [v38, v19, v19]
+v40 <- LoadInteger '167'
+v41 <- CreateNamedVariable 'Float32Array', 'none'
+SetProperty v41, 'prototype', v41
+v42 <- Construct v41, [v40]
+SetProperty v42, 'valueOf', v3
+SetElement v42, '116', v42
+v43 <- BinaryOperation v42, '%', v31
+v44 <- CreateNamedVariable 'Number', 'none'
+v45 <- GetProperty v44, 'length'
+v46 <- CallMethod v44, 'isNaN', []
+v47 <- BinaryOperation v32, '**', v33
+v48 <- UnaryOperation v47, '--'
+v49 <- CreateFloatArray [0.7634064314666795, -1.757189086955064, 3.0, 1e-15]
+v50 <- CreateNamedVariable 'Symbol', 'none'
+v51 <- GetProperty v50, 'toPrimitive'
+SetComputedProperty v49, v51, v3
+v52 <- BeginClassDefinition (decl)
+EndClassDefinition
+v53 <- Construct v52, []
+v54 <- CreateFloatArray [0.8888880580307695, 928.3092772365194, 575906.016845972]
+SetProperty v54, 'constructor', v16
+v55 <- CallMethod v54, 'slice', [v19]
+v56 <- CreateNamedVariable 'Symbol', 'none'
+// Program is interesting due to new coverage: 94 newly discovered edges in the CFG of the target
+
+

@@ -1,0 +1,362 @@
+// ===== [ Program ACEB113D-3C33-4959-AA66-0CDD31C0F81F ] =====
+// Start of prefix code
+// Executing code generator IntArrayGenerator
+v0 <- CreateIntArray [238442466, 39456, 1780318345, 1024, 6, 3743, -1073741824, 255]
+v1 <- CreateIntArray [46270, -2, 6, 9007199254740991, 7, 255, 127, -3, 48553, 4294967295]
+v2 <- CreateIntArray [2, -820319509, 536870912, 536870887, -47130, -1366516620, 1974901643, -1518146317, -9]
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v3 <- BeginConstructor -> v4, v5
+    SetProperty v4, 'c', v5
+    SetProperty v4, 'f', v0
+    SetProperty v4, 'b', v0
+EndConstructor
+v6 <- Construct v3, [v1]
+v7 <- Construct v3, [v2]
+v8 <- Construct v3, [v0]
+// Code generator finished
+// Executing code generator IntArrayGenerator
+v9 <- CreateIntArray [8, 15, 10, 4294967295, -9223372036854775808, -870751258, 64, 26757]
+v10 <- CreateIntArray [-4294967297]
+v11 <- CreateIntArray [8, -4294967295, -170982893, 536870912, -21501, 49046, 55665]
+// Code generator finished
+// Executing code generator FloatGenerator
+v12 <- LoadFloat '-717837.1593822499'
+v13 <- LoadFloat '-114241.18148323474'
+v14 <- LoadFloat '0.24449545930417427'
+// Code generator finished
+// End of prefix code. 13 variables are now visible
+v15 <- CreateArray []
+v16 <- LoadString '-05:00'
+v17 <- LoadString 'Pacific/Pitcairn'
+v18 <- LoadString '+22:00'
+v19 <- BeginPlainFunction -> v20, v21
+    BeginObjectLiteral
+        ObjectLiteralAddElement `9`, v17
+        BeginObjectLiteralMethod `valueOf` -> v22, v23, v24, v25
+            Reassign v17, v24
+            BeginForLoopInitializer
+                v26 <- LoadInteger '0'
+                v27 <- LoadInteger '10'
+            BeginForLoopCondition -> v28, v29
+                v30 <- Compare v28, '<', v29
+            BeginForLoopAfterthought v30 -> v31, v32
+                v33 <- UnaryOperation v31, '++'
+                v34 <- UnaryOperation v32, '--'
+            BeginForLoopBody -> v35, v36
+            EndForLoop
+            SetComputedSuperProperty v22, v23
+            v37 <- Construct (guarded) v23, []
+            v38 <- GetProperty v16, 'length'
+            Return v25
+        EndObjectLiteralMethod
+    v39 <- EndObjectLiteral
+    Return v39
+EndPlainFunction
+v40 <- CallFunction v19, [v18, v16]
+v41 <- CallFunction v19, [v18, v18]
+v42 <- CallFunction v19, [v17, v16]
+v43 <- LoadString 'n'
+v44 <- CreateFloatArray [-335384.80657671404, -0.6171062077210561, -3.0, -9.502078435164349e+306, 1.6024120884290232e+308]
+v45 <- CreateFloatArray [-373832.123721624, -1000.0, -4.482210560378615, 1.0, 1.7976931348623157e+308, 2.2250738585072014e-308, -1000.0, -2.2250738585072014e-308, 0.2619068003763766]
+v46 <- CreateFloatArray [9.88496591383436e+307, -0.0, 9.645811590416322, -2.2250738585072014e-308, -882877.4954994294, nan, 7.540716606719762, 781.9769262846953, -7.004326735250661e+306]
+v47 <- CreateNamedVariable 'Uint16Array', 'none'
+v48 <- Construct v47, [v46, v17, v17]
+v49 <- LoadInteger '3579'
+v50 <- CreateNamedVariable 'Int8Array', 'none'
+v51 <- GetElement v45, '2'
+v52 <- CallFunction (guarded) v19, [v51, v51]
+BeginObjectLiteral
+    ObjectLiteralAddProperty `apply`, v19
+    ObjectLiteralAddProperty `call`, v19
+    ObjectLiteralAddProperty `defineProperty`, v19
+    ObjectLiteralAddProperty `deleteProperty`, v19
+    ObjectLiteralAddProperty `get`, v19
+    ObjectLiteralAddProperty `getOwnPropertyDescriptor`, v19
+    ObjectLiteralAddProperty `getPrototypeOf`, v19
+    ObjectLiteralAddProperty `has`, v19
+    ObjectLiteralAddProperty `isExtensible`, v19
+    ObjectLiteralAddProperty `ownKeys`, v19
+    ObjectLiteralAddProperty `preventExtensions`, v19
+    ObjectLiteralAddProperty `set`, v19
+v53 <- EndObjectLiteral
+v54 <- CreateFloatArray [-396556.0347509007]
+v55 <- CreateFloatArray [160225.88356964802, 1000.0, 213211.8910050979, 2.220446049250313e-16, -904182.0971368359, -inf, -3.7155044582569996, 0.883337671869206]
+v56 <- CreateFloatArray [0.7634064314666795, -1.757189086955064, 3.0, 1e-15]
+v57 <- BeginClassDefinition (decl)
+    BeginClassInstanceMethod 'o' -> v58, v59
+    EndClassInstanceMethod
+    ClassAddInstanceProperty 'd'
+EndClassDefinition
+v60 <- CreateNamedVariable 'Date', 'none'
+v61 <- GetProperty v60, 'toTemporalInstant'
+v62 <- CallMethod (guarded) v61, 'apply', [v57, v51, v61]
+v63 <- CreateNamedVariable 'Proxy', 'none'
+v64 <- Construct v63, [v41, v53]
+v65 <- Construct v50, [v49]
+BeginForInLoop v65 -> v66
+    v67 <- CreateNamedVariable 'String', 'none'
+    v68 <- CreateArray []
+    v69 <- CallMethod (guarded) v67, 'apply', [v43, v68]
+EndForInLoop
+
+
+// ===== [ Program CC4A69D7-E9AB-40FF-9367-E4B85457EF5D ] =====
+// Mutating ACEB113D-3C33-4959-AA66-0CDD31C0F81F with ExplorationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- CreateIntArray [238442466, 39456, 1780318345, 1024, 6, 3743, -1073741824, 255]
+v1 <- CreateIntArray [46270, -2, 6, 9007199254740991, 7, 255, 127, -3, 48553, 4294967295]
+v2 <- CreateIntArray [2, -820319509, 536870912, 536870887, -47130, -1366516620, 1974901643, -1518146317, -9]
+v3 <- BeginConstructor -> v4, v5
+    // Exploring value v5
+    v6 <- GetElement v5, '7'
+    // Exploring finished
+    SetProperty v4, 'c', v5
+    SetProperty v4, 'f', v0
+    SetProperty v4, 'b', v0
+EndConstructor
+v7 <- Construct v3, [v1]
+v8 <- Construct v3, [v2]
+v9 <- Construct v3, [v0]
+v10 <- CreateIntArray [8, 15, 10, 4294967295, -9223372036854775808, -870751258, 64, 26757]
+v11 <- CreateIntArray [-4294967297]
+v12 <- CreateIntArray [8, -4294967295, -170982893, 536870912, -21501, 49046, 55665]
+v13 <- LoadFloat '-717837.1593822499'
+v14 <- LoadFloat '-114241.18148323474'
+v15 <- LoadFloat '0.24449545930417427'
+v16 <- CreateArray []
+v17 <- LoadString '-05:00'
+v18 <- LoadString 'Pacific/Pitcairn'
+v19 <- LoadString '+22:00'
+// Exploring value v19
+v20 <- CallMethod (guarded) v19, 'codePointAt', [v2]
+// Exploring finished
+v21 <- BeginPlainFunction -> v22, v23
+    BeginObjectLiteral
+        ObjectLiteralAddElement `9`, v18
+        BeginObjectLiteralMethod `valueOf` -> v24, v25, v26, v27
+            Reassign v18, v26
+            BeginForLoopInitializer
+                v28 <- LoadInteger '0'
+                v29 <- LoadInteger '10'
+            BeginForLoopCondition -> v30, v31
+                v32 <- Compare v30, '<', v31
+            BeginForLoopAfterthought v32 -> v33, v34
+                v35 <- UnaryOperation v33, '++'
+                v36 <- UnaryOperation v34, '--'
+            BeginForLoopBody -> v37, v38
+            EndForLoop
+            SetComputedSuperProperty v24, v25
+            v39 <- Construct (guarded) v25, []
+            v40 <- GetProperty v17, 'length'
+            Return v27
+        EndObjectLiteralMethod
+    v41 <- EndObjectLiteral
+    Return v41
+EndPlainFunction
+// Exploring value v21
+v42 <- Construct (guarded) v21, [v1, v15]
+// Exploring finished
+v43 <- CallFunction v21, [v19, v17]
+v44 <- CallFunction v21, [v19, v19]
+// Exploring value v44
+SetElement v44, '9', v44
+// Exploring finished
+v45 <- CallFunction v21, [v18, v17]
+v46 <- LoadString 'n'
+v47 <- CreateFloatArray [-335384.80657671404, -0.6171062077210561, -3.0, -9.502078435164349e+306, 1.6024120884290232e+308]
+// Exploring value v47
+v48 <- CallMethod (guarded) v47, 'flat', []
+// Exploring finished
+v49 <- CreateFloatArray [-373832.123721624, -1000.0, -4.482210560378615, 1.0, 1.7976931348623157e+308, 2.2250738585072014e-308, -1000.0, -2.2250738585072014e-308, 0.2619068003763766]
+// Exploring value v49
+v50 <- CallMethod (guarded) v49, 'toReversed', []
+// Exploring finished
+v51 <- CreateFloatArray [9.88496591383436e+307, -0.0, 9.645811590416322, -2.2250738585072014e-308, -882877.4954994294, nan, 7.540716606719762, 781.9769262846953, -7.004326735250661e+306]
+v52 <- CreateNamedVariable 'Uint16Array', 'none'
+v53 <- Construct v52, [v51, v18, v18]
+// Exploring value v53
+v54 <- GetElement v53, '1'
+// Exploring finished
+v55 <- LoadInteger '3579'
+v56 <- CreateNamedVariable 'Int8Array', 'none'
+v57 <- GetElement v49, '2'
+// Exploring value v57
+v58 <- BinaryOperation v57, '&', v57
+// Exploring finished
+v59 <- CallFunction (guarded) v21, [v57, v57]
+BeginObjectLiteral
+    ObjectLiteralAddProperty `apply`, v21
+    ObjectLiteralAddProperty `call`, v21
+    ObjectLiteralAddProperty `defineProperty`, v21
+    ObjectLiteralAddProperty `deleteProperty`, v21
+    ObjectLiteralAddProperty `get`, v21
+    ObjectLiteralAddProperty `getOwnPropertyDescriptor`, v21
+    ObjectLiteralAddProperty `getPrototypeOf`, v21
+    ObjectLiteralAddProperty `has`, v21
+    ObjectLiteralAddProperty `isExtensible`, v21
+    ObjectLiteralAddProperty `ownKeys`, v21
+    ObjectLiteralAddProperty `preventExtensions`, v21
+    ObjectLiteralAddProperty `set`, v21
+v60 <- EndObjectLiteral
+v61 <- CreateFloatArray [-396556.0347509007]
+v62 <- CreateFloatArray [160225.88356964802, 1000.0, 213211.8910050979, 2.220446049250313e-16, -904182.0971368359, -inf, -3.7155044582569996, 0.883337671869206]
+// Exploring value v62
+v63 <- GetElement v62, '1'
+// Exploring finished
+v64 <- CreateFloatArray [0.7634064314666795, -1.757189086955064, 3.0, 1e-15]
+// Exploring value v64
+v65 <- GetElement v64, '1'
+// Exploring finished
+v66 <- BeginClassDefinition (decl)
+    BeginClassInstanceMethod 'o' -> v67, v68
+    EndClassInstanceMethod
+    ClassAddInstanceProperty 'd'
+EndClassDefinition
+v69 <- CreateNamedVariable 'Date', 'none'
+v70 <- GetProperty v69, 'toTemporalInstant'
+v71 <- CallMethod (guarded) v70, 'apply', [v66, v57, v70]
+// Exploring value v71
+v72 <- BinaryOperation v71, '??', v71
+// Exploring finished
+v73 <- CreateNamedVariable 'Proxy', 'none'
+v74 <- Construct v73, [v44, v60]
+// Exploring value v74
+SetProperty v74, '__proto__', v74
+// Exploring finished
+v75 <- Construct v56, [v55]
+// Exploring value v75
+v76 <- GetElement v75, '10'
+// Exploring finished
+BeginForInLoop v75 -> v77
+    // Exploring value v77
+    v78 <- GetElement v77, '0'
+    // Exploring finished
+    v79 <- CreateNamedVariable 'String', 'none'
+    v80 <- CreateArray []
+    v81 <- CallMethod (guarded) v79, 'apply', [v46, v80]
+    // Exploring value v81
+    v82 <- CallMethod (guarded) v81, 'match', [v18]
+    // Exploring finished
+EndForInLoop
+// Program may be interesting due to new coverage: 16467 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 560BF828-D8B2-4B8B-8DF7-13FD27DFF765 ] =====
+// Mutating CC4A69D7-E9AB-40FF-9367-E4B85457EF5D with OperationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- CreateIntArray [238442466, 39456, 1780318345, 1024, 6, 3743, -1073741824, 255]
+v1 <- CreateIntArray [46270, -2, 6, 9007199254740991, 7, 255, 127, -3, 48553, 4294967295]
+v2 <- CreateIntArray [2, -820319509, 536870912, 536870887, -47130, -1366516620, 1974901643, -1518146317, -9]
+v3 <- BeginConstructor -> v4, v5
+    v6 <- GetElement v5, '7'
+    SetProperty v4, 'c', v5
+    SetProperty v4, 'f', v0
+    SetProperty v4, 'b', v0
+EndConstructor
+v7 <- Construct v3, [v1]
+v8 <- Construct v3, [v2]
+v9 <- Construct v3, [v0]
+v10 <- CreateIntArray [8, 15, 10, 4294967295, -9223372036854775808, -870751258, 64, 26757]
+v11 <- CreateIntArray [-4294967297]
+v12 <- CreateIntArray [8, -4294967295, -170982893, 536870912, -21501, 49046, 55665]
+v13 <- LoadFloat '-717837.1593822499'
+v14 <- LoadFloat '-114241.18148323474'
+v15 <- LoadFloat '0.24449545930417427'
+v16 <- CreateArray []
+v17 <- LoadString '-05:00'
+v18 <- LoadString 'Pacific/Pitcairn'
+// Mutating next operation
+v19 <- LoadString '+a22:00'
+v20 <- CallMethod (guarded) v19, 'codePointAt', [v2]
+v21 <- BeginPlainFunction -> v22, v23
+    BeginObjectLiteral
+        ObjectLiteralAddElement `9`, v18
+        BeginObjectLiteralMethod `valueOf` -> v24, v25, v26, v27
+            Reassign v18, v26
+            BeginForLoopInitializer
+                v28 <- LoadInteger '0'
+                v29 <- LoadInteger '10'
+            BeginForLoopCondition -> v30, v31
+                v32 <- Compare v30, '<', v31
+            BeginForLoopAfterthought v32 -> v33, v34
+                v35 <- UnaryOperation v33, '++'
+                v36 <- UnaryOperation v34, '--'
+            BeginForLoopBody -> v37, v38
+            EndForLoop
+            SetComputedSuperProperty v24, v25
+            v39 <- Construct (guarded) v25, []
+            v40 <- GetProperty v17, 'length'
+            Return v27
+        EndObjectLiteralMethod
+    v41 <- EndObjectLiteral
+    Return v41
+EndPlainFunction
+v42 <- Construct (guarded) v21, [v1, v15]
+v43 <- CallFunction v21, [v19, v17]
+v44 <- CallFunction v21, [v19, v19]
+SetElement v44, '9', v44
+v45 <- CallFunction v21, [v18, v17]
+v46 <- LoadString 'n'
+v47 <- CreateFloatArray [-335384.80657671404, -0.6171062077210561, -3.0, -9.502078435164349e+306, 1.6024120884290232e+308]
+v48 <- CallMethod (guarded) v47, 'flat', []
+v49 <- CreateFloatArray [-373832.123721624, -1000.0, -4.482210560378615, 1.0, 1.7976931348623157e+308, 2.2250738585072014e-308, -1000.0, -2.2250738585072014e-308, 0.2619068003763766]
+v50 <- CallMethod (guarded) v49, 'toReversed', []
+v51 <- CreateFloatArray [9.88496591383436e+307, -0.0, 9.645811590416322, -2.2250738585072014e-308, -882877.4954994294, nan, 7.540716606719762, 781.9769262846953, -7.004326735250661e+306]
+v52 <- CreateNamedVariable 'Uint16Array', 'none'
+v53 <- Construct v52, [v51, v18, v18]
+v54 <- GetElement v53, '1'
+v55 <- LoadInteger '3579'
+v56 <- CreateNamedVariable 'Int8Array', 'none'
+v57 <- GetElement v49, '2'
+v58 <- BinaryOperation v57, '&', v57
+v59 <- CallFunction (guarded) v21, [v57, v57]
+BeginObjectLiteral
+    ObjectLiteralAddProperty `apply`, v21
+    ObjectLiteralAddProperty `call`, v21
+    ObjectLiteralAddProperty `defineProperty`, v21
+    ObjectLiteralAddProperty `deleteProperty`, v21
+    ObjectLiteralAddProperty `get`, v21
+    ObjectLiteralAddProperty `getOwnPropertyDescriptor`, v21
+    ObjectLiteralAddProperty `getPrototypeOf`, v21
+    ObjectLiteralAddProperty `has`, v21
+    ObjectLiteralAddProperty `isExtensible`, v21
+    ObjectLiteralAddProperty `ownKeys`, v21
+    ObjectLiteralAddProperty `preventExtensions`, v21
+    ObjectLiteralAddProperty `set`, v21
+v60 <- EndObjectLiteral
+v61 <- CreateFloatArray [-396556.0347509007]
+v62 <- CreateFloatArray [160225.88356964802, 1000.0, 213211.8910050979, 2.220446049250313e-16, -904182.0971368359, -inf, -3.7155044582569996, 0.883337671869206]
+v63 <- GetElement v62, '1'
+v64 <- CreateFloatArray [0.7634064314666795, -1.757189086955064, 3.0, 1e-15]
+v65 <- GetElement v64, '1'
+v66 <- BeginClassDefinition (decl)
+    BeginClassInstanceMethod 'o' -> v67, v68
+    EndClassInstanceMethod
+    ClassAddInstanceProperty 'd'
+EndClassDefinition
+v69 <- CreateNamedVariable 'Date', 'none'
+v70 <- GetProperty v69, 'toTemporalInstant'
+v71 <- CallMethod (guarded) v70, 'apply', [v66, v57, v70]
+v72 <- BinaryOperation v71, '??', v71
+v73 <- CreateNamedVariable 'Proxy', 'none'
+v74 <- Construct v73, [v44, v60]
+SetProperty v74, '__proto__', v74
+v75 <- Construct v56, [v55]
+v76 <- GetElement v75, '10'
+BeginForInLoop v75 -> v77
+    v78 <- GetElement v77, '0'
+    v79 <- CreateNamedVariable 'String', 'none'
+    v80 <- CreateArray []
+    v81 <- CallMethod (guarded) v79, 'apply', [v46, v80]
+    v82 <- CallMethod (guarded) v81, 'match', [v18]
+EndForInLoop
+// Program may be interesting due to new coverage: 5139 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program DCBF336C-DD78-4CED-8F44-B26497EABF12 ] =====
+// Minimizing 560BF828-D8B2-4B8B-8DF7-13FD27DFF765
+v0 <- CreateNamedVariable 'Int8Array', 'none'
+// Program is interesting due to new coverage: 1 newly discovered edge in the CFG of the target
+
+

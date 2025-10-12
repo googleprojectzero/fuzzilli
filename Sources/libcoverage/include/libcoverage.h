@@ -57,8 +57,41 @@ struct shmem_data {
     uint32_t num_edges;
     uint32_t feedback_nexus_count; 
     uint32_t max_feedback_nexus;
+    uint32_t turbofan_flags;
+    uint64_t turbofan_optimization_bits;
+    // uint32_t maglev_optimization_bits;
     struct feedback_nexus_data feedback_nexus_data[MAX_FEEDBACK_NEXUS];
     unsigned char edges[];
+};
+
+// Optimization bitmap bit indices (matches V8's OptimizedCompilationInfo::OptimizationBit)
+// Update bitmap if ordering changes.
+enum optimization_bit {
+    BROKER_INIT_AND_SERIALIZATION = 0,
+    GRAPH_BUILDER,
+    INLINING,
+    EARLY_GRAPH_TRIMMING,
+    TYPER,
+    TYPED_LOWERING,
+    LOOP_PEELING,
+    LOOP_EXIT_ELIMINATION,
+    LOAD_ELIMINATION,
+    ESCAPE_ANALYSIS,
+    TYPE_ASSERTIONS,
+    SIMPLIFIED_LOWERING,
+    JS_WASM_INLINING,
+    WASM_TYPING,
+    WASM_GC_OPTIMIZATION,
+    JS_WASM_LOWERING,
+    WASM_OPTIMIZATION,
+    UNTYPER,
+    GENERIC_LOWERING,
+    EARLY_OPTIMIZATION,
+    SCHEDULING,
+    INSTRUCTION_SELECTION,
+    REGISTER_ALLOCATION,
+    CODE_GENERATION,
+    COUNT
 };
 
 struct cov_context {
@@ -96,6 +129,14 @@ struct cov_context {
     // Feedback nexus tracking
     struct feedback_nexus_set * current_feedback_nexus;
     struct feedback_nexus_set * previous_feedback_nexus;
+
+    // Turbofan optimization pass tracking
+    uint64_t turbofan_optimization_bits_current;
+    uint64_t turbofan_optimization_bits_previous;
+
+    // // Maglev optimization pass tracking
+    // uint32_t maglev_optimization_bits_current;
+    // uint32_t maglev_optimization_bits_previous;
 };
 
 int cov_initialize(struct cov_context*);
@@ -117,5 +158,11 @@ void cov_reset_state(struct cov_context* context);
 int cov_evaluate_feedback_nexus(struct cov_context* context);
 void cov_update_feedback_nexus(struct cov_context* context);
 void clear_feedback_nexus(struct cov_context* context);
+
+
+// Turbofan and Maglev optimization bits functions
+int cov_evaluate_optimization_bits(struct cov_context* context);
+void cov_update_optimization_bits(struct cov_context* context);
+void clear_optimization_bits(struct cov_context* context);
 
 #endif

@@ -1,0 +1,235 @@
+// ===== [ Program 8E99B700-C5BE-4D06-993F-FEEA57565912 ] =====
+// Start of prefix code
+// Executing code generator ClassDefinitionGenerator
+v0 <- LoadString 'g'
+v1 <- LoadFloat '0.5399901410917779'
+v2 <- LoadString 'c'
+v3 <- BeginClassDefinition (decl)
+    // Executing code generator ClassStaticMethodGenerator
+    BeginClassStaticMethod 'o' -> v4, v5, v6
+        // Executing code generator GcGenerator
+        v7 <- CreateNamedVariable 'gc', 'none'
+        v8 <- LoadString 'minor'
+        v9 <- LoadString 'async'
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `execution`, v9
+            ObjectLiteralAddProperty `type`, v8
+        v10 <- EndObjectLiteral
+        v11 <- CallFunction v7, [v10]
+        // Code generator finished
+        Return v7
+    EndClassStaticMethod
+    // Code generator finished
+    // Executing code generator ClassInstanceElementGenerator
+    ClassAddInstanceElement '4' v0
+    // Code generator finished
+EndClassDefinition
+v12 <- Construct v3, []
+v13 <- Construct v3, []
+v14 <- Construct v3, []
+// Code generator finished
+// Executing code generator ObjectBuilderFunctionGenerator
+v15 <- BeginPlainFunction -> v16, v17, v18, v19
+    BeginObjectLiteral
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `b`, v2
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `c`, v16
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `d`, v0
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `h`, v0
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `e`, v2
+        // Code generator finished
+        // Executing code generator ObjectLiteralElementGenerator
+        ObjectLiteralAddElement `7`, v0
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `f`, v2
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `a`, v19
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        ObjectLiteralAddProperty `g`, v17
+        // Code generator finished
+        // Executing code generator ObjectLiteralPropertyGenerator
+        // Code generator finished
+        // Executing code generator ObjectLiteralComputedPropertyGenerator
+        ObjectLiteralAddComputedProperty v3, v17
+        // Code generator finished
+        // Executing code generator ObjectLiteralElementGenerator
+        ObjectLiteralAddElement `15`, v18
+        // Code generator finished
+        // Executing code generator ObjectLiteralComputedPropertyGenerator
+        ObjectLiteralAddComputedProperty v12, v17
+        // Code generator finished
+    v20 <- EndObjectLiteral
+    Return v20
+EndPlainFunction
+v21 <- CallFunction v15, [v13, v13, v13, v12]
+v22 <- CallFunction v15, [v13, v12, v12, v1]
+v23 <- CallFunction v15, [v13, v13, v13, v14]
+// Code generator finished
+// Executing code generator ObjectBuilderFunctionGenerator
+v24 <- BeginPlainFunction -> v25, v26, v27, v28
+    BeginObjectLiteral
+        // Executing code generator ObjectLiteralComputedPropertyGenerator
+        ObjectLiteralAddComputedProperty v12, v12
+        // Code generator finished
+        // Executing code generator ObjectLiteralComputedMethodGenerator
+        BeginObjectLiteralComputedMethod v28 -> v29, v30, v31, v32, v33
+            // Executing code generator WeirdClassGenerator
+            v34 <- BeginPlainFunction -> v35
+                Return v35
+            EndPlainFunction
+            v36 <- BeginClassDefinition (decl) v34
+                // Executing code generator ClassInstanceComputedPropertyGenerator
+                ClassAddInstanceComputedProperty v22 v31
+                // Code generator finished
+                // Executing code generator ClassInstanceComputedPropertyGenerator
+                ClassAddInstanceComputedProperty v29 v0
+                // Code generator finished
+                // Executing code generator ClassStaticPropertyGenerator
+                ClassAddStaticProperty 'g' v3
+                // Code generator finished
+            EndClassDefinition
+            // Code generator finished
+            Return v26
+        EndObjectLiteralComputedMethod
+        // Code generator finished
+    v37 <- EndObjectLiteral
+    Return v37
+EndPlainFunction
+v38 <- CallFunction v24, [v13, v22, v23, v22]
+v39 <- CallFunction v24, [v12, v23, v21, v23]
+v40 <- CallFunction v24, [v12, v22, v21, v21]
+// Code generator finished
+// End of prefix code. 15 variables are now visible
+v41 <- LoadInteger '-128'
+BeginObjectLiteral
+    ObjectLiteralSetPrototype v41
+v42 <- EndObjectLiteral
+
+
+// ===== [ Program 1C1FF525-DD36-4BE9-8B9C-4A9ECC06C93B ] =====
+// Mutating 8E99B700-C5BE-4D06-993F-FEEA57565912 with ExplorationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadString 'g'
+v1 <- LoadFloat '0.5399901410917779'
+v2 <- LoadString 'c'
+v3 <- BeginClassDefinition (decl)
+    BeginClassStaticMethod 'o' -> v4, v5, v6
+        v7 <- CreateNamedVariable 'gc', 'none'
+        v8 <- LoadString 'minor'
+        v9 <- LoadString 'async'
+        BeginObjectLiteral
+            ObjectLiteralAddProperty `execution`, v9
+            ObjectLiteralAddProperty `type`, v8
+        v10 <- EndObjectLiteral
+        v11 <- CallFunction v7, [v10]
+        Return v7
+    EndClassStaticMethod
+    ClassAddInstanceElement '4' v0
+EndClassDefinition
+// Exploring value v3
+v12 <- GetProperty v3, 'name'
+// Exploring finished
+v13 <- Construct v3, []
+v14 <- Construct v3, []
+// Exploring value v14
+SetElement v14, '4', v14
+// Exploring finished
+v15 <- Construct v3, []
+v16 <- BeginPlainFunction -> v17, v18, v19, v20
+    // Exploring value v17
+    v21 <- GetProperty (guarded) v17, 'constructor'
+    v22 <- Construct (guarded) v21, []
+    // Exploring finished
+    // Exploring value v19
+    SetElement v19, '4', v19
+    // Exploring finished
+    // Exploring value v20
+    v23 <- GetElement v20, '4'
+    // Exploring finished
+    BeginObjectLiteral
+        ObjectLiteralAddProperty `b`, v2
+        ObjectLiteralAddProperty `c`, v17
+        ObjectLiteralAddProperty `d`, v0
+        ObjectLiteralAddProperty `h`, v0
+        ObjectLiteralAddProperty `e`, v2
+        ObjectLiteralAddElement `7`, v0
+        ObjectLiteralAddProperty `f`, v2
+        ObjectLiteralAddProperty `a`, v20
+        ObjectLiteralAddProperty `g`, v18
+        ObjectLiteralAddComputedProperty v3, v18
+        ObjectLiteralAddElement `15`, v19
+        ObjectLiteralAddComputedProperty v13, v18
+    v24 <- EndObjectLiteral
+    // Exploring value v24
+    SetElement v24, '15', v24
+    // Exploring finished
+    Return v24
+EndPlainFunction
+v25 <- CallFunction v16, [v14, v14, v14, v13]
+v26 <- CallFunction v16, [v14, v13, v13, v1]
+v27 <- CallFunction v16, [v14, v14, v14, v15]
+v28 <- BeginPlainFunction -> v29, v30, v31, v32
+    // Exploring value v29
+    v33 <- GetElement v29, '4'
+    // Exploring finished
+    // Exploring value v30
+    v34 <- CallMethod (guarded) v30, 'toString', []
+    // Exploring finished
+    // Exploring value v31
+    v35 <- GetElement v31, '15'
+    // Exploring finished
+    // Exploring value v32
+    v36 <- GetProperty v32, 'e'
+    // Exploring finished
+    BeginObjectLiteral
+        ObjectLiteralAddComputedProperty v13, v13
+        BeginObjectLiteralComputedMethod v32 -> v37, v38, v39, v40, v41
+            v42 <- BeginPlainFunction -> v43
+                Return v43
+            EndPlainFunction
+            v44 <- BeginClassDefinition (decl) v42
+                ClassAddInstanceComputedProperty v26 v39
+                ClassAddInstanceComputedProperty v37 v0
+                ClassAddStaticProperty 'g' v3
+            EndClassDefinition
+            Return v30
+        EndObjectLiteralComputedMethod
+    v45 <- EndObjectLiteral
+    Return v45
+EndPlainFunction
+v46 <- CallFunction v28, [v14, v26, v27, v26]
+v47 <- CallFunction v28, [v13, v27, v25, v27]
+// Exploring value v47
+SetProperty v47, 'd', v47
+// Exploring finished
+v48 <- CallFunction v28, [v13, v26, v25, v25]
+v49 <- LoadInteger '-128'
+BeginObjectLiteral
+    ObjectLiteralSetPrototype v49
+v50 <- EndObjectLiteral
+// Exploring value v50
+SetProperty v50, 'e', v50
+// Program may be interesting due to new coverage: 3244 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 8985A499-A822-46AF-82D2-D07148F22708 ] =====
+// Minimizing 1C1FF525-DD36-4BE9-8B9C-4A9ECC06C93B
+v0 <- BeginClassDefinition (decl)
+EndClassDefinition
+BeginObjectLiteral
+    ObjectLiteralAddComputedProperty v0, v0
+v1 <- EndObjectLiteral
+// Program is interesting due to new coverage: 1 newly discovered edge in the CFG of the target
+
+

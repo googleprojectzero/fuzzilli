@@ -1,0 +1,265 @@
+// ===== [ Program 4764D4E4-09E2-4B4A-BBD2-68EDBFC61EA2 ] =====
+// Start of prefix code
+// Executing code generator IntegerGenerator
+v0 <- LoadInteger '1073741824'
+v1 <- LoadInteger '64440'
+v2 <- LoadInteger '9'
+// Code generator finished
+// Executing code generator TrivialFunctionGenerator
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v4 <- BeginConstructor -> v5, v6, v7
+    SetProperty v5, 'a', v3
+    SetProperty v5, 'c', v1
+    SetProperty v5, 'g', v1
+EndConstructor
+v8 <- Construct v4, [v2, v3]
+v9 <- Construct v4, [v0, v0]
+v10 <- Construct v4, [v1, v8]
+// Code generator finished
+// Executing code generator RegExpGenerator
+v11 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+v12 <- LoadRegExp '\1\2(a(?:\1(b\1\2))\2)\1' 'dgimu'
+v13 <- LoadRegExp 'zixyz{1,32}' 'ysgimu'
+// Code generator finished
+// Executing code generator FloatArrayGenerator
+v14 <- CreateFloatArray [1000000.0, -5.350700299212024, -5.0]
+v15 <- CreateFloatArray [1.0, -7.753212969347842, -1000000.0, 5.0, -1000000000000.0, -2.220446049250313e-16]
+v16 <- CreateFloatArray [-2.0, 0.6271789754862348]
+// Code generator finished
+// End of prefix code. 14 variables are now visible
+v17 <- BeginPlainFunction -> v18, v19
+    Return v18
+EndPlainFunction
+BeginObjectLiteral
+    ObjectLiteralAddProperty `apply`, v17
+    ObjectLiteralAddProperty `get`, v17
+v20 <- EndObjectLiteral
+
+
+// ===== [ Program 14B63DF0-E9FE-4776-B379-5F8A17C211D1 ] =====
+// Mutating 4764D4E4-09E2-4B4A-BBD2-68EDBFC61EA2 with ExplorationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '1073741824'
+v1 <- LoadInteger '64440'
+v2 <- LoadInteger '9'
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v4 <- BeginConstructor -> v5, v6, v7
+    // Exploring value v7
+    v8 <- GetProperty v7, 'arguments'
+    // Exploring finished
+    SetProperty v5, 'a', v3
+    SetProperty v5, 'c', v1
+    SetProperty v5, 'g', v1
+EndConstructor
+v9 <- Construct v4, [v2, v3]
+v10 <- Construct v4, [v0, v0]
+// Exploring value v10
+v11 <- GetProperty (guarded) v10, 'constructor'
+v12 <- Construct (guarded) v11, [v9, v2]
+// Exploring finished
+v13 <- Construct v4, [v1, v9]
+v14 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+v15 <- LoadRegExp '\1\2(a(?:\1(b\1\2))\2)\1' 'dgimu'
+v16 <- LoadRegExp 'zixyz{1,32}' 'ysgimu'
+v17 <- CreateFloatArray [1000000.0, -5.350700299212024, -5.0]
+v18 <- CreateFloatArray [1.0, -7.753212969347842, -1000000.0, 5.0, -1000000000000.0, -2.220446049250313e-16]
+v19 <- CreateFloatArray [-2.0, 0.6271789754862348]
+// Exploring value v19
+v20 <- GetElement v19, '1'
+// Exploring finished
+v21 <- BeginPlainFunction -> v22, v23
+    Return v22
+EndPlainFunction
+// Exploring value v21
+v24 <- GetProperty v21, 'prototype'
+// Exploring finished
+BeginObjectLiteral
+    ObjectLiteralAddProperty `apply`, v21
+    ObjectLiteralAddProperty `get`, v21
+v25 <- EndObjectLiteral
+// Exploring value v25
+v26 <- GetProperty (guarded) v25, '__lookupGetter__'
+v27 <- Construct (guarded) v26, [v25]
+// Program may be interesting due to new coverage: 3197 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 34CDB533-EA90-44EE-AE3E-F62C404DD99F ] =====
+// Mutating 14B63DF0-E9FE-4776-B379-5F8A17C211D1 with OperationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Mutating next operation
+v0 <- LoadInteger '-14'
+// Mutating next operation
+v1 <- LoadInteger '1073741824'
+v2 <- LoadInteger '9'
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v4 <- BeginConstructor -> v5, v6, v7
+    // Mutating next operation
+    v8 <- GetProperty v7, 'e'
+    SetProperty v5, 'a', v3
+    SetProperty v5, 'c', v1
+    SetProperty v5, 'g', v1
+EndConstructor
+v9 <- Construct v4, [v2, v3]
+v10 <- Construct v4, [v0, v0]
+v11 <- GetProperty (guarded) v10, 'constructor'
+v12 <- Construct (guarded) v11, [v9, v2]
+// Mutating next operation
+v13 <- Construct v4, [v1, v9, v3, v4]
+v14 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+v15 <- LoadRegExp '\1\2(a(?:\1(b\1\2))\2)\1' 'dgimu'
+v16 <- LoadRegExp 'zixyz{1,32}' 'ysgimu'
+v17 <- CreateFloatArray [1000000.0, -5.350700299212024, -5.0]
+v18 <- CreateFloatArray [1.0, -7.753212969347842, -1000000.0, 5.0, -1000000000000.0, -2.220446049250313e-16]
+v19 <- CreateFloatArray [-2.0, 0.6271789754862348]
+// Mutating next operation
+v20 <- GetElement v19, '5'
+v21 <- BeginPlainFunction -> v22, v23
+    Return v22
+EndPlainFunction
+v24 <- GetProperty v21, 'prototype'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `apply`, v21
+    ObjectLiteralAddProperty `get`, v21
+v25 <- EndObjectLiteral
+v26 <- GetProperty (guarded) v25, '__lookupGetter__'
+v27 <- Construct (guarded) v26, [v25]
+// Program may be interesting due to new coverage: 3090 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 7AB7ADFA-BBC2-4C80-BA67-E15DBCF0F528 ] =====
+// Mutating 34CDB533-EA90-44EE-AE3E-F62C404DD99F with SpliceMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '-14'
+v1 <- LoadInteger '1073741824'
+// Splicing instruction 2 (Construct) from 67A23EE4-DDE2-4C78-A797-B5023AA1083F
+v2 <- LoadInteger '127'
+v3 <- CreateNamedVariable 'Uint32Array', 'none'
+v4 <- Construct v3, [v2]
+// Splicing done
+// Splicing instruction 3 (BeginObjectLiteral) from 1333DB36-5742-40E9-B6BB-A77532FCB4BF
+v5 <- LoadInteger '10000'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v5
+v6 <- EndObjectLiteral
+// Splicing done
+v7 <- LoadInteger '9'
+v8 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v9 <- BeginConstructor -> v10, v11, v12
+    v13 <- GetProperty v12, 'e'
+    SetProperty v10, 'a', v8
+    SetProperty v10, 'c', v1
+    SetProperty v10, 'g', v1
+EndConstructor
+// Splicing instruction 52 (GetProperty) from DDF1EB3C-1B16-4294-9753-17DAA6A605EA
+v14 <- CreateNamedVariable 'String', 'none'
+v15 <- GetProperty v14, 'prototype'
+// Splicing done
+// Splicing instruction 5 (EndClassDefinition) from 34880B13-6226-4338-B944-01660C1AEAA6
+v16 <- BeginPlainFunction -> 
+EndPlainFunction
+v17 <- BeginClassDefinition (exp) v16
+    ClassAddInstanceElement '8' v16
+    ClassAddInstanceElement '2147483647'
+EndClassDefinition
+// Splicing done
+v18 <- Construct v9, [v7, v8]
+v19 <- Construct v9, [v0, v0]
+v20 <- GetProperty (guarded) v19, 'constructor'
+v21 <- Construct (guarded) v20, [v18, v7]
+v22 <- Construct v9, [v1, v18, v8, v9]
+v23 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+v24 <- LoadRegExp '\1\2(a(?:\1(b\1\2))\2)\1' 'dgimu'
+// Splicing instruction 89 (UnaryOperation) from BF8ECD92-DF14-4D7D-AE21-264C25565E3D
+v25 <- LoadInteger '1078'
+v26 <- UnaryOperation v25, '--'
+// Splicing done
+// Splicing instruction 8 (EndObjectLiteral) from 362450D7-1337-41BC-955C-EF492AEF90DB
+v27 <- LoadInteger '4255489755'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v27
+v28 <- EndObjectLiteral
+// Splicing done
+v29 <- LoadRegExp 'zixyz{1,32}' 'ysgimu'
+v30 <- CreateFloatArray [1000000.0, -5.350700299212024, -5.0]
+v31 <- CreateFloatArray [1.0, -7.753212969347842, -1000000.0, 5.0, -1000000000000.0, -2.220446049250313e-16]
+v32 <- CreateFloatArray [-2.0, 0.6271789754862348]
+v33 <- GetElement v32, '5'
+// Splicing instruction 15 (UnaryOperation) from B6CEBAAF-B608-4FEC-9EDB-97E0679E3CDF
+BeginForLoopInitializer
+    v34 <- LoadInteger '0'
+    v35 <- LoadInteger '10'
+BeginForLoopCondition -> v36, v37
+    v38 <- Compare v36, '<', v37
+BeginForLoopAfterthought v38 -> v39, v40
+    v41 <- UnaryOperation v39, '++'
+    v42 <- UnaryOperation v40, '--'
+BeginForLoopBody -> v43, v44
+EndForLoop
+// Splicing done
+v45 <- BeginPlainFunction -> v46, v47
+    Return v46
+EndPlainFunction
+v48 <- GetProperty v45, 'prototype'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `apply`, v45
+    ObjectLiteralAddProperty `get`, v45
+v49 <- EndObjectLiteral
+v50 <- GetProperty (guarded) v49, '__lookupGetter__'
+v51 <- Construct (guarded) v50, [v49]
+// Program may be interesting due to new coverage: 3868 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program D24E270A-75A3-4DB3-88C7-20C0513C6BAA ] =====
+// Minimizing 7AB7ADFA-BBC2-4C80-BA67-E15DBCF0F528
+v0 <- LoadInteger '-14'
+v1 <- LoadInteger '1073741824'
+v2 <- LoadInteger '10000'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v2
+v3 <- EndObjectLiteral
+v4 <- LoadInteger '9'
+v5 <- BeginPlainFunction -> 
+    Return v4
+EndPlainFunction
+v6 <- BeginConstructor -> v7, v8, v9
+EndConstructor
+v10 <- CreateNamedVariable 'String', 'none'
+v11 <- GetProperty v10, 'prototype'
+v12 <- BeginPlainFunction -> 
+EndPlainFunction
+v13 <- BeginClassDefinition (exp) v12
+    ClassAddInstanceElement '8' v12
+    ClassAddInstanceElement '2147483647'
+EndClassDefinition
+v14 <- Construct v6, [v4, v5]
+v15 <- Construct v6, [v0, v0]
+v16 <- GetProperty v15, 'constructor'
+v17 <- CallFunction (guarded) v16, [v14, v4]
+v18 <- Construct v6, [v1, v14, v5, v6]
+v19 <- LoadRegExp '(?:a+){0,0}' 'dgim'
+v20 <- LoadRegExp '\1\2(a(?:\1(b\1\2))\2)\1' 'dgimu'
+BeginForLoopInitializer
+    v21 <- LoadInteger '0'
+    v22 <- LoadInteger '10'
+BeginForLoopCondition -> v23, v24
+BeginForLoopAfterthought v24 -> v25, v26
+    v27 <- UnaryOperation v25, '++'
+    v28 <- UnaryOperation v26, '--'
+BeginForLoopBody -> v29, v30
+EndForLoop
+BeginObjectLiteral
+v31 <- EndObjectLiteral
+v32 <- CallFunction (guarded) v31, [v31, v6, v2]
+// Program is interesting due to new coverage: 64 newly discovered edges in the CFG of the target
+
+

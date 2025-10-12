@@ -1,0 +1,94 @@
+// ===== [ Program C1F69AE0-F56C-4583-A8C3-FD55D8761370 ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator NullGenerator
+v0 <- LoadNull
+// Code generator finished
+// Executing code generator IntegerGenerator
+v1 <- LoadInteger '45269'
+v2 <- LoadInteger '-1360208316'
+v3 <- LoadInteger '127'
+// Code generator finished
+// Executing code generator FloatGenerator
+v4 <- LoadFloat '-714.000988777249'
+v5 <- LoadFloat '-2.220446049250313e-16'
+v6 <- LoadFloat '858.7298502608141'
+// Code generator finished
+// Executing code generator TrivialFunctionGenerator
+v7 <- BeginPlainFunction -> 
+    Return v2
+EndPlainFunction
+// Code generator finished
+// Executing code generator ClassDefinitionGenerator
+v8 <- BeginClassDefinition (decl) v7
+    // Executing code generator ClassInstanceMethodGenerator
+    BeginClassInstanceMethod 'toString' -> v9, v10, v11
+        // Executing code generator ObjectConstructorGenerator
+        v12 <- BeginConstructor -> v13, v14, v15, v16, v17
+            SetProperty v13, 'c', v15
+        EndConstructor
+        v18 <- Construct v12, [v10, v10, v11, v1]
+        v19 <- Construct v12, [v18, v10, v4, v18]
+        v20 <- Construct v12, [v19, v10, v11, v18]
+        // Code generator finished
+        Return v19
+    EndClassInstanceMethod
+    // Code generator finished
+    // Executing code generator ClassStaticElementGenerator
+    ClassAddStaticElement '314362820'
+    // Code generator finished
+EndClassDefinition
+v21 <- Construct v8, []
+v22 <- Construct v8, []
+v23 <- Construct v8, []
+// Code generator finished
+// End of prefix code. 12 variables are now visible
+// Executing code generator ConstructWithDifferentNewTargetGenerator
+v24 <- CreateNamedVariable 'Reflect', 'none'
+v25 <- CreateArray []
+v26 <- CallMethod v24, 'construct', [v8, v25, v8]
+// Code generator finished
+// Executing code generator IntegerGenerator
+v27 <- LoadInteger '-1073741824'
+v28 <- LoadInteger '61258'
+v29 <- LoadInteger '-9'
+// Code generator finished
+// Executing code generator DestructObjectGenerator
+{b:v30,} <- DestructObject v21
+// Code generator finished
+// Executing code generator MethodCallGenerator
+v31 <- CallMethod v23, 'toString', [v2, v30]
+// Code generator finished
+// Executing code generator NamedVariableGenerator
+v32 <- CreateNamedVariable 'c', 'const', v22
+// Code generator finished
+// Executing code generator FloatArrayGenerator
+v33 <- CreateFloatArray [-9.07417035329925e+307, 0.47871764685608464, 883617.9633505379, 2.220446049250313e-16, nan, 427.74493997333184, 0.8180190085577129, -4.9806668131011955, -1.1667303449300373e+307]
+v34 <- CreateFloatArray [1.7976931348623157e+308, -1000.0, 706.9325645546753, 0.44600745134185815, -489961.0239273318, -1000.0, -4.0, 9.76030039843067e+307, 950.1527911067358, -1000000000.0]
+v35 <- CreateFloatArray [-7.140376708930787, inf, 1.0, 5.0, 7.129062858417381, 238632.04694224172, -5.030722773980523e+307]
+// Program may be interesting due to new coverage: 4773 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 9FDC26F7-AF7A-4EC3-AF37-E2C8F90263C8 ] =====
+// Minimizing C1F69AE0-F56C-4583-A8C3-FD55D8761370
+v0 <- LoadNull
+v1 <- LoadInteger '45269'
+v2 <- LoadInteger '-1360208316'
+v3 <- LoadInteger '127'
+v4 <- LoadFloat '-714.000988777249'
+v5 <- LoadFloat '-2.220446049250313e-16'
+v6 <- LoadFloat '858.7298502608141'
+v7 <- BeginPlainFunction -> 
+EndPlainFunction
+v8 <- BeginClassDefinition (decl) v7
+EndClassDefinition
+v9 <- Construct v8, []
+v10 <- CreateNamedVariable 'Reflect', 'none'
+v11 <- LoadInteger '-1073741824'
+v12 <- LoadInteger '61258'
+v13 <- LoadInteger '-9'
+// Program is interesting due to new coverage: 46 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 328 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 4 newly discovered edges in the CFG of the target
+
+

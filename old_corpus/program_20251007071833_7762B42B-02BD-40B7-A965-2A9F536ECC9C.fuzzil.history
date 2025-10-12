@@ -1,0 +1,95 @@
+// ===== [ Program FB5E6DB3-A59A-487E-807B-F9B7C4B468DF ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator FloatGenerator
+v0 <- LoadFloat '-1000000000.0'
+v1 <- LoadFloat '1e-15'
+v2 <- LoadFloat '3.8607079113389884e+307'
+// Code generator finished
+// Executing code generator IntegerGenerator
+v3 <- LoadInteger '-21994'
+v4 <- LoadInteger '-11'
+v5 <- LoadInteger '684504293'
+// Code generator finished
+// Executing code generator TimeZoneIdGenerator
+v6 <- LoadString 'Asia/Kuching'
+v7 <- LoadString 'Pacific/Chuuk'
+v8 <- LoadString '-13:00'
+// Code generator finished
+// Executing code generator TrivialFunctionGenerator
+v9 <- BeginPlainFunction -> 
+    Return v2
+EndPlainFunction
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v10 <- BeginConstructor -> v11, v12, v13, v14, v15
+    SetProperty v11, 'a', v5
+    SetProperty v11, 'h', v14
+    SetProperty v11, 'c', v12
+EndConstructor
+v16 <- Construct v10, [v3, v1, v1, v1]
+v17 <- Construct v10, [v5, v0, v0, v0]
+v18 <- Construct v10, [v5, v2, v2, v3]
+// Code generator finished
+// End of prefix code. 14 variables are now visible
+// Executing code generator BinaryOperationGenerator
+v19 <- BinaryOperation v0, '>>', v4
+// Code generator finished
+// Executing code generator FastToSlowPropertiesGenerator
+BeginRepeatLoop '32' -> v20
+    v21 <- LoadString 'p'
+    v22 <- BinaryOperation v21, '+', v20
+    SetComputedProperty v17, v22, v20
+EndRepeatLoop
+// Code generator finished
+// Executing code generator PropertyRetrievalGenerator
+v23 <- GetProperty v18, 'c'
+// Code generator finished
+// Executing code generator ComputedPropertyUpdateGenerator
+UpdateComputedProperty v16, v23, '**',v5
+// Code generator finished
+// Executing code generator ElementKindChangeGenerator
+SetElement v1, '1', v7
+// Code generator finished
+// Executing code generator UnboundFunctionApplyGenerator
+v24 <- CreateArray [v7, v2, v18]
+v25 <- CallMethod (guarded) v23, 'apply', [v16, v24]
+// Program may be interesting due to new coverage: 5918 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 7762B42B-02BD-40B7-A965-2A9F536ECC9C ] =====
+// Minimizing FB5E6DB3-A59A-487E-807B-F9B7C4B468DF
+v0 <- LoadFloat '-1000000000.0'
+v1 <- LoadFloat '1e-15'
+v2 <- LoadFloat '3.8607079113389884e+307'
+v3 <- LoadInteger '-21994'
+v4 <- LoadInteger '-11'
+v5 <- LoadInteger '684504293'
+v6 <- LoadString 'Pacific/Chuuk'
+v7 <- BeginPlainFunction -> 
+    Return v2
+EndPlainFunction
+v8 <- BeginConstructor -> v9, v10, v11, v12, v13
+    SetProperty v9, 'a', v5
+    SetProperty v9, 'h', v12
+    SetProperty v9, 'c', v10
+EndConstructor
+v14 <- Construct v8, [v3, v1, v1, v1]
+v15 <- Construct v8, [v5, v0, v0, v0]
+v16 <- Construct v8, [v5, v2, v2, v3]
+v17 <- BinaryOperation v0, '>>', v4
+BeginRepeatLoop '25' -> v18
+    v19 <- LoadString 'p'
+    v20 <- BinaryOperation v19, '+', v18
+    SetComputedProperty v15, v20, v18
+EndRepeatLoop
+v21 <- GetProperty v16, 'c'
+UpdateComputedProperty v14, v21, '**',v5
+SetElement v1, '1', v6
+v22 <- CreateArray [v6, v2, v16]
+v23 <- CallMethod (guarded) v21, 'apply', [v14]
+// Program is interesting due to new coverage: 2135 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 81 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 13978 newly discovered edges in the CFG of the target
+
+

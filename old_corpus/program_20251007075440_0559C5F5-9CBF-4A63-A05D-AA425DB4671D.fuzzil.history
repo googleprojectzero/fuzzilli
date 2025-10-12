@@ -1,0 +1,115 @@
+// ===== [ Program 592F4958-6F72-47A8-955B-1D071E7DDA78 ] =====
+// Start of prefix code
+// Executing code generator IntegerGenerator
+v0 <- LoadInteger '95521319'
+v1 <- LoadInteger '-33596'
+v2 <- LoadInteger '65535'
+// Code generator finished
+// Executing code generator ArrayGenerator
+v3 <- CreateArray [v0, v0]
+v4 <- CreateArray [v2, v3]
+v5 <- CreateArray [v0, v3]
+// Code generator finished
+// Executing code generator StringGenerator
+v6 <- LoadString '-28641'
+v7 <- LoadString 'mRU'
+v8 <- LoadString 'symbol'
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v9 <- BeginConstructor -> v10, v11, v12
+    SetProperty v10, 'c', v11
+EndConstructor
+v13 <- Construct v9, [v4, v5]
+v14 <- Construct v9, [v5, v3]
+v15 <- Construct v9, [v4, v5]
+// Code generator finished
+// End of prefix code. 13 variables are now visible
+v16 <- LoadRegExp '\xed\xa0\x801poc?' 'dsgimu'
+v17 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v18 <- LoadInteger '10000'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v18
+v19 <- EndObjectLiteral
+v20 <- LoadInteger '10'
+v21 <- Construct v17, [v20, v19]
+v22 <- CreateNamedVariable 'Int8Array', 'none'
+v23 <- Construct v22, [v21]
+
+
+// ===== [ Program 82BDB99C-925B-40B4-A444-31ACE7AC11D7 ] =====
+// Mutating 592F4958-6F72-47A8-955B-1D071E7DDA78 with SpliceMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '95521319'
+v1 <- LoadInteger '-33596'
+v2 <- LoadInteger '65535'
+v3 <- CreateArray [v0, v0]
+v4 <- CreateArray [v2, v3]
+v5 <- CreateArray [v0, v3]
+v6 <- LoadString '-28641'
+// Splicing instruction 8 (EndPlainFunction) from B4C7FA08-2516-4FE1-B085-25E86651AA4E
+v7 <- BeginPlainFunction -> v8, v9, v10, v11
+EndPlainFunction
+// Splicing done
+// Splicing instruction 3 (Construct) from 9AA1C5AB-460D-4904-8290-3268E289185E
+v12 <- CreateNamedVariable 'Uint32Array', 'none'
+v13 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v14 <- Construct v13, [v12]
+// Splicing done
+v15 <- LoadString 'mRU'
+v16 <- LoadString 'symbol'
+v17 <- BeginConstructor -> v18, v19, v20
+    // Splicing instruction 43 (ConfigureProperty) from 479D9FA5-D2F8-41DB-A8DD-370317F6549F
+    v21 <- LoadRegExp '[B]' 'dimu'
+    ConfigureProperty v21, 'source', 'PropertyFlags(rawValue: 2)', 'value' [["v21"]]
+    // Splicing done
+    // Splicing instruction 11 (Construct) from F1D29A41-7FB9-41DB-BFDC-EA75F0F4E7BA
+    v22 <- LoadFloat '745.8806114719878'
+    v23 <- BeginClassDefinition (exp)
+        BeginClassConstructor -> v24, v25
+            BeginObjectLiteral
+            v26 <- EndObjectLiteral
+            SetProperty v26, 'c', v0
+            SetProperty v26, 'g', v25
+            SetProperty v26, 'c', v22
+        EndClassConstructor
+    EndClassDefinition
+    v27 <- Construct v23, []
+    // Splicing done
+    SetProperty v18, 'c', v19
+EndConstructor
+v28 <- Construct v17, [v4, v5]
+v29 <- Construct v17, [v5, v3]
+v30 <- Construct v17, [v4, v5]
+v31 <- LoadRegExp '\xed\xa0\x801poc?' 'dsgimu'
+v32 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v33 <- LoadInteger '10000'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v33
+v34 <- EndObjectLiteral
+v35 <- LoadInteger '10'
+v36 <- Construct v32, [v35, v34]
+v37 <- CreateNamedVariable 'Int8Array', 'none'
+v38 <- Construct v37, [v36]
+// Splicing instruction 0 (BeginObjectLiteral) from AC7081A2-B306-46F6-BC49-A25D0743CAE2
+BeginObjectLiteral
+    BeginObjectLiteralSetter `d` -> v39, v40
+    EndObjectLiteralSetter
+    BeginObjectLiteralGetter `g` -> v41
+        Return v41
+    EndObjectLiteralGetter
+v42 <- EndObjectLiteral
+// Program may be interesting due to new coverage: 3303 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 0559C5F5-9CBF-4A63-A05D-AA425DB4671D ] =====
+// Minimizing 82BDB99C-925B-40B4-A444-31ACE7AC11D7
+v0 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v1 <- LoadInteger '10000'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v1
+v2 <- EndObjectLiteral
+v3 <- LoadInteger '10'
+v4 <- Construct v0, [v3, v2]
+// Program is interesting due to new coverage: 6 newly discovered edges in the CFG of the target
+
+

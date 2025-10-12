@@ -1,0 +1,320 @@
+// ===== [ Program 592F4958-6F72-47A8-955B-1D071E7DDA78 ] =====
+// Start of prefix code
+// Executing code generator IntegerGenerator
+v0 <- LoadInteger '95521319'
+v1 <- LoadInteger '-33596'
+v2 <- LoadInteger '65535'
+// Code generator finished
+// Executing code generator ArrayGenerator
+v3 <- CreateArray [v0, v0]
+v4 <- CreateArray [v2, v3]
+v5 <- CreateArray [v0, v3]
+// Code generator finished
+// Executing code generator StringGenerator
+v6 <- LoadString '-28641'
+v7 <- LoadString 'mRU'
+v8 <- LoadString 'symbol'
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v9 <- BeginConstructor -> v10, v11, v12
+    SetProperty v10, 'c', v11
+EndConstructor
+v13 <- Construct v9, [v4, v5]
+v14 <- Construct v9, [v5, v3]
+v15 <- Construct v9, [v4, v5]
+// Code generator finished
+// End of prefix code. 13 variables are now visible
+v16 <- LoadRegExp '\xed\xa0\x801poc?' 'dsgimu'
+v17 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v18 <- LoadInteger '10000'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v18
+v19 <- EndObjectLiteral
+v20 <- LoadInteger '10'
+v21 <- Construct v17, [v20, v19]
+v22 <- CreateNamedVariable 'Int8Array', 'none'
+v23 <- Construct v22, [v21]
+
+
+// ===== [ Program 82BDB99C-925B-40B4-A444-31ACE7AC11D7 ] =====
+// Mutating 592F4958-6F72-47A8-955B-1D071E7DDA78 with SpliceMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '95521319'
+v1 <- LoadInteger '-33596'
+v2 <- LoadInteger '65535'
+v3 <- CreateArray [v0, v0]
+v4 <- CreateArray [v2, v3]
+v5 <- CreateArray [v0, v3]
+v6 <- LoadString '-28641'
+// Splicing instruction 8 (EndPlainFunction) from B4C7FA08-2516-4FE1-B085-25E86651AA4E
+v7 <- BeginPlainFunction -> v8, v9, v10, v11
+EndPlainFunction
+// Splicing done
+// Splicing instruction 3 (Construct) from 9AA1C5AB-460D-4904-8290-3268E289185E
+v12 <- CreateNamedVariable 'Uint32Array', 'none'
+v13 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v14 <- Construct v13, [v12]
+// Splicing done
+v15 <- LoadString 'mRU'
+v16 <- LoadString 'symbol'
+v17 <- BeginConstructor -> v18, v19, v20
+    // Splicing instruction 43 (ConfigureProperty) from 479D9FA5-D2F8-41DB-A8DD-370317F6549F
+    v21 <- LoadRegExp '[B]' 'dimu'
+    ConfigureProperty v21, 'source', 'PropertyFlags(rawValue: 2)', 'value' [["v21"]]
+    // Splicing done
+    // Splicing instruction 11 (Construct) from F1D29A41-7FB9-41DB-BFDC-EA75F0F4E7BA
+    v22 <- LoadFloat '745.8806114719878'
+    v23 <- BeginClassDefinition (exp)
+        BeginClassConstructor -> v24, v25
+            BeginObjectLiteral
+            v26 <- EndObjectLiteral
+            SetProperty v26, 'c', v0
+            SetProperty v26, 'g', v25
+            SetProperty v26, 'c', v22
+        EndClassConstructor
+    EndClassDefinition
+    v27 <- Construct v23, []
+    // Splicing done
+    SetProperty v18, 'c', v19
+EndConstructor
+v28 <- Construct v17, [v4, v5]
+v29 <- Construct v17, [v5, v3]
+v30 <- Construct v17, [v4, v5]
+v31 <- LoadRegExp '\xed\xa0\x801poc?' 'dsgimu'
+v32 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v33 <- LoadInteger '10000'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v33
+v34 <- EndObjectLiteral
+v35 <- LoadInteger '10'
+v36 <- Construct v32, [v35, v34]
+v37 <- CreateNamedVariable 'Int8Array', 'none'
+v38 <- Construct v37, [v36]
+// Splicing instruction 0 (BeginObjectLiteral) from AC7081A2-B306-46F6-BC49-A25D0743CAE2
+BeginObjectLiteral
+    BeginObjectLiteralSetter `d` -> v39, v40
+    EndObjectLiteralSetter
+    BeginObjectLiteralGetter `g` -> v41
+        Return v41
+    EndObjectLiteralGetter
+v42 <- EndObjectLiteral
+// Program may be interesting due to new coverage: 3303 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program C3F7F827-8FB0-46C7-9C77-88A0E532228E ] =====
+// Mutating 82BDB99C-925B-40B4-A444-31ACE7AC11D7 with CodeGenMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '95521319'
+v1 <- LoadInteger '-33596'
+v2 <- LoadInteger '65535'
+v3 <- CreateArray [v0, v0]
+v4 <- CreateArray [v2, v3]
+v5 <- CreateArray [v0, v3]
+v6 <- LoadString '-28641'
+v7 <- BeginPlainFunction -> v8, v9, v10, v11
+EndPlainFunction
+v12 <- CreateNamedVariable 'Uint32Array', 'none'
+v13 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v14 <- Construct v13, [v12]
+v15 <- LoadString 'mRU'
+v16 <- LoadString 'symbol'
+v17 <- BeginConstructor -> v18, v19, v20
+    v21 <- LoadRegExp '[B]' 'dimu'
+    ConfigureProperty v21, 'source', 'PropertyFlags(rawValue: 2)', 'value' [["v21"]]
+    v22 <- LoadFloat '745.8806114719878'
+    v23 <- BeginClassDefinition (exp)
+        BeginClassConstructor -> v24, v25
+            BeginObjectLiteral
+            v26 <- EndObjectLiteral
+            SetProperty v26, 'c', v0
+            SetProperty v26, 'g', v25
+            // Executing code generator SuperPropertyRetrievalGenerator
+            v27 <- GetSuperProperty 'd'
+            // Code generator finished
+            // Executing code generator ConstructWithDifferentNewTargetGenerator
+            v28 <- CreateNamedVariable 'Reflect', 'none'
+            v29 <- CreateArray [v26, v28, v23, v20]
+            v30 <- CallMethod v28, 'construct', [v7, v29, v17]
+            // Code generator finished
+            // Executing code generator BinaryOperationGenerator
+            v31 <- BinaryOperation v20, '??', v12
+            // Code generator finished
+            SetProperty v26, 'c', v22
+        EndClassConstructor
+    EndClassDefinition
+    v32 <- Construct v23, []
+    // Executing code generator FunctionBindGenerator
+    v33 <- BindFunction v7, v32, v2, v32, v16, v4
+    // Code generator finished
+    // Executing code generator NamedVariableGenerator
+    v34 <- CreateNamedVariable 'd', 'let', v15
+    // Code generator finished
+    // Executing code generator NumberComputationGenerator
+    v35 <- CreateNamedVariable 'Math', 'none'
+    v36 <- LoadInteger '-13'
+    v37 <- LoadInteger '-1062333433'
+    v38 <- UnaryOperation v37, '--'
+    v39 <- CallMethod v35, 'tanh', [v38]
+    v40 <- BinaryOperation v7, '**', v38
+    v41 <- UnaryOperation v37, '++'
+    // Code generator finished
+    SetProperty v18, 'c', v19
+EndConstructor
+v42 <- Construct v17, [v4, v5]
+v43 <- Construct v17, [v5, v3]
+v44 <- Construct v17, [v4, v5]
+v45 <- LoadRegExp '\xed\xa0\x801poc?' 'dsgimu'
+v46 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v47 <- LoadInteger '10000'
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v47
+v48 <- EndObjectLiteral
+v49 <- LoadInteger '10'
+v50 <- Construct v46, [v49, v48]
+v51 <- CreateNamedVariable 'Int8Array', 'none'
+v52 <- Construct v51, [v50]
+BeginObjectLiteral
+    BeginObjectLiteralSetter `d` -> v53, v54
+    EndObjectLiteralSetter
+    BeginObjectLiteralGetter `g` -> v55
+        Return v55
+    EndObjectLiteralGetter
+v56 <- EndObjectLiteral
+// Program may be interesting due to new coverage: 3561 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 1DB6A718-6FCB-4F03-B896-B33A73782F2B ] =====
+// Mutating C3F7F827-8FB0-46C7-9C77-88A0E532228E with ExplorationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '95521319'
+v1 <- LoadInteger '-33596'
+v2 <- LoadInteger '65535'
+v3 <- CreateArray [v0, v0]
+v4 <- CreateArray [v2, v3]
+v5 <- CreateArray [v0, v3]
+v6 <- LoadString '-28641'
+// Exploring value v6
+SetElement v6, '3', v6
+// Exploring finished
+v7 <- BeginPlainFunction -> v8, v9, v10, v11
+    // Exploring value v8
+    SetProperty v8, 'e', v8
+    // Exploring finished
+    // Exploring value v9
+    v12 <- CallMethod (guarded) v9, 'construct', [v6, v6]
+    // Exploring finished
+    // Exploring value v11
+    v13 <- CallMethod (guarded) v11, 'flat', []
+    // Exploring finished
+EndPlainFunction
+v14 <- CreateNamedVariable 'Uint32Array', 'none'
+v15 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v16 <- Construct v15, [v14]
+// Exploring value v16
+v17 <- GetElement v16, '1'
+// Exploring finished
+v18 <- LoadString 'mRU'
+v19 <- LoadString 'symbol'
+v20 <- BeginConstructor -> v21, v22, v23
+    // Exploring value v21
+    v24 <- CallMethod (guarded) v21, 'toString', []
+    // Exploring finished
+    v25 <- LoadRegExp '[B]' 'dimu'
+    // Exploring value v25
+    v26 <- CallMethod (guarded) v25, 'test', [v3]
+    // Exploring finished
+    ConfigureProperty v25, 'source', 'PropertyFlags(rawValue: 2)', 'value' [["v25"]]
+    v27 <- LoadFloat '745.8806114719878'
+    v28 <- BeginClassDefinition (exp)
+        BeginClassConstructor -> v29, v30
+            // Exploring value v30
+            v31 <- BinaryOperation v30, '??', v30
+            // Exploring finished
+            BeginObjectLiteral
+            v32 <- EndObjectLiteral
+            SetProperty v32, 'c', v0
+            SetProperty v32, 'g', v30
+            v33 <- GetSuperProperty 'd'
+            v34 <- CreateNamedVariable 'Reflect', 'none'
+            v35 <- CreateArray [v32, v34, v28, v23]
+            // Exploring value v35
+            v36 <- CallMethod (guarded) v35, 'with', [v35, v35]
+            // Exploring finished
+            v37 <- CallMethod v34, 'construct', [v7, v35, v20]
+            v38 <- BinaryOperation v23, '??', v14
+            SetProperty v32, 'c', v27
+        EndClassConstructor
+    EndClassDefinition
+    // Exploring value v28
+    v39 <- CallFunction (guarded) v28, [v1]
+    // Exploring finished
+    v40 <- Construct v28, []
+    v41 <- BindFunction v7, v40, v2, v40, v19, v4
+    // Exploring value v41
+    SetProperty v41, 'd', v41
+    // Exploring finished
+    v42 <- CreateNamedVariable 'd', 'let', v18
+    v43 <- CreateNamedVariable 'Math', 'none'
+    // Exploring value v43
+    SetProperty v43, 'd', v43
+    // Exploring finished
+    v44 <- LoadInteger '-13'
+    v45 <- LoadInteger '-1062333433'
+    // Exploring value v45
+    v46 <- UnaryOperation v45, '--'
+    // Exploring finished
+    v47 <- UnaryOperation v45, '--'
+    v48 <- CallMethod v43, 'tanh', [v47]
+    v49 <- BinaryOperation v7, '**', v47
+    v50 <- UnaryOperation v45, '++'
+    SetProperty v21, 'c', v22
+EndConstructor
+v51 <- Construct v20, [v4, v5]
+v52 <- Construct v20, [v5, v3]
+v53 <- Construct v20, [v4, v5]
+v54 <- LoadRegExp '\xed\xa0\x801poc?' 'dsgimu'
+v55 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v56 <- LoadInteger '10000'
+// Exploring value v56
+v57 <- BinaryOperation v56, '*', v56
+// Exploring finished
+BeginObjectLiteral
+    ObjectLiteralAddProperty `maxByteLength`, v56
+v58 <- EndObjectLiteral
+v59 <- LoadInteger '10'
+// Exploring value v59
+v60 <- BinaryOperation v59, '+', v59
+// Exploring finished
+v61 <- Construct v55, [v59, v58]
+v62 <- CreateNamedVariable 'Int8Array', 'none'
+v63 <- Construct v62, [v61]
+// Exploring value v63
+v64 <- GetElement v63, '1'
+// Exploring finished
+BeginObjectLiteral
+    BeginObjectLiteralSetter `d` -> v65, v66
+    EndObjectLiteralSetter
+    BeginObjectLiteralGetter `g` -> v67
+        Return v67
+    EndObjectLiteralGetter
+v68 <- EndObjectLiteral
+// Program may be interesting due to new coverage: 3801 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 1CCC1C3B-7D22-4168-91B0-DE871AE80F11 ] =====
+// Minimizing 1DB6A718-6FCB-4F03-B896-B33A73782F2B
+v0 <- LoadInteger '95521319'
+v1 <- CreateArray [v0, v0]
+v2 <- BeginPlainFunction -> v3, v4, v5, v6
+    Return v1
+EndPlainFunction
+v7 <- BeginConstructor -> v8, v9, v10
+    v11 <- LoadRegExp '[B]' 'dimu'
+    v12 <- CallMethod v11, 'test', [v1]
+    v13 <- BindFunction v2
+    SetProperty v13, 'd', v13
+EndConstructor
+v14 <- Construct v7, [v7, v1]
+// Program is interesting due to new coverage: 4 newly discovered edges in the CFG of the target
+
+

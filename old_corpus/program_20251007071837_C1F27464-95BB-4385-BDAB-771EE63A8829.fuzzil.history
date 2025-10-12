@@ -1,0 +1,85 @@
+// ===== [ Program B1CBE5CE-341C-448E-8C15-E41EA418F522 ] =====
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+// Start of prefix code
+// Executing code generator ClassDefinitionGenerator
+v0 <- LoadString 'boolean'
+v1 <- LoadString 'fill'
+v2 <- LoadString 'p'
+v3 <- BeginClassDefinition (decl)
+    // Executing code generator ClassStaticInitializerGenerator
+    BeginClassStaticInitializer -> v4
+        // Executing code generator DoWhileLoopGenerator
+        v5 <- LoadInteger '0'
+        BeginDoWhileLoopBody
+            // Executing code generator BinaryOperationGenerator
+            v6 <- BinaryOperation v2, '**', v1
+            // Code generator finished
+            // Executing code generator ComputedSuperPropertyAssignmentGenerator
+            SetComputedSuperProperty v5, v6
+            // Code generator finished
+            v7 <- UnaryOperation v5, '++'
+        BeginDoWhileLoopHeader
+            v8 <- LoadInteger '1'
+            v9 <- Compare v5, '<', v8
+        EndDoWhileLoop v9
+        // Code generator finished
+    EndClassStaticInitializer
+    // Code generator finished
+EndClassDefinition
+v10 <- Construct v3, []
+v11 <- Construct v3, []
+v12 <- Construct v3, []
+// Code generator finished
+// Executing code generator ObjectConstructorGenerator
+v13 <- BeginConstructor -> v14, v15, v16
+    SetProperty v14, 'd', v2
+EndConstructor
+v17 <- Construct v13, [v12, v11]
+v18 <- Construct v13, [v12, v10]
+v19 <- Construct v13, [v12, v18]
+// Code generator finished
+// End of prefix code. 11 variables are now visible
+// Executing code generator ElementAssignmentGenerator
+SetElement v1, '8', v12
+// Code generator finished
+// Executing code generator PlainFunctionGenerator
+v20 <- BeginPlainFunction -> v21, v22, v23, v24
+    // Executing code generator FloatGenerator
+    v25 <- LoadFloat '912321.9580232499'
+    v26 <- LoadFloat '-inf'
+    v27 <- LoadFloat '675.4034928647666'
+    // Code generator finished
+    Return v2
+EndPlainFunction
+v28 <- CallFunction (guarded) v20, [v19, v19, v1, v2]
+// Code generator finished
+// Executing code generator NumberComputationGenerator
+v29 <- CreateNamedVariable 'Math', 'none'
+v30 <- LoadInteger '9223372036854775807'
+v31 <- LoadInteger '-256'
+v32 <- UnaryOperation v17, '++'
+v33 <- CallMethod v29, 'floor', [v31]
+v34 <- CallMethod v29, 'sin', [v19]
+v35 <- UnaryOperation '+', v32
+v36 <- CallMethod v29, 'clz32', [v17]
+// Program may be interesting due to new coverage: 3893 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program C1F27464-95BB-4385-BDAB-771EE63A8829 ] =====
+// Minimizing B1CBE5CE-341C-448E-8C15-E41EA418F522
+v0 <- LoadString 'p'
+v1 <- BeginClassDefinition (decl)
+    BeginClassStaticInitializer -> v2
+        v3 <- LoadInteger '0'
+        BeginRepeatLoop '1000'
+            SetComputedSuperProperty v3, v0
+        EndRepeatLoop
+    EndClassStaticInitializer
+EndClassDefinition
+v4 <- CreateNamedVariable 'Math', 'none'
+v5 <- CallMethod v4, 'sin', []
+// Program is interesting due to new coverage: 58 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 1811 newly discovered edges in the CFG of the target
+// Imported program is interesting due to new coverage: 5631 newly discovered edges in the CFG of the target
+
+

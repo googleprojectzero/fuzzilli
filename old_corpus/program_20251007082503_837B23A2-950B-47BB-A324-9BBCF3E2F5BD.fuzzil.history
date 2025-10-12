@@ -1,0 +1,113 @@
+// ===== [ Program DC9A4BFC-CFFD-470D-AC69-B8B8B1E33052 ] =====
+// Start of prefix code
+// Executing code generator IntegerGenerator
+v0 <- LoadInteger '1073741824'
+v1 <- LoadInteger '-56249'
+v2 <- LoadInteger '2147483649'
+// Code generator finished
+// Executing code generator IntegerGenerator
+v3 <- LoadInteger '-1'
+v4 <- LoadInteger '-128'
+v5 <- LoadInteger '-36527'
+// Code generator finished
+// Executing code generator BigIntGenerator
+v6 <- LoadBigInt '16'
+v7 <- LoadBigInt '268435441'
+v8 <- LoadBigInt '536870889'
+// Code generator finished
+// Executing code generator TrivialFunctionGenerator
+v9 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+// Code generator finished
+// Executing code generator IntegerGenerator
+v10 <- LoadInteger '-65537'
+v11 <- LoadInteger '-936534268'
+v12 <- LoadInteger '-683738928'
+// Code generator finished
+// Executing code generator TypedArrayGenerator
+v13 <- LoadInteger '2167'
+v14 <- CreateNamedVariable 'Float32Array', 'none'
+v15 <- Construct v14, [v13]
+v16 <- LoadInteger '257'
+v17 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+v18 <- Construct v17, [v16]
+v19 <- LoadInteger '4'
+v20 <- CreateNamedVariable 'Float32Array', 'none'
+v21 <- Construct v20, [v19]
+// Code generator finished
+// End of prefix code. 22 variables are now visible
+v22 <- CreateNamedVariable 'Set', 'none'
+v23 <- Construct v22, []
+BeginObjectLiteral
+    ObjectLiteralSetPrototype v23
+    BeginObjectLiteralMethod `next` -> v24
+        Return v22
+    EndObjectLiteralMethod
+v25 <- EndObjectLiteral
+
+
+// ===== [ Program 64D3BCB5-B67A-4102-A1A3-5996D8D86DF2 ] =====
+// Mutating DC9A4BFC-CFFD-470D-AC69-B8B8B1E33052 with ExplorationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- LoadInteger '1073741824'
+v1 <- LoadInteger '-56249'
+v2 <- LoadInteger '2147483649'
+v3 <- LoadInteger '-1'
+v4 <- LoadInteger '-128'
+v5 <- LoadInteger '-36527'
+v6 <- LoadBigInt '16'
+v7 <- LoadBigInt '268435441'
+v8 <- LoadBigInt '536870889'
+v9 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v10 <- LoadInteger '-65537'
+// Exploring value v10
+v11 <- Compare v10, '!=', v10
+// Exploring finished
+v12 <- LoadInteger '-936534268'
+v13 <- LoadInteger '-683738928'
+// Exploring value v13
+v14 <- BinaryOperation v13, '*', v13
+// Exploring finished
+v15 <- LoadInteger '2167'
+v16 <- CreateNamedVariable 'Float32Array', 'none'
+v17 <- Construct v16, [v15]
+v18 <- LoadInteger '257'
+v19 <- CreateNamedVariable 'Uint8ClampedArray', 'none'
+// Exploring value v19
+v20 <- GetProperty v19, 'length'
+// Exploring finished
+v21 <- Construct v19, [v18]
+v22 <- LoadInteger '4'
+v23 <- CreateNamedVariable 'Float32Array', 'none'
+v24 <- Construct v23, [v22]
+// Exploring value v24
+SetElement v24, '3', v24
+// Exploring finished
+v25 <- CreateNamedVariable 'Set', 'none'
+v26 <- Construct v25, []
+// Exploring value v26
+v27 <- CallMethod (guarded) v26, 'intersection', [v13]
+// Exploring finished
+BeginObjectLiteral
+    ObjectLiteralSetPrototype v26
+    BeginObjectLiteralMethod `next` -> v28
+        Return v25
+    EndObjectLiteralMethod
+v29 <- EndObjectLiteral
+// Exploring value v29
+v30 <- GetProperty (guarded) v29, 'constructor'
+v31 <- Construct (guarded) v30, []
+// Program may be interesting due to new coverage: 2250 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 837B23A2-950B-47BB-A324-9BBCF3E2F5BD ] =====
+// Minimizing 64D3BCB5-B67A-4102-A1A3-5996D8D86DF2
+v0 <- CreateNamedVariable 'Set', 'none'
+v1 <- Construct v0, []
+v2 <- CallMethod (guarded) v1, 'intersection', []
+// Program is interesting due to new coverage: 5 newly discovered edges in the CFG of the target
+
+

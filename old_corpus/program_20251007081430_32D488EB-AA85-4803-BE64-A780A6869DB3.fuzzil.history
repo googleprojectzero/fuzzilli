@@ -1,0 +1,136 @@
+// ===== [ Program C3368D1C-10E1-49C2-9CDD-C37979F64B92 ] =====
+// Start of prefix code
+// Executing code generator BuiltinObjectInstanceGenerator
+v0 <- CreateNamedVariable 'Array', 'none'
+v1 <- LoadInteger '2136'
+v2 <- Construct v0, [v1]
+// Code generator finished
+// Executing code generator TrivialFunctionGenerator
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+// Code generator finished
+// Executing code generator BigIntGenerator
+v4 <- LoadBigInt '1024'
+v5 <- LoadBigInt '65535'
+v6 <- LoadBigInt '-128'
+// Code generator finished
+// Executing code generator StringGenerator
+v7 <- LoadString 'valueOf'
+v8 <- LoadString 'symbol'
+v9 <- LoadString 'z'
+// Code generator finished
+// End of prefix code. 10 variables are now visible
+v10 <- LoadInteger '795'
+v11 <- BinaryOperation v10, '^', v10
+v12 <- LoadString 'Pacific/Easter'
+v13 <- CallFunction (guarded) v12, []
+v14 <- LoadInteger '2869'
+v15 <- CreateNamedVariable 'Uint16Array', 'none'
+v16 <- Construct v15, [v14]
+v17 <- CallMethod v16, 'reverse', []
+v18 <- CreateNamedVariable 'BigInt64Array', 'none'
+v19 <- CreateNamedVariable 'Uint8Array', 'none'
+v20 <- Construct v19, [v18]
+v21 <- LoadInteger '476388605'
+v22 <- BinaryOperation v21, '|', v21
+v23 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v24 <- CallMethod v23, 'bind', []
+v25 <- BeginPlainFunction -> 
+    Return v17
+EndPlainFunction
+BeginObjectLiteral
+    ObjectLiteralSetPrototype v25
+    BeginObjectLiteralSetter `b` -> v26, v27
+        v28 <- GetComputedSuperProperty v25
+        Update v28, '&&', v27
+    EndObjectLiteralSetter
+v29 <- EndObjectLiteral
+v30 <- CallMethod (guarded) v29, 'toString', [v11, v20, v14, v13]
+v31 <- LoadInteger '723'
+v32 <- Compare v31, '!=', v31
+v33 <- CreateNamedVariable 'Float64Array', 'none'
+v34 <- Construct v33, []
+v35 <- GetProperty v34, 'constructor'
+v36 <- Construct v35, [v19]
+v37 <- LoadInteger '0'
+BeginWhileLoopHeader
+BeginWhileLoopBody v37
+    BeginRepeatLoop '5' -> v38
+        v39 <- CallFunction v25, []
+    EndRepeatLoop
+    v40 <- UnaryOperation v37, '++'
+EndWhileLoop
+
+
+// ===== [ Program 4F56CB9B-63D4-4C99-B423-373B83A387B8 ] =====
+// Mutating C3368D1C-10E1-49C2-9CDD-C37979F64B92 with OperationMutator
+// RUNNER ARGS: /home/diddy/v8/v8/out/fuzzbuild/d8 --trace-turbo --trace-turbo-path=/home/diddy/v8DebugProfileOut --trace-feedback-updates
+v0 <- CreateNamedVariable 'Array', 'none'
+v1 <- LoadInteger '2136'
+// Mutating next operation
+v2 <- Construct v0, [v1, v1]
+v3 <- BeginPlainFunction -> 
+    Return v0
+EndPlainFunction
+v4 <- LoadBigInt '1024'
+v5 <- LoadBigInt '65535'
+v6 <- LoadBigInt '-128'
+v7 <- LoadString 'valueOf'
+v8 <- LoadString 'symbol'
+v9 <- LoadString 'z'
+v10 <- LoadInteger '795'
+v11 <- BinaryOperation v10, '^', v10
+// Mutating next operation
+v12 <- LoadString 'boolean'
+v13 <- CallFunction (guarded) v12, []
+v14 <- LoadInteger '2869'
+v15 <- CreateNamedVariable 'Uint16Array', 'none'
+// Mutating next operation
+v16 <- Construct v15, [v14, v4]
+v17 <- CallMethod v16, 'reverse', []
+v18 <- CreateNamedVariable 'BigInt64Array', 'none'
+v19 <- CreateNamedVariable 'Uint8Array', 'none'
+v20 <- Construct v19, [v18]
+v21 <- LoadInteger '476388605'
+v22 <- BinaryOperation v21, '|', v21
+v23 <- CreateNamedVariable 'SharedArrayBuffer', 'none'
+v24 <- CallMethod v23, 'bind', []
+v25 <- BeginPlainFunction -> 
+    Return v17
+EndPlainFunction
+BeginObjectLiteral
+    ObjectLiteralSetPrototype v25
+    // Mutating next operation
+    BeginObjectLiteralSetter `c` -> v26, v27
+        v28 <- GetComputedSuperProperty v25
+        Update v28, '&&', v27
+    EndObjectLiteralSetter
+v29 <- EndObjectLiteral
+v30 <- CallMethod (guarded) v29, 'toString', [v11, v20, v14, v13]
+v31 <- LoadInteger '723'
+// Mutating next operation
+v32 <- Compare v31, '>=', v31
+v33 <- CreateNamedVariable 'Float64Array', 'none'
+v34 <- Construct v33, []
+v35 <- GetProperty v34, 'constructor'
+v36 <- Construct v35, [v19]
+v37 <- LoadInteger '0'
+BeginWhileLoopHeader
+BeginWhileLoopBody v37
+    BeginRepeatLoop '5' -> v38
+        v39 <- CallFunction v25, []
+    EndRepeatLoop
+    v40 <- UnaryOperation v37, '++'
+EndWhileLoop
+// Program may be interesting due to new coverage: 2601 newly discovered edges in the CFG of the target
+
+
+// ===== [ Program 32D488EB-AA85-4803-BE64-A780A6869DB3 ] =====
+// Minimizing 4F56CB9B-63D4-4C99-B423-373B83A387B8
+v0 <- CreateNamedVariable 'Array', 'none'
+v1 <- LoadInteger '2136'
+v2 <- CallFunction v0, [v1, v1]
+// Program is interesting due to new coverage: 24 newly discovered edges in the CFG of the target
+
+
