@@ -696,28 +696,33 @@ public class Fuzzer {
         // Determine which (if any) aspects of the program are triggered deterministially.
         // For that, the sample is executed at a few more times and the intersection of the interesting aspects of each execution is computed.
         // Once that intersection is stable, the remaining aspects are considered to be triggered deterministic.
-        let minAttempts = 5
-        let maxAttempts = 50
-        var didConverge = false
-        var attempt = 0
-        repeat {
-            attempt += 1
-            if attempt > maxAttempts {
-                logger.warning("Sample did not converage after \(maxAttempts) attempts. Discarding it")
-                return false
-            }
 
-            guard let intersection = evaluator.computeAspectIntersection(of: program, with: aspects) else {
-                // This likely means that no aspects are triggered deterministically, so discard this sample.
-                return false
-            }
 
-            // Since evaluateAndIntersect will only ever return aspects that are equivalent to, or a subset of,
-            // the provided aspects, we can check if they are identical by comparing their sizes
-            didConverge = aspects.count == intersection.count
-            aspects = intersection
-        } while !didConverge || attempt < minAttempts
+        // Make sure we're dealing wtih CovEdgeSet for computeAspectIntersection below.
+        // Otherwise, assume the program is interesting due to nexus or optimization bit delta.
+        if let _ = aspects as? CovEdgeSet {
+            let minAttempts = 5
+            let maxAttempts = 50
+            var didConverge = false
+            var attempt = 0
+            repeat {
+                attempt += 1
+                if attempt > maxAttempts {
+                    logger.warning("Sample did not converage after \(maxAttempts) attempts. Discarding it")
+                    return false
+                }
 
+                guard let intersection = evaluator.computeAspectIntersection(of: program, with: aspects) else {
+                    // This likely means that no aspects are triggered deterministically, so discard this sample.
+                    return false
+                }
+
+                // Since evaluateAndIntersect will only ever return aspects that are equivalent to, or a subset of,
+                // the provided aspects, we can check if they are identical by comparing their sizes
+                didConverge = aspects.count == intersection.count
+                aspects = intersection
+            } while !didConverge || attempt < minAttempts
+        }
         if origin == .local {
             iterationOfLastInteratingSample = iterations
         }

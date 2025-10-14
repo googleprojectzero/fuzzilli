@@ -20,10 +20,10 @@ public class CovEdgeSet: ProgramAspects {
     private var numEdges: UInt32
     fileprivate var edges: UnsafeMutablePointer<UInt32>?
 
-    init(edges: UnsafeMutablePointer<UInt32>?, numEdges: UInt32, hasFeedbackNexusDelta: Bool = false) {
+    init(edges: UnsafeMutablePointer<UInt32>?, numEdges: UInt32, hasFeedbackNexusDelta: Bool = false, hasOptimizationDelta: Bool = false) {
         self.numEdges = numEdges
         self.edges = edges
-        super.init(outcome: .succeeded, hasFeedbackNexusDelta: hasFeedbackNexusDelta)
+        super.init(outcome: .succeeded, hasFeedbackNexusDelta: hasFeedbackNexusDelta, hasOptimizationDelta: hasOptimizationDelta)
     }
 
     deinit {
@@ -32,13 +32,16 @@ public class CovEdgeSet: ProgramAspects {
 
     /// The number of aspects is the number of newly discovered coverage edges plus feedback nexus delta.
     public override var count: UInt32 {
-        return numEdges + (hasFeedbackNexusDelta ? 1 : 0)
+        return numEdges //+ (hasFeedbackNexusDelta ? 1 : 0) + (hasOptimizationDelta ? 1 : 0)
     }
 
     public override var description: String {
         var desc = "new coverage: \(numEdges) newly discovered edge\(numEdges > 1 ? "s" : "") in the CFG of the target"
         if hasFeedbackNexusDelta {
             desc += " with feedback nexus delta"
+        }
+        if hasOptimizationDelta {
+            desc += " with optimization delta"
         }
         return desc
     }
@@ -170,16 +173,20 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         // Check for feedback nexus delta separately
         let feedbackNexusDelta = libcoverage.cov_evaluate_feedback_nexus(&context)
         
+        // Check for optimization delta separately
+        let optimizationDelta = libcoverage.cov_evaluate_optimization_bits(&context)
+
         if result == 1 {
             // Either new edges found OR feedback nexus delta detected
             let hasNewEdges = newEdgeSet.count > 0
             let hasFeedbackDelta = feedbackNexusDelta == 1
+            let hasOptimizationDelta = optimizationDelta == 1
             
             if hasNewEdges {
                 return CovEdgeSet(edges: newEdgeSet.edge_indices, numEdges: newEdgeSet.count, hasFeedbackNexusDelta: hasFeedbackDelta)
-            } else if hasFeedbackDelta {
-                // Only feedback nexus delta, no new edges
-                return ProgramAspects(outcome: .succeeded, hasFeedbackNexusDelta: true)
+            } else if hasFeedbackDelta || hasOptimizationDelta {
+                // Only feedback nexus delta or optimization bit delta, no new edges
+                return ProgramAspects(outcome: .succeeded, hasFeedbackNexusDelta: hasFeedbackDelta, hasOptimizationDelta: hasOptimizationDelta)
             }
         }
         

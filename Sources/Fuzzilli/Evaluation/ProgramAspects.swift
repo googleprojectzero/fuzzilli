@@ -16,16 +16,21 @@
 public class ProgramAspects: CustomStringConvertible {
     let outcome: ExecutionOutcome
     let hasFeedbackNexusDelta: Bool
+    let hasOptimizationDelta: Bool
 
-    public init(outcome: ExecutionOutcome, hasFeedbackNexusDelta: Bool = false) {
+    public init(outcome: ExecutionOutcome, hasFeedbackNexusDelta: Bool = false, hasOptimizationDelta: Bool = false) {
         self.outcome = outcome
         self.hasFeedbackNexusDelta = hasFeedbackNexusDelta
+        self.hasOptimizationDelta = hasOptimizationDelta
     }
 
     public var description: String {
         var desc = "execution outcome \(outcome)"
         if hasFeedbackNexusDelta {
             desc += " with feedback nexus delta"
+        }
+        if hasOptimizationDelta {
+            desc += " with optimization delta"
         }
         return desc
     }
