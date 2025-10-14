@@ -172,7 +172,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
         // Check for feedback nexus delta separately
         let feedbackNexusDelta = libcoverage.cov_evaluate_feedback_nexus(&context)
-        
+
         // Check for optimization delta separately
         let optimizationDelta = libcoverage.cov_evaluate_optimization_bits(&context)
 
@@ -183,7 +183,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             let hasOptimizationDelta = optimizationDelta == 1
             
             if hasNewEdges {
-                return CovEdgeSet(edges: newEdgeSet.edge_indices, numEdges: newEdgeSet.count, hasFeedbackNexusDelta: hasFeedbackDelta)
+                return CovEdgeSet(edges: newEdgeSet.edge_indices, numEdges: newEdgeSet.count, hasFeedbackNexusDelta: hasFeedbackDelta, hasOptimizationDelta: hasOptimizationDelta)
             } else if hasFeedbackDelta || hasOptimizationDelta {
                 // Only feedback nexus delta or optimization bit delta, no new edges
                 return ProgramAspects(outcome: .succeeded, hasFeedbackNexusDelta: hasFeedbackDelta, hasOptimizationDelta: hasOptimizationDelta)
