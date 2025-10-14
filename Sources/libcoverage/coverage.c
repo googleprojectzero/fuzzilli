@@ -214,21 +214,14 @@ int cov_evaluate(struct cov_context* context, struct edge_set* new_edges)
     uint32_t num_new_edges = internal_evaluate(context, context->virgin_bits, new_edges);
     // TODO found_edges should also include crash bits
     context->found_edges += num_new_edges;
-    
-    // Update feedback nexus data
-    cov_update_feedback_nexus(context);
 
-    // Update optimization bits from shared memory
+    // Checks for feedback nexus and optimziation delta are done separetly in evaluate in ProgramCoverageEvaluator.swift
+    // so just update the feedback nexus and optimization bits here and return whether new edges were found.
+    cov_update_feedback_nexus(context);
     cov_update_optimization_bits(context);
 
-    // Check for feedback nexus delta
-    int feedback_nexus_delta = cov_evaluate_feedback_nexus(context);
-    
-    // Check for turbofan or maglev optimization bits delta
-    int optimization_bits_delta = cov_evaluate_optimization_bits(context);
-
-    // Return 1 if either new edges found OR feedback nexus delta detected
-    return (num_new_edges > 0) || feedback_nexus_delta || optimization_bits_delta;
+    // Return 1 if either new edges found
+    return (num_new_edges > 0);
 }
 
 int cov_evaluate_crash(struct cov_context* context)
@@ -372,13 +365,14 @@ int cov_evaluate_optimization_bits(struct cov_context* context) {
 
 void cov_update_optimization_bits(struct cov_context* context) {
     if (!context->shmem) return;
+    context->turbofan_optimization_bits_previous = context->turbofan_optimization_bits_current;
     context->turbofan_optimization_bits_current = context->shmem->turbofan_optimization_bits;
     // context->maglev_optimization_bits_current = context->shmem->maglev_optimization_bits;
 }
 
 void clear_optimization_bits(struct cov_context* context) {
-    context->turbofan_optimization_bits_previous = context->turbofan_optimization_bits_current;
     context->turbofan_optimization_bits_current = 0;
+    context->turbofan_optimization_bits_previous = 0;
     // context->maglev_optimization_bits_previous = context->maglev_optimization_bits_current;
     // context->maglev_optimization_bits_current = 0;
 }
