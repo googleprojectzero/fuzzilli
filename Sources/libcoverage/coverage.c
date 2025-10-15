@@ -91,6 +91,13 @@ int cov_initialize(struct cov_context* context)
     context->shmem = mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     close(fd);
 #endif
+
+    // Initialize turbofan optimization bits tracking
+    // Perform the initialzation here instead of cov_finish_initialization so when cov_clear_bitmap calls clear_optimization_bits,
+    // we don't lose track of the previous optimziation bits
+    context->turbofan_optimization_bits_current = 0;
+    context->turbofan_optimization_bits_previous = 0;
+
     return 0;
 }
 
@@ -138,10 +145,6 @@ void cov_finish_initialization(struct cov_context* context, int should_track_edg
     // Initialize feedback nexus tracking
     context->current_feedback_nexus = NULL;
     context->previous_feedback_nexus = NULL;
-
-    // Initialize turbofan optimization bits tracking
-    context->turbofan_optimization_bits_current = 0;
-    context->turbofan_optimization_bits_previous = 0;
 
     // Zeroth edge is ignored, see above.
     clear_edge(context->virgin_bits, 0);
@@ -360,19 +363,20 @@ void clear_feedback_nexus(struct cov_context* context) {
 
 int cov_evaluate_optimization_bits(struct cov_context* context) {
     if (!context->shmem) return 0;
-    return (context->turbofan_optimization_bits_current != context->turbofan_optimization_bits_previous);
+    uint8_t delta = 0;
+    // Only check for a delta if current is not 0 and previous is "something"
+    // Otherwise if previous is 0, then there is no delta anyway
+    if (context->turbofan_optimization_bits_current != 0)
+        delta = (uint8_t)(context->turbofan_optimization_bits_current != context->turbofan_optimization_bits_previous);
+    return delta;
 }
 
 void cov_update_optimization_bits(struct cov_context* context) {
     if (!context->shmem) return;
-    context->turbofan_optimization_bits_previous = context->turbofan_optimization_bits_current;
     context->turbofan_optimization_bits_current = context->shmem->turbofan_optimization_bits;
-    // context->maglev_optimization_bits_current = context->shmem->maglev_optimization_bits;
 }
 
 void clear_optimization_bits(struct cov_context* context) {
-    context->turbofan_optimization_bits_current = 0;
-    context->turbofan_optimization_bits_previous = 0;
-    // context->maglev_optimization_bits_previous = context->maglev_optimization_bits_current;
-    // context->maglev_optimization_bits_current = 0;
+    context->turbofan_optimization_bits_previous = context->turbofan_optimization_bits_current;
+    context->shmem->turbofan_optimization_bits = 0;
 }
