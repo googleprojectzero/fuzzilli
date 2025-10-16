@@ -146,6 +146,10 @@ let v8Profile = Profile(
             args.append("--stress-wasm-stack-switching")
         }
 
+        if probability(0.5) {
+            args.append("--proto-assign-seq-opt")
+        }
+
         //
         // Sometimes enable additional verification/stressing logic (which may be fairly expensive).
         //
