@@ -57,7 +57,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=bash
 
 RUN apt-get -y update && apt-get -y upgrade
-RUN apt-get install -y redis-server
 
 RUN useradd -m app
 
@@ -69,6 +68,5 @@ COPY --from=1 /home/builder/fuzzillai/.build/release/ Fuzzilli
 
 RUN mkdir -p ./Corpus
 
-EXPOSE 6379
 
-CMD ["sh", "-c", "redis-server --daemonize yes && ./Fuzzilli/FuzzilliCli --profile=v8debug --engine=multi --resume --corpus=basic --storagePath=./Corpus ./fuzzbuild/d8"]
+CMD ["./Fuzzilli/FuzzilliCli", "--profile=v8debug", "--engine=multi", "--resume", "--corpus=basic", "--storagePath=./Corpus", "./fuzzbuild/d8"]
