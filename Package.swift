@@ -26,8 +26,6 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.31.0"),
-        .package(url: "https://github.com/swift-server/RediStack.git", from: "1.4.1"),
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0"),
         .package(
           url: "https://github.com/apple/swift-collections.git",
           .upToNextMinor(from: "1.2.0")
@@ -48,8 +46,6 @@ let package = Package(
         .target(name: "Fuzzilli",
                 dependencies: [
                     .product(name: "SwiftProtobuf", package: "swift-protobuf"),
-                    .product(name: "NIO", package: "swift-nio"),
-                    .product(name: "RediStack", package: "RediStack"),
                     .product(name: "Collections", package: "swift-collections"),
                     "libsocket",
                     "libreprl",

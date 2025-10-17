@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+.build/
+*.xcodeproj
+*.xcworkspace
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# Documentation
+Docs/
+*.md
+!README.md
+
+# Tests
+Tests/
+
+# Docker files (except the one we're using)
+Cloud/Docker/
+Cloud/GCE/
+Cloud/Triage/
+
+# V8 source (will be built in container)
+v8/
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
