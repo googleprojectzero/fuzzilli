@@ -25,7 +25,7 @@ public class REPRL: ComponentBase, ScriptRunner {
     public private(set) var processArguments: [String]
 
     /// Environment variables for the child process. Shape: [(key, value)]
-    private var env = [(String, String)]()
+    public private(set) var env = [(String, String)]()
 
     /// Number of script executions since start of child process
     private var execsSinceReset = 0
