@@ -557,7 +557,11 @@ fuzzer.sync {
                 logger.info("You can recover the old corpus by moving it to \(path + "/corpus").")
             }
         }
-        exit(reason.toExitCode())
+        let code = reason.toExitCode()
+        if (code != 0) {
+            print("Aborting execution after a fatal error.")
+        }
+        exit(code)
     }
 
     // Store samples to disk if requested.
