@@ -26,6 +26,7 @@ struct MockExecution: Execution {
 
 class MockScriptRunner: ScriptRunner {
     var processArguments: [String] = []
+    var env: [(String, String)] = []
 
     func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
         return MockExecution(outcome: .succeeded,

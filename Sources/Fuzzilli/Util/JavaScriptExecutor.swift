@@ -38,9 +38,12 @@ public class JavaScriptExecutor {
 
     let arguments: [String]
 
+    let env: [(String, String)]
+
     /// Depending on the type this constructor will try to find the requested shell or fail
-    public init?(type: ExecutorType = .any, withArguments maybeArguments: [String]? = nil) {
+    public init?(type: ExecutorType = .any, withArguments maybeArguments: [String]? = nil, withEnv maybeEnv: [(String, String)]? = nil) {
         self.arguments = maybeArguments ?? []
+        self.env = maybeEnv ?? []
         let path: String?
 
         switch type {
@@ -59,23 +62,24 @@ public class JavaScriptExecutor {
         self.executablePath = path!
     }
 
-    public init(withExecutablePath executablePath: String, arguments: [String]) {
+    public init(withExecutablePath executablePath: String, arguments: [String], env: [(String, String)]) {
         self.executablePath = executablePath
         self.arguments = arguments
+        self.env = env
     }
 
     /// Executes the JavaScript script using the configured engine and returns the stdout.
     public func executeScript(_ script: String, withTimeout timeout: TimeInterval? = nil) throws -> Result {
-        return try execute(executablePath, withInput: prefix + script.data(using: .utf8)!, withArguments: self.arguments, timeout: timeout)
+        return try execute(executablePath, withInput: prefix + script.data(using: .utf8)!, withArguments: self.arguments, withEnv: self.env, timeout: timeout)
     }
 
     /// Executes the JavaScript script at the specified path using the configured engine and returns the stdout.
     public func executeScript(at url: URL, withTimeout timeout: TimeInterval? = nil) throws -> Result {
         let script = try Data(contentsOf: url)
-        return try execute(executablePath, withInput: prefix + script, withArguments: self.arguments, timeout: timeout)
+        return try execute(executablePath, withInput: prefix + script, withArguments: self.arguments, withEnv: self.env, timeout: timeout)
     }
 
-    func execute(_ path: String, withInput input: Data = Data(), withArguments arguments: [String] = [], timeout maybeTimeout: TimeInterval? = nil) throws -> Result {
+    func execute(_ path: String, withInput input: Data = Data(), withArguments arguments: [String] = [], withEnv env: [(String, String)] = [], timeout maybeTimeout: TimeInterval? = nil) throws -> Result {
         let inputPipe = Pipe()
         let outputPipe = Pipe()
         let errorPipe = Pipe()
@@ -89,6 +93,8 @@ public class JavaScriptExecutor {
         // Close stdin
         try inputPipe.fileHandleForWriting.close()
 
+        let environment = ProcessInfo.processInfo.environment.merging(env, uniquingKeysWith: { _, new in new })
+
         // Execute the subprocess.
         let task = Process()
         task.standardOutput = outputPipe
@@ -96,6 +102,7 @@ public class JavaScriptExecutor {
         task.arguments = arguments + [url.path]
         task.executableURL = URL(fileURLWithPath: path)
         task.standardInput = inputPipe
+        task.environment = environment
         try task.run()
 
         var timedOut = false
