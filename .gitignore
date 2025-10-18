@@ -14,3 +14,6 @@ Cloud/GCE/config.sh
 # node.js dependencies, used by the JavaScript parser for the FuzzIL compiler
 node_modules
 package-lock.json
+
+# V8 build directory for testing
+v8_build_test/
