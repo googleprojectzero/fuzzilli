@@ -1024,7 +1024,9 @@ public class Fuzzer {
 
         // Wrap the executor in a JavaScriptTestRunner
         // If we can execute it standalone, it could inform us if any flags that were passed are incorrect, stale or conflicting.
-        let executor = JavaScriptExecutor(withExecutablePath: runner.processArguments[0], arguments: Array(runner.processArguments[1...]))
+        let executor = JavaScriptExecutor(
+            withExecutablePath: runner.processArguments[0],
+            arguments: Array(runner.processArguments[1...]), env: runner.env)
         do {
             let output = try executor.executeScript("", withTimeout: 300).output
             if output.lengthOfBytes(using: .utf8) > 0 {
