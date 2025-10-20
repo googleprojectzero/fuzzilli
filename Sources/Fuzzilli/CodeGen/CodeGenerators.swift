@@ -12,6 +12,54 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Generator stubs for disposable and async-disposable variables.
+func disposableVariableGeneratorStubs(
+        inContext contextRequirement : Context,
+        withSymbol symbolProperty : String,
+        genDisposableVariable : @escaping (ProgramBuilder, Variable) -> Void) -> [GeneratorStub] {
+    return [
+        GeneratorStub(
+            "DisposableObjectLiteralBeginGenerator",
+            inContext: .single(contextRequirement),
+            provides: [.objectLiteral]
+        ) { b in
+            // Ensure we have the desired symbol below.
+            b.createSymbolProperty(symbolProperty)
+            b.emit(BeginObjectLiteral())
+        },
+        GeneratorStub(
+            "DisposableObjectLiteralComputedMethodBeginGenerator",
+            inContext: .single(.objectLiteral),
+            provides: [.javascript, .subroutine, .method]
+        ) { b in
+            // It should be safe to assume that we find at least the
+            // desired symbol we created above.
+            let symbol = b.randomVariable(forUseAs: .jsSymbol)
+            let parameters = b.randomParameters()
+            b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
+            b.emit(
+                BeginObjectLiteralComputedMethod(
+                    parameters: parameters.parameters),
+                withInputs: [symbol])
+        },
+        GeneratorStub(
+            "DisposableObjectLiteralComputedMethodEndGenerator",
+            inContext: .single([.javascript, .subroutine, .method]),
+            provides: [.objectLiteral]
+        ) { b in
+            b.maybeReturnRandomJsVariable(0.9)
+            b.emit(EndObjectLiteralComputedMethod())
+        },
+        GeneratorStub(
+            "DisposableObjectLiteralEndGenerator",
+            inContext: .single(.objectLiteral)
+        ) { b in
+            let disposableVariable = b.emit(EndObjectLiteral()).output
+            genDisposableVariable(b, disposableVariable)
+        },
+    ]
+}
+
 //
 // Code generators.
 //
@@ -423,34 +471,20 @@ public let CodeGenerators: [CodeGenerator] = [
     ]),
 
     CodeGenerator(
-        "DisposableVariableGenerator", inContext: .single(.subroutine), inputs: .one
-    ) { b, val in
-        assert(b.context.contains(.subroutine))
-        let dispose = b.createSymbolProperty("dispose")
-        let disposableVariable = b.buildObjectLiteral { obj in
-            obj.addProperty("value", as: val)
-            obj.addComputedMethod(dispose, with: .parameters(n: 0)) { args in
-                b.maybeReturnRandomJsVariable(0.9)
-            }
-        }
-        b.loadDisposableVariable(disposableVariable)
-    },
+        "DisposableVariableGenerator",
+        disposableVariableGeneratorStubs(
+            inContext: .subroutine,
+            withSymbol: "dispose") { b, variable in
+                b.loadDisposableVariable(variable)
+            }),
 
     CodeGenerator(
-        "AsyncDisposableVariableGenerator", inContext: .single(.asyncFunction),
-        inputs: .one
-    ) { b, val in
-        assert(b.context.contains(.asyncFunction))
-        let asyncDispose = b.createSymbolProperty("asyncDispose")
-        let asyncDisposableVariable = b.buildObjectLiteral { obj in
-            obj.addProperty("value", as: val)
-            obj.addComputedMethod(asyncDispose, with: .parameters(n: 0)) {
-                args in
-                b.maybeReturnRandomJsVariable(0.9)
-            }
-        }
-        b.loadAsyncDisposableVariable(asyncDisposableVariable)
-    },
+        "AsyncDisposableVariableGenerator",
+        disposableVariableGeneratorStubs(
+            inContext: .asyncFunction,
+            withSymbol: "asyncDispose") { b, variable in
+                b.loadAsyncDisposableVariable(variable)
+            }),
 
     CodeGenerator(
         "ObjectLiteralGenerator",
