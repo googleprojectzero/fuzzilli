@@ -446,7 +446,6 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ArgumentsAccessGenerator", inContext: .single(.subroutine)) { b in
-        assert(b.context.contains(.subroutine))
         b.loadArguments()
     },
 
@@ -503,9 +502,6 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ObjectLiteralPropertyGenerator", inContext: .single(.objectLiteral)) {
         b in
-        assert(
-            b.context.contains(.objectLiteral)
-                && !b.context.contains(.javascript))
 
         // Try to find a property that hasn't already been added to this literal.
         var propertyName: String
@@ -526,10 +522,6 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "ObjectLiteralElementGenerator", inContext: .single(.objectLiteral), inputs: .one
     ) { b, value in
-        assert(
-            b.context.contains(.objectLiteral)
-                && !b.context.contains(.javascript))
-
         // Select an element that hasn't already been added to this literal.
         var index = b.randomIndex()
         while b.currentObjectLiteral.elements.contains(index) {
@@ -544,10 +536,6 @@ public let CodeGenerators: [CodeGenerator] = [
         "ObjectLiteralComputedPropertyGenerator", inContext: .single(.objectLiteral),
         inputs: .one
     ) { b, value in
-        assert(
-            b.context.contains(.objectLiteral)
-                && !b.context.contains(.javascript))
-
         // Try to find a computed property that hasn't already been added to this literal.
         var propertyName: Variable
         var attempts = 0
@@ -568,18 +556,11 @@ public let CodeGenerators: [CodeGenerator] = [
         "ObjectLiteralCopyPropertiesGenerator", inContext: .single(.objectLiteral),
         inputs: .preferred(.object())
     ) { b, object in
-        assert(
-            b.context.contains(.objectLiteral)
-                && !b.context.contains(.javascript))
         b.currentObjectLiteral.copyProperties(from: object)
     },
 
     CodeGenerator("ObjectLiteralPrototypeGenerator", inContext: .single(.objectLiteral))
     { b in
-        assert(
-            b.context.contains(.objectLiteral)
-                && !b.context.contains(.javascript))
-
         // There should only be one __proto__ field in an object literal.
         guard !b.currentObjectLiteral.hasPrototype else { return }
 
@@ -594,10 +575,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 "ObjectLiteralMethodBeginGenerator", inContext: .single(.objectLiteral),
                 provides: [.javascript, .subroutine, .method]
             ) { b in
-                assert(
-                    b.context.contains(.objectLiteral)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a method that hasn't already been added to this literal.
                 var methodName: String
                 var attempts = 0
@@ -632,10 +609,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.objectLiteral),
                 provides: [.javascript, .subroutine, .method]
             ) { b in
-                assert(
-                    b.context.contains(.objectLiteral)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a computed method name that hasn't already been added to this literal.
                 var methodName: Variable
                 var attempts = 0
@@ -675,10 +648,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.objectLiteral),
                 provides: [.javascript, .subroutine, .method]
             ) { b in
-                assert(
-                    b.context.contains(.objectLiteral)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a property that hasn't already been added and for which a getter has not yet been installed.
                 var propertyName: String
                 var attempts = 0
@@ -715,10 +684,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.objectLiteral),
                 provides: [.javascript, .subroutine, .method]
             ) { b in
-                assert(
-                    b.context.contains(.objectLiteral)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a property that hasn't already been added and for which a setter has not yet been installed.
                 var propertyName: String
                 var attempts = 0
@@ -752,9 +717,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: []
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
 
                 guard !b.currentClassDefinition.hasConstructor else {
                     // There must only be one constructor
@@ -799,10 +761,6 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ClassInstancePropertyGenerator", inContext: .single(.classDefinition))
     { b in
-        assert(
-            b.context.contains(.classDefinition)
-                && !b.context.contains(.javascript))
-
         // Try to find a property that hasn't already been added to this literal.
         var propertyName: String
         var attempts = 0
@@ -819,10 +777,6 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ClassInstanceElementGenerator", inContext: .single(.classDefinition))
     { b in
-        assert(
-            b.context.contains(.classDefinition)
-                && !b.context.contains(.javascript))
-
         // Select an element that hasn't already been added to this literal.
         var index = b.randomIndex()
         while b.currentClassDefinition.instanceElements.contains(index) {
@@ -837,10 +791,6 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "ClassInstanceComputedPropertyGenerator", inContext: .single(.classDefinition)
     ) { b in
-        assert(
-            b.context.contains(.classDefinition)
-                && !b.context.contains(.javascript))
-
         // Try to find a computed property that hasn't already been added to this literal.
         var propertyName: Variable
         var attempts = 0
@@ -864,10 +814,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a method that hasn't already been added to this class.
                 var methodName: String
                 var attempts = 0
@@ -906,10 +852,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a method that hasn't already been added to this class.
                 var methodName = b.randomJsVariable()
                 var attempts = 0
@@ -944,10 +886,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a property that hasn't already been added and for which a getter has not yet been installed.
                 var propertyName: String
                 var attempts = 0
@@ -982,10 +920,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a property that hasn't already been added and for which a setter has not yet been installed.
                 var propertyName: String
                 var attempts = 0
@@ -1015,10 +949,6 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ClassStaticPropertyGenerator", inContext: .single(.classDefinition)) {
         b in
-        assert(
-            b.context.contains(.classDefinition)
-                && !b.context.contains(.javascript))
-
         // Try to find a property that hasn't already been added to this literal.
         var propertyName: String
         var attempts = 0
@@ -1038,10 +968,6 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ClassStaticElementGenerator", inContext: .single(.classDefinition)) {
         b in
-        assert(
-            b.context.contains(.classDefinition)
-                && !b.context.contains(.javascript))
-
         // Select an element that hasn't already been added to this literal.
         var index = b.randomIndex()
         while b.currentClassDefinition.staticElements.contains(index) {
@@ -1056,10 +982,6 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "ClassStaticComputedPropertyGenerator", inContext: .single(.classDefinition)
     ) { b in
-        assert(
-            b.context.contains(.classDefinition)
-                && !b.context.contains(.javascript))
-
         // Try to find a computed property that hasn't already been added to this literal.
         var propertyName: Variable
         var attempts = 0
@@ -1086,10 +1008,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .method, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 b.emit(BeginClassStaticInitializer())
             },
             GeneratorStub(
@@ -1108,10 +1026,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .method, .subroutine, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a method that hasn't already been added to this class.
                 var methodName: String
                 var attempts = 0
@@ -1152,10 +1066,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a method that hasn't already been added to this class.
                 var methodName = b.randomJsVariable()
                 var attempts = 0
@@ -1190,10 +1100,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a property that hasn't already been added and for which a getter has not yet been installed.
                 var propertyName: String
                 var attempts = 0
@@ -1229,10 +1135,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a property that hasn't already been added and for which a setter has not yet been installed.
                 var propertyName: String
                 var attempts = 0
@@ -1262,10 +1164,6 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "ClassPrivateInstancePropertyGenerator", inContext: .single(.classDefinition)
     ) { b in
-        assert(
-            b.context.contains(.classDefinition)
-                && !b.context.contains(.javascript))
-
         // Try to find a private field that hasn't already been added to this literal.
         var propertyName: String
         var attempts = 0
@@ -1288,10 +1186,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a private field that hasn't already been added to this class.
                 var methodName: String
                 var attempts = 0
@@ -1323,10 +1217,6 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "ClassPrivateStaticPropertyGenerator", inContext: .single(.classDefinition)
     ) { b in
-        assert(
-            b.context.contains(.classDefinition)
-                && !b.context.contains(.javascript))
-
         // Try to find a private field that hasn't already been added to this literal.
         var propertyName: String
         var attempts = 0
@@ -1349,10 +1239,6 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                assert(
-                    b.context.contains(.classDefinition)
-                        && !b.context.contains(.javascript))
-
                 // Try to find a private field that hasn't already been added to this class.
                 var methodName: String
                 var attempts = 0
@@ -2038,7 +1924,6 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "SubroutineReturnGenerator", inContext: .single(.subroutine), inputs: .one
     ) { b, val in
-        assert(b.context.contains(.subroutine))
         if probability(0.9) {
             b.doReturn(val)
         } else {
@@ -2048,7 +1933,6 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("YieldGenerator", inContext: .single(.generatorFunction), inputs: .one)
     { b, val in
-        assert(b.context.contains(.generatorFunction))
         if probability(0.9) {
             b.yield(val)
         } else {
@@ -2060,13 +1944,11 @@ public let CodeGenerators: [CodeGenerator] = [
         "YieldEachGenerator", inContext: .single(.generatorFunction),
         inputs: .required(.iterable)
     ) { b, val in
-        assert(b.context.contains(.generatorFunction))
         b.yieldEach(val)
     },
 
     CodeGenerator("AwaitGenerator", inContext: .single(.asyncFunction), inputs: .one) {
         b, val in
-        assert(b.context.contains(.asyncFunction))
         b.await(val)
     },
 
@@ -2603,7 +2485,6 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ContinueGenerator", inContext: .single(.loop)) { b in
-        assert(b.context.contains(.loop))
         b.loopContinue()
     },
 
@@ -3130,7 +3011,6 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("LoadNewTargetGenerator", inContext: .single(.subroutine)) { b in
-        assert(b.context.contains(.subroutine))
         b.loadNewTarget()
     },
 
