@@ -128,6 +128,12 @@ let v8Profile = Profile(
         }
 
         if probability(0.1) {
+            args.append("--scavenger-chaos-mode")
+            let threshold = Int.random(in: 0...100)
+            args.append("--scavenger-chaos-mode-threshold=\(threshold)")
+        }
+
+        if probability(0.1) {
             let stackSize = Int.random(in: 54...863)
             args.append("--stack-size=\(stackSize)")
         }
