@@ -26,9 +26,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 25-nightly
-      - uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "6.0.3"
       - name: Swift Version
         run: swift --version
       - uses: actions/checkout@v2
