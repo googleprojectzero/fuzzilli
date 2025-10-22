@@ -82,8 +82,8 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         self.resume = resume
         self.storage = PostgreSQLStorage(databasePool: databasePool)
         
-        // Set fixed batch size to 1 million for optimal performance
-        self.executionBatchSize = 1_000_000
+        // Set optimized batch size for better throughput (reduced from 1M to 100k for more frequent processing)
+        self.executionBatchSize = 100_000
         
         self.programs = RingBuffer(maxSize: maxSize)
         self.ages = RingBuffer(maxSize: maxSize)
@@ -93,6 +93,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         
         // Setup signal handlers for graceful shutdown
         setupSignalHandlers()
+        
+        // Start periodic batch flushing for better throughput
+        startPeriodicBatchFlush()
     }
     
     deinit {
@@ -105,6 +108,18 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
     }
     
+    
+    // MARK: - Performance Optimizations
+    
+    private func startPeriodicBatchFlush() {
+        // Flush batches every 5 seconds to ensure timely processing
+        Task {
+            while true {
+                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+                flushExecutionBatch()
+            }
+        }
+    }
     
     // MARK: - Signal Handling and Early Exit
     
@@ -134,10 +149,11 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         guard let fuzzerId = fuzzerId else { return }
         
         // Commit pending executions
-        executionBatchLock.lock()
-        let queuedExecutions = pendingExecutions
-        pendingExecutions.removeAll()
-        executionBatchLock.unlock()
+        let queuedExecutions = executionBatchLock.withLock {
+            let queuedExecutions = pendingExecutions
+            pendingExecutions.removeAll()
+            return queuedExecutions
+        }
         
         if !queuedExecutions.isEmpty {
             do {
@@ -272,17 +288,20 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     
     /// Add execution to batch for later processing
     private func addToExecutionBatch(_ program: Program, _ aspects: ProgramAspects, executionType: DatabaseExecutionPurpose) {
-        executionBatchLock.lock()
-        defer { executionBatchLock.unlock() }
+        // Use atomic operations to avoid blocking locks
+        let shouldProcessBatch: [(Program, ProgramAspects, DatabaseExecutionPurpose)]? = executionBatchLock.withLock {
+            pendingExecutions.append((program, aspects, executionType))
+            let shouldProcess = pendingExecutions.count >= executionBatchSize
+            if shouldProcess {
+                let batch = pendingExecutions
+                pendingExecutions.removeAll()
+                return batch
+            }
+            return nil
+        }
         
-        pendingExecutions.append((program, aspects, executionType))
-        
-        // Process batch if it's full
-        if pendingExecutions.count >= executionBatchSize {
-            let batch = pendingExecutions
-            pendingExecutions.removeAll()
-            executionBatchLock.unlock()
-            
+        // Process batch asynchronously if needed
+        if let batch = shouldProcessBatch {
             Task {
                 await processExecutionBatch(batch)
             }
@@ -298,45 +317,61 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         
         // logger.debug("Processing batch of \(batch.count) executions")
         
-        for (program, aspects, executionType) in batch {
-            do {
-                // Store the program in the program table
-                let programHash = try await storage.storeProgram(
-                    program: program,
-                    fuzzerId: fuzzerId,
-                    metadata: ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
+        do {
+            // Prepare batch data for programs (deduplicate by program hash)
+            var uniquePrograms: [String: (Program, ExecutionMetadata)] = [:]
+            var executionBatchData: [ExecutionBatchData] = []
+            
+            for (program, aspects, executionType) in batch {
+                let programHash = DatabaseUtils.calculateProgramHash(program: program)
+                
+                // Only store unique programs
+                if uniquePrograms[programHash] == nil {
+                    let metadata = ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
                         id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
                         outcome: aspects.outcome.description,
                         description: aspects.outcome.description
                     ))
-                )
+                    uniquePrograms[programHash] = (program, metadata)
+                }
                 
-                // Store the execution record
-                let executionId = try await storage.storeExecution(
+                // Prepare execution data
+                let executionData = ExecutionBatchData(
                     program: program,
-                    fuzzerId: fuzzerId,
                     executionType: executionType,
                     mutatorType: nil,
                     outcome: aspects.outcome,
-                    coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0
+                    coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0,
+                    coverageEdges: Set<Int>() // Empty for now
                 )
-                
-                // logger.debug("Stored execution in database: programHash=\(programHash), executionId=\(executionId)")
-                
-            } catch {
-                logger.error("Failed to store execution in database: \(error)")
+                executionBatchData.append(executionData)
             }
+            
+            // Batch store programs (only unique ones)
+            let programBatch = Array(uniquePrograms.values)
+            if !programBatch.isEmpty {
+                _ = try await storage.storeProgramsBatch(programs: programBatch, fuzzerId: fuzzerId)
+            }
+            
+            // Batch store executions
+            if !executionBatchData.isEmpty {
+                _ = try await storage.storeExecutionsBatch(executions: executionBatchData, fuzzerId: fuzzerId)
+            }
+            
+            // logger.debug("Completed batch processing: \(programBatch.count) unique programs, \(executionBatchData.count) executions")
+            
+        } catch {
+            logger.error("Failed to process execution batch: \(error)")
         }
-        
-        // logger.debug("Completed processing batch of \(batch.count) executions")
     }
     
     /// Flush any pending executions in the batch
     private func flushExecutionBatch() {
-        executionBatchLock.lock()
-        let batch = pendingExecutions
-        pendingExecutions.removeAll()
-        executionBatchLock.unlock()
+        let batch = executionBatchLock.withLock {
+            let batch = pendingExecutions
+            pendingExecutions.removeAll()
+            return batch
+        }
         
         if !batch.isEmpty {
             // logger.debug("Flushing \(batch.count) pending executions")
@@ -358,10 +393,11 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 // logger.debug("Successfully registered fuzzer on retry with ID: \(id)")
                 
                 // Process any queued executions
-                executionBatchLock.lock()
-                let queuedExecutions = pendingExecutions
-                pendingExecutions.removeAll()
-                executionBatchLock.unlock()
+                let queuedExecutions = executionBatchLock.withLock {
+                    let queuedExecutions = pendingExecutions
+                    pendingExecutions.removeAll()
+                    return queuedExecutions
+                }
                 
                 if !queuedExecutions.isEmpty {
                     // logger.debug("Processing \(queuedExecutions.count) queued executions after successful registration")
