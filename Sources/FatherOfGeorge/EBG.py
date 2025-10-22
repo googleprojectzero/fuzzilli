@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 '''
-Child of the Father of George. Thus, George.
+Ethiopian BG
 L1 Manager Agent - Verification and Testing Coordinator
 '''
 
 from smolagents import LiteLLMModel, ToolCallingAgent
-from BaseAgent import Agent, get_manager_tools, get_corpus_generation_tools, get_runtime_analysis_tools, get_validation_tools, get_code_analysis_tools
+from BaseAgent import Agent
 
 
-class George(Agent):
+class EBG(Agent): #a
     """Verify and test seeds."""
     
     def setup_agents(self):
@@ -16,18 +16,19 @@ class George(Agent):
         self.agents['code_analyzer'] = ToolCallingAgent(
             name="CodeAnalyzer",
             description="L3 Worker responsible for analyzing code patterns, vulnerabilities, and specific components for runtime analysis",
-            tools=get_code_analysis_tools(),
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
             max_steps=8,  # Fewer steps than L1 CodeAnalyzer
             planning_interval=None,
         )
+        #self.agents['vuln_analysis_agent'].prompt_templates["system_prompt"] = self.get_prompt("code_analysis_prompt") # and similar for other agents
         
         # L2 Worker: Corpus Generator (under George)
         self.agents['corpus_generator'] = ToolCallingAgent(
             name="CorpusGenerator",
             description="L2 Worker responsible for generating seeds from the corpus and validating syntax/semantics",
-            tools=get_corpus_generation_tools(),
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
             max_steps=10,
@@ -38,7 +39,7 @@ class George(Agent):
         self.agents['runtime_analyzer'] = ToolCallingAgent(
             name="RuntimeAnalyzer",
             description="L2 Manager responsible for analyzing program runtime, coverage, and execution state",
-            tools=get_runtime_analysis_tools(),
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
                 self.agents['code_analyzer']
@@ -51,7 +52,7 @@ class George(Agent):
         self.agents['corpus_validator'] = ToolCallingAgent(
             name="CorpusValidator",
             description="L2 Worker responsible for validating corpus integrity and quality",
-            tools=get_validation_tools(),
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
             max_steps=8,
@@ -62,7 +63,7 @@ class George(Agent):
         self.agents['db_analyzer'] = ToolCallingAgent(
             name="DBAnalyzer",
             description="L2 Worker responsible for analyzing PostgreSQL database for corpus, flags, coverage, and execution state",
-            tools=get_validation_tools(),  # Reusing validation tools for DB analysis
+            tools=[],  # Reusing validation tools for DB analysis
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
             max_steps=8,
@@ -73,7 +74,7 @@ class George(Agent):
         self.agents['george_foreman'] = ToolCallingAgent(
             name="GeorgeForeman",
             description="L1 Manager responsible for verifying JavaScript programs for correctness and testing them to evaluate interestingness",
-            tools=get_manager_tools(),
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[
                 self.agents['corpus_generator'],
