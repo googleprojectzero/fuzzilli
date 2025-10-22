@@ -221,15 +221,17 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             return true
         }
 
-        guard let edgeSet = aspects as? CovEdgeSet else {
-            fatalError("Invalid aspects passed to hasAspects")
+        // Handle both CovEdgeSet and basic ProgramAspects
+        if let edgeSet = aspects as? CovEdgeSet {
+            let result = libcoverage.cov_compare_equal(&context, edgeSet.edges, edgeSet.count)
+            if result == -1 {
+                logger.error("Could not compare progam executions")
+            }
+            return result == 1
+        } else {
+            // For non-coverage aspects (like basic ProgramAspects), just check if outcomes match
+            return execution.outcome == aspects.outcome
         }
-
-        let result = libcoverage.cov_compare_equal(&context, edgeSet.edges, edgeSet.count)
-        if result == -1 {
-            logger.error("Could not compare progam executions")
-        }
-        return result == 1
     }
 
     public func computeAspectIntersection(of program: Program, with aspects: ProgramAspects) -> ProgramAspects? {

@@ -31,7 +31,7 @@ Options:
     --jobs=n                     : Total number of fuzzing jobs. This will start a main instance and n-1 worker instances.
     --engine=name                : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                    Only the mutation engine should be regarded stable at this point.
-    --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
+    --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov", "postgresql"
     --logLevel=level             : The log level to use. Valid values: "verbose", "info", "warning", "error", "fatal" (default: "info").
     --maxIterations=n            : Run for the specified number of iterations (default: unlimited).
     --maxRuntimeInHours=n        : Run for the specified number of hours (default: unlimited).
@@ -99,6 +99,10 @@ Options:
                                    This can for example be used to remember the target revision that is being fuzzed.
     --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
     --forDifferentialFuzzing     : Enable additional features for better support of external differential fuzzing.
+    --postgres-url=url           : PostgreSQL connection string for PostgreSQL corpus (e.g., postgresql://user:pass@host:port/db).
+    --sync-interval=n            : Sync interval in seconds for PostgreSQL corpus (default: 10).
+    --validate-before-cache      : Enable program validation before caching in PostgreSQL corpus (default: true).
+    --execution-history-size=n   : Number of recent executions to keep in memory for PostgreSQL corpus (default: 10).
 
 """)
     exit(0)
@@ -158,6 +162,12 @@ let tag = args["--tag"]
 let enableWasm = args.has("--wasm")
 let forDifferentialFuzzing = args.has("--forDifferentialFuzzing")
 
+// PostgreSQL corpus specific arguments
+let postgresUrl = args["--postgres-url"]
+let syncInterval = args.int(for: "--sync-interval") ?? 10
+let validateBeforeCache = args.has("--validate-before-cache") || !args.has("--no-validate-before-cache") // Default to true
+let executionHistorySize = args.int(for: "--execution-history-size") ?? 10
+
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
 }
@@ -182,7 +192,7 @@ guard validEngines.contains(engineName) else {
     configError("--engine must be one of \(validEngines)")
 }
 
-let validCorpora = ["basic", "markov"]
+let validCorpora = ["basic", "markov", "postgresql"]
 guard validCorpora.contains(corpusName) else {
     configError("--corpus must be one of \(validCorpora)")
 }
@@ -206,6 +216,19 @@ if (resume || overwrite) && storagePath == nil {
 
 if corpusName == "markov" && staticCorpus {
     configError("Markov corpus is not compatible with --staticCorpus")
+}
+
+// PostgreSQL corpus validation
+if corpusName == "postgresql" {
+    if postgresUrl == nil {
+        configError("PostgreSQL corpus requires --postgres-url")
+    }
+    if syncInterval <= 0 {
+        configError("--sync-interval must be greater than 0")
+    }
+    if executionHistorySize <= 0 {
+        configError("--execution-history-size must be greater than 0")
+    }
 }
 
 
@@ -488,6 +511,28 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     case "markov":
         corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
+    case "postgresql":
+        // Create PostgreSQL corpus with database connection
+        guard let postgresUrl = postgresUrl else {
+            logger.fatal("PostgreSQL URL is required for PostgreSQL corpus")
+        }
+        
+        let databasePool = DatabasePool(connectionString: postgresUrl)
+        let fuzzerInstanceId = "fuzzer-\(UUID().uuidString.prefix(8))"
+        
+        corpus = PostgreSQLCorpus(
+            minSize: minCorpusSize,
+            maxSize: maxCorpusSize,
+            minMutationsPerSample: minMutationsPerSample,
+            databasePool: databasePool,
+            fuzzerInstanceId: fuzzerInstanceId
+        )
+        
+        logger.info("Created PostgreSQL corpus with instance ID: \(fuzzerInstanceId)")
+        logger.info("PostgreSQL URL: \(postgresUrl)")
+        logger.info("Sync interval: \(syncInterval) seconds")
+        logger.info("Validate before cache: \(validateBeforeCache)")
+        logger.info("Execution history size: \(executionHistorySize)")
     default:
         logger.fatal("Invalid corpus name provided")
     }
