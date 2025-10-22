@@ -100,13 +100,34 @@ public class DatabaseUtils {
     public static func mapExecutionOutcome(outcome: ExecutionOutcome) -> Int {
         switch outcome {
         case .succeeded:
-            return 1
+            return 3  // Succeeded maps to ID 3
         case .failed:
-            return 2
+            return 2  // Failed maps to ID 2
         case .crashed:
-            return 3
+            return 1  // Crashed maps to ID 1
         case .timedOut:
-            return 4
+            return 4  // TimedOut maps to ID 4
+        }
+    }
+    
+    /// Map ExecutionOutcome with signal code to database ID
+    /// Signal 11 (SIGSEGV) and 7 (SIGBUS) are real crashes
+    /// Signal 5 (SIGTRAP) and 6 (SIGABRT) are sig checks
+    public static func mapExecutionOutcomeWithSignal(outcome: ExecutionOutcome, signalCode: Int?) -> Int {
+        switch outcome {
+        case .succeeded:
+            return 3  // Succeeded maps to ID 3
+        case .failed:
+            return 2  // Failed maps to ID 2
+        case .crashed(let signal):
+            // Check if this is a real crash or just a signal check
+            if signal == 11 || signal == 7 {
+                return 1  // Real crashes: SIGSEGV (11) and SIGBUS (7)
+            } else {
+                return 34 // SigCheck: SIGTRAP (5), SIGABRT (6), and others
+            }
+        case .timedOut:
+            return 4  // TimedOut maps to ID 4
         }
     }
     
@@ -114,13 +135,15 @@ public class DatabaseUtils {
     public static func mapExecutionOutcomeFromId(id: Int) -> ExecutionOutcome {
         switch id {
         case 1:
-            return .succeeded
+            return .crashed(1) // ID 1 = Crashed (real crashes)
         case 2:
-            return .failed(1) // Default exit code
+            return .failed(1) // ID 2 = Failed
         case 3:
-            return .crashed(1) // Default signal
+            return .succeeded // ID 3 = Succeeded
         case 4:
-            return .timedOut
+            return .timedOut  // ID 4 = TimedOut
+        case 34:
+            return .crashed(5) // ID 34 = SigCheck (signal checks)
         default:
             return .succeeded // Default fallback
         }

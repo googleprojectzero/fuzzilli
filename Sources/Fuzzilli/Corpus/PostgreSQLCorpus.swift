@@ -143,8 +143,19 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                     dbExecutionPurpose = .other
                 }
                 
-                // Add to batch instead of storing immediately
-                self.addToExecutionBatch(program, aspects, executionType: dbExecutionPurpose)
+                // Cache execution data immediately before REPRL context becomes invalid
+                let executionData = ExecutionData(
+                    outcome: execution.outcome,
+                    execTime: execution.execTime,
+                    stdout: execution.stdout,
+                    stderr: execution.stderr,
+                    fuzzout: execution.fuzzout
+                )
+                
+                // Store execution data with cached metadata
+                Task {
+                    await self.storeExecutionWithCachedData(program, executionData, dbExecutionPurpose, aspects)
+                }
             }
         }
         
@@ -505,6 +516,91 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
         
         throw lastError ?? DatabasePoolError.initializationFailed("Failed to register fuzzer after \(maxRetries) attempts")
+    }
+    
+    /// Cached execution data to avoid REPRL context issues
+    private struct ExecutionData {
+        let outcome: ExecutionOutcome
+        let execTime: TimeInterval
+        let stdout: String
+        let stderr: String
+        let fuzzout: String
+    }
+    
+    /// Store execution with cached data to avoid REPRL context issues
+    private func storeExecutionWithCachedData(_ program: Program, _ executionData: ExecutionData, _ executionType: DatabaseExecutionPurpose, _ aspects: ProgramAspects) async {
+        do {
+            // Use the registered fuzzer ID
+            guard let fuzzerId = fuzzerId else {
+                logger.error("Cannot store execution: fuzzer not registered")
+                return
+            }
+            
+            // Store the program in the program table
+            let programHash = try await storage.storeProgram(
+                program: program,
+                fuzzerId: fuzzerId,
+                metadata: ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
+                    id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
+                    outcome: aspects.outcome.description,
+                    description: aspects.outcome.description
+                ))
+            )
+            
+            // Store the execution record with cached execution metadata
+            let executionId = try await storage.storeExecution(
+                program: program,
+                fuzzerId: fuzzerId,
+                executionType: executionType,
+                outcome: executionData.outcome,
+                coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0,
+                executionTimeMs: Int(executionData.execTime * 1000), // Convert to milliseconds
+                stdout: executionData.stdout,
+                stderr: executionData.stderr,
+                fuzzout: executionData.fuzzout
+            )
+            
+            logger.info("Stored execution with cached data: programHash=\(programHash), executionId=\(executionId), execTime=\(executionData.execTime), outcome=\(executionData.outcome)")
+            
+        } catch {
+            logger.error("Failed to store execution with cached data: \(error)")
+        }
+    }
+    
+    /// Store execution with full metadata from Execution object
+    private func storeExecutionWithMetadata(_ program: Program, _ execution: Execution, _ executionType: DatabaseExecutionPurpose, _ aspects: ProgramAspects) async {
+        do {
+            // Use the registered fuzzer ID
+            guard let fuzzerId = fuzzerId else {
+                logger.error("Cannot store execution: fuzzer not registered")
+                return
+            }
+            
+            // Store the program in the program table
+            let programHash = try await storage.storeProgram(
+                program: program,
+                fuzzerId: fuzzerId,
+                metadata: ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
+                    id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
+                    outcome: aspects.outcome.description,
+                    description: aspects.outcome.description
+                ))
+            )
+            
+            // Store the execution record with full execution metadata
+            let executionId = try await storage.storeExecution(
+                program: program,
+                fuzzerId: fuzzerId,
+                execution: execution,
+                executionType: executionType,
+                coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0
+            )
+            
+            logger.info("Stored execution with metadata: programHash=\(programHash), executionId=\(executionId), execTime=\(execution.execTime), outcome=\(execution.outcome)")
+            
+        } catch {
+            logger.error("Failed to store execution with metadata: \(error)")
+        }
     }
     
     /// Store a program execution in the database

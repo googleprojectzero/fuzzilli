@@ -79,10 +79,11 @@ CREATE TABLE IF NOT EXISTS execution_outcome (
 
 -- Preseed execution outcomes
 INSERT INTO execution_outcome (outcome, description) VALUES 
-    ('Crashed', 'Program crashed with a signal'),
+    ('Crashed', 'Program crashed with a signal (SIGSEGV/SIGBUS)'),
     ('Failed', 'Program failed with an exit code'),
     ('Succeeded', 'Program executed successfully'),
-    ('TimedOut', 'Program execution timed out')
+    ('TimedOut', 'Program execution timed out'),
+    ('SigCheck', 'Program terminated with signal (SIGTRAP/SIGABRT)')
 ON CONFLICT (outcome) DO NOTHING;
 
 -- Create the main execution table
@@ -195,7 +196,7 @@ SELECT
 FROM execution e
 JOIN execution_outcome eo ON e.execution_outcome_id = eo.id
 LEFT JOIN crash_analysis ca ON e.execution_id = ca.execution_id
-WHERE eo.outcome IN ('Crashed', 'Failed');
+WHERE eo.outcome IN ('Crashed', 'Failed', 'SigCheck');
 
 -- Create function to get coverage statistics
 CREATE OR REPLACE FUNCTION get_coverage_stats(fuzzer_instance_id INTEGER)

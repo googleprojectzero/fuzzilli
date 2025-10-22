@@ -154,12 +154,23 @@ public class PostgreSQLStorage {
         """
         try await connection.query(fuzzerQuery, logger: self.logger)
         
+        // Generate JavaScript code from the program
+        let lifter = JavaScriptLifter(ecmaVersion: .es6)
+        let javascriptCode = lifter.lift(program, withOptions: [])
+        
         // Insert into program table (executed programs)
-        let programQuery: PostgresQuery = """
-            INSERT INTO program (program_base64, fuzzer_id, program_size, program_hash) 
-            VALUES (\(programBase64), \(fuzzerId), \(program.size), \(programHash)) 
-            ON CONFLICT (program_base64) DO NOTHING
-        """
+        // Base64 encode the JavaScript code to avoid SQL injection issues
+        let javascriptCodeBase64 = Data(javascriptCode.utf8).base64EncodedString()
+        
+        // Use string concatenation to avoid parameter substitution issues
+        let programQueryString = "INSERT INTO program (program_base64, fuzzer_id, program_size, program_hash, javascript_code) VALUES ('" + 
+            programBase64 + "', " + 
+            String(fuzzerId) + ", " + 
+            String(program.size) + ", '" + 
+            programHash + "', '" + 
+            javascriptCodeBase64 + "') ON CONFLICT (program_base64) DO NOTHING"
+        
+        let programQuery = PostgresQuery(stringLiteral: programQueryString)
         try await connection.query(programQuery, logger: self.logger)
         
         self.logger.info("Program storage successful: hash=\(programHash)")
@@ -198,7 +209,10 @@ public class PostgreSQLStorage {
         coverage: Double = 0.0,
         executionTimeMs: Int = 0,
         feedbackVector: Data? = nil,
-        coverageEdges: Set<Int> = []
+        coverageEdges: Set<Int> = [],
+        stdout: String? = nil,
+        stderr: String? = nil,
+        fuzzout: String? = nil
     ) async throws -> Int {
         let programHash = DatabaseUtils.calculateProgramHash(program: program)
         let programBase64 = DatabaseUtils.encodeProgramToBase64(program: program)
@@ -225,20 +239,38 @@ public class PostgreSQLStorage {
         defer { Task { _ = try? await connection.close() } }
         
         let executionTypeId = DatabaseUtils.mapExecutionType(purpose: executionType)
-        let outcomeId = DatabaseUtils.mapExecutionOutcome(outcome: outcome)
+        let mutatorTypeId = mutatorType != nil ? DatabaseUtils.mapMutatorType(mutator: mutatorType!) : nil
         
-        let query: PostgresQuery = """
+        // Extract execution metadata from ExecutionOutcome
+        let (signalCode, exitCode) = extractExecutionMetadata(from: outcome)
+        
+        // Use signal-aware mapping for execution outcomes
+        let outcomeId = DatabaseUtils.mapExecutionOutcomeWithSignal(outcome: outcome, signalCode: signalCode)
+        
+        let mutatorTypeValue = mutatorTypeId != nil ? "\(mutatorTypeId!)" : "NULL"
+        let feedbackVectorValue = feedbackVector != nil ? "'\(feedbackVector!.base64EncodedString())'" : "NULL"
+        let signalCodeValue = signalCode != nil ? "\(signalCode!)" : "NULL"
+        let exitCodeValue = exitCode != nil ? "\(exitCode!)" : "NULL"
+        let stdoutValue = stdout != nil ? "'\(stdout!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
+        let stderrValue = stderr != nil ? "'\(stderr!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
+        let fuzzoutValue = fuzzout != nil ? "'\(fuzzout!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
+        
+        let queryString = """
             INSERT INTO execution (
                 program_base64, execution_type_id, mutator_type_id, 
                 execution_outcome_id, coverage_total, execution_time_ms, 
+                signal_code, exit_code, stdout, stderr, fuzzout, 
                 feedback_vector, created_at
             ) VALUES (
-                \(programBase64), \(executionTypeId), 
-                \(mutatorType ?? "NULL"), \(outcomeId), \(coverage), 
-                \(executionTimeMs), \(feedbackVector?.base64EncodedString() ?? "NULL"), 
-                NOW()
+                '\(programBase64)', \(executionTypeId), 
+                \(mutatorTypeValue), \(outcomeId), \(coverage), 
+                \(executionTimeMs), \(signalCodeValue), \(exitCodeValue), 
+                \(stdoutValue), \(stderrValue), \(fuzzoutValue), 
+                \(feedbackVectorValue), NOW()
             ) RETURNING execution_id
         """
+        
+        let query = PostgresQuery(stringLiteral: queryString)
         
         let result = try await connection.query(query, logger: self.logger)
         let rows = try await result.collect()
@@ -249,6 +281,46 @@ public class PostgreSQLStorage {
         let executionId = try row.decode(Int.self, context: .default)
         self.logger.info("Execution storage successful: executionId=\(executionId)")
         return executionId
+    }
+    
+    /// Store execution record from Execution object
+    public func storeExecution(
+        program: Program,
+        fuzzerId: Int,
+        execution: Execution,
+        executionType: DatabaseExecutionPurpose,
+        mutatorType: String? = nil,
+        coverage: Double = 0.0,
+        feedbackVector: Data? = nil,
+        coverageEdges: Set<Int> = []
+    ) async throws -> Int {
+        let executionTimeMs = Int(execution.execTime * 1000) // Convert to milliseconds
+        return try await storeExecution(
+            program: program,
+            fuzzerId: fuzzerId,
+            executionType: executionType,
+            mutatorType: mutatorType,
+            outcome: execution.outcome,
+            coverage: coverage,
+            executionTimeMs: executionTimeMs,
+            feedbackVector: feedbackVector,
+            coverageEdges: coverageEdges,
+            stdout: execution.stdout,
+            stderr: execution.stderr,
+            fuzzout: execution.fuzzout
+        )
+    }
+    
+    /// Extract execution metadata from ExecutionOutcome
+    private func extractExecutionMetadata(from outcome: ExecutionOutcome) -> (signalCode: Int?, exitCode: Int?) {
+        switch outcome {
+        case .crashed(let signal):
+            return (signalCode: signal, exitCode: nil)
+        case .failed(let exitCode):
+            return (signalCode: nil, exitCode: exitCode)
+        case .succeeded, .timedOut:
+            return (signalCode: nil, exitCode: nil)
+        }
     }
     
     /// Get execution history for a program
