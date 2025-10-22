@@ -14,7 +14,6 @@ index 05e5dc1..540b552 100644
  
          .target(name: "FuzzilliCli",
                  dependencies: ["Fuzzilli"]),
--
 -        .target(name: "FuzzILTool",
 +        
 +        .target(name: "RelateTool",
