@@ -135,6 +135,10 @@ public let WasmArrayGenerator = CodeGenerator("WasmArrayGenerator") { b in
     b.eval("%WasmArray()", hasOutput: true);
 }
 
+public let SharedObjectGenerator = CodeGenerator("SharedObjectGenerator", inputs: .one) { b, v in
+    b.eval("%ShareObject(%@)", with: [v], hasOutput: true);
+}
+
 public let PretenureAllocationSiteGenerator = CodeGenerator("PretenureAllocationSiteGenerator", inputs: .required(.object())) { b, obj in
     b.eval("%PretenureAllocationSite(%@)", with: [obj]);
 }

@@ -80,8 +80,11 @@ let v8Profile = Profile(
             args.append("--minor-ms")
         }
 
+        // Enable the shared heap.
         if probability(0.25) {
-            args.append("--shared-string-table")
+            // Either use the shared-string-table (needed for JS shared structs) or only allow
+            // shared strings (needed for shared Wasm objects).
+            args.append(Bool.random() ? "--shared-string-table" : "--shared-strings")
         }
 
         if probability(0.25) && !args.contains("--no-maglev") {
@@ -307,6 +310,7 @@ let v8Profile = Profile(
 
         (WasmStructGenerator,                     15),
         (WasmArrayGenerator,                      15),
+        (SharedObjectGenerator,                    5),
         (PretenureAllocationSiteGenerator,         5),
     ],
 
