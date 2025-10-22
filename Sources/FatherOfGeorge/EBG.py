@@ -94,6 +94,12 @@ class EBG(Agent): #a
             "error": None,
         }
         return results
+    
+    def get_prompt(self, prompt_name: str) -> str:
+        f = open(Path(__file__).parent / "prompts_EBG" / prompt_name, 'r')
+        prompt = f.read()
+        f.close()
+        return prompt
 
 
 def main():
