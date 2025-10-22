@@ -96,7 +96,7 @@ class Father(Agent):
     
 
     def get_prompt(self, prompt_name: str) -> str:
-        f = open(Path(__file__).parent / "prompts" / prompt_name, 'r')
+        f = open(Path(__file__).parent / "prompts_FOG" / prompt_name, 'r')
         prompt = f.read()
         f.close()
         return prompt
