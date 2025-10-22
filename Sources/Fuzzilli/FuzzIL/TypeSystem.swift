@@ -23,7 +23,7 @@
 //        a variable of type .object() as input because only that can have methods. Also, when generating function
 //        calls it can be necessary to find variables of the types that the function expects as arguments. This task
 //        is solved by defining a "Is a" relationship between types which can then be used to find suitable variables.
-//        Notice that the relationship is not reflexive. Think of it as "Is contained by" or <=.
+//        Notice that the relationship is not symmetric. Think of it as "Is contained by" or <=.
 //     2. to determine possible actions that can be performed on a value. E.g. when having a reference to something
 //        that is known to be a function, a function call can be performed. Also, the method call code generator will
 //        want to know the available methods that it can call on an object, which it can query from the type system.
