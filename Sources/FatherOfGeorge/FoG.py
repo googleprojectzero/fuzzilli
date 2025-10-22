@@ -44,6 +44,7 @@ class Father(Agent):
             managed_agents=[],
             max_steps=10,
             planning_interval=None,
+            system_prompt=self.get_prompt('v8_search.txt'),
         )
 
         # L1 Manager: Code Analysis Agent
@@ -59,6 +60,7 @@ class Father(Agent):
             ],
             max_steps=15,
             planning_interval=None,
+            system_prompt=self.get_prompt('code_analyzer.txt'),
         )
         
         # L1 Manager: Program Builder Agent  
@@ -72,6 +74,7 @@ class Father(Agent):
             ],
             max_steps=15,
             planning_interval=None,
+            system_prompt=self.get_prompt('program_builder.txt'),
         )
         
         # L0 Root Manager Agent
@@ -86,6 +89,7 @@ class Father(Agent):
             ],
             max_steps=20,
             planning_interval=None,
+            system_prompt=self.get_prompt('root_manager.txt'),
         )
     
 
