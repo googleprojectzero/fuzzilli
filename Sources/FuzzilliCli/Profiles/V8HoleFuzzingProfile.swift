@@ -40,7 +40,7 @@ let v8HoleFuzzingProfile = Profile(
 
     maxExecsBeforeRespawn: 1000,
 
-    timeout: 300,
+    timeout: 400,
 
     codePrefix: """
                 """,

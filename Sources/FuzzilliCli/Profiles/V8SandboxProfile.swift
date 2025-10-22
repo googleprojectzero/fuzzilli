@@ -76,7 +76,7 @@ let v8SandboxProfile = Profile(
     maxExecsBeforeRespawn: 1000,
 
     // ASan builds are slower, so we use a larger timeout.
-    timeout: 500,
+    timeout: 600,
 
     codePrefix: """
                 //
