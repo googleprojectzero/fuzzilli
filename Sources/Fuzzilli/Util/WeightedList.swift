@@ -14,9 +14,9 @@
 
 /// A list where each element also has a weight, which determines how frequently it is selected by randomElement().
 /// For example, an element with weight 10 is 2x more likely to be selected by randomElement() than an element with weight 5.
-public struct WeightedList<Element>: Sequence {
+public class WeightedList<Element>: Sequence {
     private var elements = [(elem: Element, weight: Int, cumulativeWeight: Int)]()
-    private(set) var totalWeight = 0
+    private(set) var totalWeight: Int = 0
 
     public init() {}
 
@@ -34,7 +34,7 @@ public struct WeightedList<Element>: Sequence {
         return count == 0
     }
 
-    public mutating func append(_ elem: Element, withWeight weight: Int) {
+    public func append(_ elem: Element, withWeight weight: Int) {
         assert(weight > 0)
         elements.append((elem, weight, totalWeight))
         totalWeight += weight

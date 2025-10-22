@@ -435,6 +435,21 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         configError("List of enabled mutators is empty. There needs to be at least one mutator available.")
     }
 
+    var runtimeMutators = RuntimeWeightedList([
+        (ExplorationMutator(),                 3),
+        (CodeGenMutator(),                     2),
+        (SpliceMutator(),                      2),
+        (ProbingMutator(),                     2),
+        (InputMutator(typeAwareness: .loose),  2),
+        (InputMutator(typeAwareness: .aware),  1),
+        // Can be enabled for experimental use, ConcatMutator is a limited version of CombineMutator
+        // (ConcatMutator(),                   1),
+        (OperationMutator(),                   1),
+        (CombineMutator(),                     1),
+        // Include this once it does more than just remove unneeded try-catch
+        // (FixupMutator()),                   1),
+    ])
+
     // Engines to execute programs.
     let engine: FuzzEngine
     switch engineName {
@@ -548,6 +563,7 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
                   codeGenerators: codeGenerators,
                   programTemplates: programTemplates,
                   evaluator: evaluator,
+                  runtimeWeightedMutators: runtimeMutators,
                   environment: environment,
                   lifter: lifter,
                   corpus: corpus,

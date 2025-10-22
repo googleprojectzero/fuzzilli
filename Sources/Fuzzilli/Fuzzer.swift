@@ -51,6 +51,9 @@ public class Fuzzer {
     /// The mutators used by the engine.
     public let mutators: WeightedList<Mutator>
 
+    /// The mutators used by the engine when dynamically weighted during runtime
+    public let runtimeWeightedMutators: RuntimeWeightedList<Mutator>
+
     /// The evaluator to score generated programs.
     public let evaluator: ProgramEvaluator
 
@@ -160,6 +163,7 @@ public class Fuzzer {
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
         codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator,
+        runtimeWeightedMutators: RuntimeWeightedList<Mutator>,
         environment: JavaScriptEnvironment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         let uniqueId = UUID()
@@ -171,6 +175,7 @@ public class Fuzzer {
         self.timers = Timers(queue: self.queue)
         self.engine = engine
         self.mutators = mutators
+        self.runtimeWeightedMutators = runtimeWeightedMutators
         self.codeGenerators = codeGenerators
 
         self.programTemplates = programTemplates
@@ -723,9 +728,9 @@ public class Fuzzer {
                 aspects = intersection
             } while !didConverge || attempt < minAttempts
         }
-        if origin == .local {
-            iterationOfLastInteratingSample = iterations
-        }
+        // Update the iteration counter for any interesting program found
+        // This is crucial for corpus generation phase to properly track progress
+        iterationOfLastInteratingSample = iterations
 
         // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
         // event and insert the sample into the corpus.
