@@ -504,8 +504,17 @@ public let CodeGenerators: [CodeGenerator] = [
         b in
 
         // Try to find a property that hasn't already been added to this literal.
-        let propertyName = b.generateString(b.randomCustomPropertyName,
-            notIn: b.currentObjectLiteral.properties)
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            if attempts >= 10 {
+                propertyName = String.random(ofLength: Int.random(in: 1...5))
+                break
+            }
+            propertyName = b.randomCustomPropertyName()
+            attempts += 1
+        } while b.currentObjectLiteral.properties.contains(propertyName)
+
         b.currentObjectLiteral.addProperty(
             propertyName, as: b.randomJsVariable())
     },
@@ -539,6 +548,7 @@ public let CodeGenerators: [CodeGenerator] = [
             propertyName = b.randomJsVariable()
             attempts += 1
         } while b.currentObjectLiteral.computedProperties.contains(propertyName)
+
         b.currentObjectLiteral.addComputedProperty(propertyName, as: value)
     },
 
@@ -566,8 +576,17 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method]
             ) { b in
                 // Try to find a method that hasn't already been added to this literal.
-                let methodName = b.generateString(b.randomCustomMethodName,
-                    notIn: b.currentObjectLiteral.methods)
+                var methodName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        methodName = String.random(
+                            ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    methodName = b.randomCustomMethodName()
+                    attempts += 1
+                } while b.currentObjectLiteral.methods.contains(methodName)
 
                 let randomParameters = b.randomParameters()
                 b.setParameterTypesForNextSubroutine(
@@ -591,16 +610,15 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method]
             ) { b in
                 // Try to find a computed method name that hasn't already been added to this literal.
-
                 var methodName: Variable
                 var attempts = 0
                 repeat {
-                    methodName = b.randomJsVariable()
                     if attempts >= 10 {
-                        // This might lead to having two computed methods with the same name (so one
-                        // will overwrite the other).
+                        methodName = b.loadString(
+                            String.random(ofLength: Int.random(in: 1...5)))
                         break
                     }
+                    methodName = b.randomJsVariable()
                     attempts += 1
                 } while b.currentObjectLiteral.computedMethods.contains(
                     methodName)
@@ -631,8 +649,20 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method]
             ) { b in
                 // Try to find a property that hasn't already been added and for which a getter has not yet been installed.
-                let propertyName = b.generateString(b.randomCustomPropertyName,
-                    notIn: b.currentObjectLiteral.properties + b.currentObjectLiteral.getters)
+                var propertyName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        // We should not fail here but also don't produce a syntax error.
+                        propertyName = String.random(
+                            ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    propertyName = b.randomCustomPropertyName()
+                    attempts += 1
+                } while b.currentObjectLiteral.properties.contains(propertyName)
+                    || b.currentObjectLiteral.getters.contains(propertyName)
+
                 b.emit(BeginObjectLiteralGetter(propertyName: propertyName))
 
             },
@@ -655,8 +685,20 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method]
             ) { b in
                 // Try to find a property that hasn't already been added and for which a setter has not yet been installed.
-                let propertyName = b.generateString(b.randomCustomPropertyName,
-                    notIn: b.currentObjectLiteral.properties + b.currentObjectLiteral.setters)
+                var propertyName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        // We should not fail here but also don't produce a syntax error.
+                        propertyName = String.random(
+                            ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    propertyName = b.randomCustomPropertyName()
+                    attempts += 1
+                } while b.currentObjectLiteral.properties.contains(propertyName)
+                    || b.currentObjectLiteral.setters.contains(propertyName)
+
                 b.emit(BeginObjectLiteralSetter(propertyName: propertyName))
             },
             GeneratorStub(
@@ -720,8 +762,14 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ClassInstancePropertyGenerator", inContext: .single(.classDefinition))
     { b in
         // Try to find a property that hasn't already been added to this literal.
-        let propertyName = b.generateString(b.randomCustomPropertyName,
-            notIn: b.currentClassDefinition.instanceProperties)
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randomCustomPropertyName()
+            attempts += 1
+        } while b.currentClassDefinition.instanceProperties.contains(
+            propertyName)
 
         var value: Variable? = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addInstanceProperty(propertyName, value: value)
@@ -767,8 +815,18 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
                 // Try to find a method that hasn't already been added to this class.
-                let methodName = b.generateString(b.randomCustomMethodName,
-                    notIn: b.currentClassDefinition.instanceMethods)
+                var methodName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        methodName = String.random(
+                            ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    methodName = b.randomCustomMethodName()
+                    attempts += 1
+                } while b.currentClassDefinition.instanceMethods.contains(
+                    methodName)
 
                 let parameters = b.randomParameters()
                 b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
@@ -829,9 +887,21 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
                 // Try to find a property that hasn't already been added and for which a getter has not yet been installed.
-                let propertyName = b.generateString(b.randomCustomPropertyName,
-                    notIn: b.currentClassDefinition.instanceProperties
-                         + b.currentClassDefinition.instanceGetters)
+                var propertyName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        propertyName = String.random(
+                            ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    propertyName = b.randomCustomPropertyName()
+                    attempts += 1
+                } while b.currentClassDefinition.instanceProperties.contains(
+                    propertyName)
+                    || b.currentClassDefinition.instanceGetters.contains(
+                        propertyName)
+
                 b.emit(BeginClassInstanceGetter(propertyName: propertyName))
             },
             GeneratorStub(
@@ -851,9 +921,21 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
                 // Try to find a property that hasn't already been added and for which a setter has not yet been installed.
-                let propertyName = b.generateString(b.randomCustomPropertyName,
-                    notIn: b.currentClassDefinition.instanceProperties
-                         + b.currentClassDefinition.instanceSetters)
+                var propertyName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        propertyName = String.random(
+                            ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    propertyName = b.randomCustomPropertyName()
+                    attempts += 1
+                } while b.currentClassDefinition.instanceProperties.contains(
+                    propertyName)
+                    || b.currentClassDefinition.instanceSetters.contains(
+                        propertyName)
+
                 b.emit(BeginClassInstanceSetter(propertyName: propertyName))
             },
             GeneratorStub(
@@ -868,8 +950,17 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ClassStaticPropertyGenerator", inContext: .single(.classDefinition)) {
         b in
         // Try to find a property that hasn't already been added to this literal.
-        let propertyName = b.generateString(b.randomCustomPropertyName,
-            notIn: b.currentClassDefinition.staticProperties)
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            if attempts >= 10 {
+                propertyName = String.random(
+                    ofLength: Int.random(in: 1...5))
+                break
+            }
+            propertyName = b.randomCustomPropertyName()
+            attempts += 1
+        } while b.currentClassDefinition.staticProperties.contains(propertyName)
 
         var value: Variable? = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addStaticProperty(propertyName, value: value)
@@ -936,8 +1027,19 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .method, .subroutine, .classMethod]
             ) { b in
                 // Try to find a method that hasn't already been added to this class.
-                let methodName = b.generateString(b.randomCustomMethodName,
-                    notIn: b.currentClassDefinition.staticMethods)
+                var methodName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        methodName = String.random(
+                            ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    methodName = b.randomCustomMethodName()
+                    attempts += 1
+                } while b.currentClassDefinition.staticMethods.contains(
+                    methodName)
+
                 let parameters = b.randomParameters()
 
                 b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
@@ -999,9 +1101,21 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
                 // Try to find a property that hasn't already been added and for which a getter has not yet been installed.
-                let propertyName = b.generateString(b.randomCustomPropertyName,
-                    notIn: b.currentClassDefinition.staticProperties
-                         + b.currentClassDefinition.staticGetters)
+                var propertyName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        propertyName = String.random(
+                            ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    propertyName = b.randomCustomPropertyName()
+                    attempts += 1
+                } while b.currentClassDefinition.staticProperties.contains(
+                    propertyName)
+                    || b.currentClassDefinition.staticGetters.contains(
+                        propertyName)
+
                 b.emit(BeginClassStaticGetter(propertyName: propertyName))
             },
             GeneratorStub(
@@ -1022,10 +1136,22 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
                 // Try to find a property that hasn't already been added and for which a setter has not yet been installed.
-                let propertyName = b.generateString(b.randomCustomPropertyName,
-                    notIn: b.currentClassDefinition.staticProperties
-                         + b.currentClassDefinition.staticSetters)
+                var propertyName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        propertyName = String.random(ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    propertyName = b.randomCustomPropertyName()
+                    attempts += 1
+                } while b.currentClassDefinition.staticProperties.contains(
+                    propertyName)
+                    || b.currentClassDefinition.staticSetters.contains(
+                        propertyName)
+
                 b.emit(BeginClassStaticSetter(propertyName: propertyName))
+
             },
             GeneratorStub(
                 "ClassStaticSetterEndGenerator",
@@ -1039,8 +1165,13 @@ public let CodeGenerators: [CodeGenerator] = [
         "ClassPrivateInstancePropertyGenerator", inContext: .single(.classDefinition)
     ) { b in
         // Try to find a private field that hasn't already been added to this literal.
-        let propertyName = b.generateString(b.randomCustomPropertyName,
-            notIn: b.currentClassDefinition.privateFields)
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randomCustomPropertyName()
+            attempts += 1
+        } while b.currentClassDefinition.privateFields.contains(propertyName)
 
         var value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addPrivateInstanceProperty(
@@ -1056,8 +1187,18 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
                 // Try to find a private field that hasn't already been added to this class.
-                let methodName = b.generateString(b.randomCustomMethodName,
-                    notIn: b.currentClassDefinition.privateFields)
+                var methodName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        methodName = String.random(ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    methodName = b.randomCustomMethodName()
+                    attempts += 1
+                } while b.currentClassDefinition.privateFields.contains(
+                    methodName)
+
                 let parameters = b.randomParameters()
                 b.emit(
                     BeginClassPrivateInstanceMethod(
@@ -1077,8 +1218,14 @@ public let CodeGenerators: [CodeGenerator] = [
         "ClassPrivateStaticPropertyGenerator", inContext: .single(.classDefinition)
     ) { b in
         // Try to find a private field that hasn't already been added to this literal.
-        let propertyName = b.generateString(b.randomCustomPropertyName,
-            notIn: b.currentClassDefinition.privateFields)
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randomCustomPropertyName()
+            attempts += 1
+        } while b.currentClassDefinition.privateFields.contains(propertyName)
+
         var value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addPrivateStaticProperty(
             propertyName, value: value)
@@ -1093,8 +1240,19 @@ public let CodeGenerators: [CodeGenerator] = [
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
                 // Try to find a private field that hasn't already been added to this class.
-                let methodName = b.generateString(b.randomCustomMethodName,
-                    notIn: b.currentClassDefinition.privateFields)
+                var methodName: String
+                var attempts = 0
+                repeat {
+                    if attempts >= 10 {
+                        methodName = String.random(
+                            ofLength: Int.random(in: 1...5))
+                        break
+                    }
+                    methodName = b.randomCustomMethodName()
+                    attempts += 1
+                } while b.currentClassDefinition.privateFields.contains(
+                    methodName)
+
                 let parameters = b.randomParameters()
                 b.emit(
                     BeginClassPrivateStaticMethod(
