@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
-"""
-Father of George, and thus George the negative First.
-L0 Root Manager Agent - Orchestrates Code Analysis and Program Building
-"""
+
+
 
 from smolagents import LiteLLMModel, ToolCallingAgent
 from BaseAgent import Agent, get_manager_tools, get_code_analysis_tools, get_program_builder_tools, get_retrieval_tools, get_v8_search_tools
 from GeorgeForeman import George
+from pathlib import Path
 
 
 class Father(Agent):
-    """Init code analysis and program builder."""
-    
     def setup_agents(self):
+        
         # L2 Worker: George Foreman
+
         self.agents['george_foreman'] = George(
             model=self.model,
             api_key=self.api_key,
             anthropic_api_key=self.anthropic_api_key
         )
 
-        # L2 Worker: Retriever of Code (under CodeAnalyzer)
-        self.agents['retriever_of_code'] = ToolCallingAgent(
-            name="RetrieverOfCode",
-            description="L2 Worker responsible for retrieving code from various sources using RAG database",
+        # L2 Worker: Reviwer of Code (under CodeAnalyzer)
+
+        self.agents['reviewer_of_code'] = ToolCallingAgent(
+            name="ReviewerOfCode",
+            description="L2 Worker responsible for reviewing code from various sources using RAG database",
             tools=get_retrieval_tools(),
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
@@ -31,9 +31,11 @@ class Father(Agent):
             ], 
             max_steps=10,
             planning_interval=None,
+            system_prompt=self.get_prompt('reviewer_of_code.txt'),
         )
         
         # L2 Worker: V8 Search (under CodeAnalyzer)
+
         self.agents['v8_search'] = ToolCallingAgent(
             name="V8Search",
             description="L2 Worker responsible for searching V8 source code using fuzzy find, regex, and compilation tools",
@@ -45,6 +47,7 @@ class Father(Agent):
         )
 
         # L1 Manager: Code Analysis Agent
+
         self.agents['code_analyzer'] = ToolCallingAgent(
             name="CodeAnalyzer",
             description="L1 Manager responsible for analyzing code and coordinating retrieval and V8 search operations",
@@ -84,6 +87,13 @@ class Father(Agent):
             max_steps=20,
             planning_interval=None,
         )
+    
+
+    def get_prompt(self, prompt_name: str) -> str:
+        f = open(Path(__file__).parent / "prompts" / prompt_name, 'r')
+        prompt = f.read()
+        f.close()
+        return prompt
 
 
     def run_task(self, task_description: str, context: dict = None) -> dict:
@@ -94,6 +104,8 @@ class Father(Agent):
             "error": None,
         }
         return results
+
+
 
 
 def main():
