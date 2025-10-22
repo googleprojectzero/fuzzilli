@@ -8,7 +8,7 @@ from smolagents import LiteLLMModel, ToolCallingAgent
 from BaseAgent import Agent
 
 
-class EBG(Agent):
+class EBG(Agent): #a
     """Verify and test seeds."""
     
     def setup_agents(self):
