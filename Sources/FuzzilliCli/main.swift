@@ -210,7 +210,7 @@ if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.in
     configError("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample are not compatible with the Markov corpus")
 }
 
-if (resume || overwrite) && storagePath == nil {
+if (resume || overwrite) && storagePath == nil && corpusName != "postgresql" {
     configError("--resume and --overwrite require --storagePath")
 }
 
@@ -517,9 +517,25 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
             logger.fatal("PostgreSQL URL is required for PostgreSQL corpus")
         }
         
-        let databasePool = DatabasePool(connectionString: postgresUrl)
-        // Use a consistent fuzzer instance ID so we can resume with the same fuzzer
-        let fuzzerInstanceId = "fuzzer-main"
+        // Generate database name based on resume flag
+        let databaseName: String
+        let fuzzerInstanceId: String
+        
+        if resume {
+            // Use fixed database name for resume
+            databaseName = "database-main"
+            fuzzerInstanceId = "fuzzer-main"
+        } else {
+            // Generate dynamic database name with 8-char hash
+            let randomHash = String(UUID().uuidString.prefix(8))
+            databaseName = "database-\(randomHash)"
+            fuzzerInstanceId = "fuzzer-\(randomHash)"
+        }
+        
+        // Replace database name in the connection string
+        let modifiedPostgresUrl = postgresUrl.replacingOccurrences(of: "/fuzzilli", with: "/\(databaseName)")
+        
+        let databasePool = DatabasePool(connectionString: modifiedPostgresUrl)
         
         corpus = PostgreSQLCorpus(
             minSize: minCorpusSize,
@@ -530,7 +546,9 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         )
         
         logger.info("Created PostgreSQL corpus with instance ID: \(fuzzerInstanceId)")
-        logger.info("PostgreSQL URL: \(postgresUrl)")
+        logger.info("Database name: \(databaseName)")
+        logger.info("PostgreSQL URL: \(modifiedPostgresUrl)")
+        logger.info("Resume mode: \(resume)")
         logger.info("Sync interval: \(syncInterval) seconds")
         logger.info("Validate before cache: \(validateBeforeCache)")
         logger.info("Execution history size: \(executionHistorySize)")
