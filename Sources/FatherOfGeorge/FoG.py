@@ -3,20 +3,22 @@
 
 
 from smolagents import LiteLLMModel, ToolCallingAgent
-from BaseAgent import Agent, get_manager_tools, get_code_analysis_tools, get_program_builder_tools, get_retrieval_tools, get_v8_search_tools
-from GeorgeForeman import George
-from pathlib import Path
+from BaseAgent import Agent
+from EBG import EBG
+from pathlib import Path #a
 
 
 class Father(Agent):
     def setup_agents(self):
-        
-        # L2 Worker: George Foreman
-
-        self.agents['george_foreman'] = George(
-            model=self.model,
-            api_key=self.api_key,
-            anthropic_api_key=self.anthropic_api_key
+        # L2 Worker: EBG
+        self.agents['george_foreman'] = ToolCallingAgent(
+            name="GeorgeForeman",
+            description="L2 Worker responsible for generating JavaScript programs and fuzzing corpus",
+            tools=[],
+            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
+            managed_agents=[],
+            max_steps=10,
+            planning_interval=None,
         )
 
         # L2 Worker: Reviwer of Code (under CodeAnalyzer)
@@ -24,7 +26,7 @@ class Father(Agent):
         self.agents['reviewer_of_code'] = ToolCallingAgent(
             name="ReviewerOfCode",
             description="L2 Worker responsible for reviewing code from various sources using RAG database",
-            tools=get_retrieval_tools(),
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
                 self.agents['george_foreman']
@@ -39,7 +41,7 @@ class Father(Agent):
         self.agents['v8_search'] = ToolCallingAgent(
             name="V8Search",
             description="L2 Worker responsible for searching V8 source code using fuzzy find, regex, and compilation tools",
-            tools=get_v8_search_tools(),
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
             max_steps=10,
@@ -52,7 +54,7 @@ class Father(Agent):
         self.agents['code_analyzer'] = ToolCallingAgent(
             name="CodeAnalyzer",
             description="L1 Manager responsible for analyzing code and coordinating retrieval and V8 search operations",
-            tools=get_code_analysis_tools(),
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
                 self.agents['retriever_of_code'],
@@ -67,7 +69,7 @@ class Father(Agent):
         self.agents['program_builder'] = ToolCallingAgent(
             name="ProgramBuilder",
             description="L1 Manager responsible for building program templates using corpus and context",
-            tools=get_program_builder_tools(),
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
                 self.agents['george_foreman']
@@ -81,7 +83,7 @@ class Father(Agent):
         self.agents['father_of_george'] = ToolCallingAgent(
             name="FatherOfGeorge",
             description="L0 Root Manager responsible for orchestrating code analysis and program building operations",
-            tools=get_manager_tools(),
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[
                 self.agents['code_analyzer'],
