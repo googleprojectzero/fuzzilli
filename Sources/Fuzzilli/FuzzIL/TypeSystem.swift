@@ -23,6 +23,7 @@
 //        a variable of type .object() as input because only that can have methods. Also, when generating function
 //        calls it can be necessary to find variables of the types that the function expects as arguments. This task
 //        is solved by defining a "Is a" relationship between types which can then be used to find suitable variables.
+//        Notice that the relationship is not reflexive. Think of it as "Is contained by" or <=.
 //     2. to determine possible actions that can be performed on a value. E.g. when having a reference to something
 //        that is known to be a function, a function call can be performed. Also, the method call code generator will
 //        want to know the available methods that it can call on an object, which it can query from the type system.
@@ -251,6 +252,7 @@ public struct ILType: Hashable {
     public static let wasmFuncRef = ILType.wasmRef(.Abstract(.WasmFunc), nullability: true)
     public static let wasmExnRef = ILType.wasmRef(.Abstract(.WasmExn), nullability: true)
     public static let wasmI31Ref = ILType.wasmRef(.Abstract(.WasmI31), nullability: true)
+    public static let wasmRefI31 = ILType.wasmRef(.Abstract(.WasmI31), nullability: false)
     public static let wasmAnyRef = ILType.wasmRef(.Abstract(.WasmAny), nullability: true)
     public static let wasmRefAny = ILType.wasmRef(.Abstract(.WasmAny), nullability: false)
     public static let wasmNullRef = ILType.wasmRef(.Abstract(.WasmNone), nullability: true)
@@ -259,7 +261,6 @@ public struct ILType: Hashable {
     public static let wasmEqRef = ILType.wasmRef(.Abstract(.WasmEq), nullability: true)
     public static let wasmStructRef = ILType.wasmRef(.Abstract(.WasmStruct), nullability: true)
     public static let wasmArrayRef = ILType.wasmRef(.Abstract(.WasmArray), nullability: true)
-    public static let wasmRefI31 = ILType.wasmRef(.Abstract(.WasmI31), nullability: false)
     public static let wasmSimd128 = ILType(definiteType: .wasmSimd128)
     public static let wasmGenericRef = ILType(definiteType: .wasmRef)
 
@@ -323,7 +324,7 @@ public struct ILType: Hashable {
         return !(lhs == rhs)
     }
 
-    /// Returns true if this type subsumes the given type, i.e. every instance of other is also an instance of this type.
+    /// Returns true if other type subsumes this type, i.e. every instance of this is also an instance of other type.
     public func Is(_ other: ILType) -> Bool {
         return other.subsumes(self)
     }
