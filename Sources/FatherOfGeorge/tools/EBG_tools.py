@@ -1,4 +1,5 @@
 from smolagents import Tool
+from common_tools import *
 
 @Tool
 def tree(query: str) -> str:
