@@ -51,20 +51,42 @@ public class PostgreSQLStorage {
         )
         defer { Task { _ = try? await connection.close() } }
         
-        let query: PostgresQuery = """
+        // First, check if a fuzzer with this name already exists
+        let checkQuery: PostgresQuery = "SELECT fuzzer_id, status FROM main WHERE fuzzer_name = \(name)"
+        let checkResult = try await connection.query(checkQuery, logger: self.logger)
+        let checkRows = try await checkResult.collect()
+        
+        if let existingRow = checkRows.first {
+            let existingFuzzerId = try existingRow.decode(Int.self, context: .default)
+            let existingStatus = try existingRow.decode(String.self, context: .default)
+            
+            // Update status to active if it was inactive
+            if existingStatus != "active" {
+                let updateQuery: PostgresQuery = "UPDATE main SET status = 'active' WHERE fuzzer_id = \(existingFuzzerId)"
+                try await connection.query(updateQuery, logger: self.logger)
+                logger.info("Reactivated existing fuzzer: fuzzerId=\(existingFuzzerId)")
+            } else {
+                logger.info("Reusing existing active fuzzer: fuzzerId=\(existingFuzzerId)")
+            }
+            
+            return existingFuzzerId
+        }
+        
+        // If no existing fuzzer found, create a new one
+        let insertQuery: PostgresQuery = """
             INSERT INTO main (fuzzer_name, engine_type, status) 
             VALUES (\(name), \(engineType), 'active') 
             RETURNING fuzzer_id
         """
         
-        let result = try await connection.query(query, logger: self.logger)
+        let result = try await connection.query(insertQuery, logger: self.logger)
         let rows = try await result.collect()
         guard let row = rows.first else {
             throw PostgreSQLStorageError.noResult
         }
         
         let fuzzerId = try row.decode(Int.self, context: .default)
-        self.logger.info("Fuzzer registration successful: fuzzerId=\(fuzzerId)")
+        self.logger.info("Created new fuzzer: fuzzerId=\(fuzzerId)")
         return fuzzerId
     }
     
@@ -362,10 +384,115 @@ public class PostgreSQLStorage {
     public func getRecentPrograms(fuzzerId: Int, since: Date, limit: Int = 100) async throws -> [(Program, ExecutionMetadata)] {
         logger.info("Getting recent programs: fuzzerId=\(fuzzerId), since=\(since), limit=\(limit)")
         
-        // For now, return empty array
-        // TODO: Implement actual database query when PostgreSQL is set up
-        logger.info("Mock recent programs lookup: no programs found")
-        return []
+        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
+            throw PostgreSQLStorageError.noResult
+        }
+        
+        let connection = try await PostgresConnection.connect(
+            on: eventLoopGroup.next(),
+            configuration: PostgresConnection.Configuration(
+                host: "localhost",
+                port: 5433,
+                username: "fuzzilli",
+                password: "fuzzilli123",
+                database: "fuzzilli",
+                tls: .disable
+            ),
+            id: 0,
+            logger: logger
+        )
+        defer { Task { _ = try? await connection.close() } }
+        
+        // Query for recent programs with their latest execution metadata
+        let queryString = """
+            SELECT 
+                p.program_base64,
+                p.program_size,
+                p.program_hash,
+                p.created_at,
+                eo.outcome,
+                eo.description,
+                e.execution_time_ms,
+                e.coverage_total,
+                e.signal_code,
+                e.exit_code
+            FROM program p
+            LEFT JOIN execution e ON p.program_base64 = e.program_base64
+            LEFT JOIN execution_outcome eo ON e.execution_outcome_id = eo.id
+            WHERE p.fuzzer_id = \(fuzzerId)
+            AND p.created_at >= '\(since.ISO8601Format())'
+            ORDER BY p.created_at DESC
+            LIMIT \(limit)
+        """
+        
+        let query = PostgresQuery(stringLiteral: queryString)
+        let result = try await connection.query(query, logger: self.logger)
+        let rows = try await result.collect()
+        
+        var programs: [(Program, ExecutionMetadata)] = []
+        
+        for row in rows {
+            let programBase64 = try row.decode(String.self, context: .default)
+            let programSize = try row.decode(Int.self, context: .default)
+            let programHash = try row.decode(String.self, context: .default)
+            let createdAt = try row.decode(Date.self, context: .default)
+            let outcome = try row.decode(String?.self, context: .default)
+            let description = try row.decode(String?.self, context: .default)
+            let executionTimeMs = try row.decode(Int?.self, context: .default)
+            let coverageTotal = try row.decode(Double?.self, context: .default)
+            let signalCode = try row.decode(Int?.self, context: .default)
+            let exitCode = try row.decode(Int?.self, context: .default)
+            
+            // Decode the program from base64
+            guard let programData = Data(base64Encoded: programBase64) else {
+                logger.warning("Failed to decode base64 data for program: \(programHash)")
+                continue
+            }
+            
+            let program: Program
+            do {
+                let protobuf = try Fuzzilli_Protobuf_Program(serializedBytes: programData)
+                program = try Program(from: protobuf)
+            } catch {
+                logger.warning("Failed to decode program from protobuf: \(programHash), error: \(error)")
+                continue
+            }
+            
+            // Create execution metadata
+            
+            // Map outcome string to database ID
+            let outcomeId: Int
+            switch (outcome ?? "Succeeded").lowercased() {
+            case "crashed":
+                outcomeId = 1
+            case "failed":
+                outcomeId = 2
+            case "succeeded":
+                outcomeId = 3
+            case "timedout":
+                outcomeId = 4
+            case "sigcheck":
+                outcomeId = 34
+            default:
+                outcomeId = 3 // Default to succeeded
+            }
+            
+            let dbOutcome = DatabaseExecutionOutcome(
+                id: outcomeId,
+                outcome: outcome ?? "Succeeded",
+                description: description ?? "Program executed successfully"
+            )
+            
+            var metadata = ExecutionMetadata(lastOutcome: dbOutcome)
+            if let coverage = coverageTotal {
+                metadata.lastCoverage = coverage
+            }
+            
+            programs.append((program, metadata))
+        }
+        
+        logger.info("Loaded \(programs.count) recent programs from database")
+        return programs
     }
     
     /// Update program metadata

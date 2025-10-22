@@ -518,7 +518,8 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         }
         
         let databasePool = DatabasePool(connectionString: postgresUrl)
-        let fuzzerInstanceId = "fuzzer-\(UUID().uuidString.prefix(8))"
+        // Use a consistent fuzzer instance ID so we can resume with the same fuzzer
+        let fuzzerInstanceId = "fuzzer-main"
         
         corpus = PostgreSQLCorpus(
             minSize: minCorpusSize,

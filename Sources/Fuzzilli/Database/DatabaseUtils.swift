@@ -378,6 +378,24 @@ public enum DatabaseUtilsError: Error, LocalizedError {
             return "Invalid metadata format"
         }
     }
+    
+    /// Map execution outcome string to database ID
+    public static func mapExecutionOutcomeFromString(_ outcome: String) -> Int {
+        switch outcome.lowercased() {
+        case "crashed":
+            return 1
+        case "failed":
+            return 2
+        case "succeeded":
+            return 3
+        case "timedout":
+            return 4
+        case "sigcheck":
+            return 34
+        default:
+            return 3 // Default to succeeded
+        }
+    }
 }
 
 // MARK: - Extensions

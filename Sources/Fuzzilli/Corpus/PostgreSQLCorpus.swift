@@ -25,6 +25,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     private let databasePool: DatabasePool
     private let fuzzerInstanceId: String
     private let storage: PostgreSQLStorage
+    private let resume: Bool
     
     // MARK: - In-Memory Cache
     
@@ -65,7 +66,8 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         minMutationsPerSample: Int,
         databasePool: DatabasePool,
         fuzzerInstanceId: String,
-        syncInterval: TimeInterval = 60.0 // Default 1 minute sync interval
+        syncInterval: TimeInterval = 60.0, // Default 1 minute sync interval
+        resume: Bool = true // Default to resume from previous state
     ) {
         // The corpus must never be empty
         assert(minSize >= 1)
@@ -77,6 +79,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         self.databasePool = databasePool
         self.fuzzerInstanceId = fuzzerInstanceId
         self.syncInterval = syncInterval
+        self.resume = resume
         self.storage = PostgreSQLStorage(databasePool: databasePool)
         
         self.programs = RingBuffer(maxSize: maxSize)
@@ -176,9 +179,11 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             fuzzer.timers.scheduleTask(every: 30 * Minutes, cleanup)
         }
         
-        // Load initial corpus from database
-        Task {
-            await loadInitialCorpus()
+        // Load initial corpus from database if resume is enabled
+        if resume {
+            Task {
+                await loadInitialCorpus()
+            }
         }
     }
     
@@ -423,9 +428,55 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     private func loadInitialCorpus() async {
         logger.info("Loading initial corpus from PostgreSQL...")
         
-        // This would be implemented when we have actual database operations
-        // For now, just log that we would load from database
-        logger.info("Initial corpus loading would be implemented here")
+        guard let fuzzerId = fuzzerId else {
+            logger.warning("Cannot load initial corpus: fuzzer not registered")
+            return
+        }
+        
+        do {
+            // Load programs from the last 24 hours to resume recent work
+            let since = Date().addingTimeInterval(-24 * 60 * 60) // 24 hours ago
+            let recentPrograms = try await storage.getRecentPrograms(
+                fuzzerId: fuzzerId, 
+                since: since, 
+                limit: maxSize
+            )
+            
+            logger.info("Found \(recentPrograms.count) recent programs to resume")
+            
+            // Add programs to the corpus
+            cacheLock.lock()
+            defer { cacheLock.unlock() }
+            
+            for (program, metadata) in recentPrograms {
+                let programHash = DatabaseUtils.calculateProgramHash(program: program)
+                
+                // Skip if already in cache
+                if programCache[programHash] != nil {
+                    continue
+                }
+                
+                // Add to in-memory structures
+                prepareProgramForInclusion(program, index: totalEntryCounter)
+                programs.append(program)
+                ages.append(0)
+                programHashes.append(programHash)
+                programCache[programHash] = (program: program, metadata: metadata)
+                
+                totalEntryCounter += 1
+            }
+            
+            logger.info("Resumed PostgreSQL corpus with \(programs.count) programs")
+            
+            // If we have no programs, we need at least one to avoid empty corpus
+            if programs.count == 0 {
+                logger.info("No programs found to resume, corpus will start empty")
+            }
+            
+        } catch {
+            logger.error("Failed to load initial corpus from PostgreSQL: \(error)")
+            logger.info("Corpus will start empty and build up from scratch")
+        }
     }
     
     /// Synchronize with PostgreSQL database
@@ -489,7 +540,8 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     
     /// Register fuzzer with retry logic
     private func registerFuzzerWithRetry() async throws -> Int {
-        let fuzzerName = "fuzzer-\(fuzzerInstanceId)"
+        // Use the fuzzerInstanceId directly as the name to avoid double "fuzzer-" prefix
+        let fuzzerName = fuzzerInstanceId
         let engineType = "v8" // This could be made configurable
         
         let maxRetries = 3
