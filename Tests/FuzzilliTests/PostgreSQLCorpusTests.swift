@@ -169,4 +169,36 @@ final class PostgreSQLCorpusTests: XCTestCase {
         XCTAssertTrue(description.contains("Coverage: 75.50%"))
         XCTAssertTrue(description.contains("Pending Sync: 3"))
     }
+    
+    func testPostgreSQLCorpusInterestingProgramTracking() {
+        let databasePool = DatabasePool(connectionString: "postgresql://localhost:5432/fuzzilli")
+        let corpus = PostgreSQLCorpus(
+            minSize: 1,
+            maxSize: 10,
+            minMutationsPerSample: 5,
+            databasePool: databasePool,
+            fuzzerInstanceId: "test-instance-1"
+        )
+        
+        // Create a mock fuzzer to initialize the corpus
+        let mockFuzzer = makeMockFuzzer(corpus: corpus)
+        
+        // Create a simple program with actual content
+        let b = mockFuzzer.makeBuilder()
+        b.loadInt(42)
+        let program = b.finalize()
+        
+        // Add the program to the corpus
+        // This should trigger the InterestingProgramFound event
+        corpus.add(program, ProgramAspects(outcome: .succeeded))
+        
+        // Verify the program was added
+        XCTAssertEqual(corpus.size, 1)
+        XCTAssertFalse(corpus.isEmpty)
+        
+        // Test that we can get the program back
+        let allPrograms = corpus.allPrograms()
+        XCTAssertEqual(allPrograms.count, 1)
+        XCTAssertEqual(allPrograms[0], program)
+    }
 }
