@@ -8,7 +8,7 @@ from pathlib import Path
 from smolagents import LiteLLMModel, ToolCallingAgent
 
 
-class Agent(ABC):
+class Agent(ABC): #a
     """Base class for AI agents."""
     
     def __init__(self, model: LiteLLMModel, api_key: str = None, anthropic_api_key: str = None):
