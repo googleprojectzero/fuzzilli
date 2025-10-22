@@ -723,9 +723,9 @@ public class Fuzzer {
                 aspects = intersection
             } while !didConverge || attempt < minAttempts
         }
-        if origin == .local {
-            iterationOfLastInteratingSample = iterations
-        }
+        // Update the iteration counter for any interesting program found
+        // This is crucial for corpus generation phase to properly track progress
+        iterationOfLastInteratingSample = iterations
 
         // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
         // event and insert the sample into the corpus.
