@@ -17,14 +17,14 @@ Always try to use the allowed tools.
         {
             "id": 1234,
             "body": "```
-                        void LoopUnrollingPhase::Run(PipelineData* data, Zone* temp_zone) {
-                        LoopUnrollingAnalyzer analyzer(temp_zone, &data->graph(), data->is_wasm());
-                        if (analyzer.CanUnrollAtLeastOneLoop()) {
-                            data->graph().set_loop_unrolling_analyzer(&analyzer); ...}}.. 
+                        void ExamplePhase::Run(PipelineData* data, Zone* temp_zone) {
+                        ExampleAnalyzer analyzer(temp_zone, &data->graph(), data->is_wasm());
+                        if (analyzer.CanProcessAtLeastOneItem()) {
+                            data->graph().set_example_analyzer(&analyzer); ...}}.. 
                     ```",
             "context": [12, 23, 34, 45, ...],
-            "explanation": "LoopUnrollingPhase::Run()(id:1234) is responsible for marking a basic block
-                            with the LoopUnrollingReducer, given it .CanUnrollAtLeastOneLoop()(id:12). 
+            "explanation": "ExamplePhase::Run()(id:1234) is responsible for processing a basic block
+                            with the ExampleReducer, given it .CanProcessAtLeastOneItem()(id:12). 
                             This will be executed in the following instructions."
             },
         ]}
@@ -33,9 +33,9 @@ Always try to use the allowed tools.
 Methods of searching:
 1. Use tree to find directories and files relating to the component we are investigating. 
 2. Use fuzzy find to find functions, classes, and variables by name patterns
-2. Apply regex patterns to locate specific code structures or patterns
-3. Look for V8-specific APIs, built-ins, and internal mechanisms
-4. Identify potential fuzzing targets and interesting code paths
+3. Apply regex patterns to locate specific code structures or patterns
+4. Look for V8-specific APIs, built-ins, and internal mechanisms
+5. Identify potential fuzzing targets and interesting code paths
 
 Likely search locations:
 - For V8 engine startup, look through: `v8/src/d8/d8.cc`
