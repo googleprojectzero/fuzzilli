@@ -618,12 +618,12 @@ public class JavaScriptEnvironment: ComponentBase {
 
         // Log detailed information about the environment here so users are aware of it and can modify things if they like.
         logger.info("Initialized static JS environment model")
-        logger.info("Have \(builtins.count) available builtins: \(builtins)")
-        logger.info("Have \(groups.count) different object groups: \(groups.keys)")
-        logger.info("Have \(builtinProperties.count) builtin property names: \(builtinProperties)")
-        logger.info("Have \(builtinMethods.count) builtin method names: \(builtinMethods)")
-        logger.info("Have \(customProperties.count) custom property names: \(customProperties)")
-        logger.info("Have \(customMethods.count) custom method names: \(customMethods)")
+        logger.info("Have \(builtins.count) available builtins: \(builtins.sorted())")
+        logger.info("Have \(groups.count) different object groups: \(groups.keys.sorted())")
+        logger.info("Have \(builtinProperties.count) builtin property names: \(builtinProperties.sorted())")
+        logger.info("Have \(builtinMethods.count) builtin method names: \(builtinMethods.sorted())")
+        logger.info("Have \(customProperties.count) custom property names: \(customProperties.sorted())")
+        logger.info("Have \(customMethods.count) custom method names: \(customMethods.sorted())")
     }
 
     func checkConstructorAvailability() {
