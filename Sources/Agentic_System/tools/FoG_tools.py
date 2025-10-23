@@ -2,53 +2,93 @@ from smolagents import Tool
 from common_tools import *
 
 @Tool
-def swift_build(query: str) -> str:
+def swift_build(target: str = "FuzzilliCli") -> str:
     """
-    Build the swift code using the swift compiler
+    Build the Swift codebase using the Swift compiler.
+    
+    Args:
+        target (str, optional): The Swift target to build. Defaults to "FuzzilliCli".
+    
+    Returns:
+        str: The build output including any errors or success messages.
     """
-    return swift_build(query)
+    return run_command(f"swift build --target {target}")
 
 @Tool
 def lookup(query: str) -> str:
     """
-    Lookup the query in the internet
+    Search the internet for information about a given query.
+    
+    Args:
+        query (str): The search query to look up online.
+    
+    Returns:
+        str: Search results and relevant information from the web.
     """
-    return lookup(query)
+    return run_command(f"curl -s 'https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1'")
 
 @Tool
 def run_python(code: str) -> str:
     """
-    Run the python code using the python interpreter
-    No more than `N` steps should be spent on this tool.
+    Execute Python code using the Python interpreter.
+    
     Args:
-        code (str): The python code to run
+        code (str): The Python code to execute.
+    
+    Returns:
+        str: The output from executing the Python code, including stdout and stderr.
     """
-    return run_python(code)
+    return run_command(f"python3 -c '{code}'")
 
 @Tool 
-def get_call_graph(query: str) -> str:
+def get_call_graph() -> str:
     """
-    Use the call graph to find functions, classes, and variables by name patterns
+    Generate and search a call graph to find functions, classes, and variables by name patterns.
+    
+    Returns:
+        str: Call graph analysis results showing relationships and matches.
     """
-    return get_call_graph(query)
+    return get_call_graph()
 
 @Tool
-def tree(query: str) -> str:
+def tree(directory: str = ".", max_depth: int = 3) -> str:
     """
-    Use tree to find directories and files relating to the component we are investigating.
+    Display directory structure using tree command to explore project layout.
+    
+    Args:
+        directory (str, optional): The directory to explore. Defaults to current directory ".".
+        max_depth (int, optional): Maximum depth to display. Defaults to 3.
+    
+    Returns:
+        str: Tree structure showing directories and files in the specified path.
     """
-    return tree(query)
+    return run_command(f"tree -L {max_depth} {directory}")
 
 @Tool
-def ripgrep(query: str) -> str:
+def ripgrep(pattern: str, file_type: str = "swift", context_lines: int = 2) -> str:
     """
-    Use ripgrep to find functions, classes, and variables by name patterns
+    Search for text patterns in files using ripgrep (rg) for fast text searching.
+    
+    Args:
+        pattern (str): The regex pattern to search for.
+        file_type (str, optional): File type filter (e.g., 'swift', 'py', 'js'). Defaults to 'swift'.
+        context_lines (int, optional): Number of context lines to show around matches. Defaults to 2.
+    
+    Returns:
+        str: Search results showing matching lines with context.
     """
-    return ripgrep(query)   
+    return run_command(f"rg -t {file_type} -C {context_lines} '{pattern}'")   
 
 @Tool
-def fuzzy_finder(query: str) -> str:
+def fuzzy_finder(pattern: str, file_type: str = "swift", options: str = "") -> str:
     """
-    Use fuzzy find to find functions, classes, and variables by name patterns
+    Use fuzzy finding to locate files and content by approximate name matching.
+    
+    Args:
+        pattern (str): The fuzzy search pattern to match against file names and content.
+        file_type (str, optional): File type filter (e.g., 'swift', 'py', 'js'). Defaults to 'swift'.
+    
+    Returns:
+        str: Fuzzy search results showing files and content that approximately match the pattern.
     """
-    return fuzzy_finder(query)
+    return run_command(f"fzf {options} {file_type} {pattern}")
