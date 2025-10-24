@@ -5,7 +5,8 @@
 from smolagents import LiteLLMModel, ToolCallingAgent
 from BaseAgent import Agent
 from EBG import EBG
-from pathlib import Path #a
+from pathlib import Path 
+from tools.FoG_tools import *
 
 
 class Father(Agent):
@@ -25,7 +26,7 @@ class Father(Agent):
         self.agents['reviewer_of_code'] = ToolCallingAgent(
             name="ReviewerOfCode",
             description="L2 Worker responsible for reviewing code from various sources using RAG database",
-            tools=[],
+            tools=[run_d8],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
                 self.agents['george_foreman']
@@ -39,9 +40,8 @@ class Father(Agent):
         self.agents['v8_search'] = ToolCallingAgent(
             name="V8Search",
             description="L2 Worker responsible for searching V8 source code using fuzzy find, regex, and compilation tools",
-            tools=[],
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
-            managed_agents=[],
+            tools=[fuzzy_finder, ripgrep, tree, get_call_graph],
+            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
             max_steps=10,
             planning_interval=None,
             system_prompt=self.get_prompt('v8_search.txt'),
@@ -51,12 +51,12 @@ class Father(Agent):
         self.agents['code_analyzer'] = ToolCallingAgent(
             name="CodeAnalyzer",
             description="L1 Manager responsible for analyzing code and coordinating retrieval and V8 search operations",
-            tools=[],
+            tools=[run_python, lift_fuzzil_to_js, compile_js_to_fuzzil, fuzzy_finder, ripgrep, tree, get_call_graph, lookup], # add rag db tools here aswell
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
-                self.agents['retriever_of_code'],
+                self.agents['retriever_of_code'], 
                 self.agents['v8_search']
-            ],
+                ],
             max_steps=15,
             planning_interval=None,
             system_prompt=self.get_prompt('code_analyzer.txt'),
@@ -66,7 +66,7 @@ class Father(Agent):
         self.agents['program_builder'] = ToolCallingAgent(
             name="ProgramBuilder",
             description="L1 Manager responsible for building program templates using corpus and context",
-            tools=[],
+            tools=[run_d8], # add rag db stuff here aswell
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
                 self.agents['george_foreman']
@@ -80,7 +80,7 @@ class Father(Agent):
         self.agents['father_of_george'] = ToolCallingAgent(
             name="FatherOfGeorge",
             description="L0 Root Manager responsible for orchestrating code analysis and program building operations",
-            tools=[],
+            tools=[],#rag db tools here
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[
                 self.agents['code_analyzer'],

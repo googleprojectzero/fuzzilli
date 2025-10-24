@@ -145,3 +145,16 @@ def compile_js_to_fuzzil(target: str) -> str:
         str: The compiled FuzzIL program the given JS program
     """
     return run_command(f"swift run FuzzILTool --compile {target}")
+
+# Unsure if we will want this tool to run with the fuzzilli d8
+# so that we can measure if it hit the code region we are targeting. 
+# That being said, surely we can find another way.
+@tool
+def run_d8(target: str) -> str:
+    """
+    Run the target program using d8 to test for syntactical correctness
+    and test for coverage. 
+    """ # consider adding arguments for it to tack onto the V8 runs
+    return run_command(f"./v8/v8/out/fuzzbuild/d8 {target}") 
+
+
