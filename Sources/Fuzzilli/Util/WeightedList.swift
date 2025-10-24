@@ -16,7 +16,7 @@
 /// For example, an element with weight 10 is 2x more likely to be selected by randomElement() than an element with weight 5.
 public class WeightedList<Element>: Sequence {
     private var elements = [(elem: Element, weight: Int, cumulativeWeight: Int)]()
-    private(set) var totalWeight: Int = 0
+    public var totalWeight: Int = 0
 
     public init() {}
 

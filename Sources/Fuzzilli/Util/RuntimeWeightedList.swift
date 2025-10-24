@@ -27,6 +27,21 @@ public class RuntimeWeightedList<Element: Equatable>: WeightedList<Element> {
     // cache of most recently selected mutators
     private var lastElements: [Element] = []
 
+    public override init(_ values: [(Element, Int)]) {
+        super.init()
+        totalWeight = values.count
+        for (e, _) in values {
+            append(e, withWeight: 1, runtimeWeight: 1.0)
+        }
+    }
+
+    public var description: String {
+        return String(format: "%.2f", totalRuntimeWeight)
+    }
+
+    // When applying the factor to the elements runtimeWeight, floating point imprecision is introduced.
+    // This can cause floating point drift for the last element's cumulativeRuntimeWeight and the totalRuntimeWeight
+    // which may have an impact when choosing a weighted mutation. 
     public func adjustWeight(_ elem: Element, _ factor: Float) {
         var hitElement = false;
         var diffWeight: Float = 0.0
@@ -37,7 +52,7 @@ public class RuntimeWeightedList<Element: Equatable>: WeightedList<Element> {
                 let ogRuntimeWeight = elements[i].runtimeWeight
                 elements[i].runtimeWeight *= factor 
                 diffWeight = elements[i].runtimeWeight - ogRuntimeWeight
-                totalRuntimeWeight += factor - elements[i].runtimeWeight
+                totalRuntimeWeight += diffWeight 
                 hitElement = true;
             }
         }
@@ -55,32 +70,30 @@ public class RuntimeWeightedList<Element: Equatable>: WeightedList<Element> {
     }
 
     public override func filter(_ isIncluded: (Element) -> Bool) -> RuntimeWeightedList<Element> {
-        var r: RuntimeWeightedList<Element> = RuntimeWeightedList()
-        for (e, w, cw, rw, crw) in elements where isIncluded(e) {
-            r.append(e, withWeight: w)
-        }
-        return r
+        //var r: RuntimeWeightedList<Element> = RuntimeWeightedList()
+        //for (e, w, cw, rw, crw) in elements where isIncluded(e) {
+        //    append(e, withWeight: w)
+        //}
+        return self
     }
     
     public func append(_ elem: Element, withWeight weight: Int, runtimeWeight: Float) {
         assert(weight > 0)
-        elements.append((elem, weight, totalWeight, runtimeWeight, totalRuntimeWeight))
         totalRuntimeWeight += runtimeWeight
+        elements.append((elem, weight, totalWeight, runtimeWeight, totalRuntimeWeight))
     }
 
     public func weightedElement() -> Element {
-        let k = Float.random(in: 0.0...totalRuntimeWeight)
-
+        let k = Float.random(in: 0.0...totalRuntimeWeight - elements.last!.runtimeWeight)
+        //print("elements.count == \(elements.count); elements.last.cumulativeRuntimeWeight == \(elements.last!.cumulativeRuntimeWeight)")
         for i in 0..<elements.count {
-            if elements[i].cumulativeRuntimeWeight > k {
+            //print("k: \(k), elements[\(i)].cumulativeRuntimeWeight \(elements[i].cumulativeRuntimeWeight) totalRuntimeWeight \(totalRuntimeWeight)")
+            if elements[i].cumulativeRuntimeWeight >= k {
+                lastElements.append(elements[i].elem)
                 return elements[i].elem
             }
         }
-
-        let randomElement = randomElement()
-
-        lastElements.append(randomElement)
-        return randomElement
+        return elements.last!.elem 
     }
 
     public func getLastElements() -> [Element] {
