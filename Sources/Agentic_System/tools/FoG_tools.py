@@ -107,7 +107,7 @@ def lift_fuzzil_to_js(target: str) -> str:
     return run_comman(f"swift run FuzzILTool --liftToFuzzIL {target}")
 
 @tool
-def compile_fuzzil_to_js(target: str) -> str:
+def compile_js_to_fuzzil(target: str) -> str:
     """
     Use FuzzILTool to compile a JavaScript program to a FuzzIl program (requires Node.js)
 
