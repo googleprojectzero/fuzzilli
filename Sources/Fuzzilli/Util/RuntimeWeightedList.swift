@@ -88,7 +88,7 @@ public class RuntimeWeightedList<Element: Equatable>: WeightedList<Element> {
     }
 
     public func popLastElement() -> Void {
-        lastElements.popLast()
+        let _ = lastElements.popLast()
     }
 
     public func flushLastElements() -> Void {
