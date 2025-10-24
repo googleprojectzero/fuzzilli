@@ -60,7 +60,7 @@ Analyze the relation between the validated interesting code blocks and the side-
 Here is the JSON object that you MUST send to Father of George/parent agent:
 
 {
-    analysis: "[YOUR ANALYSIS OF THE RELATION BETWEEN THE INTERESTING CODE BLOCKS AND JAVASCRIPT PROGRAMS IN THE CORPUS]"
+    ANALYSIS: "[YOUR ANALYSIS OF THE RELATION BETWEEN THE INTERESTING CODE BLOCKS AND JAVASCRIPT PROGRAMS IN THE CORPUS]"
 }
 
 

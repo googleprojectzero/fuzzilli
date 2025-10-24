@@ -1,3 +1,3 @@
 # rag tools
 
-from smolagents import Tool
+from smolagents import tool
