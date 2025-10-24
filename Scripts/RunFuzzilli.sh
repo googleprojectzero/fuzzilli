@@ -1,0 +1,1 @@
+swift run FuzzilliCli --profile=v8 --engine=multi --corpus=postgresql --postgres-url=postgresql://fuzzilli:password@localhost:5432/fuzzilli --logLevel=verbose --timeout=1500 --diagnostics ~/projects/ritsec/vrig/vrigatoni/v8/out/fuzzbuild/d8
