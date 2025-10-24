@@ -70,9 +70,32 @@ def ripgrep(pattern: str, file_type: str = "swift", context_lines: int = 2) -> s
     Search for text patterns in files using ripgrep (rg) for fast text searching.
     
     Args:
-        pattern (str): The regex pattern to search for.
-        file_type (str, optional): File type filter (e.g., 'swift', 'py', 'js'). Defaults to 'swift'.
-        context_lines (int, optional): Number of context lines to show around matches. Defaults to 2.
+        --files: List all files that would be searched, without searching inside them. 
+             Example: `rg --files src/` → lists all files under `src/`.
+
+        --type: Limit search to specific file types. 
+                Example: `rg --type py "def " src/` → search only Python files.
+
+        --glob: Include or exclude paths by glob pattern. 
+                Example: `rg --glob '!tests/*' "TODO"` → skip `tests` folder.
+
+        --ignore-case: Match text case-insensitively. 
+                    Example: `rg --ignore-case "error"` → matches `Error`, `ERROR`, etc.
+
+        --no-heading: Suppress file name headings in results. 
+                    Example: `rg --no-heading "main"` → cleaner, machine-parsable output.
+
+        --line-number: Show line numbers in matches. 
+                    Example: `rg --line-number "main"` → outputs `file:line:match`.
+
+        --vimgrep: Output in `file:line:column:match` format for easy parsing. 
+                Example: `rg --vimgrep "init"` → structured grep-like output.
+
+        --json: Emit results as structured JSON. 
+                Example: `rg --json "TODO"` → machine-readable output for parsing.
+
+        --max-depth: Limit recursion depth when searching directories. 
+                    Example: `rg --max-depth 2 "class"` → search only two levels deep.
     
     Returns:
         str: Search results showing matching lines with context.
@@ -85,8 +108,20 @@ def fuzzy_finder(pattern: str, file_type: str = "swift", options: str = "") -> s
     Use fuzzy finding to locate files and content by approximate name matching.
     
     Args:
-        pattern (str): The fuzzy search pattern to match against file names and content.
-        file_type (str, optional): File type filter (e.g., 'swift', 'py', 'js'). Defaults to 'swift'.
+        --filter: Run non-interactively; outputs only matching lines. 
+              Example: `ls | fzf --filter .py` → lists only Python files.
+
+        --exact: Match the query exactly (not fuzzily). 
+                Example: `echo "main.c\nmain.cpp" | fzf --exact --filter main.c` → returns only `main.c`.
+
+        --delimiter: Define field separator for structured input. 
+                    Example: `cat results.txt | fzf --delimiter : --nth 1` → searches only filenames in `file:line:match`.
+
+        --nth: Limit searchable fields to specific columns. 
+            Example: `ps aux | fzf --nth 2` → searches only in the command field.
+
+        --bind: Map keys or events to actions (e.g. reload, execute). 
+                Example: `fzf --bind "enter:execute(cat {})"` → runs `cat` on selected file.
     
     Returns:
         str: Fuzzy search results showing files and content that approximately match the pattern.
