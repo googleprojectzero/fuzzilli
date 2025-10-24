@@ -187,7 +187,7 @@ guard let logLevel = logLevelByName[logLevelName] else {
     configError("Invalid log level \(logLevelName)")
 }
 
-let validEngines = ["mutation", "hybrid", "multi"]
+let validEngines = ["mutation", "hybrid", "multi", "runtime-multi"]
 guard validEngines.contains(engineName) else {
     configError("--engine must be one of \(validEngines)")
 }
