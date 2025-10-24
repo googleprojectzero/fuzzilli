@@ -1,3 +1,237 @@
-# rag tools
-
 from smolagents import tool
+
+import os
+import json
+import hashlib
+from pathlib import Path
+import chromadb
+from chromadb.config import Settings as ChromaSettings
+from chromadb.api.models.Collection import Collection
+from chromadb.api.models.Document import Document
+from chromadb.api.models.QueryResult import QueryResult
+from chromadb.api.models.QueryResult import QueryResult
+
+# Try to import LangChain components, set to None if not available
+try:
+    from langchain_community.vectorstores import Chroma
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+    Chroma = Chroma
+except ImportError:
+    Chroma = None
+    HuggingFaceEmbeddings = None
+
+def _get_embeddings():
+    """Get embeddings function, returns None if not available."""
+    if HuggingFaceEmbeddings is None:
+        raise RuntimeError("HuggingFaceEmbeddings not available")
+    return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+def _rag_dir() -> str:
+    return os.getenv("RAG_DB_DIR", "./rag_db")
+
+def _collection_marker_path() -> Path:
+    return Path(_rag_dir()) / ".active_collection"
+
+def _get_active_collection(default: str = "rag-chroma") -> str:
+    try:
+        p = _collection_marker_path()
+        if p.exists():
+            return p.read_text().strip() or default
+        return default
+    except Exception:
+        return default
+
+def _set_active_collection(name: str) -> None:
+    p = _collection_marker_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(name)
+
+def _get_chromadb_collection(collection_name: str):
+    if chromadb is None:
+        raise RuntimeError("chromadb not installed")
+    path = _rag_dir()
+    try:
+        client = chromadb.PersistentClient(path=path)  # chromadb>=0.5
+    except Exception:
+        # Fallback: older API with Settings
+        client = chromadb.Client(ChromaSettings(persist_directory=path))  # type: ignore
+    return client.get_or_create_collection(name=collection_name)
+
+def _compute_doc_id(metadata: dict, content: str) -> str:
+    key_fields = [
+        metadata.get("challenge", ""),
+        metadata.get("binary", ""),
+        metadata.get("type", ""),
+        metadata.get("label", ""),
+        metadata.get("address", ""),
+        metadata.get("file", ""),
+        str(metadata.get("stage", "")),
+    ]
+    h = hashlib.sha1("|".join(key_fields).encode("utf-8"))
+    return h.hexdigest()
+
+@tool
+def set_rag_collection(name: str) -> str:
+    """
+    Sets the active RAG collection name for subsequent operations.
+
+    Args:
+        name (str): Collection name to select, e.g., "rev-<challenge_slug>".
+    """
+    try:
+        _set_active_collection(name)
+        return f"Active RAG collection set to: {name}"
+    except Exception as e:
+        return f"Error setting collection: {e}"
+
+@tool
+def get_rag_collection() -> str:
+    """
+    Returns the current active RAG collection name.
+    """
+    return _get_active_collection()
+
+@tool
+def search_rag_db(query: str, where_json: str = "", k: int = 8, collection: str = "") -> str:
+    """
+    Hybrid search with optional metadata filters. Returns JSONL of {id, metadata, snippet}.
+
+    Args:
+        query (str): Natural language query used for vector retrieval.
+        where_json (str): JSON dict filter on metadata (e.g., '{"challenge":"ctf-1"}').
+        k (int): Number of results to return.
+        collection (str): Override collection name; defaults to the active collection.
+    """
+    try:
+        if Chroma is None:
+            return "RAG is not configured in this environment."
+        try:
+            embeddings = _get_embeddings()
+        except Exception as ee:
+            return f"RAG embedding not available: {ee}"
+        RAG_DB_DIR = _rag_dir()
+        collection_name = collection or _get_active_collection("rag-chroma")
+        vectorstore = Chroma(
+          collection_name=collection_name,
+          persist_directory=RAG_DB_DIR,
+          embedding_function=embeddings
+        )
+        flt = json.loads(where_json) if where_json else None
+        retriever = vectorstore.as_retriever(search_kwargs={"k": int(k), "filter": flt} if flt else {"k": int(k)})
+        docs = retriever.invoke(query)
+        lines = []
+        for d in docs:
+            meta = getattr(d, 'metadata', {}) or {}
+            doc_id = meta.get("doc_id") or meta.get("id") or ""
+            snippet = (getattr(d, 'page_content', str(d)) or "").strip()
+            if len(snippet) > 300:
+                snippet = snippet[:300] + "..."
+            lines.append(json.dumps({"id": doc_id, "metadata": meta, "snippet": snippet}))
+        return "\n".join(lines) if lines else "[]"
+    except Exception as e:
+        return f"Error searching RAG DB: {e}"
+
+@tool
+def update_rag_db(doc_id: str, new_content: str = "", new_metadata_json: str = "", collection: str = "") -> str:
+    """
+    Updates an existing doc by id. If content or metadata omitted, preserves current value.
+
+    Args:
+        doc_id (str): The document id to update.
+        new_content (str): New full content for the document. Leave empty to keep existing.
+        new_metadata_json (str): JSON dict of metadata fields to merge into existing metadata.
+        collection (str): Override collection name; defaults to the active collection.
+    """
+    try:
+        coll = _get_chromadb_collection(collection or _get_active_collection("rag-chroma"))
+        cur = coll.get(ids=[doc_id])
+        if not cur or not cur.get("ids"):
+            return f"Not found: {doc_id}"
+        doc = (cur.get("documents") or [""])[0]
+        meta = (cur.get("metadatas") or [{}])[0]
+        if new_content:
+            doc = new_content
+        if new_metadata_json:
+            try:
+                meta_update = json.loads(new_metadata_json)
+                meta.update(meta_update)
+            except Exception:
+                return "Invalid JSON for new_metadata_json"
+        coll.update(ids=[doc_id], documents=[doc], metadatas=[meta])
+        return f"Updated: {doc_id}"
+    except Exception as e:
+        return f"Error updating RAG DB: {e}"
+
+@tool
+def delete_rag_db(doc_ids_json: str = "", where_json: str = "", collection: str = "") -> str:
+    """
+    Deletes documents by ids or metadata filter.
+
+    Args:
+        doc_ids_json (str): JSON list of ids to delete (e.g., '["id1","id2"]').
+        where_json (str): JSON dict metadata filter for bulk delete (e.g., '{"challenge":"ctf-1"}').
+        collection (str): Override collection name; defaults to the active collection.
+    """
+    try:
+        coll = _get_chromadb_collection(collection or _get_active_collection("rag-chroma"))
+        ids = json.loads(doc_ids_json) if doc_ids_json else None
+        where = json.loads(where_json) if where_json else None
+        if ids:
+            coll.delete(ids=ids)
+            return f"Deleted {len(ids)} by id"
+        if where:
+            coll.delete(where=where)
+            return "Deleted by filter"
+        return "No ids or filter provided"
+    except Exception as e:
+        return f"Error deleting from RAG DB: {e}"
+
+@tool
+def list_rag_db(where_json: str = "", limit: int = 100, collection: str = "") -> str:
+    """
+    Lists documents (id, metadata, snippet) matching optional filter.
+
+    Args:
+        where_json (str): JSON dict metadata filter (e.g., '{"type":"func"}').
+        limit (int): Maximum number of documents to return.
+        collection (str): Override collection name; defaults to the active collection.
+    """
+    try:
+        coll = _get_chromadb_collection(collection or _get_active_collection("rag-chroma"))
+        where = json.loads(where_json) if where_json else None
+        resp = coll.get(where=where, limit=int(limit))
+        ids = resp.get("ids") or []
+        docs = resp.get("documents") or []
+        metas = resp.get("metadatas") or []
+        lines = []
+        for i, doc_id in enumerate(ids):
+            snippet = (docs[i] or "").strip()
+            if len(snippet) > 300:
+                snippet = snippet[:300] + "..."
+            lines.append(json.dumps({"id": doc_id, "metadata": metas[i] if i < len(metas) else {}, "snippet": snippet}))
+        return "\n".join(lines) if lines else "[]"
+    except Exception as e:
+        return f"Error listing RAG DB: {e}"
+
+@tool
+def get_rag_doc(doc_id: str, collection: str = "") -> str:
+    """
+    Gets a single document by id, returning full document and metadata as JSON.
+
+    Args:
+        doc_id (str): The document id to fetch.
+        collection (str): Override collection name; defaults to the active collection.
+    """
+    try:
+        coll = _get_chromadb_collection(collection or _get_active_collection("rag-chroma"))
+        resp = coll.get(ids=[doc_id])
+        if not resp or not resp.get("ids"):
+            return f"Not found: {doc_id}"
+        result = {
+            "id": (resp.get("ids") or [""])[0],
+            "metadata": (resp.get("metadatas") or [{}])[0],
+            "document": (resp.get("documents") or [""])[0],
+        }
+        return json.dumps(result)
+    except Exception as e:
+        return f"Error getting RAG doc: {e}"
