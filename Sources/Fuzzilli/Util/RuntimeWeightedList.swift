@@ -25,7 +25,7 @@ public class RuntimeWeightedList<Element: Equatable>: WeightedList<Element> {
     )]()
     private(set) var totalRuntimeWeight: Float = 0.0
 
-    public func adjustWeight(elem: Element, factor: Float) {
+    public func adjustWeight(_ elem: Element, _ factor: Float) {
         var hitElement = false;
         var diffWeight: Float = 0.0
         for i in 0..<elements.count {
@@ -37,6 +37,17 @@ public class RuntimeWeightedList<Element: Equatable>: WeightedList<Element> {
                 diffWeight = elements[i].runtimeWeight - ogRuntimeWeight
                 totalRuntimeWeight += factor - elements[i].runtimeWeight
                 hitElement = true;
+            }
+        }
+    }
+
+    public func adjustBatchWeight(_ hitElements: [Element], _ factorHit: Float?, _ factorNotHit: Float?) {
+        for element in elements {
+            let elem: Element = element.elem
+            if hitElements.contains(elem) {
+                adjustWeight(elem, factorHit ?? 1.1)
+            } else {
+                adjustWeight(elem, factorNotHit ?? 0.9)
             }
         }
     }
