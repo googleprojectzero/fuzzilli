@@ -915,6 +915,7 @@ public class Fuzzer {
 
         // Perform the next iteration as soon as all tasks related to the current iteration are finished.
         fuzzGroup.notify(queue: queue) {
+            self.runtimeWeightedMutators.flushLastElements()
             self.fuzzOne()
         }
     }

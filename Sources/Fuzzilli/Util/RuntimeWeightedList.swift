@@ -24,6 +24,8 @@ public class RuntimeWeightedList<Element: Equatable>: WeightedList<Element> {
         cumulativeRuntimeWeight: Float
     )]()
     private(set) var totalRuntimeWeight: Float = 0.0
+    // cache of most recently selected mutators
+    private var lastElements: [Element] = []
 
     public func adjustWeight(_ elem: Element, _ factor: Float) {
         var hitElement = false;
@@ -75,6 +77,21 @@ public class RuntimeWeightedList<Element: Equatable>: WeightedList<Element> {
             }
         }
 
-        return randomElement()
+        let randomElement = randomElement()
+
+        lastElements.append(randomElement)
+        return randomElement
+    }
+
+    public func getLastElements() -> [Element] {
+        return lastElements
+    }
+
+    public func popLastElement() -> Void {
+        lastElements.popLast()
+    }
+
+    public func flushLastElements() -> Void {
+        lastElements = []
     }
 }
