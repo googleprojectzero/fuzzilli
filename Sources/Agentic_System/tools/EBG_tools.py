@@ -1,7 +1,7 @@
-from smolagents import Tool
+from smolagents import tool
 from common_tools import *
 
-@Tool
+@tool
 def tree(directory: str = ".", max_depth: int = 3) -> str:
     """
     Display directory structure using tree command to explore project layout.

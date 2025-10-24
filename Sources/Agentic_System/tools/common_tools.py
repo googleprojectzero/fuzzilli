@@ -1,7 +1,7 @@
-from smolagents import Tool
+from smolagents import tool
 import subprocess
 
-@Tool
+@tool
 def run_command(command: str) -> str:
     """
     Executes a command inside the CTF Docker container with access to analysis tools.

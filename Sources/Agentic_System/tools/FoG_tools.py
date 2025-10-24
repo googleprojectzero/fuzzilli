@@ -1,7 +1,7 @@
-from smolagents import Tool
+from smolagents import tool
 from common_tools import *
 
-@Tool
+@tool
 def swift_build(target: str = "FuzzilliCli") -> str:
     """
     Build the Swift codebase using the Swift compiler.
@@ -14,7 +14,7 @@ def swift_build(target: str = "FuzzilliCli") -> str:
     """
     return run_command(f"swift build --target {target}")
 
-@Tool
+@tool
 def lookup(query: str) -> str:
     """
     Search the internet for information about a given query.
@@ -27,7 +27,7 @@ def lookup(query: str) -> str:
     """
     return run_command(f"curl -s 'https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1'")
 
-@Tool
+@tool
 def run_python(code: str) -> str:
     """
     Execute Python code using the Python interpreter.
@@ -40,7 +40,7 @@ def run_python(code: str) -> str:
     """
     return run_command(f"python3 -c '{code}'")
 
-@Tool 
+@tool 
 def get_call_graph() -> str:
     """
     Generate and search a call graph to find functions, classes, and variables by name patterns.
@@ -50,7 +50,7 @@ def get_call_graph() -> str:
     """
     return get_call_graph()
 
-@Tool
+@tool
 def tree(directory: str = ".", max_depth: int = 3) -> str:
     """
     Display directory structure using tree command to explore project layout.
@@ -64,7 +64,7 @@ def tree(directory: str = ".", max_depth: int = 3) -> str:
     """
     return run_command(f"tree -L {max_depth} {directory}")
 
-@Tool
+@tool
 def ripgrep(pattern: str, file_type: str = "swift", context_lines: int = 2) -> str:
     """
     Search for text patterns in files using ripgrep (rg) for fast text searching.
@@ -102,7 +102,7 @@ def ripgrep(pattern: str, file_type: str = "swift", context_lines: int = 2) -> s
     """
     return run_command(f"rg -t {file_type} -C {context_lines} '{pattern}'")   
 
-@Tool
+@tool
 def fuzzy_finder(pattern: str, file_type: str = "swift", options: str = "") -> str:
     """
     Use fuzzy finding to locate files and content by approximate name matching.
@@ -127,3 +127,29 @@ def fuzzy_finder(pattern: str, file_type: str = "swift", options: str = "") -> s
         str: Fuzzy search results showing files and content that approximately match the pattern.
     """
     return run_command(f"fzf {options} {file_type} {pattern}")
+
+@tool
+def lift_fuzzil_to_js(target: str) -> str:
+    """
+    Use FuzzILTool to lift a FuzzIL protobuf to a JavaScript program
+
+    Args:
+        target (str): The path to the target FuzzIL program identified by .fzil to be lifted to JS
+
+    Returns:
+        str: The lifted JS program from the given FuzzIL
+    """
+    return run_comman(f"swift run FuzzILTool --liftToFuzzIL {target}")
+
+@tool
+def compile_js_to_fuzzil(target: str) -> str:
+    """
+    Use FuzzILTool to compile a JavaScript program to a FuzzIl program (requires Node.js)
+
+    Args:
+        target (str): The path to the the JavaScript program to compile to FuzzIL
+
+    Returns:
+        str: The compiled FuzzIL program the given JS program
+    """
+    return run_command(f"swift run FuzzILTool --compile {target}")

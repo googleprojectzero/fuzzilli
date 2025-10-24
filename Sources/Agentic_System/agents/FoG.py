@@ -22,7 +22,6 @@ class Father(Agent):
         )
 
         # L2 Worker: Reviwer of Code (under CodeAnalyzer)
-
         self.agents['reviewer_of_code'] = ToolCallingAgent(
             name="ReviewerOfCode",
             description="L2 Worker responsible for reviewing code from various sources using RAG database",
@@ -37,7 +36,6 @@ class Father(Agent):
         )
         
         # L2 Worker: V8 Search (under CodeAnalyzer)
-
         self.agents['v8_search'] = ToolCallingAgent(
             name="V8Search",
             description="L2 Worker responsible for searching V8 source code using fuzzy find, regex, and compilation tools",
@@ -50,7 +48,6 @@ class Father(Agent):
         )
 
         # L1 Manager: Code Analysis Agent
-
         self.agents['code_analyzer'] = ToolCallingAgent(
             name="CodeAnalyzer",
             description="L1 Manager responsible for analyzing code and coordinating retrieval and V8 search operations",
@@ -110,9 +107,6 @@ class Father(Agent):
             "error": None,
         }
         return results
-
-
-
 
 def main():
     # Init model
