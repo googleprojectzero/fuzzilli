@@ -1,18 +1,6 @@
 from smolagents import tool
 from common_tools import *
 
-@tool
-def swift_build(target: str = "FuzzilliCli") -> str:
-    """
-    Build the Swift codebase using the Swift compiler.
-    
-    Args:
-        target (str, optional): The Swift target to build. Defaults to "FuzzilliCli".
-    
-    Returns:
-        str: The build output including any errors or success messages.
-    """
-    return run_command(f"swift build --target {target}")
 
 @tool
 def lookup(query: str) -> str:
@@ -51,21 +39,23 @@ def get_call_graph() -> str:
     return get_call_graph()
 
 @tool
-def tree(directory: str = ".", max_depth: int = 3) -> str:
+def tree(directory: str = ".", options: str = "") -> str:
     """
     Display directory structure using tree command to explore project layout.
     
     Args:
-        directory (str, optional): The directory to explore. Defaults to current directory ".".
-        max_depth (int, optional): Maximum depth to display. Defaults to 3.
+        directory: The directory to explore. Defaults to current directory ".".
+        Args: Additional tree command options. Common options include:
+            -L NUM: Limit depth to NUM levels
+            -f: Show full path prefix
     
     Returns:
         str: Tree structure showing directories and files in the specified path.
     """
-    return run_command(f"tree -L {max_depth} {directory}")
+    return run_command(f"tree {options} {directory}")
 
 @tool
-def ripgrep(pattern: str, file_type: str = "swift", context_lines: int = 2) -> str:
+def ripgrep(pattern: str, options: str = "") -> str:
     """
     Search for text patterns in files using ripgrep (rg) for fast text searching.
     
@@ -77,7 +67,7 @@ def ripgrep(pattern: str, file_type: str = "swift", context_lines: int = 2) -> s
                 Example: `rg --type py "def " src/` → search only Python files.
 
         --glob: Include or exclude paths by glob pattern. 
-                Example: `rg --glob '!tests/*' "TODO"` → skip `tests` folder.
+                Example: `rg --glob '!tests/*' "<pattern>"` → skip `tests` folder.
 
         --ignore-case: Match text case-insensitively. 
                     Example: `rg --ignore-case "error"` → matches `Error`, `ERROR`, etc.
@@ -92,18 +82,20 @@ def ripgrep(pattern: str, file_type: str = "swift", context_lines: int = 2) -> s
                 Example: `rg --vimgrep "init"` → structured grep-like output.
 
         --json: Emit results as structured JSON. 
-                Example: `rg --json "TODO"` → machine-readable output for parsing.
+                Example: `rg --json "<pattern>"` → machine-readable output for parsing.
 
         --max-depth: Limit recursion depth when searching directories. 
                     Example: `rg --max-depth 2 "class"` → search only two levels deep.
-    
+        --context=NUM: Displays NUM lines of context both before and after each match.
+                    Example: `rg --context=2 "<pattern>"` → shows 2 lines of context before and after each match.
+
     Returns:
         str: Search results showing matching lines with context.
     """
-    return run_command(f"rg -t {file_type} -C {context_lines} '{pattern}'")   
+    return run_command(f"rg -C {options} '{pattern}'")   
 
 @tool
-def fuzzy_finder(pattern: str, file_type: str = "swift", options: str = "") -> str:
+def fuzzy_finder(pattern: str, options: str = "") -> str:
     """
     Use fuzzy finding to locate files and content by approximate name matching.
     
@@ -126,7 +118,7 @@ def fuzzy_finder(pattern: str, file_type: str = "swift", options: str = "") -> s
     Returns:
         str: Fuzzy search results showing files and content that approximately match the pattern.
     """
-    return run_command(f"fzf {options} {file_type} {pattern}")
+    return run_command(f"fzf {options} '{pattern}'")
 
 @tool
 def lift_fuzzil_to_js(target: str) -> str:
@@ -139,7 +131,7 @@ def lift_fuzzil_to_js(target: str) -> str:
     Returns:
         str: The lifted JS program from the given FuzzIL
     """
-    return run_comman(f"swift run FuzzILTool --liftToFuzzIL {target}")
+    return run_command(f"swift run FuzzILTool --liftToFuzzIL {target}")
 
 @tool
 def compile_js_to_fuzzil(target: str) -> str:
