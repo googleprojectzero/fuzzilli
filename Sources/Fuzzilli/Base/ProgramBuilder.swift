@@ -19,6 +19,38 @@ import Foundation
 /// This provides methods for constructing and appending random
 /// instances of the different kinds of operations in a program.
 public class ProgramBuilder {
+
+    /// Runtime data used by code generators to share data between different stubs inside the same
+    /// code generator. It is strictly required that all pushed values are also popped again in the
+    /// same code generator.
+    public class GeneratorRuntimeData {
+        private var data = [String : Stack<Variable>]()
+
+        public func push(_ key: String, _ value: Variable) {
+            data[key, default: .init()].push(value)
+        }
+
+        public func pop(_ key: String) -> Variable {
+            assert(data[key] != nil)
+            return data[key]!.pop()
+        }
+
+        // Fetch the most recent value for this key and push it back.
+        public func popAndPush(_ key: String) -> Variable {
+            assert(data[key] != nil)
+            return data[key]!.top
+        }
+
+        func reset() {
+            #if DEBUG
+            for (key, value) in data {
+                assert(value.isEmpty, "Stale entries for runtime data '\(key)'")
+            }
+            #endif
+            data.removeAll(keepingCapacity: false)
+        }
+    }
+
     /// The fuzzer instance for which this builder is active.
     public let fuzzer: Fuzzer
 
@@ -147,6 +179,9 @@ public class ProgramBuilder {
     /// The remaining CodeGenerators to call as part of a building / CodeGen step, these will "clean up" the state and fix the contexts.
     public var scheduled: Stack<GeneratorStub> = Stack()
 
+    // Runtime data that can be shared between different stubs within a CodeGenerator.
+    var runtimeData = GeneratorRuntimeData()
+
     /// Stack of active switch blocks.
     private var activeSwitchBlocks = Stack<SwitchBlock>()
 
@@ -214,6 +249,7 @@ public class ProgramBuilder {
         activeObjectLiterals.removeAll()
         activeClassDefinitions.removeAll()
         buildLog?.reset()
+        runtimeData.reset()
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
@@ -2075,7 +2111,7 @@ public class ProgramBuilder {
 
         var numberOfGeneratedInstructions = 0
 
-        // calculate all input requirements of this CodeGenerator.
+        // Calculate all input requirements of this CodeGenerator.
         let inputTypes = Set(generator.parts.reduce([]) { res, gen in
             return res + gen.inputs.types
         })

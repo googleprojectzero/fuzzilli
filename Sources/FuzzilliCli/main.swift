@@ -172,8 +172,8 @@ if let raw_timeout = args.string(for: "--timeout") {
         guard let upper = UInt32(parts[1]) else {
             configError("The upper bound for --timeout must be an integer")
         }
-        guard lower < upper else {
-            configError("The --timeout=lower,upper boundaries must adhere to lower < upper")
+        guard lower <= upper else {
+            configError("The --timeout=lower,upper boundaries must adhere to lower <= upper")
         }
         timeout = Timeout.interval(lower, upper)
     } else {
