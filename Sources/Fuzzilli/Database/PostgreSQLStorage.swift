@@ -140,6 +140,70 @@ public class PostgreSQLStorage {
         return fuzzer
     }
     
+    /// Get database statistics for a specific fuzzer
+    public func getDatabaseStatistics(fuzzerId: Int) async throws -> DatabaseStatistics {
+        logger.debug("Getting database statistics for fuzzer: \(fuzzerId)")
+        
+        // Use direct connection to avoid connection pool deadlock
+        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
+            throw PostgreSQLStorageError.noResult
+        }
+        
+        let connection = try await PostgresConnection.connect(
+            on: eventLoopGroup.next(),
+            configuration: PostgresConnection.Configuration(
+                host: "localhost",
+                port: 5433,
+                username: "fuzzilli",
+                password: "fuzzilli123",
+                database: "fuzzilli",
+                tls: .disable
+            ),
+            id: 0,
+            logger: logger
+        )
+        defer { Task { _ = try? await connection.close() } }
+        
+        // Get program count for this fuzzer
+        let programQuery: PostgresQuery = "SELECT COUNT(*) FROM fuzzer WHERE fuzzer_id = \(fuzzerId)"
+        let programResult = try await connection.query(programQuery, logger: self.logger)
+        let programRows = try await programResult.collect()
+        let totalPrograms = try programRows.first?.decode(Int.self, context: .default) ?? 0
+        
+        // Get execution count for this fuzzer
+        let executionQuery: PostgresQuery = "SELECT COUNT(*) FROM execution e JOIN program p ON e.program_base64 = p.program_base64 WHERE p.fuzzer_id = \(fuzzerId)"
+        let executionResult = try await connection.query(executionQuery, logger: self.logger)
+        let executionRows = try await executionResult.collect()
+        let totalExecutions = try executionRows.first?.decode(Int.self, context: .default) ?? 0
+        
+        // Get crash count for this fuzzer
+        let crashQuery: PostgresQuery = """
+            SELECT COUNT(*) FROM execution e 
+            JOIN program p ON e.program_base64 = p.program_base64 
+            JOIN execution_outcome eo ON e.execution_outcome_id = eo.id 
+            WHERE p.fuzzer_id = \(fuzzerId) AND eo.outcome = 'Crashed'
+        """
+        let crashResult = try await connection.query(crashQuery, logger: self.logger)
+        let crashRows = try await crashResult.collect()
+        let totalCrashes = try crashRows.first?.decode(Int.self, context: .default) ?? 0
+        
+        // Get active fuzzers count
+        let activeQuery: PostgresQuery = "SELECT COUNT(*) FROM main WHERE status = 'active'"
+        let activeResult = try await connection.query(activeQuery, logger: self.logger)
+        let activeRows = try await activeResult.collect()
+        let activeFuzzers = try activeRows.first?.decode(Int.self, context: .default) ?? 0
+        
+        let stats = DatabaseStatistics(
+            totalPrograms: totalPrograms,
+            totalExecutions: totalExecutions,
+            totalCrashes: totalCrashes,
+            activeFuzzers: activeFuzzers
+        )
+        
+        self.logger.debug("Database statistics: Programs: \(stats.totalPrograms), Executions: \(stats.totalExecutions), Crashes: \(stats.totalCrashes), Active Fuzzers: \(stats.activeFuzzers)")
+        return stats
+    }
+    
     // MARK: - Program Management
     
     /// Store multiple programs in batch for better performance
@@ -176,17 +240,11 @@ public class PostgreSQLStorage {
             let programBase64 = DatabaseUtils.encodeProgramToBase64(program: program)
             programHashes.append(programHash)
             
-            // Generate JavaScript code from the program
-            let lifter = JavaScriptLifter(ecmaVersion: .es6)
-            let javascriptCode = lifter.lift(program, withOptions: [])
-            let javascriptCodeBase64 = Data(javascriptCode.utf8).base64EncodedString()
-            
             // Escape single quotes in strings
             let escapedProgramBase64 = programBase64.replacingOccurrences(of: "'", with: "''")
-            let escapedJavascriptCodeBase64 = javascriptCodeBase64.replacingOccurrences(of: "'", with: "''")
             
             fuzzerValues.append("('\(escapedProgramBase64)', \(fuzzerId), \(program.size), '\(programHash)')")
-            programValues.append("('\(escapedProgramBase64)', \(fuzzerId), \(program.size), '\(programHash)', '\(escapedJavascriptCodeBase64)')")
+            programValues.append("('\(escapedProgramBase64)', \(fuzzerId), \(program.size), '\(programHash)')")
         }
         
         // Batch insert into fuzzer table
@@ -199,13 +257,127 @@ public class PostgreSQLStorage {
         
         // Batch insert into program table
         if !programValues.isEmpty {
-            let programQueryString = "INSERT INTO program (program_base64, fuzzer_id, program_size, program_hash, javascript_code) VALUES " + 
-                programValues.joined(separator: ", ") + " ON CONFLICT (program_base64) DO NOTHING"
+            let programQueryString = "INSERT INTO program (program_base64, fuzzer_id, program_size, program_hash) VALUES " + 
+                programValues.joined(separator: ", ") + " ON CONFLICT (program_base64) DO UPDATE SET " +
+                "fuzzer_id = EXCLUDED.fuzzer_id, program_size = EXCLUDED.program_size, " +
+                "program_hash = EXCLUDED.program_hash"
             let programQuery = PostgresQuery(stringLiteral: programQueryString)
             try await connection.query(programQuery, logger: self.logger)
         }
         
         return programHashes
+    }
+    
+    /// Store both program and execution in a single transaction to avoid foreign key issues
+    public func storeProgramAndExecution(
+        program: Program,
+        fuzzerId: Int,
+        executionType: DatabaseExecutionPurpose,
+        outcome: ExecutionOutcome,
+        coverage: Double,
+        executionTimeMs: Int,
+        stdout: String?,
+        stderr: String?,
+        fuzzout: String?,
+        metadata: ExecutionMetadata
+    ) async throws -> (programHash: String, executionId: Int) {
+        let programHash = DatabaseUtils.calculateProgramHash(program: program)
+        let programBase64 = DatabaseUtils.encodeProgramToBase64(program: program)
+        logger.debug("Storing program and execution: hash=\(programHash), fuzzerId=\(fuzzerId), executionCount=\(metadata.executionCount)")
+        
+        // Use direct connection to avoid connection pool deadlock
+        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
+            throw PostgreSQLStorageError.noResult
+        }
+        
+        let connection = try await PostgresConnection.connect(
+            on: eventLoopGroup.next(),
+            configuration: PostgresConnection.Configuration(
+                host: "localhost",
+                port: 5433,
+                username: "fuzzilli",
+                password: "fuzzilli123",
+                database: "fuzzilli",
+                tls: .disable
+            ),
+            id: 0,
+            logger: logger
+        )
+        defer { Task { _ = try? await connection.close() } }
+        
+        // Start transaction
+        try await connection.query("BEGIN", logger: self.logger)
+        
+        do {
+            // Insert into fuzzer table (corpus)
+            let fuzzerQuery = PostgresQuery(stringLiteral: """
+                INSERT INTO fuzzer (program_base64, fuzzer_id, program_size, program_hash) 
+                VALUES ('\(programBase64)', \(fuzzerId), \(program.size), '\(programHash)') 
+                ON CONFLICT (program_base64) DO NOTHING
+            """)
+            try await connection.query(fuzzerQuery, logger: self.logger)
+            
+            // Insert into program table (executed programs) - use DO UPDATE to ensure it exists
+            let programQuery = PostgresQuery(stringLiteral: """
+                INSERT INTO program (program_base64, fuzzer_id, program_size, program_hash) 
+                VALUES ('\(programBase64)', \(fuzzerId), \(program.size), '\(programHash)') 
+                ON CONFLICT (program_base64) DO UPDATE SET 
+                    fuzzer_id = EXCLUDED.fuzzer_id,
+                    program_size = EXCLUDED.program_size,
+                    program_hash = EXCLUDED.program_hash
+            """)
+            try await connection.query(programQuery, logger: self.logger)
+            
+            // Now store the execution
+            let executionTypeId = DatabaseUtils.mapExecutionType(purpose: executionType)
+            
+            // Extract execution metadata from ExecutionOutcome
+            let (signalCode, exitCode) = extractExecutionMetadata(from: outcome)
+            
+            // Use signal-aware mapping for execution outcomes
+            let outcomeId = DatabaseUtils.mapExecutionOutcomeWithSignal(outcome: outcome, signalCode: signalCode)
+            
+            // Prepare parameters for NULL handling
+            let signalCodeValue = signalCode != nil ? "\(signalCode!)" : "NULL"
+            let exitCodeValue = exitCode != nil ? "\(exitCode!)" : "NULL"
+            let stdoutValue = stdout != nil ? "'\(stdout!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
+            let stderrValue = stderr != nil ? "'\(stderr!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
+            let fuzzoutValue = fuzzout != nil ? "'\(fuzzout!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
+            
+            let executionQuery = PostgresQuery(stringLiteral: """
+                INSERT INTO execution (
+                    program_base64, execution_type_id, mutator_type_id, 
+                    execution_outcome_id, coverage_total, execution_time_ms, 
+                    signal_code, exit_code, stdout, stderr, fuzzout, 
+                    feedback_vector, created_at
+                ) VALUES (
+                    '\(programBase64)', \(executionTypeId), 
+                    NULL, \(outcomeId), \(coverage), 
+                    \(executionTimeMs), \(signalCodeValue), \(exitCodeValue), 
+                    \(stdoutValue), \(stderrValue), \(fuzzoutValue), 
+                    NULL, NOW()
+                ) RETURNING execution_id
+            """)
+            
+            let result = try await connection.query(executionQuery, logger: self.logger)
+            let rows = try await result.collect()
+            guard let row = rows.first else {
+                throw PostgreSQLStorageError.noResult
+            }
+            
+            let executionId = try row.decode(Int.self, context: PostgresDecodingContext.default)
+            
+            // Commit transaction
+            try await connection.query("COMMIT", logger: self.logger)
+            
+            self.logger.debug("Program and execution storage successful: hash=\(programHash), executionId=\(executionId)")
+            return (programHash, executionId)
+            
+        } catch {
+            // Rollback transaction on error
+            try await connection.query("ROLLBACK", logger: self.logger)
+            throw error
+        }
     }
     
     /// Store a program in the database with execution metadata
@@ -237,28 +409,25 @@ public class PostgreSQLStorage {
         // Insert into fuzzer table (corpus)
         let fuzzerQuery: PostgresQuery = """
             INSERT INTO fuzzer (program_base64, fuzzer_id, program_size, program_hash) 
-            VALUES (\(programBase64), \(fuzzerId), \(program.size), \(programHash)) 
+            VALUES ('\(programBase64)', \(fuzzerId), \(program.size), '\(programHash)') 
             ON CONFLICT (program_base64) DO NOTHING
         """
         try await connection.query(fuzzerQuery, logger: self.logger)
         
         // Generate JavaScript code from the program
         let lifter = JavaScriptLifter(ecmaVersion: .es6)
-        let javascriptCode = lifter.lift(program, withOptions: [])
+        _ = lifter.lift(program, withOptions: [])
         
         // Insert into program table (executed programs)
-        // Base64 encode the JavaScript code to avoid SQL injection issues
-        let javascriptCodeBase64 = Data(javascriptCode.utf8).base64EncodedString()
-        
-        // Use string concatenation to avoid parameter substitution issues
-        let programQueryString = "INSERT INTO program (program_base64, fuzzer_id, program_size, program_hash, javascript_code) VALUES ('" + 
-            programBase64 + "', " + 
-            String(fuzzerId) + ", " + 
-            String(program.size) + ", '" + 
-            programHash + "', '" + 
-            javascriptCodeBase64 + "') ON CONFLICT (program_base64) DO NOTHING"
-        
-        let programQuery = PostgresQuery(stringLiteral: programQueryString)
+        // Use DO UPDATE to ensure the program exists for foreign key constraints
+        let programQuery: PostgresQuery = """
+            INSERT INTO program (program_base64, fuzzer_id, program_size, program_hash) 
+            VALUES ('\(programBase64)', \(fuzzerId), \(program.size), '\(programHash)') 
+            ON CONFLICT (program_base64) DO UPDATE SET 
+                fuzzer_id = EXCLUDED.fuzzer_id,
+                program_size = EXCLUDED.program_size,
+                program_hash = EXCLUDED.program_hash
+        """
         try await connection.query(programQuery, logger: self.logger)
         
         self.logger.debug("Program storage successful: hash=\(programHash)")
@@ -320,7 +489,6 @@ public class PostgreSQLStorage {
             let programBase64 = DatabaseUtils.encodeProgramToBase64(program: executionData.program)
             
             let executionTypeId = DatabaseUtils.mapExecutionType(purpose: executionData.executionType)
-            let mutatorTypeId = executionData.mutatorType != nil ? DatabaseUtils.mapMutatorType(mutator: executionData.mutatorType!) : nil
             
             // Extract execution metadata from ExecutionOutcome
             let (signalCode, exitCode) = extractExecutionMetadata(from: executionData.outcome)
@@ -328,7 +496,8 @@ public class PostgreSQLStorage {
             // Use signal-aware mapping for execution outcomes
             let outcomeId = DatabaseUtils.mapExecutionOutcomeWithSignal(outcome: executionData.outcome, signalCode: signalCode)
             
-            let mutatorTypeValue = mutatorTypeId != nil ? "\(mutatorTypeId!)" : "NULL"
+            // Store mutator name as text instead of ID
+            let mutatorTypeValue = executionData.mutatorType != nil ? "'\(executionData.mutatorType!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
             let feedbackVectorValue = executionData.feedbackVector != nil ? "'\(executionData.feedbackVector!.base64EncodedString())'" : "NULL"
             let signalCodeValue = signalCode != nil ? "\(signalCode!)" : "NULL"
             let exitCodeValue = exitCode != nil ? "\(exitCode!)" : "NULL"
@@ -409,7 +578,6 @@ public class PostgreSQLStorage {
         defer { Task { _ = try? await connection.close() } }
         
         let executionTypeId = DatabaseUtils.mapExecutionType(purpose: executionType)
-        let mutatorTypeId = mutatorType != nil ? DatabaseUtils.mapMutatorType(mutator: mutatorType!) : nil
         
         // Extract execution metadata from ExecutionOutcome
         let (signalCode, exitCode) = extractExecutionMetadata(from: outcome)
@@ -417,7 +585,8 @@ public class PostgreSQLStorage {
         // Use signal-aware mapping for execution outcomes
         let outcomeId = DatabaseUtils.mapExecutionOutcomeWithSignal(outcome: outcome, signalCode: signalCode)
         
-        let mutatorTypeValue = mutatorTypeId != nil ? "\(mutatorTypeId!)" : "NULL"
+        // Prepare parameters for NULL handling - store mutator name as text instead of ID
+        let mutatorTypeValue = mutatorType != nil ? "'\(mutatorType!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
         let feedbackVectorValue = feedbackVector != nil ? "'\(feedbackVector!.base64EncodedString())'" : "NULL"
         let signalCodeValue = signalCode != nil ? "\(signalCode!)" : "NULL"
         let exitCodeValue = exitCode != nil ? "\(exitCode!)" : "NULL"
@@ -425,7 +594,7 @@ public class PostgreSQLStorage {
         let stderrValue = stderr != nil ? "'\(stderr!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
         let fuzzoutValue = fuzzout != nil ? "'\(fuzzout!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
         
-        let queryString = """
+        let query = PostgresQuery(stringLiteral: """
             INSERT INTO execution (
                 program_base64, execution_type_id, mutator_type_id, 
                 execution_outcome_id, coverage_total, execution_time_ms, 
@@ -438,9 +607,7 @@ public class PostgreSQLStorage {
                 \(stdoutValue), \(stderrValue), \(fuzzoutValue), 
                 \(feedbackVectorValue), NOW()
             ) RETURNING execution_id
-        """
-        
-        let query = PostgresQuery(stringLiteral: queryString)
+        """)
         
         let result = try await connection.query(query, logger: self.logger)
         let rows = try await result.collect()
@@ -448,7 +615,7 @@ public class PostgreSQLStorage {
             throw PostgreSQLStorageError.noResult
         }
         
-        let executionId = try row.decode(Int.self, context: .default)
+        let executionId = try row.decode(Int.self, context: PostgresDecodingContext.default)
         self.logger.debug("Execution storage successful: executionId=\(executionId)")
         return executionId
     }

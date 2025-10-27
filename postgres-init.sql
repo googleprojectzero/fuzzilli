@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS execution (
     execution_id SERIAL PRIMARY KEY,
     program_base64 TEXT NOT NULL REFERENCES program(program_base64) ON DELETE CASCADE,
     execution_type_id INTEGER NOT NULL REFERENCES execution_type(id),
-    mutator_type_id INTEGER REFERENCES mutator_type(id),
+    mutator_type_id TEXT, -- Store mutator name directly instead of ID
     execution_outcome_id INTEGER NOT NULL REFERENCES execution_outcome(id),
     
     -- Execution results
@@ -173,14 +173,13 @@ SELECT
     e.execution_id,
     e.program_base64,
     et.title as execution_type,
-    mt.name as mutator_type,
+    e.mutator_type_id as mutator_type, -- Use the TEXT field directly
     eo.outcome as execution_outcome,
     e.coverage_total,
     e.execution_time_ms,
     e.created_at
 FROM execution e
 JOIN execution_type et ON e.execution_type_id = et.id
-LEFT JOIN mutator_type mt ON e.mutator_type_id = mt.id
 JOIN execution_outcome eo ON e.execution_outcome_id = eo.id;
 
 CREATE OR REPLACE VIEW crash_summary AS
