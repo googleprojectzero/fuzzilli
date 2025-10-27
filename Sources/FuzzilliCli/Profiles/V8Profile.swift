@@ -270,7 +270,7 @@ let v8Profile = Profile(
 
     maxExecsBeforeRespawn: 1000,
 
-    timeout: 400,
+    timeout: Timeout.interval(300, 900),
 
     codePrefix: """
                 """,

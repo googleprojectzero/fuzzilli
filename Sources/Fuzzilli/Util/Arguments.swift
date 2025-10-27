@@ -83,6 +83,10 @@ public class Arguments {
         }
     }
 
+    public func string(for name: String) -> String? {
+        return self[name]
+    }
+
     public func has(_ name: String) -> Bool {
         return self[name] != nil
     }

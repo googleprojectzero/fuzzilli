@@ -18,8 +18,8 @@ struct Profile {
     let processArgs: (_ randomize: Bool) -> [String]
     let processEnv: [String : String]
     let maxExecsBeforeRespawn: Int
-    // Timeout is in milliseconds.
-    let timeout: Int
+    // Timeout either by value or interval in milliseconds.
+    let timeout: Timeout
     let codePrefix: String
     let codeSuffix: String
     let ecmaVersion: ECMAScriptVersion
