@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 '''
 Ethiopian BG
-L1 Manager Agent - Verification and Testing Coordinator
+L0 Manager Agent - Runtime analysis and issue solev
 '''
 
 from smolagents import LiteLLMModel, ToolCallingAgent
 from BaseAgent import Agent
 
 
-class EBG(Agent): #a
+class EBG(Agent): 
     """Verify and test seeds."""
     
     def setup_agents(self):
@@ -16,9 +16,8 @@ class EBG(Agent): #a
         self.agents['code_analyzer'] = ToolCallingAgent(
             name="CodeAnalyzer",
             description="L3 Worker responsible for analyzing code patterns, vulnerabilities, and specific components for runtime analysis",
-            tools=[],
+            tools=[], # rag db tools here
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
-            managed_agents=[],
             max_steps=8,  # Fewer steps than L1 CodeAnalyzer
             planning_interval=None,
         )
@@ -28,7 +27,9 @@ class EBG(Agent): #a
         self.agents['corpus_generator'] = ToolCallingAgent(
             name="CorpusGenerator",
             description="L2 Worker responsible for generating seeds from the corpus and validating syntax/semantics",
-            tools=[],
+            tools=[
+                self.agents['corpus_validator']
+                ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
             max_steps=10,
@@ -39,7 +40,10 @@ class EBG(Agent): #a
         self.agents['runtime_analyzer'] = ToolCallingAgent(
             name="RuntimeAnalyzer",
             description="L2 Manager responsible for analyzing program runtime, coverage, and execution state",
-            tools=[],
+            tools=[
+                self.agents['code_analyzer'],
+                self.agents['corpus_validator'],
+            ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
                 self.agents['code_analyzer']
