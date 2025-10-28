@@ -9,6 +9,10 @@ except ImportError:
 import subprocess
 import os
 import json
+from cfg_tool import *
+
+cfg_builder = CFGBuilder("/usr/share/vrigatoni/fuzzillai/v8")
+cfg_builder.parse_directory("/usr/share/vrigatoni/fuzzillai/v8", pattern='*.cc')
 
 # Try to import from rag_tools, but handle import errors gracefully
 try:
@@ -110,3 +114,24 @@ def write_rag_db(content: str, metadata_json: str = "") -> str:
         return f"Indexed 1 document with id(s): {ids}"
     except Exception as e:
         return f"Error writing to RAG DB: {e}"
+
+
+@tool
+def find_function_cfg(function_name: str) -> str:
+    """
+        Retrieve and return a specific function's CFG as a tree structure.
+        
+        Args:
+            function_name: Name of the function to search for (partial match supported)
+        
+        Tree structure:
+            Each node in the tree contains:
+                - id: Unique node identifier
+                - kind: Type of node (ENTRY, IF_STMT, WHILE_STMT, etc.)
+                - content: Code snippet
+                - location: Source location (file, line, column)
+                - children: List of successor nodes
+                - is_cycle: True if this node creates a cycle (loop backedge)
+                - is_backedge: True if already visited (prevents infinite recursion)
+    """
+    return cfg_builder.get_function_cfg(function_name)
