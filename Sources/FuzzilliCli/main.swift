@@ -123,7 +123,7 @@ func configError(_ msg: String) -> Never {
 
 func runAgent() {
     let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/usr/share/vrigatoni/.venv/bin/python3")
+    process.executableURL = URL(fileURLWithPath: "/usr/share/vrigatoni/fuzzillai/.venv/bin/python3")
     // path = URL(fileURLWithPath: #file)
     // .deletingLastPathComponent()
     // .deletingLastPathComponent()
