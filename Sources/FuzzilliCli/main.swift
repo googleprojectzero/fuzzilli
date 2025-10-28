@@ -22,7 +22,10 @@ import Fuzzilli
 let args = Arguments.parse(from: CommandLine.arguments)
 
 // check for agent-testing flag early, before positional args check
-if args["--agent-testing"] != nil {
+if args["--agent-testing"] != nil { 
+    // We are going to want to be able to pass flags to the agent as 
+    // well so you should also pull the rest of the flags and pass 
+    // them as arguments to the runAgent()
     runAgent()
     exit(0) // Just testing.
 }
