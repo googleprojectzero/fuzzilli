@@ -100,7 +100,7 @@ Options:
                                    This can for example be used to remember the target revision that is being fuzzed.
     --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
     --forDifferentialFuzzing     : Enable additional features for better support of external differential fuzzing.
-    --agent-testing
+    --agent-testing              : Used for testing FoG in isolation.
 
 """)
     exit(0)
@@ -142,6 +142,7 @@ if !FileManager.default.fileExists(atPath: jsShellPath) {
 }
 
 if args["--agent-testing"] != nil {
+    print("hitting path")
     runAgent()
     exit(0) // Just testing.
 } 
