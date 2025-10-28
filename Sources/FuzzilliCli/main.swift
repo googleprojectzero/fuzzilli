@@ -115,7 +115,8 @@ func configError(_ msg: String) -> Never {
 func runAgent() {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-    process.arguments = "../Agentic_System/rises-the-fog.py"
+    path = "../Agentic_System/rises-the-fog.py"
+    process.arguments = [path]
     
     let pipe = Pipe()
     process.standardOutput = pipe
@@ -140,7 +141,7 @@ if !FileManager.default.fileExists(atPath: jsShellPath) {
     configError("Invalid JS shell path \"\(jsShellPath)\", file does not exist")
 }
 
-if args["--agent-testing"] {
+if args["--agent-testing"] != nil {
     runAgent()
     exit(0) // Just testing.
 } 
