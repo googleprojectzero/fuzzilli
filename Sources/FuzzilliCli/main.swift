@@ -115,7 +115,7 @@ func configError(_ msg: String) -> Never {
 func runAgent() {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-    path = "../Agentic_System/rises-the-fog.py"
+    let path = "../Agentic_System/rises-the-fog.py"
     process.arguments = [path]
     
     let pipe = Pipe()
