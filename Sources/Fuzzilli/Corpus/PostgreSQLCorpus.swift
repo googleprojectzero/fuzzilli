@@ -193,6 +193,20 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             }
         }
         
+        // Track coverage statistics from evaluator
+        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            if let coverageEvaluator = self.fuzzer.evaluator as? ProgramCoverageEvaluator {
+                let currentCoverage = coverageEvaluator.currentScore
+                
+                Task {
+                    await self.storeCoverageSnapshot(
+                        coverage: currentCoverage,
+                        programHash: DatabaseUtils.calculateProgramHash(program: ev.program)
+                    )
+                }
+            }
+        }
+        
         // Listen for PreExecute events to track the program being executed
         fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { (program, purpose) in
             // Store the program and purpose for the next PostExecute event
@@ -694,7 +708,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             
             // DEBUG: Log execution storage attempt
             logger.info("Storing execution: fuzzerId=\(fuzzerId), outcome=\(executionData.outcome), execTime=\(executionData.execTime)")
-            
+
             // Store both program and execution in a single transaction to avoid foreign key issues
             _ = try await storage.storeProgramAndExecution(
                 program: program,
@@ -712,7 +726,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                     description: aspects.outcome.description
                 ))
             )
-            
+
             logger.info("Successfully stored program and execution")
             
         } catch {
@@ -720,76 +734,27 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
     }
     
-    /// Store execution with full metadata from Execution object
-    private func storeExecutionWithMetadata(_ program: Program, _ execution: Execution, _ executionType: DatabaseExecutionPurpose, _ aspects: ProgramAspects) async {
-        do {
-            // Use the registered fuzzer ID
-            guard let fuzzerId = fuzzerId else {
-                logger.error("Cannot store execution: fuzzer not registered")
-                return
-            }
-            
-            // Store the program in the program table
-            _ = try await storage.storeProgram(
-                program: program,
-                fuzzerId: fuzzerId,
-                metadata: ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
-                    id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
-                    outcome: aspects.outcome.description,
-                    description: aspects.outcome.description
-                ))
-            )
-            
-            // Store the execution record with full execution metadata
-            _ = try await storage.storeExecution(
-                program: program,
-                fuzzerId: fuzzerId,
-                execution: execution,
-                executionType: executionType,
-                coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0
-            )
-            
-            // logger.debug("Stored execution with metadata: programHash=\(programHash), executionId=\(executionId), execTime=\(execution.execTime), outcome=\(execution.outcome)")
-            
-        } catch {
-            logger.error("Failed to store execution with metadata: \(error)")
+    /// Store coverage snapshot to database
+    private func storeCoverageSnapshot(coverage: Double, programHash: String) async {
+        guard let fuzzerId = fuzzerId else {
+            logger.info("Cannot store coverage snapshot: fuzzer not registered")
+            return
         }
-    }
-    
-    /// Store a program execution in the database
-    private func storeExecutionInDatabase(_ program: Program, _ aspects: ProgramAspects, executionType: DatabaseExecutionPurpose, mutatorType: String?) async {
+        
         do {
-            // Use the registered fuzzer ID
-            guard let fuzzerId = fuzzerId else {
-                logger.error("Cannot store execution: fuzzer not registered")
-                return
-            }
+            let query = PostgresQuery(stringLiteral: """
+                INSERT INTO coverage_snapshot (
+                    fuzzer_id, coverage_percentage, program_hash, created_at
+                ) VALUES (
+                    \(fuzzerId), \(coverage), '\(programHash)', NOW()
+                )
+            """)
             
-            // Store the program in the program table
-            _ = try await storage.storeProgram(
-                program: program,
-                fuzzerId: fuzzerId,
-                metadata: ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
-                    id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
-                    outcome: aspects.outcome.description,
-                    description: aspects.outcome.description
-                ))
-            )
-            
-            // Store the execution record
-            _ = try await storage.storeExecution(
-                program: program,
-                fuzzerId: fuzzerId,
-                executionType: executionType,
-                mutatorType: mutatorType,
-                outcome: aspects.outcome,
-                coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0
-            )
-            
-            // logger.debug("Stored execution in database: programHash=\(programHash), executionId=\(executionId)")
+            try await storage.executeQuery(query)
+            logger.info("Stored coverage snapshot: \(String(format: "%.6f%%", coverage * 100))")
             
         } catch {
-            logger.error("Failed to store execution in database: \(error)")
+            logger.error("Failed to store coverage snapshot: \(error)")
         }
     }
     

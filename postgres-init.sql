@@ -149,6 +149,22 @@ CREATE TABLE IF NOT EXISTS crash_analysis (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Coverage tracking over time
+CREATE TABLE IF NOT EXISTS coverage_snapshot (
+    snapshot_id SERIAL PRIMARY KEY,
+    fuzzer_id INTEGER NOT NULL,
+    coverage_percentage NUMERIC(10, 8) NOT NULL,
+    program_hash TEXT,
+    edges_found INTEGER,
+    total_edges INTEGER,
+    created_at TIMESTAMP DEFAULT NOW(),
+    
+    FOREIGN KEY (fuzzer_id) REFERENCES main(fuzzer_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_coverage_snapshot_fuzzer ON coverage_snapshot(fuzzer_id);
+CREATE INDEX IF NOT EXISTS idx_coverage_snapshot_created ON coverage_snapshot(created_at);
+
 -- Create performance indexes
 CREATE INDEX IF NOT EXISTS idx_execution_program ON execution(program_base64);
 CREATE INDEX IF NOT EXISTS idx_execution_type ON execution(execution_type_id);

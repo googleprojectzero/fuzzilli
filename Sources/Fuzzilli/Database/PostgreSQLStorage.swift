@@ -620,34 +620,6 @@ public class PostgreSQLStorage {
         return executionId
     }
     
-    /// Store execution record from Execution object
-    public func storeExecution(
-        program: Program,
-        fuzzerId: Int,
-        execution: Execution,
-        executionType: DatabaseExecutionPurpose,
-        mutatorType: String? = nil,
-        coverage: Double = 0.0,
-        feedbackVector: Data? = nil,
-        coverageEdges: Set<Int> = []
-    ) async throws -> Int {
-        let executionTimeMs = Int(execution.execTime * 1000) // Convert to milliseconds
-        return try await storeExecution(
-            program: program,
-            fuzzerId: fuzzerId,
-            executionType: executionType,
-            mutatorType: mutatorType,
-            outcome: execution.outcome,
-            coverage: coverage,
-            executionTimeMs: executionTimeMs,
-            feedbackVector: feedbackVector,
-            coverageEdges: coverageEdges,
-            stdout: execution.stdout,
-            stderr: execution.stderr,
-            fuzzout: execution.fuzzout
-        )
-    }
-    
     /// Extract execution metadata from ExecutionOutcome
     private func extractExecutionMetadata(from outcome: ExecutionOutcome) -> (signalCode: Int?, exitCode: Int?) {
         switch outcome {
@@ -911,5 +883,33 @@ public enum PostgreSQLStorageError: Error, LocalizedError {
         case .queryFailed(let message):
             return "Database query failed: \(message)"
         }
+    }
+}
+
+// MARK: - Coverage Tracking Methods
+
+extension PostgreSQLStorage {
+    /// Execute a simple query without expecting results
+    public func executeQuery(_ query: PostgresQuery) async throws {
+        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
+            throw PostgreSQLStorageError.noResult
+        }
+        
+        let connection = try await PostgresConnection.connect(
+            on: eventLoopGroup.next(),
+            configuration: PostgresConnection.Configuration(
+                host: "localhost",
+                port: 5433,
+                username: "fuzzilli",
+                password: "fuzzilli123",
+                database: "fuzzilli",
+                tls: .disable
+            ),
+            id: 0,
+            logger: logger
+        )
+        defer { Task { _ = try? await connection.close() } }
+        
+        try await connection.query(query, logger: self.logger)
     }
 }
