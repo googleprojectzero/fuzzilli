@@ -47,8 +47,10 @@ public let codeGeneratorWeights = [
     "BuiltinTemporalGenerator":                 4,
     "BuiltinIntlGenerator":                     4,
     "LoadNewTargetGenerator":                   3,
-    "DisposableVariableGenerator":              5,
-    "AsyncDisposableVariableGenerator":         5,
+    "DisposableObjVariableGenerator":           3,
+    "DisposableClassVariableGenerator":         3,
+    "AsyncDisposableObjVariableGenerator":      3,
+    "AsyncDisposableClassVariableGenerator":    3,
     "HexGenerator":                             2,
     "Base64Generator":                          2,
 

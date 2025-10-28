@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Generator stubs for disposable and async-disposable variables.
-func disposableVariableGeneratorStubs(
+// Generator stubs for disposable and async-disposable object variables.
+func disposableObjVariableGeneratorStubs(
         inContext contextRequirement : Context,
         withSymbol symbolProperty : String,
         genDisposableVariable : @escaping (ProgramBuilder, Variable) -> Void) -> [GeneratorStub] {
@@ -24,7 +24,9 @@ func disposableVariableGeneratorStubs(
             provides: [.objectLiteral]
         ) { b in
             // Ensure we have the desired symbol below.
-            b.createSymbolProperty(symbolProperty)
+            let symbol = b.createSymbolProperty(symbolProperty)
+            b.hide(symbol)
+            b.runtimeData.push("symbol", symbol)
             b.emit(BeginObjectLiteral())
         },
         GeneratorStub(
@@ -32,9 +34,7 @@ func disposableVariableGeneratorStubs(
             inContext: .single(.objectLiteral),
             provides: [.javascript, .subroutine, .method]
         ) { b in
-            // It should be safe to assume that we find at least the
-            // desired symbol we created above.
-            let symbol = b.randomVariable(forUseAs: .jsSymbol)
+            let symbol = b.runtimeData.pop("symbol")
             let parameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
             b.emit(
@@ -55,6 +55,69 @@ func disposableVariableGeneratorStubs(
             inContext: .single(.objectLiteral)
         ) { b in
             let disposableVariable = b.emit(EndObjectLiteral()).output
+            genDisposableVariable(b, disposableVariable)
+        },
+    ]
+}
+
+// Generator stubs for disposable and async-disposable class variables.
+func disposableClassVariableGeneratorStubs(
+        inContext contextRequirement : Context,
+        withSymbol symbolProperty : String,
+        genDisposableVariable : @escaping (ProgramBuilder, Variable) -> Void) -> [GeneratorStub] {
+    return [
+        GeneratorStub(
+            "DisposableClassDefinitionBeginGenerator",
+            inContext: .single(contextRequirement),
+            provides: [.classDefinition]
+        ) { b in
+            // Ensure we have the desired symbol below.
+            let symbol = b.createSymbolProperty(symbolProperty)
+            b.hide(symbol)
+            b.runtimeData.push("symbol", symbol)
+
+            // Possibly pick a superclass.
+            // The superclass must be a constructor (or null).
+            var superclass: Variable? = nil
+            if probability(0.5) && b.hasVisibleVariables {
+                superclass = b.randomVariable(ofType: .constructor())
+            }
+            let inputs = superclass != nil ? [superclass!] : []
+            let cls = b.emit(BeginClassDefinition(
+                    hasSuperclass: superclass != nil,
+                    isExpression: probability(0.3)),
+                withInputs: inputs).output
+            b.runtimeData.push("class", cls)
+        },
+        GeneratorStub(
+            "DisposableClassInstanceComputedMethodBeginGenerator",
+            inContext: .single(.classDefinition),
+            provides: [.javascript, .subroutine, .method, .classMethod]
+        ) { b in
+            let symbol = b.runtimeData.pop("symbol")
+            let parameters = b.randomParameters()
+            b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
+            b.emit(
+                BeginClassInstanceComputedMethod(
+                    parameters: parameters.parameters),
+                withInputs: [symbol])
+        },
+        GeneratorStub(
+            "DisposableClassInstanceComputedMethodEndGenerator",
+            inContext: .single([.javascript, .subroutine, .method, .classMethod]),
+            provides: [.classDefinition]
+        ) { b in
+            b.maybeReturnRandomJsVariable(0.9)
+            b.emit(EndClassInstanceComputedMethod())
+        },
+        GeneratorStub(
+            "DisposableClassDefinitionEndGenerator",
+            inContext: .single(.classDefinition)
+        ) { b in
+            b.emit(EndClassDefinition())
+            let cls = b.runtimeData.pop("class")
+            let disposableVariable = b.construct(
+                cls, withArgs: b.randomArguments(forCalling: cls))
             genDisposableVariable(b, disposableVariable)
         },
     ]
@@ -478,16 +541,32 @@ public let CodeGenerators: [CodeGenerator] = [
     ]),
 
     CodeGenerator(
-        "DisposableVariableGenerator",
-        disposableVariableGeneratorStubs(
+        "DisposableObjVariableGenerator",
+        disposableObjVariableGeneratorStubs(
             inContext: .subroutine,
             withSymbol: "dispose") { b, variable in
                 b.loadDisposableVariable(variable)
             }),
 
     CodeGenerator(
-        "AsyncDisposableVariableGenerator",
-        disposableVariableGeneratorStubs(
+        "AsyncDisposableObjVariableGenerator",
+        disposableObjVariableGeneratorStubs(
+            inContext: .asyncFunction,
+            withSymbol: "asyncDispose") { b, variable in
+                b.loadAsyncDisposableVariable(variable)
+            }),
+
+    CodeGenerator(
+        "DisposableClassVariableGenerator",
+        disposableClassVariableGeneratorStubs(
+            inContext: .subroutine,
+            withSymbol: "dispose") { b, variable in
+                b.loadDisposableVariable(variable)
+            }),
+
+    CodeGenerator(
+        "AsyncDisposableClassVariableGenerator",
+        disposableClassVariableGeneratorStubs(
             inContext: .asyncFunction,
             withSymbol: "asyncDispose") { b, variable in
                 b.loadAsyncDisposableVariable(variable)
