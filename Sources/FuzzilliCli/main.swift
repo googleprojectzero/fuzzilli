@@ -123,11 +123,15 @@ func configError(_ msg: String) -> Never {
 
 func runAgent() {
     let process = Process()
-    // process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-    path = URL(fileURLWithPath: #file).deletingLastPathComponent()
-    .deletingLastPathComponent().deletingLastPathComponent()
-    .appendingPathComponent(".venv").appendingPathComponent("bin").appendingPathComponent("python3")
-    proccess.executablePath = path 
+    process.executableURL = URL(fileURLWithPath: "/usr/share/vrigatoni/.venv/bin/python3")
+    // path = URL(fileURLWithPath: #file)
+    // .deletingLastPathComponent()
+    // .deletingLastPathComponent()
+    // .deletingLastPathComponent()
+    // .appendingPathComponent(".venv")
+    // .appendingPathComponent("bin")
+    // .appendingPathComponent("python3")
+    // proccess.executablePath = path 
     
     // get absolute path to agent run script
     let currentFileURL = URL(fileURLWithPath: #file)
