@@ -367,39 +367,46 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("ClassDefinitionGenerator", produces: [.constructor()]) { b in
-        // Possibly pick a superclass. The superclass must be a constructor (or null), otherwise a type error will be raised at runtime.
-        var superclass: Variable? = nil
-        if probability(0.5) && b.hasVisibleVariables {
-            superclass = b.randomVariable(ofType: .constructor())
-        }
+    CodeGenerator(
+        "ClassDefinitionGenerator",
+        [
+            GeneratorStub(
+                "ClassDefinitionBeginGenerator",
+                produces: [.constructor()],
+                provides: [.classDefinition]
+            ) { b in
+                // Possibly pick a superclass.
+                // The superclass must be a constructor (or null).
+                var superclass: Variable? = nil
+                if probability(0.4) && b.hasVisibleVariables {
+                    superclass = b.randomVariable(ofType: .constructor())
+                } else if probability(0.2) {
+                    superclass = b.buildPlainFunction(with: .parameters(n: 1)) {
+                        args in
+                        b.doReturn(b.randomJsVariable())
+                    }
+                }
+                let inputs = superclass != nil ? [superclass!] : []
+                let cls = b.emit(BeginClassDefinition(
+                        hasSuperclass: superclass != nil,
+                        isExpression: probability(0.3)),
+                    withInputs: inputs).output
+                b.runtimeData.push("class", cls)
+            },
+            GeneratorStub(
+                "ClassDefinitionEndGenerator",
+                inContext: .single(.classDefinition)
+            ) { b in
+                b.emit(EndClassDefinition())
 
-        // If there are no visible variables, create some random number- or string values first, so they can be used for example as property values.
-        if !b.hasVisibleVariables {
-            for _ in 0..<3 {
-                withEqualProbability(
-                    {
-                        b.loadInt(b.randomInt())
-                    },
-                    {
-                        b.loadFloat(b.randomFloat())
-                    },
-                    {
-                        b.loadString(b.randomString())
-                    })
-            }
-        }
-
-        // Create the class.
-        let c = b.buildClassDefinition(withSuperclass: superclass, isExpression: probability(0.3)) { cls in
-            b.buildRecursive(n: defaultCodeGenerationAmount)
-        }
-
-        // And construct a few instances of it.
-        for _ in 0..<Int.random(in: 1...4) {
-            b.construct(c, withArgs: b.randomArguments(forCalling: c))
-        }
-    },
+                // Construct a few instances of the class.
+                let cls = b.runtimeData.pop("class")
+                for _ in 0..<Int.random(in: 0...4) {
+                    b.construct(cls, withArgs: b.randomArguments(forCalling: cls))
+                }
+            },
+        ]
+    ),
 
     CodeGenerator("TrivialFunctionGenerator", produces: [.function()]) { b in
         // Generating more than one function has a fairly high probability of generating
@@ -2484,31 +2491,6 @@ public let CodeGenerators: [CodeGenerator] = [
         ]
         b.callMethod("construct", on: reflect, withArgs: arguments)
     },
-
-    CodeGenerator(
-        "WeirdClassGenerator",
-        [
-            GeneratorStub(
-                "WeirdClassBeginGenerator",
-                provides: [.classDefinition]
-            ) { b in
-                // See basically https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields#examples
-                let base = b.buildPlainFunction(with: .parameters(n: 1)) {
-                    args in
-                    b.doReturn(b.randomJsVariable())
-                }
-                b.emit(
-                    BeginClassDefinition(hasSuperclass: true, isExpression: probability(0.3)),
-                    withInputs: [base])
-            },
-            GeneratorStub(
-                "WeirdClassGenerator",
-                inContext: .single(.classDefinition)
-            ) { b in
-                b.emit(EndClassDefinition())
-            },
-        ]
-    ),
 
     CodeGenerator("ProxyGenerator", inputs: .preferred(.object())) {
         b, target in
