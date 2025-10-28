@@ -21,6 +21,12 @@ import Fuzzilli
 //
 let args = Arguments.parse(from: CommandLine.arguments)
 
+// check for agent-testing flag early, before positional args check
+if args["--agent-testing"] != nil {
+    runAgent()
+    exit(0) // Just testing.
+}
+
 if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 1 {
     print("""
 Usage:
@@ -115,8 +121,16 @@ func configError(_ msg: String) -> Never {
 func runAgent() {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-    let path = "../Agentic_System/rises-the-fog.py"
-    process.arguments = [path]
+    
+    // get absolute path to agent run script
+    let currentFileURL = URL(fileURLWithPath: #file)
+    let fuzzilliCliURL = currentFileURL.deletingLastPathComponent() // Sources/FuzzilliCli
+    let sourcesURL = fuzzilliCliURL.deletingLastPathComponent() // Sources
+    let scriptURL = sourcesURL
+        .appendingPathComponent("Agentic_System")
+        .appendingPathComponent("rises-the-fog.py")
+    
+    process.arguments = [scriptURL.path]
     
     let pipe = Pipe()
     process.standardOutput = pipe
@@ -131,7 +145,7 @@ func runAgent() {
             print(output)
         }
     } catch {
-        print("Error running \(path): \(error)")
+        print("Error running \(scriptURL.path): \(error)")
     }
 }
 
@@ -140,12 +154,6 @@ let jsShellPath = args[0]
 if !FileManager.default.fileExists(atPath: jsShellPath) {
     configError("Invalid JS shell path \"\(jsShellPath)\", file does not exist")
 }
-
-if args["--agent-testing"] != nil {
-    print("hitting path")
-    runAgent()
-    exit(0) // Just testing.
-} 
 
 var profile: Profile! = nil
 var profileName: String! = nil
