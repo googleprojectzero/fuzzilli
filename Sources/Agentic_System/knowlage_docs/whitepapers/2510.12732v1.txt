@@ -1,0 +1,2013 @@
+C LUTCH C ONTROL : A N ATTENTION - BASED C OMBINATORIAL
+BANDIT FOR E FFICIENT M UTATION IN JAVA S CRIPT E NGINE
+F UZZING
+
+arXiv:2510.12732v1 [cs.AI] 14 Oct 2025
+
+Myles Foley1 , Sergio Maffeis1 , Muhammad Fakhrur Rozi2 , Takeshi Takahashi2
+1
+
+2
+
+Imperial College London
+National Institute of Information and Communications Technology
+
+A BSTRACT
+JavaScript engines are widely used in web browsers, PDF readers, and server-side applications. The
+rise in concern over their security has led to the development of several targeted fuzzing techniques.
+However, existing approaches use random selection to determine where to perform mutations in
+JavaScript code. We postulate that the problem of selecting better mutation targets is suitable for
+combinatorial bandits with a volatile number of arms. Thus, we propose C LUTCH, a novel deep
+combinatorial bandit that can observe variable length JavaScript test case representations, using
+an attention mechanism from deep learning. Furthermore, using Concrete Dropout, C LUTCH can
+dynamically adapt its exploration. We show that C LUTCH increases efficiency in JavaScript fuzzing
+compared to three state-of-the-art solutions by increasing the number of valid test cases and coverageper-testcase by, respectively, 20.3% and 8.9% on average. In volatile and combinatorial settings we
+show that C LUTCH outperforms state-of-the-art bandits, achieving at least 78.1% and 4.1% less regret
+in volatile and combinatorial settings, respectively.
+Keywords Deep Contextual Bandits · JavaScript Fuzzing
+
+1
+
+Introduction
+
+JavaScript is commonly used across the web, with a consistent year-on-year increase [1, 2]. This prevalence is in part
+due to frameworks that allow for easy and lightweight deployment such as jQuery, React, and core-js. JavaScript is a
+dynamically typed, prototype based, object oriented language, that allows for flexibility of types and properties during
+runtime as the code executes. As such, it is used for a variety of tasks in modern web sites, including animations,
+logging, content loading, API calls. Due to the large volume of JavaScript on the web, and its varied functionality,
+JavaScript engines use Just-In-Time (JIT) compilers. These JIT compilers have become a focus of security concerns,
+due to the rising number of vulnerabilities they contain [3].
+Fuzzing is one of the most common and efficient methodologies to find vulnerabilities in software [4]. Broadly, these
+approaches generate new JavaScript and then mutate test cases to change the structure, syntax, or behaviour of the
+test case, this is in the hope of triggering new paths in the JavaScript engine and find potential vulnerabilities or
+bugs. Fuzzing of JavaScript engines has spawned different methodologies ranging from neural networks for code
+generation [5] to heuristics [3]. However, while they focus on developing new mutations, testing heuristics, or oracles,
+they apply mutations at random locations within test cases. This behaviour reduces the number of successful test cases,
+and leads to inefficient search of system under test.
+Consider the test case in Listing 1 that causes a bug due to the following behaviour. On line 4 v14 is assigned as a
+BigInt, and on line 6 a call to asUintN always throws an error as the result is too large. The optimiser then does not
+assign the result to v15, leaving it in the cache. Finally, due to the repeated calls from the for loop a segmentation
+2
+
+https://bugzilla.mozilla.org/show_bug.cgi?id=1745907
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Listing 1: Javascript test case that always throws an error (Line 6) without clearing the cache leading to a segmentation
+fault in SpiderMonkey2 .
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+
+for ( let v3 = 0; v3 < 100; v3 ++) {
+function v4 ( v5 , v6 ) {}
+function v7 ( v8 , v9 ) {
+v14 = BigInt ( -1.7976931348623157 e +308) ;
+try {
+v15 = BigInt . asUintN (639625512 , v14 ) ;
+} catch ( v17 ) {}
+}
+v18 = v4 . prototype ;
+v18 . b = v7 ;
+v19 = new v4 () ;
+v20 = v19 . b () ;
+}
+
+fault occurs in FireFox’s Spidermonkey engine2 . However, if the variable v14 on line 4 was mutated to a different type
+instead, e.g. Int the crash would not have been triggered.
+We postulate it is possible to learn where to perform such a mutation, instead of random selection. The problem of
+selecting a given location in a JavaScript program to mutate is similar to that of contextual Combinatorial Bandits
+(CBs). At each timestep a representation of a test case can be observed (the contexts of arms) and locations are selected
+(selection of a subset of arms). The test case is immediately run and feed and feedback on the performance of the
+test case is retrieved (reward is received based on select arms). However, to apply a CB approach to such a task is
+challenging. First, the CBs must generalise quickly to the large state-action space of potential test cases generated:
+JavaScript fundamentals are defined in over 800 pages of technical detail in the 15th ECMA standards [6]. Second, the
+arms of the CB are volatile: JavaScript test cases are of variable size and structure. Third, the exploration of arms must
+be dynamic: random selection of testcase locations should change during testing of the JavaScript engines.
+To overcome these challenges, we develop C LUTCH, a novel deep CB. Given a representation of a JavaScript test
+case, and a mutation to apply, C LUTCH will select where to apply the mutation, immediately receiving feedback from
+test case performance that is used to guide learning via a reward. C LUTCH uses an attention-based neural network
+with concrete dropout, allowing it handle different sizes of JavaScript test case, and adapt its exploration as fuzzing
+progresses. We demonstrate the utility of C LUTCH in a two stage evaluation. First, we embed C LUTCH inside three
+state-of-the-art JavaScript fuzzers, comparing approaches focusing on their efficiency over the number of test cases they
+are able to produce. Second, to compare with state-of-the-art bandits in terms of regret we evaluate in separate volatile
+and combinatorial settings where ground truth rewards are known. In summary, our contributions are:
+• We develop C LUTCH, a novel attention-based deep combinatorial bandit which overcomes challenges of
+volatility and dynamic control of exploration during software testing, by using the attention mechanism of
+Pointer Networks, and Bayesian exploration via Concrete Dropout.
+• We demonstrate that C LUTCH is able to learn where to perform mutations in test cases for fuzzing JavaScript
+engines.
+• Through a thorough evaluation on different JavaScript engines we show C LUTCH increases the efficiency of
+testing compared to state-of-the-art approaches.
+• We show that the design of C LUTCH outperforms state-of-the-art bandits in bandit-based evaluations to achieve
+lower regret. Underpinning the potential impact in other domains beyond software engineering.
+
+2
+
+Background
+
+Contextual Bandit Variants. Deep Neural Networks (DNNs) have been applied to contextual bandit problems. One
+of the first was NeuralUCB, which used a DNN to approximate the reward in the Upper Confidence Bound (UCB)
+algorithm [7]. This was closely followed the use of DNNs for Thompson Sampling (TS) [8], which introduces a
+posterior over the neural network to approximate the reward instead of direct approximation. Contextual CBs are a
+special class of bandit where a bandit selects multiple arms at each round. The CB problem is closely related to the
+one considered in this paper. Neural CBs were proposed by Hwang et al. [9], and are applied to both UCB (CN-UCB)
+and TS (CN-TS) settings. Both CN-UCB and CN-TS sample directly from the reward predicted by a DNN to select
+the arms to play. Volatile CBs (VCBs) consider the case where the number of arms can change with the task that is
+2
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+being conducted. To the best of our knowledge, the DNNs haven’t been applied to volatile bandit conditions due to
+the variable number of arms. The first work to consider VCB problems was CC-MAB [10] an online policy that is
+formed by creating identical hypercubes that exist within the space of possible arms. A similar approach is taken
+by ACC-UCB [10], that adaptively discretises the hypercubes to estimate outcomes of different arms. As a result,
+ACC-UCB functions only in a two-dimensional feature space of arms.
+Fuzzing Strategies. The goal of fuzzing JavaScript engines is to trigger abnormal behaviour, corresponding to a bug
+or vulnerability. Fuzzing tools either tend to generate new test cases or mutate existing ones, at random or following
+some predefined heuristics. Code coverage is a common metric to evaluate the performance of the mutated test cases,
+providing a practical estimate of the portion of the search space explored, such fuzzers are referred to as greybox.
+However, only a small fraction of test cases will find bugs in the test program, leading to a high number of executed
+tests [11]. Hence, a key objective for practical fuzzing solutions is to increase the efficiency of bug finding by reducing
+the volume of test cases that do not result in new behaviour or do not pass input validation [12].
+There has been no prior work in fuzzing to learn where to perform mutations in a test case. Limpanukorn et al. [13] use
+a tree-like representation of a test case to deterministically perform mutations at locations dependent on shared ancestor
+and sibling nodes. However, this approach is developed for low-level language representations, and not for JavaScript.
+Orthogonal works have focused on different aspects of fuzzing. Weissberg et al. [14] examined different methods to
+select areas in the target to fuzz in directed fuzzing [15, 16, 17]. Zhao et al. [18] investigated the scheduling of seeds
+using Monte-Carlo Tree Search approach. Lemieux et al. [19] mask locations at random, then use a language model to
+generate a mutation. The model is then fine-tuned via reinforcement learning to improve testing. While these works
+investigate selection of target code, scheduling mutators, or scheduling seeds, C LUTCH learns to select where in the test
+case to perform mutations in greybox fuzzing.
+More recent research has focused specifically on the JIT compiler to target the deeper functionality and harder-to-find
+vulnerabilities contained within. Several of these approaches are based on Fuzzilli [20], which provided modular and
+customisable templates for generating JavaScript for particular engines; in addition to mutations designed to trigger JIT
+compilation. OptFuzz [21], builds on the Fuzzilli architecture to use optimisation paths as a performance metric. The
+authors of OptFuzz use an approximation of the optimisation path coverage as feedback to guide seed scheduling and
+preservation.
+RL for Testing. RL techniques have been developed to automate many different types of testing. One of the first
+works to investigate RL for automating fuzzing was from Böttinger et al. [22] which focused on fuzzing C compliers.
+This has lead to many works that use RL for fuzzing different compilers [23, 24, 25]. Zheng et al. [26] used an RL
+agent with an intrinsic reward function to increase coverage in web crawling. While Tsingenopoulos et al. [27], used an
+alternative deep RL model to bypass captchas in web applications. RL has been used for a number of different security
+focused testing applications, including SQL injection [28, 29], cross site scripting [30, 31], denial-of-service [32], and
+cache timing attacks [33].
+Bandits for Software Testing. Bandits have been used for software testing for seed scheduling. Yue et al. [34]
+propose a variant of an adversarial Multi-Armed Bandit (MAB), which models seed selection using the estimated
+reward probability. Wang et al. [35] use a similar problem formulation using an MAB, they further consider feedback
+in the form of hierarchical feedback on coverage of test cases. More recently Luo et al. [36] use Thompson Sampling
+(TS) for seed selection, with a sparse reward function. McFadden et al. [37] use PPO as a one-step MDP to classify
+malware samples additionally combining active learning, rejection.
+
+3
+
+Fuzzing JavaScript Engines.
+
+Fuzzing has become the de facto approach to find bugs and vulnerabilities in JavaScript engines, leading to a number
+of works on this. LangFuzz [38], creates an Abstract Syntax Tree (AST) of JavaScript functions, selecting nodes to
+mutate at random. IFuzzer [39] makes use of a similar strategy, but improves effectiveness with genetic programming,
+and a fitness function from greybox feedback on the test case. Montage [5] uses Natural Language Processing (NLP)
+to generate JavaScript subtrees at random locations in a test case’s AST. DIE [3] is a mutation based fuzzer that aims
+to preserve type and structural properties of test cases. CodeAlchemist [40], reduces test cases to fragments, using
+static and dynamic analysis to infer types, and then reassemble test cases. In both Superion [41], and SkyFire [42],
+the authors use grammar based methods for mutation and generation, respectively. Nautilus [43] takes this a stage
+further: generating its own test cases and then mutating their ASTs. While Salls et al. [44] use a ‘token level’ approach
+to perform mutations at a higher level, to avoid using grammars.
+3
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Listing 2: JavaScript source code of a test case.
+1
+2
+3
+4
+5
+6
+7
+8
+
+const v2 = new Uint32Array (256) ;
+const v3 = [0 , 1 , 2 , 3 , 4 , 5 , 6];
+for ( const v4 of v2 ) {
+~ v3 [ v4 ];
+}
+
+Listing 3: Fuzzilli IR of the code in Listing 2.
+1
+2
+3
+4
+5
+6
+7
+8
+
+v0 <- LoadInteger ’ 256 ’
+v1 <- LoadBuiltin ’ Uint32Array ’
+v2 <- Construct v1 , [ v0 ]
+v3 <- CreateFloatArray [0 , 1 , 2 , 3 , 4 , 5 , 6];
+BeginForOfLoop v2 -> v4
+v5 <- G e t C o m p u t e d P ro p e r t y v3 , v4
+v6 <- UnaryOperation ’~ ’ , v5
+EndForOfLoop
+
+Our approach, C LUTCH, instead uses a deep CB to select the locations to mutate. C LUTCH is independent from the
+JavaScript engine, and the fuzzer. We will place C LUTCH inside three state-of-the-art fuzzers for evaluation in Section 6.
+Each fuzzer approaches the problem differently, yet share similarities, we briefly describe the salient points of these
+fuzzers related to C LUTCH here.
+Fuzzilli [20] is a greybox fuzzer targeting crashes in the JIT compiler of JS engines. Fuzzilli leverages coverage
+feedback and semantic correctness preservation in order to improve its ability to fuzz. Several approaches are based on
+Fuzzilli, due to the modular and customisable templates for generating JavaScript for particular engines.
+FuzzJIT [45] is a tool based on the Fuzzilli architecture, but develops JIT-specific oracles and triggers. Specifically,
+FuzzJIT wraps each generated function in a wrapper that can be called repeatedly to trigger JIT compilation. The
+wrapped output can then be compared before and after JIT compilation to determine errors that result form the JIT.
+FuzzJIT implements its oracle to perform type-specific comparisons, using ‘deep equality’ to find if there are differences
+in objects, arrays, or individual values, and in such cases reporting an error.
+JIT-Picker [46] uses differential testing on the backbone of Fuzzilli to detect subtle non-crash bugs. It uses both the
+interpreter and the JIT compiler as separate bug oracles, using the fact that both demand the interpreted and compiled
+code to perform computations in a strict and substitutable way. This abstracts away from implementation-dependent
+behaviour, allowing JIT-Picker to perform differential testing in individual engines without need to instrument the
+JavaScript code being tested.
+JavaScript representation. The use of an Intermediate Representation (IR) for JavaScript was first introduced by
+Fuzzilli. The IR is based on the how the JIT compiler interprets JavaScript, an example can be seen in Listings 2
+and 3. By performing mutations on the IR of the JIT compiler, instead of the JavaScript source code the chance of
+‘semantically meaningless mutations’ can be reduced.
+Mutations. Fuzzers we consider are able to generate their own test cases, which in a second stage of testing are then
+mutated at the IR level. Key mutations, originally introduced by Fuzzilli include:
+• InputMutator: replace one input instruction with another. For example, changing v4 on line 6 of Listing 3 to
+v0.
+• InputMutator (type aware): replace one input instruction with another, ensuring type preservation.
+• OperationMutator: mutate parameters of an Operation (e.g. 256 on line 1 of Listing 3 could be replaced with
+64).
+• CombineMutator: insert part of a program into another, renaming variables to avoid collisions/syntax errors.
+• CodeGenMutator: generate new, random code, placing this in the program, renaming variables to avoid
+collisions/syntax errors.
+• SpliceMutator: copy a self contained part of a program within the corpus, placing this into another to combine
+their features.
+The fuzzers we consider apply these mutations on IR instructions at random in test cases, making them ideal candidates
+for prioritisation by C LUTCH.
+3.1
+
+Challenges in targeting mutations
+
+Mutational JavaScript engine fuzzers traditionally focus on developing new ways to perform mutations [5, 41, 38, 3], or
+new oracles to detect bugs and vulnerabilities [20, 46, 21]. Mutations introduce diversity in the testing set, which may
+increase coverage, and find bugs. In comparison, the problem of where to apply these mutations has been overlooked,
+and they are typically applied at random locations. This may be in part due to the difficulty of disentangling the effects
+on performance of the applied mutation operator and the chosen location. We detail below two key challenges in
+learning where to perform mutations.
+4
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Large search space. First, JavaScript is a highly structured and dynamically typed programming language. This
+means that a variable can have arbitrary types dependent on the point of execution. Thus, the combinations of possible
+programs that can be created in JavaScript constitutes an enormous search space.
+Mutation based fuzzers, attempt to reduce to problem of creating test cases for fuzzing JavaScript engines by applying
+mutations to existing valid JavaScript. Conversely some generational based fuzzers use a constrained set of rules, or
+grammars, to increase the proportion of valid samples. Yet, despite this, the search space of test cases that cover new
+paths or trigger bugs remains vanishingly small compared to the space of syntactically valid JavaScript [40]. This can
+be considered a challenging search problem: how to mutate the test cases to find the ‘interesting’ test cases that trigger
+new areas, or behaviours of the JavaScript engines.
+Complexity of JavaScript. Fuzzers traditionally focus on throughput, trying to generate as many test cases as possible.
+They try to do this with some understanding of the ‘sensible’ behaviours that could lead to bugs. Such behaviours
+are generally understood by software testers and security practitioners, and used to form the basis of mutations. In
+performing these mutations, fuzzers generate a diverse range of JavaScript to stress an engine.
+However, choosing where to make these mutations makes the problem significantly harder. Consider again Listing 1:
+had a mutation on Line 4 caused variable v14 to be of type int, the bug would not have occurred. We can retrospectively
+see that this was the ‘best place’ for the mutation by analysing the behaviour of the test case. Such ‘post-hoc’ analysis
+is not possible during fuzzing, as the mutation has been applied, and the test case executed.
+Finding the ‘best place’ (or at least a ‘good place’) for a mutation requires identifying locations, assigning them
+preference, and resolving conflicting candidates. The design and implementation of appropriate heuristics would require
+an expansive knowledge of JavaScriptand its 800 pages of technical detail as defined in 15th ECMA standards [6].
+
+4
+
+Our Approach
+
+In this Section, we motivate the use of bandits for testing JavaScript engines, and then introduce C LUTCH, a novel deep
+CB that learns the effective location to mutate JavaScript code to increase fuzzing efficiency.
+4.1
+
+Motivation
+
+As discussed in Section 3.1, selecting an effective location to mutate is a challenging task involving covering a large
+search space, and a deep understanding JavaScript. Given these challenges, we believe a Multi-Armed Bandit (MAB)
+can learn to select a location in a test case, and then immediately receive feedback in the form of coverage. Framing the
+problem as a MAB is also advantageous for the computational complexity of fuzzing, as we need to call the bandit only
+once per test case, reducing overhead.
+In the traditional MAB actions (selecting an arm) and observations do not require any kind of association. This means
+that in stationary problems the bandit learns the single ‘best action’, and in non-stationary tasks it learns the ‘best action’
+over time [47]. However, test cases have different structures and, as in the example in Listing 1, will have different
+optimal locations to perform a given mutation. Thus we can consider each test case as a separate task, to optimise for
+coverage, bugs, or testing deeper into the JavaScript engine. As we fuzz, generated test cases will be included in the
+corpus increasing the number of tasks the agent has to learn. Therefore, it is important that we provide a context of the
+current test case to the bandit, enabling the association of actions to observations. As a result we need a contextual
+bandit that understands the subtleties of the JavaScript test cases.
+Contextual bandits learn to select one of a fixed number of arms, given a the context of the arm. This is beneficial
+as the bandit can observe the effect of each of the arm selected, and detect the shift between different tasks. Yet, the
+nature of fuzzing deviates from this format, as multiple mutations can be applied simultaneously, making the problem
+combinatorial. Additionally, the JavaScript test cases the bandit sees may be of different structure and size, thus the
+number of locations (arms) is volatile. The challenge is to rapidly adapt to the number of arms at each timestep, while
+reducing the uncertainty in the location we select.
+4.2
+
+C LUTCH Control
+
+A high level system diagram of C LUTCH can be seen in Figure 1. At each timestep, a test case is selected to mutate,
+which is represented for C LUTCH as a series of locations (observable arms). C LUTCH then observes the volatile number
+of arms and selects from the locations where to perform a mutation. The fuzzer then performs the mutation(s) at the
+selected location and submits this to the JavaScript engine. Information on the performance of the test case is collected
+from the engine as it runs, which is used to compute the reward. This is summarised in Algorithm 1.
+5
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Figure 1: The C LUTCH architecture shown within a fuzzer.
+Algorithm 1 Clutch approach to fuzzing.
+Input: test cases J, mutations M , number of mutations to apply n, learning rate α, update step T
+Initialize bandit clutch with random weights θ
+repeat
+Initialize memory K
+for t = 1, 2, . . . , T do
+With uniform probability select test case jt ∈ J
+With uniform probability select mutation mt ∈ M
+at , φt , rt = clutch(jt , mt )
+lt = argmaxn (at )
+Apply mutation mt to jt at lt creating lt′
+Run testcase lt′ , observing reward Rt
+Store (lt , rt , φt , Rt ) in K
+end for
+Update θ to minimise the loss in Eq. 3 using gradient descent with α.
+until done
+
+4.2.1
+
+Model Architecture
+
+To handle the representation of JavaScript that forms arms and contexts for C LUTCH we use a deep learning architecture.
+Specifically we use a sequence-to-sequence model with an attention mechanism in the form of a Pointer Network [48].
+Using a Gated Recurrent Unit (GRU) model as an encoder-decoder allows the encoder and decoder states e1 , . . . , en
+and d1 , . . . , dm , to be used to compute an attention vector at over the locations available at each timestep (t), where
+parameters v T , W1 and, W2 are learnable.
+utj = v T tanh(W1 ej + W2 dj )
+t
+
+t
+
+a = softmax(u )
+
+j ∈ (1, . . . , n)
+
+(1)
+
+As a result, C LUTCH can take as input the IR of a JavaScript test case, that constitutes a variable number of locations,
+and output an attention value for each location (vector at ). The location with the highest value (estimated reward) can
+then be selected as the location to perform the mutation.
+The last challenge is the rate of exploration that C LUTCH should use to learn over time. In deep Reinforcement Learning
+(RL) models this often handled by hyperparameter ε, which indicates the rate of selecting random actions. Conversely,
+deep MABs sample over a Gaussian distribution based on either the network parameters, or estimated rewards [8, 9].
+However, hyperparameter search and sampling network parameters is computationally expensive. While it is possible
+to sample over the estimated rewards directly, this may not be sufficiently optimistic, resulting in lack of exportation
+and poor performance.
+Instead, we can place a prior over the network, that can be tuned using Concrete Dropout [49]. In doing so, dropout
+parameter p can be treated as a parameter to be trained via gradient descent. Thus, the exploration-exploitation trade-off
+can be controlled via re regularisation parameters r1 , . . . , r4 . As training increases and more data is seen, the dropout
+regularisation loss reduces as the uncertainty on the weights reduces. This reduces the exploration, resulting in more
+exploitation. Equally, the network can have higher uncertainty in the weights which will increase the regularisation,
+effectively increasing the exploration. For more detailed explanation of Concrete Dropout, see Appendix B. Thus, using
+Eq. 1, we can form the output variables of C LUTCH. The encoder and decoder outputs are passed through the respective
+hidden layers W1 , W2 , with Concrete Dropout applied. This produces the attention vector at , which represents the
+estimated rewards of each location, used to select the location as in Algorithm 1. The model also estimates the log
+6
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+variance, φt , used in a heteroskedastic loss as in Eq. 3.
+at = v T ⊗ (et ⊗ W1 + dt ⊗ W2 )
+φt = v m ⊗ (et ⊗ W1 + dt ⊗ W2 )
+
+(2)
+
+Where ⊗ represents multiplication and Concrete Dropout. We can then determine the loss function for C LUTCH to
+include the regularisation terms of each layer (r1 . . . r4 ):
+l=
+
+4.3
+
+T
+T
+X
+1 X −φt
++ (Rt − at )2 + φt ) +
+(e
+rt1 + rt2 + rt3 + rt4
+T t=1
+t=1
+
+(3)
+
+Arms and Contexts
+
+C LUTCH will select arms that correspond to the location we can mutate within the test case. As we have outlined it
+is important for C LUTCH to understand specifics of the JavaScript that will be mutated and the mutation that will be
+applied. Thus, at each timestep we give C LUTCH an observation of the available locations that can be selected and the
+mutation that will be performed.
+Arms and their contexts are, for C LUTCH, agnostic of the fuzzer for which it will select locations. This has the added
+advantage of reducing the overhead when selecting locations without further processing. For instance, the IR used by
+Fuzzilli provides instructions that correspond to locations that can be selected. For C LUTCH, each instruction can be
+uniquely mapped into a vocabulary. The context of each arm is then the vocabulary representation of the IR (the set of
+locations), in addition to the mutation that will be applied.
+4.4
+
+Reward
+
+Prior work from Li et al. [23] studied the use of several key metrics for rewards when fuzzing a simple compiler,
+including: coverage, syntactic validity, and complexity of test cases. Later work from Bates et al. [50] and Foley and
+Maffeis [51] have discussed the difficulty in designing rewards for real-world tasks, arguing for rewards consistent
+across training to ensure that diminishing returns do not effect the learnt policy. This is particularly relevant when using
+coverage based rewards where a) the total possible coverage can be quite large, and b) the majority of coverage is often
+found early in testing. Thus, we design a reward, R for C LUTCH that is consistent across training:
+(
+R=
+
+CCt
++ | max(Var(Bt ) − Var(Bt−1 ))|, Syntactically Correct Test
+1 + CC
+max
+−1,
+Otherwise
+
+(4)
+
+Where CC is the cyclomatic complexity (CC) and Bt represents the vector of branch coverage at time t. This reward
+function balances validity, complexity, and coverage. When a test case is not syntactically valid it penalises the choice,
+with a negative reward of −1. When test cases are valid, it rewards 1 for the validity, additionally rewarding for how
+complex the test case is, as a ratio of current CC and the maximum CC seen historically.
+Finally, Eq 4 rewards for coverage using a term that incentivises the agent to explore new branches. At each timestep
+we compute an updated running variance of each branch (b ∈ B) representing this as a vector: Varti=0 (Bi ) [52]. In
+doing so we can estimate the variance of each branch without retaining all the historic branch coverage. We then take
+the difference in variance between time t and t − 1, isolating the difference in variance (novelty in coverage) from the
+test case at time t. The maximum value indicates the largest difference in coverage compared to the previous timestep,
+i.e. where branches which are less frequently covered. We then take the absolute value to reward for changing the
+variance. Meaning that C LUTCH is incentivised not to hit the same branches frequently, but instead to explore other
+branches, including lower frequency branches. Compared with traditional CBs where a reward is given per arm, we
+reward for the set of arms, as the reward is based on the overall test case performance, not individual arms.
+
+5
+
+Implementation Details.
+
+The implementation of this architecture is as follows. Program representations are passed through a single embedding
+layer. This embedding is then passed through a single GRU layer of width 64, to produce both encoder states and the
+terminal hidden state. The terminal hidden state is used to initialise the decoder, and give the decoder output. The
+encoder and decoder output are passed through the respective hidden layers W1 , W2 (of size 512) with concrete dropout
+applied.
+7
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Table 1: Correctness of generated test case and Branch coverage per generated test case (five run average) from 24h
+fuzzing of C LUTCH and baseline fuzzers.
+FJClutch
+
+Correctness
+Fuzzilli FClutch
+
+V8
+
+Average
+Relative Change
+Â12
+p
+
+66.4%
+80.5%
+8.321%
+1.000
+0.011
+
+65.9%
+79.3%
+20.32%
+1.000
+0.002
+
+73.3%
+85.8%
+8.585%
+1.000
+0.011
+
+0.566
+0.627
+10.81%
+0.560
+0.099
+
+0.382
+0.387
+1.152%
+0.680
+0.513
+
+0.514
+0.585
+13.72%
+0.880
+0.594
+
+SpiderMonkey
+
+Average
+Relative Change
+Â12
+p
+
+59.8%
+77.4%
+9.843%
+1.0
+0.008
+
+64.9%
+77.5%
+19.35%
+1.000
+0.003
+
+76.5%
+89.5%
+8.615%
+1.000
+0.036
+
+0.050
+0.067
+32.55%
+1.000
+0.001
+
+0.059
+0.082
+38.56%
+1.000
+0.001
+
+0.092
+0.081
+-11.9%
+0.222
+0.287
+
+JavaScriptCore
+
+Average
+Relative Change
+Â12
+p
+
+70.5%
+82.1%
+5.054%
+1.000
+0.008
+
+63.7%
+78.7%
+23.52%
+1.000
+0.001
+
+71.8%
+85.1%
+12.23%
+1.000
+0.008
+
+0.530
+0.508
+-4.25%
+0.000
+0.768
+
+0.250
+0.238
+-5.01%
+0.200
+0.055
+
+0.344
+0.358
+4.12%
+1.000
+0.096
+
+Engine
+
+Metric
+
+FuzzJIT
+
+JIT-Picker
+
+JPClutch
+
+FuzzJIT
+
+Branch Coverage per test case
+FJClutch Fuzzilli FClutch JIT-Picker
+
+JPClutch
+
+We implement C LUTCH in Python 3.11 using PyTorch. We use the PythonKit [53] framework to interface C LUTCH
+with the fuzzers above (implemented in Swift), so they can share JavaScript representations, coverage information, and
+locations. Locations in each of these models are represented by the IR instructions found in each of the three fuzzers we
+place C LUTCH into. We run experiments on two identical machines running Ubuntu 24.04 with Intel i7 8700k and
+64GB RAM.
+
+6
+
+Field Test Evaluation
+
+In this Section we evaluate the effectiveness of C LUTCH at improving the efficiency of state-of-the-art fuzzers. Finally,
+we perform an bandit comparison study of C LUTCH in different settings. Interested readers may see additional analysis
+in Appendix C.
+6.1
+
+Experimental Setup
+
+Baselines. At its core, C LUTCH is a contextual bandit applied to select locations in variable length (volatile) JavaScript
+test cases to fuzz JavaScript engines. We evaluate its effectiveness by inserting C LUTCH into three different stateof-the-art JavaScript engine fuzzers: Fuzzilli [20], FuzzJIT [45], and JIT-Picker [46]. We refer to these variants as
+FClutch, FJClutch, and JPClutch respectively. Each fuzzer applies the default number of 7 mutations simultaneously,
+thus C LUTCH chooses 7 arms at each timestep. We did not include OptFuzz [21], another extension of Fuzzilli, in the
+comparison as the available prototype relied on a version of llvm incompatible with current operating systems and
+JavaScript engines.
+JavaScript Engines. We test C LUTCH on JavaScriptCore (used in Webkit and Safari), V8 (used in Chrome and
+Chromium), and SpiderMonkey (used in Firefox), the main JavaScript engines in use, targeted by previous work from
+academics, security researchers, and project maintainers.
+Metrics. To assess the performance of C LUTCH we compare with the particular view to efficiency. We consider
+the correctness of the test cases, i.e. the test cases that are valid JavaScript, not causing one of the four error types
+of JavaScript: SyntaxError, ReferenceError, TypeError, and RangeError. Generating JavaScript that does not cause
+such errors results in test cases that pass initial semantic and syntactic checks; in turn facilitating the deeper testing into
+the less frequently used paths in the engine. A common metric to test the ability of a fuzzer to reach these paths is code
+coverage. To measure the efficiency of C LUTCH we use the branch coverage per test case. Branch coverage is often
+used in the literature, providing a point of comparison with prior work [20].
+Experiment Design. Each trial (JavaScript engine and fuzzer) is run for 24 hours and repeated 5 times, overall
+constituting 3,240 CPU hours across all experiments. Repeating experiments reduces the effect of randomness and
+allows for the statistical testing of different fuzzing approaches, as advocated for by Schloegel et al. [54]. In particular,
+we use the Mann-Whitney U test to determine statistical significance, and Vargha and Delaney’s Â12 test to quantify the
+magnitude of difference or effect size. The performance is considered significant when p < 0.1, and outperforms with a
+large effect size when Â12 ≥ 0.71.
+8
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Table 2: Total regret of combinatorial bandits in different settings.
+Selected
+Arms
+
+Setting
+Gowalla Dataset
+
+Volatile
+
+2
+
+✓
+
+4
+
+✓
+
+ACC-UCB
+
+CC-UCB
+
+4915.64
+(±57.00)
+985.70
+(±20.35)
+
+12328.73
+(±20.31)
+3688.81
+(±15.15)
+
+R1 (x) = x⊤ a
+
+4
+
+-
+
+-
+
+R2 (x) = (x⊤ a)2
+
+4
+
+-
+
+-
+
+⊤
+
+4
+
+-
+
+-
+
+R3 (x) = cos(πx a)
+
+6.2
+
+CombLinTS
+
+Total Regret
+CombLinUCB CN-UCB
+
+CN-TS
+
+CN-TS(M=1)
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+2865.87
+(±321.02)
+1140.77
+(±23.56)
+2501.58
+(±35.68)
+
+2667.51
+(±227.48)
+1155.06
+(±14.31)
+2495.12
+(±48.78)
+
+74.43
+(±3.95)
+310.01
+(±83.50)
+948.33
+(±96.76)
+
+67.87
+(±2.12)
+253.60
+(±28.48)
+997.02
+(±158.80)
+
+70.80
+(±3.97)
+242.26
+(±14.97)
+991.70
+(±83.72)
+
+C LUTCH
+1077.68
+(±962.21)
+125.42
+(±105.05)
+65.04
+(±2.51)
+216.54
+(±4.37)
+325.86
+(±40.11)
+
+Correctness.
+
+We first measure the ability of C LUTCH to improve the rate of generation of valid JavaScript code, that is code that does
+not cause one of the four JavaScript error types. We report the validity results in Table 1.
+All C LUTCH variants achieve a higher proportion of valid test cases compared to their non-C LUTCH counterparts.
+Indeed C LUTCH can quickly learn from its experiences to find strategies that improve the rate of valid test cases.
+Impressively, this performance is consistent across different fuzzing approaches, from differential testing to JIT-specific
+mutators. C LUTCH improves correctness by at least 16.42% (compared with FuzzJIT), and on average by 20.3%. In all
+cases we show that these results are statistically significant, and have a large effect size.
+JIT-Picker and JPClutch achieve the highest rate of correctness of baseline fuzzers, and C LUTCH variants, respectively.
+JIT-Picker focuses on instrumentation and probing the engine using a subset of mutators from prior work [20], which
+causes this improvement in performance compared to the other approaches.
+6.3
+
+Test Case Efficiency.
+
+Recent work from Caturano et al. [55] has argued that ‘more intelligent’ tools achieve the same (or better) results with
+a given number of attempts. As such, we report the efficiency as coverage per test case in Table 1. This allows us to
+determine how efficient each approach is with its test case budget. We can see that C LUTCH is generally able to improve
+the number of branches covered per execution, by an average of 8.9%. Indeed, C LUTCH increases the branches covered
+per execution consistently, doing so in six of the nine combinations of fuzzer and JavaScript engine. Specifically, each
+C LUTCH variant improves over the baseline fuzzer in two of the three engines. When comparing per JavaScript engine
+we see that C LUTCH always increases efficiency when fuzzing V8. This is due to a combination of the size of the
+engine and the resulting throughput of the fuzzer approaches. As the size of V8 is larger compared to JavaScriptCore
+and SpiderMonkey, the search space for C LUTCH is larger, giving it an advantage to target it efficiently. The throughput
+on V8 is also similar between C LUTCH variants and baseline fuzzers in comparison to the other JavaScript engines,
+which also accounts for efficiency improvements of C LUTCH, as baseline fuzzers achieve less coverage per test case.
+Both FJClutch and FClutch have marginally lower efficiency in JavaScriptCore (-4.63% on average), and significantly
+greater efficiency in SpiderMonkey (35.56% on average). Yet, JPClutch does not follow this same behaviour, achieving
+11.9% fewer branches per execution on SpiderMonkey, and 4.12% more on JavaScriptCore. This arises from the
+different approaches in fuzzing taken by JIT-Picker compared to Fuzzilli and FClutch, which leads to the highest rate
+of valid JavaScript generation from both JIT-Picker and JPClutch. As a result, JIT-Picker has a higher base efficiency
+compared to other fuzzers.
+We can see from Vargha and Delaney’s Â12 values that the effect size is often large. Similarly, we can see that when
+C LUTCH outperforms a fuzzer the result is often statistically significant, as indicated by p < 0.1.
+
+7
+
+C LUTCH Selection
+
+We have seen that C LUTCH improves the efficiency of fuzzing by increasing the correctness of test cases, their coverage,
+and the coverage per test case. However, it is important to consider the underlying cause. To investigate this we have
+recorded the mutations performed by baseline fuzzers and C LUTCH variants on 10,000 test cases. We capture where
+mutations are performed and run the test cases on V8 to capture branch coverage and JavaScript errors.
+We provide the distribution of errors in Figure 5. Figures 2(b), 2(d), 2(f) show the difference in the errors across the
+mutations. Figures 2(a), 2(c), and 2(e) show the distribution of IR instructions per mutation. For example Figure 2(a)
+9
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+shows the difference between Fuzzilli and FClutch. The CodeGenMutator bar shows where C LUTCH deviates from the
+strategy of Fuzzilli, i.e. the CallFunction is selected 5.2% less by C LUTCH, and SetProperty is chosen 1% more. For
+readability we only report the top ten IR instructions, thus the difference may not sum to zero for each bar.
+By comparing with the random selection of the fuzzers we can show what C LUTCH has learned to do. Importantly, we
+do so while accounting for the original distribution of the test cases, where some instructions, or mutations, may occur
+more frequently than others. For instance, InputMutator cannot be applied to instructions with no input variables, such
+as a BinaryOperation.
+7.1
+
+Distribution of Mutations
+
+We let C LUTCH observe the IR of a test case and the mutation that will be applied, with the intention for it to learn
+where to apply different mutations. Signs of this occurring can be seen in Figure 2 from the difference in the IR
+instructions chosen by C LUTCH for different mutations. For instance, BinaryOperation is present in the top ten IR
+locations selected by C LUTCH regardless of the fuzzer approach. Yet, the preference of location to perform mutations
+varies across different C LUTCH variants. Consider the differences in selection between JPClutch (Figure 2(e)) and
+FClutch (Figure 2(a)). JPClutch performs 9.8% more CodeGenMutator mutations on BinaryOperations than the random
+selection of JIT-Picker, where as FClutch has learnt an alternative strategy performing this combination 2.6% less than
+Fuzzilli.
+However, C LUTCH variants also perform mutations at similar locations, as six of the instructions are present in all
+variants. Consider FJClutch and FClutch, which both favour the Construct instruction to perform mutations, indicated
+by its prevalence in Figure 2(a) and 2(c). This seems a reasonable choice as Construct instructions create and initialise
+variables. By mutating these C LUTCH effects the structure and properties of test cases in an attempt to trigger additional
+functionality.
+7.2
+
+Distribution of Errors
+
+In Section 6.2 we saw how C LUTCH increased the number of test cases that executed successfully. We investigate here
+why this is the case by studying what errors occur, and where. Figures 2(b), 2(d), 2(f) show the difference in the errors
+caused by test cases, and Figure 5 shows the distribution of errors across all fuzzers and C LUTCH variants.
+Figure 5 shows a similar distribution of errors in the C LUTCH variants and baseline fuzzers, with some slight variation
+apparent between the different fuzzer types. Overall, fuzzers cause TypeErrors most frequently, which account for
+at least 78.2% for FClutch, and in the worst case of JIT-Picker causing 92.1% of errors. This is not an unexpected
+distribution of errors as JavaScript is a dynamically typed language where variable types can change type during the
+execution of a program. Combining this with the prevalence of mutations that change the type of a variable, either
+explicitly or implicitly increases the likelihood of a TypeError.
+A more granular analysis of these errors, from Figures 2(b), 2(d), 2(f), reveals a different story: errors occur because of
+different underlying causes. These Figures show the difference in error types between C LUTCH variants and baseline
+fuzzers. Consider Figure 2(d), where FJClutch causes fewer ReferenceErrors when performing both Input and
+Combine mutations, leading to an overall reduction of these errors by 35%. However, while there is a commensurate
+increase in both TypeErrors and RangeErrors, the overall number of errors is reduced as seen in Section 6.2. Such
+behaviour shows C LUTCH has learnt the syntax of test cases, selecting the most appropriate location to perform
+mutations. By comparison with Figure 2(c) we can see how applying mutations to different instructions causes a shift
+in errors. For instance, the use of Construct and CallFunction likely leads to an increase in TypeErrors.
+Similar comparisons can be made in the performance of JPClutch. In Figure 2(f), the main difference in errors
+compared to JIT-Picker is from TypeErrors. We can see that the InputMutator (type aware) leads to an increase in
+TypeErrors. When comparing with Figure 2(e), the cause of this is the shift in mutations; applying mutations more
+often to LoadProperty, and less to CallMethod. The redistribution of mutations to different instructions also reduces
+the TypeErrors in other locations: InputMutator and OperationMutator. By doing this C LUTCH reduces the overall
+number of errors (Table 1), and ratio of TypeErrors (Figure 5).
+7.3
+
+Frequency of Branch Coverage
+
+We have argued in favour of using C LUTCH to increase the efficiency of testing JavaScript engines. To demonstrate this
+further we compare branch frequency from the 10,000 generated test cases generated by Fuzzilli and FClutch on V8.
+We report these results in Figure 3. We can see that both Fuzzilli and FClutch find a comparable number of branches,
+covering 0.25%. of the V8 engine, accounting for over 34,000 branches. Comparable performance is also seen from
+10
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+(a) Fuzzilli V8 Mutations
+
+(b) Fuzzilli V8 Errors
+
+(c) FuzzJIT V8 Mutations
+
+(d) FuzzJIT V8 Errors
+
+(e) JIT-Picker V8 Mutations
+
+(f) JIT-Picker V8 Errors
+
+Figure 2: Analysis of 10,000 mutated test cases by C LUTCH and the equivalent fuzzer when tested on V8. The left
+column shows the percentage difference from C LUTCH selection in its top ten selected instructions per mutation. The
+right column shows the difference between clutch and the baseline fuzzer in terms of the errors caused per mutation.
+
+the highest frequency of a single branch, 1320 for Fuzzilli and 1228 for FClutch. However, the frequency density of
+the the two highlights the difference in testing strategy. On average Fuzzilli requires 150.28 test cases to cover each
+branch, 23.5% more test cases than C LUTCH. Test cases from Fuzzilli trigger the same shallow paths due to higher
+11
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+(a)
+
+(b)
+
+Figure 3: Frequency of branches in V8 that are reached from 10,000 test cases from Fuzzilli and FClutch.
+proportion of errors they contain. Indeed, such results show that C LUTCH explores a maximal number of low frequency
+paths [11]. C LUTCH does so by learning to perform mutations in locations which are, a) valid for JavaScript, b) able to
+probe deeper in the engine more consistently.
+
+(a)
+
+(b)
+
+(c)
+
+Figure 4: Throughput of test cases (five run average and standard deviation) from 24h fuzzing of JavaScript engines.
+
+8
+
+Combinatorial Bandit Evaluation
+
+We must also consider the performance of C LUTCH in relation to alternative bandit approaches. However, to do so
+in the context of JavaScript engines is challenging as it is computationally expensive to train bandits, and there is no
+ground truth to determine regret performance. Instead, we use evaluation methodologies used in prior work, providing a
+ground truth reward, and relatively inexpensive training time. Specifically, we consider the Gowalla Dataset in the same
+configuration as Nika et al. [10] for Volatile Combinatorial Bandits (VCBs), and use three hidden rewards as Hwang et
+al. [9] for CB. We use the hyperparameters and experimental setup as in the prior work, running experiments for 10,000
+rounds and repeating 10 times. We present the results in Table 2.
+Volatile Arms. In this setting we consider a crowd sourcing problem used by Nika et al. [10], using the Gowalla
+dataset. At each round t a random number of user check-ins are sampled, where each check-in is an arm. Context
+is the location (normalised longitude and latitude lying in [0, 1]2 ), and the reward is the ‘willingness to work’, i.e.
+battery status. Bandits must then select K ∈ 2, 4 locations. We compare against two state-of-the-art bandits that handle
+the volatile nature of the arms: ACC-UCB [10] and CC-UCB [56]. From Table 2 we see that bandits improve when
+selecting an increasing number of arms due increased information gathered from the additional arms. Furthermore,
+C LUTCH has the best performance in both K ∈ 2, 4, achieving at least 78.1% fewer regret than other bandits.
+12
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Non-Volatile Arms. In this setting we consider three different, unknown, reward functions: R1 (x) = x⊤ a, R2 (x) =
+(x⊤ a)2 , and R3 (x) = cos(πx⊤ a). Where x is the set of contexts for arms and a has the same dimension as x and is
+randomly generated from a unit ball, remaining fixed during the experiment. Bandits must select from K = 4 arms at
+each round, observing a context of 80 features. Such an evaluation is inline with Hwang et al. [9] and Zhou et al. [7].
+We compare against contextual neural bandits CN-UCB and CN-TS, and their linear equivalents CombLinUCB and
+CombLinTS [9]. We additionally include CN-TS(M=1), a special case of CN-TS drawing only one sample per arm.
+Volatile bandits require context features to be N = 2, which not originally considered by Hwang et al. [9] which uses
+80 features (N = 80). For completeness we consider N = 2 in Appendix D. From Table 2 we again see that the
+deep CBs outperform the linear counterparts. We also see that across all rewards C LUTCH outperforms the deep CBs,
+achieving between 4.1%-67.3% fewer regret.
+Furthermore, across both volatile and non-volatile settings C LUTCH outperforms with large effect size (Â12 ≥ 0.78)
+and statistical significance (p < 0.04) (see Appendix D).
+
+9
+
+Threats to validity
+
+The selection of hyperparameters in a learning architecture may depend on domain knowledge, leading to bias, and
+may in general affect the performance of the model unpredictably. To mitigate this, C LUTCH controls its own rate of
+exportation, uses hyperparameters from prior work where applicable [49, 57, 48], and uses a grid-search to find optimal
+values for remaining hyperparameters (Appendix A).
+We did not place C LUTCH inside an exhaustive list of all JavaScript engine fuzzers. In particular, we have excluded
+OptFuzz [21] and Superion [41]. OptFuzz, while publicly available, requires recompiling the llvm library with custom
+hooks, and does not fully document the dependencies required to do so. Superion is used for fuzzing both XML and
+JavaScript engines, extending the AFL fuzzing model. As such we considered the approach and underlying system
+out-of-scope. Indeed, it is non-trivial to place C LUTCH inside new fuzzers, even those based on similar architecture.
+Instead, we selected three state-of-the-art fuzzers to evaluate the performance of C LUTCH. We argue these fuzzers
+demonstrate the generalisability of our approach, as they use different approaches and testing mutations, ranging from
+targeting the JIT to differential testing. We further test each fuzzer and C LUTCH variant on three separate and commonly
+used JavaScript engines. This removes bias from test subjects, showing the real world application of C LUTCH.
+To mitigate for randomness in the different approaches we conducted large scale experiments. We repeated experiments
+in Section 6, and Appendix C.3 five times, accounting for 3,240 compute hours of experiments. In reporting our results
+we have followed guidance from Schlosser et al. [54], reporting metrics which provide deeper statistical comparison
+between different sets of data. Additionally, in Section 7, we use 10,000 test cases to compare between C LUTCH and
+the fuzzer baselines to provide an in-depth study on their behavioural differences.
+
+10
+
+Conclusion
+
+The use of fuzzing to find bugs and vulnerabilities in JavaScript engines has become the default testing strategy. While
+existing research has focused on oracles, instrumentation, and heuristics for mutations, they perform mutations at
+random locations in test cases. We posit that a bandit model can learn effective locations to perform mutations to
+increase testing efficiency. However, to do so must over come several challenges: 1) a bandit that can handle the
+high dimensional state-action space, 2) can adapt to the volatile number of arms that represent the variable locations
+in JavaScript test cases, 3) can dynamically adjust the rate of exploration during testing. Our approach, C LUTCH,
+overcomes these challenges with the attention mechanism found in pointer networks to hand the volatile number of
+arms, and concrete dropout to adjust the rate of exploration. We place C LUTCH inside existing fuzzers, showing it can
+increase correctness of test cases and efficiency of coverage per test case. We further evaluate C LUTCH in volatile and
+combinatorial settings, showing state-of-the-art performance compared to existing approaches. C LUTCH demonstrates
+impressive performance locating where to perform mutations in a test case, highlighting how bandits can solve real-wold
+problems.
+
+13
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+References
+[1] HTTP Archive et al. Web Almanac 2022: HTTP Archive’s Annual State of the Web Report. Technical report,
+2023.
+[2] HTTP Archive et al. Web Almanac 2021: HTTP Archive’s Annual State of the Web Report. Technical report,
+2022.
+[3] Soyeon Park, Wen Xu, Insu Yun, Daehee Jang, and Taesoo Kim. Fuzzing JavaScript Engines with Aspectpreserving Mutation. In 2020 IEEE Symposium on Security and Privacy (SP), 2020.
+[4] M Zalewski. American Fuzzy Lop, 2007.
+[5] Suyoung Lee, HyungSeok Han, Sang Kil Cha, and Sooel Son. Montage: A neural network language Model-Guided
+JavaScript engine fuzzer. In 29th USENIX Security Symposium (USENIX Security 20). USENIX Association,
+2020.
+[6] Ecma International. ECMAScript 2024 language specification. Technical Report 15, 2024.
+[7] Dongruo Zhou, Lihong Li, and Quanquan Gu. Neural contextual bandits with UCB-based exploration. In
+Proceedings of the 37th International Conference on Machine Learning, volume 119 of ICML’20, pages 11492–
+11502, 2020.
+[8] Weitong Zhang, Dongruo Zhou, Lihong Li, and Quanquan Gu. Neural Thompson Sampling, 2021.
+arXiv:2010.00827 [cs].
+[9] Taehyun Hwang, Kyuwook Chai, and Min-Hwan Oh. Combinatorial Neural Bandits. In Proceedings of the 40th
+International Conference on Machine Learning. PMLR, 2023.
+[10] Andi Nika, Sepehr Elahi, and Cem Tekin. Contextual Combinatorial Volatile Multi-armed Bandit with Adaptive
+Discretization. In Proceedings of the Twenty Third International Conference on Artificial Intelligence and Statistics.
+PMLR, 2020.
+[11] Marcel Böhme, Van-Thuan Pham, and Abhik Roychoudhury. Coverage-based Greybox Fuzzing as Markov Chain.
+In Proceedings of the 2016 ACM SIGSAC Conference on Computer and Communications Security, CCS ’16,
+2016.
+[12] Yan Wang, Peng Jia, Luping Liu, Cheng Huang, and Zhonglin Liu. A systematic review of fuzzing based on
+machine learning techniques. PLOS ONE, 15(8), 2020.
+[13] Ben Limpanukorn, Jiyuan Wang, Hong Jin Kang, Eric Zitong Zhou, and Miryung Kim. Fuzzing MLIR Compilers
+with Custom Mutation Synthesis, 2024. arXiv:2404.16947 [cs].
+[14] Felix Weissberg, Jonas Möller, Tom Ganz, Erik Imgrund, Lukas Pirch, Lukas Seidel, Moritz Schloegel, Thorsten
+Eisenhofer, and Konrad Rieck. SoK: Where to Fuzz? Assessing Target Selection Methods in Directed Fuzzing. In
+Proceedings of the 19th ACM Asia Conference on Computer and Communications Security, ASIA CCS ’24, 2024.
+[15] Chenyang Lyu, Shouling Ji, Chao Zhang, Yuwei Li, Wei-Han Lee, Yu Song, and Raheem Beyah. MOPT:
+Optimized Mutation Scheduling for Fuzzers. In In 28th USENIX Security Symposium (USENIX Security 19),
+2019.
+[16] Fatmah Yousef Assiri and Asia Othman Aljahdali. Software Vulnerability Fuzz Testing: A Mutation-Selection
+Optimization Systematic Review. Engineering, Technology & Applied Science Research, 14(4), 2024.
+[17] Prashast Srivastava, Stefan Nagy, Matthew Hicks, Antonio Bianchi, and Mathias Payer. One Fuzz Doesn’t Fit All:
+Optimizing Directed Fuzzing via Target-tailored Program State Restriction. In Proceedings of the 38th Annual
+Computer Security Applications Conference, ACSAC ’22, 2022.
+[18] Yiru Zhao, Xiaoke Wang, Lei Zhao, Yueqiang Cheng, and Heng Yin. Alphuzz: Monte Carlo Search on SeedMutation Tree for Coverage-Guided Fuzzing. In Proceedings of the 38th Annual Computer Security Applications
+Conference, ACSAC ’22, 2022.
+[19] Jueon Eom, Seyeon Jeong, and Taekyoung Kwon. Fuzzing JavaScript Interpreters with Coverage-Guided
+Reinforcement Learning for LLM-Based Mutation. In Proceedings of the 33rd ACM SIGSOFT International
+Symposium on Software Testing and Analysis, ISSTA 2024, pages 1656–1668, 2024.
+[20] Samuel Groß, Simon Koch, Lukas Bernhard, Thorsten Holz, and Martin Johns. FUZZILLI: Fuzzing for JavaScript
+JIT Compiler Vulnerabilities. In Proceedings 2023 Network and Distributed System Security Symposium. Internet
+Society, 2023.
+[21] Jiming Wang, Yan Kang, Chenggang Wu, Yuhao Hu, Yue Sun, Jikai Ren, Yuanming Lai, Mengyao Xie, Charles
+Zhang, Tao Li, and Zhe Wang. OptFuzz: Optimization Path Guided Fuzzing for JavaScript JIT Compilers. In
+Proceedings of the 33rd USENIX Security Symposium (USENIX Security 24), 2024.
+14
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+[22] K. Böttinger, P. Godefroid, and R. Singh. Deep Reinforcement Fuzzing. In 2018 IEEE Security and Privacy
+Workshops (SPW), 2018.
+[23] Xiaoting Li, Xiao Liu, Lingwei Chen, Rupesh Prajapati, and Dinghao Wu. ALPHAPROG: Reinforcement
+Generation of Valid Programs for Compiler Fuzzing. Proceedings of the AAAI Conference on Artificial Intelligence,
+36(11), 2022.
+[24] Xiaoting Li, Xiao Liu, Lingwei Chen, Rupesh Prajapati, and Dinghao Wu. FuzzBoost: Reinforcement Compiler
+Fuzzing. In Information and Communications Security: 24th International Conference, ICICS 2022, Canterbury,
+UK, September 5–8, 2022, Proceedings. Springer-Verlag, 2022.
+[25] Martin Sablotny, Bjørn Sand Jensen, and Jeremy Singer. Reinforcement learning guided fuzz testing for a
+browser’s HTML rendering engine, 2023. arXiv:2307.14556 [cs].
+[26] Yan Zheng, Yi Liu, Xiaofei Xie, Yepang Liu, Lei Ma, Jianye Hao, and Yang Liu. Automatic Web Testing Using
+Curiosity-Driven Reinforcement Learning. In Proceedings of the 43rd International Conference on Software
+Engineering, ICSE ’21. IEEE Press, 2021.
+[27] I. Tsingenopoulos, D. Preuveneers, L. Desmet, and W. Joosen. Captcha me if you can: Imitation Games with
+Reinforcement Learning. In 2022 IEEE 7th European Symposium on Security and Privacy (EuroS&P), 2022.
+[28] L. Erdodi, A A. Sommervoll, and F M. Zennaro. Simulating SQL Injection Vulnerability Exploitation Using
+Q-Learning Reinforcement Learning Agents. arXiv:2101.03118, 2021.
+[29] Salim Al Wahaibi, Myles Foley, and Sergio Maffeis. SQIRL: Grey-Box Detection of SQL Injection Vulnerabilities
+Using Reinforcement Learning. In Proceedings of the 32nd USENIX Security Symposium (USENIX Security 23),
+2023.
+[30] S. Lee, S. Wi, and S. Son. Link: Black-Box Detection of Cross-Site Scripting Vulnerabilities Using Reinforcement
+Learning. In ACM Web Conference, 2022.
+[31] Myles Foley and Sergio Maffeis. Haxss: Hierarchical Reinforcement Learning for XSS Payload Generation.
+In 2022 IEEE International Conference on Trust, Security and Privacy in Computing and Communications
+(TrustCom), 2022.
+[32] Shae McFadden, Marcello Maugeri, Chris Hicks, Vasilios Mavroudis, and Fabio Pierazzi. WENDIGO: Deep
+Reinforcement Learning for Denial-of-Service Query Discovery in GraphQL. In IEEE Workshop on Deep
+Learning Security and Privacy (DLSP), 2024.
+[33] Mulong Luo, Wenjie Xiong, Geunbae Lee, Yueying Li, Xiaomeng Yang, Amy Zhang, Yuandong Tian, HsienHsin S. Lee, and G. Edward Suh. AutoCAT: Reinforcement Learning for Automated Exploration of Cache-Timing
+Attacks. In 2023 IEEE International Symposium on High-Performance Computer Architecture (HPCA), 2023.
+[34] T. Yue, P. Wang, Y. Tang, E. Wang, B. Yu, K. Lu, and X. Zhou. EcoFuzz: Adaptive Energy-Saving Greybox
+Fuzzing as a Variant of the Adversarial Multi-Armed Bandit. In Proceedings of the 29th USENIX Security
+Symposium, 2020.
+[35] J. Wang, C. Song, and H. Yin. Reinforcement Learning-based Hierarchical Seed Scheduling for Greybox Fuzzing.
+In Proceedings 2021 Network and Distributed System Security Symposium, 2021.
+[36] Simon Luo, Adrian Herrera, Paul Quirk, Michael Chase, Damith C. Ranasinghe, and Salil S Kanhere. Make out
+like a (Multi-Armed) Bandit: Improving the Odds of Fuzzer Seed Scheduling with T-Scheduler. In Proceedings
+of the 19th ACM Asia Conference on Computer and Communications Security, ASIA CCS ’24, 2024.
+[37] Shae McFadden, Myles Foley, Mario D’Onghia, Chris Hicks, Vasilios Mavroudis, Nicola Paoletti, and Fabio
+Pierazzi. Drmd: Deep reinforcement learning for malware detection under concept drift, 2025.
+[38] Holler Christian, Kim Herzig, and Andreas Zeller. Fuzzing with code fragments. In Proceedings of the USENIX
+Security Symposium, 2012.
+[39] Spandan Veggalam, Sanjay Rawat, Istvan Haller, and Herbert Bos. IFuzzer: An evolutionary interpreter fuzzer
+using genetic programming. In Proceedings of the European Symposium on Research in Computer Security, 2016.
+[40] HyungSeok Han, DongHyeon Oh, and Sang Kil Cha. CodeAlchemist: Semantics-Aware Code Generation to Find
+Vulnerabilities in JavaScript Engines. In Proceedings 2019 Network and Distributed System Security Symposium.
+Internet Society, 2019.
+[41] Junjie Wang, Bihuan Chen, Lei Wei, and Yang Liu. Superion: Grammar-Aware Greybox Fuzzing. In 2019
+IEEE/ACM 41st International Conference on Software Engineering (ICSE). IEEE, 2019.
+[42] Junjie Wang, Bihuan Chen, Lei Wei, and Yang Liu. Skyfire: Data-Driven Seed Generation for Fuzzing. In 2017
+IEEE Symposium on Security and Privacy (SP). IEEE, 2017.
+15
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+[43] Cornelius Aschermann, Tommaso Frassetto, Thorsten Holz, Patrick Jauernig, Ahmad-Reza Sadeghi, and Daniel
+Teuchert. NAUTILUS: Fishing for Deep Bugs with Grammars. In Proceedings 2019 Network and Distributed
+System Security Symposium. Internet Society, 2019.
+[44] Christopher Salls, Chani Jindal, Jake Corina, Christopher Kruegel, and Giovanni Vigna. Token-Level Fuzzing. In
+Proceedings of the 30th USENIX Security Symposium (USENIX Security 21), 2021.
+[45] Junjie Wang, Zhiyi Zhang, Shuang Liu, Xiaoning Du, and Junjie Chen. FuzzJIT: Oracle-Enhanced Fuzzing for
+JavaScript Engine JIT Compiler. In Proceedings of the 32nd USENIX Security Symposium, pages 1865–1882,
+2023.
+[46] Lukas Bernhard, Tobias Scharnowski, Moritz Schloegel, Tim Blazytko, and Thorsten Holz. JIT-Picking: Differential Fuzzing of JavaScript Engines. In Proceedings of the 2022 ACM SIGSAC Conference on Computer and
+Communications Security, CCS ’22, 2022.
+[47] R S. Sutton and A G. Barto. Reinforcement learning: an introduction. Adaptive computation and machine learning
+series. The MIT Press, second edition edition, 2018.
+[48] Oriol Vinyals, Meire Fortunato, and Navdeep Jaitly. Pointer Networks. arXiv:1506.03134 [cs, stat], 2017. arXiv:
+1506.03134.
+[49] Yarin Gal, Jiri Hron, and Alex Kendall. Concrete Dropout. In 31st Conference on Neural Information Processing
+Systems (NIPS 2017), 2017.
+[50] Elizabeth Bates, Vasilios Mavroudis, and Chris Hicks. Reward Shaping for Happier Autonomous Cyber Security
+Agents. In Proceedings of the 16th ACM Workshop on Artificial Intelligence and Security. ACM, 2023.
+[51] Myles Foley and Sergio Maffeis. APIRL: Deep Reinforcement Learning for REST API Fuzzing. In Proceedings
+of the AAAI Conference on Artificial Intelligence, 2025.
+[52] T. F. Chan, G. H. Golub, and R. J. LeVeque. Updating Formulae and a Pairwise Algorithm for Computing Sample
+Variances. In COMPSTAT 1982 5th Symposium held at Toulouse 1982. Physica-Verlag HD, 1982.
+[53] Pedro José Pereira Vieito. pvieito/PythonKit, 2024.
+[54] Moritz Schloegel, Nils Bars, Nico Schiller, Lukas Bernhard, Tobias Scharnowski, Addison Crump, Arash AleEbrahim, Nicolai Bissantz, Marius Muench, and Thorsten Holz. SoK: Prudent Evaluation Practices for Fuzzing.
+In 2024 IEEE Symposium on Security and Privacy (SP), 2024.
+[55] Francesco Caturano, Gaetano Perrone, and Simon Pietro Romano. Discovering reflected cross-site scripting
+vulnerabilities using a multiobjective reinforcement learning environment. Computers & Security, 103, 2021.
+[56] Lixing Chen, Jie Xu, and Zhuo Lu. Contextual Combinatorial Multi-armed Bandits with Volatile Arms and
+Submodular Reward. In Advances in Neural Information Processing Systems, volume 31, 2018.
+[57] Mark Collier and Hector Urdiales Llorens. Deep Contextual Multi-armed Bandits. arXiv.org, 2018.
+[58] Andreas Damianou and Neil D. Lawrence. Deep Gaussian Processes. In Proceedings of the Sixteenth International
+Conference on Artificial Intelligence and Statistics. PMLR, 2013.
+
+16
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Figure 5: Distribution of error types caused by 10,000 test cases from different fuzzers, when testing on V8.
+
+A
+
+Hyperparameters
+
+Lower and upper bounds of the of the hyperparameters used in the grid search for C LUTCH are displayed in Table 3.
+Values were sampled uniformly to determine the optimal hyperparameters. We also include the selected values. In
+Section 8 we compare against VCB and CB bandits using evaluation benchmarks taken from prior work; thus we use
+the same hyperparameters as in prior work.
+Table 3: Grid search ranges for hyperparameters neural network models
+
+B
+
+Hyperparameter
+
+Lower Bound
+
+Upper Bound
+
+Selected
+
+γ
+Learning Rate
+Update Step
+Update Type
+
+0.5
+0.05
+10
+Exponential
+
+0.999
+0.0005
+10000
+Linear
+
+0.9
+0.005
+200
+Linear
+
+Concrete Dropout
+
+Dropout randomly samples from a masked weight matrix in the neural network [57]. This dropout probability and
+weight matrix can be approximated to the probabilistic deep Gaussian process [58]. By taking this approximation
+we can apply a Bayesian deep learning model to a neural network of L layers and θ variations parameters. This
+allows us to place a prior on the network weights and then learn the posterior qθ (ω) distribution over the weights
+(ω = {Wl }L
+l=1 ) [49]. This can be formally written as the objective functions:
+
+L̂M C (θ) = −
+
+1 X
+1
+log p(yi |f ω (xi )) + KL(qθ (ω)||p(ω))
+M
+N
+
+(5)
+
+i∈S
+
+where S is a set of M data points, N is the number of data points, and θ is the optimisable parameters, f ω (xi ) is the
+model output given xi , and p(yi |f ω (xi )) is the model’s likelihood.
+The KL term KL(qθ (ω)||p(ω)) can be considered the ‘regularisation’ term to ensure that the posterior qθ (ω) and prior
+p(ω) distributions do not diverge too far. Gal et al. [49] show that the KL term can be approximated to depend only
+on the probability of turning off a Bernoulli random variable (node) with with probability p. From this we can derive
+Concrete Dropout [49], where we continuously relax dropout’s discrete mask.
+17
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Table 4: Branch coverage (five run average) from 24h fuzzing of C LUTCH and baseline fuzzers.
+Engine
+
+Metric
+
+FuzzJIT
+
+FJClutch
+
+Fuzzilli
+
+FClutch
+
+JIT-Picker
+
+JPClutch
+
+V8
+
+Average
+Relative Change
+Â12
+p
+
+11.26%
+11.08%
+-1.62%
+0.440
+0.099
+
+10.69%
+10.67%
+-0.16%
+0.640
+1.000
+
+6.854%
+7.212%
+5.224%
+0.640
+0.953
+
+SpiderMonkey
+
+Average
+Relative Change
+Â12
+p
+
+21.30%
+20.73%
+-2.68%
+0.000
+0.055
+
+24.50%
+22.70%
+-7.33%
+0.000
+0.001
+
+16.18%
+16.97%
+4.898%
+0.667
+0.112
+
+JavaScriptCore
+
+Average
+Relative Change
+Â12
+p
+
+17.64%
+18.21%
+3.229%
+1.000
+0.859
+
+16.49%
+16.64%
+0.923%
+0.680
+0.594
+
+14.58%
+14.55%
+-0.18%
+0.520
+0.755
+
+(a)
+
+(b)
+
+(c)
+
+Figure 6: Branch coverage (five run average and standard deviation) from 24h fuzzing of JavaScript engines.
+
+C
+
+Additional Field Test Evaluation
+
+C.1
+
+Throughput
+
+The throughput of a fuzzer is important to consider as, typically, the more test cases we execute the higher the likelihood
+of triggering a bug. We monitor the throughput of each fuzzer, reporting the results in Figure 4. We would expect
+that C LUTCH variants will take longer to execute a single test case compared to their relative counterparts, as calling
+an external implementation of a neural network in Python will inevitably introduce a higher overhead compared to
+a random selection implemented directly in the fuzzer. Increasing the rate correctness of test cases may also reduce
+throughput: by having test cases that are valid they test deeper into the engine, and in doing so, they take longer to
+execute.
+Overall, Figure 4 shows that each of the fuzzers have a different rate at which they execute test cases (similar to prior
+work), and that C LUTCH versions have a lower throughput.
+C.2
+
+Coverage
+
+Coverage is often a primary metric for evaluation of fuzzers. We show the total branch coverage in Table 4, and for
+completeness we report the coverage over time in Figure 6.
+We observe a limited and mixed effect on overall coverage by adopting C LUTCH, as shown by the average and relative
+change percentages, and the small values of Â12 in four instances. Still, 4 of the C LUTCH based models do outperform
+the fuzzer baselines in terms of coverage achieved. In fact, on average, across all combinations of fuzzer and JavaScript
+engine C LUTCH improves the coverage by an average of 2.3%.
+Given the lower number of test cases that C LUTCH variants execute, this aggregate performance is remarkable. C LUTCH
+leverages its ability to select the location for mutations, improving the efficiency of testing. To perform a more legitimate
+comparison on this efficiency we compare the coverage relative to the number of test cases executed in Section 6.3.
+18
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Table 5: Branch coverage per generated test case (five run average) from 24h fuzzing of C LUTCH and C LUTCH L ITE.
+Engine
+
+C.3
+
+Metric
+
+FJClutch
+
+FJClutchLite
+
+FClutch
+
+0.627
+
+0.620
+
+0.387
+
+V8
+
+Average
+Relative Change
+Â12
+p
+Average
+Relative Change
+Â12
+p
+
+0.067
+
+SpiderMonkey
+
+Average
+Relative Change
+Â12
+p
+
+0.508
+
+JavaScriptCore
+
+-1.13%
+0.560
+0.841
+0.058
+
+0.077
+
+-13.4%
+1.000
+0.008
+0.671
+32.20%
+0.000
+0.008
+
+0.240
+
+FClutchLite
+
+JPClutch
+
+JPClutchLite
+
+0.382
+-1.24%
+0.480
+1.000
+
+0.585
+
+0.438
+
+0.088
+13.52%
+0
+0.008
+
+0.081
+
+0.235
+-2.07%
+0.680
+0.421
+
+0.358
+
+-25.1%
+0.880
+0.056
+0.103
+26.06%
+0.111
+0.143
+0.363
+1.968%
+0.500
+0.571
+
+Comparison to C LUTCH L ITE
+
+We have shown how C LUTCH outperforms equivalent fuzzing baselines. Compared with random selection, C LUTCH
+learns from its experience to improve efficiency, and a targeted testing strategy. We designed C LUTCH to handle the
+many complex problems that come with selecting a location to perform mutations, as outlined in Sections 3.1 and 4.
+Yet, it remains to be seen if alternative bandit architectures could learn in such a setting.
+Thus we introduce C LUTCH L ITE, an alternative bandit model based on the Adaptive Contextual Combinatorial Upper
+Confidence Bound (ACC-UCB) [10] algorithm. While ACC-UCB was originally used for solving ‘dynamic resource
+allocation problems’ using a tree based structure, we have modified it to work within C LUTCH, by providing it with
+the ability to increase the search space over time (i.e. the number of instructions seen from test cases over time).
+C LUTCH L ITE can then handle the context of selecting instructions from the IR, and the variable number of arms that
+are seen over the course of fuzzing. As a result we can compare C LUTCH to another contextual bandit for selecting
+locations to mutate. We compare C LUTCH and C LUTCH L ITE for their efficiency of branches found per execution,
+reporting the results in Table 5.
+We can see that C LUTCH L ITE learns to select appropriate locations for mutations, as evidenced by the comparable
+performance in efficiency compared to C LUTCH. In C LUTCH L ITEs best case it increases efficiency by 32.2%, and at
+worst reduces efficiency by 25.1%. This result shows that even alternative bandit algorithms are a capable of learning to
+optimise mutations when fuzzing. While C LUTCH L ITE has been able to learn, we still see the superior performance
+from C LUTCH, resulting in greater branch coverage per execution in the majority of engines, increasing the aggregate
+efficiency by 30.81%, and 3.42% on average.
+
+D
+
+Additional Combinatorial Bandit Evaluation
+
+We include here the plots pertaining to the experiments detailed in Section 8 and Table 2. Figure 7 contains the regret of
+bandits in the volatile setting of the Gollawa dataset used by Nika et al. [10]. Table 6 includes the statistical testing
+values related to effect size (significant when Â12 ≥ 0.71) and statistical significance (significant when p < 0.1).
+For the combinatorial setting (without volatile arms) we include plots of regret when there are 80 observable features
+per arm and two features per arm (Figure 8). As discussed in Section 8 the volatile bandits require exactly two features
+per arm in order run their respective bandit algorithms. In order to compare across all the bandits in an equal setting
+we set the number of features per arm in the combinatorial setting to 2. The results from this experiment is presented
+in Table 7 and Figure 8. In two of the three reward functions (h2 and h3 ) C LUTCH achieves the lowest regret of any
+bandit. However, in reward h1 , ACC-UCB outperforms C LUTCH by 16.8%. This is due to an anomaly in one of the
+instances of training C LUTCH, where it performs 6.5 times worse causing the standard deviation to become significantly
+larger than in other instances. This behaviour is observed in the last 3000 timesteps in Figure 8(d), where the standard
+deviation increases.
+
+19
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+Table 6: Statistical significance of bandit regret performance compared to C LUTCH, using Vargha and Delaney’s Â12
+test and Mann-Whitney U test (p values).
+Setting
+
+Volatile
+
+Selected Arms
+
+✓
+
+2
+4
+4
+
+Golwalla Dataset
+R1 (x) = x⊤ a
+R2 (x) = (x⊤ a)2
+
+4
+
+R3 (x) = cos(πx⊤ a)
+
+4
+
+Features
+2
+2
+80
+2
+80
+2
+80
+
+ACC-UCB
+
+CC-UCB
+
+CombLinTS
+
+Â12 , p
+CombLinUCB
+
+CN-UCB
+
+CN-TS
+
+CN-TS(M=1)
+
+1.0, 0.0002
+1.0, 0.0002
+0.8, 0.03
+1.0, 0.0002
+1.0, 0.0002
+-
+
+1.0, 0.0002
+1.0, 0.0002
+0.9, 0.03
+1.0, 0.0002
+1.0, 0.0002
+-
+
+0.78, 0.04
+1.0, 0.0002
+1.0, 0.0002
+1.0, 0.0002
+1.0, 0.0002
+1.0, 0.0002
+
+0.9, 0.03
+1.0, 0.0002
+1.0, 0.0002
+1.0, 0.0002
+1.0, 0.0002
+1.0, 0.0002
+
+1.0, 0.0002
+0.98, 0.0003
+1.0, 0.0002
+1.0, 0.0002
+1.0, 0.0002
+1.0, 0.0002
+
+1.0, 0.0002
+0.81, 0.02
+1.0, 0.0002
+0.96, 0.0006
+1.0, 0.0002
+1.0, 0.0002
+
+1.0, 0.0002
+0.86, 0.007
+1.0, 0.0002
+1.0, 0.0002
+1.0, 0.0002
+1.0, 0.0002
+
+1e4
+3.5
+3.0
+
+Cumulative Regret
+
+1.0
+
+Cumulative Regret
+
+1e3
+Clutch with K = 2
+ACC-UCB with K = 2
+CC-MAB with K = 2
+
+1.2
+
+0.8
+0.6
+0.4
+0.2
+
+Clutch with K = 4
+ACC-UCB with K = 4
+CC-MAB with K = 4
+
+2.5
+2.0
+1.5
+1.0
+0.5
+
+0.0
+
+0.0
+0
+
+10000
+
+20000
+
+30000
+
+Round (t)
+
+40000
+
+50000
+
+0
+
+10000
+
+(a)
+
+20000
+
+30000
+
+Round (t)
+
+40000
+
+50000
+
+(b)
+
+Figure 7: Cumulative regret of volatile combinatorial contextual bandits.
+
+Table 7: Total regret of combinatorial bandits in combinatorial bandit settings with two features per arm.
+Setting
+⊤
+
+R1 (x) = x a
+R2 (x) = (x⊤ a)2
+R3 (x) = cos(πx⊤ a)
+
+ACC-UCB
+
+CC-UCB
+
+CombLinTS
+
+Total Regret
+CombLinUCB
+CN-UCB
+
+2485.14
+(±22.22)
+4490.68
+(±11.95)
+3273.88
+(±17.58)
+
+15405.27
+(±3.71)
+7645.91
+(±3.38)
+18699.54
+(±8.21)
+
+3400.14
+(±945.67)
+15851.85
+(±9413.66)
+43407.08
+(±193.73)
+
+6470.49
+(±1061.56)
+9408.59
+(±4772.00)
+43171.84
+(±61.45)
+
+20
+
+35312.04
+(±667.05)
+17862.91
+(±40.10)
+38149.58
+(±8426.18)
+
+CN-TS
+
+CN-TS(M=1)
+
+C LUTCH
+
+35669.80
+(±16.68)
+17905.96
+(±50.17)
+42397.60
+(±1143.33)
+
+35604.24
+(±233.58)
+17882.48
+(±46.23)
+39768.50
+(±9970.75)
+
+2988.15
+(±5641.32)
+402.20
+(±353.64)
+77.05
+(±30.18)
+
+C LUTCH Control: An Attention-based Combinatorial Bandit for Efficient Mutation in JavaScript Engine Fuzzing
+
+1.2
+1.0
+
+2.0
+
+0.8
+
+Cumulative Regret
+
+1.5
+1.0
+
+h2(x) = (x
+CN-UCB
+CN-TS(M=1)
+CN-TS
+Clutch
+CombLinUCB
+CombLinTS
+
+1e3
+
+0.0
+
+2.0
+
+0.6
+0.4
+
+2000
+
+4000
+
+6000
+
+Round (t)
+
+8000
+
+10000
+
+1.0
+
+0.0
+0
+
+2000
+
+(a)
+
+4000
+
+6000
+
+Round (t)
+
+8000
+
+10000
+
+0
+
+2000
+
+(b)
+
+h1(x) = x a, d=2, m=100
+
+1e4
+
+1.5
+
+0.5
+
+0.0
+0
+
+h3(x) = cos( x a), d=80, m=100
+
+2.5
+
+0.2
+
+0.5
+
+1e4
+
+3.5
+
+1.75
+
+3.0
+
+1.50
+
+2.5
+
+1.25
+
+Cumulative Regret
+
+Cumulative Regret
+
+a)2, d=80, m=100
+
+2.0
+1.5
+1.0
+0.5
+
+h2(x) = (x
+CN-UCB
+CN-TS(M=1)
+CN-TS
+Clutch
+CC-MAB
+ACC-UCB
+
+4000
+
+6000
+
+Round (t)
+
+8000
+
+10000
+
+(c)
+
+a)2, d=2, m=100
+
+1e4
+
+h3(x) = cos( x a), d=2, m=100
+
+4
+
+Cumulative Regret
+
+Cumulative Regret
+
+2.5
+
+1e3
+
+Cumulative Regret
+
+h1(x) = x a, d=80, m=100
+
+1e3
+3.0
+
+1.00
+0.75
+0.50
+
+3
+
+2
+
+1
+
+0.25
+
+0.0
+
+0.00
+0
+
+2000
+
+4000
+
+6000
+
+Round (t)
+
+(d)
+
+8000
+
+10000
+
+0
+0
+
+2000
+
+4000
+
+6000
+
+Round (t)
+
+(e)
+
+8000
+
+10000
+
+0
+
+2000
+
+4000
+
+6000
+
+Round (t)
+
+8000
+
+10000
+
+(f)
+
+Figure 8: Cumulative regret of C LUTCH compared with deep and linear combinatorial contextual bandits. Top row:
+80 features per arm (d) and 100 nodes per hidden layer (m). Bottom row: 80 features per arm (d) and 100 nodes per
+hidden layer (m).
+
+21
+
+

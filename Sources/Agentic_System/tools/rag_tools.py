@@ -4,14 +4,13 @@ import os
 import json
 import hashlib
 from pathlib import Path
-import chromadb
-from chromadb.config import Settings as ChromaSettings
-from chromadb.api.models.Collection import Collection
-from chromadb.api.models.Document import Document
-from chromadb.api.models.QueryResult import QueryResult
-from chromadb.api.models.QueryResult import QueryResult
 
-# Try to import LangChain components, set to None if not available
+try:
+    import chromadb
+    from chromadb.config import Settings as ChromaSettings
+except ImportError:
+    chromadb = None
+
 try:
     from langchain_community.vectorstores import Chroma
     from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -19,6 +18,15 @@ try:
 except ImportError:
     Chroma = None
     HuggingFaceEmbeddings = None
+
+try:
+    import numpy as np
+    import faiss
+    import pickle
+    from sentence_transformers import SentenceTransformer
+    FAISS_AVAILABLE = True
+except ImportError:
+    FAISS_AVAILABLE = False
 
 def _get_embeddings():
     """Get embeddings function, returns None if not available."""
@@ -235,3 +243,139 @@ def get_rag_doc(doc_id: str, collection: str = "") -> str:
         return json.dumps(result)
     except Exception as e:
         return f"Error getting RAG doc: {e}"
+
+class FAISSKnowledgeBase:
+    _instance = None
+    
+    def __init__(self):
+        if not FAISS_AVAILABLE:
+            raise RuntimeError("FAISS dependencies not available")
+        
+        base_dir = Path(__file__).parent.parent / 'knowlage_docs' / 'v8_knowlagebase'
+        
+        if not base_dir.exists():
+            raise FileNotFoundError(f"Knowledge base not found: {base_dir}")
+        
+        index_file = base_dir / 'v8_knowlagebase.index'
+        metadata_file = base_dir / 'v8_knowlagebase_metadata.json'
+        model_file = base_dir / 'v8_knowlagebase_model.pkl'
+        
+        if not all([index_file.exists(), metadata_file.exists(), model_file.exists()]):
+            raise FileNotFoundError("Knowledge base files incomplete")
+        
+        self.index = faiss.read_index(str(index_file))
+        
+        with open(metadata_file, 'r') as f:
+            self.metadata = json.load(f)
+        
+        with open(model_file, 'rb') as f:
+            model_name = pickle.load(f)
+        
+        self.model = SentenceTransformer(model_name)
+    
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+    
+    def search(self, query: str, top_k: int = 5, topic_filter: str = None):
+        query_embedding = self.model.encode([query], convert_to_numpy=True)
+        
+        search_k = top_k * 3 if topic_filter else top_k
+        distances, indices = self.index.search(query_embedding.astype('float32'), search_k)
+        
+        results = []
+        for idx, distance in zip(indices[0], distances[0]):
+            if idx < len(self.metadata):
+                doc = self.metadata[idx]
+                
+                if topic_filter and topic_filter.lower() not in doc['topic'].lower():
+                    continue
+                
+                similarity = 1.0 / (1.0 + distance)
+                results.append({
+                    'path': doc['path'],
+                    'topic': doc['topic'],
+                    'content': doc['content'],
+                    'similarity': float(similarity)
+                })
+                
+                if len(results) >= top_k:
+                    break
+        
+        return results
+
+@tool
+def search_knowledge_base(query: str, top_k: int = 3, topic_filter: str = "") -> str:
+    """
+    Searches the V8/JavaScript/C++ knowledge base using semantic search.
+    
+    Args:
+        query (str): Natural language query about V8, JavaScript, or C++ concepts.
+        top_k (int): Number of results to return (default 3, max 10).
+        topic_filter (str): Optional topic filter: 'v8', 'javascript', 'cpp', or empty for all.
+    
+    Returns:
+        str: JSON string containing search results with topic, file path, and content snippets.
+    """
+    if not FAISS_AVAILABLE:
+        return json.dumps({"error": "Knowledge base not available. Install dependencies: pip install numpy faiss-cpu sentence-transformers"})
+    
+    try:
+        kb = FAISSKnowledgeBase.get_instance()
+        
+        top_k = max(1, min(10, int(top_k)))
+        
+        results = kb.search(query, top_k, topic_filter if topic_filter else None)
+        
+        output = []
+        for result in results:
+            content = result['content']
+            lines = content.split('\n')
+            
+            preview = '\n'.join(lines[:30])
+            if len(lines) > 30:
+                preview += f"\n... ({len(lines) - 30} more lines)"
+            
+            output.append({
+                'topic': result['topic'],
+                'file': result['path'],
+                'similarity': round(result['similarity'], 3),
+                'content_preview': preview
+            })
+        
+        return json.dumps(output, indent=2)
+    
+    except Exception as e:
+        return json.dumps({"error": f"Failed to search knowledge base: {str(e)}"})
+
+@tool
+def get_knowledge_doc(file_path: str) -> str:
+    """
+    Retrieves a full document from the knowledge base by its file path.
+    
+    Args:
+        file_path (str): The relative file path from search results.
+    
+    Returns:
+        str: JSON string containing the full document content.
+    """
+    if not FAISS_AVAILABLE:
+        return json.dumps({"error": "Knowledge base not available"})
+    
+    try:
+        kb = FAISSKnowledgeBase.get_instance()
+        
+        for doc in kb.metadata:
+            if doc['path'] == file_path:
+                return json.dumps({
+                    'topic': doc['topic'],
+                    'file': doc['path'],
+                    'content': doc['content']
+                }, indent=2)
+        
+        return json.dumps({"error": f"Document not found: {file_path}"})
+    
+    except Exception as e:
+        return json.dumps({"error": f"Failed to retrieve document: {str(e)}"})
