@@ -15,6 +15,7 @@ def lookup(query: str) -> str:
     """
     return run_command(f"curl -s 'https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1'")
 
+
 @tool
 def run_python(code: str) -> str:
     """

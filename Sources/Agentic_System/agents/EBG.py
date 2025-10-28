@@ -6,6 +6,10 @@ L0 Manager Agent - Runtime analysis and issue solev
 
 from smolagents import LiteLLMModel, ToolCallingAgent
 from BaseAgent import Agent
+from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).parent.parent))
+from config_loader import get_openai_api_key, get_anthropic_api_key
 
 
 class EBG(Agent): 
@@ -107,13 +111,15 @@ class EBG(Agent):
 
 
 def main():
-    # Init model
+    openai_key = get_openai_api_key()
+    anthropic_key = get_anthropic_api_key()
+    
     model = LiteLLMModel(
         model_id="gpt-5-mini",
-        api_key="<key>"
+        api_key=openai_key
     )
     
-    system = George(model)
+    system = EBG(model, api_key=openai_key, anthropic_api_key=anthropic_key)
     
     # run task
     result = system.run_task(

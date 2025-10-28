@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-
-
 from smolagents import LiteLLMModel, ToolCallingAgent
 from BaseAgent import Agent
 from EBG import EBG
 from pathlib import Path 
 from tools.FoG_tools import *
+import sys
+sys.path.append(str(Path(__file__).parent.parent))
+from config_loader import get_openai_api_key, get_anthropic_api_key
 
 
 class Father(Agent):
@@ -109,13 +110,15 @@ class Father(Agent):
         return results
 
 def main():
-    # Init model
+    openai_key = get_openai_api_key()
+    anthropic_key = get_anthropic_api_key()
+    
     model = LiteLLMModel(
         model_id="gpt-5-mini",
-        api_key="<key>"
+        api_key=openai_key
     )
     
-    system = Father(model)
+    system = Father(model, api_key=openai_key, anthropic_api_key=anthropic_key)
     
     # run task
     result = system.run_task(
