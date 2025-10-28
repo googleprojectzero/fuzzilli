@@ -155,6 +155,6 @@ def run_d8(target: str) -> str:
     Run the target program using d8 to test for syntactical correctness
     and test for coverage. 
     """ # consider adding arguments for it to tack onto the V8 runs
-    return run_command(f"./v8/v8/out/fuzzbuild/d8 {target}") 
+    return run_command(f"/usr/share/vrigatoni/fuzzillai/v8/v8/out/fuzzbuild/d8 {target}") 
 
 
