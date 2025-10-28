@@ -14,6 +14,7 @@
 
 import Foundation
 import Fuzzilli
+// import Agentic_System
 
 //
 // Process commandline arguments.
@@ -99,6 +100,7 @@ Options:
                                    This can for example be used to remember the target revision that is being fuzzed.
     --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
     --forDifferentialFuzzing     : Enable additional features for better support of external differential fuzzing.
+    --agent-testing
 
 """)
     exit(0)
@@ -110,11 +112,38 @@ func configError(_ msg: String) -> Never {
     exit(-1)
 }
 
+func runAgent() {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+    process.arguments = "../Agentic_System/rises-the-fog.py"
+    
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    process.standardError = pipe
+    
+    do {
+        try process.run()
+        process.waitUntilExit()
+        
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        if let output = String(data: data, encoding: .utf8) {
+            print(output)
+        }
+    } catch {
+        print("Error running \(path): \(error)")
+    }
+}
+
 let jsShellPath = args[0]
 
 if !FileManager.default.fileExists(atPath: jsShellPath) {
     configError("Invalid JS shell path \"\(jsShellPath)\", file does not exist")
 }
+
+if args["--agent-testing"] {
+    runAgent()
+    exit(0) // Just testing.
+} 
 
 var profile: Profile! = nil
 var profileName: String! = nil
