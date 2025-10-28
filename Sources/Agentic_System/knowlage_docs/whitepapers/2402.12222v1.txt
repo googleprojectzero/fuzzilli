@@ -1,0 +1,2368 @@
+CovRL: Fuzzing JavaScript Engines with Coverage-Guided
+Reinforcement Learning for LLM-based Mutation
+Jueon Eom
+
+Seyeon Jeong
+
+Taekyoung Kwon
+
+Yonsei University
+jueoneom@yonsei.ac.kr
+
+Suresofttech Inc.
+best6653@gmail.com
+
+Yonsei University
+taekyoung@yonsei.ac.kr
+
+arXiv:2402.12222v1 [cs.CR] 19 Feb 2024
+
+ABSTRACT
+Fuzzing is an effective bug-finding technique but it struggles with
+complex systems like JavaScript engines that demand precise grammatical input. Recently, researchers have adopted language models
+for context-aware mutation in fuzzing to address this problem. However, existing techniques are limited in utilizing coverage guidance
+for fuzzing, which is rather performed in a black-box manner.
+This paper presents a novel technique called CovRL (Coverageguided Reinforcement Learning) that combines Large Language
+Models (LLMs) with reinforcement learning from coverage feedback. Our fuzzer, CovRL-Fuzz, integrates coverage feedback directly
+into the LLM by leveraging the Term Frequency-Inverse Document
+Frequency (TF-IDF) method to construct a weighted coverage map.
+This map is key in calculating the fuzzing reward, which is then
+applied to the LLM-based mutator through reinforcement learning. CovRL-Fuzz, through this approach, enables the generation
+of test cases that are more likely to discover new coverage areas,
+thus improving vulnerability detection while minimizing syntax
+and semantic errors, all without needing extra post-processing.
+Our evaluation results indicate that CovRL-Fuzz outperforms the
+state-of-the-art fuzzers in terms of code coverage and bug-finding
+capabilities: CovRL-Fuzz identified 48 real-world security-related
+bugs in the latest JavaScript engines, including 39 previously unknown vulnerabilities and 11 CVEs.
+
+1
+
+INTRODUCTION
+
+JavaScript (JS) engines are complex software components for parsing, interpreting, compiling, and executing JavaScript code in modern web browsers. These engines are essential for accessing today’s
+interactive web and embedded applications. According to a recent
+survey, as of January 2024, JavaScript is employed as a client-side
+programming language by 98.9% of web browsers [52]. Given their
+extensive use and Turing-complete nature, securing JS engines is
+a critical requirement. For instance, vulnerabilities in JS engines
+can lead to various attack patterns, encompassing threats such as
+information disclosure and the potential for bypassing web browser
+security measures [18, 35]. Considering the high stakes, the need for
+continuous and automated testing, such as fuzzing, is crucial for JS
+engines, despite challenges from their strict input grammar requirements. Fuzzing involves providing invalid, unexpected, or random
+inputs, e.g., by mutation, to a program to detect bugs. Coverageguided fuzzing, e.g., AFL [36], stands out as an effective method by
+using code coverage to guide the fuzzing process, ensuring a more
+thorough examination of the code paths and thereby increasing the
+chances of uncovering hidden bugs [36].
+Previous research on fuzzing JS engines can broadly be divided
+into two main approaches: grammar-level and token-level fuzzing to
+deal with strict grammar. Grammar-level fuzzing techniques focus
+
+on producing inputs that are grammatically accurate [2, 19, 20,
+40, 41, 51, 53, 54], while token-level fuzzing offers a more flexible
+method. Token-level fuzzing transforms inputs into a sequence
+of tokens and then substitutes certain tokens without adhering
+strictly to grammar rules [44]. Coverage-guided fuzzing is also
+widely applied in fuzzing JS engines, encompassing both grammarlevel and token-level fuzzing methods [20, 40, 44, 54].
+However, due to the continuous evolution of the JavaScript language, the grammar in JS engines is also being consistently updated
+to match these changes. Consequently, grammar-level fuzzing faces
+the challenge of needing to add new grammar rules frequently.
+Token-level fuzzing offers more flexibility compared to grammarlevel fuzzing. Nevertheless, as mutations evolve from the initial
+seed, maintaining syntactical correctness becomes challenging, often leading to syntax errors. This limitation hinders the ability to
+uncover deeper bugs without inducing errors. Therefore, fuzzing
+JS engines requires mutating highly structured inputs, a task that
+traditional heuristic mutations alone find difficult in producing wellformed inputs. To overcome this, recent advancements have introduced fuzzing techniques that utilize Code-LLMs, capable of generating well-formed inputs (i.e., those that are syntactically informed)
+for compilers, deep learning libraries, and JS engines [11, 12, 58, 60].
+Among these developments, TitanFuzz [11] and FUZZ4ALL [58]
+are notable for their use of Code-LLMs in mutation processes. Pretrained Code-LLMs, already trained on extensive datasets across
+various programming languages, can be directly employed for LLMbased mutation without the need for further finetuning. Moreover,
+these models inherently understand the context of the language.
+This means they are capable of comprehending the grammar of the
+code and generating inputs that reflect both grammatical accuracy
+and contextual relevance. Their effectiveness is evident in their
+ability to generate seeds that are abundant in edge cases [12, 60].
+While pretrained LLM-based mutators have proven to be effective for fuzzing [11, 58], it is important to note that all current
+LLM-based fuzzing approaches are categorized as black-box fuzzing
+and do not incorporate internal program information such as code
+coverage. In TitanFuzz [11], although a fitness function is used,
+it does not involve coverage-related information like in coverageguided fuzzing. Instead, it utilizes static analysis information of the
+generated input, such as the number of unique function calls, depth,
+and iteration counts, as the fitness function’s input. Therefore,
+TitanFuzz is not based on coverage-guided fuzzing, as it doesn’t
+directly utilize execution code coverage information of the fuzzing
+target.
+Differing from black-box fuzzing, coverage-guided fuzzing leverages internal program data. This method of fuzzing uses an evolutionary strategy to create interesting seeds that aim to enhance
+the target program’s coverage. It considers the impact of mutated
+
+Jueon Eom, Seyeon Jeong, and Taekyoung Kwon
+
+Figure 1: Overview: CovRL is a pioneering approach in integrating
+an LLM-based mutator into coverage-guided fuzzing.
+
+inputs on the program’s coverage. According to Miller’s research, a
+1% increase in code coverage correlates to a 0.92% higher probability
+of discovering bugs [6]. Applying coverage data in coverage-guided
+fuzzing enhances coverage more effectively than black-box fuzzing,
+increasing the likelihood of discovering more bugs. However, as
+we describe below, this is surprisingly challenging.
+Problem. When AFL’s heuristic mutator is replaced with a pretrained LLM-based mutator in coverage-guided fuzzing, we observe a reduced error rate. However, this improvement did not
+translate into increased code coverage. Surprisingly, some performance patterns fell below that of random fuzzing. This pattern was
+confirmed in our experiments, where we replaced AFL’s mutator
+with an LLM-based mutator. Some of the LLM-based fuzzers obtained 12-16% lower coverage in V8 and 4-13% lower coverage in
+JerryScript compared to the baseline (random mutation). For more
+detailed results, please refer to Table 6 in Section 5.3. Our results
+also align with findings from TitanFuzz’s experiments. We speculate that this phenomenon arises because LLM-based mutators
+make constrained predictions. While AFL’s interesting seeds are
+based on increased coverage, random mutators indiscriminately
+mutate tokens from the dictionary, regardless of context. In contrast,
+LLM-based mutators focus on contextually relevant token predictions, which reduces diversity (due to an overemphasis on context,
+they often predict common sentences, diminishing diversity). Thus,
+in coverage-guided fuzzing, LLM-based mutators’ context-aware
+mutations reduce errors but also limit diversity, rendering them
+less effective than random fuzzing.
+Our Approach. To address the aforementioned problem, we propose enhancing LLM-based mutators to align better with coverageguided fuzzing. This involves a novel strategy of providing direct
+coverage feedback to the LLM-based mutator for more effective JS
+engine fuzzing as illustrated in Figure 1. Key to this approach is the
+use of a coverage-based weight map, where weights are assigned
+according to the inverse frequency of each coverage occurrence. By
+leveraging Term Frequency-Inverse Document Frequency (TF-IDF)
+for weighting the coverage map, the coverage-weighted reward is
+directly applied in reinforcement learning, enabling the LLM-based
+mutator to generate test cases that can achieve new coverage. This
+method enhances the model’s ability to discover unknown vulnerabilities and reduces syntax and semantic errors without the need for
+additional post-processing. We call this approach CovRL-fuzz, and
+unlike other LLM-based fuzzing techniques [11, 12, 58, 60], CovRL
+is the first method that properly integrates an LLM-based mutator
+to coverage-guided fuzzing.
+To sum up, this paper makes the following contributions:
+
+• We introduce CovRL, a novel technique that combines LLMs
+with reinforcement learning from coverage feedback. This is a
+unique approach that directly integrates coverage feedback into
+the LLM using TF-IDF for advanced coverage-guided fuzzing.
+• We implement CovRL-Fuzz, a coverage-guided fuzzer employing
+the CovRL technique, focused on JS engine fuzzing. Our experiments show that CovRL-Fuzz outperforms existing fuzzers in
+terms of code coverage and bug-finding capabilities. This advancement underscores CovRL-Fuzz’s efficiency in navigating
+the complexities of JS engine fuzzing.
+• CovRL-Fuzz successfully identified 48 real-world security-related
+bugs, including 39 previously unknown bugs (11 CVEs) in the
+latest JS engines.
+• To foster future research, we will open-source our work at publication time.
+
+2 BACKGROUND AND RELATED WORK
+2.1 JS Engine Fuzzing
+Fuzzing is a powerful automated bug-finding technique that generates and executes numerous inputs to identify vulnerabilities,
+crashes, or unexpected behaviors in software [38]. Both academia
+and industry have recognized its effectiveness in uncovering software bugs. However, fuzzing faces challenges with JS engines that
+require strict grammar for input. When the input is not syntactically correct, the JS engine returns a syntax error. On the other
+hand, semantic inconsistencies (e.g., errors with reference, type,
+range, or URI) lead to semantic errors [19]. In both cases, the JS
+engine’s core logic, which may contain hidden vulnerabilities, isn’t
+executed.
+To address these challenges, researchers have proposed grammarlevel and token-level fuzzing approaches. These strategies employ
+heuristic methods to tackle the issue. The grammar-level technique
+transforms the seed into an Intermediate Representation (IR) to
+produce grammatically accurate inputs [2, 19, 20, 40, 41, 51, 53, 54].
+While this approach reliably produces syntactically correct inputs,
+it doesn’t consistently account for semantic constraints. Moreover,
+it often demands substantial manual effort to craft the necessary
+grammar rules. The token-level fuzzing approach [44] offers a more
+flexible method, free from the constraints of grammar rules. This
+technique transforms inputs into a sequence of tokens and substitutes certain ones. Although this method has demonstrated effectiveness in bug detection, its strategy of randomly replacing
+tokens—without accounting for inter-token relationships—places
+a significant dependency on the quality of the initial seed. Consequently, the approach often results in inputs that are not syntactically correct.
+Recently, there has been a growing interest among researchers
+in utilizing deep learning-based Language Models (LM) in fuzzing,
+aiming to overcome the limitations of traditional fuzzing methods. Early endeavors leveraged RNN-based Language Models to
+mutate portions of inputs [10, 17, 26, 32]. More recently, there’s
+been a discernible trend towards the adoption of Large Language
+Models (LLMs) for seed generation and mutation [11, 12, 58, 60].
+TitanFuzz [11] is a black-box fuzzing technique to use LLMs for
+mutation, demonstrating the effectiveness of pretrained LLMs not
+only for seed generation but also for mutation. While TitanFuzz
+
+CovRL: Fuzzing JavaScript Engines with Coverage-Guided Reinforcement Learning for LLM-based Mutation
+
+didn’t use internal target information like coverage in fuzzing, it
+did utilize static analysis metrics such as the number of unique
+function calls, depth, and iteration counts. These metrics, gathered
+from statically analyzing mutated inputs, helped select interesting
+seeds for fuzzing processes. They substituted portions of inputs
+with a mask token for the mutation (we refer to “Mask Mutation”).
+Conversely, FUZZ4ALL [58] introduced mutation by adding mutation prompts, such as ‘Please create a mutated program’
+instead of using mask tokens.
+Coverage-guided Fuzzing. By leveraging coverage feedback to explore diverse code paths, coverage-guided fuzzing has consistently
+outperformed traditional black-box fuzzing in its ability to discover
+software bugs [6]. Tools like the American Fuzzy Lop (AFL) have
+notably shifted testing paradigms by focusing on maximizing code
+coverage, mutating, and generating input sequences. Such tools
+have been remarkably effective, uncovering a plethora of security
+issues and thereby validating their ability to detect vulnerabilities
+across a wide range of software [36]. It has also been extensively
+applied in JS engine fuzzing, such as grammar-level and token-level
+fuzzing [20, 40, 44, 54].
+It is illustrated in Figure 1. Unlike black-box or white-box fuzzing,
+coverage-guided fuzzing utilizes code coverage information of the
+target software to explore varied code paths. This method initially
+requires the instrumentation of the software, leading to the creation
+of a coverage map—a matrix that tracks the frequency of specific
+code paths being accessed.
+Following this setup, the fuzzing procedure begins with the selection of a seed from the seed queue for the mutation ( 1 ). This
+selected seed is then mutated to generate a new test case ( 2 ). Subsequently, the executor runs the target software with this test case,
+measuring its associated code coverage ( 3 ). If coverage is not already recorded in the coverage map, it is deemed as new coverage.
+Identifying such new coverage elevates the mutated test case to the
+status of an ‘interesting seed’ ( 4 ), which is then queued back into
+the seed pool ( 5 ). By continuously reintroducing such interesting
+seeds and encouraging the discovery of novel coverages through
+iterative mutations, coverage-guided fuzzing effectively generates
+a wide array of diverse test cases, each targeting the exploration of
+unexplored code areas of the target software.
+RL-based Fuzzing. Unlike coverage-guided fuzzing, RL-based
+fuzzing approaches [4, 29, 30] seek to improve performance not
+by utilizing coverage for seed selection, but by incorporating code
+coverage feedback into deep learning models, such as deep neural
+networks (DNNs) and recurrent neural networks (RNNs). They
+provide feedback using each code coverage as a reward, and for
+this purpose, they process the code coverage into a quantified reward, which is the ratio of the current coverage relative to the total
+cumulative coverage. We refer to this as Coverage-Rate Rewarding
+(CRR).
+The details of the coverage-rate rewarding procedure are shown
+in Algorithm 1. In the case of a syntax error or semantic error in
+the JS engine, a fixed penalty is given (Lines 3-6). These penalty
+approach is also commonly seen in other RL methods targeting
+Code-LLM [24, 31, 47]. When passed through the JS engine, a CRR
+is calculated (Line 7-11). The CRR is calculated as a ratio of the
+current coverage relative to the total cumulative coverage. This
+
+Algorithm 1: Coverage-Rate Rewarding (CRR)
+Input: testcase 𝑇
+Output: reward 𝑅𝑐𝑜𝑣
+1 𝑇𝑜𝑡𝑎𝑙𝑐𝑜𝑣 : Total Coverage Map (Accumulated)
+Function GetReward(𝑇 ):
+if JS_Engine(𝑇 ) is 𝑆 𝑦𝑛𝑡𝑎𝑥𝐸𝑟𝑟𝑜𝑟 then
+4
+return -1.0
+5
+else if JS_Engine(𝑇 ) is 𝑆𝑒𝑚𝑎𝑛𝑡𝑖𝑐𝐸𝑟𝑟𝑜𝑟 then
+6
+return -0.5
+7
+else
+8
+/* JS_Engine(𝑇 ) is Passed */
+
+2
+
+3
+
+9
+10
+11
+
+𝑇𝑐𝑜𝑣 = GetCov (𝐼𝑛𝑝𝑢𝑡 )
+𝑇 𝑜𝑡𝑎𝑙𝑐𝑜𝑣 += 𝑇𝑐𝑜𝑣 ⊕ 𝑇 𝑜𝑡𝑎𝑙𝑐𝑜𝑣
+return Count (𝑇𝑐𝑜𝑣 ) / Count (𝑇 𝑜𝑡𝑎𝑙𝑐𝑜𝑣 )
+
+Function RewardModelingProcess(𝑇 ):
+𝑅𝑐𝑜𝑣 = GetReward (𝑇 )
+14
+𝑂𝑢𝑡𝑝𝑢𝑡 ← 𝑅𝑐𝑜𝑣
+15
+return 𝑂𝑢𝑡𝑝𝑢𝑡
+
+12
+
+13
+
+approach has inherent challenge, notably its failure to differentiate between newly discovered and pre-existing coverage, which
+means it awards high scores for MANY COVERED, including those
+previously covered. In other words, even if a test case does not
+find new coverage, it can still receive a high score if it covers a
+substantial amount of existing coverage. In this work, we propose
+a new rewarding approach that addresses this problem.
+
+2.2
+
+Finetuning LLMs for code
+
+Following the success of LLMs in Natural Language Processing
+(NLP) tasks [5, 8, 9], the field of programming languages is advancing with significant contributions from Large Language Models for code (Code-LLMs) such as PLBART [1], CodeT5 [55, 56],
+Codex [7] and InCoder [16]. These advancements are facilitating
+various downstream tasks, including code completion [61], program synthesis [3, 24, 31, 47], program repair [15, 59], and many
+others.
+Methods for finetuning LLMs, including Code-LLMs are categorized into supervised finetuning (SFT), instruction finetuning [57],
+and RL-based finetuning [25, 39, 43]. While prompt engineering
+controls the output of LLMs at inference time through input manipulation alone, SFT, instruction finetuning, and RL-based finetuning
+aim to steer the model during training time by learning from specific datasets tailored to particular tasks. Particularly, RL-based
+finetuning has been proven effective in guiding LLMs using feedback to optimize factual consistency and reduce the toxic generation [25, 39, 43]. Recently, there has also been proposed for applying
+RL-based finetuning to Code-LLMs aimed at generating unit tests
+that are not only grammatically correct but also capable of solving
+complex coding tasks [24, 31, 47].
+RL-based finetuning. RL-based finetuning consists of the following phases: reward modeling, and reinforcement learning. In
+reward modeling, an LLM-based rewarder is trained to evaluate
+
+Jueon Eom, Seyeon Jeong, and Taekyoung Kwon
+
+Figure 2: Workflow of CovRL-Fuzz: The gray-shaded area illustrates the operation of CovRL.
+the suitability of output results when input is provided to the LLM
+created in the previous phase. There are various approaches to
+feedback depending on how the rewarder is trained: utilizing an
+oracle [24, 31, 47], using deep learning models [25], and using human feedback [39]. We also adopt the strategy of employing the
+JS engine as a feedback oracle. In reinforcement learning, training commonly employs Kullback-Leibler (KL) divergence-based
+optimization. This method is designed to optimize the balance between maximizing rewards and minimizing deviation from the
+initial training distribution.
+
+3
+
+DESIGN
+
+In this section, we describe the design of CovRL-Fuzz. The key
+accomplishment of CovRL-Fuzz is: We ensure effective fuzzing by
+limiting irrelevant mutations through context-aware mutations utilizing an LLM-based mutator and guiding the mutator with CovRL
+to obtain a wide range of coverage.
+Figure 2 is a workflow of CovRL-Fuzz, which consists of three
+phases. First, CovRL-Fuzz selects a seed from the seed queue. The
+seed undergoes a mask mutation process where specific tokens
+are masked and subsequently predicted ( 1 ). We use mask tokens
+and predict their replacements using a masked language model
+task [13, 42]. After mutation, the test case is then executed by the
+target JS engine. If the test case discovers new coverage not seen
+before, it is considered an interesting seed and is placed back in
+the seed queue for further mutation. At the same time, CovRL-Fuzz
+stores the coverage map measured by the test case and validity
+information, whether the test case led to syntax errors, semantic
+errors, or passed successfully. Our rewarding approach uses validity
+information to impose penalties on inputs that result in syntax or
+semantic errors. Following this, it produces a rewarding signals
+by multiplying the current coverage map with a coverage-based
+weight map ( 2 ). After completing a mutation cycle, we proceed
+to finetune the LLM-based mutator using CovRL by utilizing the
+gathered interesting seeds and rewarding signals. We define the
+notion of one cycle as a predetermined number of mutations. The
+CovRL employs the PPO [45] algorithm, a method that seeks to
+improve the current model while adhering closely to the previous
+model’s framework. The signal during training prevents the LLM
+
+from making syntax or semantic errors and induces prediction to
+find new coverage ( 3 ).
+Note that we do not perform any heuristic post-processing on the
+LLM-based mutator, save for CovRL-based finetuning. We demonstrated a minimal error rate in using solely CovRL that is comparable to other latest JS engine fuzzing techniques on Section 5.2.
+
+3.1
+
+Phase 1. Mask Mutation
+
+We use the mask mutation as a basic type of LLM-based mutation
+that can be done without any further prompts.
+Masking. To mutate the selected seed, CovRL-Fuzz performs a
+masking strategy for mask mutation ( 1 in Figure 2). Given the input sequence 𝑊 = {𝑤 1, 𝑤 2, .., 𝑤𝑛 }, CovRL-Fuzz uses three masking
+techniques: insert, overwrite, and splice. The strategy results in the
+mask sequence 𝑊 𝑀𝐴𝑆𝐾 = {[𝑀𝐴𝑆𝐾], 𝑤 3, .., 𝑤𝑘 } and the masked
+sequence 𝑊 \𝑀𝐴𝑆𝐾 = {𝑤 1, 𝑤 2, [𝑀𝐴𝑆𝐾], .., 𝑤𝑛 }. The detailed operations are described as follows:
+Randomly select positions and insert [MASK] tokens
+Insert
+into the inputs.
+Overwrite Randomly select positions and replace existing tokens
+with the [MASK] token.
+Splice
+
+Statements within a seed are randomly divided into
+segments. A portion of these segments is replaced with
+a segment from another seed with [MASK], formatted
+as [MASK] statement [MASK].
+
+Mutation. After generating a masked sequence 𝑊 \𝑀𝐴𝑆𝐾 via masking, the input is mutated by inferring in the masked positions via
+LLM-based mutator. The mutation design of CovRL-Fuzz is based
+on a span-based masked language model (MLM) that can predict
+variable-length masks [16, 42]. Thus, the MLM loss we utilize for
+mutation can be represented as follows:
+
+𝐿𝑀𝐿𝑀 (𝜃 ) =
+
+𝑘
+∑︁
+
+𝑀𝐴𝑆𝐾
+−𝑙𝑜𝑔𝑃𝜃 (𝑤𝑖𝑀𝐴𝑆𝐾 |𝑤 \𝑀𝐴𝑆𝐾 , 𝑤 <𝑖
+)
+
+(1)
+
+𝑖=1
+
+𝜃 represents the model’s trainable parameters that are optimized
+during the training process, and 𝑘 is the number of tokens in
+𝑊 𝑀𝐴𝑆𝐾 . 𝑤 \𝑀𝐴𝑆𝐾 denotes the masked input tokens where certain
+tokens are replaced by mask tokens. 𝑤 𝑀𝐴𝑆𝐾 refers to the original
+
+CovRL: Fuzzing JavaScript Engines with Coverage-Guided Reinforcement Learning for LLM-based Mutation
+
+tokens that have been substituted with the mask tokens in the input
+sequence.
+
+3.2
+
+Phase 2. Coverage-Weighted Rewarding
+
+CovRL designs rewarding signal called Coverage-Weighted Rewarding (CWR) for guiding the mutator. The signal is weighted using
+TF-IDF [48] to prioritize the discovery of new coverage ( 2 in Figure 2). The TF-IDF known as the statistical term-specificity method,
+computes the importance of a word to a document in a corpus,
+accounting for the fact that specific words appear more frequently
+in general. It is often used as a weight vector in information retrieval and text mining searches. We utilize it in constructing the
+coverage-based weight map.
+Rewarding. Enhancing the concepts from previous RL-based finetuning methods using Code-LLM [24, 31, 47], we extend the idea
+of using software output to apply a rewarding signal. Notably, errors in the JS engine can be broadly grouped into syntax errors
+and semantic errors, which include reference, type, range, and URI
+errors. Given that 𝑊 ∗ is the concatenation of the masked sequence
+𝑊 \𝑀𝐴𝑆𝐾 and the mask sequence 𝑊 𝑀𝐴𝑆𝐾 , the following returns
+can be deduced based on input to the target:
+
+
+−1.0
+
+
+
+𝑟 (𝑊 ) = −0.5
+
+
+ +𝑅𝑐𝑜𝑣
+
+∗
+
+if 𝑊 ∗ is syntax error
+if 𝑊 ∗ is semantic error
+if 𝑊 ∗ is passed
+
+(2)
+
+In order to assist the LLM-based mutator in discovering new
+coverage, we provide an additional rewarding signal alongside
+Eq. 2. Our approach focuses on the frequency of each coverage by
+assigning specific weights instead of using the CRR commonly used
+in traditional RL-based fuzzing. The rewarding procedure involves
+adjusting the coverage map by utilizing the TF-IDF weight map,
+calculating the weighted sum for each coverage information, and
+normalizing it to get scores.
+At first, we noted that the coverage map is similar to the Term
+Frequency (TF) in that it calculates the frequency at which a specific
+coverage location is reached. However, with a JS engine, certain
+codes in the test case can trigger the same code coverage multiple
+times. A typical example is when the input includes repetitions
+such as ’a=1; a=1;’. This can result in duplicate triggers for the same
+coverage area. In such cases, the importance of repetitive coverage
+is reduced. It emphasizes the need to differentiate between different
+types of coverage rather than merely focusing on how often it
+occurs. Therefore, we define the term 𝑇 𝐹 𝑐𝑜𝑣 as a map of unique
+coverage:
+𝑇 𝐹 𝑐𝑜𝑣 = unique coverage map
+
+(3)
+
+We define the coverage-based weight map 𝐼𝐷𝐹 𝑐𝑜𝑣 using the coverage map of each seed as follows:
+1
+𝑁
+𝐼 𝐷𝐹 𝑐𝑜𝑣 = √ 𝑙𝑜𝑔(
+)
+1 + 𝐷𝐹 𝑐𝑜𝑣
+𝑀
+
+(4)
+
+where 𝑁 denotes the total number of unique coverage obtained.
+𝐷𝐹 𝑐𝑜𝑣 denotes the number of seeds that have achieved the specific
+coverage location. The weight map 𝐼𝐷𝐹 𝑐𝑜𝑣 is obtained by taking
+the inverse of 𝐷𝐹 𝑐𝑜𝑣 , resulting in greater weights for less common
+
+coverage. The variable 𝑀 denotes the overall size of the coverage
+map, which we utilized as a scale factor to adjust the weight value.
+The reward is acquired by taking the weighted sum of 𝑇 𝐹 𝑐𝑜𝑣
+and 𝐼𝐷𝐹 𝑐𝑜𝑣 to create the weighted coverage map, which is then
+weighted to obtain as
+𝑅𝑇 𝐹 𝐼 𝐷𝐹 = 𝑙𝑜𝑔(
+
+𝑀
+∑︁
+
+𝑡 𝑓𝑖,𝑡 · 𝑖𝑑 𝑓𝑖,𝑡 −1 )
+
+(5)
+
+𝑖=1
+
+where 𝑡 represents the current cycle. 𝑡 𝑓𝑖,𝑡 refers to an element in
+𝑇 𝐹𝑡𝑐𝑜𝑣 , and 𝑖𝑑 𝑓𝑖,𝑡 −1 refers to an element in 𝐼𝐷𝐹𝑡𝑐𝑜𝑣
+−1 at the previous
+time step before updating the weights. Afterward, we proceed to
+normalize the findings as:
+(
+𝜎 (𝑅𝑇 𝐹 𝐼 𝐷𝐹 )
+𝑅𝑐𝑜𝑣 =
++0.5
+
+if 𝑅𝑇 𝐹 𝐼 𝐷𝐹 > 0
+otherwise
+
+(6)
+
+where 𝜎 is a sigmoid function used to map 𝑅𝑇 𝐹 𝐼 𝐷𝐹 to a value
+between 0 and 1. If there’s no new coverage and no error, we set
+𝑅𝑐𝑜𝑣 to 0.5 when it’s zero or less to give the minimum reward. The
+𝑅𝑐𝑜𝑣 is calculated only if the test case is free from any syntax or
+semantic problems. Our rewarding scheme incentivizes the LLMbase mutator to explore a wider range of coverage by providing high
+payouts for test cases that achieve uncommon levels of coverage.
+Update Weight Map with Momentum. Following each cycle,
+CovRL updates the IDF weight map. To mitigate dramatic changes in
+reward distribution, we use momentum at a rate of 𝛼 to incorporate
+the prior weight while recalculating the map. The updated weight
+map is as follows:
+𝑐𝑜𝑣
+𝐼𝐷𝐹𝑡𝑐𝑜𝑣 = 𝛼𝐼𝐷𝐹𝑡𝑐𝑜𝑣
+(7)
+−1 + (1 − 𝛼)𝐼𝐷𝐹𝑡
+𝑐𝑜𝑣
+𝑐𝑜𝑣
+where 𝐼𝐷𝐹𝑡 means new weight map and 𝐼𝐷𝐹𝑡 −1 means previous
+
+weight map.
+Coverage-Weighted Rewarding Algorithm. Algorithm 2 describes the overall procedure of CWR. The input is the mutated test
+case 𝑇 , and the output is the reward 𝑅𝑐𝑜𝑣 measured from 𝑇 . Our
+objective is to compute the reward 𝑅𝑐𝑜𝑣 by assigning weights to
+each coverage using the TF-IDF approach. Thus, we adhere to the
+subsequent course of action:
+First, to evaluate the reward for the mutated test case 𝑇 , we assess
+for syntax errors, semantic errors, and whether the test case was
+successfully executed in the JS engine. If an error occurs, we impose
+a predetermined penalty, as shown in equation Eq. 2 (Lines 5-8).
+Imposing the predetermined penalty allows LLM-based mutator to
+focus on minimizing errors, which is consistent with the strategy
+used in previous studies that apply RL to Code-LLMs [24, 31, 47].
+When 𝑇 is passed through the JS engine, we measure the coverage
+𝑇𝑐𝑜𝑣 of 𝑇 and calculate the reward based on this coverage (Lines
+9-12). The procedure for constructing CWR is based on the TFIDF weight map (Lines 14-21). 𝑇 𝐹𝑡𝑐𝑜𝑣 is created by generating the
+unique coverage map of 𝑇𝑐𝑜𝑣 (Line 14). Additionally, it calculates
+the 𝐼𝐷𝐹𝑡𝑐𝑜𝑣 using the value of 𝑇𝑐𝑜𝑣 (Line 15).
+Subsequently, the TF-IDF-based reward 𝑅𝑐𝑜𝑣 is calculated by
+using the weight map 𝐼𝐷𝐹𝑡𝑐𝑜𝑣
+−1 that was created in the previous cycle
+and 𝑇 𝐹𝑡𝑐𝑜𝑣 (line 16). The purpose of applying the weight map from
+the previous cycle to measure the reward is to assign higher scores
+to the newly obtained rewards based on the coverage distribution
+
+Jueon Eom, Seyeon Jeong, and Taekyoung Kwon
+
+Algorithm 2: Coverage-Weighted Rewarding (CWR)
+Input: test case 𝑇
+Output: reward 𝑅𝑐𝑜𝑣
+𝑐𝑜𝑣 : Unique Coverage Map
+1 𝑇 𝐹𝑡
+𝑐𝑜𝑣
+2 𝐼 𝐷𝐹
+𝑡 −1 : Previous Weight Map
+𝑐𝑜𝑣
+3 𝐼 𝐷𝐹𝑡
+: Weight Map
+
+Algorithm 3: Fuzzing with CovRL
+Input: finetuning dataset 𝐷𝑇
+1 R𝑝𝑟𝑒𝑣 : Previous LLM-based rewarder
+2 R𝑐𝑢𝑟 : Current LLM-based rewarder
+3 M𝑝𝑟𝑒𝑣 : Previous LLM-based mutator
+4 M𝑐𝑢𝑟 : Current LLM-based mutator
+
+Function GetReward(𝑇 ):
+if JS_Engine(𝑇 ) is 𝑆 𝑦𝑛𝑡𝑎𝑥𝐸𝑟𝑟𝑜𝑟 then
+6
+return -1.0
+7
+else if JS_Engine(𝑇 ) is 𝑆𝑒𝑚𝑎𝑛𝑡𝑖𝑐𝐸𝑟𝑟𝑜𝑟 then
+8
+return -0.5
+9
+else
+10
+/* JS_Engine(𝑇 ) is Passed */
+
+Function FuzzOne(𝑠𝑒𝑒𝑑_𝑞𝑢𝑒𝑢𝑒):
+for 𝑖 = 1 to 𝑖𝑡𝑒𝑟 _𝑐𝑦𝑐𝑙𝑒 do
+7
+𝑠𝑒𝑒𝑑 ← SelectSeed(𝑠𝑒𝑒𝑑_𝑞𝑢𝑒𝑢𝑒)
+8
+𝑇 ← MaskMutation(M𝑐𝑢𝑟 , 𝑠𝑒𝑒𝑑)
+9
+if IsInteresting(𝑇 ) then
+10
+𝑇𝑖𝑛𝑡𝑒𝑟𝑒𝑠𝑡 ← 𝑇
+11
+𝑠𝑒𝑒𝑑_𝑞𝑢𝑒𝑢𝑒.append(𝑇𝑖𝑛𝑡𝑒𝑟𝑒𝑠𝑡 )
+12
+𝑅𝑐𝑜𝑣 = RewardingProcess(𝑇𝑖𝑛𝑡𝑒𝑟𝑒𝑠𝑡 )
+13
+𝑑𝑎𝑡𝑎 ← 𝑇𝑖𝑛𝑡𝑒𝑟𝑒𝑠𝑡 , 𝑅𝑐𝑜𝑣
+14
+𝐷𝑇 .append(𝑑𝑎𝑡𝑎)
+
+4
+
+5
+
+11
+12
+
+𝑇𝑐𝑜𝑣 = GetCov (𝑇 )
+return CalcCovReward (𝑇𝑐𝑜𝑣 )
+
+Function CalcCovReward(𝑇𝑐𝑜𝑣 ):
+𝑇 𝐹𝑡𝑐𝑜𝑣 = GetUniqueCov (𝑇𝑐𝑜𝑣 )
+15
+𝐼 𝐷𝐹𝑡𝑐𝑜𝑣 ← CalcIDF (𝑇𝑐𝑜𝑣 )
+16
+𝑅𝑐𝑜𝑣 ← CalcTFIDF (𝑇 𝐹𝑡𝑐𝑜𝑣 , 𝐼𝐷𝐹𝑡𝑐𝑜𝑣
+−1 )
+𝑐𝑜𝑣 + (1 - 𝛼) * 𝐼𝐷𝐹 𝑐𝑜𝑣
+17
+𝐼 𝐷𝐹𝑡𝑐𝑜𝑣
+←
+𝛼
+*
+𝐼𝐷𝐹
+𝑡
+−1
+𝑡 −1
+
+13
+
+14
+
+18
+19
+20
+21
+
+if 𝑅𝑐𝑜𝑣 > 0 then
+return 𝑅𝑐𝑜𝑣
+else
+return 0.5
+
+5
+
+6
+
+15
+
+FinetuneCovRL(𝐷𝑇 )
+
+Function FinetuneCovRL(𝐷𝑇 ):
+R𝑝𝑟𝑒𝑣 , M𝑝𝑟𝑒𝑣 ← R𝑐𝑢𝑟 , M𝑐𝑢𝑟
+18
+R𝑐𝑢𝑟 ← FinetuneRewarder(R𝑝𝑟𝑒𝑣 , 𝐷𝑇 )
+19
+M𝑐𝑢𝑟 ← FinetuneMutator(M𝑝𝑟𝑒𝑣 , R𝑐𝑢𝑟 , 𝐷𝑇 )
+
+16
+
+17
+
+Function RewardingProcess(𝑇 ):
+23
+𝑅𝑐𝑜𝑣 = GetReward (𝑇 )
+24
+𝑂𝑢𝑡𝑝𝑢𝑡 ← 𝑅𝑐𝑜𝑣
+25
+return 𝑂𝑢𝑡𝑝𝑢𝑡
+
+For CovRL-based finetuning with PPO, we define the CovRL loss
+as following manner:
+!#
+"
+𝜋𝜃𝑡 (𝑦|𝑥)
+(8)
+𝐿𝐶𝑜𝑣𝑅𝐿 (𝜃 ) = −E (𝑥,𝑦)∼𝐷𝑡 𝑅(𝑥, 𝑦)𝑡 · log 𝑡 −1
+𝜋 (𝑦|𝑥)
+
+achieved in the previous cycle. If the reward 𝑅𝑐𝑜𝑣 is greater than
+0, it is returned as is; otherwise, a fixed value is returned (Lines
+18-21). To mitigate significant changes in the reward distribution,
+we stabilize the reward by using 𝐼𝐷𝐹𝑡𝑐𝑜𝑣
+−1 using a momentum rate
+of 𝛼 (Line 17). We demonstrate the effect of CWR with momentum
+in Section 5.3.
+
+where 𝑅(𝑥, 𝑦) represents the reward of CovRL, and 𝐷𝑡 refers to the
+finetuning dataset that has been collected up to time step 𝑡. 𝜋𝜃𝑡 (𝑦|𝑥)
+with parameters 𝜃 is the trainable RL policy for the current mutator,
+and 𝜋 𝑡 −1 (𝑦|𝑥) represents the policy from the previous mutator.
+To mitigate the overoptimization and maintain the LLM-based
+mutator’s mask prediction ability, we also use KL regularization.
+The reward after adding the KL regularization is
+!
+𝜋𝜃𝑡 (𝑦|𝑥)
+∗
+(9)
+𝑅(𝑥, 𝑦)𝑡 = 𝑟 (𝑊 ) + log 𝑡 −1
+𝜋 (𝑦|𝑥)
+
+22
+
+3.3
+
+Phase 3. CovRL-based Finetuning
+
+The fuzzing environment with mask mutation can be conceptualized as a bandit environment for RL. In this environment, a masked
+sequence 𝑊 \𝑀𝐴𝑆𝐾 is provided as input (𝑥), and the expected output is a mask sequence 𝑊 𝑀𝐴𝑆𝐾 (𝑦). Inspired by previous studies [24, 31, 47], we finetune our model using the PPO algorithm [45],
+an actor-critic reinforcement learning ( 3 in Figure 2). In our situation, it can be implemented by finetuning two LLMs in tandem:
+one LLM acts as a mutator (actor), while the other LLM serves as
+a rewarder (critic). We utilize a pretrained LLM to initialize the
+parameters both of mutator and rewarder. The rewarder is trained
+using the Eq. 2. It plays a crucial role in training the mutator.
+
+Fuzzing with CovRL Algorithm. Algorithm 3 details one cycle of
+the fuzzing loop with CovRL. The cycle iterates for a predetermined
+number of 𝑖𝑡𝑒𝑟 _𝑐𝑦𝑐𝑙𝑒 (Lines 6-14). The LLM-based mutator uses a
+seed chosen from the 𝑠𝑒𝑒𝑑_𝑞𝑢𝑒𝑢𝑒 to produce the test case 𝑇 (Lines
+7-8). If 𝑇 is deemed a noteworthy seed, it is added to the seed queue
+and the reward for the particular 𝑇𝑖𝑛𝑡𝑒𝑟𝑒𝑠𝑡 is calculated and added
+to 𝐷𝑇 (Lines 9-14). After completing these 𝑖𝑡𝑒𝑟 _𝑐𝑦𝑐𝑙𝑒 iterations, the
+gathered 𝐷𝑇 is utilized as training data to call the FinetuneCovRL
+function, which carries out CovRL-based finetuning (Line 15). The
+procedure of FinetuneCovRL involves the finetuning of the LLMbased Rewarder R and the LLM-based Mutator M (Lines 17-19).
+Initially, we designate the existing model as R𝑝𝑟𝑒𝑣 and M𝑝𝑟𝑒𝑣 (Line
+17). Following that, R𝑝𝑟𝑒𝑣 is finetuned using the finetuning dataset
+
+CovRL: Fuzzing JavaScript Engines with Coverage-Guided Reinforcement Learning for LLM-based Mutation
+
+𝐷𝑇 to generate a new rewarder R𝑐𝑢𝑟 (Line 18). At this point, the rewarder has been trained to predict the rewarding signal as described
+in Eq. 2. By utilizing the finetuned R𝑝𝑟𝑒𝑣 and 𝐷𝑇 , we finetune the
+mutator M𝑝𝑟𝑒𝑣 to generate M𝑐𝑢𝑟 (Line 19). For finetuning the mutator, we apply reward or penalty to the model using the CovRL
+loss from Eq. 8.
+
+4
+
+IMPLEMENTATION
+
+We implemented a prototype of CovRL-Fuzz using Pytorch v1.8
+and afl 2.52b [36].
+Dataset. We collected data from regression test suites in several
+repositories including V8, JavaScriptCore, ChakraCore, JerryScript,
+Test262 [50], and js-vuln-db [21] as of December 2022. We then
+simply pre-processed the data for training data and seeds, resulting
+in a collection of 55,000 unique JavaScript files for our experiments.
+Pre-Processing. We performed a simple pre-processing on the
+regression test suites of the JS engines mentioned above to remove
+comments, filter out grammatical errors, and simplify identifiers.
+We then used the processed data directly for training. The preprocessing was conducted utilizing the -m and -b options of the
+UglifyJS tool [37].
+Training. We utilize the pretrained Code-LLM, CodeT5+ (220m) [55],
+as both the rewarder and the mutator. For the process of CovRLbased finetuning, we trained the rewarder and mutator for 1 epoch
+each mutation cycle. We used a batch-size of 256 and learning
+rate of 1e-4. The optimization utilized the AdamW optimizer [33]
+together with a learning rate linear warmup technique. Related
+experiments can be found in Table 7. The LLM-based rewarder uses
+the encoder from CodeT5+ to predict rewarding signal through a
+classification approach. we also employed the contrastive search
+technique [49], applying a penalty factor 𝛼 of 0.6 and setting the
+top-k of 32. The analysis of the optimal epoch and 𝛼 selection in
+CovRL can be found in Section 5.3. In addition, we align the coverage map size with AFL’s recommendations by setting the scaling
+factor 𝑀 for the map size. This ensures that the instrumentational
+capacity is optimized. For moderate-sized software (approx. 10K
+lines), we employed a map size of 216 . For larger software exceeding
+50K lines, we used a map size of 217 , striking a balance between
+granularity and performance. The number of lines in the target JS
+engine that we used can be located in Table 1.
+
+5
+
+EVALUATION
+
+To evaluate CovRL-Fuzz, we set three research questions.
+• RQ1: Is CovRL-Fuzz more effective and efficient than other
+state-of-the-art fuzzers?
+• RQ2: How does each component contribute to CovRL-Fuzz’s
+effectiveness?
+• RQ3: Can CovRL-Fuzz find real-world bugs in JS engines?
+
+5.1
+
+Experimental Design
+
+Experimental setup. Our setup included a 64-bit Ubuntu 20.04
+LTS OS on an Intel(R) Xeon(R) Gold 6134 CPU @ 3.20GHz (64-core).
+Additionally, we harnessed three NVIDIA GeForce RTX 3090 GPUs
+for both training and mutation.
+
+Table 1: Benchmarks of JS engines with their versions and lines of
+code
+JS Engine
+V8
+JavaScriptCore (JSC)
+ChakraCore (Chakra)
+JerryScript (Jerry)
+QuickJS (QJS)
+Jsish
+escargot
+Espruino
+
+Version
+11.4.73
+2.38.1
+1.13.0.0-beta
+3.0.0
+2021-03-27
+3.5.0
+bd95de3c, Jan 20 2024
+2v20
+
+# of Lines
+1,087,873
+566,262
+782,996
+122,048
+75,257
+58,143
+311,473
+26,945
+
+Table 2: Baseline fuzzers targeting JS engines. CGF indicates the
+use of coverage-guided fuzzing, LLM denotes the usage of LLMs, and
+Mutation Level refers to the unit of mutation.
+
+Fuzzer
+Heuristic Baselines
+AFL(w/Dict) [36]
+Superion [54]
+Token-Level AFL [44]
+LM Baselines
+Montage [26]
+COMFORT [60]
+CovRL-Fuzz
+
+CGF
+
+LLM
+
+✓
+✓
+✓
+
+✓
+
+Mutation
+Level
+
+Post
+Processing
+
+Bit/Byte
+Grammar
+Token
+
+✓
+✓
+
+Grammar
+Grammar
+Token
+
+✓
+✓
+
+Benchmarks. We tested it on four JS engines, using the latest
+versions as of January 2023: JavaScriptCore (2.38.1), ChakraCore
+(1.13.0.0-beta), V8 (11.4.73), JerryScript (3.0.0). We also conducted
+additional experiments on QuickJS, Jsish, escargot and Espruino
+for real bug detection experiments. Table 1 presents the JS engine
+benchmarks used in our experiments. It displays both the version
+and the number of lines.
+We built each target JS engine with Address Sanitizer (ASAN) [46]
+to detect bugs related to abnormal memory access and with debug
+mode to find bugs related to undefined behavior.
+Fuzzing Campaign. For a fair evaluation, we used the same set of
+100 valid seeds. For RQ1, we operated on 3 CPU cores considering
+other fuzzing approaches, and for RQ2, we used a single CPU core.
+For RQ3, we also used 3 CPU cores and conducted experiments for
+a week including four more JS engines apart from the four major
+ones. To consider the randomness of fuzzing, we executed each
+fuzzer five times and then averaged the coverage results. Also, to
+ensure fairness in fuzzing, the results of each experiment were measured, including the finetuning time through CovRL. The average
+finetuning time is 10 minutes, occurring every 2.5 hours.
+Baselines. For RQ1 and RQ2, we compare CovRL-Fuzz with stateof-the-art JS engine fuzzers, which include heuristic fuzzing techniques such as bit/byte-level fuzzing (AFL (w/Dict) [36]), grammarlevel fuzzing (superion [54]), token-level fuzzing (Token-Level
+AFL [44]), and language model-based fuzzing techniques (Montage [26], COMFORT [60]).
+In the case of Montage, it imports code from its test suite corpus,
+which might affect coverage by increasing the amount of executed
+code. As a result, we included a version of Montage (w/o Import)
+in our experimental study, which does not import the other test
+suites. In the case of COMFORT, we evaluated it solely with the
+black-box fuzzer, excluding the differential testing component. Each
+
+Jueon Eom, Seyeon Jeong, and Taekyoung Kwon
+
+tool was run on four JS engines with default configurations which
+details can be found in Table 2. Also, as part of our ablation study
+in RQ2, we performed an experiment comparing our approach to
+LLM-based fuzzers [11, 58] that are not specifically designed for
+JS engines. This experiment involved using pretrained LLM-based
+mutation techniques, including mask mutation from TitanFuzz [11]
+and prompt mutation from FUZZ4ALL [58].
+
+Table 3: Comparison with other JS engine fuzzers in Table 2.
+
+Target
+
+V8
+
+Metrics. We use three metrics for evaluation.
+• Code Coverage represents the range of the software’s code
+that has been executed. We adopt edge coverage from the AFL’s
+coverage bitmap, following FairFuzz [27] and Evaluate-FuzzTesting [23] settings. We conducted a comparison of coverage
+in two categories: total and valid. Total refers to the coverage
+across all test cases, while valid refers to the coverage for valid
+test cases. We also employed the Mann-Whitney U-test [34] to
+assess the statistical significance and verified that all p-values
+were less than 0.05.
+• Error Rate measures the rate of syntax errors and semantic
+errors in the generated test cases. This provides insight into
+how effectively each method explores the core logic in the target
+software. For detailed analysis, semantic errors are categorized
+into type errors, reference errors, URI errors, and internal errors
+based on the ECMA standard [14]. It should be noted that while
+COMFORT [60] utilized jshint [22] for measurement, focusing
+their error rate on syntax errors, we used JS engines, allowing
+us to measure the error rate including both syntax and semantic
+errors.
+• Bug Detection is what the fuzzer is trying to find, which means
+a vulnerability.
+
+5.2
+
+RQ1. Comparison against existing fuzzers
+
+JSC
+
+Chakra
+
+Jerry
+
+AFL (w/Dict)
+Superion
+Token-Level AFL
+Montage
+Montage (w/o Import)
+COMFORT
+CovRL-Fuzz
+
+96.90%
+77.35%
+84.10%
+56.24%
+94.08%
+79.66%
+48.68%
+
+Coverage
+Valid
+Total
+29,929
+33,531
+33,812
+36,985
+39,582
+42,303
+38,856
+40,155
+33,487
+36,338
+44,324
+46,522
+75,240
+78,729
+
+AFL (w/Dict)
+Superion
+Token-Level AFL
+Montage
+Montage (w/o Import)
+COMFORT
+CovRL-Fuzz
+
+74.42%
+72.02%
+69.70%
+42.34%
+93.72%
+79.64%
+48.59%
+
+18,343
+17,619
+52,385
+55,511
+43,861
+36,074
+61,137
+
+20,496
+19,772
+53,719
+56,861
+47,754
+36,542
+64,738
+
+215.86%
+227.42%
+20.51%
+13.85%
+35.57%
+77.16%
+-
+
+AFL (w/Dict)
+Superion
+Token-Level AFL
+Montage
+Montage (w/o Import)
+COMFORT
+CovRL-Fuzz
+
+81.32%
+42.63%
+90.64%
+82.21%
+94.72%
+79.47%
+54.87%
+
+83,038
+92,314
+92,621
+101,470
+90,940
+81,171
+105,121
+
+87,587
+94,237
+95,677
+103,589
+98,643
+83,142
+111,498
+
+27.30%
+18.32%
+16.54%
+7.63%
+13.03%
+34.11%
+-
+
+AFL (w/Dict)
+Superion
+Token-Level AFL
+Montage
+Montage (w/o Import)
+COMFORT
+CovRL-Fuzz
+
+77.32%
+86.23%
+80.52%
+95.55%
+95.34%
+79.83%
+58.84%
+
+9,307
+8,944
+14,361
+13,114
+12,662
+12,268
+20,844
+
+14,259
+15,061
+17,152
+13,285
+15,598
+14,026
+23,246
+
+63.03%
+54.35%
+35.53%
+74.98%
+49.03%
+65.74%
+-
+
+Fuzzer
+
+Error (%)
+
+Improv
+Ratio (%)
+134.79%
+112.87%
+86.11%
+96.06%
+116.66%
+69.23%
+-
+
+To answer RQ1, we ran all state-of-the-art heuristic and LM-based
+fuzzers listed in Table 2 with the same 24-hour timeout, and we
+repeated the experiments five times to account for the randomness
+of fuzzing.
+
+Note that, while other LM baselines did not account for training
+time, CovRL-Fuzz included the time required for CovRL finetuning
+during the experiment. Additionally, we observed that CovRL-Fuzz
+continues to increase coverage when it nears the 24 hour mark. It
+displays its effectiveness in obtaining coverage.
+
+Code Coverage. Table 3 depicts the valid and total coverage for
+each fuzzing technique. The results of our evaluation demonstrate
+that CovRL-Fuzz outperforms state-of-the-art JS engine fuzzers.
+Our observation revealed that CovRL-Fuzz attained the highes
+coverage across all target engines, resulting in an average increase
+of 102.62%/98.40%/19.49%/57.11% in edge coverage.
+To emphasize the effectiveness of CovRL-Fuzz, we monitored a
+growth trend of edge coverage, depicted in Figure 3. In every experiment, CovRL-Fuzz consistently achieved the highest edge coverage
+more rapidly than any other fuzzer. In contrast to heuristic baselines, CovRL-Fuzz immediately and significantly achieved higher
+coverage. This suggests that the LLM-based mutator of CovRL-Fuzz
+has a more potent ability to mutate than heuristic mutators for
+coverage-guided fuzzing. CovRL-Fuzz also achieved high coverage
+compared to LM baselines. However, in ChakraCore, there was
+a marginal difference in coverage between Montage and CovRLFuzz, attributed to Montage’s strategy of importing and executing
+code from its test suite corpus, resulting in higher coverage. We
+observed that CovRL-Fuzz obtained significantly higher coverage
+when compared to Montage (w/o Import).
+
+Syntax and Semantic Correctness. CovRL-Fuzz is not a grammarlevel fuzzing approach that prioritizes syntax and semantic validity.
+However, it is assumed that CovRL-Fuzz, which uses reinforcement
+learning from a reward signal, can achieve higher validity compared to random fuzzing (such as Token-Level AFL). To verify this
+assumption, we evaluate the error rate of unique test cases.
+The experimental results are shown in Table 3. CovRL-Fuzz
+demonstrated a lower error rate than Token-Level AFL for all JS
+engines. Furthermore, CovRL-Fuzz showed a lower error rate in
+comparison to most of the fuzzers. While it did not achieve the
+lowest error rate in JavaScriptCore and ChakraCore, CovRL-Fuzz
+still induced a significantly low error rate compared to the most
+of baselines. Please note that the high error rate of Montage (w/o
+Import) is due to its inability to access functions from other test
+suites.
+For a more detailed analysis of the error rate, we analyzed the
+types of errors triggered by fuzzers on V8, which is the most largest
+and dependable JS engine, as shown in Figure 4. The results showed
+that CovRL-Fuzz triggered fewer syntax errors in comparison to
+heuristic baselines. Furthermore, it also produced less syntax and
+
+CovRL: Fuzzing JavaScript Engines with Coverage-Guided Reinforcement Learning for LLM-based Mutation
+
+Figure 3: Number of edge coverage between CovRL-Fuzz and other JS engine fuzzers. The solid line represents the average coverage, while the
+shaded region depicts the range between the lowest and highest values five times.
+
+Table 4: Unique bugs discovered by CovRL-Fuzz and compared JS
+engine fuzzers.
+JS Engine Bug Type
+
+Figure 4: The error rate of generated test cases on V8. The four error
+types, excluding Syntax Error, are classified as Semantic Errors.
+
+semantic errors than LM baselines, even without using the postprocessing techniques used by COMFORT and Montage. These
+results indicate that CovRL-Fuzz is successful in reducing error
+rates exclusively through CovRL, without requiring heuristic postprocessing.
+Finding bugs. To study whether the coverage improvement and
+low error rate achieved by CovRL-Fuzz aid in detecting bugs, we
+conducted experiments by JS engines compiled in debug mode with
+ASAN. We relied on the output reports generated by ASAN for
+stack trace analysis to eliminate duplicate bugs. We also manually
+analyzed and categorized these results by bug types.
+Table 4 shows the number and types of unique bugs found by
+the CovRL-Fuzz and compared fuzzers. CovRL-Fuzz discovered
+the most unique bugs compared to other fuzzers. In detail, CovRLFuzz found 13 unique bugs and 8 of these bugs were exclusively
+detected by CovRL-Fuzz, including stack overflow and heap buffer
+overflow. These results highlight its effectiveness for bug detection.
+As observed in the experimental results, LM-based fuzzers, despite
+achieving higher coverage, tend to find fewer bugs, while heuristic
+fuzzers, although achieving lower coverage, generally find more
+bugs. However, irrespective of this trend, CovRL-Fuzz demonstrated
+superior performance in effectively discovering the most bugs.
+
+5.3
+
+RQ2. Ablation study
+
+To answer RQ2, we conducted an ablation study on two key components of CovRL-Fuzz: (1) We compared pretrained LLM-based
+mutators and CovRL-Fuzz in terms of the type of LLMs and mutation strategies. For this comparison, we utilized three LLMs and
+employed three mutation strategies. Note that, as our focus is solely
+
+JSC
+JSC
+Chakra
+Chakra
+Chakra
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+
+AFL Superion TokenAFL Montage COMFORT CovRL-Fuzz
+
+Undefined Behavior
+Out-of-bounds Read
+Undefined Behavior
+Out of Memory
+Out of Memory
+Undefined Behavior
+Memory Leak
+Undefined Behavior
+Undefined Behavior
+Heap Buffer Overflow
+Out of Memory
+Stack Overflow
+Undefined Behavior
+Heap Buffer Overflow
+
+SUM
+
+2
+
+3
+
+4
+
+0
+
+1
+
+13
+
+Table 5: Variants of Ablation Study. Mutation Strategy refers to the
+method of mutation. Pretrained LLM denotes the Code-LLM used
+for mutation. Reward refers to the method of calculating rewards in
+CovRL.
+Variants
+
+CGF
+
+Mutation Strategy
+
+Baseline (TokenAFL [44])
+✓
+Pretrained LLM-based Mutators
+Incoder w/Mask
+✓
+StarCoder w/Mask
+✓
+StarCoder w/Prompt
+✓
+CodeT5+ w/Mask
+✓
+Finetuned LLM-based Mutators
+✓
+SFT
+CovRL w/CR
+✓
+CovRL w/CRR
+✓
+
+Random
+
+✓
+
+CovRL-Fuzz (w/CWR)
+
+Pretrained LLM
+
+CovRL
+
+Reward
+
+Mask
+Mask
+Prompt
+Mask
+
+Incoder (1B) [16]
+StarCoder (1B) [28]
+StarCoder (1B) [28]
+CodeT5+ (220M) [55]
+
+Mask
+Mask
+Mask
+
+CodeT5+ (220M) [55]
+CodeT5+ (220M) [55]
+CodeT5+ (220M) [55]
+
+✓
+✓
+
+CR
+CRR
+
+Mask
+
+CodeT5+ (220M) [55]
+
+✓
+
+CWR
+
+on LLM-based mutation, we did not include LLM-based generators in our study’s scope, and thus they were not considered for
+comparison.
+(2) Finetuned LLM-based mutators, we studied the impact of
+CovRL-based finetuning on CovRL-Fuzz, focusing on the use of
+reward. The detailed configuration for the subject is as shown in
+Table 5. It is important to note that we only consider the impact
+of LLM-based mutators in the context of coverage-guided fuzzing.
+Therefore, all variations have been evaluated with only the mutation component being replaced, based on AFL. Table 6 shows
+the coverage and error rate of our studied variants, which were
+
+Jueon Eom, Seyeon Jeong, and Taekyoung Kwon
+
+Table 6: The ablation study with each variant is detailed in Table 5. The Improv (%) refers to the improvement ratio compared to the baseline.
+Target
+Variants
+
+Error (%)
+
+Baseline (TokenAFL [44])
+88.79%
+Pretrained LLM-based Mutators
+Incoder w/Mask
+49.08%
+StarCoder w/Mask
+82.76%
+StarCoder w/Prompt
+82.72%
+CodeT5+ w/Mask
+62.68%
+Finetuned LLM-based Mutators
+SFT
+74.91%
+CovRL w/CR
+71.77%
+74.15%
+CovRL w/CRR
+CovRL-Fuzz (w/CWR)
+
+61.53%
+
+V8
+Coverage
+Valid
+Total
+44,705 53,936
+
+Improv
+(%)
+-
+
+87.45%
+
+JavaScriptCore
+Coverage
+Valid
+Total
+35,406 37,461
+
+Improv
+(%)
+-
+
+46,427
+53,779
+41,331
+55,459
+
+47,385
+56,256
+45,034
+56,576
+
+-12.15%
+4.30%
+-16.50%
+4.89%
+
+50.31%
+83.11%
+87.90%
+55.40%
+
+44,191
+42,007
+45,545
+41,523
+
+44,643
+43,136
+47,568
+42,385
+
+58,230
+55,678
+57,401
+
+61,947
+57,735
+61,331
+
+14.85%
+7.04%
+13.71%
+
+65.57%
+53.00%
+69.57%
+
+41,211
+47,116
+37,230
+
+71,319
+
+74,574
+
+38.26%
+
+49.60%
+
+56,370
+
+Error (%)
+
+78.98%
+
+ChakraCore
+Coverage
+Valid
+Total
+81,393 83,785
+
+19.17%
+15.15%
+26.98%
+13.14%
+
+40.96%
+82.34%
+83.85%
+45.25%
+
+86,590
+86,988
+84,597
+86,043
+
+87,105
+88,842
+87,351
+86,858
+
+3.96%
+6.04%
+4.26%
+3.67%
+
+77.63%
+90.56%
+82.35%
+78.48%
+
+11,977
+12,174
+13,777
+12,833
+
+12,851
+13,817
+15,413
+14,068
+
+-13.14%
+-6.61%
+4.18%
+-4.91%
+
+43,959
+49,083
+43,369
+
+17.34%
+31.02%
+15.77%
+
+69.96%
+67.50%
+65.47%
+
+92,022
+92,465
+91,427
+
+95,334
+94,145
+94,785
+
+13.78%
+12.36%
+13.13%
+
+74.76%
+73.35%
+75.34%
+
+15,927
+16,689
+16,118
+
+18,688
+18,629
+18,584
+
+26.31%
+25.91%
+25.61%
+
+58,340
+
+55.74%
+
+58.42%
+
+96,257
+
+98,221
+
+17.23%
+
+58.59%
+
+17,481
+
+19,855
+
+34.20%
+
+Error (%)
+
+Finetuned LLM-based Mutators. To demonstrate the effectiveness of CovRL-Fuzz, we froze the type and size of LLM and mutation
+strategy to examine the impact of different coverage rewards. The
+variants studied include: SFT, CovRL w/CR, CovRL w/CRR, and
+CovRL-Fuzz (w/CWR). For SFT, we trained with our training dataset
+for the masked language model task. The experiment did not account for the training time, which was conducted independently.
+The training consisted of 10 epochs.
+For rewarding, we additionally have designed a simple binary
+rewarding process, termed “Coverage Reward (CR)”. Under this process, a reward of 1 is given to test cases that achieve new coverage,
+while a penalty of 0 is assigned to those that do not.
+In the experimental results, CovRL-Fuzz achieved the highest
+coverage, both valid and total, compared to all control groups,
+and exhibited a low error rate. Furthermore, compared to baseline, CovRL-Fuzz showed an average increase of 36.36% in total
+coverage and 44.75% in valid coverage, while reducing the error
+
+87.39%
+
+JerryScript
+Coverage
+Valid
+Total
+12,312 14,795
+
+Improv
+(%)
+-
+
+Error (%)
+
+Table 7: Ablation : Impact for finetuning epochs
+
+conducted by running them five times for five hours each, and the
+results were averaged.
+Pretrained LLM-based Mutators. We analyzed the results depending on the pretrained LLM and mutation strategies used for
+LLM-based mutators. We studied CodeT5+ w/Mask, which is utilized in CovRL-Fuzz. For comparison, we conducted a study using two other LLMs and mutation strategies: Incoder w/Mask,
+StarCoder w/Mask, and StarCoder w/Prompt. These two LLMs
+were used as pretrained LLM-based mutators in the TitanFuzz [11]
+and Fuzz4ALL [58] respectively, as control groups. We simply implemented the prompt mutation by adding mutation instructions
+(e.g. Please create a mutated program that modifies the
+previous generation.).
+In the experimental results, we observed that the application
+of a pretrained LLM-based mutator, in comparison to the baseline
+which mutates randomly, resulted in a notable decrease in error
+rates. On the other hand, finetuned LLM-based mutators, including
+CovRL-Fuzz, consistently showed significantly higher coverage improvements compared to the baseline. This suggests that finetuning
+a pretrained LLM-based mutator is more effective for coverageguided fuzzing than using it as is. Additionally, we observed that
+the type and size of LLM did not have a substantial impact on the
+increase in coverage. Although the pretrained LLM of CodeT5+
+w/Mask is just one-fifth the size of the other two models, the degree
+of improvement in coverage was not markedly different.
+
+Improv
+(%)
+-
+
+V8
+Epoch
+
+Error (%)
+
+Coverage
+Valid
+Total
+
+0 Epoch
+1 Epoch
+2 Epoch
+3 Epoch
+
+74.91%
+61.53%
+59.43%
+56.93%
+
+58,230
+71,319
+66,017
+67,079
+
+61,947
+74,574
+69,764
+69,517
+
+Table 8: Ablation : Impact for 𝛼
+
+Cov.
+
+𝛼
+
+0.0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1.0
+
+Valid
+Total
+
+68,248
+71,906
+
+68,635
+71,692
+
+69,247
+72,415
+
+71,319
+74,574
+
+69,955
+72,623
+
+69,330
+72,218
+
+rate by 28.62%. This is a notable improvement, especially when
+compared to the other two rewarding processes, which were almost
+similar to SFT. Particularly considering that training time is not
+included for SFT, this demonstrates that CovRL-Fuzz contributes
+not only to guiding the LLM to obtain more coverage but also to
+decreasing the error rate.
+Impact Components. We further conducted experiments on V8
+to study two major impact components for CovRL-Fuzz: the CovRLbased finetuning epochs and alpha. As with the earlier ablation
+studies, we conducted each experiment for 5 hours, repeated 5
+times. In order to ensure fairness, any training time that exceeded
+one epoch was not included in the experiment duration for the
+CovRL-based finetuning epochs.
+Table 7 compares the coverage based on finetuning epochs. Our
+observation revealed a negative correlation between the number
+of epochs and the error rate, indicating that as the epochs rose,
+the error rate decreased. However, this decrease in error rate was
+also followed by a decrease in coverage. It indicates that overfitting
+starts at the second epoch, which may restrict the generation of
+diverse test cases.
+Table 8 represents the comparison of coverage based on different
+values of 𝛼. 𝛼 refers to the momentum rate in Eq. 7, which adjusts
+the weight between the previous and current 𝐼𝐷𝐹 𝑐𝑜𝑣 . The experimental results demonstrated that applying a momentum rate of 0.6
+led to better results compared to the absence of momentum.
+
+CovRL: Fuzzing JavaScript Engines with Coverage-Guided Reinforcement Learning for LLM-based Mutation
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+function i ( t ) { }
+async function n ( t ) {
+if ( t instanceof i ) {
+let c = await i ( ) ;
+await c >> i ( n ) ;
+} else {
+var c = await n ( ) ;
+}
+}
+n ( true ) ;
+
+Listing 1: The test case that triggers out-of-bounds read on ChakraCore 1.13.0.0-beta (#13).
+
+1
+2
+3
+4
+
+class s extends WeakMap {
+static {} ;
+}
+function f ( )
+
+Listing 2: The test case that triggers heap buffer overflow on JerryScript 3.0.0 (#23).
+
+5.4
+
+RQ3. Real-World Bugs
+
+In this section, we evaluated the ability of CovRL-Fuzz to find
+real-world bugs during a certain period of fuzzing. Specifically, we
+investigated how many real-world bugs CovRL-Fuzz can find and
+whether it can discover previously unknown vulnerabilities. Thus,
+we evaluated whether CovRL-Fuzz can find real-world bugs for 1
+week for each target. We tested the latest version of each target
+engine as of January 2023 and found a total of 48 bugs, including 39
+previously unknown vulnerabilities with 11 CVEs, some of which
+were internally fixed in the newer versions.
+Table 9 illustrates a description of the discovered bugs. 'Reported'
+in the Status column means that CovRL-Fuzz was the only fuzzer
+that discovered the bug, and it was reported because it persisted
+in the latest version. 'Internal Fixed' refers to a bug that existed
+in a certain version but was not reported separately as a vulnerability and was fixed in the next version. If a bug was fixed after
+it was reported, it is labeled as 'Reported/Fixed'. Additionally, if
+a bug was in the latest version despite being previously reported,
+it is labeled as 'Confirmed'. CovRL-Fuzz found a variety of bugs
+including undefined behaviors like assertion failures as well as
+memory vulnerabilities such as buffer overflow and use after free.
+Note that, the experiment was carried out using only 3 cores and
+for a relatively short duration. In contrast, other fuzzing techniques
+have utilized an average of around 30 cores and have done their
+experiments for a whole month [26, 44, 54, 60].
+Despite these significant constraints, CovRL-Fuzz was still able
+to find a substantial number of unknown bugs. This suggests that
+CovRL-Fuzz demonstrated the effectiveness in finding real-world
+bugs on JS engines.
+Case Study. Listing 1 represents a minimized test case generated by
+CovRL-Fuzz. This code triggered an out-of-bounds read bug in the
+ChakraCore 1.13.0, causing an abnormal termination of the JS engine. The original seed does not assign await to var c. CovRL-Fuzz
+changed it to var c=await n(); and added the await statement
+on line 5, and also changed the condition of the if conditional. This
+
+caused the logic to call await n(); repeatedly, which ultimately
+led to the bug.
+Listing 2 represents a minimized test case generated by CovRLFuzz, causing a heap buffer overflow in the release version of JerryScript 3.0.0. The bug occurs when a function declaration comes
+on the line following the declaration of a static initialization block
+in a class. When the parser read the statement, it didn’t correctly
+distinguish the static initialization block range. As a result, memory corruption occurred when parsing the function statement. In
+contrast to other fuzzing tools, CovRL-Fuzz is grammatically somewhat free and allows for context-aware mutation. this feature led
+to the discovery of this bug. Our case study confirmed that these
+bugs can be only triggered by CovRL-Fuzz. This demonstrates the
+effectiveness of CovRL-Fuzz in detecting real-world bugs.
+
+6
+
+DISCUSSION
+
+We discuss three properties of CovRL-Fuzz in the following:
+Diversity and validity. To ensure diversity, we conducted experiments with seven fuzzers targeting four major JS engines such as
+V8, JavaScriptCore, ChakraCore, JerryScript. Theoretically, adhering to syntax and semantics implies more constraints in mutation,
+which can make it more challenging to increase coverage. However,
+CovRL-Fuzz achieved higher coverage while maintaining low error
+rate of test cases (as shown in Figure 3 and Table 3). It allowed
+that CovRL-Fuzz explore deeper code areas and detect more bugs
+compared to existing fuzzers.
+Time spent between fuzzing and CovRL-based finetuning. As
+mentioned in the experimental setup, we calculated the fuzzing time
+for the fairness of fuzzing, including the time spent on finetuning
+in the experimental results. On average, finetuning occurs for 10
+minutes every 2.5 hours of fuzzing. Despite including the finetuning
+time in the experiment, CovRL-Fuzz achieved high coverage while
+also decreasing the error rate.
+Supporting other targets. Through finetuning, the core idea of
+guiding coverage information directly with the LLM-based mutator
+is actually language-agnostic, which suggests its applicability to
+other language interpreters or compilers. However, our focus was
+more on analyzing the suitability of our idea to existing techniques
+than supporting various languages. Therefore, we conducted experiments only on JS engines, which we deemed to have the most
+impact. Extending to other targets is left as future work.
+
+7
+
+CONCLUSION
+
+We introduced CovRL-Fuzz, a novel LLM-based coverage-guided
+fuzzing framework that integrates coverage-guided reinforcement
+learning for the first time. This approach enhances LLM-based
+fuzzing by leveraging coverage feedback to generate inputs that
+achieve broader coverage and deeper exploration of code logic
+without syntax limitations. Our evaluation results affirmed the
+superior efficacy of the CovRL-Fuzz methodology in comparison
+to existing fuzzing strategies. Impressively, it discovered 48 realworld security-related bugs with 11 CVEs in JS engines — among
+these, 39 were previously unknown vulnerabilities. We believe
+that our methodology paves the way for future studies focused on
+harnessing LLMs with coverage feedback for software testing.
+
+Jueon Eom, Seyeon Jeong, and Taekyoung Kwon
+
+Table 9: Summary of Detected Real-World Bugs: This table details 48 bugs identified in JavaScript engines by our study (CovRL-Fuzz), including
+11 that were classified as CVEs. Notably, 39 of these bugs were previously unknown.
+#
+
+JS Engine
+
+Buggy Function
+
+Bug Type
+
+Status
+
+Bug ID
+
+1
+2
+
+V8
+V8
+
+NewFixedArray
+Builtins_ArrayPrototypeSort
+
+Invalid size error
+Out of Memory
+
+Confirmed
+Confirmed
+
+Issue *
+Issue *
+
+3
+4
+5
+
+JSC
+JSC
+JSC
+
+isSymbol
+allocateBuffer
+fixupArrayIndexOf
+
+Out-of-bounds Read
+Crash by load()
+Use After Free
+
+Internal Fixed
+Confirmed
+Internal Fixed
+
+Bug *
+Bug *
+Bug *
+
+6
+7
+8
+9
+10
+11
+12
+13
+
+Chakra
+Chakra
+Chakra
+Chakra
+Chakra
+Chakra
+Chakra
+Chakra
+
+DeleteProperty
+PreVisitFunction
+ParseDestructuredObjectLiteral
+RepeatCore
+GetSz
+UtcTimeFromStrCore
+ToString
+TypePropertyCacheElement
+
+Undefined Behavior
+Out of Memory
+Undefined Behavior
+Out of Memory
+Out of Memory
+Undefined Behavior
+Undefined Behavior
+Out-of-bounds Read
+
+Confirmed
+Confirmed
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+Jerry
+
+parser_parse_class
+jmem_heap_finalize
+parser_parse_statements
+ecma_builtin_typedarray_prototype_sort
+ecma_regexp_parse_flags
+vm_loop
+ecma_big_uint_div_mod
+jmem_heap_alloc
+scanner_literal_is_created
+parser_parse_function_statement
+ecma_property_hashmap_create
+parser_parse_for_statement_start
+jmem_heap_alloc
+scanner_is_context_needed
+
+Undefined Behavior
+Undefined Behavior
+Undefined Behavior
+Heap Buffer Overflow
+Undefined Behavior
+Undefined Behavior
+Undefined Behavior
+Out of Memory
+Heap Buffer Overflow
+Heap Buffer Overflow
+Undefined Behavior
+Undefined Behavior
+Stack Overflow
+Heap Buffer Overflow
+
+Confirmed
+Confirmed
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+
+Issue *
+Issue *
+Issue *
+CVE-*-*
+CVE-*-*
+CVE-*-*
+CVE-*-*
+CVE-*-*
+CVE-*-*
+CVE-*-*
+CVE-*-*
+CVE-*-*
+Issue *
+CVE-*-*
+
+28
+
+QJS
+
+js_proxy_isArray
+
+Stack Overflow
+
+Reported/Fixed
+
+CVE-*-*
+
+29
+30
+31
+32
+
+Jsish
+Jsish
+Jsish
+Jsish
+
+jsiEvalCodeSub
+IterGetKeysCallback
+Jsi_DecrRefCount
+SplitChar
+
+Out-of-bounds Read
+Stack Overflow
+Use After Free
+Use After Free
+
+Reported
+Reported
+Reported
+Reported
+
+Issue *
+Issue *
+Issue *
+Issue *
+
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+
+escargot
+escargot
+escargot
+escargot
+escargot
+escargot
+escargot
+escargot
+escargot
+escargot
+escargot
+escargot
+escargot
+escargot
+
+parseLeftHandSideExpression
+generateExpressionByteCode
+generateStatementByteCode
+hasRareData
+readPointerIsNumberEncodedValue
+TightVector
+setupAlternativeOffsets
+setMutableBindingByBindingSlot
+redefineOwnProperty
+asPointerValue
+addOptionalChainingJumpPosition
+lastFoundPropertyIndex
+setMutableBindingByIndex
+VectorCopier
+
+Undefined Behavior
+Undefined Behavior
+Undefined Behavior
+Out-of-bounds Read
+Out-of-bounds Read
+Out-of-bounds Read
+Stack Overflow
+Undefined Behavior
+Undefined Behavior
+Undefined Behavior
+Undefined Behavior
+Stack Overflow
+Undefined Behavior
+memcpy-param-overlap
+
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+Issue *
+
+47
+48
+
+Espruino
+Espruino
+
+jsvStringIteratorPrintfCallback
+jspeFactorFunctionCall
+
+Out-of-bounds Read
+Stack Overflow
+
+Reported
+Reported
+
+Issue *
+Issue *
+
+CovRL: Fuzzing JavaScript Engines with Coverage-Guided Reinforcement Learning for LLM-based Mutation
+
+REFERENCES
+[1] Ahmad, W., Chakraborty, S., Ray, B., and Chang, K.-W. Unified pre-training
+for program understanding and generation. In Proceedings of the 2021 Conference
+of the North American Chapter of the Association for Computational Linguistics:
+Human Language Technologies (2021), pp. 2655–2668.
+[2] Aschermann, C., Frassetto, T., Holz, T., Jauernig, P., Sadeghi, A.-R., and
+Teuchert, D. Nautilus: Fishing for deep bugs with grammars. In Proceedings
+2019 Network and Distributed System Security Symposium (2019).
+[3] Austin, J., Odena, A., Nye, M., Bosma, M., Michalewski, H., Dohan, D., Jiang,
+E., Cai, C., Terry, M., Le, Q., et al. Program synthesis with large language
+models, 2021.
+[4] Böttinger, K., Godefroid, P., and Singh, R. Deep reinforcement fuzzing. In
+2018 IEEE Security and Privacy Workshops (SPW) (2018), IEEE, pp. 116–122.
+[5] Brown, T., Mann, B., Ryder, N., Subbiah, M., Kaplan, J. D., Dhariwal, P.,
+Neelakantan, A., Shyam, P., Sastry, G., Askell, A., et al. Language models
+are few-shot learners. In Advances in neural information processing systems
+(2020), vol. 33, pp. 1877–1901.
+[6] Charlie Miller. Fuzz by number. https://www.ise.io/wp-content/uploads/2019/
+11/cmiller_cansecwest2008.pdf, 2008. Accessed: 2024-01-12.
+[7] Chen, M., Tworek, J., Jun, H., Yuan, Q., Pinto, H. P. d. O., Kaplan, J., Edwards,
+H., Burda, Y., Joseph, N., Brockman, G., et al. Evaluating large language
+models trained on code, 2021.
+[8] Chowdhery, A., Narang, S., Devlin, J., Bosma, M., Mishra, G., Roberts, A.,
+Barham, P., Chung, H. W., Sutton, C., Gehrmann, S., et al. Palm: Scaling
+language modeling with pathways, 2022.
+[9] Cobbe, K., Kosaraju, V., Bavarian, M., Chen, M., Jun, H., Kaiser, L., Plappert,
+M., Tworek, J., Hilton, J., Nakano, R., et al. Training verifiers to solve math
+word problems, 2021.
+[10] Cummins, C., Petoumenos, P., Murray, A., and Leather, H. Compiler fuzzing
+through deep learning. In Proceedings of the 27th ACM SIGSOFT International
+Symposium on Software Testing and Analysis (2018), pp. 95–105.
+[11] Deng, Y., Xia, C. S., Peng, H., Yang, C., and Zhang, L. Large language models
+are zero-shot fuzzers: Fuzzing deep-learning libraries via large language models.
+In Proceedings of the 32nd ACM SIGSOFT International Symposium on Software
+Testing and Analysis (ISSTA 2023) (2023).
+[12] Deng, Y., Xia, C. S., Yang, C., Zhang, S. D., Yang, S., and Zhang, L. Large
+language models are edge-case fuzzers: Testing deep learning libraries via fuzzgpt,
+2023.
+[13] Devlin, J., Chang, M.-W., Lee, K., and Toutanova, K. Bert: Pre-training of
+deep bidirectional transformers for language understanding, 2018.
+[14] ECMA International. Ecmascript language speicification. https://www.ecmainternational.org/ecma-262/, 1997. Accessed: 2023-08-15.
+[15] Fan, Z., Gao, X., Mirchev, M., Roychoudhury, A., and Tan, S. H. Automated
+repair of programs from large language models. In 2023 IEEE/ACM 45th International Conference on Software Engineering (ICSE) (2023), IEEE, pp. 1469–1481.
+[16] Fried, D., Aghajanyan, A., Lin, J., Wang, S., Wallace, E., Shi, F., Zhong, R.,
+Yih, S., Zettlemoyer, L., and Lewis, M. Incoder: A generative model for code
+infilling and synthesis. In The Eleventh International Conference on Learning
+Representations (2022).
+[17] Godefroid, P., Peleg, H., and Singh, R. Learn&fuzz: Machine learning for input
+fuzzing. In 2017 32nd IEEE/ACM International Conference on Automated Software
+Engineering (ASE) (2017), ASE 2017, IEEE, pp. 50–59.
+[18] Google. Chrominum issue 729991. https://bugs.chromium.org/p/chromium/
+issues/detail?id=729991, 2017. Accessed: 2023-08-14.
+[19] Han, H., Oh, D., and Cha, S. K. Codealchemist: Semantics-aware code generation
+to find vulnerabilities in javascript engines. In Proceedings 2019 Network and
+Distributed System Security Symposium (2019).
+[20] He, X., Xie, X., Li, Y., Sun, J., Li, F., Zou, W., Liu, Y., Yu, L., Zhou, J., Shi, W.,
+et al. Sofi: Reflection-augmented fuzzing for javascript engines. In Proceedings
+of the 2021 ACM SIGSAC Conference on Computer and Communications Security
+(2021), ACM, pp. 2229–2242.
+[21] hoongwoo Han. js-vuln-db. https://github.com/tunz/js-vuln-db, 2010. Accessed:
+2023-08-15.
+[22] JSHint. Jshint: A javascript code quality tool. https://jshint.com/, 2013. Accessed:
+2023-08-15.
+[23] Klees, G., Ruef, A., Cooper, B., Wei, S., and Hicks, M. Evaluating fuzz testing. In
+Proceedings of the 2018 ACM SIGSAC conference on computer and communications
+security (2018), ACM, pp. 2123–2138.
+[24] Le, H., Wang, Y., Gotmare, A. D., Savarese, S., and Hoi, S. C. H. Coderl:
+Mastering code generation through pretrained models and deep reinforcement
+learning. Advances in Neural Information Processing Systems 35 (2022), 21314–
+21328.
+[25] Lee, H., Phatale, S., Mansoor, H., Lu, K., Mesnard, T., Bishop, C., Carbune,
+V., and Rastogi, A. Rlaif: Scaling reinforcement learning from human feedback
+with ai feedback, 2023.
+[26] Lee, S., Han, H., Cha, S. K., and Son, S. Montage: A neural network language
+{ Model-Guided } { JavaScript } engine fuzzer. In 29th USENIX Security Symposium
+
+(USENIX Security 20) (2020), USENIX Association, pp. 2613–2630.
+[27] Lemieux, C., and Sen, K. Fairfuzz: A targeted mutation strategy for increasing
+greybox fuzz testing coverage. In Proceedings of the 33rd ACM/IEEE international
+conference on automated software engineering (2018), pp. 475–485.
+[28] Li, R., Allal, L. B., Zi, Y., Muennighoff, N., Kocetkov, D., Mou, C., Marone,
+M., Akiki, C., Li, J., Chim, J., et al. Starcoder: may the source be with you! arXiv
+preprint arXiv:2305.06161 (2023).
+[29] Li, X., Liu, X., Chen, L., Prajapati, R., and Wu, D. Alphaprog: reinforcement
+generation of valid programs for compiler fuzzing. In Proceedings of the AAAI
+Conference on Artificial Intelligence (2022), pp. 12559–12565.
+[30] Li, X., Liu, X., Chen, L., Prajapati, R., and Wu, D. Fuzzboost: Reinforcement
+compiler fuzzing. In Information and Communications Security: 24th International
+Conference, ICICS 2022, Canterbury, UK, September 5–8, 2022, Proceedings (Berlin,
+Heidelberg, 2022), Springer-Verlag, p. 359–375.
+[31] Liu, J., Zhu, Y., Xiao, K., Fu, Q., Han, X., Yang, W., and Ye, D. Rltf: Reinforcement
+learning from unit test feedback, 2023.
+[32] Liu, X., Li, X., Prajapati, R., and Wu, D. Deepfuzz: Automatic generation of
+syntax valid c programs for fuzz testing. In Proceedings of the AAAI Conference
+on Artificial Intelligence (2019), pp. 1044–1051.
+[33] Loshchilov, I., and Hutter, F. Decoupled weight decay regularization. arXiv
+preprint arXiv:1711.05101 (2017).
+[34] Mann, H. B., and Whitney, D. R. On a test of whether one of two random
+variables is stochastically larger than the other. The annals of mathematical
+statistics (1947), 50–60.
+[35] Matt Molinyawe, Adul-Aziz Hariri, J. S. $hell on earth: From browser to
+system compromise. In Black Hat USA (2016).
+[36] Michal Zalewski. Afl: American fuzzy lop. https://lcamtuf.coredump.cx/afl/,
+2013. Accessed: 2023-08-15.
+[37] Mihai Bazon. uglifyjs. https://github.com/mishoo/UglifyJS, 2010. Accessed:
+2023-08-14.
+[38] Miller, B. P., Fredriksen, L., and So, B. An empirical study of the reliability of
+unix utilities. Communications of the ACM 33, 12 (Dec. 1990), 32–44.
+[39] Ouyang, L., Wu, J., Jiang, X., Almeida, D., Wainwright, C., Mishkin, P., Zhang,
+C., Agarwal, S., Slama, K., Ray, A., et al. Training language models to follow
+instructions with human feedback. Advances in Neural Information Processing
+Systems 35 (2022), 27730–27744.
+[40] Park, S., Xu, W., Yun, I., Jang, D., and Kim, T. Fuzzing javascript engines with
+aspect-preserving mutation. In 2020 IEEE Symposium on Security and Privacy
+(SP) (2020), IEEE, pp. 1629–1642.
+[41] Patra, J., and Pradel, M. Learning to fuzz: Application-independent fuzz testing
+with probabilistic, generative models of input data. Tech. rep., TU Darmstadt,
+Department of Computer Science, 2016.
+[42] Raffel, C., Shazeer, N., Roberts, A., Lee, K., Narang, S., Matena, M., Zhou,
+Y., Li, W., and Liu, P. J. Exploring the limits of transfer learning with a unified
+text-to-text transformer. The Journal of Machine Learning Research 21, 1 (Jan.
+2020), 5485–5551.
+[43] Roit, P., Ferret, J., Shani, L., Aharoni, R., Cideron, G., Dadashi, R., Geist, M.,
+Girgin, S., Hussenot, L., Keller, O., et al. Factually consistent summarization
+via reinforcement learning with textual entailment feedback, 2023.
+[44] Salls, C., Jindal, C., Corina, J., Kruegel, C., and Vigna, G. { Token-Level }
+fuzzing. In 30th USENIX Security Symposium (USENIX Security 21) (2021), USENIX
+Association, pp. 2795–2809.
+[45] Schulman, J., Wolski, F., Dhariwal, P., Radford, A., and Klimov, O. Proximal
+policy optimization algorithms, 2017.
+[46] Serebryany, K., Bruening, D., Potapenko, A., and Vyukov, D.
+{ AddressSanitizer } : A fast address sanity checker. In 2012 USENIX annual technical conference (USENIX ATC 12) (2012), pp. 309–318.
+[47] Shojaee, P., Jain, A., Tipirneni, S., and Reddy, C. K. Execution-based code
+generation using deep reinforcement learning, 2023.
+[48] Sparck Jones, K. A statistical interpretation of term specificity and its application
+in retrieval. Journal of documentation 28, 1 (1972), 11–21.
+[49] Su, Y., Lan, T., Wang, Y., Yogatama, D., Kong, L., and Collier, N. A contrastive
+framework for neural text generation. Advances in Neural Information Processing
+Systems 35 (2022), 21548–21561.
+[50] Technical Committee 39 ECMA International. Test262. https://github.com/
+tc39/test262, 2010. Accessed: 2023-08-15.
+[51] Veggalam, S., Rawat, S., Haller, I., and Bos, H. Ifuzzer: An evolutionary interpreter fuzzer using genetic programming. In Computer Security–ESORICS 2016:
+21st European Symposium on Research in Computer Security, Heraklion, Greece,
+September 26-30, 2016, Proceedings, Part I 21 (2016), Springer, Cham, pp. 581–601.
+[52] W3Techs. Usage statistics of javascript as client-side programming language
+on websites. https://w3techs.com/technologies/details/cp-javascript, 2024. Accessed: 2024-01-17.
+[53] Wang, J., Chen, B., Wei, L., and Liu, Y. Skyfire: Data-driven seed generation
+for fuzzing. In 2017 IEEE Symposium on Security and Privacy (SP) (2017), IEEE,
+pp. 579–594.
+[54] Wang, J., Chen, B., Wei, L., and Liu, Y. Superion: Grammar-aware greybox
+fuzzing. In 2019 IEEE/ACM 41st International Conference on Software Engineering
+
+Jueon Eom, Seyeon Jeong, and Taekyoung Kwon
+
+(ICSE) (2019), IEEE, pp. 724–735.
+[55] Wang, Y., Le, H., Gotmare, A. D., Bui, N. D., Li, J., and Hoi, S. C. Codet5+:
+Open code large language models for code understanding and generation, 2023.
+[56] Wang, Y., Wang, W., Joty, S., and Hoi, S. C. Codet5: Identifier-aware unified
+pre-trained encoder-decoder models for code understanding and generation. In
+Proceedings of the 2021 Conference on Empirical Methods in Natural Language
+Processing (2021), pp. 8696–8708.
+[57] Wei, J., Bosma, M., Zhao, V., Guu, K., Yu, A. W., Lester, B., Du, N., Dai, A. M.,
+and Le, Q. V. Finetuned language models are zero-shot learners. In International
+Conference on Learning Representations (2021).
+[58] Xia, C. S., Paltenghi, M., Tian, J. L., Pradel, M., and Zhang, L. Universal
+fuzzing via large language models. arXiv preprint arXiv:2308.04748 (2023).
+
+[59] Xia, C. S., and Zhang, L. Less training, more repairing please: revisiting automated program repair via zero-shot learning. In Proceedings of the 30th ACM Joint
+European Software Engineering Conference and Symposium on the Foundations of
+Software Engineering (2022), pp. 959–971.
+[60] Ye, G., Tang, Z., Tan, S. H., Huang, S., Fang, D., Sun, X., Bian, L., Wang,
+H., and Wang, Z. Automated conformance testing for javascript engines via
+deep compiler fuzzing. In Proceedings of the 42nd ACM SIGPLAN International
+Conference on Programming Language Design and Implementation (2021), ACM,
+pp. 435–450.
+[61] Ziegler, A., Kalliamvakou, E., Li, X. A., Rice, A., Rifkin, D., Simister, S.,
+Sittampalam, G., and Aftandilian, E. Productivity assessment of neural code
+completion. In Proceedings of the 6th ACM SIGPLAN International Symposium on
+Machine Programming (2022), pp. 21–29.
+
+

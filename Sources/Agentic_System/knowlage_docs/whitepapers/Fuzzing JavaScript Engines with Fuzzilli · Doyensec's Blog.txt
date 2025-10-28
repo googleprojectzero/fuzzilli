@@ -1,0 +1,309 @@
+Fuzzing JavaScript Engines with
+Fuzzilli
+09 Sep 2020 - Posted by Norbert Szetei
+
+Background
+ABOUT US
+
+As part of my research at Doyensec, I spent some time trying to understand
+
+We are security
+
+current fuzzing techniques, which could be leveraged against the popular
+
+engineers who break
+
+JavaScript engines (JSE) with a focus on V8. Note that I did not have any prior
+
+bits and tell stories.
+Visit us
+doyensec.com
+Follow us
+@doyensec
+
+experience with fuzzing JSEs before starting this journey.
+
+Dharma
+My experimentation started with a context-free grammar (CFG) generator:
+Dharma. I quickly realized that the grammar rules for generating valid JavaScript
+code that does something interesting are too complicated. Type confusion and
+JIT engine bugs were my primary focus, however, most of the generated code
+was syntactically incorrect. Every statement was wrapped in a
+
+try/catch
+
+block to deal with the incorrect code. After a few days of fuzzing, I was only able
+
+Engage us
+
+to nd out-of-memory (OOM) bugs. If you want to read more about V8 JIT and
+
+info@doyensec.com
+
+Dharma, I recommend this thoughtful research.
+Dharma allows you to specify three sections for various purposes. The rst one
+
+Blog Archive
+2025 2024 2023 2022
+2021 2020 2019 2018
+2017
+
+is called variable and enables you the de nition of variables later used in the
+value
+
+section. The last one,
+
+variance
+
+is commonly used to specify the
+
+starting symbol for expanding the CFG tree.
+The linkage is implemented inside the value and a nice feature of Dharma is
+that here you only de ne the assignment rules or function invocations, and the
+
+Search the blog
+© 2025 Doyensec LLC
+
+variables are automatically created when needed. However, if we assign a
+variable of type A to one with the di erent type B, we have to include all the type
+A rules inside the type B object.
+Here is an example of such rule:
+try { !TYPEDARRAY! = !ARRAYBUFFER!.slice(!ANY_FUNCTION!, !ANY_FUNCTIO
+N!) } catch (e) {};
+
+As you can imagine, without writing an additional library, the code quickly
+becomes complicated and clumsy.
+Fuzzing with coverage is mandatory when targeting popular software as a pure
+blackbox approach only scratches the attack surface. Coverage could be easily
+obtained when the binary is compiled with a speci c Clang (compiler frontend,
+part of the LLVM infrastructure)
+
+ag. Part of the output could be seen in the
+
+picture below. In my case, it was only useful for the manual code review and
+grammar adjustment, as there was no convenient way how to implement the
+mutator on the JavaScript source code.
+
+Fuzzilli
+As an alternative approach, I started to play with Fuzzilli, which I think is
+incredible and still a very underrated fuzzer, implemented by Samuel Groß (aka
+Saelo). Fuzzilli uses an intermediate representation (IR) language called FuzzIL,
+which is perfectly suitable for mutating. Moreover, any program in FuzzIL could
+always be converted (lifted) to a valid JavaScript code.
+At that time, the supported targets were V8, SpiderMonkey, and JavaScriptCore.
+As these engines continuously undergo widespread fuzzing, I instead decided to
+implement support for a di erent JavaScript Engine. I was also interested in the
+communication protocol between the fuzzer and the engine, so I considered
+expanding this fuzzer to be an excellent exercise.
+I decided to add support for JerryScript. In the past years, numerous security
+issues have been discovered on this target by Fuzzinator, which uses the ANTLR
+v4 testcase generator Grammarinator. Those bugs were investigated and xed,
+so I wanted to see if Fuzzilli could nd something new.
+
+Fuzzilli Basics
+REPRL
+The best available high-level documentation about Fuzzilli is Samuel’s Masters
+Thesis, where it was introduced, and I strongly recommend reading it as this
+article summarizes some of the novel ideas.
+Many modern fuzzer architectures use Forkserver. The idea behind it is to run
+the program until the initialization is complete, but before it processes any input.
+Right after that, the input from the fuzzer is read and passed to a newly forked
+child. The overhead is low since the initialization possibly only occurs once, or
+when a restart is needed (e.g. in the case of continuous memory leaks).
+Fuzzilli uses the REPRL approach, which saves the overhead caused by fork()
+and the measured execution per sample could be ~7 times faster. The JSE
+engine is modi ed to read the input from the fuzzer, and after it executes the
+sample, it obtains the coverage. The crucial part is to reset the state, which is
+normally (obviously) not done, as the engine uses the context of the already
+de ned variables. In contrast with the Forkserver, we need a rudimentary
+knowledge of the engine. It is useful to know how the engine’s string
+representation is internally implemented to feed the input or add additional
+commands.
+
+Coverage
+LLVM gives a convenient way to obtain the edge coverage. Providing the fsanitize-coverage=trace-pc-guard compiler ag to Clang, we can receive a
+
+pointer to the start and end of the regions, which are initialized by the guard
+number, as can be read in the llvm documentation:
+extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t *start,
+uint32_t *stop) {
+static uint64_t N; // Counter for the guards.
+if (start == stop || *start) return; // Initialize only once.
+printf("INIT: %p %p\n", start, stop);
+for (uint32_t *x = start; x < stop; x++)
+*x = ++N; // Guards should start from 1.
+}
+
+The guard regions are included in the JSE target. This means that the JavaScript
+engine must be modi ed to accommodate these changes. Whenever a branch is
+executed, the
+
+__sanitizer_cov_trace_pc_guard
+
+callback is called. Fuzzilli
+
+uses a POSIX shared memory object (shmem) to avoid the overhead when
+passing the data to the parent process. Shmem represents a bitmap, where the
+visited edge is set and, after each JavaScript input pass, the edge guards are
+reinitialized.
+
+Generation
+We are not going to repeat the program generation algorithms, as they are
+closely described in the thesis. The surprising fact is that all the programs stem
+from this simple JavaScript by cleverly applying multiple mutators:
+Object()
+
+Integration with JerryScript
+To add a new target, several modi cations for Fuzzilli should be implemented.
+From a high level, the REPRL pseudocode is described here.
+As we already mentioned, the JavaScript engine must be modi ed to conform to
+Fuzzilli’s protocol. To keep the same code standards and logic, we recommend
+adding a custom command line parameter to the engine. If we decide to run the
+interpreter without it, it will run normally. Otherwise, it uses the hardcoded
+descriptor numbers to make the parent knows that the interpreter is ready to
+process our input.
+Fuzzilli internally uses a custom command, by default called fuzzilli , which
+the interpreter should also implement. The
+
+rst parameter represents the
+
+operator - it could be FUZZILLI_CRASH or FUZZILLI_PRINT . The former is
+used to check if we can intercept the segmentation faults, while the latter
+(optional) is used to print the output passed as an argument. By design, the
+fuzzer prevents execution when some checks fail, e.g., the operation
+FUZZILLI_CRASH is not implemented.
+
+The code is very similar between di erent targets, as you can see in the patch
+for JerryScript that we submitted.
+For a basic setup, one needs to write a short pro le
+
+le stored in
+
+Sources/FuzzilliCli/Profiles/ . Here we can specify additional builtins
+
+speci c to the engine, arguments, or thanks to the recent contribution from
+WilliamParks also the ECMAScriptVersion .
+
+Results
+By integrating Fuzzilli with JerryScript, Doyensec was able to identify multiple
+bugs reported over the course of four weeks through GitHub. All of these issues
+were xed.
+All issues were also added to the Fuzzilli Bug Showcase:
+
+Fuzzilli is by design e cient against targets with JIT compilers. It can abuse the
+non-linear execution
+
+ow by generating nested callbacks, Prototypes or Proxy
+
+objects, where the state of a di erent object could be modi ed. Samples
+produced by Fuzzilli are speci cally generated to incorporate these properties,
+as required for the discovery of type confusion bugs.
+This behavior could be easily seen in the Issue #3836. As in most cases, the
+proof of concept generated by Fuzzilli is very simple:
+function main() {
+var v3 = new Float64Array(6);
+var v4 = v3.buffer;
+v4.constructor = Uint8Array;
+var v5 = new Float64Array(v3);
+}
+main();
+
+This could be rewritten without changing the semantics to an even simpler
+code:
+var v1 = new Float64Array(6);
+v1.buffer.constructor = Uint8Array;
+new Float64Array(v1);
+
+The root cause of this issue is described in the x.
+In JavaScript when a typed array like Float64Array is created, a raw binary data
+bu er could be accessed via the
+
+buffer
+
+property, represented by the
+
+ArrayBuffer
+
+type. However, the type was later altered to typed array view
+
+Uint8Array .
+
+During
+
+ArrayBuffer
+
+the
+
+instead
+
+initialization,
+of
+
+the
+
+the
+
+typed
+
+engine
+array.
+
+was
+
+expecting
+
+an
+
+When
+
+calling
+
+the
+
+ecma_arraybuffer_get_buffer function, the typed array pointer was cast to
+ArrayBuffer . Note that this is possible since the production build’s asserts are
+
+removed. This caused the type confusion bug on line 196.
+Consequently, the destination bu er dst_buf_p contained an incorrect pointer,
+as we can see the memory corruption from the triage via gdb:
+Program received signal SIGSEGV, Segmentation fault.
+ecma_typedarray_create_object_with_typedarray (typedarray_id=ECMA_FLO
+AT64_ARRAY, element_size_shift=<optimized out>, proto_p=<optimized ou
+t>, typedarray_p=0x5555556bd408 <jerry_global_heap+480>)
+at /home/jerryscript/jerry-core/ecma/operations/ecma-typedarray-o
+bject.c:655
+655
+memcpy (dst_buf_p, src_buf_p, array_length << element_siz
+e_shift);
+(gdb) x/i $rip
+=> 0x55555557654e <ecma_op_create_typedarray+346>:
+rep movsb %d
+s:(%rsi),%es:(%rdi)
+(gdb) i r rdi
+rdi
+0x3004100020008
+844704103137288
+
+Some of the issues, including the one mentioned above, could be probably
+escalated from Denial of Service to Code Execution. Because of the time
+constraints and little added value, we have not tried to implement a working
+exploit.
+I want to thank Saelo for including my JerryScript patch into Fuzzilli. And many
+thanks to Doyensec for the funded 25% research time, which made this project
+possible.
+
+Additional References
+FuzzIL: Coverage Guided Fuzzing for JavaScript Engines by Saelo
+E cient Approach to Fuzzing Interpreters by Marcin Dominiak and
+Wojciech Rauner
+
+Other relevant posts:
+ksmbd - Exploiting CVE-2025-37947 (3/3) 08 Oct 2025
+ksmbd - Fuzzing Improvements and Vulnerability Discovery
+(2/3) 02 Sep 2025
+ksmbd vulnerability research 07 Jan 2025
+Introduction to VirtualBox security research 26 Apr 2022
+Fuzzing TLS certi cates from their ASN.1 grammar 14 May 2020
+Staring into the Spotlight 15 Nov 2017
+
+

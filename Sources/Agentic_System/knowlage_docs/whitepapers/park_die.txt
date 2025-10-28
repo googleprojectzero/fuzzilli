@@ -1,0 +1,2141 @@
+Fuzzing JavaScript Engines with
+Aspect-preserving Mutation
+Soyeon Park Wen Xu Insu Yun Daehee Jang Taesoo Kim
+Georgia Institute of Technology
+{spark720, wen.xu, insu, daehee87, taesoo} @ gatech.edu
+Abstract—Fuzzing is a practical, widely-deployed technique
+to ﬁnd bugs in complex, real-world programs like JavaScript
+engines. We observed, however, that existing fuzzing approaches,
+either generative or mutational, fall short in fully harvesting highquality input corpora such as known proof of concept (PoC)
+exploits or unit tests. Existing fuzzers tend to destruct subtle
+semantics or conditions encoded in the input corpus in order to
+generate new test cases because this approach helps in discovering
+new code paths of the program. Nevertheless, for JavaScript-like
+complex programs, such a conventional design leads to test cases
+that tackle only shallow parts of the complex codebase and fails
+to reach deep bugs effectively due to the huge input space.
+In this paper, we advocate a new technique, called an aspectpreserving mutation, that stochastically preserves the desirable
+properties, called aspects, that we prefer to be maintained across
+mutation. We demonstrate the aspect preservation with two
+mutation strategies, namely, structure and type preservation, in
+our fully-ﬂedged JavaScript fuzzer, called D IE. Our evaluation
+shows that D IE’s aspect-preserving mutation is more effective in
+discovering new bugs (5.7× more unique crashes) and producing
+valid test cases (2.4× fewer runtime errors) than the state-ofthe-art JavaScript fuzzers. D IE newly discovered 48 high-impact
+bugs in ChakraCore, JavaScriptCore, and V8 (38 ﬁxed with 12
+CVEs assigned as of today). The source code of D IE is publicly
+available as an open-source project.1
+
+Aspect. In this paper, aspect is used to describe a key feature that guides to
+discover new bugs from the PoC of existing bugs. This term is a different
+concept from the one in the aspect oriented programming (AOP). Aspect
+in AOP represents a speciﬁc feature that cross-cuts program’s main logic,
+yet it should be parted from the main logic. However, aspect in this paper
+describes an embedded feature in the PoC of existing bugs, which is
+not explicitly annotated so that we implicitly exploit them by preserving
+structure and type. Table VIII gives examples of aspects for bugs found by
+D IE.
+
+input corpora such as known proof of concept (PoC) exploits
+or existing unit tests. These input corpora are deliberately
+designed to deal with particular properties of the program
+under testing, yet such properties are not retained during the
+fuzzing process. Existing fuzzers [19, 20, 39, 44] are designed
+to generate naive test cases based on simple generative rules
+without leveraging input corpora or fail to maintain subtle
+semantics or conditions encoded in these input corpora when
+generating new test cases, as destructing them indeed helps in
+discovering more diverse code paths of the program. Such a
+design works well for small programs where the input space
+is tractable for automatic exploration. When testing JavaScriptlike complex programs, however, such a conventional design
+tends to produce test cases that stress shallow parts of the
+complex codebase, e.g., a parser or an interpreter but not JIT
+I. I NTRODUCTION
+optimization algorithms.
+In this paper, we advocate a new technique, called aspectFuzzing is, arguably, the most preferable approach to
+test complex, real-world programs like JavaScript engines. preserving mutation, that stochastically preserves beneﬁcial
+While conventional unit testing is effective in validating properties and conditions of the original seed input in generatthe expected functional correctness of the implementation, ing a new test case. We use the term, aspect to describe such
+automated fuzzing is exceptional at discovering unintended preferred properties of input corpora that we want to retain
+security bugs. According to Google, fuzzers have uncovered across mutation. We claim that the aspect-preserving mutation is
+an order of magnitude more bugs than handwritten unit tests a stochastic process because aspects are not explicitly annotated
+developed over a decade [4, 21, 33, 40]. For example, fuzzers as a part of the input corpus, but are implicitly inferred
+have discovered over 5000 new bugs in the heavily-tested and maintained by our lightweight mutation strategies. For
+example, in a PoC exploit, control-ﬂow structures like loops
+Chromium ecosystem [37].
+Two classes of fuzzers have been developed to test JavaScript are deliberately chosen to trigger JIT compilation, and certain
+engines, namely, generative and mutational fuzzers. Generative types are carefully chosen to abuse a vulnerable optimization
+approaches build a new test case from the ground up following logic. Under aspect-preserving mutation, we ideally want to
+pre-deﬁned rules like a context-free grammar of the JavaScript maintain with a high chance such aspects in new test cases
+programming language [17, 39] or reassembling synthesizable while introducing enough variations so that we can discover
+code bricks dissected from the input corpus [19]; mutational similar or new bugs.
+To demonstrate the aspect preservation, we incorporate
+approaches [2, 44] synthesize a test case from existing seed
+two new mutation strategies—namely, structure and type
+inputs.
+However, we observed that both generative and mutational preservation—to our fully-ﬂedged JavaScript fuzzer, called D IE,
+approaches are not enough to take advantage of high-quality that implements all modern features like coverage mapping
+and distributed infrastructure. The foundational technique that
+1 https://github.com/sslab-gatech/DIE
+enables both mutation strategies is the typed abstract syntax
+
+tree, or typed-AST, which provides a structural view of an input
+corpus with the annotated type information of each node. We
+develop a lightweight type analysis that statically propagates
+the observed type information extracted from dynamic analysis
+(§IV-A). Each mutation strategy embodies its own aspectpersevering elements by utilizing the shared typed-AST, e.g.,
+structure-preserving mutation respects structural aspects like
+loops or breaches, and type-preserving mutation maintains
+types of each syntactic elements across mutation.
+We evaluate D IE with three popular JavaScript engines:
+ChakraCore in Microsoft Edge, JavaScriptCore in Apple Safari,
+and V8 in Google Chrome. Our evaluation shows that D IE’s
+aspect-preserving mutation is more effective in discovering new
+bugs (5.7× more unique crashes) and producing high-quality
+test cases (2.4× fewer runtime errors) than the state-of-the-art
+JavaScript fuzzers (see §VI). D IE has newly discovered 48
+high-impact security bugs in ChakraCore, JavaScriptCore, and
+V8;38 of the bugs have been ﬁxed with 12 CVEs assigned as
+of today ($27K as bug bounty prize).
+In summary, this paper makes three contributions:
+• We advocate a new aspect-preserving mutation approach
+that aims to preserve desirable properties and preconditions of a seed input across mutation.
+• We develop a fully-ﬂedged JavaScript fuzzer, D IE , that
+implements two new mutation strategies—namely, structure and type preservation—by using a lightweight static
+and dynamic type analysis.
+• We have reported 48 new bugs and 38 are ﬁxed during
+the responsible disclosure process: 28 in ChakraCore, 16
+in JavascriptCore, and four in V8.
+D IE will be open-sourced upon publication.
+
+JS Fuzzer
+
+Year
+
+I
+
+T
+
+C
+
+S
+
+D
+
+CVE
+
+OS
+
+jsfunfuzz [39]
+2007
+G
+
+
+2012 
+M
+
+LangFuzz [20]
+Skyﬁre [43]
+2017 
+M
+
+2018
+G
+
+
+
+
+
+Fuzzilli [17]
+CodeAlchemist [19]
+2019 
+G
+
+
+
+Superion [44]
+2019 
+M
+
+
+
+2019 
+M
+
+
+Nautilus [2]
+D IE
+2019  G/M   
+
+
+I: Input corpus, T: Type (G: generative, M: mutational), C: Coverage feedback,
+S: Semantic-aware, D: Distributed fuzzing, OS: Open source
+
+TABLE I: Classiﬁcation of existing JavaScript engine fuzzers.
+
+for optimization. The engine then translates the ﬁrst-level
+IR (i.e., bytecode) into a sequence of lower-level IR (e.g.,
+B3 IR in JavaScriptCore) and ultimately to native machine
+instructions for faster execution. Modern JavaScript engines
+apply advanced optimization techniques, such as function
+inlining and redundancy elimination (see Figure 4), during
+the compilation process. As part of the machine code, the
+JIT compiler inserts various checks (e.g., types) to validate
+assumptions made during the optimization, and falls back to
+the unoptimized code if the optimized code failed at validation,
+called bailing out. Although user-facing interfaces like the
+parser and the interpreter are the straight implementation of
+the ECMA262 standard, JIT implementation is speciﬁc to each
+JavaScript engine, e.g., low-level IRs, optimization techniques,
+etc. In other words, it is a desirable place for security auditing,
+thanks to the diversity of implementation and the complexity
+of the optimization logic.
+B. Fuzzing JavaScript Engines
+
+There are two popular types of JavaScript engine fuzzer,
+namely, generative and mutational (Table I). Generative fuzzers
+build new test cases from scratch based on pre-deﬁned grammar
+like jsfunfuzz [39] and Fuzzilli [17] or by constructing them
+from synthesizable code bricks disassembled from a large
+corpus [19]. Mutational fuzzers generate new test cases on the
+A. JavaScript Engines
+seed inputs for testing. For example, LangFuzz [20] breaks
+JavaScript engines are one of the complex components of programs in a large corpus into small code fragments, remodern browsers. Although the design and implementation combines them with a seed input, and generates new test
+of each JavaScript engine are very different, all share two cases; Skyﬁre [43], Nautilus [2] and Superion [44] mutate
+common properties: 1) serving as a standardized runtime for each program individually with the segments learned from
+JavaScript and 2) providing JIT compilation for performance. other programs in the corpus or with their mutation rule.
+JavaScript. This is a dynamically typed language, meaning Modern fuzzers [2, 17, 19, 43, 44] all leverage code coverage to
+that a variable can have an arbitrary type at any point during accelerate their exploration. However, most advanced generative
+execution. Also, the program can terminate with a syntactic or or mutational fuzzers fail to effectively explore a JavaScript
+semantic error at runtime (e.g., invalid references, unexpected engine for deep bugs on the trend (see §II-A) for two reasons:
+types in use). The JavaScript engines process it in multiple 1) Enormous search space. One major advantage of generphases: a parser ﬁrst creates an AST, and an interpreter ative fuzzers is that they fully control the generation process
+converts the AST into a ﬁrst-level intermediate representation of every statement in a testing program. Therefore, building
+(IR) and then executes it with the help of the JavaScript runtime. error-free inputs is straightforward. However, generative fuzzers
+Note that the parser and interpreter of JavaScript engines have build completely new programs by starting from code units.
+rather simple logics, so no security bugs have been recently Meanwhile, a JIT-related bug requires a complicated input with
+reported in either component [13, 14].
+speciﬁc properties to trigger (see §II-A). Hence, the search
+JIT compilation. At runtime, the engine proﬁles execution space is too large for a generative fuzzer to build such test
+(e.g., types, # of invocations) to ﬁnd potential hot spots cases in a reasonable time.
+II. BACKGROUND
+In this section, we summarize the common design of
+JavaScript engines, classify existing fuzzing approaches against
+them, and analyze a trend of recent JavaScript-related bugs.
+
+1
+
+25
+
+# of Bugs
+
+20
+
+JIT-OOB
+JIT-Type confusion
+JIT-Memory corruption
+Parser/Interpreter
+
+arr[0] = 1.1;
+
+3
+
+typeof(arr[obj]);
+
+4
+
+10
+
+arr[0] = 1.1;
+
+ (order)
+
+obj.x;
+arr[0] = 2.3023e-320;
+
+arr[0] = 2.3023e-320;
+}
+
+5
+
+}
+
+6
+
+function main() {
+
+function main() {
+
+7
+
+let arr = [1.1, 2.2, 3.3];
+
+let arr = [1.1, 2.2, 3.3];
+
+8
+
+for (let i = 0; i < 0x10000; i++){
+
+for (let i = 0; i < 0x10000; i++){
+
+9
+
+15
+
+function opt(arr, obj) {
+
+function opt(arr, obj) {
+
+2
+
+opt(arr, {});
+
+ (precondition) }
+
+10
+
+}
+
+11
+
+opt(arr, {toString: () => {
+
+12
+
+arr[0] = {};
+
+13
+
+throw 1;
+
+14
+
+let get = Map.prototype.get;
+Map.prototype.get = function (key) {
+Map.prototype.get = get;
+
+
+
+}});
+
+arr[0] = {};
+
+(type)
+
+15
+16
+
+return this.get(key);
+}
+
+17
+
+5
+
+opt(arr, Intl);
+
+18
+
+0
+2016
+
+2017
+
+2018
+
+2019
+
+Year
+
+Fig. 1: The trend of the security bugs in ChakraCore from 2016
+to 2019. In each column, the right bar shows the number of bugs
+in ChakraCore’s parser, interpreter and its JavaScript runtime. The
+left bar indicates the number of bugs residing in the JIT compilation
+phases. We further classify the JIT compiler bugs by their types and
+out-of-bounds (OOB) access and type confusion caused by incorrect
+JIT behavior dominate.
+
+2) Insufﬁcient utilization of existing programs. Recent
+JavaScript fuzzers select unit test suites and PoCs of known
+bugs as their seed inputs. Basically, such a JavaScript program
+is carefully designed to have certain properties that particularly
+stress one or more working phases in a JavaScript engine.
+Therefore, starting with these inputs enables a fuzzer to
+quickly approach and explore the deep portion of the engine.
+Unfortunately, existing fuzzers fail to fully leverage this
+prominent beneﬁt from such programs. For example, the PoC
+of a JIT-related bug has its unique control ﬂow and data
+dependencies among used variables, which explore the speciﬁc
+code paths of an optimizer. However, once the PoC is broken
+into small normalized segments and mixed with the segments
+of other programs in a large corpus, the generative fuzzers like
+CodeAlchemist [19] rarely hit the code paths in a reasonable
+amount of time. Also, semantic aspects are not respected
+when the PoC is mutated by grammar-rule-based mutational
+fuzzers like Superion [44] and Nautilus [2]. Different from the
+aforementioned fuzzers, D IE creates new JavaScript programs
+in a hybrid manner, synthesizing a seed corpus with a unit
+generated by generative methods. More importantly, D IE fully
+respects the properties of unit-test programs and PoCs. In
+particular, D IE mutates an individual program by replacing the
+code segments that are unrelated to the properties with new
+ones or simply inserting new statements. Meanwhile, the new
+segments used for mutation are generated from scratch based
+on the context.
+C. Trend of Recent Vulnerabilities
+We summarize the vulnerabilities (i.e., exploitable bugs with
+CVEs assigned) found in ChakraCore from 2016 to 2019 in
+Figure 1, which demonstrates the trend of vulnerabilities in
+JavaScript engines. We collect the vulnerability information
+
+opt(arr, {});
+
+print(arr[0]);
+
+19
+
+}
+
+20
+
+main();
+
+print(arr[0]);
+
+ (new code)
+
+}
+main();
+
+(a) CVE-2018-0840
+(e.g., input corpus)
+
+(b) CVE-2018-8288
+(e.g., output test case)
+
+Fig. 2: Two PoC exploits for CVE-2018-0840 and CVE-2018-8288 of
+ChakraCore. Given a PoC-(a) as a seed input, PoC-(b) can only be
+discovered when three conditions are met ( 1 – 3 ) but with enough
+variation introduced ( 4 ). Note that human hackers are particularly
+good at exploring similar types of bugs in this manner—both PoC
+exploits are written by the same author [25, 26].
+
+from Google Project Zero issue trackers [14] and the commits
+of ChakraCore for security updates [29]. All the vulnerabilities
+reside in either the parser and interpreter or the JIT compiler
+at the backend. The number of parser and interpreter bugs
+has been rapidly decreasing in the period. Meanwhile, the JIT
+compiler bugs gradually dominate. The JIT compiler bugs are
+mainly caused by incorrect speculation or wrong optimization
+based on logic error. We further divide these bugs by their types
+and notice that most of the bugs result in out-of-bounds (OOB)
+access or type confusion. An ordinary program written in
+JavaScript, a typical high-level language, needs sophisticatedly
+crafted code to trigger these cases. The goal of D IE is to
+effectively generate such programs that are more likely to hit
+these deep phases for ﬁnding JavaScript bugs in 2019.
+III. OVERVIEW
+A. Motivation
+Human hackers have a particular interest in auditing similar
+types of vulnerabilities. This intuitively makes sense, as the
+developers likely introduced similar mistakes dispersedly to
+the codebase. For example, Figure 2-(a) shows a bug in JITrelated optimizations [25]: a bailout condition is incorrectly
+assumed and checked in the JIT-ed code. Figure 2-(b) shows
+a similar bug but with subtle differences: it is incorrectly
+assumed to have no side effect in an exception (throw in
+toString) if suppressed by typeof in (a), but in (b), a side
+effect can be unexpectedly introduced by Map used during
+the initialization of Intl (for internationalization support).
+Accordingly, both exploits share many common preconditions,
+as shown in Figure 2. For example, 1 is required to satisfy
+the JIT-able condition by repeatedly invoking opt(), and 3 is
+required to trick the optimizer to incorrectly assume the type
+of arr in opt() but to allow an optimization condition (i.e., a
+redundant check elimination) to be met.
+
+Such an intuitive approach is not well respected when a PoC orders in a JIT-ed region are necessary to trigger an optimization
+exploit is used as a seed input by automatic techniques like phase (e.g., a redundant check elimination, 3 in Figure 2).
+fuzzing. One possible explanation is that the goal of fuzzing by In contrast, widely-deployed blind mutation and generation
+design promotes exploration of new input spaces, which tends strategies tend to destroy these structures, e.g., at an extreme
+to encourage the fuzzer’s mutation strategies to destruct the end, the state-of-the-art JavaScript fuzzer, CodeAlchemist [19],
+conditions encoded in the seeding input. This decision is well dissects all seeding inputs and regenerates new test cases for
+made to increase the code coverage in fuzzing small programs. fuzzing. According to our evaluation, structure-preserving is the
+Nonetheless, the input space for JavaScript-like complex most effective mutation technique to preserve various aspects
+programs having nearly a million lines of source code is (e.g., each JIT optimization phases §VI-D) of input corpora
+infeasible to be exhaustively explored. Also, recent trend of across mutation, which renders 2× more crashes than without
+bugs in JavaScript engines is not simple memory corruption the technique (Table VII).
+bugs that can be achieved by naive coverage-based testing, Type-preserving mutation. We also observe that respecting
+but rather logic errors that need sophisticated conditions to types in an input corpus provides enough room for fuzzers to
+reach them. In other words, mutation strategies should focus on generate high-quality test cases while retaining aspects. For
+producing high-quality test cases instead of merely increasing example, an object type ( 2 in Figure 2) should match with
+code coverage, so that it can reach meaningful, difﬁcult-to-ﬁnd the assumed argument type of the JIT-ed code ({} of opt() in
+bugs. For example, in Figure 2, an ideal strategy for fuzzers Line 9), otherwise the code should be bailed out in the JIT
+is to preserve certain preconditions: keeping the conditions to execution. In other words, if the types of a seed input are not
+enable JIT in 1 , a type in 2 and an access order in 3 , preserved, the derived test cases end up stressing only a shallow
+while introducing a new code snippet ( 4 ) that can vary the part of the JavaScript engines (e.g., parser or interpreter). In
+internal mechanics of JavaScript’s optimization algorithms. If addition, preserving types signiﬁcantly helps in producing
+Figure 2-(a) is used as an input corpus, existing coverage-based error-free test cases—both syntactic compilation errors and
+fuzzers likely discard conditions 1 – 3 because they are not dynamic runtime errors such as ReferenceError, TypeError,
+essential in discovering new code paths but are considered and RangeError. Note that such error conditions also prevent
+redundant to the existing corpus.
+test cases from reaching the deep, complex logics of the
+JavaScript engines, and so they are considered a necessary
+B. Challenges and Approaches
+precondition to preserve various types of aspects of the original
+An ideal fuzzer would want to fully harvest the subtle condi- seed corpus. In this paper, we leverage a lightweight, type
+tions encoded in a high-quality input corpus such as known PoC analysis that statically propagates the observed type information
+exploits [18] or JavaScript unit tests. Thus, the generated test from dynamic analysis (§IV-A). According to our evaluation,
+cases naturally satisfy the necessary preconditions to trigger a the type-preserving mutation reduces runtime errors 2× more
+new bug. One possible approach would be to manually encode than the state-of-the-art fuzzer (Figure 5). Note that our typesuch conditions in each input corpus. However, this does not based mutation also aims to be semantic-aware, meaning that
+work for two reasons: 1) the number of input corpora is huge it attempts to avoid the destruction of aspects by respecting
+(14K, see §VI-A), and 2) more critically, it does not provide some semantics of a seed input, e.g., avoiding try-catch logic
+fuzzers enough freedom for space exploration, negating the that thwarts a JIT invocation.
+beneﬁts of the fuzzing-like automated approaches. Another
+IV. D ESIGN
+approach is to automatically infer such preconditions from each
+corpus via program analysis (e.g., data-ﬂow analysis). However,
+D IE is a mutation-oriented JavaScript fuzzing framework
+this also negates the true enabler of fuzzers, the performance, that respects the high-level aspects of seed inputs, such as
+i.e., reducing 10% input spaces for exploration after spending PoC exploits and unit tests, to generate effective test cases. To
+10% more computing power for additional analysis brings no achieve this, D IE mutates the AST of a JavaScript input by
+beneﬁt to the fuzzer.
+preserving with a high probability the code structure that affects
+Our key approach is to stochastically preserve aspects, the the overall control ﬂows and the original types of the used
+desirable properties we prefer to be maintained across mutation. variables. Code coverage guidance and a distributed setting
+It is a stochastic process because aspects are not explicitly also enable D IE to reach deep bugs in JavaScript engines with
+annotated as part of the corpus, but they are implicitly inferred scale.
+and maintained by our lightweight mutation strategies, so-called Workﬂow. Figure 3 illustrates D IE’s overall design and
+aspect-preserving mutation.
+workﬂow. First, D IE pre-processes original seed ﬁles to produce
+In this paper, we realize aspect preservation with two their typed ASTs. Combining dynamic and static type analysis,
+mutation strategies, namely, structure and type preservation:
+D IE infers the node types in an AST with low overhead in 1 .
+Structure-preserving mutation. We observe that maintaining After type analysis, D IE picks a typed AST of a seed input from
+certain structures (e.g., control ﬂow) of an input corpus tends the corpus for mutation ( 2 in Figure 3). Given the typed AST,
+to retain their aspects in the generated test cases. For example, D IE generates a new test case by replacing each node (while
+a loop structure in a PoC exploit plays a signiﬁcant role in preserving its type), or inserting a new node (while preserving
+invoking JIT compilation ( 1 in Figure 2), and certain access the overall structure) ( 3 in Figure 3). By using the typed AST,
+
+Pre-Processing
+
+Execution/Feedback
+
+Seed Generation
+Mutated Typed-AST
+
+…
+
+Dynamic
+Analysis
+
+Instrument
+
+Original Seeds
+
+IMMUTABLE
+
+Typed-Node
+Builder
+
+while
+
+ཛ Type analysis
+while
+
+NUM ARRAY
+
+==
+[]
+a
+
+a
+Mutation
+Engine
+
++
+
+1
+
+Instrumented
+JS Engines
+NUM
+
+[]
+
+Static Analysis
+
+AST
+
+==
+
+NUM
+
+[]
+.
+
+a
+
+0
+
+NUM
+
+NUM ARRAY
+
+NUM
+
+ཞ Execute
+
+a
+ཝ
+
+NUM ARRAY
+
+“length”
+
+Type Information
+
+0
+
+ཛྷ Pick
+
+Mutate
+(Aspect-preserving)
+
+Distributed
+Fuzzing Platform
+
+IMMUTABLE
+
+while
+
+Typed-AST
+NUM
+
+Corpus
+
+==
+
+[]
+
+1
+
+a
+
+0
+
+NUM ARRAY
+
+NUM
+
+Input
+
+ཟ Feedback
+Mutated
+Seeds
+
+NUM
+
+Coverage Feedback
+
+Crash Report
+
+Fig. 3: Design overview of D IE. First, D IE pre-processes (e.g.,instrument) all the original seed ﬁles to construct a typed AST via dynamic/static
+analysis ( 1 ). In the main fuzzing loop, D IE selects a test case from the corpus along with its typed AST ( 2 ). Next, D IE mutates the typed
+AST by modifying/inserting new nodes while maintaining its structure and type information ( 3 ). Note that the typed-node builder interacts
+with mutation engine supporting aspect-preserving mutation. Afterward, the AST is converted back to a JavaScript ﬁle and examined by the
+fuzzing platform ( 4 ). Finally, D IE measures the runtime coverage for feedback, which determines whether or not the new ﬁle will be saved.
+If the engine crashes at runtime, D IE records the input ( 5 ). D IE can be deployed in a distributed environment where a certain amount of
+generated inputs are tested in parallel.
+
+D IE aims to preserve the type during the mutation process,
+so-called type-preserving mutation, and aims to preserve the
+control-ﬂow structure, so-called structure-preserving mutation,
+each of which tends to maintain certain aspects implicitly
+embodied in the original corpus across mutation. After mutation,
+D IE executes the newly generated test case in 4 and checks
+if the execution crashes or terminates without an error. As the
+target JavaScript engine is instrumented, D IE can obtain the
+runtime coverage after executing the test case, and store it as
+a new input corpus in 5 if it visits any new code path. D IE
+also supports distributed fuzzing by using multiple machines
+to ﬁnd bugs concurrently.
+
+types is considered an Any array. (2) Object: D IE stores the
+shape of an Object instance, which is composed of the types
+of its property keys and values. (3) Function: D IE considers
+the argument and return type of a Function instance.
+D IE’s custom type system is an essential feature to better
+support the mutation based on the semantic information
+extracted from the given test cases. For instance, being aware
+of several Number members of an existing Object, D IE has
+more building blocks for creating a valid Number expression
+than an existing fuzzer. In addition, D IE introduces fewer
+semantic errors from its mutation. For example, with the reﬁned
+Array types, D IE prefers the element of a Number array to an
+arbitrary array for mutating an array index (e.g., from arr[i]
+A. Custom JavaScript Type System
+to arr[int_arr[j]]).
+D IE reﬁnes the original type system of JavaScript. The
+Based on the custom type system, D IE abstracts every
+reﬁned type system has two unique properties that are tailored JavaScript operation, including expressions and APIs for builtfor fuzzing but are different from other JavaScript fuzzers [17, in objects into one or more type reduction rules. Each rule
+19, 39]:
+declares the type of the return value when the operation
+Mixed type. D IE introduces a new type called Mixed for the is invoked with the arguments of particular types. Table II
+syntactic units in a JavaScript program, which captures types summarizes how D IE redeﬁnes the addition and array indexing
+that vary at runtime. Note that since JavaScript is a weak- and operations. The default return type of an addition in JavaScript
+dynamic- typed language, the type of each variable can only be is String unless both of the operands are Numbers. Moreover,
+determined at runtime and even can change during its lifetime. the return value of indexing an array totally depends on the
+Mixed is introduced to describe all types that each syntactic type of element. Note that D IE relies on these rules to infer
+AST node types for typed AST construction (see §IV-B) and
+unit can potentially have.
+Detailed compound types. D IE inspects the sub-element build new AST nodes for a mutation (see §IV-C).
+type(s) of a JavaScript object to deﬁne compound types in a
+more ﬁne-grained manner. (1) Array: D IE records the common B. Typed ASTs
+type of the elements in an array, which can be Number or
+Basically, D IE mutates the syntactic units (i.e., AST nodes)
+String. An array that has empty slots or elements of various of a saved JavaScript ﬁle in the corpus so as to generate new
+
+Operation
+
+Arg. types
+
+Require l-val.
+
+Ret. type
+
+Ensure l-val.
+
+arg1 + arg2
+
+Num., Num.
+Any, Any
+
+false, false
+false, false
+
+Num.
+Str.
+
+false
+false
+
+Num. Arr., Num.
+Str. Arr., Num.
+Arr., Num.
+
+false, false
+false, false
+false, false
+
+Num.
+Str.
+Any
+
+true
+true
+true
+
+Algorithm 1 Constructing a random typed AST that has a
+desired value type.
+
+Num.
+
+true
+
+Num.
+
+false
+
+1: Input: context: the context of a code point (i.e., bindings)
+2: lval: true only when expecting a l-value
+
+arg1[arg2]
+arg1++
+
+TABLE II: The examples of typed operation rules described in D IE:
+addition and array indexing. The rules are used to statically infer the
+type of every AST node of a seed input and also guide the generation
+of new typed AST nodes.
+
+then utilizes the context to construct a new AST whose value
+type is compatible with the expected one.
+
+3: type: the desired value type
+4: step: the current AST depth
+5: Output: the typed AST of a newly constructed expression
+6: function BUILD _ EXP (context, lval, type, step = 0)
+
+inputs for testing. To build new AST nodes for mutation while
+keeping the validity of a generated input, D IE retrieves the
+type and binding information of every seed ﬁle at the ﬁrst
+stage. In particular, for each node of the AST retrieved from a
+seed ﬁle, D IE extends it with (1) its potential type(s) reﬁned by
+D IE (see §IV-A) at runtime and (2) a set of declared variables
+available within its scope. We name such an extended AST that
+contains the type and binding information for every AST node
+as a typed AST. D IE maintains the typed AST for every saved
+input in the corpus and mutates the typed AST to generate
+new JavaScript ﬁles.
+As JavaScript is a weak- and dynamic- typed language, D IE
+aims to infer all the possible types that an AST node may have
+at runtime. D IE achieves this through heterogeneous approaches.
+First, D IE dynamically collects the type(s) of every AST node
+that represents an identiﬁer, namely, a reference to a particular
+variable, in a seed ﬁle. After parsing out the AST of a seed,
+D IE instruments the seed by adding a trampoline right before
+the statement that references an identiﬁer node. The trampoline
+jumps to a type proﬁling function that retrieves the type of the
+identiﬁer at the moment. Note that the function traverses an
+Array and iterates all the members of an Object for a reﬁned
+type enforced by D IE. D IE then runs the instrumented seed
+ﬁle and deduplicates the record types of an identiﬁer output at
+runtime for an eventual type set. With the determined types of
+all the leaf nodes (i.e., identiﬁers and literals), D IE statically
+infers the type(s) of other AST nodes from bottom to top in
+an unambiguous manner. Particularly, D IE refers to ECMA262 [9], which speciﬁes the types of arguments used in a
+particular expression or built-in API. In addition, D IE statically
+reducts the types of arguments and return value of a custom
+Function for its legitimate invokings in newly built AST nodes.
+For the sake of completeness, D IE also labels the statement not
+having a deﬁned value type with its corresponding descriptive
+type, such as if statements, function declarations, etc. D IE
+also performs traditional scope analysis for every identiﬁer
+node in order to build an available variable set at each code
+point in the typed AST.
+C. Building Typed AST Nodes
+D IE relies on its builder to build new nodes for mutating
+the typed AST of an input. Basically, D IE invokes the builder
+with a desired type and a context (i.e., the code point of a
+typed AST node where node mutation is to occur). The builder
+
+7:
+8:
+9:
+10:
+11:
+12:
+13:
+14:
+15:
+16:
+17:
+18:
+19:
+20:
+21:
+22:
+23:
+
+if step == THRESHOLD then
+if PREFER _ VAR() or lval then
+return BUILD _ VAR(context, type)
+else
+return BUILD _ LIT(context, type)
+f it_rules ← {}
+for each rule ∈ RULES do
+if MATCH(rule.ret_type, type) then
+if not lval or rule.ret_lval then
+f it_rules ← f it_rules ∪ {rule}
+rule ← RANDOM _ CHOICE(f it_rules)
+args ← {}
+for each arg ∈ rule.args do
+arg ← BUILD _ EXP(context, arg.lval,
+arg.type, step + 1)
+args ← args ∪ {arg}
+return CONSTRUCT _ AST(rule, args, rule.ret_type)
+
+Algorithm 1 presents the algorithm of the builder that returns
+the root of a new typed AST. Given a targeted value type, the
+builder iterates all the abstract rules of the supported JavaScript
+operations such as the ones described in §IV-A (Line 12-16).
+The builder randomly selects one that has a matched value
+type (Line 17) and ensures a l-value if necessary (Line 15).
+After that, the builder recursively builds the argument nodes
+required by the operation based on their expected value types
+(Line 18-22). During the construction, the builder maintains
+the exact value type for every newly created node during the
+construction. The builder limits the depth of a new AST and
+terminates the construction with leaf nodes, including variables
+and literals (Line 7-11). To fully exploit the semantic aspect of
+the current seed, the builder tends to reuse the constant values
+(e.g., numbers, strings, and regular expressions) that appear in
+the ﬁle for building literals; also, the builder references existing
+variables available within the scope for constructing leaf nodes.
+D. Mutating Typed ASTs
+Given a selected input, D IE mutates its typed AST in an
+aspect-preserving manner in order to utilize its properties that
+targetedly test speciﬁc code paths in the underlying component
+of a JavaScript engine. Generally, the aspects of a test case
+largely depend on its structure and type information. Therefore,
+during the mutation, D IE particularly avoids removing the entire
+if statements, loop statements, custom function deﬁnitions
+
+Algorithm 2 Mutating the typed AST of an input ﬁle and
+testing the mutated input.
+1: Input: t_ast: the typed AST of an input ﬁle.
+2: procedure FUZZ _ ONE(t_ast)
+
+type ← SELECT _ MUTATION _ TYPE ()
+if type == M utation then
+ Mutating a typed
+sub-AST.
+5:
+old ← RANDOM _ EXP(t_ast)
+6:
+new ← BUILD _ EXP(old.context, old.type)
+7:
+REPLACE _ NODE (t_ast, old, new)
+8:
+SAVE _ FILE (t_ast.toString())
+9:
+REPLACE _ NODE (t_ast, new, old)
+10:
+else
+11:
+ref ← RANDOM _ EXP _ STMT(t_ast)
+12:
+if type == Insert_Statement then  Inserting
+a statement.
+13:
+new ← BUILD _ EXP _ STMT(ref.context)
+14:
+else
+ Introducing a new variable.
+15:
+new ← BUILD _ VAR _ DECL(ref.context)
+16:
+INSERT _ BEFORE (t_ast, ref , new)
+17:
+SAVE _ FILE (t_ast.toString())
+18:
+REMOVE _ NODE (t_ast, new)
+3:
+4:
+
+In order to fully exploit the existing aspects of a seed, D IE
+prefers sub-AST mutation and new statement insertion when
+selecting the mutation approach (Line 3). D IE introduces new
+variables into the input only if no new code path is discovered
+for a long time. The newly generated input through any of the
+three approaches is stored (Line 7 and 16) for further execution
+by the target JavaScript engine. Then D IE reverts the changes
+made to the typed AST that will be reused for further mutation
+in the subsequent rounds (Line 8 and 17).
+E. Feedback-driven Fuzzing in Distributed Environment
+
+Even with D IE’s aspect-preserving mutation, ﬁnding new
+bugs in a JavaScript engine is still challenging because (1) input
+space is still enormous due to the high dimensions of freedom
+in JavaScript and (2) the re-execution cost is too high to be
+handled in a single machine. To overcome these issues, D IE
+uses coverage-driven fuzzing in a distributed environment. In
+particular, D IE uses classical feedback-driven fuzzing inspired
+by AFL, but with a reﬁned code coverage that is the same as
+Fuzzilli [17]. The original AFL’s code coverage represents
+each edge in a byte to record hit counts for ﬁnding overﬂows.
+However, hit counts are pointless in JavaScript because they
+can be arbitrarily controllable by modifying a range in the for
+statement. Thus, D IE records an edge in a bit by discarding hit
+counts. As a result, D IE can store eight times more branches
+and invocations, etc., which determine the structure of an
+within the same size of memory compared to the original AFL’s
+existing JavaScript program. Also, D IE avoids redeﬁning an
+design.
+existing variable with a different type. The mutated AST is then
+Furthermore, to make multiple machines collaborate in a
+translated into JavaScript code for testing. After processing
+distributed environment, D IE develops its own code-coverage
+the execution result, D IE reverts the changes made to the AST
+synchronization mechanism. While maintaining its local covfor the next round of mutation. If a generated JavaScript ﬁle
+erage map, an instance of D IE synchronizes its map with a
+discovers new code paths of the targeted JavaScript engine,
+global map if it discovers a locally interesting test case; it
+its typed AST is saved along with the code. Algorithm 2
+introduces a new bit according to the instance’s local map.
+presents how D IE fuzzes an existing JavaScript ﬁle through
+Then, the instance uploads the test case if it is still interesting
+aspect-preserving mutation.
+after the synchronization. This is similar to EnFuzz’s Globally
+Particularly, D IE adopts the following approaches to mutate
+Asynchronous Locally Synchronous (GALS) mechanism [6],
+the typed AST of a JavaScript ﬁle, sorted by their priorities:
+but is different in two aspects. First, D IE synchronizes code
+Mutating a typed sub-AST. D IE randomly selects a sub- coverage itself instead of interesting test cases like EnFuzz.
+AST that serves no structural purpose (i.e., an expression or a Unlike EnFuzz, which needs to re-evaluate test cases because
+sub-expression) (Line 4). The sub-AST is then replaced with of the heterogeneity of fuzzers, D IE can avoid this re-execution,
+a new one built by the builder that has a matched type (Line which is expensive in JavaScript engines, by synchronizing
+5-6).
+code coverage directly thanks to identical fuzzers. Second, D IE
+Inserting a statement. D IE locates a statement block (e.g., can support multiple machines, not just multiple processes in
+the body of an if statement, a function or simply the global a single machine.
+region) and randomly selects a code point inside the block
+V. I MPLEMENTATION
+for insertion (Line 10). Next, D IE generates a new expression
+statement by using the existing variables declared at the point.
+Broadly, D IE is implemented as an AFL variant that can
+Here, the expression statement is simply an expression of any also run in a distributed environment. First, D IE introduces
+value type followed by a semicolon, which can also be built a pre-processing phase into AFL. Starting with existing test
+by the builder. D IE grows the old input by inserting the new suites and PoCs, D IE leverages its type analyzer to construct
+statement at the end (Line 15).
+their typed ASTs and save them along with the source ﬁles into
+Introducing a new variable. Instead of inserting statements, the input corpus. More importantly, D IE replaces the AFL’s
+D IE also manages to insert the declarations of new variables at mutator for binary input with its own mutation engine. The
+random code points in a typed AST. A new variable is always mutation engine uses the typed-AST builder to build random
+initialized by an expression built by the builder with a random sub-ASTs for mutating or growing a typed-AST selected from
+type (Line 14).
+the corpus. D IE reuses most of the other components of the
+
+Component
+
+LoC
+
+Language
+
+strings and regular expressions) used in all the seed programs
+in our corpus for the builder to choose from when building a
+3,677
+TypeScript
+new code segment. The builder also works with the binding
+222
+Python
+information provided by the original AST in Babel and thereby
+10,545
+TypeScript
+only uses declared variables within the scope in order to avoid
+2,333
+TypeScript
+453
+C
+ReferenceError.
+Distributed fuzzing harness
+Integration with AFL. We build a single fuzzing executor
+Coordinator
+205
+TypeScript
+of D IE on the basic infrastructure of AFL [49] (version
+Local agent
+1,419
+Python, Shell script
+2.52b), including the forkserver, coverage feedback routine, and
+Crash reporter
+492
+Python
+execution scheduling. Instead of classic byte mutation in AFL,
+TABLE III: Implementation complexity of D IE including core fuzzing
+we
+integrate our fuzzing engine for mutation with AFL and let
+engine, AFL modiﬁcation, and necessary harnesses for distributed
+fuzzing. Since we reuse a few components (e.g., the fork-server, seed it communicate with the AFL infrastructure. After generating
+scheduler, and coverage collector) in the original AFL, we omit their input by the core engine, AFL executes a target engine with
+code sizes.
+the generated input. Libraries, including wrapper functions to
+resolve compatibility issues (see §VI-A), are executed together
+with the generated input. To build an instrumented binary for
+AFL, including the fork-server, seed scheduler, and coverage code coverage, we directly reuse AFL-Clang as a compiler
+collector. Nevertheless, D IE disables the trimming phase in the and slightly modify the LLVM pass to use the custom code
+original AFL, which destructs the aspects from a seed input. coverage described in §IV-E.
+Note that D IE heavily utilizes Babel [28], a popular JavaScript Distributed fuzzing engine. To launch our fuzzing executor in
+transpiler, to complete all the tasks at the AST level of a a distributed environment, we implement harnesses, including
+JavaScript ﬁle. To support D IE to run in a distributed manner, executor written in Python and Shell script, coordinator, and
+we implement several harnesses: (1) a centralized coordinator crash reporter. To execute the shell command in a distributed
+that synchronizes discovered test cases across the D IE instances environment, we use fabric [10], which is a Python library
+running on different machines and collects crashes, (2) a local supporting the execution of shell commands remotely. The
+agent that manages the execution of D IE on a single machine, harness includes functionalities such as installing dependencies
+and (3) a crash reporter that deduplicates found crashes and and deploying, launching, and terminating the AFL instances.
+reports the coordinator.
+After launching them in a distributed environment, diverse
+Table III presents the lines of code (LoC) of each component intermediate data such as seed corpora should be synchronized.
+of D IE. We explain the implementation details of several non- For fast and reliable data access in a distributed environment,
+we use a well-known open source and in-memory database,
+trivial ones in this section.
+Type analyzer. The type analyzer constructs a corresponding redis [35]. The coordinator communicates with the redis server
+typed-AST for every seed ﬁle (see §IV-B). First, it leverages and synchronizes and distributes intermediate data (e.g., code
+Babel to get the original AST of a seed ﬁle. Note that Babel also coverage and input introduced new paths) among the distributed
+provides the binding information of every variable along with AFL instances. We also implement crash reporter to report the
+the AST by scope analysis. Then it instruments the seed ﬁle found crashes and ﬁlter them to eliminate duplicates. Once
+with the invokings of the typing function on every occurrence the crash reporter gets crashes from the database, it tests them
+of a variable (i.e., an identiﬁer) with the help of the Babel with the JavaScript engine and notiﬁes the user if it ﬁnds a
+APIs for AST manipulation. Then the seed ﬁle is executed new unique crash.
+and the runtime types of an identiﬁer are collected at runtime
+VI. E VALUATION
+and used for bottom-up type analysis on the AST afterward.
+In this section, we evaluate the effectiveness of D IE regarding
+To implement a typed-AST, we simply introduce a new type its ability to ﬁnd new bugs in the latest JavaScript engines using
+ﬁeld into the original Node structure that represents a node in aspect-preserving mutation. Moreover, we compare D IE with
+the AST implementation of Babel, where the inferred type is existing JavaScript engine fuzzers based on diverse metrics to
+stored.
+present various advantages of D IE.
+Mutation engine and typed-node builder. Given an input Q1 Can D IE ﬁnd new bugs in real-world JavaScript engines?
+typed-AST from the corpus, the mutation engine queries the
+(§VI-B)
+typed-AST builder for a randomly built sub-AST. The built Q2 Do the preserved aspects from the corpus play a key role
+sub-AST is a substitute for an existing subtree or is simply
+in triggering the bugs found by D IE? (§VI-C)
+inserted into the input typed-AST (see §IV-D). Since our typed- Q3 Does D IE fully preserve the aspects presented by the
+AST is a simple extension of the Babel’s AST, we leverage
+corpus? (§VI-D)
+various Babel APIs for (1) building new ASTs of JavaScript Q4 Can D IE generate correct JavaScript code, both syntactiexpressions and statements in the typed-node builder and (2)
+cally and semantically? (§VI-E)
+removing existing nodes or adding new nodes in an AST in Q5 How does D IE perform in terms of code coverage and bug
+the mutation engine. Also, we gather the literals (i.e., numbers,
+ﬁnding ability against state-of-the-art fuzzers? (§VI-F)
+Fuzzing engine
+Type analyzer
+Instrumentation tool
+Typed-node builder
+Mutation engine
+AFL modiﬁcation
+
+Version
+# Lines
+Running Time
+Resource
+JS Engine
+§VI-A explains the environment for the experiments. §VI-B
+1.11.5
+780,954
+3 days
+N: 22, C: 839
+ChakraCore
+describes the bugs, including security vulnerabilities found
+ChakraCore
+1.11.5*
+797,872
+3 days
+N: 22, C: 839
+by D IE. §VI-C evaluates the effectiveness of utilizing the
+ChakraCore
+1.11.9
+781,397
+1 week
+N: 22, C: 839
+aspects of the seed corpus by analyzing the results of D IE.
+ChakraCore
+1.11.9*
+797,782
+1 week
+N: 22, C: 839
+JavaScriptCore
+2.24.2
+443,692
+1 week
+N: 22, C: 839
+§VI-D evaluates whether the aspects of the seed corpus are
+V8
+8.0.0*
+995,299
+1 week
+N: 13, C: 388
+well maintained in the test cases generated by D IE. §VI-E
+N: # of nodes, C: # of cores
+evaluates the validity of the generated input by D IE based
+*Canary version
+on syntactic and semantic errors raised by JavaScript engines. TABLE IV: Targeted JavaScript engines, their versions and the
+§VI-F compares the performance of D IE with other state-of- running time D IE runs against them.
+the-art fuzzers.
+
+A. Experimental Setup
+Environment. We evaluate D IE on Intel Xeon E7-4820 (64
+cores) with 132 GB memory for the experiments in §VI-D
+and §VI-F, and Intel Xeon Gold 5115 (40 cores) with 196 GB
+memory for the ones in §VI-E. Both machines run Ubuntu
+16.04. Note that when compared with other fuzzers that do
+not natively support distributed fuzzing, we only use a single
+machine in the evaluation for fairness.
+
+Preserved aspect
+
+Bug
+
+Crash
+
+Structure & Type
+Structure-only
+Total
+
+14/28 (50.00%)
+12/28 (42.86%)
+22/28 (92.86%)
+
+40/84 (47.62%)
+32/84 (42.86%)
+72/84 (90.48%)
+
+TABLE V: The ratio of the crashes and bugs found by D IE in
+ChakraCore that exactly borrow the aspects, indicated by both structure
+and type information, or only the control ﬂow structure, from the
+seed ﬁles in the starting corpus.
+
+Targeted engines. We evaluate the bug-ﬁnding ability B. Identiﬁed Bugs Including Security Vulnerabilities
+with three widely used JavaScript engines: ChakraCore [29],
+To evaluate the ability of D IE in ﬁnding new vulnerabilities,
+JavaScriptCore [1], and V8 [16]. Note that these engines we comprehensively ran D IE in a distributed environment,
+currently operate for Microsoft Edge, Apple Safari, and Google including one master node to store and synchronize intermediate
+Chrome, which all have a large user base and are security- data (e.g., coverage map) and multiple slave nodes. Table IV
+critical so that they are heavily tested by OSS-Fuzz [15] and describes the targeted engines, period, and used resource D IE
+security researchers. Also, we choose the youngest engine, ran for.
+ChakraCore, as a representative in the other experiments
+As a result, D IE found 28 bugs in ChakraCore, 16 bugs in
+(i.e., evaluating aspect preserving, input validity, and code JavaScriptCore, and four bugs in V8 for a total of 48 bugs.
+coverage). With a design similar to other engines, ChakraCore Table VIII shows the unique bugs found and their description.
+involves abundant complicated compiler techniques for code We counted these bugs using the following criteria: (1) found
+optimization and also provides ﬁne-grained debug messages in but ﬁxed issues before we reported to the vendors, (2) semantic
+each working phase.
+bugs that have different behavior from spec and other JavaScript
+Collecting valid seed inputs. As D IE mutates based on the engines, (3) memory corruption bugs except assertions in
+aspects of existing test suites and PoCs, the quality and validity release build, and (4) security bugs acknowledged by vendors.
+of seed corpora largely affect D IE’s performance. To build the Actually, assertion in release build can be considered a
+corpus of D IE, we collect JavaScript ﬁles from two public type of bug for some vendors. For example, the vendor of
+sources: (1) regression tests from the source repositories of JavaScriptCore accepts reports related to assertions in release
+four JavaScript engines: ChakraCore, JavaScriptCore, V8, and build and was willing to ﬁx them, although they are not securitySpiderMonkey, and (2) js-vuln-db [18], a public repository related bugs. On the other hand, the vendor of ChakraCore
+that collects PoCs of JavaScript engine CVEs. To alleviate does not accept reports about assertion in release build. Thus,
+compatibility issues among different JavaScript engines, we we eliminated the number of assertions in release build to
+clariﬁed the engine-speciﬁc functions (e.g., Windows Script conservatively count the number of bugs found.
+Host (WScript) in ChakraCore) and then implemented wrapper
+To identify all bugs by unique root cause, we manually
+functions that perform the equivalent actions in the other analyzed every found crash, and identiﬁed 48 distinct bugs.
+engines or eliminated them as possible to suppress unexpected Among the distinct bugs, we found that 16 are related to
+ReferenceError. Moreover, to fully utilize the seed corpus, security based on their similarity to existing bugs previously
+we further removed all the assertions from the collected ﬁles known as security-related bugs. Of the number of securityto prevent early termination of the new inputs generated by related bugs, we gained 12 CVEs acknowledged by vendors
+D IE. We eventually accumulated 14,708 unique JavaScript and 27K USD as bug bounty rewards. In addition, 13 of the
+ﬁles, including 158 JavaScript ﬁles from js-vuln-db used in bugs are likely security-related, including memory corruption
+the following experiments 2 .
+bugs. Interestingly, we could identify six semantic bugs in
+ChakraCore because ChakraCore provides a more detailed
+debugging message than the others for misbehaved situations
+2 We use complete set of ﬁles from these repositories to avoid cherry-picking
+or biased selection.
+including semantic bugs, so D IE could reach them.
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+
+function opt(arr, start, end) {
+for (let i = start; i < end; i++) {
+if (i === 10) {
+i += 0;
+}
++
+start++;
++
+++start;
++
+--start;
+arr[i] = 2.3023e-320;
+}
++ arr[start] = 2.3023e-320;
+}
+function main() {
+let arr = new Array(100);
+arr.fill(1.1);
+
+16
+
+D IE
+
+D IEt
+
+Superion
+
+CodeAlchemist
+
+Preserved aspect
+65.39% 34.26%
+58.26%
+40.67%
+# of bytecode†
+412
+1,422
+-119
+-984
+† The corpus totally emits 2,551 unique bytecode statements after
+normalization.
+
+TABLE VI: The preserved aspect rate of generated input and the
+difference between the number of normalized statements in the
+bytecode of the seed programs and the generated inputs by D IE,
+D IEt , Superion, and CodeAlchemist.
+
+that affects the wrong array-bound elimination. This example
+shows the beneﬁt of D IE in terms of borrowing existing aspects,
+19
+wrongly calculated induction variable, and using it as an array
+20
+21
+index to invoke a wrong redundancy elimination. The structure22 }
+preserving supported by D IE helps to keep the environment,
+23 main();
+which
+leads to a wrong redundancy elimination (e.g., for and if
+Listing 1: The difference between the PoC of CVE-2019-0990 found
+statement
+on Line 2-5), and type-preserving mutation (e.g., i on
+by D IE and that of CVE-2018-0777 contained in the corpus. The
+PoC is almost seemingly identical, yet patching these bugs requires Line 19) helps it to iterate over the loop enough times to lead to
+different measure as their root cause differs from each other.
+wrong induction variable calculation. Note that the bug is not
+reproducible if the if statement (Line 3-5) is eliminated, which
+means a negligible code change affects the optimization phase
+C. Effectiveness of Leveraging Aspect
+in JIT sensitively, which leads to the bug. Besides, although the
+As described in §III-B, D IE leverages the aspects from difference between the two PoCs seems trivial, their root cause
+existing test cases to explore a broad input space more efﬁ- differs; thus, patching these two bugs requires independent
+ciently and effectively. To evaluate whether aspect-preserving effort. The root cause of the previous bug (CVE-2018-0777)
+mutation enables us to reach bugs, we manually investigated stems from erroneous constant folding, whereas the new bug
+the relationship between the generated crashing inputs in §VI-B brings its wrong behavior due to the improper array bounds
+and their corresponding seed ﬁles. First, we minimized every proﬁling.
+crashing input into a minimal PoC that can trigger the crash.
+D. Evaluation of Aspect Preserving
+We then inspect whether the structure or type information of
+To demonstrate that preserving a structure and type inthe PoC that result in the crash correspond to that of the seed
+ﬁle indeed. We checked the inputs for 84 distinct crashes and formation are effective to maintain interesting aspects and
+28 reasoned bugs found by D IE in ChakraCore (see §VI-B). compare the performance regarding aspect preserving with
+Table V presents the number of inputs that leverage only existing fuzzers, we evaluate D IE, D IE without structurestructure information or both structure and type information preserving, Superion, and CodeAlchemist with a seed corpus
+of the original seed ﬁle. The result shows that the aspects that only contains the JavaScript programs that triggers JIT
+borrowed from the starting corpus contribute to 90.48% of the compilation. Note that the approach of D IE without structurecrashes and 92.86% of the bugs found by D IE. In particular, preserving (notated as D IEt for convenience) mutates any
+47.62% of the crashes and half of the bugs share both structure node in a typed AST regardless of the node’s structural
+and type information with the corpus. The detailed aspects of meaning. D IEt still respects the type information during
+its mutation. First, we measure the rate of generated input
+the found bugs are described in Table VIII.
+Listing 1 presents a code difference between a bug found by invoking the JIT compilation, which is considered a criterion
+D IE (i.e., CVE-2019-0990) and its seed ﬁle (i.e., CVE-2018- to show aspect-preserving. Next, we compare the number of
+0777) to show an example of shared aspects. The original seed unique (normalized) statements in the emitted bytecode of
+corpus leads to an out-of-bounds array access (Line 9), as the the generated input with the number in the seed corpus to
+JavaScript engine fails to compute the correct bounds of the further demonstrate the power of aspect-preserving mutation in
+array (i.e., arr), so a bound check for the array is incorrectly exploiting existing test cases and covering deep code paths in a
+eliminated by redundancy elimination for optimization. This is JavaScript engine. When counting statements in the bytecode,
+because the array index created as an induction variable (i.e., we normalize the operands (e.g., literal and register name in
+i) is wrongly optimized (Line 4). Similar to the seed, the bug arguments of bytecode) that are false noises that hinder the true
+found by D IE leads to an out-of-bounds array access (Line 11) uniqueness. Last, in order to show a more ﬁne-grained effect
+due to a wrong bound check elimination for the array. It also of preserving a structure and type information for utilizing the
+uses an induction variable (i.e., start) as an array index and it is aspects of an existing test case, we evaluate the ratio difference
+wrongly calculated 3 , so it leads to a miscalculated array bound of JIT-optimization invocations between the set of generated
+inputs and the starting corpus. Note that we choose Superion
+3 Patch: https://bit.ly/2MEahCK
+and CodeAlchemist for comparison, as they are one of the
+17
+18
+
++
+
+for (let i = 0; i < 1000; i++) {
+opt(arr, 0, 3);
+opt(arr, 0, i);
+}
+opt(arr, 0, 100000);
+
+175
+150
+125
+
+Forward
+FGPeeps
+FGBuild
+Backward
+CaptureByteCodeRegUse
+BackEnd
+DeadStore
+GlobOpt
+Etc
+
+SyntaxError
+ReferenceError
+TypeError
+RangeError
+
+40
+
+Error Rate (%)
+
+Optimization Invocation Rate (%)
+
+200
+
+100
+75
+
+30
+
+20
+
+10
+
+50
+0
+
+25
+0
+
+la
+
+il
+Van
+
+Die
+
+Diet
+
+Die c
+
+Die
+
+Sup
+
+ist
+uzz
+hem jsfunf
+Alc
+
+n
+
+erio
+
+e
+Cod
+
+Superion CodeAlchemist
+
+Fig. 4: The ratio difference of JIT-optimization invocations between
+the generated inputs and seed ﬁles. The y-axis represents the
+absolute difference between the rate, which means the number of
+invoked optimization phases per JIT invocation. Based on the same
+seed corpus, D IE is the least distant from the corpus regarding
+optimization invocations. The eight most notable optimization phases
+are highlighted.
+
+state-of-the-art JavaScript fuzzers that found JavaScript bugs
+that are acknowledged as CVEs and uses the corpus for input
+mutation and generation.
+Aspect preserving presented as JIT invocations. We observe
+in Table VI that D IE generates 1.12× and 1.61× more inputs
+than Superion and CodeAlchemist that invokes JIT compilation.
+The result shows that Superion also tends to maintain aspect
+through mutation, but D IE is better than Superion because our
+approach is aware of not only grammar but also semantics
+for mutation. In addition, the approach of CodeAlchemist is
+far from leveraging aspects because it breaks useful aspects
+in the seed corpus while breaking corpora into code bricks.
+Furthermore, comparison between D IE and D IEt shows the
+importance of maintaining the structure in regard to aspect
+preserving. Speciﬁcally, D IE invokes JIT compilation 1.9×
+more times in the experiment.
+Aspect preserving presented as optimization invocation. To
+demonstrate the approach that D IE helps to preserve aspect
+in a more ﬁne-grained way, we measured the number of
+invoked optimization phases and compared it with the one
+invoked by the ﬁles in the seed corpus. Figure 4 shows
+that D IE modiﬁes the fewest aspects in the seed against
+D IEt , Superion, and CodeAlchemist. D IE maintains the same
+optimization invocation 1.53× and 4.29× more than D IEt
+and CodeAlchemist, respectively. In particular, CodeAlchemist
+makes the biggest difference for every optimization phase,
+which means reassembling code bricks can totally break
+the existing aspects in the seed corpus. Superion shows the
+negligible difference from D IE because Superion fuzzes code
+
+Fig. 5: The error rate of seed ﬁles and inputs generated by D IE without
+coverage feedback (i.e., D IEc ), D IE, Superion, CodeAlchemist, and
+jsfunfuzz against ChakraCore for 12 hours. The y-axis represents the
+rate of the generated inputs yielding runtime errors. Based on the
+same seed corpus, both Superion and CodeAlchemist generate 2.31×
+more runtime errors than D IE. In the meantime, jsfunfuzz generates
+2.42× more runtime errors than D IE.
+
+in a dumb manner, which is proven as it generates less diverse
+bytecodes (see Table V) and higher syntax error (see Figure 5).
+However, the dumb manner leaves JIT-affected code in the seed
+corpus intact in many cases, so it does not hurt the optimization
+invocation a lot.
+Unique bytecode generation. D IE generates more diverse
+bytecodes than the ones emitted by the seed corpus whether the
+structure is preserved or not (see Table V). In contrast to D IE,
+Superion and CodeAlchemist produce less diverse bytecodes
+than the ones of the seed corpus, which indicates that both
+fuzzers cannot fully utilize existing test cases. Also, the result
+shows that D IE tends to explore the input space in a more
+diverse way than the others.
+E. Validity of Generated Input
+As §III-B described, generating valid highly-structured input
+is difﬁcult but important because early termination by invalid
+input will hinder further exploring the input space, which
+may include defects. To answer Q4, we measured the runtime
+error rates while executing generated input by Superion [44],
+CodeAlchemist [19], jsfunfuzz [39], and D IE. We slightly
+modiﬁed the fuzzers to check the standard error streams of
+executing the generated input with the JavaScript engine to
+compare D IE against existing fuzzers.
+3 To conﬁrm the fairness of comparison, we conducted manual inspection of
+root causes of high error rate generated by CodeAlchemist. We observed that
+high error rate majorly stems from incorrect variable handling (i.e., redeclare
+existing variables and redeﬁne them with wrong types) between assembled
+code bricks.
+
+F. Performance Comparison with Other Fuzzers
+23
+
+Covered Path Rate (%)
+
+22
+21
+20
+19
+18
+17
+
+Die
+Diet
+Superion
+CodeAlchemist
+
+16
+15
+0h
+
+5h
+
+10h
+15h
+Time (h)
+
+20h
+
+Fig. 6: The overall covered path rate of running D IE, D IE without
+structure-preserving (i.e., D IEt ), Superion, and CodeAlchemist against
+ChakraCore for 24 hours. The solid lines represent mean and the
+shades around lines are conﬁdence intervals for ﬁve runs. In the
+process, D IE visits unique paths up to 1.16× more than Superion and
+up to 1.29× more than CodeAlchemist. The unique paths visited by
+D IEt slightly exceed the original D IE up to 1.01×.
+JavaScript Engine
+
+D IE
+
+D IEt
+
+Superion
+
+CodeAlchemist
+
+ChakraCore 1.11.10
+JavaScriptCore 2.24.2
+V8 7.7.100
+
+17
+2
+2
+
+7
+0
+1
+
+0
+0
+1
+
+3
+0
+0
+
+TABLE VII: The number of unique crashes found by D IE, Superion
+and CodeAlchemist for 24 hours on the latest engines of June, 2019.
+All of the crashes were manually inspected to conﬁrm its uniqueness.
+
+To compare performance in terms of exploring input space
+and reaching crashes against state-of-the-art fuzzers, we ﬁrst ran
+D IE, D IEt , Superion, and CodeAlchemist on the instrumented
+JavaScript engine to measure code coverage. In addition, we
+ran them in the same environment (see §VI-A) against the
+latest versions of three major JavaScript engines and counted
+the number of crashes they found. Both experiments lasted for
+24 hours.
+Exploring input space. Figure 6 illustrates that D IE explores
+unique code paths up to 1.16× more than Superion and 1.29×
+more than CodeAlchemist. Interestingly, D IEt visits slightly
+more paths than the original D IE. This is because D IEt has
+more chances to mutate diverse nodes in a more diverse manner,
+which matches the result in Table V that it produces more
+unique bytecodes.
+Reaching crashes. Table VII summarizes the number of
+unique crashes each fuzzer found. Note that D IE found the
+most unique crashes 5 on the JavaScript engine, while Superion
+and CodeAlchemist found fewer crashes. In particular, D IE
+found 5.7× more than CodeAlchemist on the latest version of
+ChakraCore, and Superion could not ﬁnd any crash over the
+same period.
+From the result, we observe that most code paths were
+introduced within the ﬁrst two hours, which shows that
+leveraging aspects in the seed helps to boost exploring diverse
+paths. More importantly, we conclude that code coverage tends
+to show the ability of input-space searching, but it cannot be
+the absolute metric to judge the ability of a JavaScript engine
+fuzzer to ﬁnd bugs: (1) D IEt introduced more code coverage
+than D IE, but found fewer crashes, and (2) 71.79% of the
+crashes found by D IE in ChakraCore are generated after the
+ﬁrst two hours.
+
+VII. D ISCUSSION
+Figure 5 presents the error rate of generated input by D IE and
+We have demonstrated that D IE effectively leverages the
+existing fuzzers. First, we measured the error rate of the intact aspects to discover bugs in the latest JavaScript engines. In
+seed ﬁles (i.e., vanilla) for comparison. The set of seed ﬁles this section, we discuss the limitations of D IE and our future
+originally generated an 11.20% error rate when we performed directions.
+a dry-run. With the seed set, the newly created inputs by D IE
+Seed prioritization. The mutation approach of D IE highly
+produced an 18.88% error rate with coverage feedback. In
+relies on the seed ﬁles, which means the quality of the starting
+addition, Superion and CodeAlchemist generated a 43.54%
+corpus is an important factor that determines the result. D IE
+and 43.58% error rate with the same seed set, and jsfunfuzz
+currently does not prioritize seeds for mutation, which may
+generated a 45.62% error rate, which means that the generated
+make D IE waste time on mutating the seed ﬁles that do not have
+inputs by both Superion and CodeAlchemist yield 2.31× more
+valuable
+aspects and discourage D IE from exploring faceted
+runtime error 4 and generated inputs by jsfunfuzz yield 2.42×
+ones. We believe D IE beneﬁts from the state-of-the-art seed
+more runtime error than D IE. This result demonstrates the
+selection algorithms [34, 43].
+effectiveness of D IE against existing JavaScript fuzzers with
+regard to generating valid input, which is an important factor to Generative rule-based builder. D IE generates typed nodes
+a fuzz structured target. Furthermore, we measured D IE without based on the language rules. In particular, D IE includes most
+coverage feedback to show the ability of D IE to construct valid operations allowed in JavaScript to generate diverse code
+code. Without coverage feedback, D IE generated an 8.65% segments. However, D IE uniformly selects the generation rules
+error rate, which is less than the error rate of the original to build new nodes. Researchers can prioritize certain rules to
+seed set. The result indicates that D IE analyzes type correctly, heavily test speciﬁc routines in JavaScript engines. Moreover,
+builds a valid typed AST node based on our type system, and
+5 All crashes are manually inspected, suggested by [22], to conﬁrm their
+replaces the error-yielding AST node with the valid AST node. distinctness instead of AFL’s coverage measure.
+
+D IE can integrate several existing approaches to generate new based on their types so as to create more semantically valid
+code such as utilizing code fragments [19, 20] or IR-based inputs. Machine learning is also applied to master sophisticated
+generation [17].
+semantic rules from numerous seed ﬁles [8, 12], which are
+Aspect annotation. Practically, D IE considers that the struc- used for generating more test cases. Not only aimed at building
+ture and type information of a test case form its aspects when semantically correct inputs like these works, D IE targetedly
+fuzzing JavaScript ﬁles. Basically, this information is feasible stresses speciﬁc components in a JavaScript engine by fully
+and largely affects how a JavaScript engine JIT-compiles and utilizing the overall semantic properties of each existing test
+further optimizes a program. Nevertheless, one is free to case (i.e., aspects).
+annotate the aspects of a seed ﬁle [30, 32] with different Coverage-guided fuzzers. Starting from AFL [49], coverageguided fuzzing became very popular among general-purpose
+semantic information and explore more speciﬁc code paths.
+Aspect-preserving mutation beyond JavaScript. Although fuzzers [7, 27, 36, 38] and also for JavaScript fuzzing [2, 44].
+D IE only focuses on fuzzing JavaScript engines now, the Superion [44] extends AFL to support additional mutaconcept of aspect-preserving mutation is generic enough to be tion strategies for grammar-based inputs such as XML and
+applied against any target. First, the core idea of D IE can be JavaScript. As a result, Superion beneﬁts from coverage
+ported to other language compilers or interpreters for other feedback by better preserving the structure of a JavaScript
+program. Similarly, Nautilus [2] leverages coverage feedback
+contexts.
+For example, Equivalence Modulo Inputs (EMI) [23, 24] with context-free-grammar-based input generation. Fuzzilli [17],
+is proposed to validate optimizing compilers for differential a recently introduced generative JavaScript fuzzer, also relies
+testing. Similar to D IE, it utilizes existing input corpora to on coverage feedback. Based on a specially designed Interconstruct valid test programs. In addition, it selectively mutates mediate Representation (IR), Fuzzilli builds syntactically and
+unexecuted code to fully exploit the existing semantics that semantically correct test cases from scratch. Different from
+can correspond to the aspect of D IE. We believe that the these approaches that arbitrarily modify test cases only for
+mutation algorithm of these works can beneﬁt from D IE by maximizing code coverage, D IE limits its mutation for aspects
+cooperating with its type-preserving mutation based on structure to meet the complex conditions of modern JavaScript bugs.
+preserving. This is technically doable in C context with a
+IX. C ONCLUSION
+mutation skeleton [5]. Also, [45] proposes a marking algorithm,
+In this paper, we propose D IE, a JavaScript engine fuzzer
+which has a similar effect to preserve structure in D IE, to fuzz
+an ActionScript virtual machine. Instead of marking only the that preserves the aspects of a pre-mutated test case, which are
+identiﬁer, our type-preserving mutation can help to improve the essential conditions for its original purpose. To this end,
+D IE deliberately handles the structure of a given test case and
+the marking algorithm in that context as well.
+keeps
+its type information intact using our novel type analysis
+Furthermore, we can adopt the concept of aspects for
+in
+a
+static
+and dynamic manner. Our evaluation shows that D IE
+applications that receive binary input by identifying the aspects
+can
+maintain
+1.61× more aspects than state-of-the-art fuzzers,
+of a seed ﬁle. For instance, using taint analysis can deprioritize
+including
+Superion
+and CodeAlchemist, resulting in 5.7× more
+the modiﬁcation of certain bytes of the ﬁle based upon the
+unique
+crashes.
+More
+importantly, D IE found 48 new bugs in
+analysis results. The notable bytes contribute to the aspects.
+real-world JavaScript engines with 12 CVEs assigned.
+VIII. R ELATED W ORK
+X. ACKNOWLEDGMENT
+Syntax-aware fuzzing. The earliest fuzzers for structured
+We thank the anonymous reviewers, and Frank Piessens
+inputs worked for being aware of their syntax [3, 11, 41, 46– especially, for their helpful feedback. This research was
+48]. In JavaScript fuzzing, jsfunfuzz [39], and LangFuzz [20] supported, in part, by the NSF award CNS-1563848, CNSare frontiers in this line of work. jsfunfuzz generates various 1704701, CRI-1629851 and CNS-1749711 ONR under grant
+JavaScript programs from scratch based on its pre-deﬁned N00014-18-1-2662, N00014-15-1-2162, N00014-17-1-2895,
+rules, while LangFuzz modiﬁes existing test cases by randomly DARPA AIMEE, and ETRI IITP/KEIT[2014-3-00035], and
+combining their code fragments. Unlike these approaches, D IE gifts from Facebook, Mozilla, Intel, VMware and Google.
+considers not only syntax but also semantics to generate test
+R EFERENCES
+cases with fewer runtime errors.
+Semantic-aware fuzzing. After proposing a line of syntaxaware JavaScript engine fuzzers, researchers have started
+to build semantic-aware ones [19, 31, 42, 43] for better
+performance. Skyﬁre [43] is one of the earliest research efforts
+that tackles the semantic problem in language fuzzing. Skyﬁre
+learns the semantics of a language from existing test cases in the
+form of probabilistic context-sensitive grammar (PCSG), which
+is further used for fuzzing. Unlike Skyﬁre, CodeAlchemist [19]
+focuses more on correctly using variables in the generated code
+
+[1] Apple. JavaScriptCore, The built-in JavaScript engine for WebKit, 2019.
+https://trac.webkit.org/wiki/JavaScriptCore.
+[2] C. Aschermann, T. Frassetto, T. Holz, P. Jauernig, A.-R. Sadeghi, and
+D. Teuchert. Nautilus: Fishing for deep bugs with grammars. In NDSS,
+2019.
+[3] O. Bastani, R. Sharma, A. Aiken, and P. Liang. Synthesizing program
+input grammars. In ACM SIGPLAN Notices, volume 52, pages 95–110.
+ACM, 2017.
+[4] O. Chang, A. Arya, and J. Armour. OSS-Fuzz: Five Months Later, and
+Rewarding Projects, 2018. https://security.googleblog.com/2017/05/ossfuzz-ﬁve-months-later-and.html.
+
+[5] J. Chen, J. Han, P. Sun, L. Zhang, D. Hao, and L. Zhang. Compiler bug
+isolation via effective witness test program generation. In Proceedings
+of the 27th ACM SIGSOFT Symposium on the Foundations of Software
+Engineering (FSE), Tallinn, Estonia, Aug. 2019.
+
+[28] S. McKenzie. Babel, Javascript compiler, 2019. https://babeljs.io/.
+
+[6] Y. Chen, Y. Jiang, F. Ma, J. Liang, M. Wang, C. Zhou, Z. Su, and
+X. Jiao. Enfuzz: Ensemble fuzzing with seed synchronization among
+diverse fuzzers. In Proceedings of the 28th USENIX Security Symposium
+(Security), Santa Clara, CA, USA, Aug. 2019.
+
+[30] R. Padhye, C. Lemieux, K. Sen, M. Papadakis, and Y. Le Traon. Semantic
+fuzzing with zest. In Proceedings of the International Symposium on
+Software Testing and Analysis (ISSTA), Beijing, China, July 2019.
+
+[7] N. Coppik, O. Schwahn, and N. Suri. Memfuzz: Using memory accesses
+to guide fuzzing. In 2019 12th IEEE Conference on Software Testing,
+Validation and Veriﬁcation (ICST), pages 48–58. IEEE, 2019.
+[8] C. Cummins, P. Petoumenos, A. Murray, and H. Leather. Compiler
+fuzzing through deep learning. In Proceedings of the International
+Symposium on Software Testing and Analysis (ISSTA), Amsterdam,
+Netherlands, July 2018.
+[9] ECMA. Standard ECMA-262. https://www.ecma-international.org/
+publications/standards/Ecma-262.htm, 2019.
+[10] J. Forcier. Fabric, High level python library designed to execute shell
+commands remotely over SSH, 2019. http://www.fabﬁle.org/.
+[11] P. Godefroid, A. Kiezun, and M. Y. Levin. Grammar-based whitebox
+fuzzing. In Proceedings of the 2008 ACM SIGPLAN Conference on
+Programming Language Design and Implementation (PLDI), Tucson,
+Arizona, June 2007.
+[12] P. Godefroid, H. Peleg, and R. Singh. Learn&fuzz: Machine learning for
+input fuzzing. In Proceedings of the 32nd IEEE/ACM International Conference on Automated Software Engineering (ASE), Urbana-Champaign,
+Illinois, USA, Nov. 2017.
+[13] Google. Chrome Releases. https://chromereleases.googleblog.com, 2019.
+[14] Google. project-zero. https://bugs.chromium.org/p/project-zero/issues/list,
+2019.
+[15] Google. Continuous fuzzing of open source software, 2019. https:
+//opensource.google/projects/oss-fuzz.
+[16] Google. V8, Open source JavaScript and WebAssembly engine for
+Chrome and Node.js, 2019. https://v8.dev/.
+[17] S. Groß. Fuzzil: Coverage guided fuzzing for javascript engines. Master’s
+thesis, TU Braunschweig, 2018.
+[18] C. Han. js-vuln-db, A collection of JavaScript engine CVEs with PoCs,
+2019. https://github.com/tunz/js-vuln-db.
+[19] H. Han, D. Oh, and S. K. Cha. Codealchemist: Semantics-aware code
+generation to ﬁnd vulnerabilities in javascript engines. In Proceedings of
+the 2017 Annual Network and Distributed System Security Symposium
+(NDSS), San Diego, CA, Feb. 2019.
+[20] C. Holler, K. Herzig, and A. Zeller. Fuzzing with code fragments. In
+Proceedings of the 21st USENIX Security Symposium (Security), Bellevue,
+WA, Aug. 2012.
+[21] Honggfuzz. Honggfuzz Found Bugs, 2018. https://github.com/google/
+honggfuzz#trophies.
+[22] G. Klees, A. Ruef, B. Cooper, S. Wei, and M. Hicks. Evaluating fuzz
+testing. In Proceedings of the 25th ACM Conference on Computer and
+Communications Security (CCS), Toronto, Canada, Oct. 2018.
+[23] V. Le, M. Afshari, and Z. Su. Compiler validation via equivalence
+modulo inputs. In Proceedings of the 2013 ACM SIGPLAN Conference on
+Programming Language Design and Implementation (PLDI), Edinburgh,
+United Kingdom, June 2014.
+[24] V. Le, C. Sun, and Z. Su. Finding deep compiler bugs via guided
+stochastic program mutation. In Proceedings of the 26th Annual ACM
+Conference on Object-Oriented Programming, Systems, Languages, and
+Applications (OOPSLA), Pittsburgh, PA, Oct. 2015.
+[25] J. Lee. Issue 1438: Microsoft Edge: Chakra: JIT: ImplicitCallFlags checks
+bypass. https://bugs.chromium.org/p/project-zero/issues/detail?id=1438,
+2018.
+[26] J. Lee. Issue 1565: Microsoft Edge: Chakra: JIT: ImplicitCallFlags check
+bypass with Intl. https://bugs.chromium.org/p/project-zero/issues/detail?
+id=1565, 2018.
+[27] C. Lemieux and K. Sen. Fairfuzz: A targeted mutation strategy for
+increasing greybox fuzz testing coverage. In Proceedings of the 33rd
+ACM/IEEE International Conference on Automated Software Engineering,
+
+pages 475–485. ACM, 2018.
+[29] Microsoft. ChakraCore, The core part of the Chakra JavaScript engine that
+powers Microsoft Edge, 2019. https://github.com/microsoft/ChakraCore.
+
+[31] J. Patra and M. Pradel. Learning to fuzz: Application-independent fuzz
+testing with probabilistic, generative models of input data. TU Darmstadt,
+Department of Computer Science, Tech. Rep. TUD-CS-2016-14664, 2016.
+[32] M. Rajpal, W. Blum, and R. Singh. Not all bytes are equal: Neural byte
+sieve for fuzzing. arXiv preprint arXiv:1711.04596, 2017.
+[33] M. Rash. A Collection of Vulnerabilities Discovered by the AFL Fuzzer,
+2017. https://github.com/mrash/aﬂ-cve.
+[34] A. Rebert, S. K. Cha, T. Avgerinos, J. Foote, D. Warren, G. Grieco, and
+D. Brumley. Optimizing seed selection for fuzzing. In Proceedings of
+the 23rd USENIX Security Symposium (Security), San Diego, CA, Aug.
+2014.
+[35] S. Sanﬁlippo. Redis, Open source in-memory database, cache and
+message broker, 2019. https://redis.io/.
+[36] K. Serebryany. libfuzzer a library for coverage-guided fuzz testing. LLVM
+project, 2015.
+[37] K. Serebryany. Sanitize, Fuzz, and Harden Your C++ Code. In
+Proceedings of the 1st USENIX ENIGMA, San Francisco, CA, Jan. 2016.
+[38] R. Swiecki. Honggfuzz. Available online a t: http://code. google.
+com/p/honggfuzz, 2016.
+[39] W. Syndder and M. Shaver. Building and Breaking the Browser. In
+Black Hat USA Brieﬁngs (Black Hat USA), Las Vegas, NV, Aug. 2007.
+[40] Syzkaller. Syzkaller Found Bugs - Linux Kernel, 2018. https://github.
+com/google/syzkaller/blob/master/docs/linux/found_bugs.md.
+[41] B. Turner. Random c program generator. Retrieved from, 2007.
+[42] S. Veggalam, S. Rawat, I. Haller, and H. Bos. Ifuzzer: An evolutionary
+interpreter fuzzer using genetic programming. In Proceedings of the 21th
+European Symposium on Research in Computer Security (ESORICS),
+Crete, Greece, Sept. 2016.
+[43] J. Wang, B. Chen, L. Wei, and Y. Liu. Skyﬁre: Data-driven seed
+generation for fuzzing. In Proceedings of the 38th IEEE Symposium on
+Security and Privacy (Oakland), San Jose, CA, May 2017.
+[44] J. Wang, B. Chen, L. Wei, and Y. Liu. Superion: grammar-aware greybox
+fuzzing. In Proceedings of the 41st International Conference on Software
+Engineering (ICSE), Montréal, Canada, May 2019.
+[45] G. Wen, Y. Zhang, Q. Liu, and D. Yang. Fuzzing the actionscript virtual
+machine. In Proceedings of the 8th ACM Symposium on Information,
+Computer and Communications Security (ASIACCS), Hangzhou, China,
+May 2013.
+[46] D. Yang, Y. Zhang, and Q. Liu. Blendfuzz: A model-based framework
+for fuzz testing programs with grammatical inputs. In 2012 IEEE 11th
+International Conference on Trust, Security and Privacy in Computing
+and Communications, pages 1070–1076. IEEE, 2012.
+[47] X. Yang, Y. Chen, E. Eide, and J. Regehr. Finding and understanding bugs
+in c compilers. In Proceedings of the 2011 ACM SIGPLAN Conference
+on Programming Language Design and Implementation (PLDI), San
+Jose, CA, June 2011.
+[48] H. Yoo and T. Shon. Grammar-based adaptive fuzzing: Evaluation on
+scada modbus protocol. In 2016 IEEE International Conference on Smart
+Grid Communications (SmartGridComm), pages 557–563. IEEE, 2016.
+[49] M. Zalewski. american fuzzy lop, 2019. http://lcamtuf.coredump.cx/aﬂ/.
+
+A PPENDIX
+A. JavaScript engine bugs found by D IE
+Table VIII lists the bugs discovered by D IE in three known JavaScript
+engines (i.e., ChakraCore in Microsoft Edge, JavaScriptCore in Apple Webkit
+and V8 in Google Chrome) with their aspect description.
+
+#
+
+JS Engine
+
+Type
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+
+Ch 1.11.5
+Ch 1.11.5
+Ch 1.11.5
+Ch 1.11.7
+Ch 1.11.7
+Ch 1.11.7*
+Ch 1.11.7*
+Ch 1.11.7*
+Ch 1.11.8*
+Ch 1.11.9
+Ch 1.11.9
+Ch 1.11.9
+Ch 1.11.9
+Ch 1.11.9
+Ch 1.11.9
+Ch 1.11.9
+Ch 1.11.9
+Ch 1.11.9
+Ch 1.11.9
+Ch 1.11.9
+Ch 1.11.9*
+Ch 1.11.9*
+Ch 1.11.9*
+Ch 1.11.9*
+Ch 1.11.9*
+Ch 1.11.9*
+Ch 1.11.9*
+Ch 1.11.9*
+
+Incorrect regular expression parsing
+Incorrect regular expression parsing
+Use-after-free due to scope escaping
+Incorrect proﬁling during JIT compilation
+Memory corruption in JavascriptArray
+Incorrect proﬁled state during JIT optimization
+Inconsistent behavior between negative NaN and positive NaN
+Breaking assumption related to the size of inline segment
+Inconsistency in helper label annotation during JIT compilation
+Writability of read-only property in class
+Writability of constant variable
+Incorrect behavior when overwriting previously deleted variable
+Incorrect behavior when calling getter of previously deleted variable
+Type confusion between integer and double
+Inconsistency between cached value and real value
+Memory corruption while building bytecode
+Memory corruption while parsing JS code
+Memory corruption in JavascriptArray
+Null dereference due to wrong scope analysis
+Breaking assumption related to the size of inline segment
+Incorrect internal state due to misbehavior of the engine
+Wrong no-return annotation for a function which has return
+OOB write due to wrong JIT optimization
+Incorrect emitted IR from JIT compilation
+Use-after-free during JIT
+OOB read/write due to accessing uninitialized variable during JIT
+OOB read/write due to wrong JIT optimization
+OOB read/write due to wrong inlining during JIT
+
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+
+JSC 2.24.0
+JSC 2.24.1
+JSC 2.24.1
+JSC 2.24.2
+JSC 2.24.2
+JSC 2.24.2
+JSC 2.24.2
+JSC 2.24.2
+JSC 2.24.2
+JSC 2.24.2
+JSC 2.25.1
+JSC 2.25.1
+JSC 2.25.1
+JSC 2.25.1
+JSC 2.25.1
+JSC 2.25.1
+
+Wrong proﬁling during JIT optimization
+Invalid indices stored in TypedArrays
+Type confusion of induction variable during JIT
+Incorrect assumption while compiling JIT IR
+Incorrect type speculation during JIT
+Wrongly yielded exception while handling another exception
+Inconsistent behavior of garbage collector from JIT proﬁling
+Invalid state while handling character
+Memory corruption while parsing function
+Memory corruption while handling slow path in JIT code
+Type confusion due to accessing uninitialized memory region
+Use-after-free due to wrong garbage collection
+Memory corruption while handling regular expression
+Memory corruption while creating regular expression
+Null dereference while accessing HashMap
+Memory corruption due to race condition in concurrent JIT
+
+Security
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Status
+
+Aspect
+
+Fixed
+Fixed
+CVE-2019-0609
+Fixed
+Fixed
+Fixed
+Fixed
+Fixed
+Fixed
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Reported
+Fixed
+Fixed
+Fixed†
+Reported
+Fixed
+CVE-2019-1023
+CVE-2019-1300
+CVE-2019-0990
+CVE-2019-1092
+Fixed
+
+Non-ascii regex
+Non-ascii regex
+A gigantic object literal in a nested function
+Inﬁnite recursion with exception handling
+Sorting large arrays w/ custom comparison
+Circular function references
+Hashing NaN in Set
+new F() in F()
+Overwriting ﬁelds of super
+Deleting constant ﬁelds
+Manipulating ﬁelds of built-in objects
+Manipulating ﬁelds of built-in objects
+JIT - Referencing outer vars in a nested function
+JIT - Object property binding
+eval() giant statements
+
+WebKit 195991
+WebKit 197353
+WebKit 197569
+Fixed
+Fixed
+Fixed
+Fixed
+Fixed
+Fixed
+Fixed
+CVE-2019-8676
+CVE-2019-8673
+CVE-2019-8811
+CVE-2019-8816
+Fixed
+Fixed
+
+JIT - Control ﬂow analysis
+JIT - Indexing in TypedArrays
+JIT - Type speculation
+JIT - Compiling a built-in function
+JIT - Type speculation
+A gigantic string that causes out-of-memory
+JIT - Compiling a built-in function
+JIT - switch case statement
+eval() gigantic functions
+Triggering Yarr that JIT compiles regexps
+JIT - Call context analysis
+JIT - Garbage collection
+Back reference in regex
+Non-ascii regex
+A gigantic string that cause out-of-memory
+asm.js - Storing an object into a number array
+
+Array.prototype.push()
+with on outer variables
+JIT - Local variable escape
+JIT - Indexing statically declared arrays variably
+Error handling in proxy handlers
+JIT - Deﬁning small compound objects
+JIT - Inlining small functions
+JIT - Indexing and redeﬁning TypedArrays
+JIT - Incorrect induction variable used for array index
+JIT - Indexing and redeﬁning TypedArrays
+JIT - Deﬁning and manipulating small objects
+
+45
+V8 8.0.0*
+Type confusion between heap and internal object in JIT code
+
+CVE-2019-13730 JIT - Switch case statement
+46
+V8 8.0.0*
+Incorrect loop optimization for JIT IR
+
+CVE-2019-13764 JIT - controllable loop bound
+47
+V8 8.0.0*
+Integer overﬂow while handling regular expression
+Fixed
+48
+V8 8.0.0*
+Incorrect redundancy elimination in JIT
+
+CVE-2020-6382
+JIT - indexing arrays
+Ch: ChakraCore, JSC: JavaScriptCore
+*Canary version † This bug was reported by us but it is still reachable by D IE due to incomplete ﬁx.
+ The bug is a memory corruption which results in a crash. The bug is conﬁrmed to be exploitable for remote code execution or information leakage.
+
+TABLE VIII: New bugs found by D IE in ChakraCore, JavaScriptCore, and V8. The latest version affected by each bug is speciﬁed. In the
+Status column, Fixed means the bug was also noticed and patched by developers before we reported the bug.
+
+
