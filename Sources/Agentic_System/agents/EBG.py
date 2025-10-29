@@ -33,21 +33,7 @@ class EBG(Agent):
             description="L2 Worker responsible for validating corpus integrity and quality",
             tools=[],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
-            managed_agents=[],
             max_steps=8,
-            planning_interval=None,
-        )
-
-        # L2 Worker: Corpus Generator (under George)
-        self.agents['corpus_generator'] = ToolCallingAgent(
-            name="CorpusGenerator",
-            description="L2 Worker responsible for generating seeds from the corpus and validating syntax/semantics",
-            tools=[
-                self.agents['corpus_validator']
-                ],
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
-            managed_agents=[],
-            max_steps=10,
             planning_interval=None,
         )
         
@@ -55,13 +41,11 @@ class EBG(Agent):
         self.agents['runtime_analyzer'] = ToolCallingAgent(
             name="RuntimeAnalyzer",
             description="L2 Manager responsible for analyzing program runtime, coverage, and execution state",
-            tools=[
-                self.agents['code_analyzer'],
-                self.agents['corpus_validator'],
-            ],
+            tools=[],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
-                self.agents['code_analyzer']
+                self.agents['code_analyzer'],
+                self.agents['corpus_validator']
             ],
             max_steps=10,
             planning_interval=None,
@@ -73,7 +57,6 @@ class EBG(Agent):
             description="L2 Worker responsible for analyzing PostgreSQL database for corpus, flags, coverage, and execution state",
             tools=[],  # Reusing validation tools for DB analysis
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
-            managed_agents=[],
             max_steps=8,
             planning_interval=None,
         )
