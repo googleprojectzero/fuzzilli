@@ -5,7 +5,7 @@ L0 Manager Agent - Runtime analysis and issue solev
 '''
 
 from smolagents import LiteLLMModel, ToolCallingAgent
-from BaseAgent import Agent
+from agents.BaseAgent import Agent
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
@@ -141,3 +141,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+###
+# we need tool calls for EBG to be able to actually put the program templates hard coded into the actual execution of fuzzili  
+###

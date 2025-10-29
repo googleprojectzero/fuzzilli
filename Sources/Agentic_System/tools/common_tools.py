@@ -11,10 +11,18 @@ except ImportError:
 import subprocess
 import os
 import json
-from tools.cfg_tool import *
 
-cfg_builder = CFGBuilder("/usr/share/vrigatoni/fuzzillai/v8/v8")
-cfg_builder.parse_directory("/usr/share/vrigatoni/fuzzillai/v8/v8", pattern='*.cc')
+# Try to import CFG tools, but don't fail if clang is not available
+try:
+    from tools.cfg_tool import *
+    cfg_builder = CFGBuilder("/usr/share/vrigatoni/fuzzillai/v8/v8")
+    cfg_builder.parse_directory("/usr/share/vrigatoni/fuzzillai/v8/v8", pattern='*.cc')
+except Exception as e:
+    # Define fallback functions if CFG tools can't be imported
+    def find_function_cfg(function_name: str) -> str:
+        return f"CFG analysis not available: {e}"
+    
+    cfg_builder = None
 
 # Try to import from rag_tools, but handle import errors gracefully
 try:
@@ -144,4 +152,6 @@ def find_function_cfg(function_name: str) -> str:
                 - is_cycle: True if this node creates a cycle (loop backedge)
                 - is_backedge: True if already visited (prevents infinite recursion)
     """
+    if cfg_builder is None:
+        return "CFG analysis not available - clang library not found"
     return cfg_builder.get_function_cfg(function_name)
