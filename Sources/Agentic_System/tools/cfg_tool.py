@@ -2,7 +2,7 @@ import os
 import sys
 import subprocess
 from clang import cindex
-cindex.Config.set_library_file("/usr/lib/llvm-18/lib/libclang.so")
+cindex.Config.set_library_file("/usr/lib/llvm-16/lib/libclang.so")
 from clang.cindex import Index, CursorKind, Config
 import json
 from collections import defaultdict, deque
