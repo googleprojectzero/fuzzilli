@@ -61,34 +61,40 @@ def ripgrep(pattern: str, options: str = "") -> str:
     Search for text patterns in files using ripgrep (rg) for fast text searching.
     
     Args:
-        --files: List all files that would be searched, without searching inside them. 
-             Example: `rg --files src/` → lists all files under `src/`.
+        pattern (str): The text or regular expression pattern to search for.
+            Example: `"TODO"` → searches for the string "TODO" in files.
 
-        --type: Limit search to specific file types. 
-                Example: `rg --type py "def " src/` → search only Python files.
+        options (str): Additional ripgrep command-line options.
+            You can use any of the following commonly used flags:
 
-        --glob: Include or exclude paths by glob pattern. 
-                Example: `rg --glob '!tests/*' "<pattern>"` → skip `tests` folder.
+            --files: List all files that would be searched, without searching inside them. 
+                Example: `rg --files src/` → lists all files under `src/`.
 
-        --ignore-case: Match text case-insensitively. 
-                    Example: `rg --ignore-case "error"` → matches `Error`, `ERROR`, etc.
+            --type: Limit search to specific file types. 
+                    Example: `rg --type py "def " src/` → search only Python files.
 
-        --no-heading: Suppress file name headings in results. 
-                    Example: `rg --no-heading "main"` → cleaner, machine-parsable output.
+            --glob: Include or exclude paths by glob pattern. 
+                    Example: `rg --glob '!tests/*' "<pattern>"` → skip `tests` folder.
 
-        --line-number: Show line numbers in matches. 
-                    Example: `rg --line-number "main"` → outputs `file:line:match`.
+            --ignore-case: Match text case-insensitively. 
+                        Example: `rg --ignore-case "error"` → matches `Error`, `ERROR`, etc.
 
-        --vimgrep: Output in `file:line:column:match` format for easy parsing. 
-                Example: `rg --vimgrep "init"` → structured grep-like output.
+            --no-heading: Suppress file name headings in results. 
+                        Example: `rg --no-heading "main"` → cleaner, machine-parsable output.
 
-        --json: Emit results as structured JSON. 
-                Example: `rg --json "<pattern>"` → machine-readable output for parsing.
+            --line-number: Show line numbers in matches. 
+                        Example: `rg --line-number "main"` → outputs `file:line:match`.
 
-        --max-depth: Limit recursion depth when searching directories. 
-                    Example: `rg --max-depth 2 "class"` → search only two levels deep.
-        --context=NUM: Displays NUM lines of context both before and after each match.
-                    Example: `rg --context=2 "<pattern>"` → shows 2 lines of context before and after each match.
+            --vimgrep: Output in `file:line:column:match` format for easy parsing. 
+                    Example: `rg --vimgrep "init"` → structured grep-like output.
+
+            --json: Emit results as structured JSON. 
+                    Example: `rg --json "<pattern>"` → machine-readable output for parsing.
+
+            --max-depth: Limit recursion depth when searching directories. 
+                        Example: `rg --max-depth 2 "class"` → search only two levels deep.
+            --context=NUM: Displays NUM lines of context both before and after each match.
+                        Example: `rg --context=2 "<pattern>"` → shows 2 lines of context before and after each match.
 
     Returns:
         str: Search results showing matching lines with context.
