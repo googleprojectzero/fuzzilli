@@ -15,5 +15,5 @@ swift run FuzzilliCli \
   --postgres-url="postgresql://fuzzilli:fuzzilli123@localhost:5433/fuzzilli" \
   --storagePath=./Corpus \
   --logLevel=verbose \
-  --timeout=1500 \
+  --timeout=3000 \
   --diagnostics "$1"
