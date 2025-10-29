@@ -10,6 +10,7 @@ Package.resolved
 .venv
 *pycache*
 Sources/Agentic_System/keys.cfg
+regressions.json
 
 # custom GCE configuration
 Cloud/GCE/config.sh
