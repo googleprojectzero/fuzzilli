@@ -46,7 +46,7 @@ def tree(directory: str = ".", options: str = "") -> str:
     
     Args:
         directory: The directory to explore. Defaults to current directory ".".
-        Args: Additional tree command options. Common options include:
+        options: Additional tree command options. Common options include:
             -L NUM: Limit depth to NUM levels
             -f: Show full path prefix
     
