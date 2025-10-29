@@ -1,6 +1,7 @@
 from smolagents import tool
 from tools.common_tools import * #
 
+FUZZILTOOL_BIN = "/usr/share/vrigatoni/fuzzillai/.build/x86_64-unknown-linux-gnu/debug/FuzzILTool"
 OUTPUT_DIRECTORY = "/tmp/fog-d8-records" 
 
 @tool
@@ -132,7 +133,7 @@ def lift_fuzzil_to_js(target: str) -> str:
     Returns:
         str: The lifted JS program from the given FuzzIL
     """
-    return get_output(run_command(f"swift run FuzzILTool --liftToFuzzIL {target}"))
+    return get_output(run_command(f"{FUZZILTOOL_BIN} --liftToFuzzIL {target}"))
 
 @tool
 def compile_js_to_fuzzil(target: str) -> str:
@@ -145,7 +146,7 @@ def compile_js_to_fuzzil(target: str) -> str:
     Returns:
         str: The compiled FuzzIL program the given JS program
     """
-    return get_output(run_command(f"swift run FuzzILTool --compile {target}"))
+    return get_output(run_command(f"{FUZZILTOOL_BIN} --compile {target}"))
 
 @tool 
 def run_d8(target: str, options: str = "") -> str:
