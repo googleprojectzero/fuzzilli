@@ -44,7 +44,7 @@ except ImportError as e:
     Chroma = None
 
 # helper to get output from run_command
-def get_output(completed_process: CompletedProcess) -> str:
+def get_output(completed_process) -> str:
     if not completed_process:
         return ""
     p_stdout = completed_process.stdout if completed_process.stdout else None
