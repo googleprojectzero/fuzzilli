@@ -38,6 +38,22 @@ def main():
         }
     )
 
+    # delete below ... testing only
+    result = a.system.run_task(
+        task_description="Initialize corpus generation for V8 fuzzing",
+        context={
+            "CodeAnalyzer": "Analyze V8 source code for patterns. vulnerabilities. specifc components, etc...",
+            "ProgramBuilder": "Build JavaScript programs using corpus and context"
+        }
+    )
+
+    print("Task Result:")
+    print(f"Completed: {result['completed']}")
+    print(f"Output: {result['output']}")
+    if result['error']:
+        print(f"Error: {result['error']}")
+    
+
 
 if __name__ == "__main__":
     sys.exit(main())
