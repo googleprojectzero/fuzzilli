@@ -1,3 +1,5 @@
+OUTPUT_DIRECTORY = "/tmp/fog-output-samples"
+
 # Try to import smolagents, but don't fail if it's not available
 try:
     from smolagents import tool
@@ -9,7 +11,7 @@ except ImportError:
 import subprocess
 import os
 import json
-from cfg_tool import *
+from tools.cfg_tool import *
 
 cfg_builder = CFGBuilder("/usr/share/vrigatoni/fuzzillai/v8")
 cfg_builder.parse_directory("/usr/share/vrigatoni/fuzzillai/v8", pattern='*.cc')
@@ -40,6 +42,14 @@ except ImportError as e:
         return h.hexdigest()
     
     Chroma = None
+
+# helper to get output from run_command
+def get_output(completed_process: CompletedProcess) -> str:
+    if not completed_process:
+        return ""
+    p_stdout = completed_process.stdout if completed_process.stdout else None
+    p_stderr = completed_process.stderr if completed_process.stderr else None
+    return p_stdout if p_stdout else p_stderr
 
 @tool
 def run_command(command: str) -> str:

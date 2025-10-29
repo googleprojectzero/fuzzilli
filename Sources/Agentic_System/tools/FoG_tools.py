@@ -1,8 +1,6 @@
 from smolagents import tool
 from tools.common_tools import *
 
-OUTPUT_DIRECTORY = "/tmp/fog-output-samples"
-
 @tool
 def lookup(query: str) -> str:
     """
@@ -14,7 +12,7 @@ def lookup(query: str) -> str:
     Returns:
         str: Search results and relevant information from the web.
     """
-    return run_command(f"curl -s 'https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1'")
+    return get_output(run_command(f"curl -s 'https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1'"))
 
 
 @tool
@@ -28,7 +26,7 @@ def run_python(code: str) -> str:
     Returns:
         str: The output from executing the Python code, including stdout and stderr.
     """
-    return run_command(f"python3 -c '{code}'")
+    return get_output(run_command(f"python3 -c '{code}'"))
 
 # TODO: @Tanush - good luck
 @tool 
@@ -55,7 +53,7 @@ def tree(directory: str = ".", options: str = "") -> str:
     Returns:
         str: Tree structure showing directories and files in the specified path.
     """
-    return run_command(f"tree {options} {directory}")
+    return get_output(run_command(f"tree {options} {directory}"))
 
 @tool
 def ripgrep(pattern: str, options: str = "") -> str:
@@ -95,7 +93,7 @@ def ripgrep(pattern: str, options: str = "") -> str:
     Returns:
         str: Search results showing matching lines with context.
     """
-    return run_command(f"rg -C {options} '{pattern}'")   
+    return get_output(run_command(f"rg -C {options} '{pattern}'"))
 
 @tool
 def fuzzy_finder(pattern: str, options: str = "") -> str:
@@ -121,7 +119,7 @@ def fuzzy_finder(pattern: str, options: str = "") -> str:
     Returns:
         str: Fuzzy search results showing files and content that approximately match the pattern.
     """
-    return run_command(f"fzf {options} '{pattern}'")
+    return get_output(run_command(f"fzf {options} '{pattern}'"))
 
 @tool
 def lift_fuzzil_to_js(target: str) -> str:
@@ -134,7 +132,7 @@ def lift_fuzzil_to_js(target: str) -> str:
     Returns:
         str: The lifted JS program from the given FuzzIL
     """
-    return run_command(f"swift run FuzzILTool --liftToFuzzIL {target}")
+    return get_output(run_command(f"swift run FuzzILTool --liftToFuzzIL {target}"))
 
 @tool
 def compile_js_to_fuzzil(target: str) -> str:
@@ -147,7 +145,7 @@ def compile_js_to_fuzzil(target: str) -> str:
     Returns:
         str: The compiled FuzzIL program the given JS program
     """
-    return run_command(f"swift run FuzzILTool --compile {target}")
+    return get_output(run_command(f"swift run FuzzILTool --compile {target}"))
 
 @tool 
 def run_d8(target: str, options: str = "") -> str:
@@ -170,13 +168,6 @@ def run_d8(target: str, options: str = "") -> str:
         --turbo-stats (print TurboFan statistics)
         --trace-wasm-compiler (trace compiling of wasm code)
         --trace-wasm (trace wasm function calls)
-
-        ```
-        TODO: Trace output destination of each of the above flags. 
-              Regardless of whether it is printed to stdout or to
-              a file, I will want to put it in a predetermined
-              place that an AI can easily parse in digestible chunks.
-        ```
 
         AT ANY POINT IN TIME YOU CAN ONLY PICK UP TO 4 OF THESE OPTIONS.
 
