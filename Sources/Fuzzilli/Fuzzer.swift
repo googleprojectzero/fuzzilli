@@ -890,6 +890,7 @@ public class Fuzzer {
 
             iterations += 1
             corpusGenerationEngine.fuzzOne(fuzzGroup)
+            //engine.fuzzOne(fuzzGroup)
 
             // Perform initial corpus generation until we haven't found a new interesting sample in the last N
             // iterations. The rough order of magnitude of N has been determined experimentally: run two instances with
