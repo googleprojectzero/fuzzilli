@@ -1,6 +1,8 @@
 from smolagents import tool
 from tools.common_tools import *
 
+OUTPUT_DIRECTORY = "/tmp/fog-d8-records" 
+
 @tool
 def lookup(query: str) -> str:
     """
@@ -28,16 +30,6 @@ def run_python(code: str) -> str:
     """
     return get_output(run_command(f"python3 -c '{code}'"))
 
-# TODO: @Tanush - good luck
-@tool 
-def get_call_graph() -> str:
-    """
-    Generate and search a call graph to find functions, classes, and variables by name patterns.
-    
-    Returns:
-        str: Call graph analysis results showing relationships and matches.
-    """
-    return get_call_graph()
 
 @tool
 def tree(directory: str = ".", options: str = "") -> str:
@@ -182,22 +174,19 @@ def run_d8(target: str, options: str = "") -> str:
             AT ANY POINT IN TIME YOU CAN ONLY PICK UP TO 4 OF THESE OPTIONS.
 
             WHENEVER --trace-turbo-graph is passed MAKE SURE --trace-turbo-path is ALSO passed in
-            IF --trace-turbo-path is passed, MAKE SURE the output directory is /tmp/fog-output-samples/{target}
+            IF --trace-turbo-path is passed, MAKE SURE the output directory is /tmp/fog-d8-records/{target}
 
     Returns:
         str: The output from running the JavaScript program with d8.
     """ 
-    completed_procses = run_command(f"/usr/share/vrigatoni/fuzzillai/v8/v8/out/fuzzbuild/d8 {target} {options}")
+    completed_process = run_command(f"/usr/share/vrigatoni/fuzzillai/v8/v8/out/fuzzbuild/d8 {target} {options}")
     if not completed_process:
         return
 
-    try:
-        os.makedirs(OUTPUT_DIRECTORY)
-    except FileExistsError:
-        pass
+    os.makedirs(OUTPUT_DIRECTORY, exist_ok=True)
 
-    with open(f"{OUTPUT_DIRECTORY}/{target}.out") as file:
-        file.write(p_stdout)
+    with open(f"{OUTPUT_DIRECTORY}/{target}.out", "w") as file:
+        file.write(completed_process.stdout or "")
 
-    with open(f"{OUTPUT_DIRECTORY}/{target}.err") as file:
-        file.write(p_stderr)
+    with open(f"{OUTPUT_DIRECTORY}/{target}.err", "w") as file:
+        file.write(completed_process.stderr or "")
