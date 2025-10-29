@@ -26,6 +26,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     private let fuzzerInstanceId: String
     private let storage: PostgreSQLStorage
     private let resume: Bool
+    private let enableLogging: Bool
     
     // MARK: - In-Memory Cache
     
@@ -67,7 +68,8 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         databasePool: DatabasePool,
         fuzzerInstanceId: String,
         syncInterval: TimeInterval = 60.0, // Default 1 minute sync interval
-        resume: Bool = true // Default to resume from previous state
+        resume: Bool = true, // Default to resume from previous state
+        enableLogging: Bool = false
     ) {
         // The corpus must never be empty
         assert(minSize >= 1)
@@ -80,7 +82,8 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         self.fuzzerInstanceId = fuzzerInstanceId
         self.syncInterval = syncInterval
         self.resume = resume
-        self.storage = PostgreSQLStorage(databasePool: databasePool)
+        self.enableLogging = enableLogging
+        self.storage = PostgreSQLStorage(databasePool: databasePool, enableLogging: enableLogging)
         
         // Set optimized batch size for better throughput (reduced from 1M to 100k for more frequent processing)
         self.executionBatchSize = 100_000
