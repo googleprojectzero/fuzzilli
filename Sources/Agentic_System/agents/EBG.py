@@ -27,6 +27,7 @@ class EBG(Agent):
         )
         #self.agents['vuln_analysis_agent'].prompt_templates["system_prompt"] = self.get_prompt("code_analysis_prompt") # and similar for other agents
 
+
         # L2 Worker: Corpus Validator (under George)
         self.agents['corpus_validator'] = ToolCallingAgent(
             name="CorpusValidator",
@@ -68,7 +69,6 @@ class EBG(Agent):
             tools=[],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[
-                self.agents['corpus_generator'],
                 self.agents['runtime_analyzer'],
                 self.agents['corpus_validator'],
                 self.agents['db_analyzer']
