@@ -44,10 +44,10 @@ public class PostgreSQLStorage {
             on: eventLoopGroup.next(),
             configuration: PostgresConnection.Configuration(
                 host: "localhost",
-                port: 5433,
+                port: 5432,
                 username: "fuzzilli",
                 password: "fuzzilli123",
-                database: "fuzzilli",
+                database: "fuzzilli_master",
                 tls: .disable
             ),
             id: 0,
@@ -61,8 +61,8 @@ public class PostgreSQLStorage {
         let checkRows = try await checkResult.collect()
         
         if let existingRow = checkRows.first {
-            let existingFuzzerId = try existingRow.decode(Int.self, context: .default)
-            let existingStatus = try existingRow.decode(String.self, context: .default)
+            let existingFuzzerId = try existingRow.decode(Int.self, context: PostgresDecodingContext.default)
+            let existingStatus = try existingRow.decode(String.self, context: PostgresDecodingContext.default)
             
             // Update status to active if it was inactive
             if existingStatus != "active" {
@@ -93,7 +93,7 @@ public class PostgreSQLStorage {
             throw PostgreSQLStorageError.noResult
         }
         
-        let fuzzerId = try row.decode(Int.self, context: .default)
+        let fuzzerId = try row.decode(Int.self, context: PostgresDecodingContext.default)
         if enableLogging {
             self.logger.info("Created new fuzzer: fuzzerId=\(fuzzerId)")
         }
@@ -115,10 +115,10 @@ public class PostgreSQLStorage {
             on: eventLoopGroup.next(),
             configuration: PostgresConnection.Configuration(
                 host: "localhost",
-                port: 5433,
+                port: 5432,
                 username: "fuzzilli",
                 password: "fuzzilli123",
-                database: "fuzzilli",
+                database: "fuzzilli_master",
                 tls: .disable
             ),
             id: 0,
@@ -134,11 +134,11 @@ public class PostgreSQLStorage {
             return nil
         }
         
-        let fuzzerId = try row.decode(Int.self, context: .default)
-        let createdAt = try row.decode(Date.self, context: .default)
-        let fuzzerName = try row.decode(String.self, context: .default)
-        let engineType = try row.decode(String.self, context: .default)
-        let status = try row.decode(String.self, context: .default)
+        let fuzzerId = try row.decode(Int.self, context: PostgresDecodingContext.default)
+        let createdAt = try row.decode(Date.self, context: PostgresDecodingContext.default)
+        let fuzzerName = try row.decode(String.self, context: PostgresDecodingContext.default)
+        let engineType = try row.decode(String.self, context: PostgresDecodingContext.default)
+        let status = try row.decode(String.self, context: PostgresDecodingContext.default)
         
         let fuzzer = FuzzerInstance(
             fuzzerId: fuzzerId,
@@ -169,10 +169,10 @@ public class PostgreSQLStorage {
             on: eventLoopGroup.next(),
             configuration: PostgresConnection.Configuration(
                 host: "localhost",
-                port: 5433,
+                port: 5432,
                 username: "fuzzilli",
                 password: "fuzzilli123",
-                database: "fuzzilli",
+                database: "fuzzilli_master",
                 tls: .disable
             ),
             id: 0,
@@ -184,13 +184,13 @@ public class PostgreSQLStorage {
         let programQuery: PostgresQuery = "SELECT COUNT(*) FROM fuzzer WHERE fuzzer_id = \(fuzzerId)"
         let programResult = try await connection.query(programQuery, logger: self.logger)
         let programRows = try await programResult.collect()
-        let totalPrograms = try programRows.first?.decode(Int.self, context: .default) ?? 0
+        let totalPrograms = try programRows.first?.decode(Int.self, context: PostgresDecodingContext.default) ?? 0
         
         // Get execution count for this fuzzer
         let executionQuery: PostgresQuery = "SELECT COUNT(*) FROM execution e JOIN program p ON e.program_hash = p.program_hash WHERE p.fuzzer_id = \(fuzzerId)"
         let executionResult = try await connection.query(executionQuery, logger: self.logger)
         let executionRows = try await executionResult.collect()
-        let totalExecutions = try executionRows.first?.decode(Int.self, context: .default) ?? 0
+        let totalExecutions = try executionRows.first?.decode(Int.self, context: PostgresDecodingContext.default) ?? 0
         
         // Get crash count for this fuzzer
         let crashQuery: PostgresQuery = """
@@ -201,13 +201,13 @@ public class PostgreSQLStorage {
         """
         let crashResult = try await connection.query(crashQuery, logger: self.logger)
         let crashRows = try await crashResult.collect()
-        let totalCrashes = try crashRows.first?.decode(Int.self, context: .default) ?? 0
+        let totalCrashes = try crashRows.first?.decode(Int.self, context: PostgresDecodingContext.default) ?? 0
         
         // Get active fuzzers count
         let activeQuery: PostgresQuery = "SELECT COUNT(*) FROM main WHERE status = 'active'"
         let activeResult = try await connection.query(activeQuery, logger: self.logger)
         let activeRows = try await activeResult.collect()
-        let activeFuzzers = try activeRows.first?.decode(Int.self, context: .default) ?? 0
+        let activeFuzzers = try activeRows.first?.decode(Int.self, context: PostgresDecodingContext.default) ?? 0
         
         let stats = DatabaseStatistics(
             totalPrograms: totalPrograms,
@@ -237,10 +237,10 @@ public class PostgreSQLStorage {
             on: eventLoopGroup.next(),
             configuration: PostgresConnection.Configuration(
                 host: "localhost",
-                port: 5433,
+                port: 5432,
                 username: "fuzzilli",
                 password: "fuzzilli123",
-                database: "fuzzilli",
+                database: "fuzzilli_master",
                 tls: .disable
             ),
             id: 0,
@@ -338,10 +338,10 @@ public class PostgreSQLStorage {
             on: eventLoopGroup.next(),
             configuration: PostgresConnection.Configuration(
                 host: "localhost",
-                port: 5433,
+                port: 5432,
                 username: "fuzzilli",
                 password: "fuzzilli123",
-                database: "fuzzilli",
+                database: "fuzzilli_master",
                 tls: .disable
             ),
             id: 0,
@@ -453,10 +453,10 @@ public class PostgreSQLStorage {
             on: eventLoopGroup.next(),
             configuration: PostgresConnection.Configuration(
                 host: "localhost",
-                port: 5433,
+                port: 5432,
                 username: "fuzzilli",
                 password: "fuzzilli123",
-                database: "fuzzilli",
+                database: "fuzzilli_master",
                 tls: .disable
             ),
             id: 0,
@@ -546,10 +546,10 @@ public class PostgreSQLStorage {
             on: eventLoopGroup.next(),
             configuration: PostgresConnection.Configuration(
                 host: "localhost",
-                port: 5433,
+                port: 5432,
                 username: "fuzzilli",
                 password: "fuzzilli123",
-                database: "fuzzilli",
+                database: "fuzzilli_master",
                 tls: .disable
             ),
             id: 0,
@@ -607,7 +607,7 @@ public class PostgreSQLStorage {
             let rows = try await result.collect()
             
             for row in rows {
-                let executionId = try row.decode(Int.self, context: .default)
+                let executionId = try row.decode(Int.self, context: PostgresDecodingContext.default)
                 executionIds.append(executionId)
             }
 
@@ -660,10 +660,10 @@ public class PostgreSQLStorage {
             on: eventLoopGroup.next(),
             configuration: PostgresConnection.Configuration(
                 host: "localhost",
-                port: 5433,
+                port: 5432,
                 username: "fuzzilli",
                 password: "fuzzilli123",
-                database: "fuzzilli",
+                database: "fuzzilli_master",
                 tls: .disable
             ),
             id: 0,
@@ -785,10 +785,10 @@ public class PostgreSQLStorage {
             on: eventLoopGroup.next(),
             configuration: PostgresConnection.Configuration(
                 host: "localhost",
-                port: 5433,
+                port: 5432,
                 username: "fuzzilli",
                 password: "fuzzilli123",
-                database: "fuzzilli",
+                database: "fuzzilli_master",
                 tls: .disable
             ),
             id: 0,
@@ -825,16 +825,16 @@ public class PostgreSQLStorage {
         var programs: [(Program, ExecutionMetadata)] = []
         
         for row in rows {
-            let programHash = try row.decode(String.self, context: .default)
-            _ = try row.decode(Int.self, context: .default) // programSize
-            let programBase64 = try row.decode(String.self, context: .default)
-            _ = try row.decode(Date.self, context: .default) // createdAt
-            let outcome = try row.decode(String?.self, context: .default)
-            let description = try row.decode(String?.self, context: .default)
-            _ = try row.decode(Int?.self, context: .default) // executionTimeMs
-            let coverageTotal = try row.decode(Double?.self, context: .default)
-            _ = try row.decode(Int?.self, context: .default) // signalCode
-            _ = try row.decode(Int?.self, context: .default) // exitCode
+            let programHash = try row.decode(String.self, context: PostgresDecodingContext.default)
+            _ = try row.decode(Int.self, context: PostgresDecodingContext.default) // programSize
+            let programBase64 = try row.decode(String.self, context: PostgresDecodingContext.default)
+            _ = try row.decode(Date.self, context: PostgresDecodingContext.default) // createdAt
+            let outcome = try row.decode(String?.self, context: PostgresDecodingContext.default)
+            let description = try row.decode(String?.self, context: PostgresDecodingContext.default)
+            _ = try row.decode(Int?.self, context: PostgresDecodingContext.default) // executionTimeMs
+            let coverageTotal = try row.decode(Double?.self, context: PostgresDecodingContext.default)
+            _ = try row.decode(Int?.self, context: PostgresDecodingContext.default) // signalCode
+            _ = try row.decode(Int?.self, context: PostgresDecodingContext.default) // exitCode
             
             // Decode the program from base64
             guard let programData = Data(base64Encoded: programBase64) else {
@@ -1015,10 +1015,10 @@ extension PostgreSQLStorage {
             on: eventLoopGroup.next(),
             configuration: PostgresConnection.Configuration(
                 host: "localhost",
-                port: 5433,
+                port: 5432,
                 username: "fuzzilli",
                 password: "fuzzilli123",
-                database: "fuzzilli",
+                database: "fuzzilli_master",
                 tls: .disable
             ),
             id: 0,

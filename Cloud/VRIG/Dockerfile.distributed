@@ -1,0 +1,54 @@
+# Stage 1: Build Fuzzilli
+FROM docker.io/swift:latest
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SHELL=bash
+
+RUN apt-get -y update && apt-get -y upgrade
+RUN apt-get -y install nodejs
+
+RUN useradd -m builder
+WORKDIR /home/builder
+
+ADD .. fuzzillai
+
+# build Fuzzilli
+RUN cd fuzzillai && \
+    # Temporarily remove test target to avoid build issues
+    sed -i '/\.testTarget(name: "FuzzilliTests"/,/),$/d' Package.swift && \
+    swift build -c release --product FuzzilliCli && \
+    # Verify the executable was created
+    ls -la .build/release/ && \
+    find .build -name "FuzzilliCli" -type f -executable
+
+#####################
+# Stage 2: Runtime
+FROM docker.io/swift:latest
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SHELL=bash
+
+RUN apt-get -y update && apt-get -y upgrade
+
+RUN useradd -m app
+
+WORKDIR /home/app
+
+# Copy Fuzzilli executable
+COPY --from=0 /home/builder/fuzzillai/.build/release/FuzzilliCli FuzzilliCli
+
+# Create directory for V8 build (will be mounted from host)
+RUN mkdir -p ./fuzzbuild
+
+RUN mkdir -p ./Corpus
+
+# Environment variables for distributed fuzzing
+ENV MASTER_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-master:5432/fuzzilli
+ENV FUZZER_INSTANCE_NAME=fuzzer-default
+ENV SYNC_INTERVAL=300
+ENV TIMEOUT=2500
+ENV MIN_MUTATIONS_PER_SAMPLE=25
+ENV DEBUG_LOGGING=false
+
+# Default command for distributed fuzzing
+CMD ./FuzzilliCli --profile=v8debug --engine=multi --resume --corpus=postgresql --master-postgres-url="${MASTER_POSTGRES_URL}" --fuzzer-instance-name="${FUZZER_INSTANCE_NAME}" --sync-interval="${SYNC_INTERVAL}" --timeout="${TIMEOUT}" --minMutationsPerSample="${MIN_MUTATIONS_PER_SAMPLE}" --postgres-logging ./fuzzbuild/d8

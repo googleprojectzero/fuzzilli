@@ -705,7 +705,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             } catch {
                 logger.error("Failed to sync program to database: \(error)")
                 // Re-add to pending sync for retry
-                withLock(syncLock) {
+                _ = withLock(syncLock) {
                     pendingSyncOperations.insert(DatabaseUtils.calculateProgramHash(program: program))
                 }
             }
@@ -821,17 +821,29 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
         
         do {
+            // Get edge counts from the coverage evaluator if available
+            let edgesFound: Int
+            let totalEdges: Int
+            
+            if let coverageEvaluator = self.fuzzer.evaluator as? ProgramCoverageEvaluator {
+                edgesFound = Int(coverageEvaluator.getFoundEdgesCount())
+                totalEdges = Int(coverageEvaluator.getTotalEdgesCount())
+            } else {
+                edgesFound = 0
+                totalEdges = 0
+            }
+            
             let query = PostgresQuery(stringLiteral: """
                 INSERT INTO coverage_snapshot (
-                    fuzzer_id, coverage_percentage, program_hash, created_at
+                    fuzzer_id, coverage_percentage, program_hash, edges_found, total_edges, created_at
                 ) VALUES (
-                    \(fuzzerId), \(coverage), '\(programHash)', NOW()
+                    \(fuzzerId), \(coverage), '\(programHash)', \(edgesFound), \(totalEdges), NOW()
                 )
             """)
             
             try await storage.executeQuery(query)
             if enableLogging {
-                self.logger.info("Stored coverage snapshot: \(String(format: "%.6f%%", coverage * 100))")
+                self.logger.info("Stored coverage snapshot: \(String(format: "%.6f%%", coverage * 100)) (\(edgesFound)/\(totalEdges) edges)")
             }
             
         } catch {

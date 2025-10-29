@@ -519,23 +519,20 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
             logger.fatal("PostgreSQL URL is required for PostgreSQL corpus")
         }
         
-        // Generate database name based on resume flag
-        let databaseName: String
+        // Use the existing fuzzilli_master database for all instances
         let fuzzerInstanceId: String
         
         if resume {
-            // Use fixed database name for resume
-            databaseName = "database-main"
+            // Use fixed fuzzer instance ID for resume
             fuzzerInstanceId = "fuzzer-main"
         } else {
-            // Generate dynamic database name with 8-char hash
+            // Generate dynamic fuzzer instance ID with 8-char hash
             let randomHash = String(UUID().uuidString.prefix(8))
-            databaseName = "database-\(randomHash)"
             fuzzerInstanceId = "fuzzer-\(randomHash)"
         }
         
-        // Replace database name in the connection string
-        let modifiedPostgresUrl = postgresUrl.replacingOccurrences(of: "/fuzzilli", with: "/\(databaseName)")
+        // Use the original postgres URL without modification
+        let modifiedPostgresUrl = postgresUrl
         
         let databasePool = DatabasePool(connectionString: modifiedPostgresUrl, enableLogging: postgresLogging)
         
@@ -550,7 +547,6 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         )
         
         logger.info("Created PostgreSQL corpus with instance ID: \(fuzzerInstanceId)")
-        logger.info("Database name: \(databaseName)")
         logger.info("PostgreSQL URL: \(modifiedPostgresUrl)")
         logger.info("Resume mode: \(resume)")
         logger.info("Sync interval: \(syncInterval) seconds")

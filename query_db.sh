@@ -4,8 +4,8 @@
 # This script uses Docker to connect to the PostgreSQL container and run queries
 
 # Database connection parameters
-DB_CONTAINER="fuzzilli-postgres"  # Adjust this to match your container name
-DB_NAME="fuzzilli"
+DB_CONTAINER="fuzzilli-postgres-master"  # Adjust this to match your container name
+DB_NAME="fuzzilli_master"
 DB_USER="fuzzilli"
 DB_PASSWORD="fuzzilli123"
 
@@ -173,6 +173,37 @@ main() {
             COUNT(CASE WHEN coverage_total > 0 THEN 1 END) as executions_with_positive_coverage
         FROM execution 
         WHERE coverage_total IS NOT NULL;
+    "
+    
+    # Coverage snapshot statistics
+    run_query "Coverage Snapshot Statistics" "
+        SELECT 
+            COUNT(*) as total_snapshots,
+            AVG(coverage_percentage) as avg_coverage_percentage,
+            MAX(coverage_percentage) as max_coverage_percentage,
+            AVG(edges_found) as avg_edges_found,
+            MAX(edges_found) as max_edges_found,
+            AVG(total_edges) as avg_total_edges,
+            MAX(total_edges) as max_total_edges,
+            COUNT(CASE WHEN edges_found > 0 THEN 1 END) as snapshots_with_coverage
+        FROM coverage_snapshot 
+        WHERE edges_found IS NOT NULL AND total_edges IS NOT NULL;
+    "
+    
+    # Recent coverage snapshots
+    run_query "Recent Coverage Snapshots (Last 10)" "
+        SELECT 
+            snapshot_id,
+            fuzzer_id,
+            ROUND(coverage_percentage::numeric, 6) as coverage_pct,
+            edges_found,
+            total_edges,
+            LEFT(program_hash, 12) as hash_prefix,
+            created_at
+        FROM coverage_snapshot 
+        WHERE edges_found IS NOT NULL AND total_edges IS NOT NULL
+        ORDER BY created_at DESC 
+        LIMIT 10;
     "
     
     # Performance metrics

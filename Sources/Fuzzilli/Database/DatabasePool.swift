@@ -18,6 +18,7 @@ public class DatabasePool {
     private let connectionTimeout: TimeInterval
     private let retryAttempts: Int
     private let enableLogging: Bool
+    private var configuration: SQLPostgresConfiguration?
     
         public init(connectionString: String, maxConnections: Int = 5, connectionTimeout: TimeInterval = 120.0, retryAttempts: Int = 3, enableLogging: Bool = false) {
         self.connectionString = connectionString
@@ -56,6 +57,7 @@ public class DatabasePool {
             
             // Parse connection string and create configuration
             let config = try parseConnectionString(connectionString)
+            self.configuration = config
             
             // Create connection source using the new API
             let connectionSource = PostgresConnectionSource(
@@ -143,6 +145,14 @@ public class DatabasePool {
     /// Get connection string for direct connections
     public func getConnectionString() -> String {
         return connectionString
+    }
+    
+    /// Get the database configuration
+    public func getConfiguration() throws -> SQLPostgresConfiguration {
+        guard let config = configuration else {
+            throw DatabasePoolError.notInitialized
+        }
+        return config
     }
     
     /// Shutdown the connection pool

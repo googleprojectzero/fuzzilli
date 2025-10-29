@@ -144,6 +144,16 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
         return edgeArray
     }
+    
+    /// Get the number of edges found so far
+    public func getFoundEdgesCount() -> UInt32 {
+        return context.found_edges
+    }
+    
+    /// Get the total number of edges in the target
+    public func getTotalEdgesCount() -> UInt32 {
+        return context.num_edges
+    }
 
     override func initialize() {
         // Must clear the shared memory bitmap before every execution

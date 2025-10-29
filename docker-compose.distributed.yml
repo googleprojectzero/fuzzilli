@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  postgres-master:
+    image: postgres:15-alpine
+    container_name: fuzzilli-postgres-master
+    environment:
+      POSTGRES_DB: fuzzilli_master
+      POSTGRES_USER: fuzzilli
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fuzzilli123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_master_data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuzzilli -d fuzzilli_master"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - fuzzing-network
+
+  fuzzer:
+    build:
+      context: .
+      dockerfile: Cloud/VRIG/Dockerfile.distributed
+    # Remove hardcoded container name to allow scaling
+    environment:
+      - MASTER_POSTGRES_URL=postgresql://fuzzilli:${POSTGRES_PASSWORD:-fuzzilli123}@postgres-master:5432/fuzzilli_master
+      - FUZZER_INSTANCE_NAME=
+      - SYNC_INTERVAL=${SYNC_INTERVAL:-300}
+      - TIMEOUT=${TIMEOUT:-2500}
+      - MIN_MUTATIONS_PER_SAMPLE=${MIN_MUTATIONS_PER_SAMPLE:-25}
+      - DEBUG_LOGGING=${DEBUG_LOGGING:-false}
+    depends_on:
+      postgres-master:
+        condition: service_healthy
+    volumes:
+      - fuzzer_data:/home/app/Corpus
+      # Mount your existing V8 build directory
+      - /home/tropic/vrig/v8/v8/out/fuzzbuild:/home/app/fuzzbuild:ro
+    restart: unless-stopped
+    networks:
+      - fuzzing-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: fuzzilli-pgadmin-distributed
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres-master
+    restart: unless-stopped
+    networks:
+      - fuzzing-network
+
+volumes:
+  postgres_master_data:
+  fuzzer_data:
+
+networks:
+  fuzzing-network:
+    driver: bridge
