@@ -106,13 +106,21 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         PostgreSQLCorpus.unregisterInstance(self)
         
         // Commit any pending batches when the corpus is deallocated
-        Task {
-            await commitPendingBatches()
+        // Use Task.detached to avoid capturing self
+        Task.detached { [weak self] in
+            await self?.commitPendingBatches()
         }
     }
     
     
     // MARK: - Performance Optimizations
+    
+    /// Async-safe locking helper
+    private func withLock<T>(_ lock: NSLock, _ body: () throws -> T) rethrows -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body()
+    }
     
     private func startPeriodicBatchFlush() {
         // Flush batches every 5 seconds to ensure timely processing
@@ -149,7 +157,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     }
     
     private func commitPendingBatches() async {
-        guard let fuzzerId = fuzzerId else { return }
+        guard fuzzerId != nil else { return }
         
         // Commit pending executions
         let queuedExecutions = executionBatchLock.withLock {
@@ -159,12 +167,10 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
         
         if !queuedExecutions.isEmpty {
-            do {
-                try await processExecutionBatch(queuedExecutions)
-                // logger.debug("Committed \(queuedExecutions.count) pending executions on exit")
-            } catch {
-                logger.error("Failed to commit pending executions on exit: \(error)")
-            }
+            await processExecutionBatch(queuedExecutions)
+                if enableLogging {
+                    self.logger.info("Committed \(queuedExecutions.count) pending executions on exit")
+                }
         }
     }
     
@@ -176,7 +182,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         Task {
             do {
                 try await databasePool.initialize()
-                // logger.debug("Database pool initialized successfully")
+                if enableLogging {
+                    self.logger.info("Database pool initialized successfully")
+                }
                 
                 // Register this fuzzer instance in the database (only once)
                 if !fuzzerRegistered {
@@ -184,10 +192,14 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                         let id = try await registerFuzzerWithRetry()
                         fuzzerId = id
                         fuzzerRegistered = true
-                        // logger.debug("Fuzzer registered in database with ID: \(id)")
+                        if enableLogging {
+                            self.logger.info("Fuzzer registered in database with ID: \(id)")
+                        }
                     } catch {
                         logger.error("Failed to register fuzzer after retries: \(error)")
-                        // logger.debug("Fuzzer will continue without database registration - executions will be queued")
+                        if enableLogging {
+                            self.logger.info("Fuzzer will continue without database registration - executions will be queued")
+                        }
                     }
                 }
                 
@@ -221,7 +233,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { execution in
             if let program = self.currentExecutionProgram, let purpose = self.currentExecutionPurpose {
                 // DEBUG: Log execution recording
-                self.logger.info("Recording execution: outcome=\(execution.outcome), execTime=\(execution.execTime)")
+                if self.enableLogging {
+                    self.logger.info("Recording execution: outcome=\(execution.outcome), execTime=\(execution.execTime)")
+                }
                 
                 // Create ProgramAspects from the execution
                 let aspects = ProgramAspects(outcome: execution.outcome)
@@ -260,21 +274,29 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 }
             } else {
                 // DEBUG: Log when execution is not recorded
-                self.logger.info("Skipping execution recording: program=\(self.currentExecutionProgram != nil), purpose=\(self.currentExecutionPurpose != nil)")
+                if self.enableLogging {
+                    self.logger.info("Skipping execution recording: program=\(self.currentExecutionProgram != nil), purpose=\(self.currentExecutionPurpose != nil)")
+                }
             }
         }
         
         // Schedule periodic synchronization with PostgreSQL
         fuzzer.timers.scheduleTask(every: syncInterval, syncWithDatabase)
-        // logger.debug("Scheduled database sync every \(syncInterval) seconds")
+        if self.enableLogging {
+            logger.info("Scheduled database sync every \(syncInterval) seconds")
+        }
         
         // Schedule periodic flush of execution batch
         fuzzer.timers.scheduleTask(every: 5.0, flushExecutionBatch)
-        // logger.debug("Scheduled execution batch flush every 5 seconds")
+        if enableLogging {
+            logger.info("Scheduled execution batch flush every 5 seconds")
+        }
         
         // Schedule periodic retry of fuzzer registration if it failed
         fuzzer.timers.scheduleTask(every: 30.0, retryFuzzerRegistration)
-        // logger.debug("Scheduled fuzzer registration retry every 30 seconds")
+        if enableLogging {
+            logger.info("Scheduled fuzzer registration retry every 30 seconds")
+        }
         
         // Schedule cleanup task (similar to BasicCorpus)
         if !fuzzer.config.staticCorpus {
@@ -338,7 +360,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             return
         }
         
-        // logger.debug("Processing batch of \(batch.count) executions")
+        if enableLogging {
+            self.logger.info("Processing batch of \(batch.count) executions")
+        }
         
         do {
             // Prepare batch data for programs (deduplicate by program hash)
@@ -381,7 +405,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 _ = try await storage.storeExecutionsBatch(executions: executionBatchData, fuzzerId: fuzzerId)
             }
             
-            // logger.debug("Completed batch processing: \(programBatch.count) unique programs, \(executionBatchData.count) executions")
+            if enableLogging {
+                self.logger.info("Completed batch processing: \(programBatch.count) unique programs, \(executionBatchData.count) executions")
+            }
             
         } catch {
             logger.error("Failed to process execution batch: \(error)")
@@ -397,7 +423,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
         
         if !batch.isEmpty {
-            // logger.debug("Flushing \(batch.count) pending executions")
+            if enableLogging {
+                self.logger.info("Flushing \(batch.count) pending executions")
+            }
             Task {
                 await processExecutionBatch(batch)
             }
@@ -413,7 +441,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 let id = try await registerFuzzerWithRetry()
                 fuzzerId = id
                 fuzzerRegistered = true
-                // logger.debug("Successfully registered fuzzer on retry with ID: \(id)")
+                if enableLogging {
+                    self.logger.info("Successfully registered fuzzer on retry with ID: \(id)")
+                }
                 
                 // Process any queued executions
                 let queuedExecutions = executionBatchLock.withLock {
@@ -423,7 +453,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 }
                 
                 if !queuedExecutions.isEmpty {
-                    // logger.debug("Processing \(queuedExecutions.count) queued executions after successful registration")
+                    if enableLogging {
+                        self.logger.info("Processing \(queuedExecutions.count) queued executions after successful registration")
+                    }
                     await processExecutionBatch(queuedExecutions)
                 }
                 
@@ -498,10 +530,11 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         
         // Update execution metadata
         let programHash = programHashes[idx]
-        if var (program, metadata) = programCache[programHash] {
-            metadata.executionCount += 1
-            metadata.lastExecutionTime = Date()
-            programCache[programHash] = (program: program, metadata: metadata)
+        if let (program, metadata) = programCache[programHash] {
+            var updatedMetadata = metadata
+            updatedMetadata.executionCount += 1
+            updatedMetadata.lastExecutionTime = Date()
+            programCache[programHash] = (program: program, metadata: updatedMetadata)
             markForSync(programHash)
         }
         
@@ -521,7 +554,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         defer { cacheLock.unlock() }
         
         let res = try encodeProtobufCorpus(Array(programs))
-        // logger.debug("Successfully serialized \(programs.count) programs from PostgreSQL corpus")
+        if enableLogging {
+            self.logger.info("Successfully serialized \(programs.count) programs from PostgreSQL corpus")
+        }
         return res
     }
     
@@ -540,14 +575,18 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             addInternal(program)
         }
         
-        // logger.debug("Imported \(newPrograms.count) programs into PostgreSQL corpus")
+        if enableLogging {
+            self.logger.info("Imported \(newPrograms.count) programs into PostgreSQL corpus")
+        }
     }
     
     // MARK: - Database Operations
     
     /// Load initial corpus from PostgreSQL database
     private func loadInitialCorpus() async {
-        // logger.debug("Loading initial corpus from PostgreSQL...")
+        if enableLogging {
+            self.logger.info("Loading initial corpus from PostgreSQL...")
+        }
         
         guard let fuzzerId = fuzzerId else {
             logger.warning("Cannot load initial corpus: fuzzer not registered")
@@ -563,40 +602,47 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 limit: maxSize
             )
             
-            // logger.debug("Found \(recentPrograms.count) recent programs to resume")
-            
-            // Add programs to the corpus
-            cacheLock.lock()
-            defer { cacheLock.unlock() }
-            
-            for (program, metadata) in recentPrograms {
-                let programHash = DatabaseUtils.calculateProgramHash(program: program)
-                
-                // Skip if already in cache
-                if programCache[programHash] != nil {
-                    continue
-                }
-                
-                // Add to in-memory structures
-                prepareProgramForInclusion(program, index: totalEntryCounter)
-                programs.append(program)
-                ages.append(0)
-                programHashes.append(programHash)
-                programCache[programHash] = (program: program, metadata: metadata)
-                
-                totalEntryCounter += 1
+            if enableLogging {
+                self.logger.info("Found \(recentPrograms.count) recent programs to resume")
             }
             
-            // logger.debug("Resumed PostgreSQL corpus with \(programs.count) programs")
+            // Add programs to the corpus
+            withLock(cacheLock) {
+                for (program, metadata) in recentPrograms {
+                    let programHash = DatabaseUtils.calculateProgramHash(program: program)
+                    
+                    // Skip if already in cache
+                    if programCache[programHash] != nil {
+                        continue
+                    }
+                    
+                    // Add to in-memory structures
+                    prepareProgramForInclusion(program, index: totalEntryCounter)
+                    programs.append(program)
+                    ages.append(0)
+                    programHashes.append(programHash)
+                    programCache[programHash] = (program: program, metadata: metadata)
+                    
+                    totalEntryCounter += 1
+                }
+            }
+            
+            if enableLogging {
+                self.logger.info("Resumed PostgreSQL corpus with \(programs.count) programs")
+            }
             
             // If we have no programs, we need at least one to avoid empty corpus
             if programs.count == 0 {
-                // logger.debug("No programs found to resume, corpus will start empty")
+                if enableLogging {
+                    self.logger.info("No programs found to resume, corpus will start empty")
+                }
             }
             
         } catch {
             logger.error("Failed to load initial corpus from PostgreSQL: \(error)")
-            // logger.debug("Corpus will start empty and build up from scratch")
+            if enableLogging {
+                self.logger.info("Corpus will start empty and build up from scratch")
+            }
         }
     }
     
@@ -611,23 +657,24 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     private func performDatabaseSync() async {
         let hashesToSync: Set<String>
         
-        // Use synchronous lock for getting pending operations
-        syncLock.lock()
-        hashesToSync = Set(pendingSyncOperations)
-        pendingSyncOperations.removeAll()
-        syncLock.unlock()
+        // Use async-safe lock for getting pending operations
+        hashesToSync = withLock(syncLock) {
+            let hashes = Set(pendingSyncOperations)
+            pendingSyncOperations.removeAll()
+            return hashes
+        }
         
         guard !hashesToSync.isEmpty else { return }
         
         // Syncing programs with PostgreSQL silently
         
         // Get programs to sync from cache
-        cacheLock.lock()
-        let programsToSync = hashesToSync.compactMap { hash -> (Program, ExecutionMetadata)? in
-            guard let (program, metadata) = programCache[hash] else { return nil }
-            return (program, metadata)
+        let programsToSync = withLock(cacheLock) {
+            hashesToSync.compactMap { hash -> (Program, ExecutionMetadata)? in
+                guard let (program, metadata) = programCache[hash] else { return nil }
+                return (program, metadata)
+            }
         }
-        cacheLock.unlock()
         
         // Store each program in the database
         for (program, metadata) in programsToSync {
@@ -650,9 +697,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             } catch {
                 logger.error("Failed to sync program to database: \(error)")
                 // Re-add to pending sync for retry
-                syncLock.lock()
-                pendingSyncOperations.insert(DatabaseUtils.calculateProgramHash(program: program))
-                syncLock.unlock()
+                withLock(syncLock) {
+                    pendingSyncOperations.insert(DatabaseUtils.calculateProgramHash(program: program))
+                }
             }
         }
         
@@ -670,12 +717,16 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         
         for attempt in 1...maxRetries {
             do {
-                // logger.debug("Attempting to register fuzzer (attempt \(attempt)/\(maxRetries))")
+                if enableLogging {
+                    self.logger.info("Attempting to register fuzzer (attempt \(attempt)/\(maxRetries))")
+                }
                 let id = try await storage.registerFuzzer(
                     name: fuzzerName,
                     engineType: engineType
                 )
-                // logger.debug("Successfully registered fuzzer with ID: \(id)")
+                if enableLogging {
+                    self.logger.info("Successfully registered fuzzer with ID: \(id)")
+                }
                 return id
             } catch {
                 lastError = error
@@ -705,12 +756,16 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         do {
             // Use the registered fuzzer ID
             guard let fuzzerId = fuzzerId else {
-                logger.info("Cannot store execution: fuzzer not registered")
+                if enableLogging {
+                    self.logger.info("Cannot store execution: fuzzer not registered")
+                }
                 return
             }
             
             // DEBUG: Log execution storage attempt
-            logger.info("Storing execution: fuzzerId=\(fuzzerId), outcome=\(executionData.outcome), execTime=\(executionData.execTime)")
+            if enableLogging {
+                self.logger.info("Storing execution: fuzzerId=\(fuzzerId), outcome=\(executionData.outcome), execTime=\(executionData.execTime)")
+            }
 
             // Store both program and execution in a single transaction to avoid foreign key issues
             _ = try await storage.storeProgramAndExecution(
@@ -730,7 +785,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 ))
             )
 
-            logger.info("Successfully stored program and execution")
+            if enableLogging {
+                self.logger.info("Successfully stored program and execution")
+            }
             
         } catch {
             logger.error("Failed to store execution: \(String(reflecting: error))")
@@ -740,7 +797,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     /// Store coverage snapshot to database
     private func storeCoverageSnapshot(coverage: Double, programHash: String) async {
         guard let fuzzerId = fuzzerId else {
-            logger.info("Cannot store coverage snapshot: fuzzer not registered")
+            if enableLogging {
+                self.logger.info("Cannot store coverage snapshot: fuzzer not registered")
+            }
             return
         }
         
@@ -754,7 +813,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             """)
             
             try await storage.executeQuery(query)
-            logger.info("Stored coverage snapshot: \(String(format: "%.6f%%", coverage * 100))")
+            if enableLogging {
+                self.logger.info("Stored coverage snapshot: \(String(format: "%.6f%%", coverage * 100))")
+            }
             
         } catch {
             logger.error("Failed to store coverage snapshot: \(error)")
@@ -828,7 +889,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             }
         }
         
-        // logger.debug("PostgreSQL corpus cleanup finished: \(self.programs.count) -> \(newPrograms.count)")
+        if enableLogging {
+            self.logger.info("PostgreSQL corpus cleanup finished: \(self.programs.count) -> \(newPrograms.count)")
+        }
         programs = newPrograms
         ages = newAges
         programHashes = newHashes
@@ -868,12 +931,12 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     
     /// Get enhanced statistics including database coverage
     public func getEnhancedStatistics() async -> EnhancedCorpusStatistics {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-        
-        let totalExecutions = programCache.values.reduce(0) { $0 + $1.metadata.executionCount }
-        let averageCoverage = programCache.values.isEmpty ? 0.0 : 
-            programCache.values.reduce(0.0) { $0 + $1.metadata.lastCoverage } / Double(programCache.count)
+        let (totalExecutions, averageCoverage, pendingSyncCount) = withLock(cacheLock) {
+            let totalExecutions = programCache.values.reduce(0) { $0 + $1.metadata.executionCount }
+            let averageCoverage = programCache.values.isEmpty ? 0.0 : 
+                programCache.values.reduce(0.0) { $0 + $1.metadata.lastCoverage } / Double(programCache.count)
+            return (totalExecutions, averageCoverage, pendingSyncOperations.count)
+        }
         
         // Get database statistics
         var dbStats = DatabaseStatistics()
@@ -889,7 +952,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             totalPrograms: programs.count,
             totalExecutions: totalExecutions,
             averageCoverage: averageCoverage,
-            pendingSyncOperations: pendingSyncOperations.count,
+            pendingSyncOperations: pendingSyncCount,
             fuzzerInstanceId: fuzzerInstanceId,
             databasePrograms: dbStats.totalPrograms,
             databaseExecutions: dbStats.totalExecutions,

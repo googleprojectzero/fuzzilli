@@ -31,10 +31,7 @@ public class DatabasePool {
     /// Initialize the connection pool
     public func initialize() async throws {
         // Check if already initialized
-        let alreadyInitialized: Bool
-        lock.lock()
-        alreadyInitialized = isInitialized
-        lock.unlock()
+        let alreadyInitialized = await withLock(lock) { isInitialized }
         
         guard !alreadyInitialized else {
             if enableLogging {
@@ -73,9 +70,9 @@ public class DatabasePool {
                 on: eventLoopGroup
             )
             
-            lock.lock()
-            isInitialized = true
-            lock.unlock()
+            await withLock(lock) {
+                isInitialized = true
+            }
             
             if enableLogging {
                 logger.info("Database connection pool initialized successfully")
@@ -150,11 +147,8 @@ public class DatabasePool {
     
     /// Shutdown the connection pool
     public func shutdown() async {
-        // Use a synchronous lock for the check
-        let shouldShutdown: Bool
-        lock.lock()
-        shouldShutdown = isInitialized
-        lock.unlock()
+        // Use async-safe lock for the check
+        let shouldShutdown = await withLock(lock) { isInitialized }
         
         guard shouldShutdown else {
             if enableLogging {
@@ -170,7 +164,10 @@ public class DatabasePool {
         do {
             // Shutdown connection pool
             if let pool = connectionPool {
-                pool.shutdown()
+                // Use Task.detached to avoid blocking the async context
+                Task.detached {
+                    pool.shutdown()
+                }
                 connectionPool = nil
             }
             
@@ -180,9 +177,9 @@ public class DatabasePool {
                 self.eventLoopGroup = nil
             }
             
-            lock.lock()
-            isInitialized = false
-            lock.unlock()
+            await withLock(lock) {
+                isInitialized = false
+            }
             
             if enableLogging {
                 logger.info("Database connection pool shutdown complete")
@@ -201,6 +198,13 @@ public class DatabasePool {
     }
     
     // MARK: - Private Methods
+    
+    /// Async-safe locking helper
+    private func withLock<T>(_ lock: NSLock, _ body: () throws -> T) rethrows -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body()
+    }
     
     private func parseConnectionString(_ connectionString: String) throws -> SQLPostgresConfiguration {
         // Parse postgresql://user:password@host:port/database format

@@ -187,7 +187,7 @@ public class PostgreSQLStorage {
         let totalPrograms = try programRows.first?.decode(Int.self, context: .default) ?? 0
         
         // Get execution count for this fuzzer
-        let executionQuery: PostgresQuery = "SELECT COUNT(*) FROM execution e JOIN program p ON e.program_base64 = p.program_base64 WHERE p.fuzzer_id = \(fuzzerId)"
+        let executionQuery: PostgresQuery = "SELECT COUNT(*) FROM execution e JOIN program p ON e.program_hash = p.program_hash WHERE p.fuzzer_id = \(fuzzerId)"
         let executionResult = try await connection.query(executionQuery, logger: self.logger)
         let executionRows = try await executionResult.collect()
         let totalExecutions = try executionRows.first?.decode(Int.self, context: .default) ?? 0
@@ -195,7 +195,7 @@ public class PostgreSQLStorage {
         // Get crash count for this fuzzer
         let crashQuery: PostgresQuery = """
             SELECT COUNT(*) FROM execution e 
-            JOIN program p ON e.program_base64 = p.program_base64 
+            JOIN program p ON e.program_hash = p.program_hash 
             JOIN execution_outcome eo ON e.execution_outcome_id = eo.id 
             WHERE p.fuzzer_id = \(fuzzerId) AND eo.outcome = 'Crashed'
         """
@@ -261,26 +261,50 @@ public class PostgreSQLStorage {
             // Escape single quotes in strings
             let escapedProgramBase64 = programBase64.replacingOccurrences(of: "'", with: "''")
             
-            fuzzerValues.append("('\(escapedProgramBase64)', \(fuzzerId), \(program.size), '\(programHash)')")
-            programValues.append("('\(escapedProgramBase64)', \(fuzzerId), \(program.size), '\(programHash)')")
+            fuzzerValues.append("('\(programHash)', \(fuzzerId), \(program.size), '\(escapedProgramBase64)')")
+            programValues.append("('\(programHash)', \(fuzzerId), \(program.size), '\(escapedProgramBase64)')")
         }
         
         // Batch insert into fuzzer table
         if !fuzzerValues.isEmpty {
-            let fuzzerQueryString = "INSERT INTO fuzzer (program_base64, fuzzer_id, program_size, program_hash) VALUES " + 
-                fuzzerValues.joined(separator: ", ") + " ON CONFLICT (program_base64) DO NOTHING"
+            let fuzzerQueryString = "INSERT INTO fuzzer (program_hash, fuzzer_id, program_size, program_base64) VALUES " + 
+                fuzzerValues.joined(separator: ", ") + " ON CONFLICT DO NOTHING"
             let fuzzerQuery = PostgresQuery(stringLiteral: fuzzerQueryString)
             try await connection.query(fuzzerQuery, logger: self.logger)
         }
         
-        // Batch insert into program table
+        // Batch insert into program table - use two-step upsert for each program
         if !programValues.isEmpty {
-            let programQueryString = "INSERT INTO program (program_base64, fuzzer_id, program_size, program_hash) VALUES " + 
-                programValues.joined(separator: ", ") + " ON CONFLICT (program_base64) DO UPDATE SET " +
-                "fuzzer_id = EXCLUDED.fuzzer_id, program_size = EXCLUDED.program_size, " +
-                "program_hash = EXCLUDED.program_hash"
-            let programQuery = PostgresQuery(stringLiteral: programQueryString)
-            try await connection.query(programQuery, logger: self.logger)
+            for programValue in programValues {
+                // Extract program_hash from the value string for the UPDATE
+                let components = programValue.dropFirst().dropLast().split(separator: ",")
+                guard components.count >= 4 else { continue }
+                let programHash = String(components[0].dropFirst().dropLast()) // Remove quotes
+                let fuzzerId = String(components[1].trimmingCharacters(in: .whitespaces))
+                let programSize = String(components[2].trimmingCharacters(in: .whitespaces))
+                let programBase64 = String(components[3].dropFirst().dropLast()) // Remove quotes
+                
+                // Try UPDATE first
+                let updateQuery = PostgresQuery(stringLiteral: """
+                    UPDATE program SET 
+                        fuzzer_id = \(fuzzerId),
+                        program_size = \(programSize),
+                        program_base64 = '\(programBase64)'
+                    WHERE program_hash = '\(programHash)'
+                """)
+                let updateResult = try await connection.query(updateQuery, logger: self.logger)
+                let updateRows = try await updateResult.collect()
+                
+                // If no rows were updated, insert the new program
+                if updateRows.isEmpty {
+                    let insertQuery = PostgresQuery(stringLiteral: """
+                        INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64) 
+                        VALUES ('\(programHash)', \(fuzzerId), \(programSize), '\(programBase64)') 
+                        ON CONFLICT DO NOTHING
+                    """)
+                    try await connection.query(insertQuery, logger: self.logger)
+                }
+            }
         }
         
         return programHashes
@@ -331,22 +355,32 @@ public class PostgreSQLStorage {
         do {
             // Insert into fuzzer table (corpus)
             let fuzzerQuery = PostgresQuery(stringLiteral: """
-                INSERT INTO fuzzer (program_base64, fuzzer_id, program_size, program_hash) 
-                VALUES ('\(programBase64)', \(fuzzerId), \(program.size), '\(programHash)') 
-                ON CONFLICT (program_base64) DO NOTHING
+                INSERT INTO fuzzer (program_hash, fuzzer_id, program_size, program_base64) 
+                VALUES ('\(programHash)', \(fuzzerId), \(program.size), '\(programBase64)') 
+                ON CONFLICT DO NOTHING
             """)
             try await connection.query(fuzzerQuery, logger: self.logger)
             
-            // Insert into program table (executed programs) - use DO UPDATE to ensure it exists
-            let programQuery = PostgresQuery(stringLiteral: """
-                INSERT INTO program (program_base64, fuzzer_id, program_size, program_hash) 
-                VALUES ('\(programBase64)', \(fuzzerId), \(program.size), '\(programHash)') 
-                ON CONFLICT (program_base64) DO UPDATE SET 
-                    fuzzer_id = EXCLUDED.fuzzer_id,
-                    program_size = EXCLUDED.program_size,
-                    program_hash = EXCLUDED.program_hash
+            // Insert into program table (executed programs) - use two-step upsert
+            let updateQuery = PostgresQuery(stringLiteral: """
+                UPDATE program SET 
+                    fuzzer_id = \(fuzzerId),
+                    program_size = \(program.size),
+                    program_base64 = '\(programBase64)'
+                WHERE program_hash = '\(programHash)'
             """)
-            try await connection.query(programQuery, logger: self.logger)
+            let updateResult = try await connection.query(updateQuery, logger: self.logger)
+            let updateRows = try await updateResult.collect()
+            
+            // If no rows were updated, insert the new program
+            if updateRows.isEmpty {
+                let insertQuery = PostgresQuery(stringLiteral: """
+                    INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64) 
+                    VALUES ('\(programHash)', \(fuzzerId), \(program.size), '\(programBase64)') 
+                    ON CONFLICT DO NOTHING
+                """)
+                try await connection.query(insertQuery, logger: self.logger)
+            }
             
             // Now store the execution
             let executionTypeId = DatabaseUtils.mapExecutionType(purpose: executionType)
@@ -366,12 +400,12 @@ public class PostgreSQLStorage {
             
             let executionQuery = PostgresQuery(stringLiteral: """
                 INSERT INTO execution (
-                    program_base64, execution_type_id, mutator_type_id, 
+                    program_hash, execution_type_id, mutator_type_id, 
                     execution_outcome_id, coverage_total, execution_time_ms, 
                     signal_code, exit_code, stdout, stderr, fuzzout, 
                     feedback_vector, created_at
                 ) VALUES (
-                    '\(programBase64)', \(executionTypeId), 
+                    '\(programHash)', \(executionTypeId), 
                     NULL, \(outcomeId), \(coverage), 
                     \(executionTimeMs), \(signalCodeValue), \(exitCodeValue), 
                     \(stdoutValue), \(stderrValue), \(fuzzoutValue), 
@@ -432,9 +466,9 @@ public class PostgreSQLStorage {
         
         // Insert into fuzzer table (corpus)
         let fuzzerQuery: PostgresQuery = """
-            INSERT INTO fuzzer (program_base64, fuzzer_id, program_size, program_hash) 
-            VALUES ('\(programBase64)', \(fuzzerId), \(program.size), '\(programHash)') 
-            ON CONFLICT (program_base64) DO NOTHING
+            INSERT INTO fuzzer (program_hash, fuzzer_id, program_size, program_base64) 
+            VALUES ('\(programHash)', \(fuzzerId), \(program.size), '\(programBase64)') 
+            ON CONFLICT DO NOTHING
         """
         try await connection.query(fuzzerQuery, logger: self.logger)
         
@@ -442,17 +476,26 @@ public class PostgreSQLStorage {
         let lifter = JavaScriptLifter(ecmaVersion: .es6)
         _ = lifter.lift(program, withOptions: [])
         
-        // Insert into program table (executed programs)
-        // Use DO UPDATE to ensure the program exists for foreign key constraints
-        let programQuery: PostgresQuery = """
-            INSERT INTO program (program_base64, fuzzer_id, program_size, program_hash) 
-            VALUES ('\(programBase64)', \(fuzzerId), \(program.size), '\(programHash)') 
-            ON CONFLICT (program_base64) DO UPDATE SET 
-                fuzzer_id = EXCLUDED.fuzzer_id,
-                program_size = EXCLUDED.program_size,
-                program_hash = EXCLUDED.program_hash
+        // Insert into program table (executed programs) - use two-step upsert
+        let updateQuery: PostgresQuery = """
+            UPDATE program SET 
+                fuzzer_id = \(fuzzerId),
+                program_size = \(program.size),
+                program_base64 = '\(programBase64)'
+            WHERE program_hash = '\(programHash)'rm
         """
-        try await connection.query(programQuery, logger: self.logger)
+        let updateResult = try await connection.query(updateQuery, logger: self.logger)
+        let updateRows = try await updateResult.collect()
+        
+        // If no rows were updated, insert the new program
+        if updateRows.isEmpty {
+            let insertQuery: PostgresQuery = """
+                INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64) 
+                VALUES ('\(programHash)', \(fuzzerId), \(program.size), '\(programBase64)') 
+                ON CONFLICT DO NOTHING
+            """
+            try await connection.query(insertQuery, logger: self.logger)
+        }
         
         if enableLogging {
             self.logger.info("Program storage successful: hash=\(programHash)")
@@ -519,8 +562,8 @@ public class PostgreSQLStorage {
         
         // Prepare batch data
         for executionData in executions {
-            _ = DatabaseUtils.calculateProgramHash(program: executionData.program)
-            let programBase64 = DatabaseUtils.encodeProgramToBase64(program: executionData.program)
+            let programHash = DatabaseUtils.calculateProgramHash(program: executionData.program)
+            let _ = DatabaseUtils.encodeProgramToBase64(program: executionData.program)
             
             let executionTypeId = DatabaseUtils.mapExecutionType(purpose: executionData.executionType)
             
@@ -540,7 +583,7 @@ public class PostgreSQLStorage {
             let fuzzoutValue = executionData.fuzzout != nil ? "'\(executionData.fuzzout!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
             
             executionValues.append("""
-                ('\(programBase64.replacingOccurrences(of: "'", with: "''"))', \(executionTypeId), 
+                ('\(programHash)', \(executionTypeId), 
                 \(mutatorTypeValue), \(outcomeId), \(executionData.coverage), 
                 \(executionData.executionTimeMs), \(signalCodeValue), \(exitCodeValue), 
                 \(stdoutValue), \(stderrValue), \(fuzzoutValue), 
@@ -552,7 +595,7 @@ public class PostgreSQLStorage {
         if !executionValues.isEmpty {
             let queryString = """
                 INSERT INTO execution (
-                    program_base64, execution_type_id, mutator_type_id, 
+                    program_hash, execution_type_id, mutator_type_id, 
                     execution_outcome_id, coverage_total, execution_time_ms, 
                     signal_code, exit_code, stdout, stderr, fuzzout, 
                     feedback_vector, created_at
@@ -590,7 +633,7 @@ public class PostgreSQLStorage {
         let programHash = DatabaseUtils.calculateProgramHash(program: program)
         let programBase64 = DatabaseUtils.encodeProgramToBase64(program: program)
         if enableLogging {
-            logger.info("Storing execution: hash=\(programHash), fuzzerId=\(fuzzerId), type=\(executionType), outcome=\(outcome)")
+            logger.info("Storing execution: hash=\(programHash), fuzzerId=\(fuzzerId), type=\(executionType), outcome=\(outcome), programBase64=\(programBase64)")
         }
         
         // Use direct connection to avoid connection pool deadlock
@@ -632,12 +675,12 @@ public class PostgreSQLStorage {
         
         let query = PostgresQuery(stringLiteral: """
             INSERT INTO execution (
-                program_base64, execution_type_id, mutator_type_id, 
+                program_hash, execution_type_id, mutator_type_id, 
                 execution_outcome_id, coverage_total, execution_time_ms, 
                 signal_code, exit_code, stdout, stderr, fuzzout, 
                 feedback_vector, created_at
             ) VALUES (
-                '\(programBase64)', \(executionTypeId), 
+                '\(programHash)', \(executionTypeId), 
                 \(mutatorTypeValue), \(outcomeId), \(coverage), 
                 \(executionTimeMs), \(signalCodeValue), \(exitCodeValue), 
                 \(stdoutValue), \(stderrValue), \(fuzzoutValue), 
@@ -741,9 +784,9 @@ public class PostgreSQLStorage {
         // Query for recent programs with their latest execution metadata
         let queryString = """
             SELECT 
-                p.program_base64,
-                p.program_size,
                 p.program_hash,
+                p.program_size,
+                p.program_base64,
                 p.created_at,
                 eo.outcome,
                 eo.description,
@@ -752,7 +795,7 @@ public class PostgreSQLStorage {
                 e.signal_code,
                 e.exit_code
             FROM program p
-            LEFT JOIN execution e ON p.program_base64 = e.program_base64
+            LEFT JOIN execution e ON p.program_hash = e.program_hash
             LEFT JOIN execution_outcome eo ON e.execution_outcome_id = eo.id
             WHERE p.fuzzer_id = \(fuzzerId)
             AND p.created_at >= '\(since.ISO8601Format())'
@@ -767,9 +810,9 @@ public class PostgreSQLStorage {
         var programs: [(Program, ExecutionMetadata)] = []
         
         for row in rows {
-            let programBase64 = try row.decode(String.self, context: .default)
-            _ = try row.decode(Int.self, context: .default) // programSize
             let programHash = try row.decode(String.self, context: .default)
+            _ = try row.decode(Int.self, context: .default) // programSize
+            let programBase64 = try row.decode(String.self, context: .default)
             _ = try row.decode(Date.self, context: .default) // createdAt
             let outcome = try row.decode(String?.self, context: .default)
             let description = try row.decode(String?.self, context: .default)
