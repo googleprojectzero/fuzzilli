@@ -146,8 +146,32 @@ class Father(Agent):
             max_steps=15,
             planning_interval=None,
         )
+
+
+
+        # L1 Root: pick_section
+        self.agents['pick_section'] = ToolCallingAgent(
+            name="PickSection",
+            description="L0 Root Manager responsible for picking a section of the V8 code base that targets the JIT system",
+            tools=[
+                search_js_file_json,
+                get_all_js_file_names,
+                get_js_file_by_name,
+                get_random_js_file,
+                get_random_fuzzilli_file,
+                simliar_js_code,
+                simliar_fuzzilli_code,
+                simliar_execution_data,
+                search_regex_js,
+                search_regex_fuzzilli,
+                search_regex_execution_data,
+            ],
+            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            max_steps=10,
+            planning_interval=None,
+        )
         
-        # L1 Manager: Father of George (under PickSection)
+        # L0 Manager: Father of George 
         self.agents['father_of_george'] = ToolCallingAgent(
             name="FatherOfGeorge",
             description="L1 Manager responsible for orchestrating code analysis and program building operations",
@@ -168,36 +192,14 @@ class Father(Agent):
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[
                 self.agents['code_analyzer'],
-                self.agents['program_builder']
+                self.agents['program_builder'],
+                self.agents['pick_section']
             ],
             max_steps=20,
             planning_interval=None,
         )
 
-        # L0 Root Manager Agent
-        self.agents['pick_section'] = ToolCallingAgent(
-            name="PickSection",
-            description="L0 Root Manager responsible for picking a section of the V8 code base that targets the JIT system",
-            tools=[
-                search_js_file_json,
-                get_all_js_file_names,
-                get_js_file_by_name,
-                get_random_js_file,
-                get_random_fuzzilli_file,
-                simliar_js_code,
-                simliar_fuzzilli_code,
-                simliar_execution_data,
-                search_regex_js,
-                search_regex_fuzzilli,
-                search_regex_execution_data,
-            ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
-            managed_agents=[
-                self.agents['father_of_george']
-            ],
-            max_steps=10,
-            planning_interval=None,
-        )
+
     
 
     def get_prompt(self, prompt_name: str) -> str:

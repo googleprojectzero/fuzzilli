@@ -9,6 +9,11 @@ The point of making these custom Agentic Program Templates is to provide a level
 
 YOU MUST NEVER SKIP STAGES! 
 
+## STAGE 0 
+
+YOU SHOULD RUN the agent pick_section in order to get a starting target/code REGION
+
+
 ## STAGE 1
 
 During this stage you need to determine what exactly the plan and general sections 
