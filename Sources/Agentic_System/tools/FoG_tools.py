@@ -1,11 +1,33 @@
 from smolagents import tool
-from tools.common_tools import * #
+from tools.common_tools import * 
+from fuzzywuzzy import fuzz
+import json
+import os
+import subprocess
+import re
+import random
+from pathlib import Path
 
 FUZZILTOOL_BIN = "/usr/share/vrigatoni/fuzzillai/.build/x86_64-unknown-linux-gnu/debug/FuzzILTool"
 OUTPUT_DIRECTORY = "/tmp/fog-d8-records" 
 
+# Cached regressions.json data to avoid reloading on every tool call
+_REGRESSIONS_PATH = (Path(__file__).parent.parent / "regressions.json").resolve()
+_REGRESSIONS_CACHE = None
+
+def _load_regressions_once():
+    global _REGRESSIONS_CACHE
+    if _REGRESSIONS_CACHE is not None:
+        return _REGRESSIONS_CACHE
+    try:
+        with open(_REGRESSIONS_PATH, "r") as f:
+            _REGRESSIONS_CACHE = json.load(f)
+    except Exception:
+        _REGRESSIONS_CACHE = {}
+    return _REGRESSIONS_CACHE
+
 @tool
-def lookup(query: str) -> str:
+def web_search(query: str) -> str:
     """
     Search the internet for information about a given query.
     
@@ -92,7 +114,7 @@ def ripgrep(pattern: str, options: str = "") -> str:
     Returns:
         str: Search results showing matching lines with context.
     """
-    return get_output(run_command(f"rg -C {options} '{pattern}'"))
+    return get_output(run_command(f"rg {options} '{pattern}'"))
 
 @tool
 def fuzzy_finder(pattern: str, options: str = "") -> str:
@@ -191,3 +213,227 @@ def run_d8(target: str, options: str = "") -> str:
 
     with open(f"{OUTPUT_DIRECTORY}/{target}.err", "w") as file:
         file.write(completed_process.stderr or "")
+
+
+@tool
+def search_js_file_json(pattern: str, return_topic: int=0) -> str:
+    """
+    Search the regressions.json file for a given pattern
+    
+    Args:
+        pattern (str): The pattern to search for in the regressions.json file
+        return_topic (int): The topic to return from the regressions.json file
+        0: return all
+        1: return the js file
+        2: return the fuzzilli file
+        3: return the execution data
+    Returns:
+        str: The results of the search
+    """
+    data = _load_regressions_once()
+    for key, value in data.items():
+        if pattern in key:
+            if return_topic == 0:
+                return value
+            elif return_topic == 1:
+                return value["js"]
+            elif return_topic == 2:
+                return value["Fuzzilli"]
+            elif return_topic == 3:
+                return value["execution_data"]
+        else:
+            return "No results found"
+
+@tool
+def search_regex_js(regex: str) -> str:
+    """
+    Search the regressions.json JS files for a given regex (as a real regex pattern),
+    and return matching JS code snippets (with file names).
+
+    Args:
+        regex (str): The regex pattern to search for in the regressions.json JS files.
+    Returns:
+        str: The results of the regex search, or "No matches found".
+    """
+    pattern = re.compile(regex, re.MULTILINE)
+    results = []
+    data = _load_regressions_once()
+    for key, value in data.items():
+        js_code = value.get("js", "")
+        if pattern.search(js_code):
+            results.append(f"this is js code for {key}\n{js_code}\n")
+    if results:
+        return "\n".join(results)
+    else:
+        return "No matches found"
+
+@tool
+def search_regex_fuzzilli(regex: str) -> str:
+    """
+    Search the regressions.json Fuzzilli files for a given regex (as a real regex pattern),
+    and return matching Fuzzilli code snippets (with file names).
+    
+    Args:
+        regex (str): The regex pattern to search for in the regressions.json Fuzzilli files.
+    Returns:
+        str: The results of the regex search, or "No matches found".
+    """
+    pattern = re.compile(regex, re.MULTILINE)
+    results = []
+    data = _load_regressions_once()
+    for key, value in data.items():
+        fuzzilli_code = value.get("Fuzzilli", "")
+        if pattern.search(fuzzilli_code):
+            results.append(f"this is fuzzilli code for {key}\n{fuzzilli_code}\n")
+    if results:
+        return "\n".join(results)
+    else:
+        return "No matches found"
+
+
+@tool
+def search_regex_execution_data(regex: str) -> str:
+    """
+    Search the regressions.json execution data files for a given regex (as a real regex pattern),
+    and return matching execution data snippets (with file names).
+    
+    Args:
+        regex (str): The regex pattern to search for in the regressions.json execution data files.
+    Returns:
+        str: The results of the regex search, or "No matches found".
+    """
+    pattern = re.compile(regex, re.MULTILINE)
+    results = []
+    data = _load_regressions_once()
+    for key, value in data.items():
+        execution_data = value.get("execution_data", "")
+        if pattern.search(execution_data):
+            results.append(f"this is execution data for {key}\n{execution_data}\n")
+    if results:
+        return "\n".join(results)
+    else:
+        return "No matches found"
+
+@tool
+def get_random_js_file() -> str:
+    """
+    Get a random JS file from the regressions.json file
+    
+    Returns:
+        str: The random JS file
+    """
+    data = _load_regressions_once()
+    key = random.choice(list(data.keys()))
+    return "this is js code for " + key + "\n" + data[key]["js"]
+
+@tool
+def get_random_fuzzilli_file() -> str:
+    """
+    Get a random Fuzzilli file from the regressions.json file
+    
+    Returns:
+        str: The random Fuzzilli file
+    """
+    data = _load_regressions_once()
+    keys = list(data.keys())
+    if not keys:
+        return "No matches found"
+    key = random.choice(keys)
+    attempts = 0
+    while attempts < 50 and len(data.get(key, {}).get("Fuzzilli", "")) < 10:
+        key = random.choice(keys)
+        attempts += 1
+    return "this is fuzzilli code for " + key + "\n" + data[key]["Fuzzilli"]
+
+
+@tool 
+def simliar_js_code(JS_File_Name: str) -> str:
+    """
+    Find the most similar JS code to the given JS code
+    
+    Args:
+        js_code (str): The JS code to find the most similar code to
+    Returns:
+        str: The most similar JS code
+    """
+    data = _load_regressions_once()
+    simlair_js_code = []
+    for key, value in data.items():
+        if key == JS_File_Name:
+            continue
+        fuzz_score = fuzz.ratio(data[JS_File_Name]["js"], value["js"])
+        if fuzz_score > 80: # 80% similarity
+            simlair_js_code.append((key, fuzz_score))
+    simlair_js_code.sort(key=lambda x: x[1], reverse=True)
+    return "the most similar JS code to " + JS_File_Name + " are " + str(simlair_js_code)
+
+@tool 
+def simliar_fuzzilli_code(JS_File_Name: str) -> str:
+    """
+    Find the most similar Fuzzilli code to the given Fuzzilli code
+    
+    Args:
+        fuzzilli_code (str): The Fuzzilli code to find the most similar code to
+    Returns:
+        str: The most similar Fuzzilli code
+    """
+    data = _load_regressions_once()
+    simlair_fuzzilli_code = []
+    for key, value in data.items():
+        if key == JS_File_Name:
+            continue
+        fuzz_score = fuzz.ratio(data[JS_File_Name]["Fuzzilli"], value["Fuzzilli"])
+        if fuzz_score > 80: # 80% similarity
+            simlair_fuzzilli_code.append((key, fuzz_score))
+    simlair_fuzzilli_code.sort(key=lambda x: x[1], reverse=True)
+    return "the most similar Fuzzilli code to " + JS_File_Name + " are " + str(simlair_fuzzilli_code)
+
+@tool
+def simliar_execution_data(JS_File_Name: str) -> str:
+    """
+    Find the most similar execution data to the given execution data
+    
+    Args:
+        execution_data (str): The execution data to find the most similar data to
+    Returns:
+        str: The most similar execution data
+    """
+    data = _load_regressions_once()
+    simlair_execution_data = []
+    for key, value in data.items():
+        if key == JS_File_Name:
+            continue
+        fuzz_score = fuzz.ratio(data[JS_File_Name]["execution_data"], value["execution_data"])
+        if fuzz_score > 60: # 60% similarity
+            simlair_execution_data.append((key, fuzz_score))
+    simlair_execution_data.sort(key=lambda x: x[1], reverse=True)
+    return "the most similar execution data to " + JS_File_Name + " are " + str(simlair_execution_data)
+
+
+@tool
+def get_all_js_file_names() -> str:
+    """
+    Get all JS file names from the regressions.json file
+    
+    Returns:
+        str: All JS file names
+    """
+    data = _load_regressions_once()
+    return list(data.keys())
+
+
+@tool
+def get_js_file_by_name(file_name: str) -> str: 
+    """
+    Get a JS file by name from the regressions.json file
+    
+    Args:
+        file_name (str): The name of the JS file to get
+    Returns:
+        str: The JS file
+    """
+    data = _load_regressions_once()
+    entry = data.get(file_name)
+    if entry is None:
+        return "No results found"
+    return "this is data for " + file_name + "\n" + json.dumps(entry)

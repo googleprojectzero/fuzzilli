@@ -5,6 +5,17 @@ from agents.BaseAgent import Agent
 from agents.EBG import EBG
 from pathlib import Path 
 from tools.FoG_tools import *
+from tools.rag_tools import (
+    set_rag_collection,
+    get_rag_collection,
+    search_rag_db,
+    update_rag_db,
+    delete_rag_db,
+    list_rag_db,
+    get_rag_doc,
+    search_knowledge_base,
+    get_knowledge_doc,
+)
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 from config_loader import get_openai_api_key, get_anthropic_api_key
@@ -16,7 +27,10 @@ class Father(Agent):
         self.agents['george_foreman'] = ToolCallingAgent(
             name="GeorgeForeman",
             description="L2 Worker responsible for generating JavaScript programs and fuzzing corpus",
-            tools=[],
+            tools=[
+
+
+            ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
             max_steps=10,
@@ -24,10 +38,24 @@ class Father(Agent):
         )
 
         # L2 Worker: Retriever of Code (under CodeAnalyzer)
-        self.agents['retriever_of_code'] = ToolCallingAgent(
-            name="RetrieverOfCode",
+        self.agents['reviewer_of_code'] = ToolCallingAgent(
+            name="ReviewerOfCode",
             description="L2 Worker responsible for reviewing code from various sources using RAG database",
-            tools=[run_d8],
+            tools=[run_d8,
+                fuzzy_finder,
+                ripgrep,
+                tree,
+                web_search,
+                search_rag_db,
+                search_knowledge_base,
+                get_rag_doc,
+                get_knowledge_doc,
+                set_rag_collection,
+                get_rag_collection,
+                update_rag_db,
+                delete_rag_db,
+                list_rag_db,
+            ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             max_steps=10,
             planning_interval=None,
@@ -37,7 +65,11 @@ class Father(Agent):
         self.agents['v8_search'] = ToolCallingAgent(
             name="V8Search",
             description="L2 Worker responsible for searching V8 source code using fuzzy find, regex, and compilation tools",
-            tools=[fuzzy_finder, ripgrep, tree],
+            tools=[
+                fuzzy_finder,
+                ripgrep,
+                tree,
+            ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
             max_steps=10,
             planning_interval=None,
@@ -47,10 +79,31 @@ class Father(Agent):
         self.agents['code_analyzer'] = ToolCallingAgent(
             name="CodeAnalyzer",
             description="L1 Manager responsible for analyzing code and coordinating retrieval and V8 search operations",
-            tools=[run_python, lift_fuzzil_to_js, compile_js_to_fuzzil, fuzzy_finder, ripgrep, tree, lookup], # add rag db tools here aswell
+            tools=[
+                run_python, 
+                lift_fuzzil_to_js,
+                compile_js_to_fuzzil, 
+                fuzzy_finder,
+                tree, 
+                ripgrep, 
+                web_search,
+                # RAG collection management
+                set_rag_collection,
+                get_rag_collection,
+                # Chroma-based RAG queries
+                search_rag_db,
+                update_rag_db,
+                delete_rag_db,
+                list_rag_db,
+                get_rag_doc,
+                # FAISS knowledge base queries
+                search_knowledge_base,
+                get_knowledge_doc,
+                 
+                ], # add rag db tools here aswell
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
-                self.agents['retriever_of_code'], 
+                self.agents['reviewer_of_code'], 
                 self.agents['v8_search']
                 ],
             max_steps=15,
@@ -74,7 +127,20 @@ class Father(Agent):
         self.agents['father_of_george'] = ToolCallingAgent(
             name="FatherOfGeorge",
             description="L1 Manager responsible for orchestrating code analysis and program building operations",
-            tools=[],#rag db tools here
+            tools=[
+                # RAG collection management
+                set_rag_collection,
+                get_rag_collection,
+                # Chroma-based RAG queries
+                search_rag_db,
+                update_rag_db,
+                delete_rag_db,
+                list_rag_db,
+                get_rag_doc,
+                # FAISS knowledge base queries
+                search_knowledge_base,
+                get_knowledge_doc,
+            ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[
                 self.agents['code_analyzer'],
@@ -88,7 +154,19 @@ class Father(Agent):
         self.agents['pick_section'] = ToolCallingAgent(
             name="PickSection",
             description="L0 Root Manager responsible for picking a section of the V8 code base that targets the JIT system",
-            tools=[],
+            tools=[
+                search_js_file_json,
+                get_all_js_file_names,
+                get_js_file_by_name,
+                get_random_js_file,
+                get_random_fuzzilli_file,
+                simliar_js_code,
+                simliar_fuzzilli_code,
+                simliar_execution_data,
+                search_regex_js,
+                search_regex_fuzzilli,
+                search_regex_execution_data,
+            ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[
                 self.agents['father_of_george']
