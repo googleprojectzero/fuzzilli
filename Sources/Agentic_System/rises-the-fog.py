@@ -9,9 +9,6 @@ import logging
 import config_loader
 from agents.FoG import Father
 from agents.EBG import EBG
-
-# we need logging. Steal from squidagent
-
 from smolagents import LiteLLMModel
 from config_loader import get_openai_api_key, get_anthropic_api_key
 
@@ -30,8 +27,6 @@ class FatherOfGod:
         self.ebg = EBG(self.model, api_key=self.openai_api_key, anthropic_api_key=self.anthropic_api_key)
 
 
-
-
 def main():
     print("I must go in; the fog is rising")
     a = FatherOfGod()
@@ -45,4 +40,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
