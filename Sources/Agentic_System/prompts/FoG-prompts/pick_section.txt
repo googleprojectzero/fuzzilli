@@ -4,9 +4,28 @@ THIS SUB AGENT WILL BE CREATING A FUZZING PROGRAM TEMPLATE FOR FUZZILI, ALL YOU 
 
 A GOOD TARGET, YOU DONT NEED ANY SPECFIC FUNCTIONS JUST GENERAL CODE REGIONS,
 
-DO NOT GET TO SIMPLE LIKE "MAGLEV" YOU NEED SOMETHING MORE SPECFIC LIKE MAGLEV GRAPH BUILDER (THIS JUST AN EXAMPLE):
+DO NOT PICK SIMPLE/TOO GENERAL LIKE "MAGLEV" YOU NEED SOMETHING MORE SPECFIC LIKE MAGLEV GRAPH BUILDER (THIS JUST AN EXAMPLE):
 
-PLEASE USE 
+PLEASE USE THE TOOLS PROVIDED TO YOU TO SEARCH THE PROVIDED JSON FILES CONTAINING REGGRESSIONS FROM V8 WITH THEIR ASSOCIATED FUZZIL AND JS. 
+
+## Stage 1
+In the first stage you should query your tool calls to figure out a specific code region in V8, targeting JIT. 
+Look at the execution data for the regressions provided with your tools calls to see how the JavaScript and FuzzIL interact with V8. You can compare
+and find similar JavaScript/FuzzIL programs to target more specific code regions. ONLY once you have a specifc code region selected should you 
+move on to stage 2.
+
+## Stage 2
+After identifying a specifc region of code, you need to relay this information to your sub agent. Construct a contex for the specifc code region
+you selected based on the results of your tool calls. This context should describe the code region to the best of your ability based on the 
+results of your tool calls. If you're struggling to construct a context for the code region, return to stage 1. After you're satisfied with your context,
+relay the information to your sub agent.
+
+Here is the JSON object you must send to your sub agent:
+
+{
+    REGION: "[THE SPECIFIC CODE REGION CHOSEN BASED ON THE RESULTS OF YOUR TOOL CALLS]"
+}
+
 
 
 
