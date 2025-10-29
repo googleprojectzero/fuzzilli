@@ -22,6 +22,7 @@ from config_loader import get_openai_api_key, get_anthropic_api_key
 
 
 class Father(Agent):
+
     def setup_agents(self):
         # L2 Worker: EBG
         self.agents['george_foreman'] = ToolCallingAgent(
@@ -203,17 +204,33 @@ class Father(Agent):
         f = open(Path(__file__).parent.parent / "prompts" / "FoG-prompts" / prompt_name, 'r')
         prompt = f.read()
         f.close()
-        return prompt #
+        return prompt 
+    
 
 
-    def run_task(self, task_description: str, context: dict = None) -> dict:
-        results = {
-            "task_description": task_description,
-            "completed": False,
-            "output": None,
-            "error": None,
-        }
-        return results
+    def start_system(self):
+        """Kick off the FoG agentic system by running an initial orchestration task."""
+        result = self.run_task(
+            task_description="Initialize FoG orchestration across PickSection, FatherOfGeorge, CodeAnalyzer, and ProgramBuilder",
+            context={
+                "PickSection": "Select a promising V8 subsystem or JIT-related area to explore",
+                "FatherOfGeorge": "Coordinate between analysis and program generation",
+                "CodeAnalyzer": "Analyze V8 code and knowledge bases to guide fuzz inputs",
+                "ProgramBuilder": "Synthesize JavaScript programs and templates for fuzzing"
+            }
+        )
+        print("FoG start result:")
+        print(f"Completed: {result['completed']}")
+        if result['output']:
+            print(f"Output: {result['output']}")
+        if result['error']:
+            print(f"Error: {result['error']}")
+        return result
+
+    # def run_task(self, task_description: str, context: dict = None) -> dict:
+    #     self.set
+
+    #     return results
 
 def main():
     openai_key = get_openai_api_key()

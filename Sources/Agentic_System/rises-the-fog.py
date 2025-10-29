@@ -29,27 +29,9 @@ class FatherOfGod:
         self.system = Father(self.model, api_key=self.openai_api_key, anthropic_api_key=self.anthropic_api_key)
         self.ebg = EBG(self.model, api_key=self.openai_api_key, anthropic_api_key=self.anthropic_api_key)
 
-
 def main():
     print("I must go in; the fog is rising")
     a = FatherOfGod()
-    a.system.run_task(
-        task_description="Initialize corpus generation for V8 fuzzing",
-        context={
-            "CodeAnalyzer": "Analyze V8 source code for patterns. vulnerabilities. specifc components, etc...",
-            "ProgramBuilder": "Build JavaScript programs using corpus and context"
-        }
-    )
-
-    # delete below ... testing only
-    result = a.system.run_task(
-        task_description="Initialize corpus generation for V8 fuzzing",
-        context={
-            "CodeAnalyzer": "Analyze V8 source code for patterns. vulnerabilities. specifc components, etc...",
-            "ProgramBuilder": "Build JavaScript programs using corpus and context"
-        }
-    )
-
     if (not os.path.exists("regressions.json")):
         try:
             subprocess.run(["xz", "-d", "regressions.json.xz"], check=True)
@@ -59,13 +41,9 @@ def main():
             exit(1)
         else:
             print("Regressions.json decompressed successfully")
+    a.system.start_system()
 
-    print("Task Result:")
-    print(f"Completed: {result['completed']}")
-    print(f"Output: {result['output']}")
-    if result['error']:
-        print(f"Error: {result['error']}")
-    
+
 
 
 if __name__ == "__main__":
