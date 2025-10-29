@@ -111,7 +111,7 @@ class Father(Agent):
         f = open(Path(__file__).parent / "prompts_FOG" / prompt_name, 'r')
         prompt = f.read()
         f.close()
-        return prompt
+        return prompt #
 
 
     def run_task(self, task_description: str, context: dict = None) -> dict:
