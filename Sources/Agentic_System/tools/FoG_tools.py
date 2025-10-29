@@ -1,5 +1,5 @@
 from smolagents import tool
-from common_tools import *
+from tools.common_tools import *
 
 
 @tool

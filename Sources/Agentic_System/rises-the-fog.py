@@ -5,6 +5,7 @@ import json
 import os
 import sys
 from pathlib import Path
+import logging 
 
 from agents.FoG import Father
 from agents.EBG import EBG
@@ -12,7 +13,10 @@ from agents.EBG import EBG
 # we need logging. Steal from squidagent
 
 from smolagents import LiteLLMModel
+from config_loader import get_openai_api_key, get_anthropic_api_key
 
+logging.basicConfig(filename=os.path.join(os.getcwd(), 'fog_logs', 'rises_the_fog.log'), level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 BASE_MODEL_ID = "gpt-5-mini"
 
