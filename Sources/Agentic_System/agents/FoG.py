@@ -77,10 +77,10 @@ class Father(Agent):
             system_prompt=self.get_prompt('program_builder.txt'),
         )
         
-        # L0 Root Manager Agent
+        # L1 Manager: Father of George (under PickSection)
         self.agents['father_of_george'] = ToolCallingAgent(
             name="FatherOfGeorge",
-            description="L0 Root Manager responsible for orchestrating code analysis and program building operations",
+            description="L1 Manager responsible for orchestrating code analysis and program building operations",
             tools=[],#rag db tools here
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[
@@ -90,6 +90,20 @@ class Father(Agent):
             max_steps=20,
             planning_interval=None,
             system_prompt=self.get_prompt('root_manager.txt'),
+        )
+
+        # L0 Root Manager Agent
+        self.agents['pick_section'] = ToolCallingAgent(
+            name="PickSection",
+            description="L0 Root Manager responsible for picking a section of the V8 code base that targets the JIT system",
+            tools=[],
+            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            managed_agents=[
+                self.agents['father_of_george']
+            ],
+            max_steps=10,
+            planning_interval=None,
+            system_prompt=self.get_prompt('pick_section.txt'),
         )
     
 
@@ -138,3 +152,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# L0 Root: pick_section
+# ├── L1 Manager: father_of_george
+#     ├── L1 Manager: code_analyzer
+#     │   ├── L2 Worker: retriever_of_code
+#     │   └── L2 Worker: v8_search
+#     └── L1 Manager: program_builder
+#         └── L2 Worker: george_foreman
