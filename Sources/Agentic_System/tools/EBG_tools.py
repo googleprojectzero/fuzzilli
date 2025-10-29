@@ -16,11 +16,11 @@ def tree(directory: str = ".", options: str = "") -> str:
     Returns:
         str: Tree structure showing directories and files in the specified path.
     """
-    return run_command(f"tree {options} {directory}")
+    return get_output(run_command(f"tree {options} {directory}"))
 
 @tool 
 def run_d8(target: str, options: str = "") -> str:
-    """
+    f"""
     Run the target program using d8 to test for syntactical correctness
     and test for coverage. 
 
@@ -40,16 +40,25 @@ def run_d8(target: str, options: str = "") -> str:
         --trace-wasm-compiler (trace compiling of wasm code)
         --trace-wasm (trace wasm function calls)
 
-        ```
-        TODO: Trace output destination of each of the above flags. 
-              Regardless of whether it is printed to stdout or to
-              a file, I will want to put it in a predetermined
-              place that an AI can easily parse in digestible chunks.
-        ```
-
         AT ANY POINT IN TIME YOU CAN ONLY PICK UP TO 4 OF THESE OPTIONS.
+
+        WHENEVER --trace-turob-graph is passed MAKE SURE --trace-turbo-path is ALSO passed in
+        IF --trace-turbo-path is passed, MAKE SURE the output directory is {OUTPUT_DIRECTORY}/{target}
     """ 
-    return run_command(f"/usr/share/vrigatoni/fuzzillai/v8/v8/out/fuzzbuild/d8 {target} {options}")
+    completed_process = run_command(f"/usr/share/vrigatoni/fuzzillai/v8/v8/out/fuzzbuild/d8 {target} {options}")
+    if not completed_process:
+        return
+
+    try:
+        os.makedirs(OUTPUT_DIRECTORY)
+    except FileExistsError:
+        pass
+
+    with open(f"{OUTPUT_DIRECTORY}/{target}.out") as file:
+        file.write(p_stdout)
+
+    with open(f"{OUTPUT_DIRECTORY}/{target}.err") as file:
+        file.write(p_stderr)
 
 # TODO: @Tanush - good luck
 @tool
@@ -58,5 +67,17 @@ def get_call_graph(target: str) -> str:
     Get the call graph of the target program using d8 to test for syntactical correctness
     and test for coverage. 
     """
-    return run_command(f"")  # Database access wrappere
+    return get_output(run_command(f""))  # Database access wrappere
 
+@tool
+def decode_b64(str_base64: str) -> str:
+    """
+    Decode a base64 encoded string
+
+    Args:
+        str_base64 (str): The base64 encoded string to be decoded
+    
+    Returns:
+        str: Decoded base64 string
+    """
+    return get_output(run_command(f"echo '{str_base64.strip()}' | base64 -d"))
