@@ -97,7 +97,7 @@ let v8SandboxProfile = Profile(
 
                     function assert(c) {
                         if (!c) {
-                            throw new Error("Assertion failed!");
+                            throw new Error("Assertion in the in-sandbox-corruption API failed!");
                         }
                     }
 
