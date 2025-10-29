@@ -1,3 +1,0 @@
-[console_scripts]
-smolagent = smolagents.cli:main
-webagent = smolagents.vision_web_browser:main
