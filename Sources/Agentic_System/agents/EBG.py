@@ -5,7 +5,7 @@ L0 Manager Agent - Runtime analysis and issue solev
 '''
 
 from smolagents import LiteLLMModel, ToolCallingAgent
-from agents.BaseAgent import Agent
+from BaseAgent import Agent
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).parent.parent))

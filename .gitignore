@@ -8,7 +8,7 @@ Package.resolved
 .swiftpm
 /Corpus
 .venv
-**/__pychace__
+__pychace__/
 Sources/Agentic_System/keys.cfg
 
 # custom GCE configuration

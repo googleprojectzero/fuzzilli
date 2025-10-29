@@ -10,7 +10,7 @@ from pathlib import Path
 
 from smolagents import LiteLLMModel, ToolCallingAgent
 
-logging.basicConfig(filename=os.path.join(os.getcwd(), 'agents', 'fog_logs', 'base_agent.log'), level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename=os.path.join(os.getcwd(), 'fog_logs', 'base_agent.log'), level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class Agent(ABC): 
