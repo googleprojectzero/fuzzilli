@@ -9,6 +9,7 @@ Package.resolved
 /Corpus
 .venv
 **/__pychace__
+Sources/Agentic_System/keys.cfg
 
 # custom GCE configuration
 Cloud/GCE/config.sh
