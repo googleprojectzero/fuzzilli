@@ -1,1 +1,1 @@
-swift run FuzzilliCli --profile=v8 --engine=multi --resume --corpus=postgresql --postgres-url="postgresql://fuzzilli:fuzzilli123@localhost:5433/fuzzilli" --storagePath=./Corpus --logLevel=verbose --timeout=1500 --diagnostics --maxIterations=10 ~/vrig/v8/v8/out/fuzzbuild/d8 
+swift run FuzzilliCli --profile=v8 --engine=multi --resume --corpus=postgresql --postgres-url="postgresql://fuzzilli:fuzzilli123@localhost:5433/fuzzilli" --storagePath=./Corpus --logLevel=verbose --timeout=1500 --diagnostics ~/vrig/v8/v8/out/fuzzbuild/d8 

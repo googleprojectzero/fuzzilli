@@ -542,7 +542,8 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
             maxSize: maxCorpusSize,
             minMutationsPerSample: minMutationsPerSample,
             databasePool: databasePool,
-            fuzzerInstanceId: fuzzerInstanceId
+            fuzzerInstanceId: fuzzerInstanceId,
+            resume: resume
         )
         
         logger.info("Created PostgreSQL corpus with instance ID: \(fuzzerInstanceId)")
