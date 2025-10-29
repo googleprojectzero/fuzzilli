@@ -5,7 +5,8 @@ smolagents[litellm]
 # Build tools (REQUIRED)
 wheel
 setuptools
-
+fuzzywuzzy
+fuzzywuzzy[speedup]
 # LLM and AI dependencies (REQUIRED)
 openai
 anthropic

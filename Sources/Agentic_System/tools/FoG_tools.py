@@ -429,7 +429,7 @@ def simliar_js_code(JS_File_Name: str) -> str:
     Find the most similar JS code to the given JS code
     
     Args:
-        js_code (str): The JS code to find the most similar code to
+        JS_File_Name (str): The name of the JS file/key to find the most similar code to
     Returns:
         str: The most similar JS code
     """
@@ -450,7 +450,7 @@ def simliar_fuzzilli_code(JS_File_Name: str) -> str:
     Find the most similar Fuzzilli code to the given Fuzzilli code
     
     Args:
-        fuzzilli_code (str): The Fuzzilli code to find the most similar code to
+        JS_File_Name (str): The name of the JS file/key to find the most similar Fuzzilli code to
     Returns:
         str: The most similar Fuzzilli code
     """
@@ -471,7 +471,7 @@ def simliar_execution_data(JS_File_Name: str) -> str:
     Find the most similar execution data to the given execution data
     
     Args:
-        execution_data (str): The execution data to find the most similar data to
+        JS_File_Name (str): The name of the JS file/key to find the most similar execution data to
     Returns:
         str: The most similar execution data
     """
@@ -545,8 +545,13 @@ def search_template_file_json(pattern: str, return_topic: int = 0) -> str:
 @tool
 def search_regex_template_swift(regex: str) -> str:
     """
+
     Regex search over ProgramTemplateSwift in templates.json.
     Returns matching snippets with template names.
+    Args:
+        regex (str): The regex pattern to search for in the templates.json ProgramTemplateSwift files.
+    Returns:
+        str: The results of the regex search, or "No matches found".
     """
     pattern = re.compile(regex, re.MULTILINE)
     results = []
@@ -562,6 +567,11 @@ def search_regex_template_fuzzil(regex: str) -> str:
     """
     Regex search over ProgramTemplateFuzzIL in templates.json.
     Returns matching snippets with template names.
+    
+    Args:
+        regex (str): The regex pattern to search for in the templates.json ProgramTemplateFuzzIL fields.
+    Returns:
+        str: The results of the regex search, or "No matches found".
     """
     pattern = re.compile(regex, re.MULTILINE)
     results = []
@@ -594,7 +604,14 @@ def get_random_template_fuzzil() -> str:
 
 @tool
 def similar_template_swift(template_name: str) -> str:
-    """Find similar ProgramTemplateSwift entries to the given template key."""
+    """
+    Find similar ProgramTemplateSwift entries to the given template key.
+    
+    Args:
+        template_name (str): The template key to compare against.
+    Returns:
+        str: A list of similar template names with scores, or a no-results message.
+    """
     data = _load_templates_once()
     if template_name not in data:
         return "No results found"
@@ -611,7 +628,14 @@ def similar_template_swift(template_name: str) -> str:
 
 @tool
 def similar_template_fuzzil(template_name: str) -> str:
-    """Find similar ProgramTemplateFuzzIL entries to the given template key."""
+    """
+    Find similar ProgramTemplateFuzzIL entries to the given template key.
+    
+    Args:
+        template_name (str): The template key to compare against.
+    Returns:
+        str: A list of similar template names with scores, or a no-results message.
+    """
     data = _load_templates_once()
     if template_name not in data:
         return "No results found"
@@ -634,7 +658,14 @@ def get_all_template_names() -> str:
 
 @tool
 def get_template_by_name(name: str) -> str:
-    """Get full template entry by key."""
+    """
+    Get full template entry by key.
+    
+    Args:
+        name (str): The template key to retrieve.
+    Returns:
+        str: The full template entry as a JSON string, or a no-results message.
+    """
     data = _load_templates_once()
     entry = data.get(name)
     if entry is None:
@@ -685,6 +716,11 @@ def init_rag_db(rag_db_id: str) -> str:
     """
     Initialize a non-vector RAG database identified by rag_db_id.
     Creates an empty JSON file under rag_db/<rag_db_id>.json if missing.
+    
+    Args:
+        rag_db_id (str): The RAG database identifier to initialize.
+    Returns:
+        str: A confirmation message with the initialized path.
     """
     _ensure_rag_db_initialized(rag_db_id)
     return f"OK: initialized RAG DB {rag_db_id} at {_rag_db_path(rag_db_id)}"
