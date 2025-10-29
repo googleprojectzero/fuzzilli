@@ -26,7 +26,18 @@ class EBG(Agent):
             planning_interval=None,
         )
         #self.agents['vuln_analysis_agent'].prompt_templates["system_prompt"] = self.get_prompt("code_analysis_prompt") # and similar for other agents
-        
+
+        # L2 Worker: Corpus Validator (under George)
+        self.agents['corpus_validator'] = ToolCallingAgent(
+            name="CorpusValidator",
+            description="L2 Worker responsible for validating corpus integrity and quality",
+            tools=[],
+            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
+            managed_agents=[],
+            max_steps=8,
+            planning_interval=None,
+        )
+
         # L2 Worker: Corpus Generator (under George)
         self.agents['corpus_generator'] = ToolCallingAgent(
             name="CorpusGenerator",
@@ -53,17 +64,6 @@ class EBG(Agent):
                 self.agents['code_analyzer']
             ],
             max_steps=10,
-            planning_interval=None,
-        )
-        
-        # L2 Worker: Corpus Validator (under George)
-        self.agents['corpus_validator'] = ToolCallingAgent(
-            name="CorpusValidator",
-            description="L2 Worker responsible for validating corpus integrity and quality",
-            tools=[],
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
-            managed_agents=[],
-            max_steps=8,
             planning_interval=None,
         )
         
