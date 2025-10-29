@@ -51,6 +51,9 @@ public class Fuzzer {
     /// The mutators used by the engine.
     public let mutators: WeightedList<Mutator>
 
+    /// The mutators used by the engine when dynamically weighted during runtime
+    public let runtimeWeightedMutators: RuntimeWeightedList<Mutator>
+
     /// The evaluator to score generated programs.
     public let evaluator: ProgramEvaluator
 
@@ -160,6 +163,7 @@ public class Fuzzer {
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
         codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator,
+        runtimeWeightedMutators: RuntimeWeightedList<Mutator>,
         environment: JavaScriptEnvironment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         let uniqueId = UUID()
@@ -171,6 +175,7 @@ public class Fuzzer {
         self.timers = Timers(queue: self.queue)
         self.engine = engine
         self.mutators = mutators
+        self.runtimeWeightedMutators = runtimeWeightedMutators
         self.codeGenerators = codeGenerators
 
         self.programTemplates = programTemplates
@@ -910,6 +915,7 @@ public class Fuzzer {
 
         // Perform the next iteration as soon as all tasks related to the current iteration are finished.
         fuzzGroup.notify(queue: queue) {
+            self.runtimeWeightedMutators.flushLastElements()
             self.fuzzOne()
         }
     }
