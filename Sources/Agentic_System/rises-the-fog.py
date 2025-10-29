@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 import logging 
-
+import config_loader
 from agents.FoG import Father
 from agents.EBG import EBG
 
@@ -22,28 +22,27 @@ BASE_MODEL_ID = "gpt-5-mini"
 
 
 class FatherOfGod:
-    def __init__(self, api_key: str = None, anthropic_api_key: str = None):
-        if api_key:
-            self.model = LiteLLMModel(model_id=BASE_MODEL_ID, api_key=api_key)
-        else:
-            self.model = LiteLLMModel(model_id=BASE_MODEL_ID)
-
-        self.api_key = api_key
-        self.anthropic_api_key = anthropic_api_key
-
-        # Create specialized subsystem classes
-        self.systems = {
-            'FoG': Father(self.model, self.api_key, self.anthropic_api_key),
-            'EBG': EBG(self.model, self.api_key, self.anthropic_api_key)
-        }
-
+    def __init__(self):
+        self.openai_api_key = get_openai_api_key()
+        self.anthropic_api_key = get_anthropic_api_key()
+        self.model = LiteLLMModel(model_id=BASE_MODEL_ID, api_key=self.openai_api_key)
+        self.system = Father(self.model, api_key=self.openai_api_key, anthropic_api_key=self.anthropic_api_key)
+        self.ebg = EBG(self.model, api_key=self.openai_api_key, anthropic_api_key=self.anthropic_api_key)
 
 
 
 
 def main():
     print("I must go in; the fog is rising")
-    parser = argparse.ArgumentParser(description="Father of God")
+    a = FatherOfGod()
+    a.system.run_task(
+        task_description="Initialize corpus generation for V8 fuzzing",
+        context={
+            "CodeAnalyzer": "Analyze V8 source code for patterns. vulnerabilities. specifc components, etc...",
+            "ProgramBuilder": "Build JavaScript programs using corpus and context"
+        }
+    )
+
 
 if __name__ == "__main__":
     main()
