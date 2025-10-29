@@ -1,6 +1,7 @@
 from smolagents import tool
 from tools.common_tools import *
 
+OUTPUT_DIRECTORY = "/tmp/fog-output-samples"
 
 @tool
 def lookup(query: str) -> str:
@@ -150,7 +151,7 @@ def compile_js_to_fuzzil(target: str) -> str:
 
 @tool 
 def run_d8(target: str, options: str = "") -> str:
-    """
+    f"""
     Run the target program using d8 to test for syntactical correctness
     and test for coverage. 
 
@@ -178,6 +179,21 @@ def run_d8(target: str, options: str = "") -> str:
         ```
 
         AT ANY POINT IN TIME YOU CAN ONLY PICK UP TO 4 OF THESE OPTIONS.
-    """ 
-    return run_command(f"/usr/share/vrigatoni/fuzzillai/v8/v8/out/fuzzbuild/d8 {target} {options}")
 
+        WHENEVER --trace-turob-graph is passed MAKE SURE --trace-turbo-path is ALSO passed in
+        IF --trace-turbo-path is passed, MAKE SURE the output directory is {OUTPUT_DIRECTORY}/{target}
+    """ 
+    completed_procses = run_command(f"/usr/share/vrigatoni/fuzzillai/v8/v8/out/fuzzbuild/d8 {target} {options}")
+    if not completed_process:
+        return
+
+    try:
+        os.makedirs(OUTPUT_DIRECTORY)
+    except FileExistsError:
+        pass
+
+    with open(f"{OUTPUT_DIRECTORY}/{target}.out") as file:
+        file.write(p_stdout)
+
+    with open(f"{OUTPUT_DIRECTORY}/{target}.err") as file:
+        file.write(p_stderr)
