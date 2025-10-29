@@ -382,13 +382,21 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                     uniquePrograms[programHash] = (program, metadata)
                 }
                 
-                // Prepare execution data
+                // Prepare execution data, compute coverage percentage from evaluator if available
+                let coveragePct: Double = {
+                    if let coverageEvaluator = self.fuzzer.evaluator as? ProgramCoverageEvaluator {
+                        return coverageEvaluator.currentScore * 100.0
+                    } else {
+                        return 0.0
+                    }
+                }()
+
                 let executionData = ExecutionBatchData(
                     program: program,
                     executionType: executionType,
                     mutatorType: nil,
                     outcome: aspects.outcome,
-                    coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0,
+                    coverage: coveragePct,
                     coverageEdges: (aspects as? CovEdgeSet).map { Set($0.getEdges().map { Int($0) }) } ?? Set<Int>()
                 )
                 executionBatchData.append(executionData)
@@ -767,13 +775,22 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 self.logger.info("Storing execution: fuzzerId=\(fuzzerId), outcome=\(executionData.outcome), execTime=\(executionData.execTime)")
             }
 
+            // Derive coverage percentage (0-100) from evaluator if available
+            let coveragePct: Double = {
+                if let coverageEvaluator = self.fuzzer.evaluator as? ProgramCoverageEvaluator {
+                    return coverageEvaluator.currentScore * 100.0
+                } else {
+                    return 0.0
+                }
+            }()
+
             // Store both program and execution in a single transaction to avoid foreign key issues
             _ = try await storage.storeProgramAndExecution(
                 program: program,
                 fuzzerId: fuzzerId,
                 executionType: executionType,
                 outcome: executionData.outcome,
-                coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0,
+                coverage: coveragePct,
                 executionTimeMs: Int(executionData.execTime * 1000),
                 stdout: executionData.stdout,
                 stderr: executionData.stderr,

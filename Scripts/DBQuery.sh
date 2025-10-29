@@ -208,7 +208,7 @@ case "${1:-}" in
         run_query "All Executions" "SELECT e.execution_id, LEFT(p.program_base64, 20) as program_preview, eo.outcome, e.execution_time_ms, e.created_at FROM execution e JOIN program p ON e.program_hash = p.program_hash JOIN execution_outcome eo ON e.execution_outcome_id = eo.id ORDER BY e.created_at DESC LIMIT 20;"
         ;;
     "crashes")
-        run_query "All Crashes" "SELECT e.execution_id, LEFT(p.program_base64, 20) as program_preview, e.stdout, e.stderr, e.created_at FROM execution e JOIN program p ON e.program_hash = p.program_hasht  JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed' ORDER BY e.created_at DESC LIMIT 20;"
+        run_query "All Crashes" "SELECT e.execution_id, LEFT(p.program_base64, 20) as program_preview, e.stdout, e.stderr, e.created_at FROM execution e JOIN program p ON e.program_hash = p.program_hash JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed' ORDER BY e.created_at DESC LIMIT 20;"
         ;;
     "stats")
         run_query "Quick Stats" "SELECT COUNT(*) as programs, (SELECT COUNT(*) FROM execution) as executions, (SELECT COUNT(*) FROM execution e JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed') as crashes FROM program;"
