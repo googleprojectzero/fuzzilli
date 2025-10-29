@@ -10,10 +10,13 @@ from pathlib import Path
 
 FUZZILTOOL_BIN = "/usr/share/vrigatoni/fuzzillai/.build/x86_64-unknown-linux-gnu/debug/FuzzILTool"
 OUTPUT_DIRECTORY = "/tmp/fog-d8-records" 
+RAG_DB_DIR = (Path(__file__).parent.parent / "rag_db").resolve()
 
 # Cached regressions.json data to avoid reloading on every tool call
 _REGRESSIONS_PATH = (Path(__file__).parent.parent / "regressions.json").resolve()
 _REGRESSIONS_CACHE = None
+_TEMPLATES_PATH = (Path(__file__).parent.parent / "templates" / "templates.json").resolve()
+_TEMPLATES_CACHE = None
 
 def _load_regressions_once():
     global _REGRESSIONS_CACHE
@@ -25,6 +28,80 @@ def _load_regressions_once():
     except Exception:
         _REGRESSIONS_CACHE = {}
     return _REGRESSIONS_CACHE
+
+def _load_templates_once():
+    global _TEMPLATES_CACHE
+    if _TEMPLATES_CACHE is not None:
+        return _TEMPLATES_CACHE
+    try:
+        with open(_TEMPLATES_PATH, "r") as f:
+            _TEMPLATES_CACHE = json.load(f)
+    except Exception:
+        _TEMPLATES_CACHE = {}
+    return _TEMPLATES_CACHE
+
+def _rag_db_path(rag_db_id: str) -> Path:
+    return (RAG_DB_DIR / f"{rag_db_id}.json").resolve()
+
+def _ensure_rag_db_initialized(rag_db_id: str) -> None:
+    RAG_DB_DIR.mkdir(parents=True, exist_ok=True)
+    path = _rag_db_path(rag_db_id)
+    if not path.exists():
+        with open(path, "w") as f:
+            json.dump({}, f)
+
+def _load_rag_db(rag_db_id: str) -> dict:
+    _ensure_rag_db_initialized(rag_db_id)
+    path = _rag_db_path(rag_db_id)
+    try:
+        with open(path, "r") as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                return data
+            return {}
+    except Exception:
+        return {}
+
+def _save_rag_db(rag_db_id: str, data: dict) -> None:
+    _ensure_rag_db_initialized(rag_db_id)
+    path = _rag_db_path(rag_db_id)
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+
+def _parse_rag_entry(raw: str):
+    """
+    Accepts either a JSON object string with an "id" field, or a
+    "<ID>:{...}" pattern where the right side is JSON.
+    Returns (item_id:str, payload:dict) or (None, None) on failure.
+    """
+    if not isinstance(raw, str):
+        return None, None
+    s = raw.strip()
+    # Try as pure JSON first
+    try:
+        obj = json.loads(s)
+        if isinstance(obj, dict):
+            item_id = obj.get("id") or obj.get("ID")
+            payload = {k: v for k, v in obj.items() if k not in ("id", "ID")}
+            if item_id and isinstance(payload, dict):
+                return str(item_id), payload
+    except Exception:
+        pass
+    # Try the "ID:{...}" pattern
+    try:
+        # split on the first occurrence of ":{"
+        idx = s.find(":{")
+        if idx == -1:
+            idx = s.find(": {")
+        if idx != -1:
+            item_id = s[:idx].strip()
+            json_part = s[idx+1:].strip()
+            payload = json.loads(json_part)
+            if item_id and isinstance(payload, dict):
+                return item_id, payload
+    except Exception:
+        pass
+    return None, None
 
 @tool
 def web_search(query: str) -> str:
@@ -437,3 +514,177 @@ def get_js_file_by_name(file_name: str) -> str:
     if entry is None:
         return "No results found"
     return "this is data for " + file_name + "\n" + json.dumps(entry)
+
+
+# =============================
+# templates.json query helpers
+# =============================
+
+@tool
+def search_template_file_json(pattern: str, return_topic: int = 0) -> str:
+    """
+    Search templates.json for a given key pattern.
+
+    Args:
+        pattern (str): Substring to match against template key.
+        return_topic (int): 0 full entry, 1 ProgramTemplateSwift, 2 ProgramTemplateFuzzIL, 3 ProgramTemplateName
+    """
+    data = _load_templates_once()
+    for key, value in data.items():
+        if pattern in key:
+            if return_topic == 0:
+                return json.dumps(value)
+            elif return_topic == 1:
+                return value.get("ProgramTemplateSwift", "")
+            elif return_topic == 2:
+                return value.get("ProgramTemplateFuzzIL", "")
+            elif return_topic == 3:
+                return value.get("ProgramTemplateName", "")
+    return "No results found"
+
+@tool
+def search_regex_template_swift(regex: str) -> str:
+    """
+    Regex search over ProgramTemplateSwift in templates.json.
+    Returns matching snippets with template names.
+    """
+    pattern = re.compile(regex, re.MULTILINE)
+    results = []
+    data = _load_templates_once()
+    for key, value in data.items():
+        txt = value.get("ProgramTemplateSwift", "")
+        if pattern.search(txt):
+            results.append(f"this is swift template for {key}\n{txt}\n")
+    return "\n".join(results) if results else "No matches found"
+
+@tool
+def search_regex_template_fuzzil(regex: str) -> str:
+    """
+    Regex search over ProgramTemplateFuzzIL in templates.json.
+    Returns matching snippets with template names.
+    """
+    pattern = re.compile(regex, re.MULTILINE)
+    results = []
+    data = _load_templates_once()
+    for key, value in data.items():
+        txt = value.get("ProgramTemplateFuzzIL", "")
+        if pattern.search(txt):
+            results.append(f"this is fuzzil template for {key}\n{txt}\n")
+    return "\n".join(results) if results else "No matches found"
+
+@tool
+def get_random_template_swift() -> str:
+    """Return a random ProgramTemplateSwift from templates.json."""
+    data = _load_templates_once()
+    keys = list(data.keys())
+    if not keys:
+        return "No matches found"
+    name = random.choice(keys)
+    return "this is swift template for " + name + "\n" + data[name].get("ProgramTemplateSwift", "")
+
+@tool
+def get_random_template_fuzzil() -> str:
+    """Return a random ProgramTemplateFuzzIL from templates.json."""
+    data = _load_templates_once()
+    keys = list(data.keys())
+    if not keys:
+        return "No matches found"
+    name = random.choice(keys)
+    return "this is fuzzil template for " + name + "\n" + data[name].get("ProgramTemplateFuzzIL", "")
+
+@tool
+def similar_template_swift(template_name: str) -> str:
+    """Find similar ProgramTemplateSwift entries to the given template key."""
+    data = _load_templates_once()
+    if template_name not in data:
+        return "No results found"
+    base = data[template_name].get("ProgramTemplateSwift", "")
+    sims = []
+    for key, value in data.items():
+        if key == template_name:
+            continue
+        score = fuzz.ratio(base, value.get("ProgramTemplateSwift", ""))
+        if score > 80:
+            sims.append((key, score))
+    sims.sort(key=lambda x: x[1], reverse=True)
+    return "the most similar Swift templates to " + template_name + " are " + str(sims)
+
+@tool
+def similar_template_fuzzil(template_name: str) -> str:
+    """Find similar ProgramTemplateFuzzIL entries to the given template key."""
+    data = _load_templates_once()
+    if template_name not in data:
+        return "No results found"
+    base = data[template_name].get("ProgramTemplateFuzzIL", "")
+    sims = []
+    for key, value in data.items():
+        if key == template_name:
+            continue
+        score = fuzz.ratio(base, value.get("ProgramTemplateFuzzIL", ""))
+        if score > 80:
+            sims.append((key, score))
+    sims.sort(key=lambda x: x[1], reverse=True)
+    return "the most similar FuzzIL templates to " + template_name + " are " + str(sims)
+
+@tool
+def get_all_template_names() -> str:
+    """List all template keys in templates.json."""
+    data = _load_templates_once()
+    return list(data.keys())
+
+@tool
+def get_template_by_name(name: str) -> str:
+    """Get full template entry by key."""
+    data = _load_templates_once()
+    entry = data.get(name)
+    if entry is None:
+        return "No results found"
+    return "this is template data for " + name + "\n" + json.dumps(entry)
+
+
+@tool 
+def write_rag_db_id(rag_db_id: str, data: str) -> str:
+    r"""
+    Write data to the RAG database
+    
+    Args:
+        rag_db_id (str): The ID of the RAG database to write to
+        data (str): The data to write to the RAG database in the following format:
+            ID:{
+                body: <CODE SNIPPET>
+                context: <OTHER IDS THAT ARE RELATED TO THIS ONE>
+                explanation: <EXPLANATION OF THE CODE SNIPPET>
+                file_line: exmaple.cc:10
+            }
+    Returns:
+        str: The result of the write operation
+    """
+    db = _load_rag_db(rag_db_id)
+    item_id, payload = _parse_rag_entry(data)
+    if not item_id or not isinstance(payload, dict):
+        return "ERROR: data must be JSON with 'id' or in 'ID:{...}' format"
+    db[item_id] = payload
+    _save_rag_db(rag_db_id, db)
+    return f"OK: wrote {item_id} to {rag_db_id}"
+
+@tool
+def read_rag_db_id(rag_db_id: str) -> str:
+    """
+    Read data from the RAG database
+    
+    Args:
+        rag_db_id (str): The ID of the RAG database to read from
+    Returns:
+        str: The data from the RAG database
+    """
+    db = _load_rag_db(rag_db_id)
+    return json.dumps(db)
+
+@tool
+def init_rag_db(rag_db_id: str) -> str:
+    """
+    Initialize a non-vector RAG database identified by rag_db_id.
+    Creates an empty JSON file under rag_db/<rag_db_id>.json if missing.
+    """
+    _ensure_rag_db_initialized(rag_db_id)
+    return f"OK: initialized RAG DB {rag_db_id} at {_rag_db_path(rag_db_id)}"

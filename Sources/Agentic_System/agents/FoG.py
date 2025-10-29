@@ -26,10 +26,18 @@ class Father(Agent):
         # L2 Worker: EBG
         self.agents['george_foreman'] = ToolCallingAgent(
             name="GeorgeForeman",
-            description="L2 Worker responsible for generating JavaScript programs and fuzzing corpus",
+            description="L2 Worker responsible for validating program templates built by the program builder",
             tools=[
-
-
+                # templates.json access (generation-focused)
+                get_all_template_names,
+                get_template_by_name,
+                get_random_template_swift,
+                get_random_template_fuzzil,
+                search_template_file_json,
+                search_regex_template_swift,
+                search_regex_template_fuzzil,
+                similar_template_swift,
+                similar_template_fuzzil,
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
@@ -69,6 +77,9 @@ class Father(Agent):
                 fuzzy_finder,
                 ripgrep,
                 tree,
+                read_rag_db_id,
+                write_rag_db_id,
+                init_rag_db,
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
             max_steps=10,
@@ -99,6 +110,7 @@ class Father(Agent):
                 # FAISS knowledge base queries
                 search_knowledge_base,
                 get_knowledge_doc,
+                read_rag_db_id,
                  
                 ], # add rag db tools here aswell
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
@@ -114,7 +126,18 @@ class Father(Agent):
         self.agents['program_builder'] = ToolCallingAgent(
             name="ProgramBuilder",
             description="L1 Manager responsible for building program templates using corpus and context",
-            tools=[run_d8], # add rag db stuff here aswell
+            tools=[
+                run_d8,
+                get_all_template_names,
+                get_template_by_name,
+                get_random_template_swift,
+                get_random_template_fuzzil,
+                search_template_file_json,
+                search_regex_template_swift,
+                search_regex_template_fuzzil,
+                similar_template_swift,
+                similar_template_fuzzil,
+            ], # add rag db stuff here aswell
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
                 self.agents['george_foreman']
@@ -226,7 +249,7 @@ if __name__ == "__main__":
 # L0 Root: pick_section
 # ├── L1 Manager: father_of_george
 #     ├── L1 Manager: code_analyzer
-#     │   ├── L2 Worker: retriever_of_code
+#     │   ├── L2 Worker: reviewer_of_code
 #     │   └── L2 Worker: v8_search
 #     └── L1 Manager: program_builder
 #         └── L2 Worker: george_foreman
