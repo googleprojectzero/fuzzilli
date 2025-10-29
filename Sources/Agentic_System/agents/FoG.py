@@ -23,15 +23,12 @@ class Father(Agent):
             planning_interval=None,
         )
 
-        # L2 Worker: Reviwer of Code (under CodeAnalyzer)
-        self.agents['reviewer_of_code'] = ToolCallingAgent(
-            name="ReviewerOfCode",
+        # L2 Worker: Retriever of Code (under CodeAnalyzer)
+        self.agents['retriever_of_code'] = ToolCallingAgent(
+            name="RetrieverOfCode",
             description="L2 Worker responsible for reviewing code from various sources using RAG database",
             tools=[run_d8],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
-            managed_agents=[
-                self.agents['george_foreman']
-            ], 
             max_steps=10,
             planning_interval=None,
         )
