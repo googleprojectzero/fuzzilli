@@ -463,7 +463,7 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     }
 
     // Engines to execute programs.
-    var engine: FuzzEngine
+    let engine: FuzzEngine
     switch engineName {
     case "hybrid":
         engine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
@@ -528,9 +528,6 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
                                   environment: environment,
                                   alwaysEmitVariables: configuration.forDifferentialFuzzing)
 
-    // aleksi: testing override engine with test template engine
-    engine = TestTemplateEngine(numConsecutiveMutations: consecutiveMutations, lifter: lifter)
-
     // The evaluator to score produced samples.
     let evaluator = ProgramCoverageEvaluator(runner: runner)
 
@@ -547,9 +544,6 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
 
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()
-
-    print("THIS IS THE ENGINE WE'RE USING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
-    print(engine)
 
     // Construct the fuzzer instance.
     return Fuzzer(configuration: configuration,
