@@ -1,5 +1,6 @@
 # Core agent framework (REQUIRED)
 smolagents
+smolagents[litellm]
 
 # Build tools (REQUIRED)
 wheel

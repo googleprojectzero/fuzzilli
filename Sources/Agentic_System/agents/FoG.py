@@ -41,7 +41,7 @@ class Father(Agent):
         self.agents['v8_search'] = ToolCallingAgent(
             name="V8Search",
             description="L2 Worker responsible for searching V8 source code using fuzzy find, regex, and compilation tools",
-            tools=[fuzzy_finder, ripgrep, tree, get_call_graph],
+            tools=[fuzzy_finder, ripgrep, tree],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
             max_steps=10,
             planning_interval=None,
@@ -52,7 +52,7 @@ class Father(Agent):
         self.agents['code_analyzer'] = ToolCallingAgent(
             name="CodeAnalyzer",
             description="L1 Manager responsible for analyzing code and coordinating retrieval and V8 search operations",
-            tools=[run_python, lift_fuzzil_to_js, compile_js_to_fuzzil, fuzzy_finder, ripgrep, tree, get_call_graph, lookup], # add rag db tools here aswell
+            tools=[run_python, lift_fuzzil_to_js, compile_js_to_fuzzil, fuzzy_finder, ripgrep, tree, lookup], # add rag db tools here aswell
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
                 self.agents['retriever_of_code'], 
@@ -108,7 +108,7 @@ class Father(Agent):
     
 
     def get_prompt(self, prompt_name: str) -> str:
-        f = open(Path(__file__).parent / "prompts_FOG" / prompt_name, 'r')
+        f = open(Path(__file__).parent.parent / "prompts" / "FoG-prompts" / prompt_name, 'r')
         prompt = f.read()
         f.close()
         return prompt
