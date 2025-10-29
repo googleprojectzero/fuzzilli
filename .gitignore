@@ -7,6 +7,8 @@ Package.resolved
 .*.sw?
 .swiftpm
 /Corpus
+.venv
+*/__pychace__
 
 # custom GCE configuration
 Cloud/GCE/config.sh
