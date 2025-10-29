@@ -389,7 +389,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                     mutatorType: nil,
                     outcome: aspects.outcome,
                     coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0,
-                    coverageEdges: Set<Int>() // Empty for now
+                    coverageEdges: (aspects as? CovEdgeSet).map { Set($0.getEdges().map { Int($0) }) } ?? Set<Int>()
                 )
                 executionBatchData.append(executionData)
             }

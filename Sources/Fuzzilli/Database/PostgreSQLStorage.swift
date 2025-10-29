@@ -610,6 +610,21 @@ public class PostgreSQLStorage {
                 let executionId = try row.decode(Int.self, context: .default)
                 executionIds.append(executionId)
             }
+
+            // Insert coverage detail rows for executions that have edge data
+            var coverageValues: [String] = []
+            for (idx, execId) in executionIds.enumerated() {
+                let edges = executions[idx].coverageEdges
+                if !edges.isEmpty {
+                    for edge in edges {
+                        coverageValues.append("(\(execId), \(edge), 1, TRUE)")
+                    }
+                }
+            }
+            if !coverageValues.isEmpty {
+                let coverageInsert = "INSERT INTO coverage_detail (execution_id, edge_index, edge_hit_count, is_new_edge) VALUES " + coverageValues.joined(separator: ", ")
+                try await connection.query(PostgresQuery(stringLiteral: coverageInsert), logger: self.logger)
+            }
         }
         
         return executionIds

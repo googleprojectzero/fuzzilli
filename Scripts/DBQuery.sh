@@ -167,30 +167,11 @@ main() {
     # Coverage statistics
     run_query "Coverage Statistics" "
         SELECT 
-            (SELECT COUNT(DISTINCT execution_id) FROM coverage_detail) AS executions_with_coverage,
-            (
-                SELECT ROUND(AVG(edges_hit)::numeric, 2) FROM (
-                    SELECT COUNT(*) FILTER (WHERE edge_hit_count > 0) AS edges_hit
-                    FROM coverage_detail
-                    GROUP BY execution_id
-                ) s
-            ) AS avg_edges_hit_per_execution,
-            (
-                SELECT MAX(edges_hit) FROM (
-                    SELECT COUNT(*) FILTER (WHERE edge_hit_count > 0) AS edges_hit
-                    FROM coverage_detail
-                    GROUP BY execution_id
-                ) s
-            ) AS max_edges_hit_in_execution,
-            (
-                SELECT COALESCE(SUM(new_edges), 0) FROM (
-                    SELECT SUM(CASE WHEN is_new_edge THEN 1 ELSE 0 END) AS new_edges
-                    FROM coverage_detail
-                    GROUP BY execution_id
-                ) s
-            ) AS total_new_edges,
-            ROUND(((SELECT COUNT(DISTINCT execution_id) FROM coverage_detail) * 100.0)
-                  / NULLIF((SELECT COUNT(*) FROM execution), 0), 2) AS percent_executions_with_coverage;
+            COUNT(*) FILTER (WHERE coverage_total IS NOT NULL) AS executions_with_coverage,
+            ROUND(AVG(coverage_total)::numeric, 2) AS avg_coverage_percentage,
+            MAX(coverage_total) AS max_coverage_percentage,
+            COUNT(*) FILTER (WHERE coverage_total > 0) AS executions_with_positive_coverage
+        FROM execution;
     "
     
     # Performance metrics
@@ -227,7 +208,7 @@ case "${1:-}" in
         run_query "All Executions" "SELECT e.execution_id, LEFT(p.program_base64, 20) as program_preview, eo.outcome, e.execution_time_ms, e.created_at FROM execution e JOIN program p ON e.program_hash = p.program_hash JOIN execution_outcome eo ON e.execution_outcome_id = eo.id ORDER BY e.created_at DESC LIMIT 20;"
         ;;
     "crashes")
-        run_query "All Crashes" "SELECT e.execution_id, LEFT(p.program_base64, 20) as program_preview, e.stdout, e.stderr, e.created_at FROM execution e JOIN program p ON e.program_hash = p.program_hash JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed' ORDER BY e.created_at DESC LIMIT 20;"
+        run_query "All Crashes" "SELECT e.execution_id, LEFT(p.program_base64, 20) as program_preview, e.stdout, e.stderr, e.created_at FROM execution e JOIN program p ON e.program_hash = p.program_hasht  JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed' ORDER BY e.created_at DESC LIMIT 20;"
         ;;
     "stats")
         run_query "Quick Stats" "SELECT COUNT(*) as programs, (SELECT COUNT(*) FROM execution) as executions, (SELECT COUNT(*) FROM execution e JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed') as crashes FROM program;"
