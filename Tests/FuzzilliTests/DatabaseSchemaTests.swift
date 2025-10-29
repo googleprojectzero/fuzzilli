@@ -124,7 +124,7 @@ final class DatabaseSchemaTests: XCTestCase {
         
         // Check for foreign key constraints
         XCTAssertTrue(schema.contains("REFERENCES main(fuzzer_id)"), "Should have foreign key to main table")
-        XCTAssertTrue(schema.contains("REFERENCES program(program_base64)"), "Should have foreign key to program table")
+        XCTAssertTrue(schema.contains("REFERENCES program(program_hash)"), "Should have foreign key to program table")
         XCTAssertTrue(schema.contains("REFERENCES execution(execution_id)"), "Should have foreign key to execution table")
         
         // Check for primary keys

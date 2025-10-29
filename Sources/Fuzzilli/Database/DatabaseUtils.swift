@@ -124,7 +124,7 @@ public class DatabaseUtils {
             if signal == 11 || signal == 7 {
                 return 1  // Real crashes: SIGSEGV (11) and SIGBUS (7)
             } else {
-                return 34 // SigCheck: SIGTRAP (5), SIGABRT (6), and others
+                return 5 // SigCheck: SIGTRAP (5), SIGABRT (6), and others
             }
         case .timedOut:
             return 4  // TimedOut maps to ID 4
