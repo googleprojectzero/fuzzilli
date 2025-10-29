@@ -1,8 +1,35 @@
+# Core agent framework (REQUIRED)
 smolagents
-argparse
+
+# Build tools (REQUIRED)
 wheel
-pathlib
-logging
-typing
-clang==20.1.5 ; python_full_version == "3.12.3"
-threading
+setuptools
+
+# LLM and AI dependencies (REQUIRED)
+openai
+anthropic
+
+# Basic data processing (REQUIRED)
+numpy
+requests
+
+# Vector database and embeddings (OPTIONAL - will fallback gracefully if not available)
+# Uncomment these if you need RAG functionality:
+# chromadb>=0.5.0
+# langchain-community
+# sentence-transformers
+# faiss-cpu
+
+# Additional data processing (OPTIONAL)
+# pandas
+# pickle-mixin
+
+# Configuration and environment (OPTIONAL)
+# python-dotenv
+
+# Development and debugging (OPTIONAL)
+# pytest
+# pytest-cov
+
+# Optional: Clang for C++ analysis (only for Python 3.12.3)
+# clang==20.1.5 ; python_full_version == "3.12.3"

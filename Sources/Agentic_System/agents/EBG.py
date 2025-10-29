@@ -141,3 +141,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+###
+# we need tool calls for EBG to be able to actually put the program templates hard coded into the actual execution of fuzzili  
+###
