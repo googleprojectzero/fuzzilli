@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 from smolagents import LiteLLMModel, ToolCallingAgent
-from BaseAgent import Agent
-from EBG import EBG
+from agents.BaseAgent import Agent
+from agents.EBG import EBG
 from pathlib import Path 
 from tools.FoG_tools import *
 import sys
