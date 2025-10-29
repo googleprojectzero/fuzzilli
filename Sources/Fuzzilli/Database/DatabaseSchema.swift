@@ -4,8 +4,10 @@ import PostgresNIO
 /// Manages database schema creation and verification
 public class DatabaseSchema {
     private let logger: Logger
+    private let enableLogging: Bool
     
-    public init() {
+    public init(enableLogging: Bool = false) {
+        self.enableLogging = enableLogging
         self.logger = Logger(withLabel: "DatabaseSchema")
     }
     
@@ -237,13 +239,17 @@ public class DatabaseSchema {
     
     /// Create all database tables and indexes
     public func createTables(connection: PostgresConnection) async throws {
-        logger.info("Creating database schema...")
+        if enableLogging {
+            logger.info("Creating database schema...")
+        }
         
         do {
             let query = PostgresQuery(stringLiteral: DatabaseSchema.schemaSQL)
             let result = try await connection.query(query, logger: Logging.Logger(label: "DatabaseSchema"))
-            logger.info("Database schema created successfully")
-            logger.info("Schema SQL length: \(DatabaseSchema.schemaSQL.count) characters")
+            if enableLogging {
+                logger.info("Database schema created successfully")
+                logger.info("Schema SQL length: \(DatabaseSchema.schemaSQL.count) characters")
+            }
         } catch {
             logger.error("Failed to create database schema: \(error)")
             throw error
@@ -252,7 +258,9 @@ public class DatabaseSchema {
     
     /// Verify that all required tables exist
     public func verifySchema(connection: PostgresConnection) async throws -> Bool {
-        logger.info("Verifying database schema...")
+        if enableLogging {
+            logger.info("Verifying database schema...")
+        }
         
         let requiredTables = ["main", "fuzzer", "program", "execution_type", "mutator_type", "execution_outcome", "execution", "feedback_vector_detail", "coverage_detail", "crash_analysis"]
         
@@ -272,7 +280,9 @@ public class DatabaseSchema {
             }
         }
         
-        logger.info("Database schema verification successful")
+        if enableLogging {
+            logger.info("Database schema verification successful")
+        }
         return true
     }
     
@@ -291,7 +301,9 @@ public class DatabaseSchema {
     
     /// Get lookup table data
     public func getExecutionTypes(connection: PostgresConnection) async throws -> [ExecutionType] {
-        logger.info("Getting execution types from database...")
+        if enableLogging {
+            logger.info("Getting execution types from database...")
+        }
         
         let query: PostgresQuery = "SELECT id, title, description FROM execution_type ORDER BY id"
         let result = try await connection.query(query, logger: Logging.Logger(label: "DatabaseSchema"))
@@ -304,12 +316,16 @@ public class DatabaseSchema {
             executionTypes.append(ExecutionType(id: id, title: title, description: description))
         }
         
-        logger.info("Retrieved \(executionTypes.count) execution types")
+        if enableLogging {
+            logger.info("Retrieved \(executionTypes.count) execution types")
+        }
         return executionTypes
     }
     
     public func getMutatorTypes(connection: PostgresConnection) async throws -> [MutatorType] {
-        logger.info("Getting mutator types from database...")
+        if enableLogging {
+            logger.info("Getting mutator types from database...")
+        }
         
         let query: PostgresQuery = "SELECT id, name, description, category FROM mutator_type ORDER BY id"
         let result = try await connection.query(query, logger: Logging.Logger(label: "DatabaseSchema"))
@@ -323,12 +339,16 @@ public class DatabaseSchema {
             mutatorTypes.append(MutatorType(id: id, name: name, description: description, category: category))
         }
         
-        logger.info("Retrieved \(mutatorTypes.count) mutator types")
+        if enableLogging {
+            logger.info("Retrieved \(mutatorTypes.count) mutator types")
+        }
         return mutatorTypes
     }
     
     public func getExecutionOutcomes(connection: PostgresConnection) async throws -> [DatabaseExecutionOutcome] {
-        logger.info("Getting execution outcomes from database...")
+        if enableLogging {
+            logger.info("Getting execution outcomes from database...")
+        }
         
         let query: PostgresQuery = "SELECT id, outcome, description FROM execution_outcome ORDER BY id"
         let result = try await connection.query(query, logger: Logging.Logger(label: "DatabaseSchema"))
@@ -341,7 +361,9 @@ public class DatabaseSchema {
             executionOutcomes.append(DatabaseExecutionOutcome(id: id, outcome: outcome, description: description))
         }
         
-        logger.info("Retrieved \(executionOutcomes.count) execution outcomes")
+        if enableLogging {
+            logger.info("Retrieved \(executionOutcomes.count) execution outcomes")
+        }
         return executionOutcomes
     }
 }

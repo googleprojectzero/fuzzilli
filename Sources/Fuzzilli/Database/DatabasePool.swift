@@ -17,12 +17,14 @@ public class DatabasePool {
     private let maxConnections: Int
     private let connectionTimeout: TimeInterval
     private let retryAttempts: Int
+    private let enableLogging: Bool
     
-        public init(connectionString: String, maxConnections: Int = 5, connectionTimeout: TimeInterval = 120.0, retryAttempts: Int = 3) {
+        public init(connectionString: String, maxConnections: Int = 5, connectionTimeout: TimeInterval = 120.0, retryAttempts: Int = 3, enableLogging: Bool = false) {
         self.connectionString = connectionString
         self.maxConnections = maxConnections
         self.connectionTimeout = connectionTimeout
         self.retryAttempts = retryAttempts
+        self.enableLogging = enableLogging
         self.logger = Logging.Logger(label: "DatabasePool")
     }
     
@@ -35,14 +37,18 @@ public class DatabasePool {
         lock.unlock()
         
         guard !alreadyInitialized else {
-            logger.info("Database pool already initialized")
+            if enableLogging {
+                logger.info("Database pool already initialized")
+            }
             return
         }
         
-        logger.info("Initializing database connection pool...")
-        logger.info("Connection string: \(connectionString)")
-        logger.info("Max connections: \(maxConnections)")
-        logger.info("Connection timeout: \(connectionTimeout)s")
+        if enableLogging {
+            logger.info("Initializing database connection pool...")
+            logger.info("Connection string: \(connectionString)")
+            logger.info("Max connections: \(maxConnections)")
+            logger.info("Connection timeout: \(connectionTimeout)s")
+        }
         
         do {
             // Create event loop group
@@ -71,7 +77,9 @@ public class DatabasePool {
             isInitialized = true
             lock.unlock()
             
-            logger.info("Database connection pool initialized successfully")
+            if enableLogging {
+                logger.info("Database connection pool initialized successfully")
+            }
             
         } catch {
             logger.error("Failed to initialize database connection pool: \(error)")
@@ -100,7 +108,9 @@ public class DatabasePool {
             
             // Check if we got a result
             if result.count > 0 {
-                logger.info("Database connection test successful")
+                if enableLogging {
+                    logger.info("Database connection test successful")
+                }
                 return true
             } else {
                 logger.error("Database connection test failed: no results")
@@ -147,11 +157,15 @@ public class DatabasePool {
         lock.unlock()
         
         guard shouldShutdown else {
-            logger.info("Database pool not initialized, nothing to shutdown")
+            if enableLogging {
+                logger.info("Database pool not initialized, nothing to shutdown")
+            }
             return
         }
         
-        logger.info("Shutting down database connection pool...")
+        if enableLogging {
+            logger.info("Shutting down database connection pool...")
+        }
         
         do {
             // Shutdown connection pool
@@ -170,7 +184,9 @@ public class DatabasePool {
             isInitialized = false
             lock.unlock()
             
-            logger.info("Database connection pool shutdown complete")
+            if enableLogging {
+                logger.info("Database connection pool shutdown complete")
+            }
             
         } catch {
             logger.error("Error during database pool shutdown: \(error)")
@@ -202,7 +218,9 @@ public class DatabasePool {
         let password = url.password
         let database = url.path.isEmpty ? nil : String(url.path.dropFirst()) // Remove leading slash
         
-        logger.info("Parsed connection: host=\(host), port=\(port), user=\(username), database=\(database ?? "none")")
+        if enableLogging {
+            logger.info("Parsed connection: host=\(host), port=\(port), user=\(username), database=\(database ?? "none")")
+        }
         
         return SQLPostgresConfiguration(
             hostname: host,

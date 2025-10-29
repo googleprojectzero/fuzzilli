@@ -103,6 +103,7 @@ Options:
     --sync-interval=n            : Sync interval in seconds for PostgreSQL corpus (default: 10).
     --validate-before-cache      : Enable program validation before caching in PostgreSQL corpus (default: true).
     --execution-history-size=n   : Number of recent executions to keep in memory for PostgreSQL corpus (default: 10).
+    --postgres-logging           : Enable PostgreSQL database operation logging.
 
 """)
     exit(0)
@@ -167,6 +168,7 @@ let postgresUrl = args["--postgres-url"]
 let syncInterval = args.int(for: "--sync-interval") ?? 10
 let validateBeforeCache = args.has("--validate-before-cache") || !args.has("--no-validate-before-cache") // Default to true
 let executionHistorySize = args.int(for: "--execution-history-size") ?? 10
+let postgresLogging = args.has("--postgres-logging")
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -535,7 +537,7 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         // Replace database name in the connection string
         let modifiedPostgresUrl = postgresUrl.replacingOccurrences(of: "/fuzzilli", with: "/\(databaseName)")
         
-        let databasePool = DatabasePool(connectionString: modifiedPostgresUrl)
+        let databasePool = DatabasePool(connectionString: modifiedPostgresUrl, enableLogging: postgresLogging)
         
         corpus = PostgreSQLCorpus(
             minSize: minCorpusSize,
@@ -543,7 +545,8 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
             minMutationsPerSample: minMutationsPerSample,
             databasePool: databasePool,
             fuzzerInstanceId: fuzzerInstanceId,
-            resume: resume
+            resume: resume,
+            enableLogging: postgresLogging
         )
         
         logger.info("Created PostgreSQL corpus with instance ID: \(fuzzerInstanceId)")
