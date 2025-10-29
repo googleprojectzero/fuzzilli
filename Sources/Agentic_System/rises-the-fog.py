@@ -12,6 +12,7 @@ from agents.FoG import Father
 from agents.EBG import EBG
 from smolagents import LiteLLMModel
 from config_loader import get_openai_api_key, get_anthropic_api_key
+from utils.fog_logging import FogAgentRunLogger
 
 logging.basicConfig(filename=os.path.join(os.getcwd(), 'agents', 'fog_logs', 'rises_the_fog.log'), level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ class FatherOfGod:
         self.model = LiteLLMModel(model_id=BASE_MODEL_ID, api_key=self.openai_api_key)
         self.system = Father(self.model, api_key=self.openai_api_key, anthropic_api_key=self.anthropic_api_key)
         self.ebg = EBG(self.model, api_key=self.openai_api_key, anthropic_api_key=self.anthropic_api_key)
+        self.logging = FogAgentRunLogger(run_title="FoG Logger")
 
 def main():
     print("I must go in; the fog is rising")
@@ -41,6 +43,7 @@ def main():
             exit(1)
         else:
             print("Regressions.json decompressed successfully")
+    a.logger.start()
     a.system.start_system()
 
 
