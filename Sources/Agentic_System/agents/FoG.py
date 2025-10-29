@@ -55,7 +55,7 @@ class Father(Agent):
             tools=[run_python, lift_fuzzil_to_js, compile_js_to_fuzzil, fuzzy_finder, ripgrep, tree, get_call_graph, lookup], # add rag db tools here aswell
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
-                self.agents['retriever_of_code'], 
+                self.agents['reviewer_of_code'], 
                 self.agents['v8_search']
                 ],
             max_steps=15,
