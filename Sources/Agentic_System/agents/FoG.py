@@ -2,7 +2,7 @@
 
 from smolagents import LiteLLMModel, ToolCallingAgent
 from agents.BaseAgent import Agent
-from EBG import EBG
+from agents.EBG import EBG
 from pathlib import Path 
 from tools.FoG_tools import *
 import sys
