@@ -4,9 +4,10 @@ import functools
 import json
 import os
 import sys
+import subprocess
 from pathlib import Path
 import logging 
-import config_loader
+import config_loader as config_loader 
 from agents.FoG import Father
 from agents.EBG import EBG
 from smolagents import LiteLLMModel
@@ -46,6 +47,16 @@ def main():
             "ProgramBuilder": "Build JavaScript programs using corpus and context"
         }
     )
+
+    if (not os.path.exists("regressions.json")):
+        try:
+            subprocess.run(["xz", "-d", "regressions.json.xz"], check=True)
+            #xz -d regressions.json.xz
+        except subprocess.CalledProcessError as e:
+            print(f"Error decompressing regressions.json.xz: {e}")
+            exit(1)
+        else:
+            print("Regressions.json decompressed successfully")
 
     print("Task Result:")
     print(f"Completed: {result['completed']}")
