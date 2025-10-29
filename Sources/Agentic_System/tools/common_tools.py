@@ -13,8 +13,8 @@ import os
 import json
 from tools.cfg_tool import *
 
-cfg_builder = CFGBuilder("/usr/share/vrigatoni/fuzzillai/v8")
-cfg_builder.parse_directory("/usr/share/vrigatoni/fuzzillai/v8", pattern='*.cc')
+cfg_builder = CFGBuilder("/usr/share/vrigatoni/fuzzillai/v8/v8")
+cfg_builder.parse_directory("/usr/share/vrigatoni/fuzzillai/v8/v8", pattern='*.cc')
 
 # Try to import from rag_tools, but handle import errors gracefully
 try:
