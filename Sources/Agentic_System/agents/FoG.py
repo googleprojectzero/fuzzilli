@@ -34,7 +34,6 @@ class Father(Agent):
             ], 
             max_steps=10,
             planning_interval=None,
-            system_prompt=self.get_prompt('reviewer_of_code.txt'),
         )
         
         # L2 Worker: V8 Search (under CodeAnalyzer)
@@ -45,7 +44,6 @@ class Father(Agent):
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
             max_steps=10,
             planning_interval=None,
-            system_prompt=self.get_prompt('v8_search.txt'),
         )
 
         # L1 Manager: Code Analysis Agent
@@ -60,7 +58,6 @@ class Father(Agent):
                 ],
             max_steps=15,
             planning_interval=None,
-            system_prompt=self.get_prompt('code_analyzer.txt'),
         )
         
         # L1 Manager: Program Builder Agent  
@@ -74,7 +71,6 @@ class Father(Agent):
             ],
             max_steps=15,
             planning_interval=None,
-            system_prompt=self.get_prompt('program_builder.txt'),
         )
         
         # L1 Manager: Father of George (under PickSection)
@@ -89,7 +85,6 @@ class Father(Agent):
             ],
             max_steps=20,
             planning_interval=None,
-            system_prompt=self.get_prompt('root_manager.txt'),
         )
 
         # L0 Root Manager Agent
@@ -103,7 +98,6 @@ class Father(Agent):
             ],
             max_steps=10,
             planning_interval=None,
-            system_prompt=self.get_prompt('pick_section.txt'),
         )
     
 
