@@ -10,8 +10,28 @@ from pathlib import Path
 
 from smolagents import LiteLLMModel, ToolCallingAgent
 
-logging.basicConfig(filename=os.path.join(os.getcwd(), 'agents', 'fog_logs', 'base_agent.log'), level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("base_agent")
+if not logger.handlers:
+    logger.addHandler(logging.NullHandler())
+logger.propagate = False
+logger.disabled = True
+
+def enable_base_agent_logging():
+    """Enable logging to Agentic_System/agents/fog_logs/base_agent.log if FOG_DEBUG=1."""
+    try:
+        if os.getenv("FOG_DEBUG") == "1":
+            logs_dir = Path(__file__).parent / "fog_logs"
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            log_path = logs_dir / "base_agent.log"
+            logging.basicConfig(
+                filename=str(log_path),
+                level=logging.INFO,
+                format='%(asctime)s - %(levelname)s - %(message)s'
+            )
+            logger.disabled = False
+    except Exception:
+        # Fail closed: keep logging disabled
+        logger.disabled = True
 
 class Agent(ABC): 
     """Base class for AI agents."""
