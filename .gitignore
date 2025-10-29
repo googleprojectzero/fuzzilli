@@ -7,8 +7,6 @@ Package.resolved
 .*.sw?
 .swiftpm
 /Corpus
-.env
-env.distributed
 
 # custom GCE configuration
 Cloud/GCE/config.sh
