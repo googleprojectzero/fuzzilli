@@ -20,15 +20,6 @@ _TEMPLATES_PATH = (Path(__file__).parent.parent / "templates" / "templates.json"
 _TEMPLATES_CACHE = None
 
 
-if not os.getenv('D8_PATH'):
-    print("D8_path is not set")
-    sys.exit(1)
-if not os.getenv('FUZZILLI_TOOL_BIN'):
-    print("FUZZILLI_TOOL_BIN is not set")
-    sys.exit(1)
-D8_PATH = os.getenv('D8_PATH')
-FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
-
 def _load_regressions_once():
     global _REGRESSIONS_CACHE
     if _REGRESSIONS_CACHE is not None:
@@ -331,7 +322,7 @@ def run_d8(target: str, options: str = "") -> str:
     Returns:
         str: The output from running the JavaScript program with d8.
     """ 
-    completed_process = run_command(f"{V8_PATH}/out/fuzzbuild/d8 {target} {options}")
+    completed_process = run_command(f"{D8_PATH} {target} {options}")
     if not completed_process:
         return
 

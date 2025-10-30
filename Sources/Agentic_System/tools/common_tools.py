@@ -20,6 +20,14 @@ if not V8_PATH:
     print("V8_PATH environment variable not set. Do export V8_PATH='path to v8 base dir'")
     print("     Example: export V8_PATH=/path/to/v8/v8")
     sys.exit(0)
+if not os.getenv('D8_PATH'):
+    print("D8_path is not set")
+    sys.exit(1)
+if not os.getenv('FUZZILLI_TOOL_BIN'):
+    print("FUZZILLI_TOOL_BIN is not set")
+    sys.exit(1)
+D8_PATH = os.getenv('D8_PATH')
+FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
 
 # Try to import CFG tools, but don't fail if clang is not available
 try:

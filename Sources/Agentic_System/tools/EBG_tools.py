@@ -45,7 +45,7 @@ def run_d8(target: str, options: str = "") -> str:
         WHENEVER --trace-turob-graph is passed MAKE SURE --trace-turbo-path is ALSO passed in
         IF --trace-turbo-path is passed, MAKE SURE the output directory is {OUTPUT_DIRECTORY}/{target}
     """ 
-    completed_process = run_command(f"{V8_PATH}/out/fuzzbuild/d8 {target} {options}")
+    completed_process = run_command(f"{D8_PATH} {target} {options}")
     if not completed_process:
         return
 
