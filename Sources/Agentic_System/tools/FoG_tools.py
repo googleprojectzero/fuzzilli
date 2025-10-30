@@ -103,7 +103,7 @@ def _parse_rag_entry(raw: str):
     except Exception:
         pass
     return None, None
-
+#
 #@tool
 #def web_search(query: str) -> str:
 #    """
@@ -115,8 +115,7 @@ def _parse_rag_entry(raw: str):
 #    Returns:
 #        str: Search results and relevant information from the web.
 #    """
-#    response = sel
-#    #return get_output(run_command(f"curl -s 'https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1'"))
+#    return tool.web_search()
 
 
 @tool
