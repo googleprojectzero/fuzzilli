@@ -144,29 +144,32 @@ def run_python(code: str) -> str:
 
 @tool
 def tree(directory: str = V8_PATH, options: str = "") -> str:
-    f"""
+    """
     Display directory structure using tree command to explore project layout.
 
     {V8_PATH} is the V8 source code directory, if you want to explore the entire V8 source code
-    you can use this tool. Please call tree without directory parameter.
+    you can use this tool. 
     
     Args:
-        directory: The directory to explore. Defaults to V8_PATH, THIS IS THE 
+        directory (str): The directory to explore. Defaults to V8_PATH, THIS IS THE 
         V8 SOURCE CODE DIRECTORY, if you want to explore the entire V8 source code
-        you can use this tool. Please call tree without directory parameter.
+        you can use this tool. 
         
-        options: Additional tree command options. Common options include:
+        options (str): Additional tree command options. Common options include:
             -L NUM: Limit depth to NUM levels
             -f: Show full path prefix
     
     Returns:
         str: Tree structure showing directories and files in the specified path.
     """
+    tree.__doc__ = tree.__doc__.replace("{V8_PATH}", V8_PATH)
+    if directory == None:
+        return "directory is not set"
     return get_output(run_command(f"tree {options} {directory}"))
 
 @tool
 def ripgrep(pattern: str, options: str = "", directory: str = V8_PATH) -> str:
-    f"""
+    """
     Search for text patterns in files using ripgrep (rg) for fast text searching.
 
     {V8_PATH} is the V8 source code directory, if you want to search the entire V8 source code
@@ -212,11 +215,13 @@ def ripgrep(pattern: str, options: str = "", directory: str = V8_PATH) -> str:
     Returns:
         str: Search results showing matching lines with context.
     """
-    return get_output(run_command(f"rg {options} '{pattern}' {directory}"))
+    ripgrep.__doc__ = ripgrep.__doc__.replace("{V8_PATH}", V8_PATH)
+
+    return get_output(run_command(f"cd {directory} && rg {options} '{pattern}'"))
 
 @tool
 def fuzzy_finder(pattern: str, options: str = "", directory: str = V8_PATH) -> str:
-    f"""
+    """
     Use fuzzy finding to locate files and content by approximate name matching.
 
     {V8_PATH} is the V8 source code directory, if you want to search the entire V8 source code
@@ -244,6 +249,7 @@ def fuzzy_finder(pattern: str, options: str = "", directory: str = V8_PATH) -> s
     Returns:
         str: Fuzzy search results showing files and content that approximately match the pattern.
     """
+    fuzzy_finder.__doc__ = fuzzy_finder.__doc__.replace("{V8_PATH}", V8_PATH)
     return get_output(run_command(f"cd {directory} && fzf {options} '{pattern}'"))
 
 @tool
