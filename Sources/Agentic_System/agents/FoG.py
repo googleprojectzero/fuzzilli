@@ -18,6 +18,8 @@ from tools.rag_tools import (
     FAISSKnowledgeBase,
 )
 import sys
+import yaml
+import importlib.resources
 sys.path.append(str(Path(__file__).parent.parent))
 from config_loader import get_openai_api_key, get_anthropic_api_key
 
@@ -178,9 +180,56 @@ class Father(Agent):
         self.agents['pick_section'].prompt_templates["system_prompt"] = self.get_prompt("pick_section.txt")
         
         # L0 Manager: Father of George 
+        try:
+            default_templates = yaml.safe_load(
+                importlib.resources.files("smolagents.prompts").joinpath("toolcalling_agent.yaml").read_text()
+            )
+        except (ModuleNotFoundError, AttributeError):
+            template_path = Path(__file__).parent.parent / "smolagent-fork" / "prompts" / "toolcalling_agent.yaml"
+            if template_path.exists():
+                with open(template_path, 'r') as f:
+                    default_templates = yaml.safe_load(f.read())
+            else:
+                raise FileNotFoundError(f"Could not find toolcalling_agent.yaml template at {template_path}")
+        
+        custom_prompt = self.get_prompt("root_manager.txt")
+        tools_and_agents_section = """
+
+You have access to these tools:
+{%- for tool in tools.values() %}
+- {{ tool.to_tool_calling_prompt() }}
+{%- endfor %}
+
+{%- if managed_agents and managed_agents.values() | list %}
+You can also give tasks to team members.
+Calling a team member works similarly to calling a tool: provide the task description as the 'task' argument. Since this team member is a real human, be as detailed and verbose as necessary in your task description.
+You can also include any relevant variables or context using the 'additional_args' argument.
+Here is a list of the team members that you can call:
+{%- for agent in managed_agents.values() %}
+- {{ agent.name }}: {{ agent.description }}
+  - Takes inputs: {{agent.inputs}}
+  - Returns an output of type: {{agent.output_type}}
+{%- endfor %}
+{%- endif %}
+
+{%- if custom_instructions %}
+{{custom_instructions}}
+{%- endif %}
+
+Here are the rules you should always follow to solve your task:
+1. ALWAYS provide a tool call, else you will fail.
+2. Always use the right arguments for the tools. Never use variable names as the action arguments, use the value instead.
+3. Call a tool only when needed: do not call the search agent if you do not need information, try to solve the task yourself. If no tool call is needed, use final_answer tool to return your answer.
+4. Never re-do a tool call that you previously did with the exact same parameters.
+
+Now Begin!
+"""
+        default_templates["system_prompt"] = custom_prompt + tools_and_agents_section
+        print(f"[DEBUG] Root manager prompt set. Custom prompt length: {len(custom_prompt)}, Full template length: {len(default_templates['system_prompt'])}")
+        print(f"[DEBUG] Prompt starts with: {default_templates['system_prompt'][:100]}...")
         self.agents['father_of_george'] = ToolCallingAgent(
             name="FatherOfGeorge",
-            description="L1 Manager responsible for orchestrating code analysis and program building operations",
+            description="L0 Manager responsible for orchestrating code analysis and program building operations",
             tools=[
                 # RAG collection management
                 set_rag_collection,
@@ -203,8 +252,8 @@ class Father(Agent):
             ],
             max_steps=30,
             planning_interval=None,
+            prompt_templates=default_templates,
         )
-        self.agents['father_of_george'].prompt_templates["system_prompt"] = self.get_prompt("root_manager.txt")
 
 
     
@@ -219,7 +268,7 @@ class Father(Agent):
 
     def start_system(self):
         result = self.run_task(
-            task_description="Initialize Root Manager orchestrationr",
+            task_description="Initialize Root Manager orchestration",
             context={
                 "PickSection": "Select a promising V8 code region to analyze",
                 "FatherOfGeorge": "Primary orchestrator of the system, coordinates between analysis and program generation",
