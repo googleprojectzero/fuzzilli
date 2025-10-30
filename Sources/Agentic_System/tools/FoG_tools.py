@@ -9,7 +9,7 @@ import random
 import time
 from pathlib import Path
 
-FUZZILTOOL_BIN = f"/usr/share/vrigatoni/fuzzillai/.build/x86_64-unknown-linux-gnu/debug/FuzzILTool"
+# FUZZILTOOL_BIN = f"/usr/share/vrigatoni/fuzzillai/.build/x86_64-unknown-linux-gnu/debug/FuzzILTool"
 OUTPUT_DIRECTORY = "/tmp/fog-d8-records" 
 RAG_DB_DIR = (Path(__file__).parent.parent / "rag_db").resolve()
 
@@ -18,6 +18,16 @@ _REGRESSIONS_PATH = (Path(__file__).parent.parent / "regressions.json").resolve(
 _REGRESSIONS_CACHE = None
 _TEMPLATES_PATH = (Path(__file__).parent.parent / "templates" / "templates.json").resolve()
 _TEMPLATES_CACHE = None
+
+
+if not os.getenv('D8_PATH'):
+    print("D8_path is not set")
+    sys.exit(1)
+if not os.getenv('FUZZILLI_TOOL_BIN'):
+    print("FUZZILLI_TOOL_BIN is not set")
+    sys.exit(1)
+D8_PATH = os.getenv('D8_PATH')
+FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
 
 def _load_regressions_once():
     global _REGRESSIONS_CACHE
@@ -133,12 +143,18 @@ def run_python(code: str) -> str:
 
 
 @tool
-def tree(directory: str = ".", options: str = "") -> str:
-    """
+def tree(directory: str = V8_PATH, options: str = "") -> str:
+    f"""
     Display directory structure using tree command to explore project layout.
+
+    {V8_PATH} is the V8 source code directory, if you want to explore the entire V8 source code
+    you can use this tool. Please call tree without directory parameter.
     
     Args:
-        directory: The directory to explore. Defaults to current directory ".".
+        directory: The directory to explore. Defaults to V8_PATH, THIS IS THE 
+        V8 SOURCE CODE DIRECTORY, if you want to explore the entire V8 source code
+        you can use this tool. Please call tree without directory parameter.
+        
         options: Additional tree command options. Common options include:
             -L NUM: Limit depth to NUM levels
             -f: Show full path prefix
@@ -149,9 +165,11 @@ def tree(directory: str = ".", options: str = "") -> str:
     return get_output(run_command(f"tree {options} {directory}"))
 
 @tool
-def ripgrep(pattern: str, options: str = "") -> str:
-    """
+def ripgrep(pattern: str, options: str = "", directory: str = V8_PATH) -> str:
+    f"""
     Search for text patterns in files using ripgrep (rg) for fast text searching.
+
+    {V8_PATH} is the V8 source code directory, if you want to search the entire V8 source code
     
     Args:
         pattern (str): The text or regular expression pattern to search for.
@@ -189,16 +207,20 @@ def ripgrep(pattern: str, options: str = "") -> str:
             --context=NUM: Displays NUM lines of context both before and after each match.
                         Example: `rg --context=2 "<pattern>"` → shows 2 lines of context before and after each match.
 
+        directory (str): Directory to search in. Defaults to V8_PATH (V8 source tree).
+
     Returns:
         str: Search results showing matching lines with context.
     """
-    return get_output(run_command(f"rg {options} '{pattern}'"))
+    return get_output(run_command(f"rg {options} '{pattern}' {directory}"))
 
 @tool
-def fuzzy_finder(pattern: str, options: str = "") -> str:
-    """
+def fuzzy_finder(pattern: str, options: str = "", directory: str = V8_PATH) -> str:
+    f"""
     Use fuzzy finding to locate files and content by approximate name matching.
-    
+
+    {V8_PATH} is the V8 source code directory, if you want to search the entire V8 source code
+    you can use this tool. Please call fuzzy_finder without directory parameter.
     Args:
         pattern (str): The search pattern to match against files and content.
         options (str): Additional fzf command-line options:
@@ -215,12 +237,14 @@ def fuzzy_finder(pattern: str, options: str = "") -> str:
                 Example: `ps aux | fzf --nth 2` → searches only in the command field.
 
             --bind: Map keys or events to actions (e.g. reload, execute). 
-                    Example: `fzf --bind "enter:execute(cat {})"` → runs `cat` on selected file.
+                    Example: `fzf --bind "enter:execute(cat {V8_PATH}/{{}})"` → runs `cat` on selected file.
     
+        directory (str): Directory to search in. Defaults to V8_PATH (V8 source tree).
+
     Returns:
         str: Fuzzy search results showing files and content that approximately match the pattern.
     """
-    return get_output(run_command(f"fzf {options} '{pattern}'"))
+    return get_output(run_command(f"cd {directory} && fzf {options} '{pattern}'"))
 
 @tool
 def lift_fuzzil_to_js(target: str) -> str:
@@ -233,7 +257,7 @@ def lift_fuzzil_to_js(target: str) -> str:
     Returns:
         str: The lifted JS program from the given FuzzIL
     """
-    return get_output(run_command(f"{FUZZILTOOL_BIN} --liftToFuzzIL {target}"))
+    return get_output(run_command(f"{FUZZILLI_TOOL_BIN} --liftToFuzzIL {target}"))
 
 @tool
 def compile_js_to_fuzzil(target: str) -> str:
@@ -246,7 +270,7 @@ def compile_js_to_fuzzil(target: str) -> str:
     Returns:
         str: The compiled FuzzIL program the given JS program
     """
-    return get_output(run_command(f"{FUZZILTOOL_BIN} --compile {target}"))
+    return get_output(run_command(f"{FUZZILLI_TOOL_BIN} --compile {target}"))
 
 @tool 
 def run_d8(target: str, options: str = "") -> str:
