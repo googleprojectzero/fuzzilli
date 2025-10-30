@@ -31,6 +31,7 @@ class Father(Agent):
         #     time.sleep(1)   
         # FAISSKnowledgeBase.get_instance()
         # L2 Worker: EBG
+        system_prompt=self.get_prompt("george_forman.txt")
         self.agents['george_foreman'] = ToolCallingAgent(
             name="GeorgeForeman",
             description="L2 Worker responsible for validating program templates built by the program builder",
@@ -49,8 +50,9 @@ class Father(Agent):
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
             max_steps=10,
-            planning_interval=None,
+            planning_interval=None
         )
+        self.agents['george_foreman'].prompt_templates["system_prompt"] = system_prompt
 
         # L2 Worker: Retriever of Code (under CodeAnalyzer)
         self.agents['reviewer_of_code'] = ToolCallingAgent(
@@ -74,7 +76,9 @@ class Father(Agent):
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             max_steps=10,
             planning_interval=None,
+            system_prompt=self.get_prompt("reviewer_of_code.txt"),
         )
+        self.agents['reviewer_of_code'].prompt_templates["system_prompt"] = self.get_prompt("reviewer_of_code.txt")
         
         # L2 Worker: V8 Search (under CodeAnalyzer)
         self.agents['v8_search'] = ToolCallingAgent(
@@ -91,7 +95,9 @@ class Father(Agent):
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
             max_steps=10,
             planning_interval=None,
+            system_prompt=self.get_prompt("v8_search.txt"),
         )
+        self.agents['v8_search'].prompt_templates["system_prompt"] = self.get_prompt("v8_search.txt")
 
         # L1 Manager: Code Analysis Agent
         self.agents['code_analyzer'] = ToolCallingAgent(
@@ -122,9 +128,11 @@ class Father(Agent):
                 self.agents['reviewer_of_code'], 
                 self.agents['v8_search']
                 ],
+            system_prompt=self.get_prompt("code_analyzer.txt"),
             max_steps=15,
             planning_interval=None,
         )
+        self.agents['code_analyzer'].prompt_templates["system_prompt"] = self.get_prompt("code_analyzer.txt")
         
         # L1 Manager: Program Builder Agent  
         self.agents['program_builder'] = ToolCallingAgent(
@@ -146,9 +154,11 @@ class Father(Agent):
             managed_agents=[
                 self.agents['george_foreman']
             ],
+            system_prompt=self.get_prompt("program_builder.txt"),
             max_steps=15,
             planning_interval=None,
         )
+        self.agents['program_builder'].prompt_templates["system_prompt"] = self.get_prompt("program_builder.txt")
 
         # L1 Root: pick_section
         self.agents['pick_section'] = ToolCallingAgent(
@@ -158,15 +168,16 @@ class Father(Agent):
                 search_js_file_name_by_pattern,
                 get_js_entry_data_by_name,
                 get_all_js_file_names,
-                get_random_js_file,
-                get_random_fuzzilli_file,
+                get_random_entry_data,
                 search_knowledge_base,
                 get_knowledge_doc,
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            system_prompt=self.get_prompt("pick_section.txt"),
             max_steps=10,
             planning_interval=None,
         )
+        self.agents['pick_section'].prompt_templates["system_prompt"] = self.get_prompt("pick_section.txt")
         
         # L0 Manager: Father of George 
         self.agents['father_of_george'] = ToolCallingAgent(
@@ -192,9 +203,11 @@ class Father(Agent):
                 self.agents['program_builder'],
                 self.agents['pick_section']
             ],
+            system_prompt=self.get_prompt("root_manager.txt"),
             max_steps=20,
             planning_interval=None,
         )
+        self.agents['father_of_george'].prompt_templates["system_prompt"] = self.get_prompt("root_manager.txt")
 
 
     

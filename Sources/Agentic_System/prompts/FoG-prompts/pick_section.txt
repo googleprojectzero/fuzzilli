@@ -8,35 +8,37 @@ DO NOT PICK SIMPLE/TOO GENERAL LIKE "MAGLEV" YOU NEED SOMETHING MORE SPECFIC LIK
 
 PLEASE USE THE TOOLS PROVIDED TO YOU TO SEARCH THE PROVIDED JSON FILES CONTAINING REGGRESSIONS FROM V8 WITH THEIR ASSOCIATED FUZZIL AND JS. 
 
-
 ## CRITICAL RULES:
+- NEVER SKIP STAGES OR I WILL KILL MYSELF 
 
-DO NOT JUST USE get_random_js_file/get_random_fuzzilli_file, instead make sure to actually find a specfic target
-the most important part here is querying for specfic exectuion information for the actually exectuion, please use 
-search_js_file_json with return_topic = 3 after you find a set of interesting js code. 
+## STAGE 0:
+PLEASE START BY GETTING get_random_entry_data
 
-Validate ideas agains the vector database using the search_knowledge_base and get_knowledge_doc tool calls
+## STAGE 1
+ANALYZE THE DATA ENTRY AND TRY TO THEN SEARCH FOR ADJACENT JS AND FUZZIL CODE USING search_js_file_name_by_pattern
 
-IMPORTANT:
-DO NOT USE FIRST EVER and only use search_knowledge_base unless you have something very spefic to seach and make sure you do the other steps before!
+## STAGE 2
+AFTER THAT PLEASE USE THE get_js_entry_data_by_name IN ORDER TO FIGURE OUT THE INTERNAL V8 EXECUTION INFORMAITON 
 
+## STAGE 3
+IN THIS STAGE YOU CAN NOW USE search_knowledge_base AND get_knowledge_doc ON TOP OF get_js_entry_data_by_name WITH THE 
+GOAL OF FIGURING OUT A "CODE REGION" OF V8 THAT IS MEANINGFULLY EXPLOITABLE
 
-## Stage 1
-In the first stage you should query your tool calls to figure out a specific code region in V8, targeting JIT. 
-Look at the execution data for the regressions provided with your tools calls to see how the JavaScript and FuzzIL interact with V8. You can compare
-and find similar JavaScript/FuzzIL programs to target more specific code regions. ONLY once you have a specifc code region selected should you 
-move on to stage 2.
+## STAGE 4
+PLEASE KEEP REPEATING THE STAGE 1-3 TILL YOU HAVE A CONCREATE IDEA OF WHICH CODE REGION YOU WOULD LIKE TO TARGET 
 
-## Stage 2
+## STAGE 5
+
 After identifying a specifc region of code, you need to relay this information to your sub agent. Construct a contex for the specifc code region
 you selected based on the results of your tool calls. This context should describe the code region to the best of your ability based on the 
 results of your tool calls. If you're struggling to construct a context for the code region, return to stage 1. After you're satisfied with your context,
 relay the information to your sub agent.
 
-Here is the JSON object you must send to your sub agent:
-
+Here is the JSON object THAT YOU MUST FOLLOW please make sure to include all sections and send this back to your manager:
 {
-    REGION: "[THE SPECIFIC CODE REGION CHOSEN BASED ON THE RESULTS OF YOUR TOOL CALLS]"
+    CODE REGION: "[THE SPECIFIC CODE REGION CHOSEN BASED ON THE RESULTS OF YOUR TOOL CALLS]"
+    SUMMARY_OF_CODE_REGION: "[COMPLEX WHOLISTIC SUMAMRY OF THE CODE REGION INCLUDING AS MUCH USEFUL INFORMATION]"
+    REASONING: "[WHY YOU SELECTED THE REGION YOU PICKED]"
 }
 
 

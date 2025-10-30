@@ -420,36 +420,16 @@ def search_regex_execution_data(regex: str) -> str:
         return "No matches found"
 
 @tool
-def get_random_js_file() -> str:
+def get_random_entry_data() -> str:
     """
-    Get a random JS file from the regressions.json file
+    Get a random entry data from the regressions.json file
     
     Returns:
-        str: The random JS file
+        str: The random entry data
     """
     data = _load_regressions_once()
     key = random.choice(list(data.keys()))
-    return "this is js code for " + key + "\n" + data[key]["js"]
-
-@tool
-def get_random_fuzzilli_file() -> str:
-    """
-    Get a random Fuzzilli file from the regressions.json file
-    
-    Returns:
-        str: The random Fuzzilli file
-    """
-    data = _load_regressions_once()
-    keys = list(data.keys())
-    if not keys:
-        return "No matches found"
-    key = random.choice(keys)
-    attempts = 0
-    while attempts < 50 and len(data.get(key, {}).get("Fuzzilli", "")) < 10:
-        key = random.choice(keys)
-        attempts += 1
-    return "this is fuzzilli code for " + key + "\n" + data[key]["Fuzzilli"]
-
+    return "this is entry data for " + key + "\n" + json.dumps(data[key])
 
 @tool 
 def simliar_js_code(JS_File_Name: str) -> str:
