@@ -277,7 +277,7 @@ def ripgrep(pattern: str, options: str = "") -> str:
 @tool
 def fuzzy_finder(pattern: str, options: str = "") -> str:
     """
-    Use fuzzy finding to locate files and content by approximate name matching.
+    Use fuzzy finding to locate files and content by approximate name matching. MAX LINES RETURNED: 1000
 
     command: cd {V8_PATH} && rg --hidden --no-follow --no-ignore-vcs --files 2>/dev/null | fzf {options} '{pattern}'
     Args:
@@ -302,10 +302,10 @@ def fuzzy_finder(pattern: str, options: str = "") -> str:
             --bind: Map keys or events to actions (e.g. reload, execute). 
                     Example: `fzf --bind "enter:execute(cat {V8_PATH}/{{}})"` → runs `cat` on selected file.
     Returns:
-        str: Fuzzy search results showing files and content that approximately match the pattern.
+        str: Fuzzy search results showing up to 1000 files and content that approximately match the pattern.
     """
     file_list_cmd = "rg --hidden --no-follow --no-ignore-vcs --files 2>/dev/null"
-    return get_output(run_command(f"cd {V8_PATH} && {file_list_cmd} | fzf {options} '{pattern}'"))
+    return get_output(run_command(f"cd {V8_PATH} && {file_list_cmd} | fzf {options} '{pattern}' | head -n 1000"))
 
 @tool
 def lift_fuzzil_to_js(target: str) -> str:
