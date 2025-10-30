@@ -95,9 +95,6 @@ class Father(Agent):
                 run_python, 
                 lift_fuzzil_to_js,
                 compile_js_to_fuzzil, 
-                fuzzy_finder,
-                tree, 
-                ripgrep, 
                 web_search,
                 # RAG collection management
                 set_rag_collection,
@@ -147,24 +144,18 @@ class Father(Agent):
             planning_interval=None,
         )
 
-
-
         # L1 Root: pick_section
         self.agents['pick_section'] = ToolCallingAgent(
             name="PickSection",
             description="L0 Root Manager responsible for picking a section of the V8 code base that targets the JIT system",
             tools=[
-                search_js_file_json,
+                search_js_file_name_by_pattern,
+                get_js_entry_data_by_name,
                 get_all_js_file_names,
-                get_js_file_by_name,
                 get_random_js_file,
                 get_random_fuzzilli_file,
-                simliar_js_code,
-                simliar_fuzzilli_code,
-                simliar_execution_data,
-                search_regex_js,
-                search_regex_fuzzilli,
-                search_regex_execution_data,
+                search_knowledge_base,
+                get_knowledge_doc,
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             max_steps=10,

@@ -2,6 +2,7 @@
 smolagents
 smolagents[litellm]
 
+
 # Build tools (REQUIRED)
 wheel
 setuptools

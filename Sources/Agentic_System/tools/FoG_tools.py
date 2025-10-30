@@ -6,6 +6,7 @@ import os
 import subprocess
 import re
 import random
+import time
 from pathlib import Path
 
 FUZZILTOOL_BIN = "/usr/share/vrigatoni/fuzzillai/.build/x86_64-unknown-linux-gnu/debug/FuzzILTool"
@@ -293,33 +294,45 @@ def run_d8(target: str, options: str = "") -> str:
 
 
 @tool
-def search_js_file_json(pattern: str, return_topic: int=0) -> str:
+def search_js_file_name_by_pattern(pattern: str) -> str:
     """
-    Search the regressions.json file for a given pattern
+    Search the regressions.json file for a given pattern and return the file names that match the pattern
     
     Args:
         pattern (str): The pattern to search for in the regressions.json file
-        return_topic (int): The topic to return from the regressions.json file
-        0: return all
-        1: return the js file
-        2: return the fuzzilli file
-        3: return the execution data
     Returns:
-        str: The results of the search
+        str: The file names that match the pattern
     """
     data = _load_regressions_once()
+    found = []
+
     for key, value in data.items():
-        if pattern in key:
-            if return_topic == 0:
-                return value
-            elif return_topic == 1:
-                return value["js"]
-            elif return_topic == 2:
-                return value["Fuzzilli"]
-            elif return_topic == 3:
-                return value["execution_data"]
-        else:
-            return "No results found"
+        if pattern.lower() in key.lower():
+            found.append(key)
+    if found:
+        return "\n".join(found)
+    else:
+        return "No results found"
+
+
+
+
+@tool
+def get_js_entry_data_by_name(file_name: str) -> str:
+    """
+    Get the entry data for a given JS file name from the regressions.json file
+
+    Args:
+        file_name (str): The name of the JS file to get the entry data for
+
+    Returns:
+        str: The entry data for the given JS file
+    """
+    data = _load_regressions_once()
+    return json.dumps(data.get(file_name, {})) if data.get(file_name) else "No results found for " + file_name
+
+
+
 
 @tool
 def search_regex_js(regex: str) -> str:
@@ -332,6 +345,7 @@ def search_regex_js(regex: str) -> str:
     Returns:
         str: The results of the regex search, or "No matches found".
     """
+    start_time = time.time()
     pattern = re.compile(regex, re.MULTILINE)
     results = []
     data = _load_regressions_once()
@@ -340,8 +354,12 @@ def search_regex_js(regex: str) -> str:
         if pattern.search(js_code):
             results.append(f"this is js code for {key}\n{js_code}\n")
     if results:
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time} seconds for search_regex_js")
         return "\n".join(results)
     else:
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time} seconds for search_regex_js")
         return "No matches found"
 
 @tool
@@ -355,6 +373,7 @@ def search_regex_fuzzilli(regex: str) -> str:
     Returns:
         str: The results of the regex search, or "No matches found".
     """
+    start_time = time.time()
     pattern = re.compile(regex, re.MULTILINE)
     results = []
     data = _load_regressions_once()
@@ -363,8 +382,12 @@ def search_regex_fuzzilli(regex: str) -> str:
         if pattern.search(fuzzilli_code):
             results.append(f"this is fuzzilli code for {key}\n{fuzzilli_code}\n")
     if results:
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time} seconds for search_regex_fuzzilli")
         return "\n".join(results)
     else:
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time} seconds for search_regex_fuzzilli")
         return "No matches found"
 
 
@@ -379,6 +402,7 @@ def search_regex_execution_data(regex: str) -> str:
     Returns:
         str: The results of the regex search, or "No matches found".
     """
+    start_time = time.time()
     pattern = re.compile(regex, re.MULTILINE)
     results = []
     data = _load_regressions_once()
@@ -387,8 +411,12 @@ def search_regex_execution_data(regex: str) -> str:
         if pattern.search(execution_data):
             results.append(f"this is execution data for {key}\n{execution_data}\n")
     if results:
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time} seconds for search_regex_execution_data")
         return "\n".join(results)
     else:
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time} seconds for search_regex_execution_data")
         return "No matches found"
 
 @tool
@@ -553,6 +581,7 @@ def search_regex_template_swift(regex: str) -> str:
     Returns:
         str: The results of the regex search, or "No matches found".
     """
+    start_time = time.time()
     pattern = re.compile(regex, re.MULTILINE)
     results = []
     data = _load_templates_once()
@@ -560,6 +589,8 @@ def search_regex_template_swift(regex: str) -> str:
         txt = value.get("ProgramTemplateSwift", "")
         if pattern.search(txt):
             results.append(f"this is swift template for {key}\n{txt}\n")
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time} seconds for search_regex_template_swift ")
     return "\n".join(results) if results else "No matches found"
 
 @tool

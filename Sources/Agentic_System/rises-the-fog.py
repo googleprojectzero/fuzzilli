@@ -20,6 +20,8 @@ logger.disabled = True
 
 BASE_MODEL_ID = "gpt-5-mini"
 
+import site
+
 
 class FatherOfGod:
     def __init__(self):
@@ -32,6 +34,11 @@ class FatherOfGod:
         
 
 def main():
+
+    site.addsitedir(Path(__file__).parent.parent)
+    #smolagent-fork
+
+    
     parser = argparse.ArgumentParser(description="Rise the FoG agentic system")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging to fog logs")
     args = parser.parse_args()
@@ -49,7 +56,7 @@ def main():
         logger.setLevel(logging.INFO)
         logger.disabled = False
 
-        # Redirect stdout/stderr to logger to capture third-party console UIs 1:1
+        
         class _StreamToLogger:
             def __init__(self, log_fn):
                 self.log_fn = log_fn

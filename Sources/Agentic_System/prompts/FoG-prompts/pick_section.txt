@@ -8,6 +8,17 @@ DO NOT PICK SIMPLE/TOO GENERAL LIKE "MAGLEV" YOU NEED SOMETHING MORE SPECFIC LIK
 
 PLEASE USE THE TOOLS PROVIDED TO YOU TO SEARCH THE PROVIDED JSON FILES CONTAINING REGGRESSIONS FROM V8 WITH THEIR ASSOCIATED FUZZIL AND JS. 
 
+
+## CRITICAL RULES:
+
+DO NOT JUST USE get_random_js_file/get_random_fuzzilli_file, instead make sure to actually find a specfic target
+the most important part here is querying for specfic exectuion information for the actually exectuion, please use 
+search_js_file_json with return_topic = 3 after you find a set of interesting js code. 
+
+Validate ideas agains the vector database using the search_knowledge_base and get_knowledge_doc tool calls
+
+
+
 ## Stage 1
 In the first stage you should query your tool calls to figure out a specific code region in V8, targeting JIT. 
 Look at the execution data for the regressions provided with your tools calls to see how the JavaScript and FuzzIL interact with V8. You can compare

@@ -271,7 +271,9 @@ class FAISSKnowledgeBase:
         with open(model_file, 'rb') as f:
             model_name = pickle.load(f)
         
-        self.model = SentenceTransformer(model_name)
+        # Force CPU device to avoid accidental meta device transfers that cause
+        # "Cannot copy out of meta tensor" errors in some torch/accelerate setups.
+        self.model = SentenceTransformer(model_name, device='cpu')
     
     @classmethod
     def get_instance(cls):
