@@ -4,15 +4,22 @@ import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
+import sys  
 
-PATH = "/usr/share/vrigatoni/v8_2/v8/out.gn/x64.release/d8"
 folder = "regressions"
 json_file = "regressions.json"
 
 # file name : { "js": "js code", "Fuzzilli": "Fuzzilli code", "execution_data": "bytecode and graphs" }
 
-FUZZIL_BIN = "/usr/share/vrigatoni/fuzzillai/.build/x86_64-unknown-linux-gnu/debug/FuzzILTool"
+if not os.getenv('D8_PATH'):
+    print("D8_PATH is not set")
+    sys.exit(1)
+if not os.getenv('FUZZILLI_TOOL_BIN'):
+    print("FUZZILLI_TOOL_BIN is not set")
+    sys.exit(1)
 
+D8_PATH = os.getenv('D8_PATH')
+FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
 def collect_js_files(root_dir):
     files = []
     for r, _, names in os.walk(root_dir):

@@ -14,6 +14,7 @@ import json
 import pathlib
 import sys
 
+
 V8_PATH = os.environ.get('V8_PATH')
 if not V8_PATH:
     print("V8_PATH environment variable not set. Do export V8_PATH='path to v8 base dir'")
