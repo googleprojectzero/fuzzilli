@@ -91,6 +91,7 @@ class Father(Agent):
                 read_rag_db_id,
                 write_rag_db_id,
                 init_rag_db,
+                read_file,
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
             max_steps=15,

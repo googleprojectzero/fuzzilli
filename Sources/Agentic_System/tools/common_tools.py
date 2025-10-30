@@ -166,3 +166,50 @@ def find_function_cfg(function_name: str) -> str:
     if cfg_builder is None:
         return "CFG analysis not available - clang library not found"
     return cfg_builder.get_function_cfg(function_name)
+
+
+
+@tool
+def read_file(file_path: str, section: int = None) -> str:
+    """
+    Reads and returns the content of a specified text file from the container, 
+    limited to 300 lines maximum (1 section). If the file is longer, split into 300-line sections, 
+    and require specifying which section to read.
+
+    IMPORTANT: Never call more than 300 lines. Use get_file_size first for very large or binary files.
+
+    Args:
+        file_path (str): The full path to the file to be read.
+        section (int): Section of the file to read. Each section is 3000 lines. If the file has multiple sections, agent must specify which section (starting from 1).
+    Returns:
+        If the file is <= 300 lines, returns its content. If more, returns only the requested section and info about total sections. If section is not specified, instruct agent to pick a section.
+    """
+
+    line_count_result = get_output(run_command(f"wc -l {file_path}"))
+    try:
+        line_count = int(line_count_result.strip().split()[0])
+    except Exception:
+        return f"Could not determine number of lines in file. wc -l output: {line_count_result}"
+
+    lines_per_section = 3000
+    num_sections = (line_count + lines_per_section - 1) // lines_per_section
+
+    if line_count <= lines_per_section:
+        return get_output(run_command(f"cat {file_path}"))
+
+    if section is None or section < 1 or section > num_sections:
+        return (
+            f"File '{file_path}' has {line_count} lines and is divided into {num_sections} sections "
+            f"(each section is 3000 lines).\n"
+            f"To read this file, please specify a section number between 1 and {num_sections} "
+            f"using the 'section' argument."
+        )
+
+    start_line = 1 + (section - 1) * lines_per_section
+    end_line = min(start_line + lines_per_section - 1, line_count)
+    read_cmd = f"sed -n '{start_line},{end_line}p' {file_path}"
+    content = get_output(run_command(read_cmd))
+    return (
+        f"Showing section {section}/{num_sections} (lines {start_line}-{end_line}) of '{file_path}':\n"
+        f"{content}"
+    )
