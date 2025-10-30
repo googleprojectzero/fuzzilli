@@ -18,6 +18,7 @@ _REGRESSIONS_PATH = (Path(__file__).parent.parent / "regressions.json").resolve(
 _REGRESSIONS_CACHE = None
 _TEMPLATES_PATH = (Path(__file__).parent.parent / "templates" / "templates.json").resolve()
 _TEMPLATES_CACHE = None
+V8_PATH = "/usr/share/vrigatoni/v8_2/v8"
 
 
 if not os.getenv('D8_PATH'):
