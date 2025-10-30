@@ -92,6 +92,7 @@ class Father(Agent):
                 write_rag_db_id,
                 init_rag_db,
                 read_file,
+                get_realpath,
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
             max_steps=15,
@@ -217,14 +218,13 @@ class Father(Agent):
 
 
     def start_system(self):
-        """Kick off the FoG agentic system by running an initial orchestration task."""
         result = self.run_task(
-            task_description="Initialize FoG orchestration across PickSection, FatherOfGeorge, CodeAnalyzer, and ProgramBuilder",
+            task_description="Initialize Root Manager orchestrationr",
             context={
-                "PickSection": "Select a promising V8 subsystem or JIT-related area to explore",
-                "FatherOfGeorge": "Coordinate between analysis and program generation",
-                "CodeAnalyzer": "Analyze V8 code and knowledge bases to guide fuzz inputs",
-                "ProgramBuilder": "Synthesize JavaScript programs and templates for fuzzing"
+                "PickSection": "Select a promising V8 code region to analyze",
+                "FatherOfGeorge": "Primary orchestrator of the system, coordinates between analysis and program generation",
+                "CodeAnalyzer": "Analyze V8 code and knowledge bases to guide the program template building",
+                "ProgramBuilder": "Generate Fuzzilli program templates for fuzzing a specific code region"
             }
         )
         print("FoG start result:")

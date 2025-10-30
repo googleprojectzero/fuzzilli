@@ -146,39 +146,48 @@ def run_python(code: str) -> str:
 def get_v8_path() -> str:
     """
     Get the V8 source code directory
+
+    Args:
+
+    Returns:
+        str: The V8 source code directory.
     """
     return V8_PATH
 
+@tool 
+def get_realpath(path: str) -> str:
+    """
+    Get the realpath of a given path
+
+    Args:
+        path (str): The path to get the realpath of.
+    Returns:
+        str: The realpath of the given path.
+    """
+    return get_output(run_command(f"realpath {path}"))
 
 @tool
-def tree(directory: str = None, options: str = "") -> str:
+def tree(options: str = "") -> str:
     """
-    Display directory structure using tree command to explore project layout.
+    Display directory structure using tree command to explore the v8 code base layout. 
+    command structure: cd {V8_PATH} && tree {options}
 
-    If directory is not set, you will be exploring the entire V8 source code.
     Args:
-        directory (str): The directory to explore. Defaults to V8_PATH, THIS IS THE 
-        V8 SOURCE CODE DIRECTORY, if you want to explore the entire V8 source code
-        you can use this tool. 
-        
         options (str): Additional tree command options. Common options include:
             -L NUM: Limit depth to NUM levels
             -f: Show full path prefix
     
     Returns:
-        str: Tree structure showing directories and files in the specified path.
+        str: Tree structure showing directories and files in the v8 code base.
     """
-    if directory == None:
-        directory = get_v8_path()   
-    return get_output(run_command(f"cd {directory} && tree {options}"))
+    return get_output(run_command(f"cd {V8_PATH} && tree {options}"))
 
 @tool
-def ripgrep(pattern: str, options: str = "", directory: str = None) -> str:
+def ripgrep(pattern: str, options: str = "") -> str:
     """
     Search for text patterns in files using ripgrep (rg) for fast text searching.
-
-    If directory is not set, you will be searching the entire V8 source code.
     
+    command: cd {V8_PATH} && rg {options} '{pattern}'
     Args:
         pattern (str): The text or regular expression pattern to search for.
             Example: `"TODO"` → searches for the string "TODO" in files.
@@ -214,23 +223,17 @@ def ripgrep(pattern: str, options: str = "", directory: str = None) -> str:
                         Example: `rg --max-depth 2 "class"` → search only two levels deep.
             --context=NUM: Displays NUM lines of context both before and after each match.
                         Example: `rg --context=2 "<pattern>"` → shows 2 lines of context before and after each match.
-
-        directory (str): Directory to search in. Defaults to V8_PATH (V8 source tree).
-
     Returns:
         str: Search results showing matching lines with context.
     """
-    if directory == None:
-        directory = get_v8_path()
-
-    return get_output(run_command(f"cd {directory} && rg {options} '{pattern}'"))
+    return get_output(run_command(f"cd {V8_PATH} && rg {options} '{pattern}'"))
 
 @tool
-def fuzzy_finder(pattern: str, options: str = "", directory: str = None) -> str:
+def fuzzy_finder(pattern: str, options: str = "") -> str:
     """
     Use fuzzy finding to locate files and content by approximate name matching.
 
-    If directory is not set, you will be searching the entire V8 source code.
+    command: cd {V8_PATH} && fzf {options} '{pattern}'
     Args:
         pattern (str): The search pattern to match against files and content.
         options (str): Additional fzf command-line options:
@@ -248,15 +251,10 @@ def fuzzy_finder(pattern: str, options: str = "", directory: str = None) -> str:
 
             --bind: Map keys or events to actions (e.g. reload, execute). 
                     Example: `fzf --bind "enter:execute(cat {V8_PATH}/{{}})"` → runs `cat` on selected file.
-    
-        directory (str): Directory to search in. Defaults to V8_PATH (V8 source tree).
-
     Returns:
         str: Fuzzy search results showing files and content that approximately match the pattern.
     """
-    if directory == None:
-        directory = get_v8_path()
-    return get_output(run_command(f"cd {directory} && fzf {options} '{pattern}'"))
+    return get_output(run_command(f"cd {V8_PATH} && fzf {options} '{pattern}'"))
 
 @tool
 def lift_fuzzil_to_js(target: str) -> str:
