@@ -49,7 +49,7 @@ class Father(Agent):
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
-            max_steps=10,
+            max_steps=20,
             planning_interval=None
         )
         self.agents['george_foreman'].prompt_templates["system_prompt"] = system_prompt
@@ -74,7 +74,7 @@ class Father(Agent):
                 list_rag_db,
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
-            max_steps=10,
+            max_steps=20,
             planning_interval=None,
         )
         self.agents['reviewer_of_code'].prompt_templates["system_prompt"] = self.get_prompt("reviewer_of_code.txt")
@@ -93,7 +93,7 @@ class Father(Agent):
                 init_rag_db,
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
-            max_steps=10,
+            max_steps=15,
             planning_interval=None,
         )
         self.agents['v8_search'].prompt_templates["system_prompt"] = self.get_prompt("v8_search.txt")
@@ -152,7 +152,7 @@ class Father(Agent):
             managed_agents=[
                 self.agents['george_foreman']
             ],
-            max_steps=15,
+            max_steps=30,
             planning_interval=None,
         )
         self.agents['program_builder'].prompt_templates["system_prompt"] = self.get_prompt("program_builder.txt")
@@ -170,7 +170,7 @@ class Father(Agent):
                 get_knowledge_doc,
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
-            max_steps=30,
+            max_steps=20,
             planning_interval=None,
         )
         self.agents['pick_section'].prompt_templates["system_prompt"] = self.get_prompt("pick_section.txt")
@@ -199,7 +199,7 @@ class Father(Agent):
                 self.agents['program_builder'],
                 self.agents['pick_section']
             ],
-            max_steps=20,
+            max_steps=30,
             planning_interval=None,
         )
         self.agents['father_of_george'].prompt_templates["system_prompt"] = self.get_prompt("root_manager.txt")
