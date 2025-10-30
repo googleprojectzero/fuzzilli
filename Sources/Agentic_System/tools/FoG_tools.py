@@ -176,11 +176,23 @@ def tree(options: str = "") -> str:
         options (str): Additional tree command options. Common options include:
             -L NUM: Limit depth to NUM levels
             -f: Show full path prefix
+            PATH: Prefer '.' or an absolute path. If you pass a relative like 'src/', it must exist under V8_PATH.
     
     Returns:
         str: Tree structure showing directories and files in the v8 code base.
     """
-    return get_output(run_command(f"cd {V8_PATH} && tree {options}"))
+    # If a trailing non-flag token looks like a path but does not exist under V8_PATH, fallback to '.'
+    opts = options or ""
+    parts = opts.split()
+    if parts:
+        last = parts[-1]
+        if not last.startswith("-"):
+            candidate = os.path.join(V8_PATH, last)
+            if not os.path.isdir(candidate):
+                parts[-1] = "."
+                opts = " ".join(parts)
+    final_opts = opts if opts else "-L 2 -f ."
+    return get_output(run_command(f"cd {V8_PATH} && tree {final_opts}"))
 
 @tool
 def ripgrep(pattern: str, options: str = "") -> str:
@@ -233,7 +245,7 @@ def fuzzy_finder(pattern: str, options: str = "") -> str:
     """
     Use fuzzy finding to locate files and content by approximate name matching.
 
-    command: cd {V8_PATH} && fzf {options} '{pattern}'
+    command: cd {V8_PATH} && rg --hidden --follow --no-ignore-vcs --files | fzf {options} '{pattern}'
     Args:
         pattern (str): The search pattern to match against files and content.
         options (str): Additional fzf command-line options:
@@ -258,7 +270,8 @@ def fuzzy_finder(pattern: str, options: str = "") -> str:
     Returns:
         str: Fuzzy search results showing files and content that approximately match the pattern.
     """
-    return get_output(run_command(f"cd {V8_PATH} && fzf {options} '{pattern}'"))
+    file_list_cmd = "rg --hidden --follow --no-ignore-vcs --files"
+    return get_output(run_command(f"cd {V8_PATH} && {file_list_cmd} | fzf {options} '{pattern}'"))
 
 @tool
 def lift_fuzzil_to_js(target: str) -> str:
