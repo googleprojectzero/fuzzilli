@@ -127,10 +127,6 @@ let v8Profile = Profile(
         }
 
         if probability(0.1) {
-            args.append("--handle-weak-ref-weakly-in-minor-gc")
-        }
-
-        if probability(0.1) {
             args.append("--scavenger-chaos-mode")
             let threshold = Int.random(in: 0...100)
             args.append("--scavenger-chaos-mode-threshold=\(threshold)")
