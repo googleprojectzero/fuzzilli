@@ -736,12 +736,12 @@ def get_template_by_name(name: str) -> str:
 
 
 @tool 
-def write_rag_db_id(rag_db_id: str, data: str) -> str:
+def write_rag_db_id(id: str, data: str) -> str:
     r"""
     Write data to the RAG database
     
     Args:
-        rag_db_id (str): The ID of the RAG database to write to
+        id (str): The ID of the RAG database to write to. Should be in either "id" OR "ID:{...}" format.
         data (str): A SINGLE item to write, in one of the following formats:
             1) JSON object with an "id" field. Example:
                {"id": 1234, "body": "...", "context": [1,2], "explanation": "...", "file_line": "example.cc:10"}
@@ -773,12 +773,12 @@ def write_rag_db_id(rag_db_id: str, data: str) -> str:
     return f"OK: wrote {item_id} to {rag_db_id}"
 
 @tool
-def read_rag_db_id(rag_db_id: str) -> str:
+def read_rag_db_id(id: str) -> str:
     """
     Read data from the RAG database
     
     Args:
-        rag_db_id (str): The ID of the RAG database to read from
+        id (str): The ID of the RAG database to read from. Should be in either "id" OR "ID:{...}" format.
     Returns:
         str: The data from the RAG database
     """
@@ -786,13 +786,13 @@ def read_rag_db_id(rag_db_id: str) -> str:
     return json.dumps(db)
 
 @tool
-def init_rag_db(rag_db_id: str) -> str:
+def init_rag_db(id: str) -> str:
     """
     Initialize a non-vector RAG database identified by rag_db_id.
     Creates an empty JSON file under rag_db/<rag_db_id>.json if missing.
     
     Args:
-        rag_db_id (str): The RAG database identifier to initialize.
+        id (str): The RAG database identifier to initialize. Should be in either "id" OR "ID:{...}" format.
     Returns:
         str: A confirmation message with the initialized path.
     """
