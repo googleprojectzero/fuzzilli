@@ -15,6 +15,7 @@ from tools.rag_tools import (
     get_rag_doc,
     search_knowledge_base,
     get_knowledge_doc,
+    FAISSKnowledgeBase,
 )
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
@@ -24,6 +25,11 @@ from config_loader import get_openai_api_key, get_anthropic_api_key
 class Father(Agent):
 
     def setup_agents(self):
+        # Pre-warm FAISS knowledge base to avoid first-call latency
+        try:
+            FAISSKnowledgeBase.get_instance()
+        except Exception:
+            pass
         # L2 Worker: EBG
         self.agents['george_foreman'] = ToolCallingAgent(
             name="GeorgeForeman",
