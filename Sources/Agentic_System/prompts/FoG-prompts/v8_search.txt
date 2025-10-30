@@ -31,25 +31,24 @@ CODE REGION.
 ONLY AFTER ENSURING YOU HAVE FOUND ALL THE NECESSARY INFORMATON FOR YOUR PROVIDED CODE REGION SHOULD YOU MOVE ONTO STAGE 5.
 
 ## STAGE 5
-USE THE init_rag_db TO ENSURE THE JSON FILE FOR THE RAG DB EXISTS AND IS VALID. AFTER ENSURING THE RAG DB AND ASSOCIATED
-JSON FILES EXISTS AND ARE VALID, USE write_rag_db_id AND read_rag_db_id TO WRITE THE RESULTS OF YOUR FINDING TO THE RAG DB.
+USE init_rag_db TO ENSURE THE JSON FILE FOR THE RAG DB EXISTS AND IS VALID. AFTER THAT, WRITE YOUR FINDINGS USING
+write_rag_db_id, THEN VERIFY WITH read_rag_db_id.
 
-PLEASE COPY THE FOLLOWING FORMAT FOR THE RAG DATABASE WRITE (DO NOT SKIP FIELDS)
-THIS IS AN EXAMPLE OF THE JSON OBJECT YOU SHOULD RETURN, ADD AS MUCH DATA AS NEEDED:
+STRICT OUTPUT RULES FOR write_rag_db_id:
+- Pass a SINGLE JSON OBJECT per call. DO NOT wrap in an array.
+- The object MUST contain an "id" field.
+- If you have many items, call write_rag_db_id multiple times, once per item.
+
+VALID EXAMPLE (single object):
 ```
-{[
-    {
-        "id": 1234,
-        "body": "```
-                    void ExamplePhase::Run(PipelineData* data, Zone* temp_zone) {
-                    ExampleAnalyzer analyzer(temp_zone, &data->graph(), data->is_wasm());
-                    if (analyzer.CanProcessAtLeastOneItem()) {
-                        data->graph().set_example_analyzer(&analyzer); ...}}.. 
-                ```",
-        "context": [12, 23, 34, 45, ...],
-        "explanation": "ExamplePhase::Run()(id:1234) is responsible for processing a basic block
-                        with the ExampleReducer, given it .CanProcessAtLeastOneItem()(id:12). 
-                        This will be executed in the following instructions."
-        },
-    ]}
+{"id": 1234,
+ "body": "void ExamplePhase::Run(PipelineData* data, Zone* temp_zone) { ... }",
+ "context": [12, 23, 34, 45],
+ "explanation": "ExamplePhase::Run()(id:1234) processes a basic block with ExampleReducer.",
+ "file_line": "example.cc:10"}
+```
+
+ALTERNATIVE VALID FORM (ID:{...}):
+```
+1234:{"body":"...","context":[12,23],"explanation":"...","file_line":"example.cc:10"}
 ```

@@ -180,6 +180,7 @@ def read_file(file_path: str, section: int = None) -> str:
 
     Args:
         file_path (str): The full path to the file to be read.
+        PLEASE USE FULLPATHS. If you do not know the full path, use the "get_realpath" tool to get it.
         section (int): Section of the file to read. Each section is 3000 lines. If the file has multiple sections, agent must specify which section (starting from 1).
     Returns:
         If the file is <= 300 lines, returns its content. If more, returns only the requested section and info about total sections. If section is not specified, instruct agent to pick a section.

@@ -240,6 +240,10 @@ def fuzzy_finder(pattern: str, options: str = "") -> str:
             --filter: Run non-interactively; outputs only matching lines. 
                   Example: `ls | fzf --filter .py` → lists only Python files.
 
+                  Notes:
+                  - `--filter` must be followed immediately by the query string. Do not place other flags right after it. For example, use `--filter 'v8/src/compiler' -e` not `--filter -e v8/src/compiler`.
+                  - With `--filter`, `fzf` expects input on stdin. Provide input via a producer command. Example: `rg -n 'JSLoadElement' | fzf -e --filter 'v8/src/compiler'`.
+
             --exact: Match the query exactly (not fuzzily). 
                     Example: `echo "main.c\nmain.cpp" | fzf --exact --filter main.c` → returns only `main.c`.
 
@@ -725,20 +729,32 @@ def write_rag_db_id(rag_db_id: str, data: str) -> str:
     
     Args:
         rag_db_id (str): The ID of the RAG database to write to
-        data (str): The data to write to the RAG database in the following format:
-            ID:{
-                body: <CODE SNIPPET>
-                context: <OTHER IDS THAT ARE RELATED TO THIS ONE>
-                explanation: <EXPLANATION OF THE CODE SNIPPET>
-                file_line: exmaple.cc:10
-            }
+        data (str): A SINGLE item to write, in one of the following formats:
+            1) JSON object with an "id" field. Example:
+               {"id": 1234, "body": "...", "context": [1,2], "explanation": "...", "file_line": "example.cc:10"}
+            2) "ID:{...}" form. Example:
+               1234:{"body":"...","context":[1,2],"explanation":"...","file_line":"example.cc:10"}
+
+            Do not wrap items in an array. Call this tool once per object.
     Returns:
         str: The result of the write operation
     """
     db = _load_rag_db(rag_db_id)
+    # Give a clear error if an array was provided
+    try:
+        parsed = json.loads(data)
+        if isinstance(parsed, list):
+            return (
+                "ERROR: expected a single JSON object with 'id' or 'ID:{...}'. "
+                "Arrays are not accepted. Call write_rag_db_id once per object."
+            )
+    except Exception:
+        pass
     item_id, payload = _parse_rag_entry(data)
     if not item_id or not isinstance(payload, dict):
-        return "ERROR: data must be JSON with 'id' or in 'ID:{...}' format"
+        return (
+            "ERROR: data must be a single JSON object with 'id' or in 'ID:{...}' format"
+        )
     db[item_id] = payload
     _save_rag_db(rag_db_id, db)
     return f"OK: wrote {item_id} to {rag_db_id}"
