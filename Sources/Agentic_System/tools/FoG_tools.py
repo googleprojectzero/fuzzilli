@@ -9,7 +9,7 @@ import random
 import time
 from pathlib import Path
 
-FUZZILTOOL_BIN = "/usr/share/vrigatoni/fuzzillai/.build/x86_64-unknown-linux-gnu/debug/FuzzILTool"
+FUZZILTOOL_BIN = f"/usr/share/vrigatoni/fuzzillai/.build/x86_64-unknown-linux-gnu/debug/FuzzILTool"
 OUTPUT_DIRECTORY = "/tmp/fog-d8-records" 
 RAG_DB_DIR = (Path(__file__).parent.parent / "rag_db").resolve()
 
@@ -280,7 +280,7 @@ def run_d8(target: str, options: str = "") -> str:
     Returns:
         str: The output from running the JavaScript program with d8.
     """ 
-    completed_process = run_command(f"/usr/share/vrigatoni/fuzzillai/v8/v8/out/fuzzbuild/d8 {target} {options}")
+    completed_process = run_command(f"{V8_PATH}/out/fuzzbuild/d8 {target} {options}")
     if not completed_process:
         return
 

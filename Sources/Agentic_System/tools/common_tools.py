@@ -11,12 +11,20 @@ except ImportError:
 import subprocess
 import os
 import json
+import pathlib
+import sys
+
+V8_PATH = os.environ.get('V8_PATH')
+if not V8_PATH:
+    print("V8_PATH environment variable not set. Do export V8_PATH='path to v8 base dir'")
+    print("     Example: export V8_PATH=/path/to/v8/v8")
+    sys.exit(0)
 
 # Try to import CFG tools, but don't fail if clang is not available
 try:
     from tools.cfg_tool import *
-    cfg_builder = CFGBuilder("/usr/share/vrigatoni/fuzzillai/v8/v8")
-    cfg_builder.parse_directory("/usr/share/vrigatoni/fuzzillai/v8/v8", pattern='*.cc')
+    cfg_builder = CFGBuilder(V8_PATH)
+    cfg_builder.parse_directory(V8_PATH, pattern='*.cc')
 except Exception as e:
     # Define fallback functions if CFG tools can't be imported
     def find_function_cfg(function_name: str) -> str:
@@ -50,6 +58,8 @@ except ImportError as e:
         return h.hexdigest()
     
     Chroma = None
+
+
 
 # helper to get output from run_command
 def get_output(completed_process) -> str:
