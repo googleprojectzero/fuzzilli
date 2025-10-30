@@ -76,11 +76,11 @@ class Father(Agent):
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             max_steps=10,
             planning_interval=None,
-            system_prompt=self.get_prompt("reviewer_of_code.txt"),
         )
         self.agents['reviewer_of_code'].prompt_templates["system_prompt"] = self.get_prompt("reviewer_of_code.txt")
         
         # L2 Worker: V8 Search (under CodeAnalyzer)
+        system_prompt=self.get_prompt("v8_search.txt"),
         self.agents['v8_search'] = ToolCallingAgent(
             name="V8Search",
             description="L2 Worker responsible for searching V8 source code using fuzzy find, regex, and compilation tools",
@@ -95,7 +95,6 @@ class Father(Agent):
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
             max_steps=10,
             planning_interval=None,
-            system_prompt=self.get_prompt("v8_search.txt"),
         )
         self.agents['v8_search'].prompt_templates["system_prompt"] = self.get_prompt("v8_search.txt")
 
@@ -128,7 +127,6 @@ class Father(Agent):
                 self.agents['reviewer_of_code'], 
                 self.agents['v8_search']
                 ],
-            system_prompt=self.get_prompt("code_analyzer.txt"),
             max_steps=15,
             planning_interval=None,
         )
@@ -154,7 +152,6 @@ class Father(Agent):
             managed_agents=[
                 self.agents['george_foreman']
             ],
-            system_prompt=self.get_prompt("program_builder.txt"),
             max_steps=15,
             planning_interval=None,
         )
@@ -173,8 +170,7 @@ class Father(Agent):
                 get_knowledge_doc,
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
-            system_prompt=self.get_prompt("pick_section.txt"),
-            max_steps=10,
+            max_steps=30,
             planning_interval=None,
         )
         self.agents['pick_section'].prompt_templates["system_prompt"] = self.get_prompt("pick_section.txt")
@@ -203,7 +199,6 @@ class Father(Agent):
                 self.agents['program_builder'],
                 self.agents['pick_section']
             ],
-            system_prompt=self.get_prompt("root_manager.txt"),
             max_steps=20,
             planning_interval=None,
         )
