@@ -104,18 +104,19 @@ def _parse_rag_entry(raw: str):
         pass
     return None, None
 
-@tool
-def web_search(query: str) -> str:
-    """
-    Search the internet for information about a given query.
-    
-    Args:
-        query (str): The search query to look up online.
-    
-    Returns:
-        str: Search results and relevant information from the web.
-    """
-    return get_output(run_command(f"curl -s 'https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1'"))
+#@tool
+#def web_search(query: str) -> str:
+#    """
+#    Search the internet for information about a given query.
+#    
+#    Args:
+#        query (str): The search query to look up online.
+#    
+#    Returns:
+#        str: Search results and relevant information from the web.
+#    """
+#    response = sel
+#    #return get_output(run_command(f"curl -s 'https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1'"))
 
 
 @tool
@@ -755,3 +756,4 @@ def init_rag_db(rag_db_id: str) -> str:
     """
     _ensure_rag_db_initialized(rag_db_id)
     return f"OK: initialized RAG DB {rag_db_id} at {_rag_db_path(rag_db_id)}"
+
