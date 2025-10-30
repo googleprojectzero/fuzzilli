@@ -26,10 +26,10 @@ class Father(Agent):
 
     def setup_agents(self):
         # Pre-warm FAISS knowledge base to avoid first-call latency
-        try:
-            FAISSKnowledgeBase.get_instance()
-        except Exception:
-            pass
+        # while not :
+        #     print("Waiting for FAISSKnowledgeBase to be initialized...")
+        #     time.sleep(1)   
+        # FAISSKnowledgeBase.get_instance()
         # L2 Worker: EBG
         self.agents['george_foreman'] = ToolCallingAgent(
             name="GeorgeForeman",

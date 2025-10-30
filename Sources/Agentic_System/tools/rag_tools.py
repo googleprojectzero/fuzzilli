@@ -315,9 +315,8 @@ def search_knowledge_base(query: str, top_k: int = 3, topic_filter: str = "") ->
     
     Args:
         query (str): Natural language query about V8, JavaScript, or C++ concepts.
-        top_k (int): Number of results to return (default 3, max 10).
+        top_k (int): Number of results to return (default 3, max 10, for the first query please keep top_k between 3-5).
         topic_filter (str): Optional topic filter: 'v8', 'javascript', 'cpp', or empty for all.
-    
     Returns:
         str: JSON string containing search results with topic, file path, and content snippets.
     """

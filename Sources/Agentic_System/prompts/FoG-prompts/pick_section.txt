@@ -17,6 +17,8 @@ search_js_file_json with return_topic = 3 after you find a set of interesting js
 
 Validate ideas agains the vector database using the search_knowledge_base and get_knowledge_doc tool calls
 
+IMPORTANT:
+DO NOT USE FIRST EVER and only use search_knowledge_base unless you have something very spefic to seach and make sure you do the other steps before!
 
 
 ## Stage 1
