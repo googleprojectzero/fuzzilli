@@ -181,20 +181,26 @@ def find_function_cfg(function_name: str) -> str:
 def read_file(file_path: str, section: int = None) -> str:
     """
     Reads and returns the content of a specified text file from the container, 
-    limited to 300 lines maximum (1 section). If the file is longer, split into 300-line sections, 
+    limited to 3000 lines maximum (1 section). If the file is longer, split into 3000-line sections, 
     and require specifying which section to read.
 
-    IMPORTANT: Never call more than 300 lines. Use get_file_size first for very large or binary files.
+    !!! PLEASE USE FULLPATHS. If you do not know the full path, use the "get_realpath" tool to get it. !!!
+    IMPORTANT: Never call more than 3000 lines. Use get_file_size first for very large or binary files.
 
     Args:
-        file_path (str): The full path to the file to be read.
-        PLEASE USE FULLPATHS. If you do not know the full path, use the "get_realpath" tool to get it.
+        file_path (str): The full path to the file to be read. If path starts with 'v8/', it will be resolved relative to V8_PATH.
         section (int): Section of the file to read. Each section is 3000 lines. If the file has multiple sections, agent must specify which section (starting from 1).
     Returns:
         If the file is <= 300 lines, returns its content. If more, returns only the requested section and info about total sections. If section is not specified, instruct agent to pick a section.
     """
+    if file_path.startswith('v8/'):
+        resolved_path = os.path.join(V8_PATH, file_path[3:])
+    elif not os.path.isabs(file_path):
+        resolved_path = os.path.join(V8_PATH, file_path)
+    else:
+        resolved_path = file_path
 
-    line_count_result = get_output(run_command(f"wc -l {file_path}"))
+    line_count_result = get_output(run_command(f"wc -l '{resolved_path}'"))
     try:
         line_count = int(line_count_result.strip().split()[0])
     except Exception:
@@ -204,7 +210,7 @@ def read_file(file_path: str, section: int = None) -> str:
     num_sections = (line_count + lines_per_section - 1) // lines_per_section
 
     if line_count <= lines_per_section:
-        return get_output(run_command(f"cat {file_path}"))
+        return get_output(run_command(f"cat '{resolved_path}'"))
 
     if section is None or section < 1 or section > num_sections:
         return (
@@ -216,7 +222,7 @@ def read_file(file_path: str, section: int = None) -> str:
 
     start_line = 1 + (section - 1) * lines_per_section
     end_line = min(start_line + lines_per_section - 1, line_count)
-    read_cmd = f"sed -n '{start_line},{end_line}p' {file_path}"
+    read_cmd = f"sed -n '{start_line},{end_line}p' '{resolved_path}'"
     content = get_output(run_command(read_cmd))
     return (
         f"Showing section {section}/{num_sections} (lines {start_line}-{end_line}) of '{file_path}':\n"

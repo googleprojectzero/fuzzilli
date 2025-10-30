@@ -20,6 +20,15 @@ _TEMPLATES_PATH = (Path(__file__).parent.parent / "templates" / "templates.json"
 _TEMPLATES_CACHE = None
 
 
+if not os.getenv('D8_PATH'):
+    print("D8_path is not set")
+    sys.exit(1)
+if not os.getenv('FUZZILLI_TOOL_BIN'):
+    print("FUZZILLI_TOOL_BIN is not set")
+    sys.exit(1)
+D8_PATH = os.getenv('D8_PATH')
+FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
+
 def _load_regressions_once():
     global _REGRESSIONS_CACHE
     if _REGRESSIONS_CACHE is not None:
@@ -190,12 +199,12 @@ def ripgrep(pattern: str, options: str = "") -> str:
     """
     Search for text patterns in files using ripgrep (rg) for fast text searching.
     
-    command: cd {V8_PATH} && rg {options} '{pattern}'
+    command: cd {V8_PATH} && rg {options} '{pattern}' [paths...]
     Args:
         pattern (str): The text or regular expression pattern to search for.
             Example: `"TODO"` → searches for the string "TODO" in files.
 
-        options (str): Additional ripgrep command-line options.
+        options (str): Additional ripgrep command-line options and paths.
             You can use any of the following commonly used flags:
 
             --files: List all files that would be searched, without searching inside them. 
@@ -226,17 +235,51 @@ def ripgrep(pattern: str, options: str = "") -> str:
                         Example: `rg --max-depth 2 "class"` → search only two levels deep.
             --context=NUM: Displays NUM lines of context both before and after each match.
                         Example: `rg --context=2 "<pattern>"` → shows 2 lines of context before and after each match.
+            
+            Paths: You can include directory paths in the options string. They will be placed after the pattern.
+                   Example: `-n v8/src/ic v8/src/maglev` → searches with line numbers in those directories.
     Returns:
         str: Search results showing matching lines with context.
     """
-    return get_output(run_command(f"cd {V8_PATH} && rg {options} '{pattern}'"))
+    if not options:
+        return get_output(run_command(f"cd {V8_PATH} && rg '{pattern}'"))
+    
+    parts = options.split()
+    flags = []
+    paths = []
+    
+    i = 0
+    while i < len(parts):
+        part = parts[i]
+        if part.startswith('-'):
+            flags.append(part)
+            if part in ['--type', '--glob'] and i + 1 < len(parts):
+                next_part = parts[i + 1]
+                if not next_part.startswith('-') and not next_part.startswith('v8/'):
+                    i += 1
+                    flags.append(parts[i])
+        elif part.startswith('v8/') or ('/' in part and not part.startswith('-')):
+            paths.append(part)
+        else:
+            flags.append(part)
+        i += 1
+    
+    flags_str = ' '.join(flags) if flags else ''
+    paths_str = ' '.join(paths) if paths else ''
+    
+    if paths_str:
+        cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}' {paths_str}"
+    else:
+        cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}'"
+    
+    return get_output(run_command(cmd))
 
 @tool
 def fuzzy_finder(pattern: str, options: str = "") -> str:
     """
     Use fuzzy finding to locate files and content by approximate name matching.
 
-    command: cd {V8_PATH} && rg --hidden --follow --no-ignore-vcs --files | fzf {options} '{pattern}'
+    command: cd {V8_PATH} && rg --hidden --no-follow --no-ignore-vcs --files 2>/dev/null | fzf {options} '{pattern}'
     Args:
         pattern (str): The search pattern to match against files and content.
         options (str): Additional fzf command-line options:
@@ -261,7 +304,7 @@ def fuzzy_finder(pattern: str, options: str = "") -> str:
     Returns:
         str: Fuzzy search results showing files and content that approximately match the pattern.
     """
-    file_list_cmd = "rg --hidden --follow --no-ignore-vcs --files"
+    file_list_cmd = "rg --hidden --no-follow --no-ignore-vcs --files 2>/dev/null"
     return get_output(run_command(f"cd {V8_PATH} && {file_list_cmd} | fzf {options} '{pattern}'"))
 
 @tool
