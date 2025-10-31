@@ -17,7 +17,7 @@ import sys
 
 if not os.getenv('V8_PATH'):
     print("V8_PATH environment variable not set. Do export V8_PATH='path to v8 base dir'")
-    print("     Example: export V8_PATH=/path/to/v8/v8")
+    print("     Example: export V8_PATH=/path/to/v8/v8/src")
     sys.exit(0)
 if not os.getenv('D8_PATH'):
     print("D8_path is not set")
@@ -28,7 +28,9 @@ if not os.getenv('FUZZILLI_TOOL_BIN'):
 D8_PATH = os.getenv('D8_PATH')
 FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
 V8_PATH = os.getenv('V8_PATH')
-
+if "src" not in V8_PATH:
+    print('V8_PATH is not a valid V8 source code directory')
+    sys.exit(1)
 # Try to import CFG tools, but don't fail if clang is not available
 try:
     from tools.cfg_tool import *
@@ -86,7 +88,9 @@ def run_command(command: str) -> str:
     Args:
         command (str): The command to execute in the container.
     """
-    return subprocess.run(command, shell=True, capture_output=True, text=True)
+    return_val = subprocess.run(command, shell=True, capture_output=True, text=True)
+    get_output(return_val)
+    return return_val
 
 @tool
 def read_rag_db(query: str) -> str:
