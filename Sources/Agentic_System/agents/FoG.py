@@ -17,6 +17,7 @@ from tools.rag_tools import (
     get_knowledge_doc,
     FAISSKnowledgeBase,
 )
+from common_tools import get_v8_path
 import sys
 import yaml
 import importlib.resources
@@ -100,7 +101,7 @@ class Father(Agent):
             max_steps=15,
             planning_interval=None,
         )
-        self.agents['v8_search'].prompt_templates["system_prompt"] = self.get_prompt("v8_search.txt")
+        self.agents['v8_search'].prompt_templates["system_prompt"] = self.get_prompt("v8_search.txt") + "THIS IS THE CURRENT V8 PATH ASSUMING YOU ARE INSIDE THE V8 SOURCE CODE DIRECTORY FOR ALL TOOL CALLS ALREADY: " + get_v8_path()
 
         # L1 Manager: Code Analysis Agent
         self.agents['code_analyzer'] = ToolCallingAgent(
