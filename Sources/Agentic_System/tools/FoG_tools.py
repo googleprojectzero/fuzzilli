@@ -253,7 +253,7 @@ def ripgrep(pattern: str, options: str = "") -> str:
         str: Search results showing matching lines with context.
     """
     if not options:
-        return get_output(run_command(f"cd {V8_PATH} && rg '{pattern}' | head -n 1000"))
+        return get_output(run_command(f"cd {V8_PATH} && rg '{pattern}' | head -n 10000"))
     
     parts = options.split()
     flags = []
@@ -796,7 +796,7 @@ def write_rag_db_id(id: str, data: str) -> str:
     Returns:
         str: The result of the write operation
     """
-    db = _load_rag_db(rag_db_id)
+    db = _load_rag_db(id)
     # Give a clear error if an array was provided
     try:
         parsed = json.loads(data)
@@ -813,8 +813,8 @@ def write_rag_db_id(id: str, data: str) -> str:
             "ERROR: data must be a single JSON object with 'id' or in 'ID:{...}' format"
         )
     db[item_id] = payload
-    _save_rag_db(rag_db_id, db)
-    return f"OK: wrote {item_id} to {rag_db_id}"
+    _save_rag_db(id, db)
+    return f"OK: wrote {item_id} to {id}"
 
 @tool
 def read_rag_db_id(id: str) -> str:
@@ -826,7 +826,7 @@ def read_rag_db_id(id: str) -> str:
     Returns:
         str: The data from the RAG database
     """
-    db = _load_rag_db(rag_db_id)
+    db = _load_rag_db(id)
     return json.dumps(db)
 
 @tool
