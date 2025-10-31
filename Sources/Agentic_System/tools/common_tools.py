@@ -15,8 +15,7 @@ import pathlib
 import sys
 
 
-V8_PATH = os.environ.get('V8_PATH')
-if not V8_PATH:
+if not os.getenv('V8_PATH'):
     print("V8_PATH environment variable not set. Do export V8_PATH='path to v8 base dir'")
     print("     Example: export V8_PATH=/path/to/v8/v8")
     sys.exit(0)
@@ -28,6 +27,7 @@ if not os.getenv('FUZZILLI_TOOL_BIN'):
     sys.exit(1)
 D8_PATH = os.getenv('D8_PATH')
 FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
+V8_PATH = os.getenv('V8_PATH')
 
 # Try to import CFG tools, but don't fail if clang is not available
 try:
@@ -200,7 +200,7 @@ def read_file(file_path: str, section: int = None) -> str:
     else:
         resolved_path = file_path
 
-    line_count_result = get_output(run_command(f"wc -l '{resolved_path}'"))
+    line_count_result = get_output(run_command(f"cd {V8_PATH} && wc -l '{resolved_path}'"))
     try:
         line_count = int(line_count_result.strip().split()[0])
     except Exception:
@@ -210,7 +210,7 @@ def read_file(file_path: str, section: int = None) -> str:
     num_sections = (line_count + lines_per_section - 1) // lines_per_section
 
     if line_count <= lines_per_section:
-        return get_output(run_command(f"cat '{resolved_path}'"))
+        return get_output(run_command(f"cd {V8_PATH} && cat '{resolved_path}'"))
 
     if section is None or section < 1 or section > num_sections:
         return (
@@ -222,7 +222,7 @@ def read_file(file_path: str, section: int = None) -> str:
 
     start_line = 1 + (section - 1) * lines_per_section
     end_line = min(start_line + lines_per_section - 1, line_count)
-    read_cmd = f"sed -n '{start_line},{end_line}p' '{resolved_path}'"
+    read_cmd = f"cd {V8_PATH} && sed -n '{start_line},{end_line}p' '{resolved_path}'"
     content = get_output(run_command(read_cmd))
     return (
         f"Showing section {section}/{num_sections} (lines {start_line}-{end_line}) of '{file_path}':\n"

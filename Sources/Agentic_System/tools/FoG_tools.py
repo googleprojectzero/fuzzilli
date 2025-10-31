@@ -18,17 +18,21 @@ _REGRESSIONS_PATH = (Path(__file__).parent.parent / "regressions.json").resolve(
 _REGRESSIONS_CACHE = None
 _TEMPLATES_PATH = (Path(__file__).parent.parent / "templates" / "templates.json").resolve()
 _TEMPLATES_CACHE = None
-V8_PATH = "/usr/share/vrigatoni/v8_2/v8"
 
 
-if not os.getenv('D8_PATH'):
-    print("D8_path is not set")
-    sys.exit(1)
-if not os.getenv('FUZZILLI_TOOL_BIN'):
-    print("FUZZILLI_TOOL_BIN is not set")
-    sys.exit(1)
-D8_PATH = os.getenv('D8_PATH')
-FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
+
+# if not os.getenv('D8_PATH'):
+#     print("D8_path is not set")
+#     sys.exit(1)
+# if not os.getenv('FUZZILLI_TOOL_BIN'):
+#     print("FUZZILLI_TOOL_BIN is not set")
+
+# if not os.getenv('V8_PATH'):
+#     print("V8_PATH is not set")
+#     sys.exit(1)
+# D8_PATH = os.getenv('D8_PATH')
+# FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
+# V8_PATH = os.getenv('V8_PATH')
 
 def _load_regressions_once():
     global _REGRESSIONS_CACHE
@@ -134,13 +138,15 @@ def run_python(code: str) -> str:
     """
     Execute Python code using the Python interpreter.
     
+    MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
+    
     Args:
         code (str): The Python code to execute.
     
     Returns:
         str: The output from executing the Python code, including stdout and stderr.
     """
-    return get_output(run_command(f"python3 -c '{code}'"))
+    return get_output(run_command(f"python3 -c '{code}' | head -n 1000"))
 
 
 @tool
@@ -160,18 +166,22 @@ def get_realpath(path: str) -> str:
     """
     Get the realpath of a given path
 
+    MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
+
     Args:
         path (str): The path to get the realpath of.
     Returns:
         str: The realpath of the given path.
     """
-    return get_output(run_command(f"realpath {path}"))
+    return get_output(run_command(f"cd {V8_PATH} && realpath {path}"))
 
 @tool
 def tree(options: str = "") -> str:
     """
     Display directory structure using tree command to explore the v8 code base layout. 
     command structure: cd {V8_PATH} && tree {options}
+
+    MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
 
     Args:
         options (str): Additional tree command options. Common options include:
@@ -193,12 +203,14 @@ def tree(options: str = "") -> str:
                 parts[-1] = "."
                 opts = " ".join(parts)
     final_opts = opts if opts else "-L 2 -f ."
-    return get_output(run_command(f"cd {V8_PATH} && tree {final_opts}"))
+    return get_output(run_command(f"cd {V8_PATH} && tree {final_opts} | head -n 1000"))
 
 @tool
 def ripgrep(pattern: str, options: str = "") -> str:
     """
     Search for text patterns in files using ripgrep (rg) for fast text searching.
+    
+    MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
     
     command: cd {V8_PATH} && rg {options} '{pattern}' [paths...]
     Args:
@@ -243,7 +255,7 @@ def ripgrep(pattern: str, options: str = "") -> str:
         str: Search results showing matching lines with context.
     """
     if not options:
-        return get_output(run_command(f"cd {V8_PATH} && rg '{pattern}'"))
+        return get_output(run_command(f"cd {V8_PATH} && rg '{pattern}' | head -n 1000"))
     
     parts = options.split()
     flags = []
@@ -269,16 +281,18 @@ def ripgrep(pattern: str, options: str = "") -> str:
     paths_str = ' '.join(paths) if paths else ''
     
     if paths_str:
-        cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}' {paths_str}"
+        cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}' {paths_str} | head -n 1000"
     else:
-        cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}'"
+        cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}' | head -n 1000"
     
     return get_output(run_command(cmd))
 
 @tool
 def fuzzy_finder(pattern: str, options: str = "") -> str:
     """
-    Use fuzzy finding to locate files and content by approximate name matching. MAX LINES RETURNED: 1000
+    Use fuzzy finding to locate files and content by approximate name matching.
+
+    MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
 
     command: cd {V8_PATH} && rg --hidden --no-follow --no-ignore-vcs --files 2>/dev/null | fzf {options} '{pattern}'
     Args:
@@ -306,12 +320,14 @@ def fuzzy_finder(pattern: str, options: str = "") -> str:
         str: Fuzzy search results showing up to 1000 files and content that approximately match the pattern.
     """
     file_list_cmd = "rg --hidden --no-follow --no-ignore-vcs --files 2>/dev/null"
-    return get_output(run_command(f"cd {V8_PATH} && {file_list_cmd} | fzf {options} '{pattern}' | head -n 1000"))
+    return get_output(run_command(f"cd {V8_PATH} && {file_list_cmd} | fzf {options} '{pattern}' | head -n 1000")) 
 
 @tool
 def lift_fuzzil_to_js(target: str) -> str:
     """
     Use FuzzILTool to lift a FuzzIL protobuf to a JavaScript program
+
+    MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
 
     Args:
         target (str): The path to the target FuzzIL program identified by .fzil to be lifted to JS
@@ -319,12 +335,14 @@ def lift_fuzzil_to_js(target: str) -> str:
     Returns:
         str: The lifted JS program from the given FuzzIL
     """
-    return get_output(run_command(f"{FUZZILLI_TOOL_BIN} --liftToFuzzIL {target}"))
+    return get_output(run_command(f"{FUZZILLI_TOOL_BIN} --liftToFuzzIL {target} | head -n 1000"))
 
 @tool
 def compile_js_to_fuzzil(target: str) -> str:
     """
     Use FuzzILTool to compile a JavaScript program to a FuzzIl program (requires Node.js)
+
+    MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
 
     Args:
         target (str): The path to the the JavaScript program to compile to FuzzIL
@@ -332,7 +350,7 @@ def compile_js_to_fuzzil(target: str) -> str:
     Returns:
         str: The compiled FuzzIL program the given JS program
     """
-    return get_output(run_command(f"{FUZZILLI_TOOL_BIN} --compile {target}"))
+    return get_output(run_command(f"{FUZZILLI_TOOL_BIN} --compile {target} | head -n 1000"))
 
 @tool 
 def run_d8(target: str, options: str = "") -> str:
