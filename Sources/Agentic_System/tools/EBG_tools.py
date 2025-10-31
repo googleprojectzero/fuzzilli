@@ -21,7 +21,7 @@ def tree(directory: str = ".", options: str = "") -> str:
 @tool 
 def run_d8(target: str, options: str = "") -> str:
     f"""
-    Run the target program using d8 to test for syntactical correctness
+    Run the target program using d8 to test for syntactic correctness
     and test for coverage. 
 
     Args:
@@ -42,7 +42,7 @@ def run_d8(target: str, options: str = "") -> str:
 
         AT ANY POINT IN TIME YOU CAN ONLY PICK UP TO 4 OF THESE OPTIONS.
 
-        WHENEVER --trace-turob-graph is passed MAKE SURE --trace-turbo-path is ALSO passed in
+        WHENEVER --trace-turbo-graph is passed MAKE SURE --trace-turbo-path is ALSO passed in
         IF --trace-turbo-path is passed, MAKE SURE the output directory is {OUTPUT_DIRECTORY}/{target}
     """ 
     completed_process = run_command(f"{D8_PATH} {target} {options}")
@@ -64,10 +64,10 @@ def run_d8(target: str, options: str = "") -> str:
 @tool
 def get_call_graph(target: str) -> str:
     """
-    Get the call graph of the target program using d8 to test for syntactical correctness
+    Get the call graph of the target program using d8 to test for syntactic correctness
     and test for coverage. 
     """
-    return get_output(run_command(f""))  # Database access wrappere
+    return get_output(run_command(f""))  # Database access wrapper
 
 @tool
 def decode_b64(str_base64: str) -> str:

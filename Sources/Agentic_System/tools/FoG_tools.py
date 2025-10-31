@@ -334,7 +334,7 @@ def lift_fuzzil_to_js(target: str) -> str:
 @tool
 def compile_js_to_fuzzil(target: str) -> str:
     """
-    Use FuzzILTool to compile a JavaScript program to a FuzzIl program (requires Node.js)
+    Use FuzzILTool to compile a JavaScript program to a FuzzIL program (requires Node.js)
 
     MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
 
@@ -793,13 +793,17 @@ def write_rag_db_id(id: str, Body: str, Context: list[str], Explanation: str, Fi
 # [Step 10: Duration 2.80 seconds| Input tokens: 294,624 | Output tokens: 2,411
     r"""
     Write data to the RAG database
+
+    PLEASE MAKE SURE YOU HAVE VERY DETAILED EXPLANATIONS AND 
+    MAKE SURE THE BODY IS VERY DETAILED AND THE CONTEXT IS ACCURATE.
+        OR ELSE I WILL KILL MYSELF.
     
     Args:
         id (str): The ID of the RAG database to write to, should be in the format "jsadd_pipeline"
-        Body (str): The body of the RAG database entry, THIS SHOULD BE THE CODE INTERESTING.
+        Body (str): The body of the RAG database entry, THIS SHOULD BE THE CODE INTERESTING AND DETAILED.
         Context (list[str]): The context of IDs related to the body of the RAG database entry.
-        Explanation (str): The explanation of the RAG database entry.
-        FileLine (str): The file line of the RAG database entry.
+        Explanation (str): The explanation of why this is interesting and why it should be added to the RAG database.
+        FileLine (str): The file lines related to the body of the RAG database entry, THIS SHOULD BE THE FILE LINES RELATED TO THE BODY.
     Returns:
         str: The result of the write operation
     """
