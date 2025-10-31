@@ -31,6 +31,9 @@ V8_PATH = os.getenv('V8_PATH')
 if "src" not in V8_PATH:
     print('V8_PATH is not a valid V8 source code directory')
     sys.exit(1)
+
+
+    
 # Try to import CFG tools, but don't fail if clang is not available
 try:
     from tools.cfg_tool import *
