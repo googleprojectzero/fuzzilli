@@ -184,6 +184,7 @@ def tree(options: str = "") -> str:
     Since V8_PATH already points to the src/ directory, don’t run `tree src/` while inside it — just run `tree .` instead.
 
     MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
+    MAKE SURE THE ARGUMENTS TO `options` FOLLOW THE DEFINED FORMAT.
 
     Args:
         options (str): Additional tree command options. Common options include:
