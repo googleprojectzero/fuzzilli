@@ -783,41 +783,34 @@ def get_template_by_name(name: str) -> str:
 
 
 @tool 
-def write_rag_db_id(id: str, data: str) -> str:
+def write_rag_db_id(id: str, Body: str, Context: list[str], Explanation: str, FileLine: str) -> str:
+
+# ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+# │ Calling tool: 'write_rag_db_id' with arguments: {'id': '1', 'data': '{"id":1,"body":"BinaryOperationFeedback enum and values","context":["common/globals.h:~1443"],"explanation":"Defines BinaryOperationFeedback constants used │
+# │ across feedback collection (kSignedSmall, kNumber, kString, kBigInt etc).","file_line":"src/common/globals.h:1443"}'}                                                                                                            │
+# ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+# Observations: OK: wrote 1 to 1
+# [Step 10: Duration 2.80 seconds| Input tokens: 294,624 | Output tokens: 2,411
     r"""
     Write data to the RAG database
     
     Args:
-        id (str): The ID of the RAG database to write to. Should be in either "id" OR "ID:{...}" format.
-        data (str): A SINGLE item to write, in one of the following formats:
-            1) JSON object with an "id" field. Example:
-               {"id": 1234, "body": "...", "context": [1,2], "explanation": "...", "file_line": "example.cc:10"}
-            2) "ID:{...}" form. Example:
-               1234:{"body":"...","context":[1,2],"explanation":"...","file_line":"example.cc:10"}
-
-            Do not wrap items in an array. Call this tool once per object.
+        id (str): The ID of the RAG database to write to, should be in the format "jsadd_pipeline"
+        Body (str): The body of the RAG database entry, THIS SHOULD BE THE CODE INTERESTING.
+        Context (list[str]): The context of IDs related to the body of the RAG database entry.
+        Explanation (str): The explanation of the RAG database entry.
+        FileLine (str): The file line of the RAG database entry.
     Returns:
         str: The result of the write operation
     """
-    db = _load_rag_db(id)
-    # Give a clear error if an array was provided
-    try:
-        parsed = json.loads(data)
-        if isinstance(parsed, list):
-            return (
-                "ERROR: expected a single JSON object with 'id' or 'ID:{...}'. "
-                "Arrays are not accepted. Call write_rag_db_id once per object."
-            )
-    except Exception:
-        pass
-    item_id, payload = _parse_rag_entry(data)
-    if not item_id or not isinstance(payload, dict):
-        return (
-            "ERROR: data must be a single JSON object with 'id' or in 'ID:{...}' format"
-        )
-    db[item_id] = payload
-    _save_rag_db(id, db)
-    return f"OK: wrote {item_id} to {id}"
+    data = {
+        "body": Body,
+        "context": Context,
+        "explanation": Explanation,
+        "file_line": FileLine
+    }
+    _save_rag_db(id, data)
+    return f"OK: wrote {id} to {_rag_db_path(id)}"
 
 @tool
 def read_rag_db_id(id: str) -> str:

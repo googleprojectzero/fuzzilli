@@ -26,11 +26,11 @@ USE read_file TO EXAMINE THE CONTENTS OF THE FILES BASED ON THE RESULTS FROM rip
 LIMITED TO THE NECESSARY PARTS OF THE CODE REGION PROVIDED AND/OR THE RESULTS FROM ripgrep.
 
 ## STAGE 4
-ANALYZE THE RESULTS OF THE SEARCHES YOU HAVE PERFORMED AND MAKE SURE YOU ARE CONFIDENT IN THE RESULSTS. IF YOU ARE NOT FULLY
-CONFIDENT THAT THE INFORMATION YOU HAVE FOUND, REPEAT STAGES 1-4 UNTIL YOU HAVE FOUND ALL THE REQUIRED INFORMATIO FOR THE PROVIDED
+ANALYZE THE RESULTS OF THE SEARCHES YOU HAVE PERFORMED AND MAKE SURE YOU ARE CONFIDENT IN THE RESULTS. IF YOU ARE NOT FULLY
+CONFIDENT THAT THE INFORMATION YOU HAVE FOUND, REPEAT STAGES 1-4 UNTIL YOU HAVE FOUND ALL THE REQUIRED INFORMATION FOR THE PROVIDED
 CODE REGION. 
 
-ONLY AFTER ENSURING YOU HAVE FOUND ALL THE NECESSARY INFORMATON FOR YOUR PROVIDED CODE REGION SHOULD YOU MOVE ONTO STAGE 5.
+ONLY AFTER ENSURING YOU HAVE FOUND ALL THE NECESSARY INFORMATION FOR YOUR PROVIDED CODE REGION SHOULD YOU MOVE ONTO STAGE 5.
 
 ## STAGE 5
 USE init_rag_db TO ENSURE THE JSON FILE FOR THE RAG DB EXISTS AND IS VALID. AFTER THAT, WRITE YOUR FINDINGS USING
@@ -41,16 +41,11 @@ STRICT OUTPUT RULES FOR write_rag_db_id:
 - The object MUST contain an "id" field.
 - If you have many items, call write_rag_db_id multiple times, once per item.
 
-VALID EXAMPLE (single object):
+VALID EXAMPLE (single object), USE write_rag_db_id to do this properly :
 ```
-{"id": 1234,
+{"id": jsadd_pipeline,
  "body": "void ExamplePhase::Run(PipelineData* data, Zone* temp_zone) { ... }",
- "context": [12, 23, 34, 45],
- "explanation": "ExamplePhase::Run()(id:1234) processes a basic block with ExampleReducer.",
+ "context": [turbo_prologue_deopt, v8_holey_double_search, v8_bigint_remat, turbo_prologue_deopt],
+ "explanation": "ExamplePhase::Run()(id:jsadd_pipeline) processes a basic block with ExampleReducer.",
  "file_line": "example.cc:10"}
-```
-
-ALTERNATIVE VALID FORM (ID:{...}):
-```
-1234:{"body":"...","context":[12,23],"explanation":"...","file_line":"example.cc:10"}
 ```

@@ -17,7 +17,7 @@ from tools.rag_tools import (
     get_knowledge_doc,
     FAISSKnowledgeBase,
 )
-from common_tools import get_v8_path
+from tools.FoG_tools import get_v8_path
 import sys
 import yaml
 import importlib.resources
@@ -98,7 +98,7 @@ class Father(Agent):
                 get_realpath,
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),  
-            max_steps=15,
+            max_steps=30,
             planning_interval=None,
         )
         self.agents['v8_search'].prompt_templates["system_prompt"] = self.get_prompt("v8_search.txt") + "THIS IS THE CURRENT V8 PATH ASSUMING YOU ARE INSIDE THE V8 SOURCE CODE DIRECTORY FOR ALL TOOL CALLS ALREADY: " + get_v8_path()
@@ -194,40 +194,6 @@ class Father(Agent):
                 raise FileNotFoundError(f"Could not find toolcalling_agent.yaml template at {template_path}")
         
         custom_prompt = self.get_prompt("root_manager.txt")
-        tools_and_agents_section = """
-
-You have access to these tools:
-{%- for tool in tools.values() %}
-- {{ tool.to_tool_calling_prompt() }}
-{%- endfor %}
-
-{%- if managed_agents and managed_agents.values() | list %}
-You can also give tasks to team members.
-Calling a team member works similarly to calling a tool: provide the task description as the 'task' argument. Since this team member is a real human, be as detailed and verbose as necessary in your task description.
-You can also include any relevant variables or context using the 'additional_args' argument.
-Here is a list of the team members that you can call:
-{%- for agent in managed_agents.values() %}
-- {{ agent.name }}: {{ agent.description }}
-  - Takes inputs: {{agent.inputs}}
-  - Returns an output of type: {{agent.output_type}}
-{%- endfor %}
-{%- endif %}
-
-{%- if custom_instructions %}
-{{custom_instructions}}
-{%- endif %}
-
-Here are the rules you should always follow to solve your task:
-1. ALWAYS provide a tool call, else you will fail.
-2. Always use the right arguments for the tools. Never use variable names as the action arguments, use the value instead.
-3. Call a tool only when needed: do not call the search agent if you do not need information, try to solve the task yourself. If no tool call is needed, use final_answer tool to return your answer.
-4. Never re-do a tool call that you previously did with the exact same parameters.
-
-Now Begin!
-"""
-        default_templates["system_prompt"] = custom_prompt + tools_and_agents_section
-        print(f"[DEBUG] Root manager prompt set. Custom prompt length: {len(custom_prompt)}, Full template length: {len(default_templates['system_prompt'])}")
-        print(f"[DEBUG] Prompt starts with: {default_templates['system_prompt'][:100]}...")
         self.agents['father_of_george'] = ToolCallingAgent(
             name="FatherOfGeorge",
             description="L0 Manager responsible for orchestrating code analysis and program building operations",
@@ -255,6 +221,7 @@ Now Begin!
             planning_interval=None,
             prompt_templates=default_templates,
         )
+        self.agents['father_of_george'].prompt_templates["system_prompt"] = custom_prompt
 
 
     
