@@ -248,9 +248,7 @@ def ripgrep(pattern: str, options: str = "") -> str:
                         Example: `rg --max-depth 2 "class"` → search only two levels deep.
             --context=NUM: Displays NUM lines of context both before and after each match.
                         Example: `rg --context=2 "<pattern>"` → shows 2 lines of context before and after each match.
-            
-            Paths: You can include directory paths in the options string. They will be placed after the pattern.
-                   Example: `-n v8/src/ic v8/src/maglev` → searches with line numbers in those directories.
+        
     Returns:
         str: Search results showing matching lines with context.
     """
@@ -259,7 +257,6 @@ def ripgrep(pattern: str, options: str = "") -> str:
     
     parts = options.split()
     flags = []
-    paths = []
     
     i = 0
     while i < len(parts):
@@ -271,19 +268,13 @@ def ripgrep(pattern: str, options: str = "") -> str:
                 if not next_part.startswith('-') and not next_part.startswith('v8/'):
                     i += 1
                     flags.append(parts[i])
-        elif part.startswith('v8/') or ('/' in part and not part.startswith('-')):
-            paths.append(part)
         else:
             flags.append(part)
         i += 1
     
     flags_str = ' '.join(flags) if flags else ''
-    paths_str = ' '.join(paths) if paths else ''
-    
-    if paths_str:
-        cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}' {paths_str} | head -n 1000"
-    else:
-        cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}' | head -n 1000"
+
+    cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}' | head -n 1000"
     
     return get_output(run_command(cmd))
 
