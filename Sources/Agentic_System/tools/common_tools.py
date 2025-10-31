@@ -33,7 +33,7 @@ if "src" not in V8_PATH:
     sys.exit(1)
 
 
-    
+
 # Try to import CFG tools, but don't fail if clang is not available
 try:
     from tools.cfg_tool import *
@@ -86,13 +86,13 @@ def get_output(completed_process) -> str:
 @tool
 def run_command(command: str) -> str:
     """
-    Executes a command inside the CTF Docker container with access to analysis tools.
+    Executes a command analysis tools.
     
     Args:
         command (str): The command to execute in the container.
     """
     return_val = subprocess.run(command, shell=True, capture_output=True, text=True)
-    get_output(return_val)
+    get_output(command)
     return return_val
 
 @tool
