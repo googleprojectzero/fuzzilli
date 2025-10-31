@@ -840,6 +840,6 @@ def init_rag_db(id: str) -> str:
     Returns:
         str: A confirmation message with the initialized path.
     """
-    _ensure_rag_db_initialized(rag_db_id)
-    return f"OK: initialized RAG DB {rag_db_id} at {_rag_db_path(rag_db_id)}"
+    _ensure_rag_db_initialized(id)
+    return f"OK: initialized RAG DB {id} at {_rag_db_path(id)}"
 

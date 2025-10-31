@@ -92,7 +92,7 @@ def run_command(command: str) -> str:
         command (str): The command to execute in the container.
     """
     return_val = subprocess.run(command, shell=True, capture_output=True, text=True)
-    get_output(command)
+    print(f"Command: {command}")
     return return_val
 
 @tool
