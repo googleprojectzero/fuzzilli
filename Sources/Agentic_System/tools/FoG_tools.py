@@ -179,7 +179,9 @@ def get_realpath(path: str) -> str:
 def tree(options: str = "") -> str:
     """
     Display directory structure using tree command to explore the v8 code base layout. 
-    command structure: cd {V8_PATH} && tree {options}
+    command structure: cd {V8_PATH} && tree {options}. 
+
+    Since V8_PATH already points to the src/ directory, don’t run `tree src/` while inside it — just run `tree .` instead.
 
     MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
 
