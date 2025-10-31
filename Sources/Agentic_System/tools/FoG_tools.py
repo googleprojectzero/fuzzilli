@@ -109,6 +109,7 @@ def _parse_rag_entry(raw: str):
         idx = s.find(":{")
         if idx == -1:
             idx = s.find(": {")
+        
         if idx != -1:
             item_id = s[:idx].strip()
             json_part = s[idx+1:].strip()
