@@ -86,7 +86,7 @@ def get_output(completed_process) -> str:
 @tool
 def run_command(command: str) -> str:
     """
-    Executes a command in the analysis system.
+    Executes a command analysis tools.
     
     Args:
         command (str): The command to execute in the container.
@@ -235,11 +235,3 @@ def read_file(file_path: str, section: int = None) -> str:
         f"Showing section {section}/{num_sections} (lines {start_line}-{end_line}) of '{file_path}':\n"
         f"{content}"
     )
-
-@tool
-def get_call_graph(target: str) -> str:
-    """
-    Get the call graph of the target program using d8 to test for syntactic correctness
-    and test for coverage. 
-    """
-    return get_output(run_command(f""))  # Database access wrapper

@@ -251,14 +251,14 @@ class FAISSKnowledgeBase:
         if not FAISS_AVAILABLE:
             raise RuntimeError("FAISS dependencies not available")
         
-        base_dir = Path(__file__).parent.parent / 'knowledge_docs' / 'v8_knowledgebase'
+        base_dir = Path(__file__).parent.parent / 'knowlage_docs' / 'v8_knowlagebase'
         
         if not base_dir.exists():
             raise FileNotFoundError(f"Knowledge base not found: {base_dir}")
         
-        index_file = base_dir / 'v8_knowledgebase.index'
-        metadata_file = base_dir / 'v8_knowledgebase_metadata.json'
-        model_file = base_dir / 'v8_knowledgebase_model.pkl'
+        index_file = base_dir / 'v8_knowlagebase.index'
+        metadata_file = base_dir / 'v8_knowlagebase_metadata.json'
+        model_file = base_dir / 'v8_knowlagebase_model.pkl'
         
         if not all([index_file.exists(), metadata_file.exists(), model_file.exists()]):
             raise FileNotFoundError("Knowledge base files incomplete")

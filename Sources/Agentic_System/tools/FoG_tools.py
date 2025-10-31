@@ -334,7 +334,7 @@ def lift_fuzzil_to_js(target: str) -> str:
 @tool
 def compile_js_to_fuzzil(target: str) -> str:
     """
-    Use FuzzILTool to compile a JavaScript program to a FuzzIL program (requires Node.js)
+    Use FuzzILTool to compile a JavaScript program to a FuzzIl program (requires Node.js)
 
     MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
 
