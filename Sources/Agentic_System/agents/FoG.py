@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from smolagents import LiteLLMModel, ToolCallingAgent, WebSearchTool
+from smolagents import LiteLLMModel, ToolCallingAgent
 from agents.BaseAgent import Agent
 from agents.EBG import EBG
 from pathlib import Path 
@@ -65,7 +65,7 @@ class Father(Agent):
                 fuzzy_finder,
                 ripgrep,
                 tree,
-                WebSearchTool(),
+                web_search,
                 search_rag_db,
                 search_knowledge_base,
                 get_rag_doc,
@@ -111,7 +111,7 @@ class Father(Agent):
                 run_python, 
                 lift_fuzzil_to_js,
                 compile_js_to_fuzzil, 
-                WebSearchTool(),
+                web_search,
                 # RAG collection management
                 set_rag_collection,
                 get_rag_collection,
