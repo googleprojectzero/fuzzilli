@@ -14,6 +14,8 @@ import json
 import pathlib
 import sys
 
+from config_loader import get_openai_api_key, get_anthropic_api_key
+
 
 if not os.getenv('V8_PATH'):
     print("V8_PATH environment variable not set. Do export V8_PATH='path to v8 base dir'")

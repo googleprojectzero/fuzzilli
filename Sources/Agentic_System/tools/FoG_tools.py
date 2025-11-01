@@ -1,4 +1,5 @@
 from smolagents import tool
+from openai import OpenAI
 from tools.common_tools import * 
 from fuzzywuzzy import fuzz
 import json
@@ -19,20 +20,8 @@ _REGRESSIONS_CACHE = None
 _TEMPLATES_PATH = (Path(__file__).parent.parent / "templates" / "templates.json").resolve()
 _TEMPLATES_CACHE = None
 
+client = OpenAI(api_key=get_openai_api_key())
 
-
-# if not os.getenv('D8_PATH'):
-#     print("D8_path is not set")
-#     sys.exit(1)
-# if not os.getenv('FUZZILLI_TOOL_BIN'):
-#     print("FUZZILLI_TOOL_BIN is not set")
-
-# if not os.getenv('V8_PATH'):
-#     print("V8_PATH is not set")
-#     sys.exit(1)
-# D8_PATH = os.getenv('D8_PATH')
-# FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
-# V8_PATH = os.getenv('V8_PATH')
 
 def _load_regressions_once():
     global _REGRESSIONS_CACHE
@@ -119,19 +108,27 @@ def _parse_rag_entry(raw: str):
     except Exception:
         pass
     return None, None
-#
-#@tool
-#def web_search(query: str) -> str:
-#    """
-#    Search the internet for information about a given query.
-#    
-#    Args:
-#        query (str): The search query to look up online.
-#    
-#    Returns:
-#        str: Search results and relevant information from the web.
-#    """
-#    return tool.web_search()
+
+@tool
+def web_search(query: str) -> str:
+    """
+    Search the internet for information about a given query.
+    
+    Args:
+        query (str): The search query to look up online.
+    
+    Returns:
+        str: Search results and relevant information from the web.
+    """
+    response = client.responses.create(
+        model="gpt-5-mini",
+        input=query,
+        tools=[{"type": "web_search"}],
+        max_output_tokens=1000
+    )
+    print(f"Web search response: {response.output_text}")
+    return response.output_text
+
 
 
 @tool
