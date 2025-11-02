@@ -833,3 +833,73 @@ def get_runtime_db_ids() -> str:
         str: The runtime DB IDs
     """
     return json.dumps(RUNTIME_DB_IDS)
+
+
+
+@tool 
+def read_program_template_input_file() -> str:
+    """
+    Read a program template input file
+    
+    Returns:
+        str: The content of the program template file
+    """
+    return get_output(run_command(f"cat {PROGRAM_TEMPLATE_INPUT_FILE}"))
+
+@tool 
+def write_program_template(program_template: str) -> str:
+    """
+    Write a program template to the ProgramTemplates.swift file.
+    Adds the template to the ProgramTemplates array before the closing bracket.
+    
+    Args:
+        program_template (str): The Swift program template code to add (must be a complete ProgramTemplate or WasmProgramTemplate entry)
+    Returns:
+        str: The result of the write operation
+    """
+    program_templates_file = Path(__file__).parent.parent.parent / "Sources" / "Fuzzilli" / "CodeGen" / "ProgramTemplates.swift"
+    
+    if not program_templates_file.exists():
+        return f"Error: ProgramTemplates.swift not found at {program_templates_file}"
+    
+    try:
+        with open(program_templates_file, 'r') as f:
+            content = f.read()
+        
+        content = content.rstrip()
+        
+        if not content.endswith(']'):
+            return "Error: ProgramTemplates.swift does not end with closing bracket"
+        
+        template_code = program_template.strip()
+        if not template_code.endswith(','):
+            template_code += ','
+        
+        content = content[:-1] + ',\n\n    ' + template_code + '\n]'
+        
+        with open(program_templates_file, 'w') as f:
+            f.write(content)
+        
+        return f"Successfully added program template to {program_templates_file}"
+    except Exception as e:
+        return f"Error writing program template: {str(e)}"
+
+@tool 
+def build_program_template() -> str:
+    """
+    Build a program template file 
+    
+    Returns:
+        str: The result of the build operation
+    """
+    return get_output(run_command(f"build_program_template"))
+
+@tool 
+def excute_program_tempalte() -> str:
+    """
+    Excute a program template file
+    
+    Returns:
+        str: The result of the excute operation
+    """
+    return get_output(run_command(f"excute_program_template"))
