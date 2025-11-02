@@ -179,7 +179,7 @@ def tree(options: str = "") -> str:
     Display directory structure using tree command to explore the v8 code base layout. 
     command structure: cd {V8_PATH} && tree {options}. 
 
-    Since V8_PATH already points to the src/ directory, don’t run `tree src/` while inside it — just run `tree .` instead.
+    V8_PATH already points to the `src/` directory, DO NOT ADD `src/` to your arguments —  run `tree .` instead.
 
     MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
     MAKE SURE THE ARGUMENTS TO `options` FOLLOW THE DEFINED FORMAT.
@@ -188,7 +188,7 @@ def tree(options: str = "") -> str:
         options (str): Additional tree command options. Common options include:
             -L NUM: Limit depth to NUM levels
             -f: Show full path prefix
-            PATH: Prefer '.' or an absolute path. If you pass a relative like 'src/', it must exist under V8_PATH.
+            PATH: Prefer '.' or an absolute path. If you pass a relative like 'maglev/', it must exist under V8_PATH.
     
     Returns:
         str: Tree structure showing directories and files in the v8 code base.
