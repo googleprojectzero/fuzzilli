@@ -85,10 +85,10 @@ def main():
     a = FatherOfGod()
     if (not os.path.exists("regressions.json")):
         try:
-            subprocess.run(["xz", "-d", "regressions.json.xz"], check=True)
-            #xz -d regressions.json.xz
+            subprocess.run(["unzstd", "regressions.json.zst"], check=True)
+            #unzstd regressions.json.zst
         except subprocess.CalledProcessError as e:
-            logger.error(f"Error decompressing regressions.json.xz: {e}")
+            logger.error(f"Error decompressing regressions.json.zst: {e}")
             exit(1)
         else:
             logger.info("Regressions.json decompressed successfully")
