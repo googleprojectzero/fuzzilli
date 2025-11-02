@@ -110,7 +110,7 @@ public class TestTemplateEngine: FuzzEngine {
                 refinedProgram = generatedProgram
             }
 
-            let script = lifter.lift(generatedProgram)
+            let script = lifter.lift(refinedProgram)
             //print("Lifted Program based on template \(template)\nLifted Program:\n\(script)")
 
             let content = "// Template: \(template.name)\n// Program:\n\(script)"
