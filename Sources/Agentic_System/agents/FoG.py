@@ -50,7 +50,7 @@ class Father(Agent):
                 similar_template_swift,
                 similar_template_fuzzil,
             ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
             max_steps=20,
             planning_interval=None
@@ -76,7 +76,7 @@ class Father(Agent):
                 delete_rag_db,
                 list_rag_db,
             ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             max_steps=20,
             planning_interval=None,
         )
@@ -97,7 +97,7 @@ class Father(Agent):
                 read_file,
                 get_realpath,
             ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),  
+            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
             max_steps=30,
             planning_interval=None,
         )
@@ -174,7 +174,7 @@ class Father(Agent):
                 search_knowledge_base,
                 get_knowledge_doc,
             ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             max_steps=20,
             planning_interval=None,
         )
@@ -262,7 +262,7 @@ def main():
     anthropic_key = get_anthropic_api_key()
     
     model = LiteLLMModel(
-        model_id="gpt-5-mini",
+        model_id="gpt-5",
         api_key=openai_key
     )
     

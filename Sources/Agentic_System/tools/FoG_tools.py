@@ -20,7 +20,8 @@ _REGRESSIONS_CACHE = None
 _TEMPLATES_PATH = (Path(__file__).parent.parent / "templates" / "templates.json").resolve()
 _TEMPLATES_CACHE = None
 
-client = OpenAI(api_key=get_openai_api_key())
+
+RUNTIME_DB_IDS = []
 
 
 def _load_regressions_once():
@@ -108,26 +109,6 @@ def _parse_rag_entry(raw: str):
     except Exception:
         pass
     return None, None
-
-@tool
-def web_search(query: str) -> str:
-    """
-    Search the internet for information about a given query.
-    
-    Args:
-        query (str): The search query to look up online.
-    
-    Returns:
-        str: Search results and relevant information from the web.
-    """
-    response = client.responses.create(
-        model="gpt-5-mini",
-        input=query,
-        tools=[{"type": "web_search"}],
-        max_output_tokens=1000
-    )
-    print(f"Web search response: {response.output_text}")
-    return response.output_text
 
 
 
@@ -812,6 +793,7 @@ def write_rag_db_id(id: str, Body: str, Context: list[str], Explanation: str, Fi
         "file_line": FileLine
     }
     _save_rag_db(id, data)
+    RUNTIME_DB_IDS.append(id)
     return f"OK: wrote {id} to {_rag_db_path(id)}"
 
 @tool
@@ -841,3 +823,13 @@ def init_rag_db(id: str) -> str:
     _ensure_rag_db_initialized(id)
     return f"OK: initialized RAG DB {id} at {_rag_db_path(id)}"
 
+
+@tool 
+def get_runtime_db_ids() -> str:
+    """
+    Get the runtime DB IDs
+    
+    Returns:
+        str: The runtime DB IDs
+    """
+    return json.dumps(RUNTIME_DB_IDS)

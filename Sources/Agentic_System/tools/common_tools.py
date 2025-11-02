@@ -23,7 +23,7 @@ if not os.getenv('V8_PATH'):
     print("     Example: export V8_PATH=/path/to/v8/v8/src")
     sys.exit(0)
 if not os.getenv('D8_PATH'):
-    print("D8_path is not set")
+    print("D8_PATH is not set")
     sys.exit(1)
 if not os.getenv('FUZZILLI_TOOL_BIN'):
     print("FUZZILLI_TOOL_BIN is not set")
