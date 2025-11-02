@@ -56,7 +56,7 @@ def process_one(js_path):
     fuzz = subprocess.run([FUZZIL_BIN, "--compile", js_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     combined = (fuzz.stdout or "")
     data["Fuzzilli"] = parse_fuzzil_from_output(combined)
-    d8 = subprocess.run([PATH, "--print-bytecode", "--print-maglev-code", "--print-maglev-graphs", js_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    d8 = subprocess.run([PATH, "--print-bytecode", "--print-maglev-code", "--print-maglev-graphs","" js_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     data["execution_data"] = d8.stdout.decode('utf-8', errors='ignore')
     return key, data
 

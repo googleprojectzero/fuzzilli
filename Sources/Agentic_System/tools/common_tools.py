@@ -7,7 +7,7 @@ except ImportError:
     # Define a dummy decorator if smolagents is not available
     def tool(func):
         return func
-
+from openai import OpenAI
 import subprocess
 import os
 import json
@@ -15,6 +15,7 @@ import pathlib
 import sys
 
 from config_loader import get_openai_api_key, get_anthropic_api_key
+client = OpenAI(api_key=get_openai_api_key())
 
 
 if not os.getenv('V8_PATH'):
@@ -184,6 +185,26 @@ def find_function_cfg(function_name: str) -> str:
         return "CFG analysis not available - clang library not found"
     return cfg_builder.get_function_cfg(function_name)
 
+
+@tool
+def web_search(query: str) -> str:
+    """
+    Search the internet for information about a given query.
+    
+    Args:
+        query (str): The search query to look up online.
+    
+    Returns:
+        str: Search results and relevant information from the web.
+    """
+    response = client.responses.create(
+        model="gpt-5-mini",
+        input=query,
+        tools=[{"type": "web_search"}],
+        max_output_tokens=1000
+    )
+    print(f"Web search response: {response.output_text}")
+    return response.output_text
 
 
 @tool
