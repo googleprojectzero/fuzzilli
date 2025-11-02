@@ -36,7 +36,7 @@ public class TestTemplateEngine: FuzzEngine {
     private var percentageOfGuardedOperationsAfterCodeRefining = MovingAverage(n: 1000)
 
     // We use the FixupMutator to "fix" the generated programs based on runtime information (e.g. remove unneeded try-catch).
-    private var fixupMutator = FixupMutator(name: "HybridEngineFixupMutator")
+    private var fixupMutator = FixupMutator(name: "TestTemplateEngineFixupMutator")
 
     public init(numConsecutiveMutations: Int, lifter: Lifter) {
         self.numConsecutiveMutations = numConsecutiveMutations
@@ -101,11 +101,20 @@ public class TestTemplateEngine: FuzzEngine {
         
         for template in fuzzer.programTemplates {
             let generatedProgram = generateTemplateProgram(template: template)
+
+            let refinedProgram: Program
+            if let result = fixupMutator.mutate(generatedProgram, for: fuzzer) {
+                refinedProgram = result
+            } else {
+                // Fixup is expected to fail sometimes, for example if there is nothing to fix.
+                refinedProgram = generatedProgram
+            }
+
             let script = lifter.lift(generatedProgram)
             //print("Lifted Program based on template \(template)\nLifted Program:\n\(script)")
 
-            let content = "Template: \(template.name)\nProgram:\n\(script)"
-            let filename = "template_\(template.name).fzil"
+            let content = "// Template: \(template.name)\n// Program:\n\(script)"
+            let filename = "template_\(template.name).js"
             let base = "Corpus/lifted_templates"
             let url = URL(fileURLWithPath: "\(base)/\(filename)")
             do {
