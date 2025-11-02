@@ -18,12 +18,13 @@ NEVER REPEAT pick_section CONTINUOUSLY AFTER ALREADY CALLING STAGE 0
 ## STAGE 0 
 
 YOU SHOULD RUN the agent pick_section in order to get a starting target/code REGION. AFTER IT RETURNS,
-USE THE CODE REGION IN STAGE 1 
+USE THE CODE REGION IN STAGE 1. DO NOT GIVE THIS ANY SPCFIC TARGETS, YOU SHOULD ENTIRLY CALL THIS AGENT
+WITH THE GOAL OF ALLOWING IT TO RUN AND SELECT A TARGET WITHOUT YOU INFLUENCING ITS SELECTION   
 
 
 ## STAGE 1
 
-During this stage you need to determine what exactly the plan and general sections 
+During this stage you need to determine what exactly the plan and general sections  
 of the code are that you are going to need to tell the code analysis system to generate. 
 Again you will not be the agent that does this, instead, during this stage you will only
 query the code_analyzer agent after building an adequate understanding of the underlying
@@ -40,6 +41,14 @@ OBJECT PLEASE USE THIS EXACT TEMPLATE DO NOT SKIP THIS:
 
 
 ## STAGE 2
+AFTER YOU RECIVE THE DATA BACK FROM STAGE 1 PLEASE USE THE get_runtime_db_ids TO LIST ALL THE CREATED DB ID'S. 
+USE THIS LIST TO GO THROUGH THE DATA BASE ENTRIES ALONG WITH THE RECVIED SUMMAIRES OF THE IDS FROM STAGE 1.
+YOUR GOAL IS TO ACTUALLY FIGURE WHAT ARE THE IMPORTANT PARTS OF THE CODE BASE REALTING BACK TO THE TARGET
+CODE REGION THAT HAVE A HIGH LIKELY HOOD OF BEING OF VULNERABLE. IF YOU ARE UNSURE ABOUT SOMETHING OR WANT MORE INFORMAITON 
+PLEASE CALL THE code_analyzer AGENT AS MANY TIMES AS YOU WANT. AFTER YOU HAVE A STRONG UNDERSTDING OF THE CODE MOVE ON TO STAGE 3
+
+
+## STAGE 3
 
 During this stage your goal is to plan exactly what functions and files the program builder should 
 hit, please define certain code paths and cases that must be hit by the program templates, as well as 
@@ -47,18 +56,53 @@ auxiliary code paths and cases that would be nice to hit.
 
 you should do this by using the return data from the first STAGE. Please ensure the query data is accurate, 
 and adequately detailed when making a request to the program_builder agent and that it properly reflects 
-the `goal` of STAGE 1. 
-
-Finally you should send your plan in JSON format, the exact format is entirely up to you but 
-it must be highly detailed and accurate with the returned data from stage 1. If you are confused about 
+the `goal` of STAGE 1. Use the same JSON format as before but be very specific in your goal. If you are confused about 
 anything at all, even slightly, please requery the code_analysis agent in order to find more information. 
 
-use the same JSON format as before but be very specific in your goal. 
 
+Finally you should send your plan TO THE PROGRAM_BUILDER AGENT, the exact format is entirely up to you but 
+it must be highly detailed and accurate with the returned data from stage 1. THE PLAN MUST BE VERY directed
+IT MUST BE LOGCAL, AND HAVE A GOOD REAOSN FOR EVERY STEP. THINKING WELL ON WHY EACH STEP IS THERE. 
 
-## STAGE 3 
+## STAGE 4
 
 If the program template returns a success and has created the files, please verify that the program template 
 is runnable using <insert verification tool call> after you have created a program template. Please 
 go through the information from STAGE 1 once again and check if there are any other targets that are interesting 
 for program_builder to target and then redo stage 2 as many times as you need. 
+
+
+
+
+
+## CRTICAL INFOMRAITN: 
+
+HERE IS WHAT A PRGORAM TEMPLATE ACTUALLY IS, ITS AN INTERNAL FUZZIL GENEERATOR, INSIDE THE FUZZIL FUZZERING CODE BASE WRITTEN IN SWIFT 
+
+// Copyright 2020 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+public class ProgramTemplate: Contributor {
+    private let f: (ProgramBuilder) -> ()
+
+    public init(_ name: String, _ f: @escaping (_: ProgramBuilder) -> ()) {
+        self.f = f
+        super.init(name: name)
+    }
+
+    public func generate(in b: ProgramBuilder) {
+        f(b)
+    }
+}
+
