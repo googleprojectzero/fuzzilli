@@ -39,16 +39,21 @@ class Father(Agent):
             name="GeorgeForeman",
             description="L2 Worker responsible for validating program templates built by the program builder",
             tools=[
-                # templates.json access (generation-focused)
                 get_all_template_names,
                 get_template_by_name,
-                get_random_template_swift,
-                get_random_template_fuzzil,
                 search_template_file_json,
                 search_regex_template_swift,
                 search_regex_template_fuzzil,
                 similar_template_swift,
                 similar_template_fuzzil,
+                web_search,
+                read_rag_db_id,
+                get_runtime_db_ids,
+                get_rag_doc,
+                search_knowledge_base,
+                get_knowledge_doc,
+
+
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
