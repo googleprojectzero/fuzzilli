@@ -2,13 +2,14 @@ from smolagents import tool
 from openai import OpenAI
 from tools.common_tools import * 
 from fuzzywuzzy import fuzz
+from pathlib import Path
+
 import json
 import os
 import subprocess
 import re
 import random
 import time
-from pathlib import Path
 
 # FUZZILTOOL_BIN = f"/usr/share/vrigatoni/fuzzillai/.build/x86_64-unknown-linux-gnu/debug/FuzzILTool"
 OUTPUT_DIRECTORY = "/tmp/fog-d8-records" 
@@ -895,11 +896,26 @@ def build_program_template() -> str:
     return get_output(run_command(f"cd {FUZZILLI_PATH} && swift build"))
 
 @tool 
-def excute_program_tempalte() -> str:
+def excute_program_template(template: str) -> str:
     """
-    Excute a program template file
-    
+    Excute a program template
+
+    Args:
+        template (str): the name of the program template to be executed
+            The available templates are located in Sources/Fuzzilli/CodeGen/ProgramTemplates.swift
+
     Returns:
         str: The result of the excute operation
+
+    DO NOT WORRY ABOUT fake_path IT IS SIMPLY THERE SO FUZZILTOOL RUNS PROPERLY. 
+    fake_path DOES NOT GET USED ANYWHERE
     """
-    return get_output(run_command(f"excute_program_template"))
+    # fake_path is passed in because FuzzILTool requires a path to run
+    # FuzzILTool could maybe get updated to not always require a path 
+    javascript = get_output(run_command(f"{FUZZILLI_TOOL_BIN} --compileTemplate={template} fake_path"))
+    path = f"{FUZZILLI_PATH}/Sources/Agentic_System/generated_templates/{template}-{hash(javsacript)}.js"
+    with open(path, "w") as f:
+        f.write(javascript)  
+    outcome = get_output(run_command(f"{D8_PATH} {D8_COMMON_FLAGS} {path}"))
+    return f"Execution outcome of running {template}: {outcome}"
+    

@@ -110,6 +110,7 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
               --compile                : Compile the given JavaScript program to a FuzzIL program. Requires node.js
               --generate               : Generate a random program using Fuzzilli's code generators and save it to the specified path.
               --forDifferentialFuzzing : Enable additional features for better support of external differential fuzzing.
+              --executeTemplate        : Compile a given program template by name to JavaScript
           """)
     exit(0)
 }
@@ -216,6 +217,30 @@ else if args.has("--generate") {
         print("Failed to store output program to disk: \(error)")
         exit(-1)
     }
+}
+
+else if args.has("--compileTemplate") {
+    var programTemplate: ProgramTemplate?
+    for template in ProgramTemplates {
+        if template.name == args["--compileTemplate"] {
+            programTemplate = template
+            break
+        }
+    }
+    guard let template = programTemplate else {
+        print("Unable to find specified program template")
+        exit(-1)
+    }
+
+    let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .warning, enableInspection: true), environment: JavaScriptEnvironment())
+    let b = fuzzer.makeBuilder()
+    b.traceHeader("Generating program based on \(template.name) template")
+    template.generate(in: b)
+    let program = b.finalize()
+
+    // program could potentially be refined before being lifted
+    let script = jsLifter.lift(program)
+    print(script)
 }
 
 else {
