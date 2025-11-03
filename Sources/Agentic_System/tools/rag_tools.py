@@ -333,17 +333,12 @@ def search_knowledge_base(query: str, top_k: int = 3, topic_filter: str = "") ->
         output = []
         for result in results:
             content = result['content']
-            lines = content.split('\n')
-            
-            preview = '\n'.join(lines[:30])
-            if len(lines) > 30:
-                preview += f"\n... ({len(lines) - 30} more lines)"
             
             output.append({
                 'topic': result['topic'],
                 'file': result['path'],
                 'similarity': round(result['similarity'], 3),
-                'content_preview': preview
+                'content': content
             })
         
         return json.dumps(output, indent=2)
@@ -471,17 +466,11 @@ def search_v8_source_rag(query: str, top_k: int = 3, topic_filter: str = "") -> 
         output = []
         for result in results:
             content = result['content']
-            lines = content.split('\n')
-            
-            preview = '\n'.join(lines[:30])
-            if len(lines) > 30:
-                preview += f"\n... ({len(lines) - 30} more lines)"
-            
             output.append({
                 'topic': result['topic'],
                 'file': result['path'],
                 'similarity': round(result['similarity'], 3),
-                'content_preview': preview
+                'content': content
             })
         
         return json.dumps(output, indent=2)

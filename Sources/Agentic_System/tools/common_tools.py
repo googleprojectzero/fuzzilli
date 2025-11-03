@@ -204,18 +204,33 @@ def web_search(query: str) -> str:
     !!! RETURN ONLY FACTUAL INFORMATION. DO NOT INCLUDE OFFERS, SUGGESTIONS OR FOLLOW UPS. END SILENTLY !!!
 
     Args:
-        query (str): The search query to look up online.
-                                                
+        query (str): The search query.
+
     Returns:
-        str: Search results and relevant information from the web.
+        str: Up to 5 results in a simple text format. If search is unavailable, returns a clear message.
     """
-    response = client.responses.create(
-            model="gpt-5-mini",
-            input=[{"role": "user", "content": query + " ONLY RETURN FACTUAL INFORMATION. DO NOT INCLUDE OFFERS, SUGGESTIONS OR FOLLOW UPS."}],
-            tools=[{"type": "web_search"}],
-            tool_choice="auto"
-        )
-    return print(f"Web search response: {response.output_text}")
+    try:
+        try:
+            from duckduckgo_search import DDGS  # type: ignore
+        except Exception:
+            DDGS = None  # type: ignore
+
+        if DDGS is None:
+            return "Web search is not configured in this environment. Install duckduckgo_search to enable."
+
+        results = []
+        with DDGS() as ddgs:  # type: ignore
+            for r in ddgs.text(query, max_results=5):
+                title = r.get("title", "")
+                href = r.get("href", r.get("link", ""))
+                body = r.get("body", r.get("snippet", ""))
+                results.append(f"- {title}\n  {href}\n  {body}")
+
+        if not results:
+            return "No results found."
+        return "\n\n".join(results)
+    except Exception as e:
+        return f"Error performing web search: {e}"
 
 
 @tool

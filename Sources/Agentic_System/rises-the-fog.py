@@ -46,14 +46,19 @@ def main():
     if args.debug:
         log_dir = Path(__file__).parent / 'agents' / 'fog_logs'
         log_dir.mkdir(parents=True, exist_ok=True)
+        latest_num = 0
         if os.path.exists(log_dir / 'rises_the_fog.log'):
             for root, dirs, files in os.walk(log_dir, topdown=False):
                 for name in files:
                     if name.endswith('.log'):
-                        num = int(name[len('rises_the_fog'):-len('.log')])
-                        if num > latest_num:
-                            latest_num = num
+                        if "rises_the_fog.log" not in name:
+                            num = int(name[len('rises_the_fog'):-len('.log')])
+                            if num > latest_num:
+                                latest_num = num
         log_path = str(log_dir / f'rises_the_fog{latest_num + 1}.log')
+        if os.path.exists(log_path):
+            print(f"Log file already exists: {log_path}")
+            sys.exit(0)
 
                         
         # Configure logger to write messages as-is (no prefixes) for 1:1 capture
@@ -91,9 +96,10 @@ def main():
 
     logger.info("I must go in; the fog is rising")
     a = FatherOfGod()
-    if (not os.path.exists("regressions.json")):
+    path = os.path.join(os.getenv('FUZZILLI_PATH', ''), "Sources", "Agentic_System")
+    if (not os.path.exists(os.path.join(path, "regressions.json"))):
         try:
-            subprocess.run(["unzstd", "regressions.json.zst"], check=True)
+            subprocess.run(["unzstd", os.path.join(path, "regressions.json.zst")], check=True)
             #unzstd regressions.json.zst
         except subprocess.CalledProcessError as e:
             logger.error(f"Error decompressing regressions.json.zst: {e}")

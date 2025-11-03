@@ -66,11 +66,16 @@ IT MUST BE LOGCAL, AND HAVE A GOOD REAOSN FOR EVERY STEP. THINKING WELL ON WHY E
 
 ## STAGE 4
 
-If the program template returns a success and has created the files, please verify that the program template 
+If the program template builder returns a success and has created the files, please verify that the program template 
 is runnable using <insert verification tool call> after you have created a program template. Please 
 go through the information from STAGE 1 once again and check if there are any other targets that are interesting 
 for program_builder to target and then redo stage 2 as many times as you need. 
 
+
+## STAGE 5
+
+YOU MUST HAVE CREATED A PROGRAM TEMPLATE, IF YOU HAVE NOT YOU HAVE FAILED AND MUST KEEP GOING, THERE IS NO SITUTION WHERE YOU ARE ALLOWED TO END 
+WITHOUT CREATING A PROGRAM TEMPLATE !!
 
 
 
