@@ -204,12 +204,11 @@ def web_search(query: str) -> str:
     """
     response = client.responses.create(
             model="gpt-5-mini",
-            input=[{"role": "user", "content": query}],
+            input=[{"role": "user", "content": query + " ONLY RETURN FACTUAL INFORMATION. DO NOT INCLUDE OFFERS, SUGGESTIONS OR FOLLOW UPS."}],
             tools=[{"type": "web_search"}],
             tool_choice="auto"
         )
-    print(f"Web search response: {response.output_text}")
-    return response
+    return print(f"Web search response: {response.output_text}")
 
 
 @tool
