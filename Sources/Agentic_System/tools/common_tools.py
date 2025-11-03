@@ -186,7 +186,7 @@ def find_function_cfg(function_name: str) -> str:
     return cfg_builder.get_function_cfg(function_name)
 
 
-
+@tool
 def web_search(query: str) -> str:
     """
     Search the internet for information about a given query. PLEASE DO NOT USE THIS TO SEARCH THE V8 SOURCE CODE, 
