@@ -15,6 +15,8 @@ from tools.rag_tools import (
     get_rag_doc,
     search_knowledge_base,
     get_knowledge_doc,
+    search_v8_source_rag,
+    get_v8_source_rag_doc, 
     FAISSKnowledgeBase,
 )
 from tools.FoG_tools import get_v8_path

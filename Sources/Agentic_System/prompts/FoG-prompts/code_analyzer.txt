@@ -8,9 +8,6 @@ Your final goal is to figure out a set of interesting functions/code blocks in t
 
 YOU MUST NEVER SKIP STAGES! IF YOU DO I KILL MYSELF!
 
-## STAGE 0
-
-TESTING: Using the web search tool, find out how much money the blockchain auditing company "Zellic" has made in the last year.
 
 ## STAGE 1
 
