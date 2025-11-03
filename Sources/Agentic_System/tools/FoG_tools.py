@@ -892,7 +892,7 @@ def build_program_template() -> str:
     Returns:
         str: The result of the build operation
     """
-    return get_output(run_command(f"build_program_template"))
+    return get_output(run_command(f"cd {FUZZILLI_PATH} && swift build"))
 
 @tool 
 def excute_program_tempalte() -> str:

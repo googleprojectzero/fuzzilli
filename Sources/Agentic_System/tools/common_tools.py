@@ -28,13 +28,19 @@ if not os.getenv('D8_PATH'):
 if not os.getenv('FUZZILLI_TOOL_BIN'):
     print("FUZZILLI_TOOL_BIN is not set")
     sys.exit(1)
+if not os.getenv('FUZZILLI_PATH'):
+    print("FUZZILLI_PATH is not set")
+    sys.exit(1)
 D8_PATH = os.getenv('D8_PATH')
 FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
 V8_PATH = os.getenv('V8_PATH')
+FUZZILLI_PATH = os.getenv('FUZZILLI_PATH')
 if "src" not in V8_PATH:
     print('V8_PATH is not a valid V8 source code directory')
-    sys.exit(1)
-
+    sys.exit(0)
+if "fuzzillai" not in FUZZILLI_PATH:
+    print(f"FUZZILLI_PATH is not a valid Fuzzilli path: {FUZZILLI_PATH}")
+    sys.exit(0)
 
 
 # Try to import CFG tools, but don't fail if clang is not available

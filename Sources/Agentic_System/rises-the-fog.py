@@ -46,8 +46,16 @@ def main():
     if args.debug:
         log_dir = Path(__file__).parent / 'agents' / 'fog_logs'
         log_dir.mkdir(parents=True, exist_ok=True)
-        log_path = str(log_dir / 'rises_the_fog.log')
+        if os.path.exists(log_dir / 'rises_the_fog.log'):
+            for root, dirs, files in os.walk(log_dir, topdown=False):
+                for name in files:
+                    if name.endswith('.log'):
+                        num = int(name[len('rises_the_fog'):-len('.log')])
+                        if num > latest_num:
+                            latest_num = num
+        log_path = str(log_dir / f'rises_the_fog{latest_num + 1}.log')
 
+                        
         # Configure logger to write messages as-is (no prefixes) for 1:1 capture
         logger.handlers.clear()
         file_handler = logging.FileHandler(log_path, mode='a', encoding='utf-8')

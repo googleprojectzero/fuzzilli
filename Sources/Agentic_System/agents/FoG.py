@@ -57,7 +57,7 @@ class Father(Agent):
                 search_v8_source_rag,
                 get_v8_source_rag_doc, 
             ],
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
+            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[],
             max_steps=20,
             planning_interval=None
@@ -83,7 +83,7 @@ class Father(Agent):
                 delete_rag_db,
                 list_rag_db,
             ],
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
+            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             max_steps=20,
             planning_interval=None,
         )
@@ -104,7 +104,7 @@ class Father(Agent):
                 read_file,
                 get_realpath,
             ],
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
+            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),  
             max_steps=50,
             planning_interval=None,
         )
