@@ -113,7 +113,7 @@ public class TestTemplateEngine: FuzzEngine {
             let script = lifter.lift(refinedProgram)
             //print("Lifted Program based on template \(template)\nLifted Program:\n\(script)")
 
-            let content = "// Template: \(template.name)\n// Program:\n\(script)"
+            let content = "// Template: \(template.name)\n// Program:\n\(script)\n// FuzzIL:\n\(refinedProgram)"
             let filename = "template_\(template.name).js"
             let base = "Corpus/lifted_templates"
             let url = URL(fileURLWithPath: "\(base)/\(filename)")

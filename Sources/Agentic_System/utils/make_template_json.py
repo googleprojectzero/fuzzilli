@@ -50,17 +50,20 @@ for file in os.listdir(templates_directory):
     with open(templates_directory + file, "rb") as f:
         content = f.read()
 
-    content = str(content.decode('utf-8')) 
+    content = str(content.decode('utf-8', errors='ignore')) 
     first_newline_index = content.find('\n')
     if first_newline_index != -1:
         template_line = content[:first_newline_index]
         _, template_name = template_line.split(': ', 1)
         data["ProgramTemplateName"] = template_name
 
+    fuzzil_marker = 'FuzzIL:\n'
+    fuzzil_start_index = content.find(fuzzil_marker) + len(fuzzil_marker)
+
     program_marker = 'Program:\n'
     program_start_index = content.find(program_marker) + len(program_marker)
     if program_start_index - len(program_marker) != -1:
-        lifted_program = content[program_start_index:]
+        lifted_program = content[program_start_index:fuzzil_start_index]
         data["ProgramTemplateJS"] = lifted_program
 
     if template_name in swift_templates:
@@ -68,8 +71,9 @@ for file in os.listdir(templates_directory):
 
     js_path = f"{templates_directory.decode("utf-8")}{file.decode("utf-8")}"
 
-    fuzz = subprocess.run([FUZZILLI_TOOL_BIN, "--compile", js_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-    data["ProgramTemplateFuzzIL"] = fuzz.stdout or ""
+    if fuzzil_start_index - len(fuzzil_marker) != -1:
+        fuzzil_program = content[fuzzil_start_index:]
+        data["ProgramTemplateFuzzIL"] = fuzzil_program
     
     d8 = subprocess.Popen([D8_PATH, "--allow-natives-syntax", 
                                 "--print-bytecode", 
