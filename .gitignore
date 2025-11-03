@@ -12,6 +12,7 @@ Package.resolved
 Sources/Agentic_System/keys.cfg
 regressions*.json
 *.fzil
+generated_templates/
 
 # custom GCE configuration
 Cloud/GCE/config.sh
