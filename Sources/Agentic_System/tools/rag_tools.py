@@ -3,13 +3,15 @@ from smolagents import tool
 import os
 import json
 import hashlib
+import sys
 from pathlib import Path
 
 try:
     import chromadb
     from chromadb.config import Settings as ChromaSettings
-except ImportError:
-    chromadb = None
+except ImportError as e:
+    print(f"Failed to import chromadb: {e}") 
+    sys.exit(-1)
 
 try:
     from langchain_community.vectorstores import Chroma
