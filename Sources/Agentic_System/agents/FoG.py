@@ -220,7 +220,7 @@ class Father(Agent):
                 get_knowledge_doc,
                 search_v8_source_rag,
                 get_v8_source_rag_doc, 
-
+                web_search, # testing only
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[

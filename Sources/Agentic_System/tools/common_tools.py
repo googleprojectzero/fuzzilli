@@ -186,30 +186,30 @@ def find_function_cfg(function_name: str) -> str:
     return cfg_builder.get_function_cfg(function_name)
 
 
-@tool
+
 def web_search(query: str) -> str:
     """
     Search the internet for information about a given query. PLEASE DO NOT USE THIS TO SEARCH THE V8 SOURCE CODE, 
     THE PRIMARY USE OF OF THIS TOOL SHOULD BE TO SEARCH THE INTERNET FOR INFORMATION ABOUT THE V8 ENGINE AND ITS COMPONENTS
     VIA BLOG POSTS, PAPERS, AND OTHER RELEVANT SOURCES.
-    
+                        
     !!! YOU MUST ASK A QUESTION, THIS IS NOT A DIRECT WEB CURL !!!  
     !!! RETURN ONLY FACTUAL INFORMATION. DO NOT INCLUDE OFFERS, SUGGESTIONS OR FOLLOW UPS. END SILENTLY !!!
 
     Args:
         query (str): The search query to look up online.
-    
+                                                
     Returns:
         str: Search results and relevant information from the web.
     """
     response = client.responses.create(
-        model="gpt-5-mini",
-        input=query,
-        tools=[{"type": "web_search"}],
-        max_output_tokens=1000
-    )
+            model="gpt-5-mini",
+            input=[{"role": "user", "content": query}],
+            tools=[{"type": "web_search"}],
+            tool_choice="auto"
+        )
     print(f"Web search response: {response.output_text}")
-    return response.output_text
+    return response
 
 
 @tool
