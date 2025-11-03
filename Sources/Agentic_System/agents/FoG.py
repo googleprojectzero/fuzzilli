@@ -34,7 +34,7 @@ class Father(Agent):
         #     time.sleep(1)   
         # FAISSKnowledgeBase.get_instance()
         # L2 Worker: EBG
-        system_prompt=self.get_prompt("george_forman.txt")
+        system_prompt=self.get_prompt("george_foreman.txt")
         self.agents['george_foreman'] = ToolCallingAgent(
             name="GeorgeForeman",
             description="L2 Worker responsible for validating program templates built by the program builder",
