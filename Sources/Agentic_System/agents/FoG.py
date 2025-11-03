@@ -36,6 +36,8 @@ class Father(Agent):
         #     time.sleep(1)   
         # FAISSKnowledgeBase.get_instance()
         # L2 Worker: EBG
+
+        
         system_prompt=self.get_prompt("george_foreman.txt")
         self.agents['george_foreman'] = ToolCallingAgent(
             name="GeorgeForeman",
@@ -63,6 +65,27 @@ class Father(Agent):
             planning_interval=None
         )
         self.agents['george_foreman'].prompt_templates["system_prompt"] = system_prompt
+
+
+        system_prompt=self.get_prompt("compiler.txt")
+        self.agents['compiler'] = ToolCallingAgent(
+            name="Compiler",
+            description="L2 Worker responsible for compiling program templates built by the program builder",
+            tools=[
+                swift_fuzzy_finder,
+                swift_tree,
+                swift_ripgrep,
+                swift_read_file,
+                write_program_template,
+                build_program_template,
+                excute_program_template,
+            ],
+            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            managed_agents=[],
+            max_steps=20,
+            planning_interval=None
+        )
+        self.agents['compiler'].prompt_templates["system_prompt"] = system_prompt
 
         # L2 Worker: Retriever of Code (under CodeAnalyzer)
         self.agents['reviewer_of_code'] = ToolCallingAgent(

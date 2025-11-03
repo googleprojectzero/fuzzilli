@@ -922,3 +922,201 @@ def excute_program_template(template_js_path: str) -> str:
     """
     return get_output(run_command(f"{D8_PATH} {D8_COMMON_FLAGS} {template_js_path}"))
     
+
+
+
+
+@tool
+def swift_fuzzy_finder(pattern: str, options: str = "") -> str:
+    """
+    Use fuzzy finding to locate files and content by approximate name matching in the Fuzzilli Swift codebase.
+
+    MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
+
+    command: cd {SWIFT_PATH} && rg --hidden --no-follow --no-ignore-vcs --files 2>/dev/null | fzf {options} '{pattern}'
+    Args:
+        pattern (str): The search pattern to match against files and content.
+        options (str): Additional fzf command-line options:
+            --filter: Run non-interactively; outputs only matching lines. 
+                  Example: `ls | fzf --filter .py` → lists only Python files.
+
+                  Notes:
+                  - `--filter` must be followed immediately by the query string. Do not place other flags right after it. For example, use `--filter 'v8/src/compiler' -e` not `--filter -e v8/src/compiler`.
+                  - With `--filter`, `fzf` expects input on stdin. Provide input via a producer command. Example: `rg -n 'JSLoadElement' | fzf -e --filter 'v8/src/compiler'`.
+
+            --exact: Match the query exactly (not fuzzily). 
+                    Example: `echo "main.c\nmain.cpp" | fzf --exact --filter main.c` → returns only `main.c`.
+
+            --delimiter: Define field separator for structured input. 
+                        Example: `cat results.txt | fzf --delimiter : --nth 1` → searches only filenames in `file:line:match`.
+
+            --nth: Limit searchable fields to specific columns. 
+                Example: `ps aux | fzf --nth 2` → searches only in the command field.
+
+            --bind: Map keys or events to actions (e.g. reload, execute). 
+                    Example: `fzf --bind "enter:execute(cat {SWIFT_PATH}/{{}})"` → runs `cat` on selected file.
+    Returns:
+        str: Fuzzy search results showing up to 1000 files and content that approximately match the pattern.
+    """
+    file_list_cmd = "rg --hidden --no-follow --no-ignore-vcs --files 2>/dev/null"
+    return get_output(run_command(f"cd {SWIFT_PATH} && {file_list_cmd} | fzf {options} '{pattern}' | head -n 1000")) 
+
+
+@tool
+def swift_tree(options: str = "") -> str:
+    """
+    Display directory structure using tree command to explore the Fuzzilli Swift codebase layout. 
+    command structure: cd {SWIFT_PATH} && tree {options}. 
+
+    SWIFT_PATH points to the Fuzzilli Swift source directory.
+
+    MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
+    MAKE SURE THE ARGUMENTS TO `options` FOLLOW THE DEFINED FORMAT.
+
+    Args:
+        options (str): Additional tree command options. Common options include:
+            -L NUM: Limit depth to NUM levels
+            -f: Show full path prefix
+            PATH: Prefer '.' or an absolute path. If you pass a relative path, it must exist under SWIFT_PATH.
+    
+    Returns:
+        str: Tree structure showing directories and files in the Fuzzilli Swift codebase.
+    """
+    opts = options or ""
+    parts = opts.split()
+    if parts:
+        last = parts[-1]
+        if not last.startswith("-"):
+            candidate = os.path.join(SWIFT_PATH, last)
+            if not os.path.isdir(candidate):
+                parts[-1] = "."
+                opts = " ".join(parts)
+    final_opts = opts if opts else "-L 2 -f ."
+    return get_output(run_command(f"cd {SWIFT_PATH} && tree {final_opts} | head -n 1000"))
+
+
+
+@tool
+def swift_ripgrep(pattern: str, options: str = "") -> str:
+    """
+    Search for text patterns in the Fuzzilli Swift codebase using ripgrep (rg) for fast text searching.
+    
+    MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
+    
+    command: cd {SWIFT_PATH} && rg {options} '{pattern}' [paths...]
+    Args:
+        pattern (str): The text or regular expression pattern to search for.
+            Example: `"TODO"` → searches for the string "TODO" in files.
+
+        options (str): Additional ripgrep command-line options and paths.
+            You can use any of the following commonly used flags:
+
+            --files: List all files that would be searched, without searching inside them. 
+                Example: `rg --files src/` → lists all files under `src/`.
+
+            --type: Limit search to specific file types. 
+                    Example: `rg --type py "def " src/` → search only Python files.
+
+            --glob: Include or exclude paths by glob pattern. 
+                    Example: `rg --glob '!tests/*' "<pattern>"` → skip `tests` folder.
+
+            --ignore-case: Match text case-insensitively. 
+                        Example: `rg --ignore-case "error"` → matches `Error`, `ERROR`, etc.
+
+            --no-heading: Suppress file name headings in results. 
+                        Example: `rg --no-heading "main"` → cleaner, machine-parsable output.
+
+            --line-number: Show line numbers in matches. 
+                        Example: `rg --line-number "main"` → outputs `file:line:match`.
+
+            --vimgrep: Output in `file:line:column:match` format for easy parsing. 
+                    Example: `rg --vimgrep "init"` → structured grep-like output.
+
+            --json: Emit results as structured JSON. 
+                    Example: `rg --json "<pattern>"` → machine-readable output for parsing.
+
+            --max-depth: Limit recursion depth when searching directories. 
+                        Example: `rg --max-depth 2 "class"` → search only two levels deep.
+            --context=NUM: Displays NUM lines of context both before and after each match.
+                        Example: `rg --context=2 "<pattern>"` → shows 2 lines of context before and after each match.
+        
+    Returns:
+        str: Search results showing matching lines with context.
+    """
+    if not options:
+        return get_output(run_command(f"cd {SWIFT_PATH} && rg '{pattern}' | head -n 10000"))
+    
+    parts = options.split()
+    flags = []
+    
+    i = 0
+    while i < len(parts):
+        part = parts[i]
+        if part.startswith('-'):
+            flags.append(part)
+            if part in ['--type', '--glob'] and i + 1 < len(parts):
+                next_part = parts[i + 1]
+                if not next_part.startswith('-') and not next_part.startswith('v8/'):
+                    i += 1
+                    flags.append(parts[i])
+        else:
+            flags.append(part)
+        i += 1
+    
+    flags_str = ' '.join(flags) if flags else ''
+
+    cmd = f"cd {SWIFT_PATH} && rg {flags_str} '{pattern}' | head -n 1000"
+    
+    return get_output(run_command(cmd))
+
+
+@tool
+def swift_read_file(file_path: str, section: int = None) -> str:
+    """
+    Reads and returns the content of a specified text file from the Fuzzilli Swift codebase, 
+    limited to 3000 lines maximum (1 section). If the file is longer, split into 3000-line sections, 
+    and require specifying which section to read.
+
+    IMPORTANT: Never call more than 3000 lines. Use get_file_size first for very large or binary files.
+
+    Args:
+        file_path (str): The full path to the file to be read. Relative paths will be resolved relative to SWIFT_PATH.
+        section (int): Section of the file to read. Each section is 3000 lines. If the file has multiple sections, agent must specify which section (starting from 1).
+    Returns:
+        If the file is <= 3000 lines, returns its content. If more, returns only the requested section and info about total sections. If section is not specified, instruct agent to pick a section.
+    """
+    if file_path.startswith('Sources/') or file_path.startswith('Fuzzilli/'):
+        resolved_path = os.path.join(SWIFT_PATH, file_path)
+    elif not os.path.isabs(file_path):
+        resolved_path = os.path.join(SWIFT_PATH, file_path)
+    else:
+        resolved_path = file_path
+
+    line_count_result = get_output(run_command(f"cd {SWIFT_PATH} && wc -l '{resolved_path}'"))
+    try:
+        line_count = int(line_count_result.strip().split()[0])
+    except Exception:
+        return f"Could not determine number of lines in file. wc -l output: {line_count_result}"
+
+    lines_per_section = 3000
+    num_sections = (line_count + lines_per_section - 1) // lines_per_section
+
+    if line_count <= lines_per_section:
+        return get_output(run_command(f"cd {SWIFT_PATH} && cat '{resolved_path}'"))
+
+    if section is None or section < 1 or section > num_sections:
+        return (
+            f"File '{file_path}' has {line_count} lines and is divided into {num_sections} sections "
+            f"(each section is 3000 lines).\n"
+            f"To read this file, please specify a section number between 1 and {num_sections} "
+            f"using the 'section' argument."
+        )
+
+    start_line = 1 + (section - 1) * lines_per_section
+    end_line = min(start_line + lines_per_section - 1, line_count)
+    read_cmd = f"cd {SWIFT_PATH} && sed -n '{start_line},{end_line}p' '{resolved_path}'"
+    content = get_output(run_command(read_cmd))
+    return (
+        f"Showing section {section}/{num_sections} (lines {start_line}-{end_line}) of '{file_path}':\n"
+        f"{content}"
+    )

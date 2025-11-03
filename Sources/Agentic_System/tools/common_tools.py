@@ -35,6 +35,7 @@ D8_PATH = os.getenv('D8_PATH')
 FUZZILLI_TOOL_BIN = os.getenv('FUZZILLI_TOOL_BIN')
 V8_PATH = os.getenv('V8_PATH')
 FUZZILLI_PATH = os.getenv('FUZZILLI_PATH')
+SWIFT_PATH = os.path.join(FUZZILLI_PATH, 'Sources', 'Fuzzilli')
 if "src" not in V8_PATH:
     print('V8_PATH is not a valid V8 source code directory')
     sys.exit(0)
