@@ -32,8 +32,9 @@ JSON WITH EXAMPLE (DO NOT COPY WORDING/FORMATTING, JUST THE GENERAL CONCEPT OF T
 Please use the returned IDs from the responses of the v8_search agent to interpret the code. The IDs can be used to query the 
 internal RAG database, which will contain both the code block and context IDs for connecting code sections. Your goal is, once again, 
 to actually find interesting functions. Make sure as you are interpreting the code, you have a strong understanding of what the code blocks are doing
-and why they are interesting. If you are unsure at all, please re-query v8_search with the same JSON TASK, but this time make sure to include IDs 
-as well as code specifics as needed. Until you are 100% confident in this STAGE, do not move to stage 4.
+and why they are interesting. If you are unsure, please re-query v8_search with the same JSON TASK, but this time make sure to include IDs 
+as well as code specifics as needed. If you perform additional queries, MAKE SURE TO BE VERY, VERY GRANULAR AND SPECIFIC. YOU MUST KNOW EXACTLY 
+WHAT YOU ARE LOOKING FOR. DO NOT JUST SEND THE SAME "TASK" TO THE V8_search agent. QUERY THE RAG DB AND FORMULATE THE V8_search TASK PARTIALLY BASED ON THE RESULTS. 
 
 
 ## STAGE 4 

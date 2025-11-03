@@ -17,7 +17,7 @@ requests
 
 # Vector database and embeddings (OPTIONAL - will fallback gracefully if not available)
 # Uncomment these if you need RAG functionality:
-# chromadb>=0.5.0
+chromadb>=0.5.0
 # langchain-community
 sentence-transformers
 faiss-cpu

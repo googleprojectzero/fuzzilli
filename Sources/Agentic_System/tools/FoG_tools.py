@@ -844,7 +844,7 @@ def read_program_template_input_file() -> str:
     Returns:
         str: The content of the program template file
     """
-    return get_output(run_command(f"cat {PROGRAM_TEMPLATE_INPUT_FILE}"))
+    return get_output(run_command(f"cat ../../../Sources/Fuzzilli/CodeGen/ProgramTemplates.swift"))
 
 @tool 
 def write_program_template(program_template: str) -> str:

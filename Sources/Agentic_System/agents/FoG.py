@@ -52,8 +52,6 @@ class Father(Agent):
                 get_rag_doc,
                 search_knowledge_base,
                 get_knowledge_doc,
-
-
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
@@ -103,7 +101,7 @@ class Father(Agent):
                 get_realpath,
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),  
-            max_steps=30,
+            max_steps=50,
             planning_interval=None,
         )
         self.agents['v8_search'].prompt_templates["system_prompt"] = self.get_prompt("v8_search.txt") + "THIS IS THE CURRENT V8 PATH ASSUMING YOU ARE INSIDE THE V8 SOURCE CODE DIRECTORY FOR ALL TOOL CALLS ALREADY: " + get_v8_path()

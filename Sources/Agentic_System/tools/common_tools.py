@@ -189,8 +189,11 @@ def find_function_cfg(function_name: str) -> str:
 @tool
 def web_search(query: str) -> str:
     """
-    Search the internet for information about a given query.
+    Search the internet for information about a given query. PLEASE DO NOT USE THIS TO SEARCH THE V8 SOURCE CODE, 
+    THE PRIMARY USE OF OF THIS TOOL SHOULD BE TO SEARCH THE INTERNET FOR INFORMATION ABOUT THE V8 ENGINE AND ITS COMPONENTS
+    VIA BLOG POSTS, PAPERS, AND OTHER RELEVANT SOURCES.
     
+    !!! YOU MUST ASK A QUESTION, THIS IS NOT A DIRECT WEB CURL !!!  
     Args:
         query (str): The search query to look up online.
     
