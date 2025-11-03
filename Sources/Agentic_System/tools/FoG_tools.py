@@ -15,6 +15,12 @@ import time
 OUTPUT_DIRECTORY = "/tmp/fog-d8-records" 
 RAG_DB_DIR = (Path(__file__).parent.parent / "rag_db").resolve()
 
+GENERATED_TEMPLATE_DIR = f"{FUZZILLI_PATH}/Sources/Agentic_System/generated_templates/"
+try:
+    os.makedirs(GENERATED_TEMPLATE_DIR)
+except FileExistsError:
+    pass
+
 # Cached regressions.json data to avoid reloading on every tool call
 _REGRESSIONS_PATH = (Path(__file__).parent.parent / "regressions.json").resolve()
 _REGRESSIONS_CACHE = None
@@ -903,7 +909,7 @@ def build_program_template(template: str) -> str:
     # fake_path is passed in because FuzzILTool requires a path to run
     # FuzzILTool could maybe get updated to not always require a path 
     javascript = get_output(run_command(f"{FUZZILLI_TOOL_BIN} --compileTemplate={template} fake_path"))
-    path = f"{FUZZILLI_PATH}/Sources/Agentic_System/generated_templates/{template}-{hash(javsacript)}.js"
+    path = f"{GENERATED_TEMPLATE_DIR}{template}-{hash(javascript)}.js"
     with open(path, "w") as f:
         f.write(javascript)  
     return f"Generated JavaScript from {template} template, stored at {path}, full JavaScript: {javascript}"
