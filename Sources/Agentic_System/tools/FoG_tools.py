@@ -886,26 +886,16 @@ def write_program_template(program_template: str) -> str:
         return f"Error writing program template: {str(e)}"
 
 @tool 
-def build_program_template() -> str:
+def build_program_template(template: str) -> str:
     """
-    Build a program template file 
+    Compile a program template file to JavaScript
     
-    Returns:
-        str: The result of the build operation
-    """
-    return get_output(run_command(f"cd {FUZZILLI_PATH} && swift build"))
-
-@tool 
-def excute_program_template(template: str) -> str:
-    """
-    Excute a program template
-
     Args:
         template (str): the name of the program template to be executed
             The available templates are located in Sources/Fuzzilli/CodeGen/ProgramTemplates.swift
 
     Returns:
-        str: The result of the excute operation
+        str: The resulting JavaScript program from the given program template and extra information
 
     DO NOT WORRY ABOUT fake_path IT IS SIMPLY THERE SO FUZZILTOOL RUNS PROPERLY. 
     fake_path DOES NOT GET USED ANYWHERE
@@ -916,6 +906,19 @@ def excute_program_template(template: str) -> str:
     path = f"{FUZZILLI_PATH}/Sources/Agentic_System/generated_templates/{template}-{hash(javsacript)}.js"
     with open(path, "w") as f:
         f.write(javascript)  
-    outcome = get_output(run_command(f"{D8_PATH} {D8_COMMON_FLAGS} {path}"))
-    return f"Execution outcome of running {template}: {outcome}"
+    return f"Generated JavaScript from {template} template, stored at {path}, full JavaScript: {javascript}"
+
+@tool 
+def excute_program_template(template_js_path: str) -> str:
+    """
+    Excute a JavaScript program generated from a program template
+
+    Args:
+        template_js_path (str): The path to the given JavaScript program generated from a program template
+
+    Returns:
+        str: The result of the excuting the program template's javascript
+
+    """
+    return get_output(run_command(f"{D8_PATH} {D8_COMMON_FLAGS} {template_js_path}"))
     
