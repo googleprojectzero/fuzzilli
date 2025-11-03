@@ -194,6 +194,8 @@ def web_search(query: str) -> str:
     VIA BLOG POSTS, PAPERS, AND OTHER RELEVANT SOURCES.
     
     !!! YOU MUST ASK A QUESTION, THIS IS NOT A DIRECT WEB CURL !!!  
+    !!! RETURN ONLY FACTUAL INFORMATION. DO NOT INCLUDE OFFERS, SUGGESTIONS OR FOLLOW UPS. END SILENTLY !!!
+
     Args:
         query (str): The search query to look up online.
     
