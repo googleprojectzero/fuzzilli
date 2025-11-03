@@ -52,6 +52,8 @@ class Father(Agent):
                 get_rag_doc,
                 search_knowledge_base,
                 get_knowledge_doc,
+                search_v8_source_rag,
+                get_v8_source_rag_doc, 
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[],
@@ -128,6 +130,9 @@ class Father(Agent):
                 search_knowledge_base,
                 get_knowledge_doc,
                 read_rag_db_id,
+                search_v8_source_rag,
+                get_v8_source_rag_doc, 
+                
                  
                 ], # add rag db tools here aswell
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
@@ -213,6 +218,9 @@ class Father(Agent):
                 # FAISS knowledge base queries
                 search_knowledge_base,
                 get_knowledge_doc,
+                search_v8_source_rag,
+                get_v8_source_rag_doc, 
+
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[

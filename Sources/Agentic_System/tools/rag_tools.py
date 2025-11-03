@@ -380,3 +380,141 @@ def get_knowledge_doc(file_path: str) -> str:
     
     except Exception as e:
         return json.dumps({"error": f"Failed to retrieve document: {str(e)}"})
+
+
+class FAISSV8SourceRag:
+    _instance = None
+    
+    def __init__(self):
+        if not FAISS_AVAILABLE:
+            raise RuntimeError("FAISS dependencies not available")
+        
+        base_dir = Path(__file__).parent.parent / 'rag_db' / 'v8_source_rag'
+        
+        if not base_dir.exists():
+            raise FileNotFoundError(f"v8 source rag not found: {base_dir}")
+        
+        index_file = base_dir / 'v8_source_rag.index'
+        metadata_file = base_dir / 'v8_source_rag_metadata.json'
+        model_file = base_dir / 'v8_source_rag_model.pkl'
+        
+        if not all([index_file.exists(), metadata_file.exists(), model_file.exists()]):
+            raise FileNotFoundError("v8 source rag files incomplete")
+        
+        self.index = faiss.read_index(str(index_file))
+        
+        with open(metadata_file, 'r') as f:
+            self.metadata = json.load(f)
+        
+        with open(model_file, 'rb') as f:
+            model_name = pickle.load(f)
+        
+        # Force CPU device to avoid accidental meta device transfers that cause
+        # "Cannot copy out of meta tensor" errors in some torch/accelerate setups.
+        self.model = SentenceTransformer(model_name, device='cpu')
+    
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+    
+    def search(self, query: str, top_k: int = 5, topic_filter: str = None):
+        query_embedding = self.model.encode([query], convert_to_numpy=True)
+        
+        search_k = top_k * 3 if topic_filter else top_k
+        distances, indices = self.index.search(query_embedding.astype('float32'), search_k)
+        
+        results = []
+        for idx, distance in zip(indices[0], distances[0]):
+            if idx < len(self.metadata):
+                doc = self.metadata[idx]
+                
+                if topic_filter and topic_filter.lower() not in doc['topic'].lower():
+                    continue
+                
+                similarity = 1.0 / (1.0 + distance)
+                results.append({
+                    'path': doc['path'],
+                    'topic': doc['topic'],
+                    'content': doc['content'],
+                    'similarity': float(similarity)
+                })
+                
+                if len(results) >= top_k:
+                    break
+        
+        return results
+
+@tool
+def search_v8_source_rag(query: str, top_k: int = 3, topic_filter: str = "") -> str:
+    """
+    Searches the V8 source code RAG using semantic search.
+    
+    Args:
+        query (str): Natural language query about V8 source code, JavaScript, or C++ concepts.
+        top_k (int): Number of results to return (default 3, max 10, for the first query please keep top_k between 3-5).
+        topic_filter (str): Optional topic filter to narrow results (e.g., 'ic', 'compiler', 'runtime'), or empty for all.
+    Returns:
+        str: JSON string containing search results with topic, file path, and content snippets.
+    """
+    if not FAISS_AVAILABLE:
+        return json.dumps({"error": "V8 source RAG not available. Install dependencies: pip install numpy faiss-cpu sentence-transformers"})
+    
+    try:
+        kb = FAISSV8SourceRag.get_instance()
+        
+        top_k = max(1, min(10, int(top_k)))
+        
+        results = kb.search(query, top_k, topic_filter if topic_filter else None)
+        
+        output = []
+        for result in results:
+            content = result['content']
+            lines = content.split('\n')
+            
+            preview = '\n'.join(lines[:30])
+            if len(lines) > 30:
+                preview += f"\n... ({len(lines) - 30} more lines)"
+            
+            output.append({
+                'topic': result['topic'],
+                'file': result['path'],
+                'similarity': round(result['similarity'], 3),
+                'content_preview': preview
+            })
+        
+        return json.dumps(output, indent=2)
+    
+    except Exception as e:
+        return json.dumps({"error": f"Failed to search V8 source RAG: {str(e)}"})
+
+@tool
+def get_v8_source_rag_doc(file_path: str) -> str:
+    """
+    Retrieves a full document from the V8 source RAG by its file path.
+    
+    Args:
+        file_path (str): The relative file path from search results.
+    
+    Returns:
+        str: JSON string containing the full document content.
+    """
+    if not FAISS_AVAILABLE:
+        return json.dumps({"error": "V8 source RAG not available"})
+    
+    try:
+        kb = FAISSV8SourceRag.get_instance()
+        
+        for doc in kb.metadata:
+            if doc['path'] == file_path:
+                return json.dumps({
+                    'topic': doc['topic'],
+                    'file': doc['path'],
+                    'content': doc['content']
+                }, indent=2)
+        
+        return json.dumps({"error": f"V8 source RAG document not found: {file_path}"})
+    
+    except Exception as e:
+        return json.dumps({"error": f"Failed to retrieve V8 source RAG document: {str(e)}"})
