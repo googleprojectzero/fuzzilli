@@ -1,5 +1,4 @@
 from smolagents import tool
-from openai import OpenAI
 from tools.common_tools import * 
 from fuzzywuzzy import fuzz
 from pathlib import Path
