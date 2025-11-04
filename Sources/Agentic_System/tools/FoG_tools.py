@@ -637,9 +637,13 @@ def search_template_file_json(pattern: str, return_topic: int = 0) -> str:
 @tool
 def search_regex_template_swift(regex: str) -> str:
     """
-
     Regex search over ProgramTemplateSwift in templates.json.
     Returns matching snippets with template names.
+
+    When using regex search tools, only run well-formed, 
+    specific patterns that match real identifiers or function names. 
+    Avoid broad, guessy, or repeated searches.
+
     Args:
         regex (str): The regex pattern to search for in the templates.json ProgramTemplateSwift files.
     Returns:
@@ -1075,7 +1079,10 @@ def swift_ripgrep(pattern: str, options: str = "") -> str:
 
     cmd = f"cd {SWIFT_PATH} && rg {flags_str} '{pattern}' | head -n 1000"
     
-    return get_output(run_command(cmd))
+    output = get_output(run_command(cmd))
+    if not output.strip():
+        return "No matches found"
+    return output
 
 
 @tool

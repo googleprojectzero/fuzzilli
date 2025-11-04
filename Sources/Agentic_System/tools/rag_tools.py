@@ -221,6 +221,8 @@ def list_rag_db(where_json: str = "", limit: int = 100, collection: str = "") ->
     try:
         coll = _get_chromadb_collection(collection or _get_active_collection("rag-chroma"))
         where = json.loads(where_json) if where_json else None
+        if where == {}:
+            where = None
         resp = coll.get(where=where, limit=int(limit))
         ids = resp.get("ids") or []
         docs = resp.get("documents") or []
