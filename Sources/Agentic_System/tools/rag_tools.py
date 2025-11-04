@@ -368,6 +368,8 @@ def search_knowledge_base(query: str, top_k: int = 3, topic_filter: str = "") ->
 def get_knowledge_doc(file_path: str) -> str:
     """
     Retrieves a full document from the knowledge base by its file path.
+    This is not for retrieving source code documentation- this is for 
+    higher level design documents. So do not search with a src code file_path.
     
     Args:
         file_path (str): The relative file path from search results.
