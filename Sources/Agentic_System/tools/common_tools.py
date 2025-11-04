@@ -1,4 +1,7 @@
 OUTPUT_DIRECTORY = "/tmp/fog-output-samples"
+import warnings
+warnings.filterwarnings("ignore", module="pydantic")
+
 
 # Try to import smolagents, but don't fail if it's not available
 try:
