@@ -85,7 +85,7 @@ class Father(Agent):
             max_steps=20,
             planning_interval=None
         )
-        self.agents['compiler'].prompt_templates["system_prompt"] = system_prompt
+        self.agents['george_foreman'].prompt_templates["system_prompt"] = system_prompt
 
         # L2 Worker: Retriever of Code (under CodeAnalyzer)
         self.agents['reviewer_of_code'] = ToolCallingAgent(
@@ -188,7 +188,8 @@ class Father(Agent):
             ], # add rag db stuff here aswell
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             managed_agents=[
-                self.agents['george_foreman']
+                self.agents['george_foreman'],
+                self.agents['compiler']
             ],
             max_steps=30,
             planning_interval=None,

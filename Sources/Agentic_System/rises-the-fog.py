@@ -21,6 +21,16 @@ logger.disabled = True
 BASE_MODEL_ID = "gpt-5-mini"
 
 import site
+from pathlib import Path
+
+# Prefer the project's virtualenv site-packages if present, so tools like chromadb are importable
+try:
+    _root = Path(__file__).resolve().parents[2]
+    _venv_site = _root / ".venv" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
+    if _venv_site.exists():
+        site.addsitedir(str(_venv_site))
+except Exception:
+    pass
 
 
 class FatherOfGod:

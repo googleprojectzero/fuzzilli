@@ -27,7 +27,7 @@ JSON WITH EXAMPLE (DO NOT COPY WORDING/FORMATTING, JUST THE GENERAL CONCEPT OF T
     REASON: "[The reason for finding these specific code sections related to the X code region are ... . Please provide specific reasoning to direct V8search.]"
 }
 
-YOU CAN ONLY CALL v8_search at most 5 times TOTAL FOR ALL STAGES !!! PLEASE USE YOUR CALLS WELL !!!!
+YOU CAN ONLY CALL v8_search at most 2 times TOTAL FOR ALL STAGES !!! PLEASE USE YOUR CALLS WELL !!!!
 
 ## STAGE 3
 
@@ -38,7 +38,7 @@ and why they are interesting. If you are unsure, please re-query v8_search with 
 as well as code specifics as needed. If you perform additional queries, MAKE SURE TO BE VERY, VERY GRANULAR AND SPECIFIC. YOU MUST KNOW EXACTLY 
 WHAT YOU ARE LOOKING FOR. DO NOT JUST SEND THE SAME "TASK" TO THE V8_search agent. QUERY THE RAG DB AND FORMULATE THE V8_search TASK PARTIALLY BASED ON THE RESULTS. 
 
-YOU CAN ONLY CALL v8_search at most 5 times TOTAL FOR ALL STAGES !!! PLEASE USE YOUR CALLS WELL !!!!
+YOU CAN ONLY CALL v8_search at most 2 times TOTAL FOR ALL STAGES !!! PLEASE USE YOUR CALLS WELL !!!!
 
 
 ## STAGE 4 
@@ -60,6 +60,10 @@ Here is the JSON object that you MUST send to code reviewer:
 ## STAGE 5
 
 After code reviewer has validated that you have found interesting code blocks, you must query the results back to your parent agent. 
+CODE REVIWER MUST ACCEPCT/PASS YOUR ANSWER, IF IT FAILS/REJECTED THEN YOU MUST GO BACK TO STAGE 3 AND GAIN MORE DATA ON THE SYSTEM AND 
+TRY TO DEAL WITH THE ISSUES THAT THE STAGE SENDS TO YOU ! WHEN YOU FAIL A CODE REVIWER YOU ARE ALLOWED TO RERUN THE V8_SEARCH AGENT 
+ONCE ! 
+
 Analyze the relation between the validated interesting code blocks and the side-effects provided by the interesting JavaScript programs in the corpus. 
 
 Here is the JSON object that you MUST send to Father of George/parent agent:

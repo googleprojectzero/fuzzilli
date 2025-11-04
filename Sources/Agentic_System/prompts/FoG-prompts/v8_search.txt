@@ -44,8 +44,6 @@ REGARDING WAHT THEY CONTAIN
 
 
 
-
-
 STRICT OUTPUT RULES FOR write_rag_db_id:
 - Pass a SINGLE JSON OBJECT per call. DO NOT wrap in an array.
 - The object MUST contain an "id" field.

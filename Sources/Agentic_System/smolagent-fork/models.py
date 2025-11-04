@@ -1173,6 +1173,12 @@ class LiteLLMModel(ApiModel):
             Useful for specific models that do not support specific message roles like "system".
         flatten_messages_as_text (`bool`, *optional*): Whether to flatten messages as text.
             Defaults to `True` for models that start with "ollama", "groq", "cerebras".
+        max_input_tokens (`int`, *optional*):
+            Maximum input tokens allowed. If exceeded, messages will be chunked automatically.
+            Defaults to 272000 for gpt-5 models, None for others.
+        enable_message_chunking (`bool`, *optional*):
+            Whether to enable automatic message chunking when token limit is exceeded.
+            Defaults to True.
         **kwargs:
             Additional keyword arguments to forward to the underlying LiteLLM completion call.
     """
@@ -1184,6 +1190,8 @@ class LiteLLMModel(ApiModel):
         api_key: str | None = None,
         custom_role_conversions: dict[str, str] | None = None,
         flatten_messages_as_text: bool | None = None,
+        max_input_tokens: int | None = None,
+        enable_message_chunking: bool = True,
         **kwargs,
     ):
         if not model_id:
@@ -1196,6 +1204,13 @@ class LiteLLMModel(ApiModel):
             model_id = "anthropic/claude-3-5-sonnet-20240620"
         self.api_base = api_base
         self.api_key = api_key
+        
+        if max_input_tokens is None and model_id and "gpt-5" in model_id:
+            max_input_tokens = 272000
+        
+        self.max_input_tokens = max_input_tokens
+        self.enable_message_chunking = enable_message_chunking
+        
         flatten_messages_as_text = (
             flatten_messages_as_text
             if flatten_messages_as_text is not None
@@ -1219,6 +1234,70 @@ class LiteLLMModel(ApiModel):
 
         return litellm
 
+    def _count_tokens(self, messages: list[dict]) -> int:
+        """Count tokens in messages using litellm's token counter."""
+        try:
+            import litellm
+            return litellm.token_counter(model=self.model_id, messages=messages)
+        except Exception as e:
+            logger.warning(f"Failed to count tokens: {e}. Estimating based on character count.")
+            total_chars = sum(len(str(msg.get("content", ""))) for msg in messages)
+            return int(total_chars / 3)
+
+    def _chunk_messages(self, messages: list[dict], max_tokens: int) -> list[list[dict]]:
+        """
+        Split messages into chunks that fit within token limit.
+        Strategy: Keep system prompt + last few messages, chunk middle history.
+        """
+        if not messages:
+            return [messages]
+        
+        system_messages = [msg for msg in messages if msg.get("role") == "system"]
+        non_system_messages = [msg for msg in messages if msg.get("role") != "system"]
+        
+        if len(non_system_messages) <= 2:
+            return [messages]
+        
+        reserve_tokens = int(max_tokens * 0.1)
+        available_tokens = max_tokens - reserve_tokens
+        
+        system_tokens = self._count_tokens(system_messages) if system_messages else 0
+        
+        last_messages = non_system_messages[-2:]
+        last_tokens = self._count_tokens(last_messages)
+        
+        remaining_tokens = available_tokens - system_tokens - last_tokens
+        
+        if remaining_tokens < 0:
+            logger.warning("System + last messages exceed token limit. Truncating system messages.")
+            if system_messages:
+                system_messages = []
+            remaining_tokens = available_tokens - last_tokens
+        
+        middle_messages = non_system_messages[:-2]
+        chunks = []
+        current_chunk_messages = []
+        current_chunk_tokens = 0
+        
+        for msg in middle_messages:
+            msg_tokens = self._count_tokens([msg])
+            
+            if current_chunk_tokens + msg_tokens > remaining_tokens:
+                if current_chunk_messages:
+                    chunk = system_messages + current_chunk_messages + last_messages
+                    chunks.append(chunk)
+                    current_chunk_messages = []
+                    current_chunk_tokens = 0
+            
+            current_chunk_messages.append(msg)
+            current_chunk_tokens += msg_tokens
+        
+        if current_chunk_messages or not chunks:
+            chunk = system_messages + current_chunk_messages + last_messages
+            chunks.append(chunk)
+        
+        return chunks if chunks else [messages]
+
     def generate(
         self,
         messages: list[ChatMessage | dict],
@@ -1239,6 +1318,61 @@ class LiteLLMModel(ApiModel):
             custom_role_conversions=self.custom_role_conversions,
             **kwargs,
         )
+        
+        if self.enable_message_chunking and self.max_input_tokens:
+            messages_list = completion_kwargs.get("messages", [])
+            token_count = self._count_tokens(messages_list)
+            
+            if token_count > self.max_input_tokens:
+                logger.warning(
+                    f"Messages ({token_count} tokens) exceed limit ({self.max_input_tokens} tokens). "
+                    f"Chunking messages to fit within limit."
+                )
+                
+                chunks = self._chunk_messages(messages_list, self.max_input_tokens)
+                logger.info(f"Split messages into {len(chunks)} chunks")
+                
+                responses = []
+                total_input_tokens = 0
+                total_output_tokens = 0
+                
+                for i, chunk in enumerate(chunks):
+                    chunk_kwargs = completion_kwargs.copy()
+                    chunk_kwargs["messages"] = chunk
+                    
+                    logger.info(f"Processing chunk {i+1}/{len(chunks)} ({self._count_tokens(chunk)} tokens)")
+                    
+                    self._apply_rate_limit()
+                    chunk_response = self.client.completion(**chunk_kwargs)
+                    
+                    if not chunk_response.choices:
+                        raise RuntimeError(
+                            f"Unexpected API response for chunk {i+1}: model '{self.model_id}' returned no choices. "
+                            f"Response details: {chunk_response.model_dump()}"
+                        )
+                    
+                    responses.append(chunk_response)
+                    total_input_tokens += chunk_response.usage.prompt_tokens
+                    total_output_tokens += chunk_response.usage.completion_tokens
+                
+                combined_content = "\n\n---\n\n".join([
+                    resp.choices[0].message.content or "" 
+                    for resp in responses
+                ])
+                
+                final_response = responses[-1]
+                final_message_dict = final_response.choices[0].message.model_dump(include={"role", "content", "tool_calls"})
+                final_message_dict["content"] = combined_content
+                
+                return ChatMessage.from_dict(
+                    final_message_dict,
+                    raw=final_response,
+                    token_usage=TokenUsage(
+                        input_tokens=total_input_tokens,
+                        output_tokens=total_output_tokens,
+                    ),
+                )
+        
         self._apply_rate_limit()
         response = self.client.completion(**completion_kwargs)
         if not response.choices:
