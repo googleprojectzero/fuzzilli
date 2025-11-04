@@ -18,6 +18,10 @@ requests
 # Vector database and embeddings (OPTIONAL - will fallback gracefully if not available)
 # Uncomment these if you need RAG functionality:
 chromadb
-# langchain-community
+langchain-community
 sentence-transformers
 faiss-cpu
+
+#Utilities
+pytz
+duckduckgo-search
