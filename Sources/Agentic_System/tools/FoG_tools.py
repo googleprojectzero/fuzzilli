@@ -194,7 +194,7 @@ def tree(options: str = "") -> str:
     return get_output(run_command(f"cd {V8_PATH} && tree {final_opts} | head -n 1000"))
 
 @tool
-def ripgrep(pattern: str, options: str = "") -> str:
+def ripgrep(pattern: str, paths: str = "", options: str = "") -> str:
     """
     Search for text patterns in files using ripgrep (rg) for fast text searching.
     
@@ -204,6 +204,9 @@ def ripgrep(pattern: str, options: str = "") -> str:
     Args:
         pattern (str): The text or regular expression pattern to search for.
             Example: `"TODO"` → searches for the string "TODO" in files.
+
+        paths (str): Optional file(s) or directory(ies) to limit the search to. Can be empty.
+            Example: "maglev/maglev-graph-builder.cc"
 
         options (str): Additional ripgrep command-line options and paths.
             You can use any of the following commonly used flags:
@@ -262,7 +265,7 @@ def ripgrep(pattern: str, options: str = "") -> str:
     
     flags_str = ' '.join(flags) if flags else ''
 
-    cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}' | head -n 1000"
+    cmd = f"cd {V8_PATH} && rg '{pattern}' {paths} {flags_str} | head -n 1000"
     
     return get_output(run_command(cmd))
 
