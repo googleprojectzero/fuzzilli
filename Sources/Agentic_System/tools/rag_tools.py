@@ -144,19 +144,31 @@ def search_rag_db(query: str, where_json: str = "", k: int = 8, collection: str 
 @tool
 def update_rag_db(doc_id: str, new_content: str = "", new_metadata_json: str = "", collection: str = "") -> str:
     """
-    Updates an existing doc by id. If content or metadata omitted, preserves current value.
+    Updates an existing doc by id, or creates it if it doesn't exist (upsert).
+    If content or metadata omitted when updating, preserves current value.
 
     Args:
-        doc_id (str): The document id to update.
-        new_content (str): New full content for the document. Leave empty to keep existing.
-        new_metadata_json (str): JSON dict of metadata fields to merge into existing metadata.
+        doc_id (str): The document id to update or create.
+        new_content (str): New full content for the document. Required for new docs, optional for updates.
+        new_metadata_json (str): JSON dict of metadata fields to merge into existing metadata (or full metadata for new docs).
         collection (str): Override collection name; defaults to the active collection.
     """
     try:
         coll = _get_chromadb_collection(collection or _get_active_collection("rag-chroma"))
         cur = coll.get(ids=[doc_id])
+        
         if not cur or not cur.get("ids"):
-            return f"Not found: {doc_id}"
+            if not new_content:
+                return f"Error: new_content required when creating new document: {doc_id}"
+            meta = {}
+            if new_metadata_json:
+                try:
+                    meta = json.loads(new_metadata_json)
+                except Exception:
+                    return "Invalid JSON for new_metadata_json"
+            coll.add(ids=[doc_id], documents=[new_content], metadatas=[meta])
+            return f"Created: {doc_id}"
+        
         doc = (cur.get("documents") or [""])[0]
         meta = (cur.get("metadatas") or [{}])[0]
         if new_content:
@@ -275,7 +287,11 @@ class FAISSKnowledgeBase:
         
         # Force CPU device to avoid accidental meta device transfers that cause
         # "Cannot copy out of meta tensor" errors in some torch/accelerate setups.
-        self.model = SentenceTransformer(model_name, device='cpu')
+        import torch
+        self.model = SentenceTransformer(model_name)
+        self.model = self.model.to('cpu')
+        if hasattr(self.model, 'eval'):
+            self.model.eval()
     
     @classmethod
     def get_instance(cls):
@@ -408,7 +424,11 @@ class FAISSV8SourceRag:
         
         # Force CPU device to avoid accidental meta device transfers that cause
         # "Cannot copy out of meta tensor" errors in some torch/accelerate setups.
-        self.model = SentenceTransformer(model_name, device='cpu')
+        import torch
+        self.model = SentenceTransformer(model_name)
+        self.model = self.model.to('cpu')
+        if hasattr(self.model, 'eval'):
+            self.model.eval()
     
     @classmethod
     def get_instance(cls):

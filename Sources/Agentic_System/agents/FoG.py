@@ -82,7 +82,7 @@ class Father(Agent):
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[],
-            max_steps=20,
+            max_steps=50,
             planning_interval=None
         )
         self.agents['george_foreman'].prompt_templates["system_prompt"] = system_prompt

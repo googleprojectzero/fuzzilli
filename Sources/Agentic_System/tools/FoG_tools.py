@@ -851,7 +851,8 @@ def read_program_template_input_file() -> str:
     Returns:
         str: The content of the program template file
     """
-    return get_output(run_command(f"cat ../../../Sources/Fuzzilli/CodeGen/ProgramTemplates.swift"))
+    program_templates_file = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplates.swift")
+    return get_output(run_command(f"cat '{program_templates_file}'"))
 
 @tool 
 def write_program_template(program_template: str) -> str:
@@ -864,32 +865,33 @@ def write_program_template(program_template: str) -> str:
     Returns:
         str: The result of the write operation
     """
-    program_templates_file = Path(__file__).parent.parent.parent / "Sources" / "Fuzzilli" / "CodeGen" / "ProgramTemplates.swift"
+    program_templates_file = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplates.swift")
     
-    if not program_templates_file.exists():
+    if not os.path.exists(program_templates_file):
         return f"Error: ProgramTemplates.swift not found at {program_templates_file}"
     
     try:
         with open(program_templates_file, 'r') as f:
             content = f.read()
-        
-        content = content.rstrip()
-        
-        if not content.endswith(']'):
-            return "Error: ProgramTemplates.swift does not end with closing bracket"
-        
-        template_code = program_template.strip()
-        if not template_code.endswith(','):
-            template_code += ','
-        
-        content = content[:-1] + ',\n\n    ' + template_code + '\n]'
-        
+    except Exception as e:
+        return f"Error reading ProgramTemplates.swift: {e}"
+    
+    content = content.rstrip()
+    if not content.endswith(']'):
+        return "Error: ProgramTemplates.swift does not end with closing bracket"
+    
+    template_code = program_template.strip()
+    if not template_code.endswith(','):
+        template_code += ','
+    
+    content = content[:-1] + '\n\n    ' + template_code + '\n]'
+    
+    try:
         with open(program_templates_file, 'w') as f:
             f.write(content)
-        
-        return f"Successfully added program template to {program_templates_file}"
+        return f"OK: Successfully wrote program template to {program_templates_file}"
     except Exception as e:
-        return f"Error writing program template: {str(e)}"
+        return f"Error writing to ProgramTemplates.swift: {e}"
 
 @tool 
 def build_program_template(template: str) -> str:

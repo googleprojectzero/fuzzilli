@@ -60,8 +60,8 @@ Here is the JSON object that you MUST send to code reviewer:
 ## STAGE 5
 
 After code reviewer has validated that you have found interesting code blocks, you must query the results back to your parent agent. 
-CODE REVIWER MUST ACCEPCT/PASS YOUR ANSWER, IF IT FAILS/REJECTED THEN YOU MUST GO BACK TO STAGE 3 AND GAIN MORE DATA ON THE SYSTEM AND 
-TRY TO DEAL WITH THE ISSUES THAT THE STAGE SENDS TO YOU ! WHEN YOU FAIL A CODE REVIWER YOU ARE ALLOWED TO RERUN THE V8_SEARCH AGENT 
+CODE REVIEWER MUST ACCEPT/PASS YOUR ANSWER, IF IT FAILS/REJECTED THEN YOU MUST GO BACK TO STAGE 3 AND GAIN MORE DATA ON THE SYSTEM AND 
+TRY TO DEAL WITH THE ISSUES THAT THE STAGE SENDS TO YOU ! WHEN YOU FAIL A CODE REVIEWER YOU ARE ALLOWED TO RERUN THE V8_SEARCH AGENT 
 ONCE ! 
 
 Analyze the relation between the validated interesting code blocks and the side-effects provided by the interesting JavaScript programs in the corpus. 
