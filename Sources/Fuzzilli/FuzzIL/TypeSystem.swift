@@ -493,8 +493,12 @@ public struct ILType: Hashable {
         return Is(.constructor()) ? ext?.signature : nil
     }
 
-    public var isEnumeration : Bool {
+    public var isEnumeration: Bool {
         return Is(.string) && ext != nil && !ext!.properties.isEmpty
+    }
+
+    public var isEnumerationOrNamedString: Bool {
+        return Is(.string) && ext != nil && group != nil
     }
 
     public var group: String? {

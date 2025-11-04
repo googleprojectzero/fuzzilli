@@ -830,8 +830,8 @@ public class JavaScriptEnvironment: ComponentBase {
                 if let signatures = group.methods[propertyName] {
                     return .unboundFunction(signatures.first, receiver: baseType)
                 }
-            } else {
-                // This shouldn't happen, probably forgot to register the object group
+            } else if !baseType.isEnumerationOrNamedString {
+                // This shouldn't happen, probably forgot to register the object group.
                 logger.warning("No type information for object group \(groupName) available")
             }
         }
@@ -845,7 +845,7 @@ public class JavaScriptEnvironment: ComponentBase {
                 if let signatures = group.methods[methodName] {
                     return signatures
                 }
-            } else {
+            } else if !baseType.isEnumerationOrNamedString {
                 // This shouldn't happen, probably forgot to register the object group
                 logger.warning("No type information for object group \(groupName) available")
             }
