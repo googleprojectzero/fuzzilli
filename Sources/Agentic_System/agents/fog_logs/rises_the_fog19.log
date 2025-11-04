@@ -1,0 +1,10 @@
+I must go in; the fog is rising
+Initializing FatherOfGod
+Traceback (most recent call last):
+  File "/Users/tarun/vrig/fuzzillai/Sources/Agentic_System/rises-the-fog.py", line 115, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/tarun/vrig/fuzzillai/Sources/Agentic_System/rises-the-fog.py", line 99, in main
+    path = os.getenv('FUZZILLI_PATH') / "Sources" / "Agentic_System"
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~
+TypeError: unsupported operand type(s) for /: 'str' and 'str'

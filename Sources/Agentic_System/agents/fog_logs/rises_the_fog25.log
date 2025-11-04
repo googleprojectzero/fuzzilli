@@ -1,0 +1,664 @@
+I must go in; the fog is rising
+Initializing FatherOfGod
+╭───────────────────────────────────────────────────── New run - FatherOfGeorge ──────────────────────────────────────────────────────╮
+│                                                                                                                                     │
+│ Task: Initialize Root Manager orchestration                                                                                         │
+│                                                                                                                                     │
+│ Context:                                                                                                                            │
+│ - PickSection: Select a promising V8 code region to analyze                                                                         │
+│ - FatherOfGeorge: Primary orchestrator of the system, coordinates between analysis and program generation                           │
+│ - CodeAnalyzer: Analyze V8 code and knowledge bases to guide the program template building                                          │
+│ - ProgramBuilder: Generate Fuzzilli program templates for fuzzing a specific code region                                            │
+│                                                                                                                                     │
+╰─ LiteLLMModel - gpt-5 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Step 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Calling tool: 'PickSection' with arguments: {'task': 'Stage 0: Autonomously select a promising V8 JIT-related code region to        │
+│ analyze for directed fuzzing via Fuzzilli ProgramTemplate generation. Avoid any external guidance or preselection. Return: 1) the   │
+│ chosen code region and its scope, 2) rationale for why it’s promising, 3) primary files/functions/namespaces involved, 4) typical   │
+│ data/control-flow patterns to exercise, 5) likely bug classes, and 6) any prerequisites or environment notes relevant for template  │
+│ design.'}                                                                                                                           │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─────────────────────────────────────────────────────── New run - PickSection ───────────────────────────────────────────────────────╮
+│                                                                                                                                     │
+│ You're a helpful agent named 'PickSection'.                                                                                         │
+│ You have been submitted this task by your manager.                                                                                  │
+│ ---                                                                                                                                 │
+│ Task:                                                                                                                               │
+│ Stage 0: Autonomously select a promising V8 JIT-related code region to analyze for directed fuzzing via Fuzzilli ProgramTemplate    │
+│ generation. Avoid any external guidance or preselection. Return: 1) the chosen code region and its scope, 2) rationale for why it’s │
+│ promising, 3) primary files/functions/namespaces involved, 4) typical data/control-flow patterns to exercise, 5) likely bug         │
+│ classes, and 6) any prerequisites or environment notes relevant for template design.                                                │
+│ ---                                                                                                                                 │
+│ You're helping your manager solve a wider task: so make sure to not provide a one-line answer, but give as much information as      │
+│ possible to give them a clear understanding of the answer.                                                                          │
+│                                                                                                                                     │
+│ Your final_answer WILL HAVE to contain these parts:                                                                                 │
+│ ### 1. Task outcome (short version):                                                                                                │
+│ ### 2. Task outcome (extremely detailed version):                                                                                   │
+│ ### 3. Additional context (if relevant):                                                                                            │
+│                                                                                                                                     │
+│ Put all these in your final_answer tool, everything that you do not pass as an argument to final_answer will be lost.               │
+│ And even if your task resolution is not successful, please return as much context as possible, so that your manager can act upon    │
+│ this feedback.                                                                                                                      │
+│                                                                                                                                     │
+╰─ LiteLLMModel - gpt-5 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Step 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Calling tool: 'get_random_entry_data' with arguments: {}                                                                            │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Observations: this is entry data for maglev/regress-346686148
+{"js": "// Copyright 2024 the V8 project authors. All rights reserved.\n// Use of this source code is governed by a BSD-style license 
+that can be\n// found in the LICENSE file.\n//\n// Flags: --allow-natives-syntax --maglev --no-maglev-loop-peeling\n\n// `h` is never 
+inlined, and thus forces a Tagged use on its input.\nfunction h(x) { return x; }\n%NeverOptimizeFunction(h);\n\n// `g` creates and 
+returns a Phi that could be untagged.\nfunction g(a) {\n  let i = a + 1;\n  for (; i < 100; i++) {\n    // Padding the bytecode a 
+little bit to make the loop body larger.\n    // (basically, we want that the bytecode offset of the call to `h(v)` in `f`\n    // be 
+contained this loop here).\n    h();\n    h();\n    h();\n    h();\n  }\n  return i;\n}\n\nfunction f(a) {\n  // `v` will be a loop 
+Phis that has an input that itself is a loop phi that is\n  // coming from the loop of an inlined function.\n  let v = g(a);\n  for 
+(let i = 0; i < 10; i++) {\n    v = v + 2;\n  }\n  // We now insert a tagged used of `v`. This should be recorded via\n  // 
+RecordUseReprHint, which will record it in the Phi inputs of `v` as well;\n  // namely the `g(a)` input. Since this tagged use is not 
+in the `g(a)`'s loop,\n  // it should not prevent the phi in `g(a)` from being untagged.\n  return 
+h(v);\n}\n\n%PrepareFunctionForOptimization(g);\n%PrepareFunctionForOptimization(f);\nassertEquals(120, 
+f(2));\n\n%OptimizeMaglevOnNextCall(f);\nassertEquals(120, f(2));\n", "Fuzzilli": "v0 <- BeginPlainFunction -> v1\n    Return 
+v1\nEndPlainFunction\nv2 <- Eval '%NeverOptimizeFunction(%@)', |v0]\nv3 <- BeginPlainFunction -> v4\n    v5 <- LoadInteger '1'\n    v6 
+<- BinaryOperation v4, '+', v5\n    v7 <- CreateNamedVariable 'i', 'let', v6\n    BeginForLoopInitializer\n    BeginForLoopCondition\n 
+v8 <- LoadInteger '100'\n        v9 <- Compare v7, '<', v8\n    BeginForLoopAfterthought v9\n        v10 <- UnaryOperation v7, '++'\n  
+BeginForLoopBody\n        v11 <- CallFunction v0, |]\n        v12 <- CallFunction v0, |]\n        v13 <- CallFunction v0, |]\n        
+v14 <- CallFunction v0, |]\n    EndForLoop\n    Return v7\nEndPlainFunction\nv15 <- BeginPlainFunction -> v16\n    v17 <- CallFunction 
+v3, |v16]\n    v18 <- CreateNamedVariable 'v', 'let', v17\n    BeginForLoopInitializer\n        v19 <- LoadInteger '0'\n    
+BeginForLoopCondition -> v20\n        v21 <- LoadInteger '10'\n        v22 <- Compare v20, '<', v21\n    BeginForLoopAfterthought v22 
+-> v23\n        v24 <- UnaryOperation v23, '++'\n    BeginForLoopBody -> v25\n        v26 <- LoadInteger '2'\n        v27 <- 
+BinaryOperation v18, '+', v26\n        Reassign v18, v27\n    EndForLoop\n    v28 <- CallFunction v0, |v18]\n    Return 
+v28\nEndPlainFunction\nv29 <- Eval '%PrepareFunctionForOptimization(%@)', |v3]\nv30 <- Eval '%PrepareFunctionForOptimization(%@)', 
+|v15]\nv31 <- LoadInteger '120'\nv32 <- LoadInteger '2'\nv33 <- CallFunction v15, |v32]\nv34 <- CreateNamedVariable 'assertEquals', 
+'none'\nv35 <- CallFunction v34, |v31, v33]\nv36 <- Eval '%OptimizeMaglevOnNextCall(%@)', |v15]\nv37 <- LoadInteger '120'\nv38 <- 
+LoadInteger '2'\nv39 <- CallFunction v15, |v38]\nv40 <- CallFunction v34, |v37, v39]\n\n\nfunction h(a1) {\n    return a1;\n}\nconst v2
+= %NeverOptimizeFunction(h);\nfunction g(a4) {\n    let i = a4 + 1;\n    for (; i < 100; i++) {\n        h();\n        h();\n        
+h();\n        h();\n    }\n    return i;\n}\nfunction f(a16) {\n    let v = g(a16);\n    for (let i20 = 0; i20 < 10; i20++) {\n        
+v = v + 2;\n    }\n    return h(v);\n}\nconst v29 = %PrepareFunctionForOptimization(g);\nconst v30 = 
+%PrepareFunctionForOptimization(f);\nassertEquals(120, f(2));\nconst v36 = %OptimizeMaglevOnNextCall(f);\nassertEquals(120, f(2));", 
+"execution_data": 
+"--no-experimental\n--abort-on-contradictory-flags\n--no-exit-on-contradictory-flags\n--no-allow-overwriting-for-next-flag\n--no-use-st
+rict\n--no-trace-temporal\n--no-harmony\n--harmony-shipping\n--no-js-staging\n--js-shipping\n--no-harmony-shadow-realm\n--no-harmony-st
+ruct\n--no-js-decorators\n--no-js-source-phase-imports\n--no-harmony-temporal\n--harmony-import-attributes\n--js-regexp-duplicate-named
+-groups\n--js-regexp-modifiers\n--js-promise-try\n--js-atomics-pause\n--js-error-iserror\n--js-regexp-escape\n--js-explicit-resource-ma
+nagement\n--js-float16array\n--js-base-64\n--builtin-subclassing\n--no-enable-sharedarraybuffer-per-context\n--no-for-of-optimization\n
+--no-stress-snapshot\n--no-lite-mode\n--enable-allocation-folding\n--no-disable-write-barriers\n--no-enable-unconditional-write-barrier
+s\n--no-single-generation\n--no-conservative-stack-scanning\n--no-direct-handle\n--no-scavenger-conservative-object-pinning\n--no-stres
+s-scavenger-conservative-object-pinning\n--no-stress-scavenger-conservative-object-pinning-random\n--no-scavenger-precise-object-pinnin
+g\n--no-precise-object-pinning\n--scavenger-promote-quarantined-pages\n--no-local-off-stack-check\n--no-experimental-fuzzing\n--no-futu
+re\n--no-force-emit-interrupt-budget-checks\n--maglev\n--no-maglev-future\n--no-optimize-on-next-call-optimizes-to-maglev\n--no-stress-
+maglev\n--no-maglev-as-top-tier\n--maglev-inlining\n--maglev-loop-peeling\n--maglev-optimistic-peeled-loops\n--maglev-loop-peeling-max-
+size=400\n--maglev-loop-peeling-max-size-cumulative=900\n--maglev-deopt-data-on-background\n--maglev-build-code-on-background\n--maglev
+-destroy-on-background\n--no-maglev-inline-api-calls\n--maglev-cons-string-elision\n--maglev-pretenure-store-values\n--maglev-poly-call
+s\n--maglev-truncation\n--no-maglev-licm\n--concurrent-maglev-max-threads=2\n--no-concurrent-maglev-high-priority-threads\n--max-maglev
+-inline-depth=1\n--max-maglev-hard-inline-depth=10\n--max-maglev-inlined-bytecode-size=100\n--max-maglev-inlined-bytecode-size-cumulati
+ve=920\n--max-maglev-inlined-bytecode-size-small-total=3000\n--max-maglev-inlined-bytecode-size-small=27\n--max-maglev-inlined-bytecode
+-size-small-with-heapnum-in-out=75\n--min-maglev-inlining-frequency=0.95\n--maglev-reuse-stack-slots\n--maglev-untagged-phis\n--maglev-
+hoist-osr-value-phi-untagging\n--no-maglev-speculative-hoist-phi-untagging\n--maglev-cse\n--no-maglev-non-eager-inlining\n--no-turbolev
+-non-eager-inlining\n--maglev-filter=\"*\"\n--maglev-print-filter=\"*\"\n--no-maglev-assert\n--maglev-assert-stack-size\n--no-maglev-br
+eak-on-entry\n--maglev-print-bytecode\n--maglev-print-feedback\n--maglev-print-inlined\n--print-maglev-code\n--no-trace-maglev-graph-bu
+ilding\n--no-trace-maglev-loop-speeling\n--no-trace-maglev-inlining\n--no-trace-maglev-kna-processor\n--no-print-maglev-deopt-verbose\n
+--print-maglev-graph\n--print-maglev-graphs\n--no-trace-maglev-phi-untagging\n--no-trace-maglev-regalloc\n--no-maglev-stats\n--no-magle
+v-stats-nvp\n--maglev-function-context-specialization\n--no-specialize-code-for-one-byte-seq-strings\n--additive-safe-int-feedback\n--e
+nable-enumerated-keyed-access-bytecode\n--no-dict-property-const-tracking\n--script-context-cells\n--function-context-cells\n--function
+-context-cells-max-size=1\n--empty-context-extension-dep\n--json-stringify-fast-path\n--cache-property-key-string-adds\n--smi-string-ca
+che-size=8192\n--double-string-cache-size=4096\n--no-trace-number-string-cache\n--maglev-inline-date-accessors\n--turbofan-inline-date-
+accessors\n--inline-date-accessors\n--extensible-ro-snapshot\n--max-opt=999\n--efficiency-mode=unset\n--battery-saver-mode=unset\n--mem
+ory-saver-mode=unset\n--no-efficiency-mode-disable-turbofan\n--efficiency-mode-delay-turbofan-multiply=3\n--wasm-trace-native=\"\"\n--n
+o-jitless\n--no-disable-optimizing-compilers\n--memory-protection-keys\n--no-force-memory-protection-keys\n--no-assert-types\n--no-turb
+oshaft-assert-types\n--no-verify-simplified-lowering\n--no-trace-compilation-dependencies\n--no-unmap-holes\n--no-assert-hole-checked-b
+y-value\n--allocation-site-tracking\n--allocation-site-pretenuring\n--page-promotion\n--page-promotion-threshold=70\n--minor-ms-page-pr
+omotion-threshold=50\n--minor-ms-page-promotion-max-lab-threshold=30\n--minor-ms-max-page-age=4\n--no-trace-page-promotions\n--trace-pr
+etenuring\n--no-trace-pretenuring-statistics\n--no-trace-resize-large-object\n--track-field-types\n--no-trace-block-coverage\n--trace-p
+rotector-invalidation\n--decommit-pooled-pages\n--zero-unused-memory\n--no-high-end-android\n--high-end-android-physical-memory-thresho
+ld=4294967295\n--no-minor-ms-shortcut-strings\n--no-feedback-normalization\n--internalize-on-the-fly\n--unbox-double-arrays\n--string-s
+lices\n--invocation-count-for-feedback-allocation=8\n--invocation-count-for-maglev=400\n--invocation-count-for-maglev-osr=100\n--osr-fr
+om-maglev\n--osr-from-maglev-interrupt-scale-factor=0.8\n--no-always-osr-from-maglev\n--invocation-count-for-turbofan=16000\n--invocati
+on-count-for-osr=800\n--osr-to-tierup=1\n--minimum-invocations-after-ic-update=500\n--minimum-invocations-before-optimization=2\n--no-j
+it-fuzzing\n--use-std-math-pow\n--use-ic\n--lazy-feedback-allocation\n--no-stress-ic\n--ignition-elide-noneffectful-bytecodes\n--igniti
+on-reo\n--ignition-filter-expression-positions\n--ignition-share-named-property-feedback\n--ignition-elide-redundant-tdz-checks\n--prin
+t-bytecode\n--enable-lazy-source-positions\n--no-stress-lazy-source-positions\n--print-bytecode-filter=\"*\"\n--omit-default-ctors\n--n
+o-trace-ignition-codegen\n--trace-ignition-dispatches-output-file=\"\"\n--no-trace-track-allocation-sites\n--trace-migration\n--trace-g
+eneralization\n--reuse-scope-infos\n--sparkplug\n--no-always-sparkplug\n--baseline-batch-compilation\n--concurrent-sparkplug\n--concurr
+ent-sparkplug-max-threads=1\n--no-concurrent-sparkplug-high-priority-threads\n--sparkplug-filter=\"*\"\n--no-sparkplug-needs-short-buil
+tins\n--baseline-batch-compilation-threshold=4096\n--no-trace-baseline\n--no-trace-baseline-batch-compilation\n--no-shared-string-table
+\n--no-always-use-string-forwarding-table\n--no-transition-strings-during-gc-with-stack\n--initial-shared-heap-size=0\n--max-shared-hea
+p-size=0\n--no-concurrent-builtin-generation\n--concurrent-recompilation\n--no-trace-concurrent-recompilation\n--concurrent-recompilati
+on-queue-length=8\n--concurrent-recompilation-delay=0\n--concurrent-recompilation-front-running\n--concurrent-turbofan-max-threads=4\n-
+-no-stress-concurrent-inlining\n--maglev-overwrite-budget\n--maglev-overwrite-osr-budget\n--no-stress-concurrent-inlining-attach-code\n
+--max-serializer-nesting=25\n--no-trace-heap-broker-verbose\n--no-trace-heap-broker\n--stress-runs=0\n--deopt-every-n-times=0\n--no-pri
+nt-deopt-stress\n--turbofan\n--opt\n--no-stress-turbo-late-spilling\n--turbo-wasm-address-reassociation\n--no-concurrent-turbo-tracing\
+n--no-optimize-maglev-optimizes-to-turbofan\n--turbo-filter=\"*\"\n--no-trace-turbo\n--trace-turbo-path=\"\"\n--trace-turbo-filter=\"*\
+"\n--no-trace-turbo-graph\n--no-trace-turbo-scheduled\n--trace-turbo-file-prefix=\"turbo\"\n--trace-turbo-cfg-file=\"turbo.cfg\"\n--tra
+ce-turbo-types\n--no-trace-turbo-scheduler\n--no-trace-turbo-reduction\n--no-trace-turbo-bailouts\n--no-trace-turbo-trimming\n--no-trac
+e-turbo-jt\n--no-trace-turbo-ceq\n--no-trace-turbo-loop\n--no-trace-turbo-alloc\n--no-trace-all-uses\n--no-trace-representation\n--no-t
+race-turbo-stack-accesses\n--no-fuzzing-and-concurrent-recompilation\n--turbo-verify\n--turbo-verify-machine-graph=\"\"\n--no-verify-cs
+a\n--no-trace-verify-csa\n--csa-trap-on-node=\"\"\n--builtins-effects-src=\"\"\n--fixed-array-bounds-checks\n--no-turbo-stats\n--no-tur
+bo-stats-nvp\n--no-turbo-stats-wasm\n--turbo-splitting\n--turbo-inlining\n--turbo-elide-frames\n--max-inlined-bytecode-size=460\n--max-
+inlined-bytecode-size-cumulative=920\n--max-turbolev-inlined-bytecode-size-cumulative=1840\n--max-inlined-bytecode-size-absolute=4600\n
+--max-inlined-bytecode-size-small-total=30000\n--reserve-inline-budget-scale-factor=1.2\n--max-inlined-bytecode-size-small=27\n--max-in
+lined-bytecode-size-small-with-heapnum-in-out=75\n--max-optimized-bytecode-size=61440\n--min-inlining-frequency=0.05\n--no-stress-inlin
+e\n--no-trace-turbo-inlining\n--turbo-inline-array-builtins\n--use-osr\n--maglev-osr\n--concurrent-osr\n--maglev-allocation-folding=2\n
+--maglev-escape-analysis\n--no-trace-maglev-escape-analysis\n--no-maglev-object-tracking\n--trace-maglev-object-tracking\n--no-turbo-st
+ring-builder\n--trace-osr\n--log-or-trace-osr\n--analyze-environment-liveness\n--no-trace-environment-liveness\n--turbo-load-eliminatio
+n\n--trace-turbo-load-elimination\n--no-turbo-profiling\n--no-turbo-profiling-verbose\n--turbo-profiling-output=\"\"\n--no-reorder-buil
+tins\n--no-abort-on-bad-builtin-profile-data\n--no-warn-about-builtin-profile-data\n--dump-builtins-hashes-to-file=\"\"\n--turbo-verify
+-allocation\n--turbo-move-optimization\n--turbo-jt\n--turbo-loop-peeling\n--turbo-loop-variable\n--turbo-loop-rotation\n--turbo-cf-opti
+mization\n--turbo-escape\n--turbo-allocation-folding\n--no-turbo-instruction-scheduling\n--no-turbo-stress-instruction-scheduling\n--tu
+rbo-store-elimination\n--trace-store-elimination\n--turbo-typer-hardening\n--turbo-rewrite-far-jumps\n--no-stress-gc-during-compilation
+\n--turbo-fast-api-calls\n--no-fast-api-allow-float-in-sim\n--no-turbo-compress-frame-translations\n--turbo-inline-js-wasm-calls\n--no-
+turbo-optimize-inlined-js-wasm-wrappers\n--turbo-optimize-apply\n--turbo-optimize-math-minmax\n--turboshaft\n--no-turboshaft-enable-deb
+ug-features\n--turboshaft-wasm-load-elimination\n--no-turboshaft-wasm-in-js-inlining\n--no-turbolev-inline-js-wasm-wrappers\n--turbosha
+ft-load-elimination\n--turboshaft-loop-unrolling\n--turboshaft-string-concat-escape-analysis\n--no-turboshaft-typed-optimizations\n--no
+-turbolev\n--no-print-turbolev-frontend\n--no-turbolev-future\n--typed-array-length-loading\n--no-deduplicate-heap-number-requests\n--n
+o-turboshaft-verify-load-elimination\n--turboshaft-opt-bisect-limit=18446744073709551615\n--turboshaft-opt-bisect-break=184467440737095
+51615\n--no-turboshaft-verify-reductions\n--turboshaft-trace-typing\n--turboshaft-trace-reduction\n--no-turboshaft-trace-intermediate-r
+eductions\n--turboshaft-trace-emitted\n--no-turboshaft-trace-unrolling\n--no-turboshaft-trace-peeling\n--no-turboshaft-trace-load-elimi
+nation\n--no-turboshaft-trace-if-else-to-switch\n--trace-turbolev-graph-building\n--profile-guided-optimization\n--profile-guided-optim
+ization-for-empty-feedback-vector\n--invocation-count-for-early-optimization=30\n--invocation-count-for-maglev-with-delay=600\n--no-opt
+imize-for-size\n--reopt-after-lazy-deopts\n--no-verify-get-js-builtin-state\n--wasm-generic-wrapper\n--wasm-num-compilation-tasks=128\n
+--no-trace-wasm-native-heap\n--no-trace-wasm-offheap-memory\n--no-print-wasm-offheap-memory-size\n--no-trace-wasm-serialization\n--wasm
+-async-compilation\n--no-wasm-test-streaming\n--wasm-native-module-cache\n--wasm-max-mem-pages=4294967295\n--wasm-max-table-size=100000
+00\n--wasm-max-committed-code-mb=4095\n--wasm-max-code-space-size-mb=1024\n--wasm-tier-up\n--wasm-dynamic-tiering\n--no-wasm-sync-tier-
+up\n--wasm-tiering-budget=13000000\n--wasm-wrapper-tiering-budget=1000\n--max-wasm-functions=1000000\n--wasm-caching-threshold=1000\n--
+wasm-caching-hard-threshold=1000000\n--wasm-caching-timeout-ms=2000\n--no-trace-wasm-compilation-times\n--wasm-tier-up-filter=-1\n--was
+m-eager-tier-up-function=-1\n--no-trace-wasm-decoder\n--no-trace-wasm-compiler\n--no-trace-wasm-streaming\n--no-trace-wasm-stack-switch
+ing\n--no-stress-wasm-stack-switching\n--wasm-stack-switching-stack-size=984\n--liftoff\n--no-liftoff-only\n--no-enable-testing-opcode-
+in-wasm\n--no-trace-liftoff\n--no-trace-wasm-memory\n--no-trace-wasm-globals\n--wasm-tier-mask-for-testing=0\n--wasm-debug-mask-for-tes
+ting=0\n--no-experimental-wasm-pgo-to-file\n--no-experimental-wasm-pgo-from-file\n--validate-asm\n--no-suppress-asm-messages\n--no-trac
+e-asm-time\n--no-trace-asm-scanner\n--no-trace-asm-parser\n--no-stress-validate-asm\n--no-dump-wasm-module\n--dump-wasm-module-path=\"\
+"\n--no-wasm-fast-api\n--wasm-deopt\n--wasm-deopts-per-function-limit=10\n--no-experimental-wasm-type-reflection\n--no-experimental-was
+m-instruction-tracing\n--no-experimental-wasm-custom-descriptors\n--no-experimental-wasm-shared\n--no-experimental-wasm-fp16\n--no-expe
+rimental-wasm-memory-control\n--no-experimental-wasm-wasmfx\n--no-experimental-wasm-rab-integration\n--no-experimental-wasm-compilation
+-hints\n--no-experimental-wasm-stringref\n--no-experimental-wasm-imported-strings-utf8\n--no-experimental-wasm-growable-stacks\n--exper
+imental-wasm-legacy-eh\n--experimental-wasm-branch-hinting\n--experimental-wasm-exnref\n--no-experimental-wasm-assume-ref-cast-succeeds
+\n--no-experimental-wasm-ref-cast-nop\n--no-experimental-wasm-skip-null-checks\n--no-experimental-wasm-skip-bounds-checks\n--no-experim
+ental-wasm-js-interop\n--no-wasm-staging\n--wasm-opt\n--wasm-bounds-checks\n--wasm-stack-checks\n--no-wasm-enforce-bounds-checks\n--was
+m-math-intrinsics\n--no-wasm-inlining\n--wasm-inlining-budget=5000\n--wasm-inlining-max-size=500\n--wasm-inlining-factor=3\n--wasm-inli
+ning-min-budget=50\n--no-wasm-inlining-ignore-call-counts\n--no-trace-wasm-inlining\n--no-trace-wasm-typer\n--no-wasm-inlining-call-ind
+irect\n--wasm-bulkmem-inlining\n--wasm-loop-unrolling\n--wasm-loop-peeling\n--wasm-loop-peeling-max-size=1000\n--no-trace-wasm-loop-pee
+ling\n--no-wasm-fuzzer-gen-test\n--no-print-wasm-code\n--print-wasm-code-function-index=-1\n--no-print-wasm-stub-code\n--asm-wasm-lazy-
+compilation\n--wasm-lazy-compilation\n--no-trace-wasm-lazy-compilation\n--no-wasm-lazy-validation\n--no-wasm-simd-ssse3-codegen\n--wasm
+-code-gc\n--no-trace-wasm-code-gc\n--no-stress-wasm-code-gc\n--wasm-max-initial-code-space-reservation=0\n--no-stress-wasm-memory-movin
+g\n--flush-liftoff-code\n--no-stress-branch-hinting\n--wasm-max-module-size=1073741824\n--wasm-disassembly-max-mb=1000\n--wasm-capi-thr
+ead-pool-size=0\n--trace-wasm\n--no-trace-wasm-instances\n--no-experimental-wasm-revectorize\n--no-trace-wasm-revectorize\n--wasm-memor
+y64-trap-handling\n--no-wasm-jitless\n--no-wasm-jitless-if-available-for-testing\n--no-wasm-allow-mixed-eh-for-testing\n--no-wasm-code-
+coverage\n--stress-sampling-allocation-profiler=0\n--no-lazy-new-space-shrinking\n--min-semi-space-size=0\n--max-semi-space-size=0\n--s
+emi-space-growth-factor=2\n--max-old-space-size=0\n--max-heap-size=0\n--initial-heap-size=0\n--initial-old-space-size=0\n--preconfigure
+d-old-space-size=0\n--no-gc-global\n--random-gc-interval=0\n--gc-interval=-1\n--cppgc-random-gc-interval=0\n--retain-maps-for-n-gc=2\n-
+-trace-gc\n--no-trace-gc-nvp\n--no-trace-gc-ignore-scavenger\n--no-trace-memory-reducer\n--trace-gc-verbose\n--no-trace-gc-freelists\n-
+-no-trace-gc-freelists-verbose\n--no-trace-gc-heap-layout\n--trace-gc-heap-layout-ignore-minor-gc\n--no-trace-evacuation-candidates\n--
+no-trace-pending-allocations\n--trace-allocation-stack-interval=-1\n--trace-duplicate-threshold-kb=0\n--no-trace-fragmentation\n--no-tr
+ace-fragmentation-verbose\n--no-minor-ms-trace-fragmentation\n--no-trace-evacuation\n--no-trace-mutator-utilization\n--incremental-mark
+ing\n--incremental-marking-task\n--incremental-marking-start-user-visible\n--no-incremental-marking-always-user-visible\n--incremental-
+marking-soft-trigger=0\n--incremental-marking-hard-trigger=0\n--no-incremental-marking-unified-schedule\n--no-trace-unmapper\n--paralle
+l-scavenge\n--minor-gc-task\n--minor-gc-task-trigger=80\n--minor-gc-task-with-lower-priority\n--no-trace-parallel-scavenge\n--no-cppgc-
+young-generation\n--no-optimize-gc-for-battery\n--concurrent-marking\n--concurrent-marking-max-worker-num=7\n--concurrent-array-buffer-
+sweeping\n--no-stress-concurrent-allocation\n--parallel-marking\n--ephemeron-fixpoint-iterations=10\n--no-trace-concurrent-marking\n--c
+oncurrent-sweeping\n--parallel-compaction\n--parallel-pointer-update\n--parallel-weak-ref-clearing\n--detect-ineffective-gcs-near-heap-
+limit\n--no-ineffective-gcs-forces-last-resort\n--ineffective-gc-size-threshold=0.8\n--ineffective-gc-mutator-utilization-threshold=0.4
+\n--no-trace-incremental-marking\n--no-trace-stress-marking\n--no-trace-stress-scavenge\n--no-track-gc-object-stats\n--no-trace-gc-obje
+ct-stats\n--no-trace-zone-stats\n--zone-stats-tolerance=1048576\n--no-trace-zone-type-stats\n--no-trace-backing-store\n--gc-stats=0\n--
+track-detached-contexts\n--no-trace-detached-contexts\n--no-verify-heap\n--no-verify-heap-skip-remembered-set\n--verify-write-barriers\
+n--no-memory-reducer-respects-frozen-state\n--move-object-start\n--memory-reducer\n--memory-reducer-favors-memory\n--memory-reducer-for
+-small-heaps\n--memory-reducer-gc-count=2\n--no-external-memory-accounted-in-global-limit\n--external-memory-max-growing-factor=1.3\n--
+no-gc-speed-uses-counters\n--heap-growing-percent=0\n--v8-os-page-size=0\n--allocation-buffer-parking\n--compact\n--compact-code-space\
+n--no-compact-on-every-full-gc\n--compact-with-stack\n--shortcut-strings-with-stack\n--no-stress-compaction\n--resize-large-object\n--n
+o-stress-compaction-random\n--no-flush-baseline-code\n--flush-bytecode\n--bytecode-old-age=6\n--no-flush-code-based-on-time\n--no-flush
+-code-based-on-tab-visibility\n--bytecode-old-time=30\n--no-stress-flush-code\n--no-trace-flush-code\n--use-marking-progress-bar\n--no-
+stress-per-context-marking-worklist\n--no-stress-incremental-marking\n--memory-pool\n--memory-pool-share-memory-on-teardown\n--memory-p
+ool-release-before-memory-pressure-gcs\n--no-memory-pool-release-on-malloc-failures\n--large-page-pool\n--max-large-page-pool-size=32\n
+--large-page-pool-timeout=3\n--no-managed-zone-memory\n--no-fuzzer-gc-analysis\n--stress-marking=0\n--stress-scavenge=0\n--reclaim-unmo
+dified-wrappers\n--parallel-reclaim-unmodified-wrappers\n--no-gc-experiment-less-compaction\n--gc-memory-reducer-start-delay-ms=8000\n-
+-no-concurrent-marking-high-priority-threads\n--no-disable-abortjs\n--no-randomize-all-allocations\n--no-manual-evacuation-candidates-s
+election\n--no-clear-free-memory\n--idle-gc-on-context-disposal\n--no-trace-context-disposal\n--cppheap-incremental-marking\n--cppheap-
+concurrent-marking\n--no-memory-balancer\n--memory-balancer-c-value=3e-10\n--no-trace-memory-balancer\n--late-heap-limit-check\n--reser
+ve-contiguous-compressed-read-only-space\n--debug-code\n--no-trap-on-abort\n--no-slow-debug-code\n--no-code-comments\n--enable-sse3\n--
+enable-ssse3\n--enable-sse4-1\n--enable-sse4-2\n--enable-sahf\n--enable-avx\n--enable-avx2\n--enable-avx-vnni\n--enable-avx-vnni-int8\n
+--enable-fma3\n--enable-f16c\n--enable-bmi1\n--enable-bmi2\n--enable-lzcnt\n--enable-popcnt\n--arm-arch=\"armv8\"\n--no-force-long-bran
+ches\n--mcpu=\"auto\"\n--partial-constant-pool\n--sim-arm64-optional-features=\"none\"\n--intel-jcc-erratum-mitigation\n--no-enable-sou
+rce-at-csa-bind\n--enable-armv7=unset\n--enable-vfp3=unset\n--enable-32dregs=unset\n--enable-neon=unset\n--enable-sudiv=unset\n--enable
+-armv8=unset\n--enable-regexp-unaligned-accesses\n--script-streaming\n--no-stress-background-compile\n--concurrent-cache-deserializatio
+n\n--merge-background-deserialized-script-with-compilation-cache\n--no-verify-code-merge\n--no-experimental-embedder-instance-types\n--
+no-expose-gc\n--expose-gc-as=\"\"\n--no-expose-externalize-string\n--no-expose-statistics\n--no-expose-trigger-failure\n--no-expose-ign
+ition-statistics\n--stack-trace-limit=10\n--no-builtins-in-stack-traces\n--no-experimental-stack-trace-frames\n--no-disallow-code-gener
+ation-from-strings\n--no-expose-async-hooks\n--expose-cputracemark-as=\"\"\n--experimental-report-exceptions-from-callbacks\n--no-allow
+-unsafe-function-constructor\n--no-force-slow-path\n--no-test-small-max-function-context-stub-size\n--inline-new\n--switch-table-spread
+-threshold=3\n--switch-table-min-cases=6\n--stress-lazy-compilation=0\n--no-trace\n--lazy\n--lazy-eval\n--lazy-streaming\n--no-max-lazy
+\n--trace-opt\n--trace-opt-status\n--trace-opt-verbose\n--no-trace-opt-stats\n--trace-deopt\n--no-log-deopt\n--no-trace-deopt-verbose\n
+--no-trace-file-names\n--no-always-osr\n--no-trace-serializer\n--no-external-reference-stats\n--compilation-cache\n--cache-prototype-tr
+ansitions\n--no-lazy-compile-dispatcher\n--lazy-compile-dispatcher-max-threads=0\n--no-trace-compiler-dispatcher\n--no-parallel-compile
+-tasks-for-eager-toplevel\n--no-parallel-compile-tasks-for-lazy\n--cpu-profiler-sampling-interval=1000\n--no-trace-side-effect-free-deb
+ug-evaluate\n--hard-abort\n--log-colour\n--no-expose-inspector-scripts\n--inspector-live-edit\n--stack-size=984\n--max-stack-trace-sour
+ce-length=300\n--no-clear-exceptions-on-js-entry\n--use-original-message-for-stack-trace\n--histogram-interval=600000\n--no-heap-profil
+er-trace-objects\n--heap-profiler-use-embedder-graph\n--no-heap-snapshot-on-oom\n--heap-snapshot-on-gc=-1\n--heap-snapshot-string-limit
+=1024\n--no-heap-profiler-show-hidden-objects\n--no-profile-heap-snapshot\n--no-heap-snapshot-verify\n--no-sampling-heap-profiler-suppr
+ess-randomness\n--no-log-ic\n--no-fast-map-update\n--max-valid-polymorphic-map-count=4\n--clone-object-sidestep-transitions\n--fast-pro
+perties-soft-limit=12\n--max-fast-properties=128\n--native-code-counters\n--super-ic\n--no-mega-dom-ic\n--no-trace-prototype-users\n--n
+o-trace-for-in-enumerate\n--no-log-maps\n--log-maps-details\n--move-prototype-transitions-first\n--allow-natives-syntax\n--no-allow-nat
+ives-for-differential-fuzzing\n--no-parse-only\n--no-enable-parser-ablation\n--no-enable-preparser-ablation\n--no-enable-bytecode-compi
+ler-ablation\n--parser-ablation-amount=0.8\n--preparser-ablation-amount=0.8\n--bytecode-compiler-ablation-amount=0.8\n--async-stack-tra
+ces\n--no-stack-trace-on-illegal\n--no-abort-on-uncaught-exception\n--no-correctness-fuzzer-suppressions\n--no-rehash-snapshot\n--hash-
+seed=0\n--random-seed=0\n--fuzzer-random-seed=0\n--no-hashes-collide\n--no-trace-rail\n--no-print-all-exceptions\n--no-detailed-error-s
+tack-trace\n--adjust-os-scheduling-parameters\n--experimental-flush-embedded-blob-icache\n--allow-allocation-in-fast-api-call\n--short-
+builtin-calls\n--no-trace-code-range-allocation\n--better-code-range-allocation\n--no-abort-on-far-code-range\n--no-runtime-call-stats\
+n--no-rcs\n--no-rcs-cpu-time\n--verify-snapshot-checksum\n--no-profile-deserialization\n--no-trace-deserialization\n--no-serialization-
+statistics\n--regexp-optimization\n--no-regexp-interpret-all\n--regexp-tier-up\n--regexp-tier-up-ticks=1\n--regexp-peephole-optimizatio
+n\n--regexp-results-cache\n--no-regexp-assemble-from-bytecode\n--no-trace-regexp-peephole-optimization\n--no-trace-regexp-bytecodes\n--
+no-trace-regexp-assembler\n--no-trace-regexp-parser\n--no-trace-regexp-tier-up\n--no-trace-regexp-graph\n--no-enable-experimental-regex
+p-engine\n--no-default-to-experimental-regexp-engine\n--no-experimental-regexp-engine-capture-group-opt\n--experimental-regexp-engine-c
+apture-group-opt-max-memory-usage=1024\n--no-trace-experimental-regexp-engine\n--no-enable-experimental-regexp-engine-on-excessive-back
+tracks\n--regexp-backtracks-before-fallback=50000\n--regexp-simd\n--no-trace-read-only-promotion\n--no-trace-read-only-promotion-verbos
+e\n--testing-bool-flag\n--testing-maybe-bool-flag=unset\n--testing-int-flag=13\n--testing-float-flag=2.5\n--testing-string-flag=\"Hello
+, 
+world!\"\n--testing-prng-seed=42\n--no-testing-d8-test-runner\n--no-strict-termination-checks\n--no-fuzzing\n--no-hole-fuzzing\n--no-sa
+ndbox-testing\n--no-sandbox-fuzzing\n--no-expose-memory-corruption-api\n--freeze-flags-after-init\n--no-cet-compatible\n--embedded-src=
+\"\"\n--embedded-variant=\"\"\n--startup-src=\"\"\n--startup-blob=\"\"\n--target-arch=\"\"\n--target-os=\"\"\n--no-target-is-simulator\
+n--turbo-profiling-input=\"\"\n--turbo-log-builtins-count-input=\"\"\n--text-is-readable\n--no-trace-minor-ms-parallel-marking\n--no-mi
+nor-ms\n--concurrent-minor-ms-marking\n--black-allocated-pages\n--no-sticky-mark-bits\n--minor-ms-min-new-space-capacity-for-concurrent
+-marking-mb=0\n--minor-ms-concurrent-marking-trigger=90\n--minor-ms-min-lab-size-kb=0\n--no-handle-weak-ref-weakly-in-minor-gc\n--no-he
+lp\n--print-flag-values\n--no-print-feature-flags-json\n--no-slow-histograms\n--no-use-external-strings\n--map-counters=\"\"\n--no-mock
+-arraybuffer-allocator\n--mock-arraybuffer-allocator-limit=0\n--no-multi-mapped-mock-allocator\n--no-gdbjit\n--no-gdbjit-full\n--no-gdb
+jit-dump\n--gdbjit-dump-filter=\"\"\n--no-enable-slow-asserts\n--no-print-ast\n--print-scopes\n--no-trace-contexts\n--no-gc-verbose\n--
+no-code-stats\n--no-print-handles\n--no-check-handle-count\n--no-print-global-handles\n--trace-turbo-escape\n--no-trace-module-status\n
+--no-trace-normalization\n--no-trace-lazy\n--no-trace-isolates\n--no-regexp-possessive-quantifier\n--no-print-break-location\n--logfile
+=\"v8.log\"\n--no-logfile-per-isolate\n--no-log\n--no-log-all\n--no-log-internal-timer-events\n--no-log-timer-events\n--no-log-source-c
+ode\n--no-log-source-position\n--no-log-code\n--no-log-feedback-vector\n--no-log-code-disassemble\n--no-log-function-events\n--no-detai
+led-line-info\n--no-prof-include-idle\n--no-perfetto-code-logger\n--prof-sampling-interval=1000\n--no-prof-cpp\n--prof-browser-mode\n--
+no-prof\n--no-ll-prof\n--no-perf-basic-prof\n--perf-basic-prof-path=\"/tmp\"\n--no-perf-basic-prof-only-functions\n--no-perf-prof\n--pe
+rf-prof-path=\".\"\n--no-perf-prof-annotate-wasm\n--no-perf-prof-delete-file\n--no-perf-prof-unwinding-info\n--gc-fake-mmap=\"/tmp/__v8
+_gc__\"\n--no-redirect-code-traces\n--redirect-code-traces-to=\"code.asm\"\n--print-opt-source\n--no-vtune-prof-annotate-wasm\n--win64-
+unwinding-info\n--no-interpreted-frames-native-stack\n--no-enable-etw-stack-walking\n--no-etw-trace-debug\n--no-enable-etw-by-custom-fi
+lter-only\n--no-print-builtin-size\n--no-trace-elements-transitions\n--no-trace-creation-allocation-sites\n--no-print-code\n--no-print-
+opt-code\n--print-opt-code-filter=\"*\"\n--no-print-code-verbose\n--no-print-builtin-code\n--print-builtin-code-filter=\"*\"\n--no-prin
+t-regexp-code\n--no-print-regexp-bytecode\n--no-predictable\n--no-predictable-and-random-seed-is-0\n--no-predictable-gc-schedule\n--no-
+single-threaded\n--no-single-threaded-gc\n--single-threaded-gc-in-background\n--parallel-pause-for-gc-in-background\n--incremental-mark
+ing-for-gc-in-background\n--no-shared-heap\n--no-proto-assign-seq-opt\n--use-libm-trig-functions\n--no-verify-predictable\n--dump-alloc
+ations-digest-at-alloc=-1\nConcurrent maglev has been disabled for tracing.\n|2413000:0x201c00138000] Shrinking page 0x201c00004f80: 
+end 0x300000340000 -> 0x300000309000\nGlobal scope:\nglobal { // (0x201c00644030) (0, 27)\n  // will be compiled\n  // NormalFunction\n
+// 1 stack slots\n  // temporary vars:\n  TEMPORARY .result;  // (0x201c00644338) local|0]\n  // local vars:\n  VAR fuzzilli;  // 
+(0x201c00644268) \n  // dynamic vars:\n  DYNAMIC_GLOBAL native;  // (0x201c006443f8) never assigned\n}\n|generated bytecode for 
+function:  (0x300000827475 <SharedFunctionInfo>)]\nBytecode length: 25\nParameter count 1\nRegister count 3\nFrame size 24\n         
+0x13b600800074 @    0 : 13 00             LdaConstant |0]\n         0x13b600800076 @    2 : d1                Star1\n         
+0x13b600800077 @    3 : 1b fe f7          Mov <closure>, r2\n    0 E> 0x13b60080007a @    6 : 6e 6b 01 f8 02    CallRuntime 
+|DeclareGlobals], r1-r2\n    7 S> 0x13b60080007f @   11 : 8b 01 00 00       CreateClosure |1], |0], #0\n         0x13b600800083 @   15 
+: d1                Star1\n         0x13b600800084 @   16 : 25 02 00          StaGlobal |2], |0]\n         0x13b600800087 @   19 : 1b 
+f8 f9          Mov r1, r0\n         0x13b60080008a @   22 : 0b f9             Ldar r0\n   27 S> 0x13b60080008c @   24 : b7             
+Return\nConstant pool (size = 3)\nHandler Table (size = 0)\nSource Position Table (size = 8)\nInner function scope:\nfunction h () { //
+(0x201c00638220) (316, 333)\n  // NormalFunction\n  // 2 heap slots\n  // local vars:\n  VAR x;  // (0x201c0063d248) never 
+assigned\n}\nInner function scope:\nfunction g () { // (0x201c00638460) (429, 719)\n  // NormalFunction\n  // 2 heap slots\n  // local 
+vars:\n  LET i;  // (0x201c0063d278) never assigned\n  VAR a;  // (0x201c0063d230) never assigned\n}\nInner function scope:\nfunction f
+() { // (0x201c00638650) (731, 1247)\n  // NormalFunction\n  // 2 heap slots\n  // local vars:\n  VAR a;  // (0x201c0063d230) never 
+assigned\n  LET v;  // (0x201c0063d278) never assigned\n\n  block { // (0x201c0063d428) (891, 935)\n    // 2 heap slots\n    // local 
+vars:\n    LET i;  // (0x201c0063d588) never assigned\n  }\n}\nGlobal scope:\nglobal { // (0x201c00638030) (0, 1402)\n  // will be 
+compiled\n  // NormalFunction\n  // 1 stack slots\n  // temporary vars:\n  TEMPORARY .result;  // (0x201c00638b28) local|0]\n  // local
+vars:\n  VAR f;  // (0x201c00638810) \n  VAR g;  // (0x201c00638620) \n  VAR h;  // (0x201c006383e0) \n  // dynamic vars:\n  
+DYNAMIC_GLOBAL assertEquals;  // (0x201c00638c38) never assigned\n\n  function f () { // (0x201c00638650) (731, 1247)\n    // lazily 
+parsed\n    // NormalFunction\n    // 2 heap slots\n  }\n\n  function g () { // (0x201c00638460) (429, 719)\n    // lazily parsed\n    
+// NormalFunction\n    // 2 heap slots\n  }\n\n  function h () { // (0x201c00638220) (316, 333)\n    // lazily parsed\n    // 
+NormalFunction\n    // 2 heap slots\n  }\n}\n|generated bytecode for function:  (0x300000827d09 <SharedFunctionInfo>)]\nBytecode 
+length: 97\nParameter count 1\nRegister count 5\nFrame size 40\n         0x13b60080013c @    0 : 13 00             LdaConstant |0]\n   
+0x13b60080013e @    2 : d1                Star1\n         0x13b60080013f @    3 : 1b fe f7          Mov <closure>, r2\n    0 E> 
+0x13b600800142 @    6 : 6e 6b 01 f8 02    CallRuntime |DeclareGlobals], r1-r2\n  334 S> 0x13b600800147 @   11 : 23 01 00          
+LdaGlobal |1], |0]\n         0x13b60080014a @   14 : d1                Star1\n         0x13b60080014b @   15 : 6e fc 01 f8 01    
+CallRuntime |NeverOptimizeFunction], r1-r1\n 1249 S> 0x13b600800150 @   20 : 23 02 02          LdaGlobal |2], |2]\n         
+0x13b600800153 @   23 : d1                Star1\n         0x13b600800154 @   24 : 6e 06 02 f8 01    CallRuntime 
+|PrepareFunctionForOptimization], r1-r1\n 1285 S> 0x13b600800159 @   29 : 23 03 04          LdaGlobal |3], |4]\n         0x13b60080015c
+@   32 : d1                Star1\n         0x13b60080015d @   33 : 6e 06 02 f8 01    CallRuntime |PrepareFunctionForOptimization], 
+r1-r1\n 1321 S> 0x13b600800162 @   38 : 23 04 06          LdaGlobal |4], |6]\n         0x13b600800165 @   41 : d1                
+Star1\n         0x13b600800166 @   42 : 0d 78             LdaSmi |120]\n         0x13b600800168 @   44 : d0                Star2\n     
+0x13b600800169 @   45 : 23 03 04          LdaGlobal |3], |4]\n         0x13b60080016c @   48 : cf                Star3\n         
+0x13b60080016d @   49 : 0d 02             LdaSmi |2]\n         0x13b60080016f @   51 : ce                Star4\n 1339 E> 0x13b600800170
+@   52 : 6b f6 f5 08       CallUndefinedReceiver1 r3, r4, |8]\n         0x13b600800174 @   56 : cf                Star3\n 1321 E> 
+0x13b600800175 @   57 : 6c f8 f7 f6 0a    CallUndefinedReceiver2 r1, r2, r3, |10]\n 1347 S> 0x13b60080017a @   62 : 23 03 04          
+LdaGlobal |3], |4]\n         0x13b60080017d @   65 : d1                Star1\n         0x13b60080017e @   66 : 6e 03 02 f8 01    
+CallRuntime |OptimizeMaglevOnNextCall], r1-r1\n 1377 S> 0x13b600800183 @   71 : 23 04 06          LdaGlobal |4], |6]\n         
+0x13b600800186 @   74 : d1                Star1\n         0x13b600800187 @   75 : 0d 78             LdaSmi |120]\n         
+0x13b600800189 @   77 : d0                Star2\n         0x13b60080018a @   78 : 23 03 04          LdaGlobal |3], |4]\n         
+0x13b60080018d @   81 : cf                Star3\n         0x13b60080018e @   82 : 0d 02             LdaSmi |2]\n         0x13b600800190
+@   84 : ce                Star4\n 1395 E> 0x13b600800191 @   85 : 6b f6 f5 0c       CallUndefinedReceiver1 r3, r4, |12]\n         
+0x13b600800195 @   89 : cf                Star3\n 1377 E> 0x13b600800196 @   90 : 6c f8 f7 f6 0e    CallUndefinedReceiver2 r1, r2, r3, 
+|14]\n         0x13b60080019b @   95 : d2                Star0\n 1402 S> 0x13b60080019c @   96 : b7                Return\nConstant 
+pool (size = 5)\nHandler Table (size = 0)\nSource Position Table (size = 30)\n|disabled optimization for 0x300000827d79 
+<SharedFunctionInfo h>, reason: Optimization is always disabled]\nGlobal scope:\nfunction g (a) { // (0x201c00638220) (429, 719)\n  // 
+will be compiled\n  // NormalFunction\n  // 1 stack slots\n  // local vars:\n  LET i;  // (0x201c006384f0) local|0], hole 
+initialization elided\n  VAR a;  // (0x201c00638470) parameter|0], never assigned\n}\n|generated bytecode for function: g 
+(0x300000827da9 <SharedFunctionInfo g>)]\nBytecode length: 53\nParameter count 2\nRegister count 2\nFrame size 16\n  445 S> 
+0x13b6008001fc @    0 : 0b 03             Ldar a0\n  447 E> 0x13b6008001fe @    2 : 4d 01 00          AddSmi |1], |0]\n         
+0x13b600800201 @    5 : d2                Star0\n  463 S> 0x13b600800202 @    6 : 0d 64             LdaSmi |100]\n  463 E> 
+0x13b600800204 @    8 : 77 f9 01          TestLessThan r0, |1]\n         0x13b600800207 @   11 : a6 27             JumpIfFalse |39] 
+(0x13b60080022e @ 50)\n  670 S> 0x13b600800209 @   13 : 23 00 02          LdaGlobal |0], |2]\n         0x13b60080020c @   16 : d1      
+Star1\n  670 E> 0x13b60080020d @   17 : 6a f8 04          CallUndefinedReceiver0 r1, |4]\n  679 S> 0x13b600800210 @   20 : 23 00 02    
+LdaGlobal |0], |2]\n         0x13b600800213 @   23 : d1                Star1\n  679 E> 0x13b600800214 @   24 : 6a f8 06          
+CallUndefinedReceiver0 r1, |6]\n  688 S> 0x13b600800217 @   27 : 23 00 02          LdaGlobal |0], |2]\n         0x13b60080021a @   30 :
+d1                Star1\n  688 E> 0x13b60080021b @   31 : 6a f8 08          CallUndefinedReceiver0 r1, |8]\n  697 S> 0x13b60080021e @  
+34 : 23 00 02          LdaGlobal |0], |2]\n         0x13b600800221 @   37 : d1                Star1\n  697 E> 0x13b600800222 @   38 : 
+6a f8 0a          CallUndefinedReceiver0 r1, |10]\n  471 S> 0x13b600800225 @   41 : 0b f9             Ldar r0\n         0x13b600800227 
+@   43 : 59 0c             Inc |12]\n         0x13b600800229 @   45 : d2                Star0\n  454 E> 0x13b60080022a @   46 : 95 28 
+00 0d       JumpLoop |40], |0], |13] (0x13b600800202 @ 6)\n  708 S> 0x13b60080022e @   50 : 0b f9             Ldar r0\n  717 S> 
+0x13b600800230 @   52 : b7                Return\nConstant pool (size = 1)\nHandler Table (size = 0)\nSource Position Table (size = 
+38)\nGlobal scope:\nfunction f (a) { // (0x201c00638220) (731, 1247)\n  // will be compiled\n  // NormalFunction\n  // 2 stack slots\n 
+// local vars:\n  VAR a;  // (0x201c00638470) parameter|0], never assigned\n  LET v;  // (0x201c006384f0) local|0], hole initialization
+elided\n\n  block { // (0x201c00638718) (891, 935)\n    // local vars:\n    LET i;  // (0x201c00638890) local|1], hole initialization 
+elided\n  }\n}\n|generated bytecode for function: f (0x300000827dd9 <SharedFunctionInfo f>)]\nBytecode length: 42\nParameter count 
+2\nRegister count 3\nFrame size 24\n  878 S> 0x13b60080029c @    0 : 23 00 00          LdaGlobal |0], |0]\n         0x13b60080029f @   
+3 : d0                Star2\n  878 E> 0x13b6008002a0 @    4 : 6b f7 03 02       CallUndefinedReceiver1 r2, a0, |2]\n         
+0x13b6008002a4 @    8 : d2                Star0\n  899 S> 0x13b6008002a5 @    9 : 0c                LdaZero\n         0x13b6008002a6 @ 
+10 : d1                Star1\n  904 S> 0x13b6008002a7 @   11 : 0d 0a             LdaSmi |10]\n  904 E> 0x13b6008002a9 @   13 : 77 f8 04
+TestLessThan r1, |4]\n         0x13b6008002ac @   16 : a6 11             JumpIfFalse |17] (0x13b6008002bd @ 33)\n  921 S> 
+0x13b6008002ae @   18 : 0b f9             Ldar r0\n  927 E> 0x13b6008002b0 @   20 : 4d 02 05          AddSmi |2], |5]\n         
+0x13b6008002b3 @   23 : d2                Star0\n  911 S> 0x13b6008002b4 @   24 : 0b f8             Ldar r1\n         0x13b6008002b6 @ 
+26 : 59 06             Inc |6]\n         0x13b6008002b8 @   28 : d1                Star1\n  886 E> 0x13b6008002b9 @   29 : 95 12 00 07 
+JumpLoop |18], |0], |7] (0x13b6008002a7 @ 11)\n 1233 S> 0x13b6008002bd @   33 : 23 01 08          LdaGlobal |1], |8]\n         
+0x13b6008002c0 @   36 : d0                Star2\n 1240 E> 0x13b6008002c1 @   37 : 6b f7 f9 0a       CallUndefinedReceiver1 r2, r0, 
+|10]\n 1245 S> 0x13b6008002c5 @   41 : b7                Return\nConstant pool (size = 2)\nHandler Table (size = 0)\nSource Position 
+Table (size = 29)\nregressions/maglev/regress-346686148.js:42: ReferenceError: assertEquals is not defined\nassertEquals(120, 
+f(2));\n^\nReferenceError: assertEquals is not defined\n    at regressions/maglev/regress-346686148.js:42:1\n\n"}
+[Step 1: Duration 25.87 seconds| Input tokens: 1,453 | Output tokens: 661]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Step 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Calling tool: 'search_js_file_name_by_pattern' with arguments: {'pattern': 'maglev.*phi'}                                           │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Observations: No results found
+[Step 2: Duration 14.40 seconds| Input tokens: 16,472 | Output tokens: 1,331]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Step 3 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Calling tool: 'search_js_file_name_by_pattern' with arguments: {'pattern': 'maglev.*untag'}                                         │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Observations: No results found
+[Step 3: Duration 15.86 seconds| Input tokens: 31,533 | Output tokens: 2,066]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Step 4 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Calling tool: 'search_js_file_name_by_pattern' with arguments: {'pattern': 'maglev.*regress'}                                       │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Observations: No results found
+[Step 4: Duration 12.38 seconds| Input tokens: 46,637 | Output tokens: 2,545]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Step 5 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Calling tool: 'search_js_file_name_by_pattern' with arguments: {'pattern': 'regress-346686148'}                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Observations: maglev/regress-346686148
+[Step 5: Duration 61.99 seconds| Input tokens: 61,784 | Output tokens: 4,177]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Step 6 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Calling tool: 'get_js_entry_data_by_name' with arguments: {'file_name': 'maglev/regress-346686148'}                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Observations: {"js": "// Copyright 2024 the V8 project authors. All rights reserved.\n// Use of this source code is governed by a BSD-style license that
+can be\n// found in the LICENSE file.\n//\n// Flags: --allow-natives-syntax --maglev --no-maglev-loop-peeling\n\n// `h` is never inlined, and thus 
+forces a Tagged use on its input.\nfunction h(x) { return x; }\n%NeverOptimizeFunction(h);\n\n// `g` creates and returns a Phi that could be 
+untagged.\nfunction g(a) {\n  let i = a + 1;\n  for (; i < 100; i++) {\n    // Padding the bytecode a little bit to make the loop body larger.\n    // 
+(basically, we want that the bytecode offset of the call to `h(v)` in `f`\n    // be contained this loop here).\n    h();\n    h();\n    h();\n    
+h();\n  }\n  return i;\n}\n\nfunction f(a) {\n  // `v` will be a loop Phis that has an input that itself is a loop phi that is\n  // coming from the 
+loop of an inlined function.\n  let v = g(a);\n  for (let i = 0; i < 10; i++) {\n    v = v + 2;\n  }\n  // We now insert a tagged used of `v`. This 
+should be recorded via\n  // RecordUseReprHint, which will record it in the Phi inputs of `v` as well;\n  // namely the `g(a)` input. Since this tagged 
+use is not in the `g(a)`'s loop,\n  // it should not prevent the phi in `g(a)` from being untagged.\n  return 
+h(v);\n}\n\n%PrepareFunctionForOptimization(g);\n%PrepareFunctionForOptimization(f);\nassertEquals(120, 
+f(2));\n\n%OptimizeMaglevOnNextCall(f);\nassertEquals(120, f(2));\n", "Fuzzilli": "v0 <- BeginPlainFunction -> v1\n    Return v1\nEndPlainFunction\nv2 
+<- Eval '%NeverOptimizeFunction(%@)', |v0]\nv3 <- BeginPlainFunction -> v4\n    v5 <- LoadInteger '1'\n    v6 <- BinaryOperation v4, '+', v5\n    v7 <- 
+CreateNamedVariable 'i', 'let', v6\n    BeginForLoopInitializer\n    BeginForLoopCondition\n        v8 <- LoadInteger '100'\n        v9 <- Compare v7, 
+'<', v8\n    BeginForLoopAfterthought v9\n        v10 <- UnaryOperation v7, '++'\n    BeginForLoopBody\n        v11 <- CallFunction v0, |]\n        v12 
+<- CallFunction v0, |]\n        v13 <- CallFunction v0, |]\n        v14 <- CallFunction v0, |]\n    EndForLoop\n    Return v7\nEndPlainFunction\nv15 <- 
+BeginPlainFunction -> v16\n    v17 <- CallFunction v3, |v16]\n    v18 <- CreateNamedVariable 'v', 'let', v17\n    BeginForLoopInitializer\n        v19 
+<- LoadInteger '0'\n    BeginForLoopCondition -> v20\n        v21 <- LoadInteger '10'\n        v22 <- Compare v20, '<', v21\n    
+BeginForLoopAfterthought v22 -> v23\n        v24 <- UnaryOperation v23, '++'\n    BeginForLoopBody -> v25\n        v26 <- LoadInteger '2'\n        v27 
+<- BinaryOperation v18, '+', v26\n        Reassign v18, v27\n    EndForLoop\n    v28 <- CallFunction v0, |v18]\n    Return v28\nEndPlainFunction\nv29 <-
+Eval '%PrepareFunctionForOptimization(%@)', |v3]\nv30 <- Eval '%PrepareFunctionForOptimization(%@)', |v15]\nv31 <- LoadInteger '120'\nv32 <- LoadInteger
+'2'\nv33 <- CallFunction v15, |v32]\nv34 <- CreateNamedVariable 'assertEquals', 'none'\nv35 <- CallFunction v34, |v31, v33]\nv36 <- Eval 
+'%OptimizeMaglevOnNextCall(%@)', |v15]\nv37 <- LoadInteger '120'\nv38 <- LoadInteger '2'\nv39 <- CallFunction v15, |v38]\nv40 <- CallFunction v34, |v37,
+v39]\n\n\nfunction h(a1) {\n    return a1;\n}\nconst v2 = %NeverOptimizeFunction(h);\nfunction g(a4) {\n    let i = a4 + 1;\n    for (; i < 100; i++) 
+{\n        h();\n        h();\n        h();\n        h();\n    }\n    return i;\n}\nfunction f(a16) {\n    let v = g(a16);\n    for (let i20 = 0; i20 < 
+10; i20++) {\n        v = v + 2;\n    }\n    return h(v);\n}\nconst v29 = %PrepareFunctionForOptimization(g);\nconst v30 = 
+%PrepareFunctionForOptimization(f);\nassertEquals(120, f(2));\nconst v36 = %OptimizeMaglevOnNextCall(f);\nassertEquals(120, f(2));", "execution_data": 
+"--no-experimental\n--abort-on-contradictory-flags\n--no-exit-on-contradictory-flags\n--no-allow-overwriting-for-next-flag\n--no-use-strict\n--no-trace-
+temporal\n--no-harmony\n--harmony-shipping\n--no-js-staging\n--js-shipping\n--no-harmony-shadow-realm\n--no-harmony-struct\n--no-js-decorators\n--no-js-
+source-phase-imports\n--no-harmony-temporal\n--harmony-import-attributes\n--js-regexp-duplicate-named-groups\n--js-regexp-modifiers\n--js-promise-try\n-
+-js-atomics-pause\n--js-error-iserror\n--js-regexp-escape\n--js-explicit-resource-management\n--js-float16array\n--js-base-64\n--builtin-subclassing\n--
+no-enable-sharedarraybuffer-per-context\n--no-for-of-optimization\n--no-stress-snapshot\n--no-lite-mode\n--enable-allocation-folding\n--no-disable-write
+-barriers\n--no-enable-unconditional-write-barriers\n--no-single-generation\n--no-conservative-stack-scanning\n--no-direct-handle\n--no-scavenger-conser
+vative-object-pinning\n--no-stress-scavenger-conservative-object-pinning\n--no-stress-scavenger-conservative-object-pinning-random\n--no-scavenger-preci
+se-object-pinning\n--no-precise-object-pinning\n--scavenger-promote-quarantined-pages\n--no-local-off-stack-check\n--no-experimental-fuzzing\n--no-futur
+e\n--no-force-emit-interrupt-budget-checks\n--maglev\n--no-maglev-future\n--no-optimize-on-next-call-optimizes-to-maglev\n--no-stress-maglev\n--no-magle
+v-as-top-tier\n--maglev-inlining\n--maglev-loop-peeling\n--maglev-optimistic-peeled-loops\n--maglev-loop-peeling-max-size=400\n--maglev-loop-peeling-max
+-size-cumulative=900\n--maglev-deopt-data-on-background\n--maglev-build-code-on-background\n--maglev-destroy-on-background\n--no-maglev-inline-api-calls
+\n--maglev-cons-string-elision\n--maglev-pretenure-store-values\n--maglev-poly-calls\n--maglev-truncation\n--no-maglev-licm\n--concurrent-maglev-max-thr
+eads=2\n--no-concurrent-maglev-high-priority-threads\n--max-maglev-inline-depth=1\n--max-maglev-hard-inline-depth=10\n--max-maglev-inlined-bytecode-size
+=100\n--max-maglev-inlined-bytecode-size-cumulative=920\n--max-maglev-inlined-bytecode-size-small-total=3000\n--max-maglev-inlined-bytecode-size-small=2
+7\n--max-maglev-inlined-bytecode-size-small-with-heapnum-in-out=75\n--min-maglev-inlining-frequency=0.95\n--maglev-reuse-stack-slots\n--maglev-untagged-
+phis\n--maglev-hoist-osr-value-phi-untagging\n--no-maglev-speculative-hoist-phi-untagging\n--maglev-cse\n--no-maglev-non-eager-inlining\n--no-turbolev-n
+on-eager-inlining\n--maglev-filter=\"*\"\n--maglev-print-filter=\"*\"\n--no-maglev-assert\n--maglev-assert-stack-size\n--no-maglev-break-on-entry\n--mag
+lev-print-bytecode\n--maglev-print-feedback\n--maglev-print-inlined\n--print-maglev-code\n--no-trace-maglev-graph-building\n--no-trace-maglev-loop-speel
+ing\n--no-trace-maglev-inlining\n--no-trace-maglev-kna-processor\n--no-print-maglev-deopt-verbose\n--print-maglev-graph\n--print-maglev-graphs\n--no-tra
+ce-maglev-phi-untagging\n--no-trace-maglev-regalloc\n--no-maglev-stats\n--no-maglev-stats-nvp\n--maglev-function-context-specialization\n--no-specialize
+-code-for-one-byte-seq-strings\n--additive-safe-int-feedback\n--enable-enumerated-keyed-access-bytecode\n--no-dict-property-const-tracking\n--script-con
+text-cells\n--function-context-cells\n--function-context-cells-max-size=1\n--empty-context-extension-dep\n--json-stringify-fast-path\n--cache-property-k
+ey-string-adds\n--smi-string-cache-size=8192\n--double-string-cache-size=4096\n--no-trace-number-string-cache\n--maglev-inline-date-accessors\n--turbofa
+n-inline-date-accessors\n--inline-date-accessors\n--extensible-ro-snapshot\n--max-opt=999\n--efficiency-mode=unset\n--battery-saver-mode=unset\n--memory
+-saver-mode=unset\n--no-efficiency-mode-disable-turbofan\n--efficiency-mode-delay-turbofan-multiply=3\n--wasm-trace-native=\"\"\n--no-jitless\n--no-disa
+ble-optimizing-compilers\n--memory-protection-keys\n--no-force-memory-protection-keys\n--no-assert-types\n--no-turboshaft-assert-types\n--no-verify-simp
+lified-lowering\n--no-trace-compilation-dependencies\n--no-unmap-holes\n--no-assert-hole-checked-by-value\n--allocation-site-tracking\n--allocation-site
+-pretenuring\n--page-promotion\n--page-promotion-threshold=70\n--minor-ms-page-promotion-threshold=50\n--minor-ms-page-promotion-max-lab-threshold=30\n-
+-minor-ms-max-page-age=4\n--no-trace-page-promotions\n--trace-pretenuring\n--no-trace-pretenuring-statistics\n--no-trace-resize-large-object\n--track-fi
+eld-types\n--no-trace-block-coverage\n--trace-protector-invalidation\n--decommit-pooled-pages\n--zero-unused-memory\n--no-high-end-android\n--high-end-a
+ndroid-physical-memory-threshold=4294967295\n--no-minor-ms-shortcut-strings\n--no-feedback-normalization\n--internalize-on-the-fly\n--unbox-double-array
+s\n--string-slices\n--invocation-count-for-feedback-allocation=8\n--invocation-count-for-maglev=400\n--invocation-count-for-maglev-osr=100\n--osr-from-m
+aglev\n--osr-from-maglev-interrupt-scale-factor=0.8\n--no-always-osr-from-maglev\n--invocation-count-for-turbofan=16000\n--invocation-count-for-osr=800\
+n--osr-to-tierup=1\n--minimum-invocations-after-ic-update=500\n--minimum-invocations-before-optimization=2\n--no-jit-fuzzing\n--use-std-math-pow\n--use-
+ic\n--lazy-feedback-allocation\n--no-stress-ic\n--ignition-elide-noneffectful-bytecodes\n--ignition-reo\n--ignition-filter-expression-positions\n--ignit
+ion-share-named-property-feedback\n--ignition-elide-redundant-tdz-checks\n--print-bytecode\n--enable-lazy-source-positions\n--no-stress-lazy-source-posi
+tions\n--print-bytecode-filter=\"*\"\n--omit-default-ctors\n--no-trace-ignition-codegen\n--trace-ignition-dispatches-output-file=\"\"\n--no-trace-track-
+allocation-sites\n--trace-migration\n--trace-generalization\n--reuse-scope-infos\n--sparkplug\n--no-always-sparkplug\n--baseline-batch-compilation\n--co
+ncurrent-sparkplug\n--concurrent-sparkplug-max-threads=1\n--no-concurrent-sparkplug-high-priority-threads\n--sparkplug-filter=\"*\"\n--no-sparkplug-need
+s-short-builtins\n--baseline-batch-compilation-threshold=4096\n--no-trace-baseline\n--no-trace-baseline-batch-compilation\n--no-shared-string-table\n--n
+o-always-use-string-forwarding-table\n--no-transition-strings-during-gc-with-stack\n--initial-shared-heap-size=0\n--max-shared-heap-size=0\n--no-concurr
+ent-builtin-generation\n--concurrent-recompilation\n--no-trace-concurrent-recompilation\n--concurrent-recompilation-queue-length=8\n--concurrent-recompi
+lation-delay=0\n--concurrent-recompilation-front-running\n--concurrent-turbofan-max-threads=4\n--no-stress-concurrent-inlining\n--maglev-overwrite-budge
+t\n--maglev-overwrite-osr-budget\n--no-stress-concurrent-inlining-attach-code\n--max-serializer-nesting=25\n--no-trace-heap-broker-verbose\n--no-trace-h
+eap-broker\n--stress-runs=0\n--deopt-every-n-times=0\n--no-print-deopt-stress\n--turbofan\n--opt\n--no-stress-turbo-late-spilling\n--turbo-wasm-address-
+reassociation\n--no-concurrent-turbo-tracing\n--no-optimize-maglev-optimizes-to-turbofan\n--turbo-filter=\"*\"\n--no-trace-turbo\n--trace-turbo-path=\"\
+"\n--trace-turbo-filter=\"*\"\n--no-trace-turbo-graph\n--no-trace-turbo-scheduled\n--trace-turbo-file-prefix=\"turbo\"\n--trace-turbo-cfg-file=\"turbo.c
+fg\"\n--trace-turbo-types\n--no-trace-turbo-scheduler\n--no-trace-turbo-reduction\n--no-trace-turbo-bailouts\n--no-trace-turbo-trimming\n--no-trace-turb
+o-jt\n--no-trace-turbo-ceq\n--no-trace-turbo-loop\n--no-trace-turbo-alloc\n--no-trace-all-uses\n--no-trace-representation\n--no-trace-turbo-stack-access
+es\n--no-fuzzing-and-concurrent-recompilation\n--turbo-verify\n--turbo-verify-machine-graph=\"\"\n--no-verify-csa\n--no-trace-verify-csa\n--csa-trap-on-
+node=\"\"\n--builtins-effects-src=\"\"\n--fixed-array-bounds-checks\n--no-turbo-stats\n--no-turbo-stats-nvp\n--no-turbo-stats-wasm\n--turbo-splitting\n-
+-turbo-inlining\n--turbo-elide-frames\n--max-inlined-bytecode-size=460\n--max-inlined-bytecode-size-cumulative=920\n--max-turbolev-inlined-bytecode-size
+-cumulative=1840\n--max-inlined-bytecode-size-absolute=4600\n--max-inlined-bytecode-size-small-total=30000\n--reserve-inline-budget-scale-factor=1.2\n--
+max-inlined-bytecode-size-small=27\n--max-inlined-bytecode-size-small-with-heapnum-in-out=75\n--max-optimized-bytecode-size=61440\n--min-inlining-freque
+ncy=0.05\n--no-stress-inline\n--no-trace-turbo-inlining\n--turbo-inline-array-builtins\n--use-osr\n--maglev-osr\n--concurrent-osr\n--maglev-allocation-f
+olding=2\n--maglev-escape-analysis\n--no-trace-maglev-escape-analysis\n--no-maglev-object-tracking\n--trace-maglev-object-tracking\n--no-turbo-string-bu
+ilder\n--trace-osr\n--log-or-trace-osr\n--analyze-environment-liveness\n--no-trace-environment-liveness\n--turbo-load-elimination\n--trace-turbo-load-el
+imination\n--no-turbo-profiling\n--no-turbo-profiling-verbose\n--turbo-profiling-output=\"\"\n--no-reorder-builtins\n--no-abort-on-bad-builtin-profile-d
+ata\n--no-warn-about-builtin-profile-data\n--dump-builtins-hashes-to-file=\"\"\n--turbo-verify-allocation\n--turbo-move-optimization\n--turbo-jt\n--turb
+o-loop-peeling\n--turbo-loop-variable\n--turbo-loop-rotation\n--turbo-cf-optimization\n--turbo-escape\n--turbo-allocation-folding\n--no-turbo-instructio
+n-scheduling\n--no-turbo-stress-instruction-scheduling\n--turbo-store-elimination\n--trace-store-elimination\n--turbo-typer-hardening\n--turbo-rewrite-f
+ar-jumps\n--no-stress-gc-during-compilation\n--turbo-fast-api-calls\n--no-fast-api-allow-float-in-sim\n--no-turbo-compress-frame-translations\n--turbo-i
+nline-js-wasm-calls\n--no-turbo-optimize-inlined-js-wasm-wrappers\n--turbo-optimize-apply\n--turbo-optimize-math-minmax\n--turboshaft\n--no-turboshaft-e
+nable-debug-features\n--turboshaft-wasm-load-elimination\n--no-turboshaft-wasm-in-js-inlining\n--no-turbolev-inline-js-wasm-wrappers\n--turboshaft-load-
+elimination\n--turboshaft-loop-unrolling\n--turboshaft-string-concat-escape-analysis\n--no-turboshaft-typed-optimizations\n--no-turbolev\n--no-print-tur
+bolev-frontend\n--no-turbolev-future\n--typed-array-length-loading\n--no-deduplicate-heap-number-requests\n--no-turboshaft-verify-load-elimination\n--tu
+rboshaft-opt-bisect-limit=18446744073709551615\n--turboshaft-opt-bisect-break=18446744073709551615\n--no-turboshaft-verify-reductions\n--turboshaft-trac
+e-typing\n--turboshaft-trace-reduction\n--no-turboshaft-trace-intermediate-reductions\n--turboshaft-trace-emitted\n--no-turboshaft-trace-unrolling\n--no
+-turboshaft-trace-peeling\n--no-turboshaft-trace-load-elimination\n--no-turboshaft-trace-if-else-to-switch\n--trace-turbolev-graph-building\n--profile-g
+uided-optimization\n--profile-guided-optimization-for-empty-feedback-vector\n--invocation-count-for-early-optimization=30\n--invocation-count-for-maglev
+-with-delay=600\n--no-optimize-for-size\n--reopt-after-lazy-deopts\n--no-verify-get-js-builtin-state\n--wasm-generic-wrapper\n--wasm-num-compilation-tas
+ks=128\n--no-trace-wasm-native-heap\n--no-trace-wasm-offheap-memory\n--no-print-wasm-offheap-memory-size\n--no-trace-wasm-serialization\n--wasm-async-co
+mpilation\n--no-wasm-test-streaming\n--wasm-native-module-cache\n--wasm-max-mem-pages=4294967295\n--wasm-max-table-size=10000000\n--wasm-max-committed-c
+ode-mb=4095\n--wasm-max-code-space-size-mb=1024\n--wasm-tier-up\n--wasm-dynamic-tiering\n--no-wasm-sync-tier-up\n--wasm-tiering-budget=13000000\n--wasm-
+wrapper-tiering-budget=1000\n--max-wasm-functions=1000000\n--wasm-caching-threshold=1000\n--wasm-caching-hard-threshold=1000000\n--wasm-caching-timeout-
+ms=2000\n--no-trace-wasm-compilation-times\n--wasm-tier-up-filter=-1\n--wasm-eager-tier-up-function=-1\n--no-trace-wasm-decoder\n--no-trace-wasm-compile
+r\n--no-trace-wasm-streaming\n--no-trace-wasm-stack-switching\n--no-stress-wasm-stack-switching\n--wasm-stack-switching-stack-size=984\n--liftoff\n--no-
+liftoff-only\n--no-enable-testing-opcode-in-wasm\n--no-trace-liftoff\n--no-trace-wasm-memory\n--no-trace-wasm-globals\n--wasm-tier-mask-for-testing=0\n-
+-wasm-debug-mask-for-testing=0\n--no-experimental-wasm-pgo-to-file\n--no-experimental-wasm-pgo-from-file\n--validate-asm\n--no-suppress-asm-messages\n--
+no-trace-asm-time\n--no-trace-asm-scanner\n--no-trace-asm-parser\n--no-stress-validate-asm\n--no-dump-wasm-module\n--dump-wasm-module-path=\"\"\n--no-wa
+sm-fast-api\n--wasm-deopt\n--wasm-deopts-per-function-limit=10\n--no-experimental-wasm-type-reflection\n--no-experimental-wasm-instruction-tracing\n--no
+-experimental-wasm-custom-descriptors\n--no-experimental-wasm-shared\n--no-experimental-wasm-fp16\n--no-experimental-wasm-memory-control\n--no-experimen
+tal-wasm-wasmfx\n--no-experimental-wasm-rab-integration\n--no-experimental-wasm-compilation-hints\n--no-experimental-wasm-stringref\n--no-experimental-w
+asm-imported-strings-utf8\n--no-experimental-wasm-growable-stacks\n--experimental-wasm-legacy-eh\n--experimental-wasm-branch-hinting\n--experimental-was
+m-exnref\n--no-experimental-wasm-assume-ref-cast-succeeds\n--no-experimental-wasm-ref-cast-nop\n--no-experimental-wasm-skip-null-checks\n--no-experiment
+al-wasm-skip-bounds-checks\n--no-experimental-wasm-js-interop\n--no-wasm-staging\n--wasm-opt\n--wasm-bounds-checks\n--wasm-stack-checks\n--no-wasm-enfor
+ce-bounds-checks\n--wasm-math-intrinsics\n--no-wasm-inlining\n--wasm-inlining-budget=5000\n--wasm-inlining-max-size=500\n--wasm-inlining-factor=3\n--was
+m-inlining-min-budget=50\n--no-wasm-inlining-ignore-call-counts\n--no-trace-wasm-inlining\n--no-trace-wasm-typer\n--no-wasm-inlining-call-indirect\n--wa
+sm-bulkmem-inlining\n--wasm-loop-unrolling\n--wasm-loop-peeling\n--wasm-loop-peeling-max-size=1000\n--no-trace-wasm-loop-peeling\n--no-wasm-fuzzer-gen-t
+est\n--no-print-wasm-code\n--print-wasm-code-function-index=-1\n--no-print-wasm-stub-code\n--asm-wasm-lazy-compilation\n--wasm-lazy-compilation\n--no-tr
+ace-wasm-lazy-compilation\n--no-wasm-lazy-validation\n--no-wasm-simd-ssse3-codegen\n--wasm-code-gc\n--no-trace-wasm-code-gc\n--no-stress-wasm-code-gc\n-
+-wasm-max-initial-code-space-reservation=0\n--no-stress-wasm-memory-moving\n--flush-liftoff-code\n--no-stress-branch-hinting\n--wasm-max-module-size=107
+3741824\n--wasm-disassembly-max-mb=1000\n--wasm-capi-thread-pool-size=0\n--trace-wasm\n--no-trace-wasm-instances\n--no-experimental-wasm-revectorize\n--
+no-trace-wasm-revectorize\n--wasm-memory64-trap-handling\n--no-wasm-jitless\n--no-wasm-jitless-if-available-for-testing\n--no-wasm-allow-mixed-eh-for-te
+sting\n--no-wasm-code-coverage\n--stress-sampling-allocation-profiler=0\n--no-lazy-new-space-shrinking\n--min-semi-space-size=0\n--max-semi-space-size=0
+\n--semi-space-growth-factor=2\n--max-old-space-size=0\n--max-heap-size=0\n--initial-heap-size=0\n--initial-old-space-size=0\n--preconfigured-old-space-
+size=0\n--no-gc-global\n--random-gc-interval=0\n--gc-interval=-1\n--cppgc-random-gc-interval=0\n--retain-maps-for-n-gc=2\n--trace-gc\n--no-trace-gc-nvp\
+n--no-trace-gc-ignore-scavenger\n--no-trace-memory-reducer\n--trace-gc-verbose\n--no-trace-gc-freelists\n--no-trace-gc-freelists-verbose\n--no-trace-gc-
+heap-layout\n--trace-gc-heap-layout-ignore-minor-gc\n--no-trace-evacuation-candidates\n--no-trace-pending-allocations\n--trace-allocation-stack-interval
+=-1\n--trace-duplicate-threshold-kb=0\n--no-trace-fragmentation\n--no-trace-fragmentation-verbose\n--no-minor-ms-trace-fragmentation\n--no-trace-evacuat
+ion\n--no-trace-mutator-utilization\n--incremental-marking\n--incremental-marking-task\n--incremental-marking-start-user-visible\n--no-incremental-marki
+ng-always-user-visible\n--incremental-marking-soft-trigger=0\n--incremental-marking-hard-trigger=0\n--no-incremental-marking-unified-schedule\n--no-trac
+e-unmapper\n--parallel-scavenge\n--minor-gc-task\n--minor-gc-task-trigger=80\n--minor-gc-task-with-lower-priority\n--no-trace-parallel-scavenge\n--no-cp
+pgc-young-generation\n--no-optimize-gc-for-battery\n--concurrent-marking\n--concurrent-marking-max-worker-num=7\n--concurrent-array-buffer-sweeping\n--n
+o-stress-concurrent-allocation\n--parallel-marking\n--ephemeron-fixpoint-iterations=10\n--no-trace-concurrent-marking\n--concurrent-sweeping\n--parallel
+-compaction\n--parallel-pointer-update\n--parallel-weak-ref-clearing\n--detect-ineffective-gcs-near-heap-limit\n--no-ineffective-gcs-forces-last-resort\
+n--ineffective-gc-size-threshold=0.8\n--ineffective-gc-mutator-utilization-threshold=0.4\n--no-trace-incremental-marking\n--no-trace-stress-marking\n--n
+o-trace-stress-scavenge\n--no-track-gc-object-stats\n--no-trace-gc-object-stats\n--no-trace-zone-stats\n--zone-stats-tolerance=1048576\n--no-trace-zone-
+type-stats\n--no-trace-backing-store\n--gc-stats=0\n--track-detached-contexts\n--no-trace-detached-contexts\n--no-verify-heap\n--no-verify-heap-skip-rem
+embered-set\n--verify-write-barriers\n--no-memory-reducer-respects-frozen-state\n--move-object-start\n--memory-reducer\n--memory-reducer-favors-memory\n
+--memory-reducer-for-small-heaps\n--memory-reducer-gc-count=2\n--no-external-memory-accounted-in-global-limit\n--external-memory-max-growing-factor=1.3\
+n--no-gc-speed-uses-counters\n--heap-growing-percent=0\n--v8-os-page-size=0\n--allocation-buffer-parking\n--compact\n--compact-code-space\n--no-compact-
+on-every-full-gc\n--compact-with-stack\n--shortcut-strings-with-stack\n--no-stress-compaction\n--resize-large-object\n--no-stress-compaction-random\n--n
+o-flush-baseline-code\n--flush-bytecode\n--bytecode-old-age=6\n--no-flush-code-based-on-time\n--no-flush-code-based-on-tab-visibility\n--bytecode-old-ti
+me=30\n--no-stress-flush-code\n--no-trace-flush-code\n--use-marking-progress-bar\n--no-stress-per-context-marking-worklist\n--no-stress-incremental-mark
+ing\n--memory-pool\n--memory-pool-share-memory-on-teardown\n--memory-pool-release-before-memory-pressure-gcs\n--no-memory-pool-release-on-malloc-failure
+s\n--large-page-pool\n--max-large-page-pool-size=32\n--large-page-pool-timeout=3\n--no-managed-zone-memory\n--no-fuzzer-gc-analysis\n--stress-marking=0\
+n--stress-scavenge=0\n--reclaim-unmodified-wrappers\n--parallel-reclaim-unmodified-wrappers\n--no-gc-experiment-less-compaction\n--gc-memory-reducer-sta
+rt-delay-ms=8000\n--no-concurrent-marking-high-priority-threads\n--no-disable-abortjs\n--no-randomize-all-allocations\n--no-manual-evacuation-candidates
+-selection\n--no-clear-free-memory\n--idle-gc-on-context-disposal\n--no-trace-context-disposal\n--cppheap-incremental-marking\n--cppheap-concurrent-mark
+ing\n--no-memory-balancer\n--memory-balancer-c-value=3e-10\n--no-trace-memory-balancer\n--late-heap-limit-check\n--reserve-contiguous-compressed-read-on
+ly-space\n--debug-code\n--no-trap-on-abort\n--no-slow-debug-code\n--no-code-comments\n--enable-sse3\n--enable-ssse3\n--enable-sse4-1\n--enable-sse4-2\n-
+-enable-sahf\n--enable-avx\n--enable-avx2\n--enable-avx-vnni\n--enable-avx-vnni-int8\n--enable-fma3\n--enable-f16c\n--enable-bmi1\n--enable-bmi2\n--enab
+le-lzcnt\n--enable-popcnt\n--arm-arch=\"armv8\"\n--no-force-long-branches\n--mcpu=\"auto\"\n--partial-constant-pool\n--sim-arm64-optional-features=\"non
+e\"\n--intel-jcc-erratum-mitigation\n--no-enable-source-at-csa-bind\n--enable-armv7=unset\n--enable-vfp3=unset\n--enable-32dregs=unset\n--enable-neon=un
+set\n--enable-sudiv=unset\n--enable-armv8=unset\n--enable-regexp-unaligned-accesses\n--script-streaming\n--no-stress-background-compile\n--concurrent-ca
+che-deserialization\n--merge-background-deserialized-script-with-compilation-cache\n--no-verify-code-merge\n--no-experimental-embedder-instance-types\n-
+-no-expose-gc\n--expose-gc-as=\"\"\n--no-expose-externalize-string\n--no-expose-statistics\n--no-expose-trigger-failure\n--no-expose-ignition-statistics
+\n--stack-trace-limit=10\n--no-builtins-in-stack-traces\n--no-experimental-stack-trace-frames\n--no-disallow-code-generation-from-strings\n--no-expose-a
+sync-hooks\n--expose-cputracemark-as=\"\"\n--experimental-report-exceptions-from-callbacks\n--no-allow-unsafe-function-constructor\n--no-force-slow-path
+\n--no-test-small-max-function-context-stub-size\n--inline-new\n--switch-table-spread-threshold=3\n--switch-table-min-cases=6\n--stress-lazy-compilation
+=0\n--no-trace\n--lazy\n--lazy-eval\n--lazy-streaming\n--no-max-lazy\n--trace-opt\n--trace-opt-status\n--trace-opt-verbose\n--no-trace-opt-stats\n--trac
+e-deopt\n--no-log-deopt\n--no-trace-deopt-verbose\n--no-trace-file-names\n--no-always-osr\n--no-trace-serializer\n--no-external-reference-stats\n--compi
+lation-cache\n--cache-prototype-transitions\n--no-lazy-compile-dispatcher\n--lazy-compile-dispatcher-max-threads=0\n--no-trace-compiler-dispatcher\n--no
+-parallel-compile-tasks-for-eager-toplevel\n--no-parallel-compile-tasks-for-lazy\n--cpu-profiler-sampling-interval=1000\n--no-trace-side-effect-free-deb
+ug-evaluate\n--hard-abort\n--log-colour\n--no-expose-inspector-scripts\n--inspector-live-edit\n--stack-size=984\n--max-stack-trace-source-length=300\n--
+no-clear-exceptions-on-js-entry\n--use-original-message-for-stack-trace\n--histogram-interval=600000\n--no-heap-profiler-trace-objects\n--heap-profiler-
+use-embedder-graph\n--no-heap-snapshot-on-oom\n--heap-snapshot-on-gc=-1\n--heap-snapshot-string-limit=1024\n--no-heap-profiler-show-hidden-objects\n--no
+-profile-heap-snapshot\n--no-heap-snapshot-verify\n--no-sampling-heap-profiler-suppress-randomness\n--no-log-ic\n--no-fast-map-update\n--max-valid-polym
+orphic-map-count=4\n--clone-object-sidestep-transitions\n--fast-properties-soft-limit=12\n--max-fast-properties=128\n--native-code-counters\n--super-ic\
+n--no-mega-dom-ic\n--no-trace-prototype-users\n--no-trace-for-in-enumerate\n--no-log-maps\n--log-maps-details\n--move-prototype-transitions-first\n--all
+ow-natives-syntax\n--no-allow-natives-for-differential-fuzzing\n--no-parse-only\n--no-enable-parser-ablation\n--no-enable-preparser-ablation\n--no-enabl
+e-bytecode-compiler-ablation\n--parser-ablation-amount=0.8\n--preparser-ablation-amount=0.8\n--bytecode-compiler-ablation-amount=0.8\n--async-stack-trac
+es\n--no-stack-trace-on-illegal\n--no-abort-on-uncaught-exception\n--no-correctness-fuzzer-suppressions\n--no-rehash-snapshot\n--hash-seed=0\n--random-s
+eed=0\n--fuzzer-random-seed=0\n--no-hashes-collide\n--no-trace-rail\n--no-print-all-exceptions\n--no-detailed-error-stack-trace\n--adjust-os-scheduling-
+parameters\n--experimental-flush-embedded-blob-icache\n--allow-allocation-in-fast-api-call\n--short-builtin-calls\n--no-trace-code-range-allocation\n--b
+etter-code-range-allocation\n--no-abort-on-far-code-range\n--no-runtime-call-stats\n--no-rcs\n--no-rcs-cpu-time\n--verify-snapshot-checksum\n--no-profil
+e-deserialization\n--no-trace-deserialization\n--no-serialization-statistics\n--regexp-optimization\n--no-regexp-interpret-all\n--regexp-tier-up\n--rege
+xp-tier-up-ticks=1\n--regexp-peephole-optimization\n--regexp-results-cache\n--no-regexp-assemble-from-bytecode\n--no-trace-regexp-peephole-optimization\
+n--no-trace-regexp-bytecodes\n--no-trace-regexp-assembler\n--no-trace-regexp-parser\n--no-trace-regexp-tier-up\n--no-trace-regexp-graph\n--no-enable-exp
+erimental-regexp-engine\n--no-default-to-experimental-regexp-engine\n--no-experimental-regexp-engine-capture-group-opt\n--experimental-regexp-engine-cap
+ture-group-opt-max-memory-usage=1024\n--no-trace-experimental-regexp-engine\n--no-enable-experimental-regexp-engine-on-excessive-backtracks\n--regexp-ba
+cktracks-before-fallback=50000\n--regexp-simd\n--no-trace-read-only-promotion\n--no-trace-read-only-promotion-verbose\n--testing-bool-flag\n--testing-ma
+ybe-bool-flag=unset\n--testing-int-flag=13\n--testing-float-flag=2.5\n--testing-string-flag=\"Hello, 
+world!\"\n--testing-prng-seed=42\n--no-testing-d8-test-runner\n--no-strict-termination-checks\n--no-fuzzing\n--no-hole-fuzzing\n--no-sandbox-testing\n--
+no-sandbox-fuzzing\n--no-expose-memory-corruption-api\n--freeze-flags-after-init\n--no-cet-compatible\n--embedded-src=\"\"\n--embedded-variant=\"\"\n--s
+tartup-src=\"\"\n--startup-blob=\"\"\n--target-arch=\"\"\n--target-os=\"\"\n--no-target-is-simulator\n--turbo-profiling-input=\"\"\n--turbo-log-builtins
+-count-input=\"\"\n--text-is-readable\n--no-trace-minor-ms-parallel-marking\n--no-minor-ms\n--concurrent-minor-ms-marking\n--black-allocated-pages\n--no
+-sticky-mark-bits\n--minor-ms-min-new-space-capacity-for-concurrent-marking-mb=0\n--minor-ms-concurrent-marking-trigger=90\n--minor-ms-min-lab-size-kb=0
+\n--no-handle-weak-ref-weakly-in-minor-gc\n--no-help\n--print-flag-values\n--no-print-feature-flags-json\n--no-slow-histograms\n--no-use-external-string
+s\n--map-counters=\"\"\n--no-mock-arraybuffer-allocator\n--mock-arraybuffer-allocator-limit=0\n--no-multi-mapped-mock-allocator\n--no-gdbjit\n--no-gdbji
+t-full\n--no-gdbjit-dump\n--gdbjit-dump-filter=\"\"\n--no-enable-slow-asserts\n--no-print-ast\n--print-scopes\n--no-trace-contexts\n--no-gc-verbose\n--n
+o-code-stats\n--no-print-handles\n--no-check-handle-count\n--no-print-global-handles\n--trace-turbo-escape\n--no-trace-module-status\n--no-trace-normali
+zation\n--no-trace-lazy\n--no-trace-isolates\n--no-regexp-possessive-quantifier\n--no-print-break-location\n--logfile=\"v8.log\"\n--no-logfile-per-isola
+te\n--no-log\n--no-log-all\n--no-log-internal-timer-events\n--no-log-timer-events\n--no-log-source-code\n--no-log-source-position\n--no-log-code\n--no-l
+og-feedback-vector\n--no-log-code-disassemble\n--no-log-function-events\n--no-detailed-line-info\n--no-prof-include-idle\n--no-perfetto-code-logger\n--p
+rof-sampling-interval=1000\n--no-prof-cpp\n--prof-browser-mode\n--no-prof\n--no-ll-prof\n--no-perf-basic-prof\n--perf-basic-prof-path=\"/tmp\"\n--no-per
+f-basic-prof-only-functions\n--no-perf-prof\n--perf-prof-path=\".\"\n--no-perf-prof-annotate-wasm\n--no-perf-prof-delete-file\n--no-perf-prof-unwinding-
+info\n--gc-fake-mmap=\"/tmp/__v8_gc__\"\n--no-redirect-code-traces\n--redirect-code-traces-to=\"code.asm\"\n--print-opt-source\n--no-vtune-prof-annotate
+-wasm\n--win64-unwinding-info\n--no-interpreted-frames-native-stack\n--no-enable-etw-stack-walking\n--no-etw-trace-debug\n--no-enable-etw-by-custom-filt
+er-only\n--no-print-builtin-size\n--no-trace-elements-transitions\n--no-trace-creation-allocation-sites\n--no-print-code\n--no-print-opt-code\n--print-o
+pt-code-filter=\"*\"\n--no-print-code-verbose\n--no-print-builtin-code\n--print-builtin-code-filter=\"*\"\n--no-print-regexp-code\n--no-print-regexp-byt
+ecode\n--no-predictable\n--no-predictable-and-random-seed-is-0\n--no-predictable-gc-schedule\n--no-single-threaded\n--no-single-threaded-gc\n--single-th
+readed-gc-in-background\n--parallel-pause-for-gc-in-background\n--incremental-marking-for-gc-in-background\n--no-shared-heap\n--no-proto-assign-seq-opt\
+n--use-libm-trig-functions\n--no-verify-predictable\n--dump-allocations-digest-at-alloc=-1\nConcurrent maglev has been disabled for 
+tracing.\n|2413000:0x201c00138000] Shrinking page 0x201c00004f80: end 0x300000340000 -> 0x300000309000\nGlobal scope:\nglobal { // (0x201c00644030) (0, 
+27)\n  // will be compiled\n  // NormalFunction\n  // 1 stack slots\n  // temporary vars:\n  TEMPORARY .result;  // (0x201c00644338) local|0]\n  // 
+local vars:\n  VAR fuzzilli;  // (0x201c00644268) \n  // dynamic vars:\n  DYNAMIC_GLOBAL native;  // (0x201c006443f8) never assigned\n}\n|generated 
+bytecode for function:  (0x300000827475 <SharedFunctionInfo>)]\nBytecode length: 25\nParameter count 1\nRegister count 3\nFrame size 24\n         
+0x13b600800074 @    0 : 13 00             LdaConstant |0]\n         0x13b600800076 @    2 : d1                Star1\n         0x13b600800077 @    3 : 1b
+fe f7          Mov <closure>, r2\n    0 E> 0x13b60080007a @    6 : 6e 6b 01 f8 02    CallRuntime |DeclareGlobals], r1-r2\n    7 S> 0x13b60080007f @   11
+: 8b 01 00 00       CreateClosure |1], |0], #0\n         0x13b600800083 @   15 : d1                Star1\n         0x13b600800084 @   16 : 25 02 00     
+StaGlobal |2], |0]\n         0x13b600800087 @   19 : 1b f8 f9          Mov r1, r0\n         0x13b60080008a @   22 : 0b f9             Ldar r0\n   27 S> 
+0x13b60080008c @   24 : b7                Return\nConstant pool (size = 3)\nHandler Table (size = 0)\nSource Position Table (size = 8)\nInner function 
+scope:\nfunction h () { // (0x201c00638220) (316, 333)\n  // NormalFunction\n  // 2 heap slots\n  // local vars:\n  VAR x;  // (0x201c0063d248) never 
+assigned\n}\nInner function scope:\nfunction g () { // (0x201c00638460) (429, 719)\n  // NormalFunction\n  // 2 heap slots\n  // local vars:\n  LET i;  
+// (0x201c0063d278) never assigned\n  VAR a;  // (0x201c0063d230) never assigned\n}\nInner function scope:\nfunction f () { // (0x201c00638650) (731, 
+1247)\n  // NormalFunction\n  // 2 heap slots\n  // local vars:\n  VAR a;  // (0x201c0063d230) never assigned\n  LET v;  // (0x201c0063d278) never 
+assigned\n\n  block { // (0x201c0063d428) (891, 935)\n    // 2 heap slots\n    // local vars:\n    LET i;  // (0x201c0063d588) never assigned\n  
+}\n}\nGlobal scope:\nglobal { // (0x201c00638030) (0, 1402)\n  // will be compiled\n  // NormalFunction\n  // 1 stack slots\n  // temporary vars:\n  
+TEMPORARY .result;  // (0x201c00638b28) local|0]\n  // local vars:\n  VAR f;  // (0x201c00638810) \n  VAR g;  // (0x201c00638620) \n  VAR h;  // 
+(0x201c006383e0) \n  // dynamic vars:\n  DYNAMIC_GLOBAL assertEquals;  // (0x201c00638c38) never assigned\n\n  function f () { // (0x201c00638650) (731,
+1247)\n    // lazily parsed\n    // NormalFunction\n    // 2 heap slots\n  }\n\n  function g () { // (0x201c00638460) (429, 719)\n    // lazily parsed\n
+// NormalFunction\n    // 2 heap slots\n  }\n\n  function h () { // (0x201c00638220) (316, 333)\n    // lazily parsed\n    // NormalFunction\n    // 2 
+heap slots\n  }\n}\n|generated bytecode for function:  (0x300000827d09 <SharedFunctionInfo>)]\nBytecode length: 97\nParameter count 1\nRegister count 
+5\nFrame size 40\n         0x13b60080013c @    0 : 13 00             LdaConstant |0]\n         0x13b60080013e @    2 : d1                Star1\n        
+0x13b60080013f @    3 : 1b fe f7          Mov <closure>, r2\n    0 E> 0x13b600800142 @    6 : 6e 6b 01 f8 02    CallRuntime |DeclareGlobals], r1-r2\n  
+334 S> 0x13b600800147 @   11 : 23 01 00          LdaGlobal |1], |0]\n         0x13b60080014a @   14 : d1                Star1\n         0x13b60080014b @
+15 : 6e fc 01 f8 01    CallRuntime |NeverOptimizeFunction], r1-r1\n 1249 S> 0x13b600800150 @   20 : 23 02 02          LdaGlobal |2], |2]\n         
+0x13b600800153 @   23 : d1                Star1\n         0x13b600800154 @   24 : 6e 06 02 f8 01    CallRuntime |PrepareFunctionForOptimization], 
+r1-r1\n 1285 S> 0x13b600800159 @   29 : 23 03 04          LdaGlobal |3], |4]\n         0x13b60080015c @   32 : d1                Star1\n         
+0x13b60080015d @   33 : 6e 06 02 f8 01    CallRuntime |PrepareFunctionForOptimization], r1-r1\n 1321 S> 0x13b600800162 @   38 : 23 04 06          
+LdaGlobal |4], |6]\n         0x13b600800165 @   41 : d1                Star1\n         0x13b600800166 @   42 : 0d 78             LdaSmi |120]\n         
+0x13b600800168 @   44 : d0                Star2\n         0x13b600800169 @   45 : 23 03 04          LdaGlobal |3], |4]\n         0x13b60080016c @   48 :
+cf                Star3\n         0x13b60080016d @   49 : 0d 02             LdaSmi |2]\n         0x13b60080016f @   51 : ce                Star4\n 1339 
+E> 0x13b600800170 @   52 : 6b f6 f5 08       CallUndefinedReceiver1 r3, r4, |8]\n         0x13b600800174 @   56 : cf                Star3\n 1321 E> 
+0x13b600800175 @   57 : 6c f8 f7 f6 0a    CallUndefinedReceiver2 r1, r2, r3, |10]\n 1347 S> 0x13b60080017a @   62 : 23 03 04          LdaGlobal |3], 
+|4]\n         0x13b60080017d @   65 : d1                Star1\n         0x13b60080017e @   66 : 6e 03 02 f8 01    CallRuntime 
+|OptimizeMaglevOnNextCall], r1-r1\n 1377 S> 0x13b600800183 @   71 : 23 04 06          LdaGlobal |4], |6]\n         0x13b600800186 @   74 : d1           
+Star1\n         0x13b600800187 @   75 : 0d 78             LdaSmi |120]\n         0x13b600800189 @   77 : d0                Star2\n         
+0x13b60080018a @   78 : 23 03 04          LdaGlobal |3], |4]\n         0x13b60080018d @   81 : cf                Star3\n         0x13b60080018e @   82 :
+0d 02             LdaSmi |2]\n         0x13b600800190 @   84 : ce                Star4\n 1395 E> 0x13b600800191 @   85 : 6b f6 f5 0c       
+CallUndefinedReceiver1 r3, r4, |12]\n         0x13b600800195 @   89 : cf                Star3\n 1377 E> 0x13b600800196 @   90 : 6c f8 f7 f6 0e    
+CallUndefinedReceiver2 r1, r2, r3, |14]\n         0x13b60080019b @   95 : d2                Star0\n 1402 S> 0x13b60080019c @   96 : b7                
+Return\nConstant pool (size = 5)\nHandler Table (size = 0)\nSource Position Table (size = 30)\n|disabled optimization for 0x300000827d79 
+<SharedFunctionInfo h>, reason: Optimization is always disabled]\nGlobal scope:\nfunction g (a) { // (0x201c00638220) (429, 719)\n  // will be 
+compiled\n  // NormalFunction\n  // 1 stack slots\n  // local vars:\n  LET i;  // (0x201c006384f0) local|0], hole initialization elided\n  VAR a;  // 
+(0x201c00638470) parameter|0], never assigned\n}\n|generated bytecode for function: g (0x300000827da9 <SharedFunctionInfo g>)]\nBytecode length: 
+53\nParameter count 2\nRegister count 2\nFrame size 16\n  445 S> 0x13b6008001fc @    0 : 0b 03             Ldar a0\n  447 E> 0x13b6008001fe @    2 : 4d 
+01 00          AddSmi |1], |0]\n         0x13b600800201 @    5 : d2                Star0\n  463 S> 0x13b600800202 @    6 : 0d 64             LdaSmi 
+|100]\n  463 E> 0x13b600800204 @    8 : 77 f9 01          TestLessThan r0, |1]\n         0x13b600800207 @   11 : a6 27             JumpIfFalse |39] 
+(0x13b60080022e @ 50)\n  670 S> 0x13b600800209 @   13 : 23 00 02          LdaGlobal |0], |2]\n         0x13b60080020c @   16 : d1                Star1\n
+670 E> 0x13b60080020d @   17 : 6a f8 04          CallUndefinedReceiver0 r1, |4]\n  679 S> 0x13b600800210 @   20 : 23 00 02          LdaGlobal |0], |2]\n
+0x13b600800213 @   23 : d1                Star1\n  679 E> 0x13b600800214 @   24 : 6a f8 06          CallUndefinedReceiver0 r1, |6]\n  688 S> 
+0x13b600800217 @   27 : 23 00 02          LdaGlobal |0], |2]\n         0x13b60080021a @   30 : d1                Star1\n  688 E> 0x13b60080021b @   31 :
+6a f8 08          CallUndefinedReceiver0 r1, |8]\n  697 S> 0x13b60080021e @   34 : 23 00 02          LdaGlobal |0], |2]\n         0x13b600800221 @   37 
+: d1                Star1\n  697 E> 0x13b600800222 @   38 : 6a f8 0a          CallUndefinedReceiver0 r1, |10]\n  471 S> 0x13b600800225 @   41 : 0b f9   
+Ldar r0\n         0x13b600800227 @   43 : 59 0c             Inc |12]\n         0x13b600800229 @   45 : d2                Star0\n  454 E> 0x13b60080022a 
+@   46 : 95 28 00 0d       JumpLoop |40], |0], |13] (0x13b600800202 @ 6)\n  708 S> 0x13b60080022e @   50 : 0b f9             Ldar r0\n  717 S> 
+0x13b600800230 @   52 : b7                Return\nConstant pool (size = 1)\nHandler Table (size = 0)\nSource Position Table (size = 38)\nGlobal 
+scope:\nfunction f (a) { // (0x201c00638220) (731, 1247)\n  // will be compiled\n  // NormalFunction\n  // 2 stack slots\n  // local vars:\n  VAR a;  //
+(0x201c00638470) parameter|0], never assigned\n  LET v;  // (0x201c006384f0) local|0], hole initialization elided\n\n  block { // (0x201c00638718) (891,
+935)\n    // local vars:\n    LET i;  // (0x201c00638890) local|1], hole initialization elided\n  }\n}\n|generated bytecode for function: f 
+(0x300000827dd9 <SharedFunctionInfo f>)]\nBytecode length: 42\nParameter count 2\nRegister count 3\nFrame size 24\n  878 S> 0x13b60080029c @    0 : 23 
+00 00          LdaGlobal |0], |0]\n         0x13b60080029f @    3 : d0                Star2\n  878 E> 0x13b6008002a0 @    4 : 6b f7 03 02       
+CallUndefinedReceiver1 r2, a0, |2]\n         0x13b6008002a4 @    8 : d2                Star0\n  899 S> 0x13b6008002a5 @    9 : 0c                
+LdaZero\n         0x13b6008002a6 @   10 : d1                Star1\n  904 S> 0x13b6008002a7 @   11 : 0d 0a             LdaSmi |10]\n  904 E> 
+0x13b6008002a9 @   13 : 77 f8 04          TestLessThan r1, |4]\n         0x13b6008002ac @   16 : a6 11             JumpIfFalse |17] (0x13b6008002bd @ 
+33)\n  921 S> 0x13b6008002ae @   18 : 0b f9             Ldar r0\n  927 E> 0x13b6008002b0 @   20 : 4d 02 05          AddSmi |2], |5]\n         
+0x13b6008002b3 @   23 : d2                Star0\n  911 S> 0x13b6008002b4 @   24 : 0b f8             Ldar r1\n         0x13b6008002b6 @   26 : 59 06     
+Inc |6]\n         0x13b6008002b8 @   28 : d1                Star1\n  886 E> 0x13b6008002b9 @   29 : 95 12 00 07       JumpLoop |18], |0], |7] 
+(0x13b6008002a7 @ 11)\n 1233 S> 0x13b6008002bd @   33 : 23 01 08          LdaGlobal |1], |8]\n         0x13b6008002c0 @   36 : d0                Star2\n
+1240 E> 0x13b6008002c1 @   37 : 6b f7 f9 0a       CallUndefinedReceiver1 r2, r0, |10]\n 1245 S> 0x13b6008002c5 @   41 : b7                
+Return\nConstant pool (size = 2)\nHandler Table (size = 0)\nSource Position Table (size = 29)\nregressions/maglev/regress-346686148.js:42: 
+ReferenceError: assertEquals is not defined\nassertEquals(120, f(2));\n^\nReferenceError: assertEquals is not defined\n    at 
+regressions/maglev/regress-346686148.js:42:1\n\n"}
+[Step 6: Duration 2.36 seconds| Input tokens: 76,980 | Output tokens: 4,206]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Step 7 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Calling tool: 'search_knowledge_base' with arguments: {'query': 'RecordUseReprHint Maglev Phi untagged representation propagation V8                 │
+│ maglev-untagged-phis', 'top_k': 5, 'topic_filter': 'v8'}                                                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
