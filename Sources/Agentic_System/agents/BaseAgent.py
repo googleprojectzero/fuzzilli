@@ -6,6 +6,7 @@ import time
 import os
 import logging
 from datetime import datetime
+import pytz
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -16,6 +17,7 @@ if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = False
 logger.disabled = True
+est_timezone = pytz.timezone('US/Eastern')
 
 def enable_base_agent_logging():
     """Enable logging to Agentic_System/agents/fog_logs/base_agent.log if FOG_DEBUG=1."""
@@ -324,7 +326,7 @@ class Agent(ABC):
                 agent_output = manager_agent.run(prompt)
                 agent_output = str(agent_output)
                 
-                logger.info(f"Task '{task_description}' completed successfully by {manager_agent.name} at {datetime.now()}")
+                logger.info(f"Task '{task_description}' completed successfully by {manager_agent.name} at {datetime.now(est_timezone)}")
             finally:
                 _restore_litellm_completion(litellm_original)
                 _restore_agent_runs(run_originals)

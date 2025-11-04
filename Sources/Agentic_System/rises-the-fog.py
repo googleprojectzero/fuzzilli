@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 import logging 
 from datetime import datetime
+import pytz
 import config_loader as config_loader 
 from agents.FoG import Father
 from agents.EBG import EBG
@@ -18,6 +19,7 @@ if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = False
 logger.disabled = True
+est_timezone = pytz.timezone('US/Eastern')
 
 BASE_MODEL_ID = "gpt-5-mini"
 
@@ -106,7 +108,7 @@ def main():
         os.environ["FOG_DEBUG"] = "1"
 
     logger.info("I must go in; the fog is rising")
-    logger.info(f"time: {datetime.now()}")
+    logger.info(f"time: {datetime.now(est_timezone)}")
     a = FatherOfGod()
     path = os.path.join(os.getenv('FUZZILLI_PATH', ''), "Sources", "Agentic_System")
     if (not os.path.exists(os.path.join(path, "regressions.json"))):
