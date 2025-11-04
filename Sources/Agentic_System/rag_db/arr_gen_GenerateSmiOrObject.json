@@ -1,0 +1,12 @@
+{
+  "body": "BIND(&not_smi);\nif (variant == kIncludes) {\n  GotoIf(IsUndefined(search_element), &undef_loop);\n}\nTNode<Map> map = LoadMap(CAST(search_element));\nGotoIfNot(IsHeapNumberMap(map), &not_heap_num);\nsearch_num = LoadHeapNumberValue(CAST(search_element));\nGoto(&heap_num_loop);\n\n// ... ident_loop and heap_num_loop implement TaggedEqual/StrictEquals and NaN handling\n",
+  "context": [
+    "builtins-array-gen:GenerateSmiOrObject",
+    "identity loop",
+    "nan handling",
+    "undef/the_hole handling",
+    "string/bigint paths"
+  ],
+  "explanation": "Shows start of GenerateSmiOrObject: undef handling (TheHole treated as undefined for includes), heap-number extraction and branch into number loops (including NaN handling). Also indicates identity/TaggedEqual fast loop.",
+  "file_line": "builtins/builtins-array-gen.cc:GenerateSmiOrObject (~lines 560-600)"
+}

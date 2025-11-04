@@ -1,0 +1,10 @@
+{
+  "body": "compiler/js-typed-lowering.cc:ReduceJSEqual (JSTypedLowering::ReduceJSEqual) folds abstract equality when one side is NullOrUndefined into ObjectIsUndetectable (simplified()->ObjectIsUndetectable()). It lowers to ObjectIsUndetectable in the branch handling ReceiverOrNullOrUndefined compare. It uses gasm to build a control flow: if lhs == undefined/null or rhs == undefined/null then ObjectIsUndetectable(other) else ReferenceEqual(lhs,rhs). This is seen at lines where it checks OneInputIs(Type::NullOrUndefined()) and the larger ReceiverOrNullOrUndefined logic. It does not directly register a protector; that is done later when lowering ObjectIsUndetectable to machine code.",
+  "context": [
+    "js_typed_lowering",
+    "js_native_context_specialization",
+    "typed_optimization"
+  ],
+  "explanation": "Describes JSTypedLowering::ReduceJSEqual folding to ObjectIsUndetectable when one operand is null/undefined, and the generated control flow using gasm that yields ObjectIsUndetectable on the other operand. This is relevant because protector registration (NoUndetectableObjects) is required to assume undetectable objects can't exist and thus fold to simple checks.",
+  "file_line": "compiler/js-typed-lowering.cc:ReduceJSEqual"
+}

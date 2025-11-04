@@ -1,0 +1,9 @@
+{
+  "body": "[array includes] ArrayIncludesIndexofAssembler and specific TF_BUILTIN entries in builtins/builtins-array-gen.cc: handles PACKED_SMI, HOLEY_SMI, PACKED_ELEMENTS, HOLEY_ELEMENTS, PACKED_DOUBLE, HOLEY_DOUBLE. Precondition checks: BranchIfFastJSArrayForRead(receiver,...), LoadElementsKind dispatch, LoadFastJSArrayLength, fromIndex init handles Smis and undefined, Smi checks for length and empty. SameValueZero: NaN handling in Packed and Holey doubles (nan_loop) and hole treated as undefined in holey doubles (hole_loop). For Smi/Object: ident_loop and heap_num_loop handle NaN differently; includes treats hole as undefined via undef_loop. See code lines in builtins/builtins-array-gen.cc",
+  "context": [
+    "builtins_array_gen",
+    "array_includes"
+  ],
+  "explanation": "This entry captures the generated builtins implementation for Array.prototype.includes and the internal splitting by elements kind in ArrayIncludesIndexofAssembler. It documents key branches for fast-path checks, elements kind dispatch, same-value-zero behavior (NaN, hole as undefined), and fromIndex/length handling.",
+  "file_line": "builtins/builtins-array-gen.cc:~(ArrayIncludesIndexofAssembler Generate.. GenerateSmiOrObject .. GeneratePackedDoubles .. GenerateHoleyDoubles)"
+}

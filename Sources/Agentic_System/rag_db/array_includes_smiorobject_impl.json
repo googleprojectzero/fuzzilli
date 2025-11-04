@@ -1,0 +1,9 @@
+{
+  "body": "ArrayIncludesIndexofAssembler::GenerateSmiOrObject - builtins/builtins-array-gen.cc\nPreconditions/guards snippet:\n- index_var starts from SmiUntag(from_index)\n- array_length_untagged computed from PositiveSmiUntag(array_length)\n- early checks for search_element type: TaggedIsSmi -> smi path, IsUndefined -> undef handling (includes only), IsHeapNumberMap -> heap number handling, string instance type -> string loop, BigInt instance -> bigint loop\n- SIMD fastcall guarded by kCanVectorize and array length threshold (kSIMDThreshold)\n- In ident_loop: UnsafeLoadFixedArrayElement(elements, index) and TaggedEqual(element_k, search_element) checks\n- In heap_num_loop: handles NaN specially for includes (nan_loop) and compares Float64Equal for Smi/HeapNumber, uses vectorized external C function for smi or object if possible\n- String loop: compares string lengths then calls StringEqual_Core, or falls back to runtime\n- BigInt loop: calls Runtime::kBigIntEqualToBigInt when needed\n- Returns True/False or Smi index based on variant\nExplanation: Smi/Object path handles SameValueZero vs strict indexOf differences, NaN handling (SameValueZero makes NaN==NaN), undefined vs holes for includes variant, vectorization hooks for performance.",
+  "context": [
+    "builtins-array-gen.cc:GenerateSmiOrObject",
+    "ArrayIncludesIndexofAssembler::Generate"
+  ],
+  "explanation": "Detailed logic for Smi/Objects include/indexOf. Shows type dispatch for search_element, SIMD fast-paths, unsafe element loads, NaN handling (SameValueZero), and string/bigint fallbacks.",
+  "file_line": "src/builtins/builtins-array-gen.cc:812-1035"
+}

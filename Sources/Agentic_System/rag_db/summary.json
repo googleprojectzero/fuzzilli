@@ -1,0 +1,12 @@
+{
+  "body": "Stage:1 region:KeyedLoadIC_StringIndex_Protector\nTopic: summary \u2014 Aggregated summary of KeyedLoadIC string fast path and protector.\n\nConcise summary:\n- The string-index fast-path is implemented as a Smi-encoded data handler (LoadHandler::Kind::kIndexedString) installed by KeyedLoadIC when index-like keys are observed on string receivers. CSA (AccessorAssembler) recognizes this handler and emits a guarded sequence that checks receiver, canonicalizes key, bounds-checks, switches on string representation, and returns a one-char string. Optimized compilers (TurboFan/Maglev) consume feedback and attach a dependency on Protectors::string_wrapper_to_primitive_protector so String wrappers can be treated like primitives; protector invalidation triggers deopts and IC reconfiguration.\n\nWhy this matters:\n- This fast-path provides a highly-optimized common-case for s[i] on strings, but correctness depends on prototype chain invariants guarded by the protector. Understanding the files and symbols (ic.cc, handler-configuration, accessor-assembler, builtins-ic-gen, protectors.*, compilation-dependencies) is essential to modify/validate this behavior.\n",
+  "context": [
+    "inventory",
+    "pipeline",
+    "protector",
+    "handler",
+    "transitions"
+  ],
+  "explanation": "Top-level summary tying together the inventory, pipeline, handler behavior, protector dependency, and transition semantics for the string-index fast-path.",
+  "file_line": "src/ic/ic.cc:KeyedLoadIC::*; src/ic/handler-configuration.{h,inl,cc}; src/ic/accessor-assembler.cc:GenerateKeyedLoadIC; src/builtins/builtins-ic-gen.cc; src/execution/protectors.*; src/compiler/compilation-dependencies.cc"
+}

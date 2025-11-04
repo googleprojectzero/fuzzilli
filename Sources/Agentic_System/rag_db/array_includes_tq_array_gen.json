@@ -1,0 +1,10 @@
+{
+  "body": "ArrayIncludesIndexofAssembler::Generate(SearchVariant variant) - builtins/builtins-array-gen.cc\nPreconditions/guards snippet:\n- BranchIfFastJSArrayForRead(receiver, context, &init_index, &call_runtime) // ensures receiver is fast JSArray\n- LoadFastJSArrayLength(array) ; TaggedIsPositiveSmi check\n- fromIndex handling: allow Smi or undefined; non-smi/other -> call_runtime\n- Check startIndex >= length -> return not found\n- LoadElementsKind(array); dispatch:\n  - IsElementsKindLessThanOrEqual(... HOLEY_SMI_ELEMENTS) -> Smi path\n  - IsElementsKindLessThanOrEqual(... HOLEY_ELEMENTS) -> SmiOrObject path\n  - PACKED_DOUBLE_ELEMENTS -> packed doubles path\n  - HOLEY_DOUBLE_ELEMENTS -> holey doubles path\n  - default: return not found / slow\nExplanation: This is the main dispatcher for Array.prototype.includes fast-paths. It performs fast-array checks, length/read-only Smi length expectations, fromIndex fast handling (only Smi/undefined), elements kind dispatch. If checks fail it routes to runtime slow path.  This entry is used by TF_BUILTIN(ArrayIncludes, ...).",
+  "context": [
+    "builtins-array-gen.cc:Generate",
+    "ArrayIncludesIndexofAssembler::GeneratePackedDoubles",
+    "ArrayIncludesIndexofAssembler::GenerateHoleyDoubles"
+  ],
+  "explanation": "Main fast dispatcher for Array.includes. Adds preconditions for fast JSArray, Smi length, Smi/undefined fromIndex, and elements-kind-based specialized paths for Smi/Object and Double kinds. Routes to runtime when harmful side-effects may have invalidated fast-path assumptions.",
+  "file_line": "src/builtins/builtins-array-gen.cc:658-741"
+}

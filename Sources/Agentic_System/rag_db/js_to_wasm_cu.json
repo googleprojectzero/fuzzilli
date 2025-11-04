@@ -1,0 +1,10 @@
+{
+  "body": "File: src/wasm/function-compiler.cc\nSymbols and roles:\n- JSToWasmWrapperCompilationUnit: Orchestrates compilation and caching of per-signature JS\u2192Wasm wrappers per isolate.\n  - ctor(Isolate*, const CanonicalSig*, CanonicalTypeIndex): creates a turboshaft compilation job via compiler::NewJSToWasmCompilationJob unless wasm_jitless, stores sig and sig_index. Ensures CodeTracer initialized when tracing turbo graph.\n  - Execute(): Executes the job synchronously (CompilationJob::ExecuteJob).\n  - Finalize(): Finalizes into Code, logs if needed, installs weak reference in isolate's js_to_wasm_wrappers WeakFixedArray at sig_index, increments counters. In jitless+drumbrake returns Builtin::kGenericJSToWasmInterpreterWrapper. Returns compiled Code.\n  - CompileJSToWasmWrapper(Isolate*, sig, sig_index): static helper that runs Execute() and Finalize().\nContext interaction:\n- Per-isolate weak array cache: isolate->heap()->js_to_wasm_wrappers() holds WeakFixedArray of wrappers indexed by CanonicalTypeIndex. Finalize asserts cache entry was cleared, then sets it to MakeWeak(code->wrapper()).\n- Tier-up usage: Runtime_TierUpJSToWasmWrapper uses this unit to compile a specialized wrapper for a signature if not present in the cache, then installs it for all exports sharing the signature.\n",
+  "context": [
+    "tf_hooks",
+    "runtime_tiering",
+    "wrappers_ts"
+  ],
+  "explanation": "This captures the per-isolate JS\u2192Wasm wrapper compilation unit and its connection to the weak array cache. It is the hook between runtime tiering and the TF wrapper compilation job factory.",
+  "file_line": "wasm/function-compiler.cc:132-244 (JSToWasmWrapperCompilationUnit)"
+}

@@ -1,0 +1,12 @@
+{
+  "body": "builtins/builtins-array-gen.cc:class ArrayIncludesIndexofAssembler::Generate (ArrayIncludesIndexofAssembler::Generate) \u2014 dispatch on ElementsKind, fast-paths for PACKED_SMI/HOLEY_SMI, PACKED/HOLEY OBJECT, PACKED/HOLEY DOUBLE; loads JSArray length as Smi, fromIndex Smi/undefined handling; calls Builtins::kArrayIncludesSmi/ArrayIncludesSmiOrObject/ArrayIncludesPackedDoubles/ArrayIncludesHoleyDoubles or indexOf variants via CallBuiltin; relies on BranchIfFastJSArrayForRead to guard receiver and prototype; uses IsNoElementsProtectorCellInvalid checks before treating holey as undefined.",
+  "context": [
+    "builtins/builtins-array-gen.cc:ArrayIncludesIndexofAssembler::Generate",
+    "objects/elements.cc:ElementsAccessorBase::IncludesValueImpl",
+    "builtins/builtins-array-gen.cc:ArrayIncludesIndexofAssembler::GenerateSmiOrObject",
+    "builtins/builtins-array-gen.cc:ArrayIncludesIndexofAssembler::GeneratePackedDoubles",
+    "builtins/builtins-array-gen.cc:TF_BUILTIN(ArrayIncludesPackedDoubles)"
+  ],
+  "explanation": "ArrayIncludesIndexofAssembler in builtins/builtins-array-gen.cc implements the fast dispatch/stub for Array.prototype.includes/indexOf. It does receiver checks (BranchIfFastJSArrayForRead), treats JSArray length as Smi (LoadFastJSArrayLength/LoadJSArrayLength), handles fromIndex when Smi or undefined (CheckSmi and undefined branch), and dispatches to specialized builtins per ElementsKind. It depends on the NoElementsProtector checks before treating holes as undefined, and calls TF builtins for the per-kind inner loops.",
+  "file_line": "builtins/builtins-array-gen.cc:609-826"
+}

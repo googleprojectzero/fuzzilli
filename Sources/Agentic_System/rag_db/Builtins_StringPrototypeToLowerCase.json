@@ -1,0 +1,11 @@
+{
+  "body": "builtins/builtins-string.cc: BUILTIN(StringPrototypeToLowerCase) { ... }\nAlso builtins/builtins-intl-gen.cc: TF_BUILTIN(StringToLowerCaseIntl, IntlBuiltinsAssembler) and TF_BUILTIN(StringPrototypeToLowerCaseIntl, IntlBuiltinsAssembler)\ncompiler/js-call-reducer.cc: ReduceStringPrototypeToLowerCaseIntl(Node* node) -> NodeProperties::ChangeOp(node, simplified()->StringToLowerCaseIntl())\nruntime/runtime-intl.cc: RUNTIME_FUNCTION(Runtime_StringToLowerCaseIntl) { ... }",
+  "context": [
+    "builtins/builtins-string.tq",
+    "builtins/builtins-intl-gen.cc",
+    "compiler/js-call-reducer.cc",
+    "runtime/runtime-intl.cc"
+  ],
+  "explanation": "Anchors for ToLowerCase builtins and intl variants across builtins, generated torque csa, compiler reducers and runtime ICU paths.",
+  "file_line": "builtins/builtins-string.cc: lines around BUILTIN(StringPrototypeToLowerCase)"
+}

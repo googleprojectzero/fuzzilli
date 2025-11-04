@@ -1,0 +1,11 @@
+{
+  "body": "Builtins and generated Torque/CSA builtins for String.prototype.toLowerCase / toUpperCase and generated files:\n// - src/builtins/builtins-string.tq: definitions for String.prototype.toLowerCase and toUpperCase builtin names and logic.\n// - src/builtins/builtins-string.cc / builtins/builtins-string-gen.cc / builtins/builtins-string-gen.h: generated CSA/Torque builtins and helpers for case conversions. See functions that call TO_THIS_STRING and case conversion branches (builtins/builtins-string.cc: TO_THIS_STRING, flattening and allocation decisions).\n// - src/builtins/builtins-intl.cc / builtins/builtins-intl-gen.cc: Intl variants and their builtin entrypoints; use of locale and fallback runtime calls.\n// - src/builtins/builtins-string-tsa.cc and builtins/builtins-string-gen.cc: AllocateSeqOneByteString/TwoByte and per-representation fast paths.\n",
+  "context": [
+    "builtins_string",
+    "builtins_intl",
+    "Torque",
+    "CSA"
+  ],
+  "explanation": "Collects the entrypoints and generated files for String.prototype.toLowerCase/toUpperCase, including Intl-aware builtins and allocation helpers used by their implementations. These files contain the Torque/CSA assembly used by JIT to call case conversion and allocate results.",
+  "file_line": "builtins/builtins-string.tq, builtins/builtins-string-gen.cc, builtins/builtins-intl.cc, builtins/builtins-intl-gen.cc, builtins/builtins-string-tsa.cc"
+}

@@ -1,0 +1,10 @@
+{
+  "body": "void ArrayIncludesIndexofAssembler::GenerateHoleyDoubles(SearchVariant variant, TNode<FixedDoubleArray> elements, TNode<Object> search_element, TNode<Smi> array_length, TNode<Smi> from_index) { ... }\n// Preconditions/guards: receiver is fast JSArray; elements_kind == HOLEY_DOUBLE_ELEMENTS. fromIndex is Smi-checked; handles holes treated as undefined (hole_loop) and NaN via nan_loop for includes (SameValueZero). Uses LoadFixedDoubleArrayElement with hole check; returns True/False or index.",
+  "context": [
+    "builtins_array_gen",
+    "holey_double_path",
+    "nan_and_hole_handling"
+  ],
+  "explanation": "Fast path for HOLEY_DOUBLE_ELEMENTS: treats holes as undefined in includes, explicitly checks for hole via LoadFixedDoubleArrayElement(..., &continue_loop) and handles NaN equality for includes (NaN==NaN). Handles fromIndex Smi clamping and returns quickly.",
+  "file_line": "builtins/builtins-array-gen.cc:GenerateHoleyDoubles()"
+}

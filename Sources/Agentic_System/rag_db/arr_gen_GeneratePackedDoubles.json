@@ -1,0 +1,11 @@
+{
+  "body": "BIND(&search_notnan);\nGotoIfNot(IsHeapNumber(CAST(search_element)), &return_not_found);\n\nsearch_num = LoadHeapNumberValue(CAST(search_element));\n\nLabel* nan_handling = variant == kIncludes ? &nan_loop : &return_not_found;\nBranchIfFloat64IsNaN(search_num.value(), nan_handling, &not_nan_case);\n\n// SIMD external call hookup\nTNode<ExternalReference> simd_function =\n    ExternalConstant(ExternalReference::array_indexof_includes_double());\nTNode<IntPtrT> result = UncheckedCast<IntPtrT>(CallCFunction(\n    simd_function, MachineType::UintPtr(),\n    std::make_pair(MachineType::TaggedPointer(), elements),\n    std::make_pair(MachineType::UintPtr(), array_length_untagged),\n    std::make_pair(MachineType::UintPtr(), index_var.value()),\n    std::make_pair(MachineType::TaggedPointer(), search_element)));\nindex_var = ReinterpretCast<IntPtrT>(result);\nBranch(IntPtrLessThan(index_var.value(), IntPtrConstant(0)),\n       &return_not_found, &return_found);",
+  "context": [
+    "builtins-array-gen:GeneratePackedDoubles",
+    "NaN handling",
+    "Float64Equal path",
+    "SIMD external call array_indexof_includes_double"
+  ],
+  "explanation": "Packed double path: checks for heap number, handles NaN branch for includes vs indexOf, and calls external SIMD function array_indexof_includes_double when vectorization is available.",
+  "file_line": "builtins/builtins-array-gen.cc:GeneratePackedDoubles (~lines 840-880)"
+}

@@ -1,0 +1,10 @@
+{
+  "body": "DoJSToNumberOrNumericTruncatesToFloat64 and DoJSToNumberOrNumericTruncatesToWord32 (simplified-lowering.cc):\n\n- Both functions lower JSToNumber / JSToNumeric into branches that first check ObjectIsSmi and convert via ChangeTaggedSignedToInt32 and ChangeInt32ToFloat64 (or TruncateFloat64ToWord32), else call ToNumber/ToNumeric builtin stub and then handle HeapNumber vs Smi cases in returns.\n- They create Branch(BranchSemantics::kMachine) on ObjectIsSmi, build IfTrue/IfFalse subgraphs, and create Merge + EffectPhi + Phi nodes assembling final Float64 or Word32 value.\n- They update exceptional call IfException uses to point to stub call node.\n- Finally they replace control/effect uses of original node and DeferReplacement with the new value Phi.\n\nKey lines: simplified-lowering.cc section 2 lines ~3180-3265 (Float64) and ~3266-3340 (Word32).\n\nWhy relevant: This defines how ToNumber conversions are lowered when truncations indicate Float64 or Word32 outputs; crucial for minus-zero behavior since Smi conversions treat -0 specially and stub calls can produce HeapNumber values (with -0) which are handled by subsequent checks (ObjectIsSmi) and Float64 conversions.\n\nFileLine: compiler/simplified-lowering.cc: DoJSToNumberOrNumericTruncatesToFloat64 & DoJSToNumberOrNumericTruncatesToWord32 implementations (~3180-3340).",
+  "context": [
+    "simplified-lowering.cc",
+    "simplified-lowering.h",
+    "representation-change.cc"
+  ],
+  "explanation": "Captures the lowering of JSToNumber/JSToNumeric to machine-level branches and how Smi/HeapNumber are handled, showing the points where -0 can enter the lowered graph (HeapNumber loads).",
+  "file_line": "compiler/simplified-lowering.cc:~3180-3340"
+}

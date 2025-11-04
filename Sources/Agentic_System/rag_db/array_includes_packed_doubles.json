@@ -1,0 +1,10 @@
+{
+  "body": "void ArrayIncludesIndexofAssembler::GeneratePackedDoubles(SearchVariant variant, TNode<FixedDoubleArray> elements, TNode<Object> search_element, TNode<Smi> array_length, TNode<Smi> from_index) { ... }\n// Preconditions/guards: receiver is fast JSArray; elements_kind == PACKED_DOUBLE_ELEMENTS. fromIndex Smi is untagged. Handles NaN via dedicated nan_loop for includes; vectorized SIMD call possible. Returns True/False or index.",
+  "context": [
+    "builtins_array_gen",
+    "packed_double_path",
+    "nan_handling"
+  ],
+  "explanation": "Fast path for PACKED_DOUBLE_ELEMENTS: uses direct double comparisons, handles NaN specially for includes (NaN==NaN), supports SIMD acceleration, returns quickly when found.",
+  "file_line": "builtins/builtins-array-gen.cc:~GeneratePackedDoubles()"
+}

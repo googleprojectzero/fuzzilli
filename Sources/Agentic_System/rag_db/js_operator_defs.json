@@ -1,0 +1,9 @@
+{
+  "body": "Files: compiler/js-operator.h and compiler/js-operator.cc\nOperators for with-scope/context and lookup:\n- const Operator* JSOperatorBuilder::CreateWithContext(ScopeInfoRef scope_info): defines IrOpcode::kJSCreateWithContext; input arity includes object + context; name \"JSCreateWithContext\".\n- ScopeInfoRef ScopeInfoOf(const Operator* op): used to extract scope info for CreateWith/Catch/Block.\n- Context ops: LoadContext(depth,index,immutable), LoadScriptContext(depth,index), StoreContext(depth,index), StoreScriptContext(depth,index); JSHasContextExtension(depth) operator. These are used by BGB for fast paths.\n- Global ops: LoadGlobal(NameRef, FeedbackSource, TypeofMode), StoreGlobal(LanguageMode, NameRef, FeedbackSource).\n- ToObject operator definition: const Operator* ToObject(); cached with Operator::kFoldable.\n- JS operator node wrappers exist for context operators and CreateWithContext (JSCreateWithContext appears in opcodes and builder).\nKey constant strings: JSOperatorBuilder::CreateWithContext in js-operator.cc around line ~1505 constructs Operator for IrOpcode::kJSCreateWithContext, name \"JSCreateWithContext\".\n",
+  "context": [
+    "bgb_visitors_with_lookup",
+    "tf_gen_lowering_with"
+  ],
+  "explanation": "This captures JS operator definitions for CreateWithContext and the various context load/store operations used by BytecodeGraphBuilder and lowering, as requested.",
+  "file_line": "compiler/js-operator.h:1067-1119; compiler/js-operator.cc:1505-1523 and surrounding"
+}

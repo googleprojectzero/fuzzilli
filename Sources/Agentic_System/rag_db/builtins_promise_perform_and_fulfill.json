@@ -1,0 +1,12 @@
+{
+  "body": "Builtins (Torque) and CSA implementations related to PerformPromiseThen/FulfillPromise/PromiseResolve/PromiseResolveThenableJob are defined in builtins/*.tq and generated C++ in builtins/builtins-promise-gen.cc/.h and various builtins *.cc generated from .tq. Key entries: builtins/promise-abstract-operations.tq (defines PerformPromiseThen), builtins/promise-resolve.tq (PromiseResolve), builtins/promise-jobs.tq (PromiseResolveThenableJob), builtins/promise-abstract-operations.tq (FulfillPromise), and generated code references in builtins/builtins-promise-gen.cc and builtins/builtins-promise-gen.h.",
+  "context": [
+    "builtins",
+    "PerformPromiseThen",
+    "FulfillPromise",
+    "PromiseResolve",
+    "PromiseResolveThenableJob"
+  ],
+  "explanation": "Points to Torque definitions and generated CSA entry points. These are targets that JSCallReducer lowers to (javascript()->PerformPromiseThen(), javascript()->FulfillPromise(), javascript()->PromiseResolve()).",
+  "file_line": "builtins/*.tq, builtins/builtins-promise-gen.cc/h"
+}

@@ -1,0 +1,11 @@
+{
+  "body": "Operators and generic lowering for CreateWithContext and LookupSlot runtime calls:\n\nJS operators (js-operator.{h,cc}):\n- JSOperatorBuilder::CreateWithContext(ScopeInfoRef scope_info)\n  Defined in js-operator.cc around: \n  return zone()->New<Operator1<ScopeInfoRef>>( IrOpcode::kJSCreateWithContext, Operator::kNoProperties, \"JSCreateWithContext\", 1, 1, 1, 1, 1, 2, ScopeInfoRef{scope_info});\n- Exposure in header js-operator.h: const Operator* CreateWithContext(ScopeInfoRef scope_info);\n- LoadContext/LoadScriptContext/StoreContext/StoreScriptContext operators for fast-path context/global access used by builder.\n- ToObject operator: JSOperatorBuilder::ToObject() (Operator::kFoldable, 1->1) used by BytecodeGraphBuilder::VisitToObject.\n\nJSGenericLowering (js-generic-lowering.cc):\n- LowerJSCreateWithContext(Node* node):\n  ScopeInfoRef scope_info = ScopeInfoOf(node->op());\n  node->InsertInput(zone(), 1, jsgraph()->ConstantNoHole(scope_info, broker()));\n  ReplaceWithRuntimeCall(node, Runtime::kPushWithContext);\n  => Lowers TF node IrOpcode::kJSCreateWithContext to runtime PushWithContext(context, object, scope_info).\n\n- For Load/StoreLookupSlot: Not direct TF operators; these come from BytecodeGraphBuilder emitting CallRuntime nodes; JSGenericLowering::LowerJSCallRuntime handles generic call runtime lowering by constructing a Call descriptor to runtime with id and arity.\n\n- ToObject:\n  REPLACE_STUB_CALL(ToObject) macro defines LowerJSToObject to call Builtin::kToObject.\n\n- Notes on global IC inside typeof handled elsewhere. The CreateWithContext runtime path is centralized here.\n",
+  "context": [
+    "v8_with_lookup_and_withscope",
+    "js_operator_createwith",
+    "js_generic_lowering_createwith",
+    "bytecode_graph_with_and_lookup_core"
+  ],
+  "explanation": "Connects the JS operator node for CreateWithContext with its generic lowering to Runtime::PushWithContext. Also references that lookup-slot bytecodes are represented via CallRuntime operators rather than dedicated JS operators, and that ToObject lowering goes to Builtin::kToObject, which is used by Ignition and TF.",
+  "file_line": "compiler/js-operator.cc:1505-1510; compiler/js-operator.h:1115; compiler/js-generic-lowering.cc:863-871, 70"
+}

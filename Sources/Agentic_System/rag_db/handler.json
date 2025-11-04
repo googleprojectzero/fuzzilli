@@ -1,0 +1,9 @@
+{
+  "body": "Stage:1 region:KeyedLoadIC_StringIndex_Protector\nTopic: handler \u2014 CSA keyed-load handler for strings: guard sequence and behavior.\n\nHandler encoding:\n- LoadHandler::Kind::kIndexedString is the Smi-encoded data handler kind representing string-index fast-path. LoadHandler::LoadIndexedString(Isolate*, KeyedAccessLoadMode) builds the Smi handler. See ic/handler-configuration.{h,inl,cc}.\n\nCSA path (accessor-assembler):\n- AccessorAssembler::GenerateKeyedLoadIC (ic/accessor-assembler.cc) branches on handler kind (LOAD_KIND(kIndexedString)) and emits the string-index code sequence.\n- Typical guard sequence:\n  1) Check receiver is a String or a String wrapper; if wrapper allowed, check Protectors::IsStringWrapperToPrimitiveIntact.\n  2) Canonicalize key to intptr_t index (Smi/HeapNumber/string-as-index), canonicalize -0 to 0.\n  3) Bounds check: index < string.length; if AllowOutOfBounds bit set, return undefined for OOB.\n  4) Switch on string representation: SeqOneByte/TwoByte, External, Cons/Sliced/Thin; unwrap Thin, possibly avoid flattening Cons/Sliced; perform character load.\n  5) Allocate/return one-character string with appropriate encoding (use single-char cache or factory).\n  6) On guard failure fall back to generic load/megamorphic path.\n\nAssumptions: external strings considered read-only; deep ropes/complex shapes may trigger fallback. Encoding-specific loads ensure correct element width (1 or 2 bytes).\n",
+  "context": [
+    "inventory",
+    "protector"
+  ],
+  "explanation": "CSA-level description of the kIndexedString handler behavior and the guard sequence emitted by AccessorAssembler for keyed loads that target strings.",
+  "file_line": "src/ic/handler-configuration.h; src/ic/handler-configuration-inl.h:LoadIndexedString; src/ic/accessor-assembler.cc:GenerateKeyedLoadIC; src/builtins/builtins-ic-gen.cc:Generate_KeyedLoadIC"
+}

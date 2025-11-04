@@ -1,0 +1,10 @@
+{
+  "body": "Turboshaft MachineLoweringReducer handling ObjectIsOp::Kind::kUndetectable\n\nFile: compiler/turboshaft/machine-lowering-reducer-inl.h\nSymbol: MachineLoweringReducer::REDUCE(ObjectIs)\n\nKey excerpts:\n- In the REDUCE(ObjectIs) implementation, for case ObjectIsOp::Kind::kUndetectable: it first checks if (DependOnNoUndetectableObjectsProtector()) then returns a check that input is undefined or null (TaggedEqual checks against factory_->undefined_value and null_value). If the protector dependence is false (protector invalid), falls through to generic map-bit undetectable check.\n- There are multiple references in this REDUCE handling that call DependOnNoUndetectableObjectsProtector() and otherwise load map -> check IsUndetectableBit.\n\nFile/lines: compiler/turboshaft/machine-lowering-reducer-inl.h around ObjectIs reduction implementation (ObjectIsOp::Kind::kUndetectable handling).\n\nExplanation: This shows where Turboshaft lowering will opt into using the protector to replace undetectable checks with direct null/undefined checks when DependOnNoUndetectableObjectsProtector() returns true, mirroring the high-level typed lowering. It also shows where the broker->dependencies()->DependOnNoUndetectableObjectsProtector() gets called when lowering needs it.\n",
+  "context": [
+    "turboshaft",
+    "objectis_undetectable",
+    "depend_on_protector"
+  ],
+  "explanation": "Records how MachineLoweringReducer consults DependOnNoUndetectableObjectsProtector and when it emits undefined/null checks vs map bit checks.",
+  "file_line": "compiler/turboshaft/machine-lowering-reducer-inl.h:REDUCE(ObjectIs)"
+}

@@ -1,0 +1,10 @@
+{
+  "body": "MaglevAssembler JumpIfUndetectable / JumpIfNotUndetectable / ToBoolean uses DependOnNoUndetectableObjectsProtector via compilation_info()->broker()->dependencies()->DependOnNoUndetectableObjectsProtector().\n\nKey excerpts from maglev/maglev-assembler.cc:\n- JumpIfNotUndetectable: checks Smi then loads map and tests Map::Bits1::IsUndetectableBit mask and jumps accordingly.\n- JumpIfUndetectable: same but inverted; uses LoadMap and TestUint8AndJumpIfAnySet on Map::kBitFieldOffset.\n- ToBoolean: checks false/true/empty string, and conditionally checks undefined/null only if DependOnNoUndetectableObjectsProtector() returned true (i.e., it attached protector dependency). If not, it later loads map and tests undetectable bit and treats undetectable as false.\n\nWhy interesting: Shows Maglev codegen places protector-dependent checks/assumptions by querying CompilationDependencies via broker and emits conditional checks vs map-bit checks when dependency is absent/present.\n\nfile_line: maglev/maglev-assembler.cc: JumpIfUndetectable/JumpIfNotUndetectable/ToBoolean around lines 1xx-260\n",
+  "context": [
+    "maglev",
+    "protectors",
+    "compilation_dependencies"
+  ],
+  "explanation": "Maglev assembler emits direct map-bit tests for undetectable and uses compilation dependencies to decide whether it can assume that no undetectable objects exist (and then bake-in checks for null/undefined roots) or must emit map-bit checks. This entry captures exact locations and rationale.",
+  "file_line": "maglev/maglev-assembler.cc: ~ lines 1-260"
+}

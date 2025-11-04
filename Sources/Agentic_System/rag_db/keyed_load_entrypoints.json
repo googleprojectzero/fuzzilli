@@ -1,0 +1,11 @@
+{
+  "body": "Files/symbols implementing entrypoints from JS into keyed Load IC:\n- src/builtins/builtins-ic-gen.cc:\n  Builtins::Generate_KeyedLoadIC(), Generate_KeyedLoadIC_Megamorphic(), Generate_KeyedLoadIC_PolymorphicName(), Generate_KeyedLoadICTrampoline(), Generate_KeyedLoadICBaseline(), Generate_EnumeratedKeyedLoadIC[Baseline](). Each delegates to AccessorAssembler methods.\n- src/ic/accessor-assembler.cc:\n  AccessorAssembler::GenerateKeyedLoadIC(), GenerateKeyedLoadIC_Megamorphic(), GenerateKeyedLoadIC_PolymorphicName(), GenerateKeyedLoadICTrampoline(), GenerateKeyedLoadICBaseline(), GenerateEnumeratedKeyedLoadIC[Baseline]().\n  AccessorAssembler::KeyedLoadIC(const LoadICParameters*, LoadAccessMode), KeyedLoadICGeneric, KeyedLoadICPolymorphicName implement the IC control flow for keyed loads.\n- src/ic/ic.cc:\n  RUNTIME_FUNCTION(Runtime_KeyedLoadIC_Miss) is the runtime miss handler. KeyedLoadIC class methods implement feedback update and handler selection: KeyedLoadIC::Load, KeyedLoadIC::LoadName, KeyedLoadIC::RuntimeLoad, KeyedLoadIC::UpdateLoadElement, KeyedLoadIC::LoadElementHandler, KeyedLoadIC::LoadElementPolymorphicHandlers. Also helpers computing load mode for elements: GetNewKeyedLoadMode, GetUpdatedLoadModeForMap, AllowConvertHoleElementToUndefined, AllowReadingHoleElement.\n- Interface descriptors (call conv): src/codegen/interface-descriptors.h and per-arch in codegen/*/interface-descriptors-*-inl.h define KeyedLoad{,WithVector,Baseline} descriptors used by builtins.\n",
+  "context": [
+    "v8_ic_accessors",
+    "v8_builtins_ic",
+    "v8_keyed_load_miss",
+    "v8_keyed_load_update"
+  ],
+  "explanation": "This entry concentrates the concrete entrypoints from JS into the Keyed Load IC: baseline/interpreter/builtin stubs route to AccessorAssembler methods, while runtime miss leads to KeyedLoadIC::Load. These functions are the starting points to understand fast paths for a[i] and their control flow.",
+  "file_line": "builtins/builtins-ic-gen.cc:52; ic/accessor-assembler.cc:4662-4776; ic/ic.cc:1552-1610, 2775-2919; codegen/interface-descriptors.h:1282-1314"
+}

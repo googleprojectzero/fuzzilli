@@ -1,0 +1,11 @@
+{
+  "body": "Files: src/wasm/wasm-import-wrapper-cache.{h,cc}\n- class wasm::WasmImportWrapperCache\n  - struct CacheKey { ImportCallKind kind; CanonicalTypeIndex type_index; int expected_arity; Suspend suspend; bool operator==; Hash }\n  - LazyInitialize(Isolate* triggering_isolate): reserves code space for wrappers and initializes WasmCodeAllocator\n  - ModificationScope helper (RAII lock) with operator[](key) and AddWrapper(key, WasmCompilationResult result, WasmCode::Kind kind) -> installs code and reloc info into wrapper code space, sets up WasmCode object, tracks in entry_map_ and codes_ map, handles refcount init\n  - CompileWasmImportCallWrapper(Isolate*, ImportCallKind, const CanonicalSig*, CanonicalTypeIndex sig_index, bool source_positions, int expected_arity, Suspend): invokes compiler::CompileWasmImportCallWrapper and AddWrapper under lock, logs and counters, returns WasmCode*\n  - MaybeGet(kind, type_index, expected_arity, suspend): thread-safe lookup, AddRef and return WasmCode* or nullptr\n  - FindWrapper(WasmCodePointer call_target): reverse-lookup by CPT entrypoint\n  - Lookup(Address pc): lookup by instruction address (disassembler)\n  - Free(std::vector<WasmCode*>& wrappers): frees code, clears maps\n  - LogForIsolate, EstimateCurrentMemoryConsumption\n- Integrations:\n  - wasm/wasm-objects.cc installs wrappers into WasmDispatchTable entries and uses MaybeGet/Compile paths; also calls FindWrapper on WasmJSFunctionData.\n  - compiler/wasm-compiler.cc provides CompileWasmImportCallWrapper implementation using Turboshaft pipeline.\n",
+  "context": [
+    "wrappers_ts_builders",
+    "tf_wrappers_builders_pipeline",
+    "wasm_objects_glue",
+    "compiler_pipeline_wasm_wrappers"
+  ],
+  "explanation": "Indexes the import wrapper cache including key structure and compile/install paths, and the reverse lookup helper. This is central to managing wasm-to-js wrapper code objects and their code pointer table entries.",
+  "file_line": "wasm/wasm-import-wrapper-cache.h: CacheKey; .cc: LazyInitialize, AddWrapper, CompileWasmImportCallWrapper, MaybeGet, FindWrapper, Lookup"
+}

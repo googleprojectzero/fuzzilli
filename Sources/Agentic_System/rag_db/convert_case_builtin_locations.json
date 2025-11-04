@@ -1,0 +1,10 @@
+{
+  "body": "builtins/builtins-string.cc: BUITIN(StringPrototypeToLowerCase), BUITIN(StringPrototypeToUpperCase), StringPrototypeToLocaleLowerCase, StringPrototypeToLocaleUpperCase. These call ConvertCase and mappings from isolate->runtime_state().to_lower_mapping()/to_upper_mapping(). Also builtins/builtins-intl-gen.cc: TF_BUILTIN(StringPrototypeToLowerCaseIntl, IntlBuiltinsAssembler) and TF_BUILTIN(StringToLowerCaseIntl) generated CSA entry points. compiler/js-call-reducer.cc has ReduceStringPrototypeToLowerCaseIntl/UpperCaseIntl that lower the JSCall to simplified opcodes.",
+  "context": [
+    "torque_builtins",
+    "runtime_intl",
+    "maglev_turbofan_reduction"
+  ],
+  "explanation": "Identifies the Torque builtin names (StringPrototypeToLowerCase, ToUpperCase and Intl variants) and where they are dispatched in builtins and compiler reducers. Important anchors for CSA and turbine code and inline replacement across tiers.",
+  "file_line": "src/builtins/builtins-string.cc:~280-420"
+}

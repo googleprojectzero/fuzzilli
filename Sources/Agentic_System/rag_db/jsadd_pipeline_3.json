@@ -1,0 +1,11 @@
+{
+  "body": "compiler/turboshaft/machine-lowering-reducer-inl.h:REDUCE(ObjectIs) handles ObjectIsOp::Kind::kUndetectable by calling DependOnNoUndetectableObjectsProtector() (member helper DependOnNoUndetectableObjectsProtector() at bottom of file). If the protector dependency is present, it folds ObjectIs(Undetectable) into tagged-equals checks against undefined and null (is_undefined || is_null). The helper uses broker_->dependencies()->DependOnNoUndetectableObjectsProtector() to register the protector dependency (caches result in optional<bool> undetectable_objects_protector_). This is the Turboshaft lowering/assumption point that converts ObjectIsUndetectable to simple comparisons under the protector dependency.",
+  "context": [
+    "turboshaft",
+    "machine_lowering",
+    "object_is",
+    "protectors"
+  ],
+  "explanation": "Documents the exact spot in the turboshaft machine-lowering reducer where ObjectIsUndetectable is folded to simple comparisons when the NoUndetectableObjects protector dependency is recorded. Shows the dependency registration path through JSHeapBroker/CompilationDependencies.",
+  "file_line": "compiler/turboshaft/machine-lowering-reducer-inl.h:REDUCE(ObjectIs) (kUndetectable case)"
+}

@@ -1,0 +1,12 @@
+{
+  "body": "File: compiler/js-native-context-specialization.cc\nSymbol: JSNativeContextSpecialization::Reduce (handles various JS ops including JSEqual folding to ObjectIsUndetectable when one side null/undefined if present?)\nExcerpt: Search shows JSNativeContextSpecialization contains many reductions; JSEqual specific handling lives in js-typed-lowering.cc; JSNativeContextSpecialization registers protector dependencies in some reductions (e.g., PromiseHook, MegaDOMProtector).",
+  "context": [
+    "js-typed-lowering",
+    "turboshaft/machine-lowering-reducer-inl.h",
+    "compilation-dependencies.cc",
+    "maglev/maglev-assembler.cc",
+    "maglev/maglev-ir.h"
+  ],
+  "explanation": "Record pointing to JSNativeContextSpecialization as a general place for JS op folding (context specialization). Not direct JSEqual folding, but relevant for dependencies like DependOnNoUndetectableObjectsProtector used elsewhere.",
+  "file_line": "compiler/js-native-context-specialization.cc:1-200"
+}

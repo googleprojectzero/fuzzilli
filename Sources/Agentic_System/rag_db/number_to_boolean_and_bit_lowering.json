@@ -1,0 +1,9 @@
+{
+  "body": "NumberToBoolean lowering and DoIntegral32ToBit/DoOrderedNumberToBit/DoNumberToBit (simplified-lowering.cc):\n\n- NumberToBoolean: comments note that 0 and -0 both map to false, so kIdentifyZeros truncation is used. Behavior by input_type:\n  * Integral32OrMinusZeroOrNaN -> TruncatingWord32 -> Bit; lowering->DoIntegral32ToBit(node)\n  * OrderedNumber -> TruncatingFloat64(kIdentifyZeros) -> Bit; lowering->DoOrderedNumberToBit(node)\n  * default -> TruncatingFloat64(kIdentifyZeros) -> Bit; lowering->DoNumberToBit(node)\n\n- DoIntegral32ToBit: replaces input with (input == 0) and changes op to Word32Equal comparing to zero (append zero). Thus 0 and -0 map to zero (word32), -0 represented as 0 already.\n\n- DoOrderedNumberToBit: replaces input with Float64Equal(input, 0.0) and compares with 0 via Word32Equal; uses Float64Equal so it treats +0 and -0 as equal; sets op to Word32Equal.\n\n- DoNumberToBit: replaces input with 0.0 constant and appends Float64Abs(input) then changes op to Float64LessThan; this ensures that negative zero is treated via abs and 0/ -0 map to false.\n\nRelevant code: simplified-lowering.cc section 2 lines ~3460-3560 and functions DoIntegral32ToBit, DoOrderedNumberToBit, DoNumberToBit around ~3410-3440.\n",
+  "context": [
+    "simplified-lowering.cc",
+    "use-info.h"
+  ],
+  "explanation": "This records where NumberToBoolean is lowered to bit tests and how minus-zero is neutralized by using abs or equality with zero for ordered numbers, ensuring both 0 and -0 yield false.",
+  "file_line": "compiler/simplified-lowering.cc:~3410-3560"
+}

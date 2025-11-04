@@ -1,0 +1,10 @@
+{
+  "body": "objects/string-inl.h: uint8_t ExternalOneByteString::Get(...) and uint16_t ExternalTwoByteString::Get(...) inline implementations\nobjects/string.h: ExternalOneByteString and ExternalTwoByteString classes with resource accessors and Get methods\nbuiltins and code paths using External strings: extensions/externalize-string-extension.cc, objects/string.cc (externalization and Get handling)",
+  "context": [
+    "objects/string-inl.h",
+    "objects/string.h",
+    "extensions/externalize-string-extension.cc"
+  ],
+  "explanation": "Anchors for External string handling, resource pointer management, Get methods for external one/two-byte strings and update_data_cache.",
+  "file_line": "objects/string-inl.h: implementation lines for ExternalOneByteString::Get and ExternalTwoByteString::Get"
+}

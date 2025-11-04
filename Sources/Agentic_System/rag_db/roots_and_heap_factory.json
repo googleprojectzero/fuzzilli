@@ -1,0 +1,11 @@
+{
+  "body": "roots/roots.h (strong mutable immovable roots) entry for no_undetectable_objects_protector:\nV(PropertyCell, no_undetectable_objects_protector,                           \n    NoUndetectableObjectsProtector)\n\nheap/setup-heap-internal.cc: In CreateInitialMutableObjects(), protector is set via factory->NewProtector():\nset_no_undetectable_objects_protector(*factory->NewProtector());\n\nThis shows the root's accessor and that the factory provides NewProtector to create the PropertyCell used as the protector cell.",
+  "context": [
+    "execution/protectors.h",
+    "roots_roots.h",
+    "heap_setup_heap_internal_cc",
+    "factory_root_accessors"
+  ],
+  "explanation": "Identifies where the protector root is declared and where the heap sets up the protector cell, via Factory::NewProtector(). This anchor is important for DependencyAttachment to the protector cell.",
+  "file_line": "roots/roots.h:336-338; heap/setup-heap-internal.cc:~1395"
+}

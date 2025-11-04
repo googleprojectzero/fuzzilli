@@ -1,0 +1,10 @@
+{
+  "body": "Reduction JSTypedLowering::ReduceJSEqual / ReduceJSStrictEqual folding of null/undefined to ObjectIsUndetectable and use of DependOnNoUndetectableObjectsProtector seen in compiler/js-typed-lowering.cc\n\nKey excerpts:\n- JSTypedLowering::ReduceJSEqual: handles OneInputIs(Type::NullOrUndefined()) by RelaxEffectsAndControls, removing one input and changing op to simplified()->ObjectIsUndetectable().\n- For ReceiverOrNullOrUndefined compare, generates control flow: if lhs is undefined/null -> check ObjectIsUndetectable(rhs) etc., using JSGraphAssembler and ObjectIsUndetectable node.\n- JSTypedLowering::ReduceJSStrictEqual: uses OneInputIs(Type::NullOrUndefined()) via CheckReceiverOrNullOrUndefined to ReferenceEqual but does not change to ObjectIsUndetectable.\n\nWhy interesting: Shows Turbofan-tier folding of ==/=== in typed lowering into ObjectIsUndetectable or ReferenceEqual and where the protector dependency (DependOnNoUndetectableObjectsProtector) is consulted by downstream phases.\n\nfile_line: compiler/js-typed-lowering.cc: around ReduceJSEqual/ReduceJSStrictEqual\n",
+  "context": [
+    "compilation_dependencies",
+    "protectors",
+    "typed_lowering"
+  ],
+  "explanation": "JSTypedLowering (Turbofan typed reducers) perform the high-level folding of JSEqual and JSStrictEqual: they transform null/undefined comparisons into ObjectIsUndetectable checks or ReferenceEqual when safe. This entry records the exact location and rationale.",
+  "file_line": "compiler/js-typed-lowering.cc: ~ lines 350-680"
+}

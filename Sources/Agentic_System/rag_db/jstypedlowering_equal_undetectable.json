@@ -1,0 +1,10 @@
+{
+  "body": "JSTypedLowering::ReduceJSEqual / ReduceJSStrictEqual folding to ObjectIsUndetectable\n\nFile: compiler/js-typed-lowering.cc\nSymbols: JSTypedLowering::ReduceJSEqual, JSTypedLowering::ReduceJSStrictEqual\n\nKey excerpts:\n- In ReduceJSEqual, when OneInputIs(Type::NullOrUndefined()), the code relaxes effects/controls, removes the null/undefined input and changes the operator to simplified()->ObjectIsUndetectable(). (lines around: node->RemoveInput(...); NodeProperties::ChangeOp(node, simplified()->ObjectIsUndetectable());)\n- In the ReceiverOrNullOrUndefined path (abstract equality), it lowers to a small branch sequence using JSGraphAssembler and ultimately uses ObjectIsUndetectable on the other side when one side is null/undefined. (Uses __ ObjectIsUndetectable(check_undetectable.PhiAt<Object>(0));)\n- ReduceJSStrictEqual handles ReceiverOrNullOrUndefined by CheckLeftInputToReceiverOrNullOrUndefined and then ReferenceEqual; but JSEqual has the undetectable folding as above.\n\nFile/lines: compiler/js-typed-lowering.cc (function definitions near ~ lines 300-600 in file)\n\nExplanation: This reduction turns comparisons like x == null or x === null/undefined in some cases into checks for undetectability by emitting simplified ObjectIsUndetectable nodes or lowering to ObjectIsUndetectable via JSGraphAssembler when appropriate. The JSEqual path specifically folds abstract equality cases to ObjectIsUndetectable when one operand is null/undefined.\n",
+  "context": [
+    "objectisundetectable",
+    "js_typed_lowering",
+    "equality_folding"
+  ],
+  "explanation": "Records the exact lowering points in JSTypedLowering that fold == null/undefined into ObjectIsUndetectable; includes where JSGraphAssembler emits ObjectIsUndetectable in the ReceiverOrNullOrUndefined path.",
+  "file_line": "compiler/js-typed-lowering.cc:~(ReduceJSEqual/ReduceJSStrictEqual)"
+}

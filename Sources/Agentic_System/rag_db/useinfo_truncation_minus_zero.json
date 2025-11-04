@@ -1,0 +1,10 @@
+{
+  "body": "File: compiler/use-info.h\nAnchors and symbols:\n- enum IdentifyZeros { kIdentifyZeros, kDistinguishZeros } (lines ~16-23). Controls whether truncation identifies +0 and -0 or distinguishes them.\n- class Truncation and Truncation::IdentifiesZeroAndMinusZero() (lines ~29-117). Truncation carries identify_zeros and TruncationKind (kNone, kBool, kWord32, kWord64, kOddballAndBigIntToNumber, kAny). Methods: Generalize, IdentifyZeros helpers.\n- UseInfo constructors and static factory methods (UseInfo::TruncatingFloat64, UseInfo::TruncatingWord32, UseInfo::CheckedNumberAsFloat64 etc.) (lines ~190-310). UseInfo::minus_zero_check() method computes whether a minus-zero check is needed: it returns truncation().IdentifiesZeroAndMinusZero() ? kDontCheckForMinusZero : kCheckForMinusZero (lines ~331-336). This is the central helper that RepresentationChanger uses to pass correct CheckForMinusZeroMode for checked conversions.\nWhy interesting: This file defines the IdentifyZeros enumeration and Truncation logic, and the UseInfo helper minus_zero_check(), which determines whether a checked conversion should check for -0. These are the logical gates used by SimplifiedLowering and RepresentationChanger when deciding to insert or omit minus-zero checks.",
+  "context": [
+    "Truncation",
+    "IdentifyZeros",
+    "UseInfo::minus_zero_check"
+  ],
+  "explanation": "UseInfo/Truncation define identify_zeros and how truncations generalize; UseInfo::minus_zero_check() is the key API used by RepresentationChanger to decide check insertion.",
+  "file_line": "compiler/use-info.h:16-336"
+}

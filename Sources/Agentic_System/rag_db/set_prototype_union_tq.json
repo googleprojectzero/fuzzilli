@@ -1,0 +1,10 @@
+{
+  "body": "File: src/builtins/set-union.tq\nSymbol: transitioning javascript builtin SetPrototypeUnion(js-implicit context: NativeContext, receiver: JSAny)(other: JSAny): JSSet\nSynopsis: Implements TC39 Set.prototype.union. Fast-paths for other being JSSet or JSMap with no custom iteration; SlowPath uses GetKeysIterator, IteratorStep, IteratorValue. Uses GetSetRecord, NewStableBackingTableWitness, NewUnmodifiedOrderedHashSetIterator/NewUnmodifiedOrderedHashMapIterator, CloneFixedArray, AddToSetTable, and constructs new JSSet with table=resultSetData.\nKey lines: starts at builtins/set-union.tq; contains methodName constant and fastIteratorResultMap usage.",
+  "context": [
+    "collections_tq_macros",
+    "collections_csa_gen",
+    "add_to_set_table_csa"
+  ],
+  "explanation": "This entry indexes the Torque builtin implementing Set.prototype.union. It is a primary entry point for control/data-flow analysis of union semantics: where it clones backing table, iterates other collection, calls AddToSetTable and iterator helpers. We will use this ID to fetch exact Torque source and map callees.",
+  "file_line": "src/builtins/set-union.tq:1-200"
+}

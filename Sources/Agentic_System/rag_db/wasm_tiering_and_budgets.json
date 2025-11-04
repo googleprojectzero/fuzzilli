@@ -1,0 +1,10 @@
+{
+  "body": "Tiering controllers and wrapper-tier budgeting touchpoints:\n- src/wasm/wasm-objects.h\n  - class WasmTrustedInstanceData has field: tiering_budget_array (std::atomic<uint32_t>*) and jump_table_start; used by tiering to manage per-function budget and call counts. Wrappers and dispatch tables use call targets that may tier-up functions independently of wrappers.\n- src/compiler/wasm-compiler.cc\n  - Wrapper builders do not themselves implement tiering heuristics, but integrate with existing budget counters via BuildWasmCall and call counts tracking. WasmGraphBuilder::StoreCallCount and ReserveCallCounts allow counting wasm call instructions; used in wasm compilation.\n  - CompileWasmImportCallWrapper and friends generate wrapper stubs once; no tiering for the stubs themselves. The WasmImportWrapperCache stores compiled wrappers with ExecutionTier::kNone (stubs), independent from Liftoff/Turbofan tiering of wasm bodies.\n- src/wasm/wrappers.cc\n  - BuildWasmWrapper(WrapperCompilationInfo) selects code kind only; wrappers are not tiered like wasm functions. They may manage stack switching and set thread_in_wasm_flag for correct runtime accounting and unwinding.\n- Dispatch table and wrappers:\n  - WasmDispatchTableData tracks wrapper code pointers; switching from generic to compiled wrapper can be seen as an \"upgrade\", but not controlled by per-function tiering budgets; it is driven by import site resolution and the wrapper cache (availability of compiled specialized wrappers vs using generic signature-hash wrapper).",
+  "context": [
+    "wasm_objects_core",
+    "wasm_wrappers_cache",
+    "wasm_wrappers_entry_points"
+  ],
+  "explanation": "Summarizes item (4), indicating where tiering is present (module functions) versus wrapper stubs (not tiered), and where budgeting arrays live. Notes generic\u2192compiled wrapper switching is cache-driven, not tier-budgeted.",
+  "file_line": "wasm/wasm-objects.h:WasmTrustedInstanceData::kTieringBudgetArrayOffset; compiler/wasm-compiler.cc: functions at end; wasm/wrappers.cc: BuildWasmWrapper"
+}

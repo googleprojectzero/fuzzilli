@@ -1,0 +1,9 @@
+{
+  "body": "simplified-lowering.cc: VisitNode<LOWER> handles IrOpcode::kSpeculativeNumberMultiply, IrOpcode::kSpeculativeNumberAdd, IrOpcode::kSpeculativeNumberDivide and IrOpcode::kNumberFloor/NumberRound/NumberTrunc paths. Key functions: VisitForCheckedInt32Mul (around line ~1500), VisitSpeculativeAdditiveOp, VisitSpeculativeIntegerAdditiveOp, VisitSpeculativeNumberModulus, VisitSpeculativeNumberDivide, and the NumberCeil/Floor/Round/Trunc handling at the NumberCeil... case (~lines 2700-2800). These implement propagation and lowerings with UseInfo specifying IdentifyZeros / TruncatingFloat64 modes.",
+  "context": [
+    "representation_changer_conversion_helpers",
+    "useinfo_truncation_minus_zero"
+  ],
+  "explanation": "Anchors for simplified lowering speculative and Math.* operations: points to the visitor cases in simplified-lowering.cc for SpeculativeNumberMultiply/Add/Divide and NumberFloor/Round/Trunc handling relevant for minus-zero semantics and float/int lowering.",
+  "file_line": "compiler/simplified-lowering.cc:1490-1510, 2700-2760"
+}

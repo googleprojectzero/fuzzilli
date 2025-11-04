@@ -1,0 +1,11 @@
+{
+  "body": "execution/protectors.h: protector declarations for NoUndetectableObjects\n\nExcerpt:\n#define DECLARED_PROTECTORS_ON_ISOLATE(V)                                     \\\n  ...\n  V(NoUndetectableObjects, NoUndetectableObjectsProtector,                    \\\n    no_undetectable_objects_protector)\n\nAnd the DECLARE_PROTECTOR_ON_ISOLATE macro expands to:\n  V8_EXPORT_PRIVATE static inline bool IsNoUndetectableObjectsIntact(Isolate* isolate);\n  V8_EXPORT_PRIVATE static void InvalidateNoUndetectableObjects(Isolate* isolate);\n",
+  "context": [
+    "roots_roots.h",
+    "heap_setup_heap_internal_cc",
+    "compilation_dependencies_cc",
+    "api_api_natives_cc"
+  ],
+  "explanation": "Header defines protector name and helper APIs IsNoUndetectableObjectsIntact and InvalidateNoUndetectableObjects. This entry maps to protectors.h lines.",
+  "file_line": "execution/protectors.h:30-40"
+}

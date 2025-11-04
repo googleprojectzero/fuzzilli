@@ -1,0 +1,10 @@
+{
+  "body": "BUILTIN entrypoints and Torque/CSA spots for case conversion:\n- builtins/builtins-string.cc: BUITIN(StringPrototypeToLowerCase) and BUITIN(StringPrototypeToUpperCase) -> call ConvertCase(..., isolate->runtime_state()->to_lower_mapping()/to_upper_mapping()).\n- builtins/builtins-intl-gen.cc: TF_BUILTIN(StringToLowerCaseIntl, IntlBuiltinsAssembler) and TF_BUILTIN(StringPrototypeToLowerCaseIntl, IntlBuiltinsAssembler) -> CallBuiltin(Builtin::kStringToLowerCaseIntl, ...)\n- builtins/builtins-intl.cc: BUITIN(StringPrototypeToUpperCaseIntl)\n- init/bootstrapper.cc: registers Builtin::kStringPrototypeToLowerCase and Intl variants in bootstrapping.\nPurpose: anchors for the JS-level builtins and CSA/Torque-generated entry points for non-Intl and Intl variants.",
+  "context": [
+    "builtins-string",
+    "builtins-intl",
+    "torque-csa"
+  ],
+  "explanation": "Provides exact builtin names and the primary C++ functions that implement String.prototype.toLowerCase/UpperCase and their Intl variants. These are the entry points used by higher-tier compilers (Maglev/TurboFan) and runtimes.",
+  "file_line": "src/builtins/builtins-string.cc (StringPrototypeToLowerCase/UpperCase); src/builtins/builtins-intl-gen.cc (StringToLowerCaseIntl TF_BUILTIN)"
+}

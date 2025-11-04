@@ -1,0 +1,8 @@
+{
+  "body": "// Deopt reason and check site for array length change in forEach loop\n// src/maglev/maglev-graph-builder.cc (within TryReduceArrayForEach)\n// After callback, re-load length and compare to original; deopt if changed.\nValueNode* current_length = BuildLoadJSArrayLength(receiver);\nsub_builder.set(var_length, current_length);\nif (current_length != original_length) {\n  RETURN_IF_ABORT(\n      TryBuildCheckInt32Condition(original_length_int32, current_length,\n                                  AssertCondition::kUnsignedLessThanEqual,\n                                  DeoptimizeReason::kArrayLengthChanged));\n}\n\n// CheckInt32Condition IR node emits a deopt on mismatch with given reason\n// src/maglev/maglev-ir.cc\nvoid CheckInt32Condition::GenerateCode(MaglevAssembler* masm,\n                                       const ProcessingState& state) {\n  Label* fail = __ GetDeoptLabel(this, reason());\n  __ CompareInt32AndJumpIf(ToRegister(left_input()), ToRegister(right_input()),\n                           NegateCondition(ToCondition(condition())), fail);\n}\n\n// ArrayLengthChanged reason is declared in src/deoptimizer/deoptimize-reason.h\n// and propagated into codegen deopt labels.\n",
+  "context": [
+    "maglev_foreach_tryreduce"
+  ],
+  "explanation": "Highlights the exact site in Maglev\u2019s Array.prototype.forEach lowering where it enforces that the array length hasn\u2019t changed during iteration. It re-reads the JSArray length and emits a CheckInt32Condition with AssertCondition::kUnsignedLessThanEqual and DeoptimizeReason::kArrayLengthChanged, ensuring correctness if the callback mutates the length.",
+  "file_line": "maglev/maglev-graph-builder.cc:8306-8320; maglev/maglev-ir.cc:... CheckInt32Condition::GenerateCode"
+}

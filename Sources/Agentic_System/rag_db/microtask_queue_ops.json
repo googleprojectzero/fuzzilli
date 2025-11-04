@@ -1,0 +1,10 @@
+{
+  "body": "MicrotaskQueue::EnqueueMicrotask(v8::Isolate* v8_isolate, v8::Local<Function> function)\n - wraps a Function into a CallableTask and calls EnqueueMicrotask(*microtask).\nMicrotaskQueue::EnqueueMicrotask(Tagged<Microtask> microtask)\n - stores microtask into ring_buffer_[(start_ + size_) % capacity_] and increments size_.\nMicrotaskQueue::PerformCheckpointInternal(v8::Isolate* v8_isolate)\n - if microtasks_policy_ == kScoped, creates local MicrotasksScope with kDoNotRunMicrotasks,\n   then calls RunMicrotasks(isolate) and ClearKeptObjects().\nMicrotaskQueue::RunMicrotasks(Isolate* isolate)\n - sets is_running_microtasks_, suppresses microtask execution on v8::Isolate, and loops Execution::TryRunMicrotasks(isolate, this) to execute tasks.\n\nAnchors: src/execution/microtask-queue.cc/.h\n",
+  "context": [
+    "promise_resolve_thenable_job",
+    "trigger_promise_reactions",
+    "jspromise_runtime_methods"
+  ],
+  "explanation": "Captures microtask queue enqueue & checkpointing behavior used by Promise jobs and JSPromise runtime: EnqueueMicrotask is used by PromiseResolveThenableJob and TriggerPromiseReactions; PerformCheckpointInternal is invoked via MicrotasksScope::PerformCheckpoint and API entry points.",
+  "file_line": "src/execution/microtask-queue.cc:.h"
+}

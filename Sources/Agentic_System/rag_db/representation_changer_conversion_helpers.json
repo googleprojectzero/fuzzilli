@@ -1,0 +1,9 @@
+{
+  "body": "representation-change.cc: RepresentationChanger::InsertCheckedFloat64ToInt32, InsertChangeTaggedToFloat64, InsertChangeFloat64ToInt32, Float64OperatorFor(NumberFloor/NumberRound/NumberTrunc). Key functions and definitions: RepresentationChanger::InsertCheckedFloat64ToInt32 (line ~1400), InsertChangeTaggedToFloat64 (line ~1360), InsertChangeFloat64ToInt32 (line ~1320), const Operator* RepresentationChanger::Float64OperatorFor(IrOpcode::Value opcode) (line ~1700). These map simplified ops to machine float64 operators including Float64RoundDown/Truncate/Up.",
+  "context": [
+    "simplified_lowering_speculative_and_math",
+    "useinfo_truncation_minus_zero"
+  ],
+  "explanation": "Anchors for representation change helpers that insert/check float64->int32 and tagged->float64 conversions and map NumberFloor/Round/Trunc to machine Float64 operators. Critical for minus-zero handling because CheckedFloat64ToInt32 receives a CheckForMinusZeroMode.",
+  "file_line": "compiler/representation-change.cc:1300-1530, 1700-1750"
+}

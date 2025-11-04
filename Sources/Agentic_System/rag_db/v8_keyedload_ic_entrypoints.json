@@ -1,0 +1,11 @@
+{
+  "body": "KeyedLoadIC entrypoints and generic paths are emitted by AccessorAssembler in ic/accessor-assembler.cc. Notable public generators:\n- void AccessorAssembler::GenerateKeyedLoadIC_Megamorphic() at lines ~4692-4706: tail-calls KeyedLoadICGeneric.\n- void AccessorAssembler::GenerateKeyedLoadICTrampoline_Megamorphic() at ~4744-4754: trampoline to Builtin::kKeyedLoadIC_Megamorphic.\n- void AccessorAssembler::GenerateKeyedLoadIC_PolymorphicName() at ~4757-4771: enters KeyedLoadICPolymorphicName.\nThe shared slow/generic helpers:\n- void AccessorAssembler::KeyedLoadICGeneric(const LoadICParameters* p) at ~3728-3804: does elements-vs-properties dispatch, calls GenericElementLoad or GenericPropertyLoad and uses Builtin::kKeyedLoadIC_Megamorphic.\n- void AccessorAssembler::KeyedLoadICPolymorphicName(const LoadICParameters* p, LoadAccessMode) at ~3811-3838: probes feedback array for polymorphic name IC, then HandlePolymorphicCase.\nDispatch from feedback:\n- At ~3604-3720, AccessorAssembler::KeyedLoadIC (inlined control) handles monomorphic via TryMonomorphicCase, polymorphic via HandlePolymorphicCase when feedback is WeakFixedArray, and megamorphic fallback to Builtin::kKeyedLoadIC_Megamorphic; also has PolymorphicName subcase when key is unique name.\n",
+  "context": [
+    "v8_keyedload_handler",
+    "v8_elements_kind_lattice",
+    "v8_accessor_assembler_element_load",
+    "v8_keyed_load_ic_state"
+  ],
+  "explanation": "Captures the JS entry stub/builtin entrypoints and generic KeyedLoadIC dispatch implemented in AccessorAssembler, which are the first stage from JS into the IC machinery for a[i] loads.",
+  "file_line": "ic/accessor-assembler.cc:4692-4771,3604-3720,3728-3804"
+}

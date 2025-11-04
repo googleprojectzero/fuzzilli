@@ -1,0 +1,10 @@
+{
+  "body": "File: compiler/turboshaft/machine-lowering-reducer-inl.h\nSymbol: MachineLoweringReducer::REDUCE(ObjectIs) handling ObjectIsOp::Kind::kUndetectable\nExcerpt: In REDUCE(ObjectIs) case for kUndetectable, it first calls if (DependOnNoUndetectableObjectsProtector()) { ... check for undefined/null via TaggedEqual } else falls through to checking Map bitfield IsUndetectableBit. The helper DependOnNoUndetectableObjectsProtector() at bottom calls broker_->dependencies()->DependOnNoUndetectableObjectsProtector();\nKey lines:\n- if (DependOnNoUndetectableObjectsProtector()) { V<Word32> is_undefined = __ TaggedEqual(input, __ HeapConstant(factory_->undefined_value())); V<Word32> is_null = __ TaggedEqual(input, __ HeapConstant(factory_->null_value())); return __ Word32BitwiseOr(is_undefined, is_null); }\n- bool DependOnNoUndetectableObjectsProtector() { broker_->dependencies()->DependOnNoUndetectableObjectsProtector(); }\nFileLine: compiler/turboshaft/machine-lowering-reducer-inl.h:256-300, 3792-3796",
+  "context": [
+    "turboshaft",
+    "compilation-dependencies.cc",
+    "js-typed-lowering.cc"
+  ],
+  "explanation": "Records the TurboShaft lowering that folds ObjectIsUndetectable by depending on NoUndetectableObjects protector; shows direct call to DependOnNoUndetectableObjectsProtector and alternative fallback to map bit check if protector dependency not recorded.",
+  "file_line": "compiler/turboshaft/machine-lowering-reducer-inl.h:256-300;3792-3796"
+}

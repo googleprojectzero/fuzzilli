@@ -1,0 +1,9 @@
+{
+  "body": "ElementsAccessor::IncludesValueImpl and Fast* IncludesValueImpl overrides in objects/elements.cc implement the core C++ fast-paths for includes/indexOf logic across ElementsKinds. Key points:\n- ElementsKind dispatch and hole semantics handled per accessor (FastSmiOrObject, FastDouble, Dictionary, TypedElementsAccessor).\n- SameValueZero semantics implemented: NaN handling for double/object kinds; holes treated as undefined for includes (see comments and hole checks in Fast*IncludesValueImpl).\n- Prototype no-elements checks: many fast paths assume JSObject::PrototypeHasNoElements; DictionaryElementsAccessor fast path requires PrototypeHasNoElements and checks for accessors.\n- IncludesValueFastPath exists for DictionaryElementsAccessor to avoid slow path when no accessors.\n- TypedElementsAccessor::IncludesValueImpl handles detach/out-of-bounds (WasDetached/IsDetached checks), BigInt vs Number handling and lossless conversion for BigInt typed arrays, and RAB/GSAB out-of-bounds semantics.\n",
+  "context": [
+    "objects-elements:IncludesValueImpl",
+    "elements-accessors:FastDouble/FastSmiOrObject/Dictionary/TypedElementsAccessor"
+  ],
+  "explanation": "This entry captures the C++ side that builtins call into \u2014 the per-elements-kind IncludesValueImpl logic (hole handling, SameValueZero (NaN), prototype protector, TypedArray detach/resize and BigInt vs Number rules).",
+  "file_line": "objects/elements.cc: IncludesValueImpl / TypedElementsAccessor::IncludesValueImpl (~lines 1400-2064 and 3586-5038)"
+}

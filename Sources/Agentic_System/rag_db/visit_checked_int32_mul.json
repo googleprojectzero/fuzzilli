@@ -1,0 +1,10 @@
+{
+  "body": "VisitForCheckedInt32Mul in simplified-lowering.cc determines CheckForMinusZeroMode (mz_mode) and restriction type based on input types and truncation. It sets mz_mode = kDontCheckForMinusZero when some positive ordered number or truncation identifies zeros; otherwise kCheckForMinusZero. It then visits binop and changes op to simplified()->CheckedInt32Mul(mz_mode) during lowering.\n\nRelevant code (simplified):\n- if (IsSomePositiveOrderedNumber(input0_type) || IsSomePositiveOrderedNumber(input1_type)) {\n      mz_mode = CheckForMinusZeroMode::kDontCheckForMinusZero;\n      restriction = Type::Signed32();\n  } else if (truncation.IdentifiesZeroAndMinusZero()) {\n      mz_mode = CheckForMinusZeroMode::kDontCheckForMinusZero;\n      restriction = Type::Signed32OrMinusZero();\n  } else {\n      mz_mode = CheckForMinusZeroMode::kCheckForMinusZero;\n      restriction = Type::Signed32();\n  }\n\nAction: VisitBinop(...); if (lower<T>()) ChangeOp(node, simplified()->CheckedInt32Mul(mz_mode));\n\ncontext: compiler/simplified-lowering.cc lines ~1200-1250\n",
+  "context": [
+    "simplified-lowering.cc",
+    "simplified-operator.cc",
+    "use-info.h"
+  ],
+  "explanation": "This entry captures the logic for selecting whether to check for -0 during lowering of speculative number multiply to CheckedInt32Mul, which is central to minus-zero handling.",
+  "file_line": "compiler/simplified-lowering.cc:~1200-1250"
+}

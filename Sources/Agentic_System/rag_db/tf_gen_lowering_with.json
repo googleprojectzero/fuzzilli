@@ -1,0 +1,10 @@
+{
+  "body": "File: compiler/js-generic-lowering.cc\nRelevant lowerings:\n- void JSGenericLowering::LowerJSCreateWithContext(Node* node) { ScopeInfoRef scope_info = ScopeInfoOf(node->op()); node->InsertInput(zone(), 1, jsgraph()->ConstantNoHole(scope_info, broker())); ReplaceWithRuntimeCall(node, Runtime::kPushWithContext); }\n- void JSGenericLowering::LowerJSCreateCatchContext(Node* node) { ... ReplaceWithRuntimeCall(node, Runtime::kPushCatchContext); }\n- void JSGenericLowering::LowerJSCreateBlockContext(Node* node) { ... ReplaceWithRuntimeCall(node, Runtime::kPushBlockContext); }\n- REPLACE_STUB_CALL(ToObject) expands to LowerJSToObject(Node*): ReplaceWithBuiltinCall(node, Builtin::kToObject).\n- JSLoadContext/JSStoreContext/JSHasContextExtension/JSLoadScriptContext/JSStoreScriptContext: UNREACHABLE in generic lowering (eliminated in typed/context specialization), indicating TF specializes context access before generic lowering.\n- Load/Store global and property lowerings use IC/builtins; unrelated but confirms fast-paths for global lookups are via ICs not generic runtime.\n- JSCallRuntime handling: LowerJSCallRuntime dispatches to runtime calls (used for LoadLookupSlot/StoreLookupSlot when emitted by BGB as JSCallRuntime).\n",
+  "context": [
+    "js_operator_defs",
+    "bgb_visitors_with_lookup",
+    "runtime_scope_fns"
+  ],
+  "explanation": "Shows TurboFan JSGenericLowering mapping for CreateWithContext to Runtime::kPushWithContext and notes ToObject lowering and that direct context load/store ops are eliminated earlier (JSContextSpecialization), matching with-scope and lookup-slot behavior.",
+  "file_line": "compiler/js-generic-lowering.cc:590-606,857-869,1124-1134"
+}

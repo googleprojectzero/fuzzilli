@@ -1,0 +1,10 @@
+{
+  "body": "// Take slow path if not a JSArray, if retrieving elements requires\n// traversing prototype, or if access checks are required.\nBranchIfFastJSArrayForRead(receiver, context, &init_index, &call_runtime);\n...\n// Initialize fromIndex.\n// If no fromIndex was passed, default to 0.\nGotoIf(IntPtrLessThanOrEqual(args.GetLengthWithoutReceiver(),\n                             IntPtrConstant(kFromIndexArg)),\n       &done);\nTNode<Object> start_from = args.AtIndex(kFromIndexArg);\n// Handle Smis and undefined here and everything else in runtime.\nBranch(TaggedIsSmi(start_from), &is_smi, &is_nonsmi);",
+  "context": [
+    "builtins-array-gen:Generate",
+    "fast-path guards",
+    "fromIndex handling"
+  ],
+  "explanation": "Shows BranchIfFastJSArrayForRead guard, fromIndex Smi/undefined handling and early runtime fallback in ArrayIncludes/IndexOf fast-path dispatch.",
+  "file_line": "builtins/builtins-array-gen.cc:Generate (~lines 420-480)"
+}

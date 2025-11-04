@@ -1,0 +1,10 @@
+{
+  "body": "Reduction JSCallReducer::ReducePromiseResolveTrampoline(Node* node) { ... } (compiler/js-call-reducer.cc lines 7535-7569)",
+  "context": [
+    "js-call-reducer",
+    "promise",
+    "PromiseResolveTrampoline"
+  ],
+  "explanation": "Transforms JSCall to javascript()->PromiseResolve() when receiver is JSReceiver and maps known. Lowers the node to PromiseResolve simplified operator.",
+  "file_line": "compiler/js-call-reducer.cc:7535-7569"
+}

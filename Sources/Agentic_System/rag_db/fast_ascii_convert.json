@@ -1,0 +1,9 @@
+{
+  "body": "src/strings/string-case.cc: FastAsciiConvert<char> and FastAsciiConvert<true> instantiations, AsciiRangeMask, FastAsciiConvert templates; purpose: fast ASCII path for case conversion. Includes AsciiRangeMask, FastAsciiConvert, Ascii mask constants",
+  "context": [
+    "string_flatten_writetoflat",
+    "cons_sliced_external_handling"
+  ],
+  "explanation": "Contains the word-level fast ASCII converter used by case conversion for one-byte strings; key for fast-path detection and generation when flattening/WriteToFlat is used before ConvertCase.",
+  "file_line": "src/strings/string-case.cc:1-200"
+}

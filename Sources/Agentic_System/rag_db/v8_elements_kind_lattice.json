@@ -1,0 +1,11 @@
+{
+  "body": "ElementsKind lattice and helpers in objects/elements-kind.h:\n- enum ElementsKind lists all elements representations, including fast SMI/OBJECT/DOUBLE, HOLEY variants, nonextensible/sealed/frozen (and shared array) kinds, DICTIONARY, sloppy-arguments, string-wrapper kinds, and typed arrays (including RAB/GSAB variants). Constants FIRST/LAST_* cover ranges, and helpers identify categories.\n- Helpers for classification:\n  \u2022 IsFastElementsKind, IsSmiElementsKind, IsObjectElementsKind, IsDoubleElementsKind, IsHoleyElementsKind(ForRead), IsFastPackedElementsKind, IsDictionaryElementsKind, IsTypedArrayElementsKind, IsRabGsabTypedArrayElementsKind, IsTypedArrayOrRabGsabTypedArrayElementsKind, IsAnyNonextensibleElementsKind etc.\n  \u2022 GetHoleyElementsKind/GetPackedElementsKind; FastSmiToObjectElementsKind; IsSimpleMapChangeTransition; IsMoreGeneralElementsKindTransition; GetMoreGeneralElementsKind; UnionElementsKind helpers; GetCorrespondingRabGsabElementsKind/NonRabGsab.\n  \u2022 ElementsKindToShiftSize/ByteSize to compute element size.\nUsage in KeyedLoadIC handlers depends on these helpers to decide transitions and to select the correct load instructions in AccessorAssembler::EmitElementLoad and in IC::LoadElementHandler.\n",
+  "context": [
+    "v8_accessor_assembler_element_load",
+    "v8_keyedload_handler",
+    "v8_keyedload_ic_entrypoints",
+    "v8_keyed_load_ic_state"
+  ],
+  "explanation": "Defines the core elements-kind lattice and predicates used to switch fast paths and reason about transitions and holey vs packed behavior for element loads.",
+  "file_line": "objects/elements-kind.h: all throughout (classification helpers and constants)"
+}

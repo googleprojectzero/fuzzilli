@@ -1,0 +1,10 @@
+{
+  "body": "void ArrayIncludesIndexofAssembler::GenerateSmiOrObject(SearchVariant variant, TNode<Context> context, TNode<FixedArray> elements, TNode<Object> search_element, TNode<Smi> array_length, TNode<Smi> from_index, SimpleElementKind array_kind) { /* ... implementation in builtins-array-gen.cc ... */ }\n\nSnippet (semantics/guards):\n- Caller confirmed receiver is a fast JSArray for read (BranchIfFastJSArrayForRead).\n- fromIndex is only accepted if Smi or undefined; non-Smi -> runtime slow path.\n- array_length is LoadFastJSArrayLength(array) (positive Smi).\n- Elements-kind dispatch routes PACKED_SMI/HOLEY_SMI -> smi path, PACKED/HOLEY_ELEMENTS -> smiOrObject path, PACKED_DOUBLE/HOLEY_DOUBLE -> packed/holey doubles handlers.\n- SameValueZero for includes: NaN-handling loop, undefined/hole treated as match when search_element is undefined; holes treated specially for includes.\n- SIMD fastcall used when supported (kCanVectorize) and array large enough.\n",
+  "context": [
+    "builtins_array_gen.cc",
+    "objects_elements.cc",
+    "SameValueZero"
+  ],
+  "explanation": "Key fast-path implementation for Array.prototype.includes/indexOf for SMI and object element kinds. Shows receiver fast-array guard, elements-kind dispatch, fromIndex Smi checks and clamping, SameValueZero semantics (NaN equality and +0/-0 handling via float comparison), and holes treated as undefined for includes. This is used to drive lowering and TurboFan guard placement.",
+  "file_line": "builtins/builtins-array-gen.cc: ArrayIncludesIndexofAssembler::GenerateSmiOrObject (around function definition)"
+}

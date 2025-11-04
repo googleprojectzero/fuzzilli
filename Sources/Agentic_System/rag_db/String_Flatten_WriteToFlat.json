@@ -1,0 +1,11 @@
+{
+  "body": "objects/string.cc: template EXPORT_TEMPLATE_DEFINE(void) String::WriteToFlat(Tagged<String> source, SinkCharT* sink, uint32_t start, uint32_t length) { ... }\nobjects/string.cc: template EXPORT_TEMPLATE_DEFINE(void) String::WriteToFlat2(SinkCharT* dst, Tagged<ConsString> src, uint32_t src_index, uint32_t length, ... ) { ... }\ncodegen/code-stub-assembler.cc: void CodeStubAssembler::StringWriteToFlatOneByte(TNode<String> source, RawPtrT sink, Int32T start, Int32T length) and StringWriteToFlatTwoByte\ncodegen/external-reference.cc: StringWriteToFlatOneByte/TwoByte wrappers for runtime calls\nobjects/string.h: declarations of WriteToFlat and WriteToFlat2",
+  "context": [
+    "objects/string.h",
+    "objects/string-inl.h",
+    "codegen/code-stub-assembler.cc",
+    "codegen/external-reference.cc"
+  ],
+  "explanation": "Concrete anchors for flattening and writing string contents to flat buffers: the primary implementations are in objects/string.cc (WriteToFlat/WriteToFlat2) with CSA/CodeStubAssembler fast-call wrappers in codegen and external-reference. These are the functions used across runtime and builtins when flattening or copying string data.",
+  "file_line": "objects/string.cc: function templates WriteToFlat and WriteToFlat2 (see object/string.cc definitions)"
+}

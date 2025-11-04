@@ -1,0 +1,10 @@
+{
+  "body": "IncludesValueImpl / IncludesValueFastPath - src/objects/elements.cc\nPreconditions/guards snippet:\n- Checks receiver is JSObject with fast elements (fast-path selection in caller).\n- Uses start_from/index and length; bounds checks performed by caller.\n- If elements are simple (packed/holey) use IncludesValueFastPath which:\n  - Iterates elements with Unsafe loads (LoadFixedArrayElement / LoadFixedDoubleArrayElement)\n  - Compares via Object::SameValueZero(*value, *element_k) and treats holes per elements kind\n  - For holey kinds, treats hole as absent unless includes semantics (holes\u2192undefined) handled\n- Falls back to IncludesValueSlowPath on dictionary, slow kinds or when SameValueZero requires runtime (BigInt/String compare)\nExplanation: Implements the core fast and slow element search for JS arrays; SameValueZero comparisons and hole handling are done here; used by ArrayIncludes runtime and builtins.",
+  "context": [
+    "objects/elements.cc:IncludesValueImpl",
+    "objects/elements.cc:IncludesValueFastPath",
+    "objects/elements.cc:IncludesValueSlowPath"
+  ],
+  "explanation": "Core array elements Includes implementation: fast-path loops using Unsafe loads, SameValueZero comparisons (NaN handling), hole treatment, and slow fallbacks. This is the canonical C++ behavior behind the builtins' generated specialized TF stubs.",
+  "file_line": "src/objects/elements.cc:1405-1420,1832-1880,269-320"
+}

@@ -1,0 +1,12 @@
+{
+  "body": "File: src/compiler/wasm-compiler.cc (section ~7000+)\n- class WasmWrapperGraphBuilder : public WasmGraphBuilder { ... } [~7071]\n  - BuildJSToWasmWrapper(bool do_conversion=true, Node* frame_state=nullptr, bool set_in_wasm_flag=true) [~7733]\n  - BuildWasmToJSWrapper(wasm::ImportCallKind kind, int expected_arity, wasm::Suspend suspend) [~8022]\n  - Helpers: FromJS/ToJS, ModifyThreadInWasmFlagScope, BuildCallAndReturn, BuildSwitchToTheCentralStackIfNeeded/Back, BuildSuspend, AddArgumentNodes, BigIntToI64 handling, etc.\n  - BuildCWasmEntry (TF path) [~... near 8800]\n- BuildInlinedJSToWasmWrapper(Zone*, MachineGraph*, const CanonicalSig*, Isolate*, SourcePositionTable*, Node* frame_state, bool set_in_wasm_flag) [~8417] -> directly uses WasmWrapperGraphBuilder.BuildJSToWasmWrapper(false,...)\n- NewJSToWasmCompilationJob(Isolate*, const CanonicalSig*) [~8428] -> returns Pipeline::NewWasmTurboshaftWrapperCompilationJob(... CodeKind::JS_TO_WASM_FUNCTION ...)\n- CompileWasmImportCallWrapper(ImportCallKind kind, const CanonicalSig* sig, bool source_positions, int expected_arity, Suspend suspend) [~8448] -> calls Pipeline::GenerateCodeForWasmNativeStubFromTurboshaft(... CodeKind::WASM_TO_JS_FUNCTION ...)\n- CompileWasmCapiCallWrapper(const CanonicalSig* sig) -> GenerateCodeForWasmNativeStubFromTurboshaft(CodeKind::WASM_TO_CAPI_FUNCTION)\nNotes: This TF builder is legacy counterpart of TS wrappers. It\u2019s used for inlining and for generating C-wasm entry, and wrapper compilation dispatch into Turboshaft pipeline. Anchors cross-reference simplified-lowering comments (compiler/simplified-lowering.cc:2246,2256) that refer to WasmWrapperGraphBuilder.\n",
+  "context": [
+    "wrappers_ts_builders",
+    "compiler_pipeline_wasm_wrappers",
+    "call_descs_js_wasm",
+    "wasm_import_wrapper_cache",
+    "wasm_objects_glue"
+  ],
+  "explanation": "Indexes the Turbofan WasmWrapperGraphBuilder and wrapper compilation entry points in compiler/wasm-compiler.cc, including job factories and Turboshaft wrapper pipeline dispatch. This complements the TS wrappers index and shows the TF counterparts and pipeline linkage.",
+  "file_line": "compiler/wasm-compiler.cc:7071,7733,8022,8417,8428,8448"
+}

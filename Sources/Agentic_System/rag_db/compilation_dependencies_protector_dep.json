@@ -1,0 +1,10 @@
+{
+  "body": "compiler/compilation-dependencies.cc: ProtectorDependency implementation and DependOnNoUndetectableObjectsProtector\n\nProtectorDependency class:\nclass ProtectorDependency final : public CompilationDependency {\n public:\n  explicit ProtectorDependency(PropertyCellRef cell)\n      : CompilationDependency(kProtector), cell_(cell) {}\n\n  bool IsValid(JSHeapBroker* broker) const override {\n    DirectHandle<PropertyCell> cell = cell_.object();\n    return cell->value() == Smi::FromInt(Protectors::kProtectorValid);\n  }\n  void Install(JSHeapBroker* broker, PendingDependencies* deps) const override {\n    SLOW_DCHECK(IsValid(broker));\n    deps->Register(cell_.object(), DependentCode::kPropertyCellChangedGroup);\n  }\n\n private:\n  size_t Hash() const override { ... }\n  bool Equals(const CompilationDependency* that) const override { ... }\n\n  const PropertyCellRef cell_;\n};\n\nDependOnNoUndetectableObjectsProtector() implementation:\nbool CompilationDependencies::DependOnNoUndetectableObjectsProtector() {\n  return DependOnProtector(MakeRef(\n      broker_,\n      broker_->isolate()->factory()->no_undetectable_objects_protector()));\n}\n",
+  "context": [
+    "compiler/compilation-dependencies.h",
+    "compiler/compilation-dependencies.cc",
+    "heap/setup-heap-internal.cc"
+  ],
+  "explanation": "Shows how CompilationDependencies depends on the protector: it wraps the root's PropertyCell into a PropertyCellRef, creates a ProtectorDependency that checks cell.value() == kProtectorValid, and on install registers the cell with DependentCode under PropertyCellChangedGroup. The DependOnNoUndetectableObjectsProtector() helper obtains the root cell via factory()->no_undetectable_objects_protector().",
+  "file_line": "compiler/compilation-dependencies.cc:~1180-1360"
+}

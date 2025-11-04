@@ -1,0 +1,10 @@
+{
+  "body": "Stage:1 region:KeyedLoadIC_StringIndex_Protector\nTopic: transitions \u2014 IC/handler state transitions and protector flips.\n\nIC state machine (ic/ic.cc):\n- Feedback progression: UNINITIALIZED -> MONOMORPHIC (install kIndexedString for string accesses) -> POLYMORPHIC (multiple handlers/maps) -> MEGAMORPHIC (generic builtin) when polymorphism limit exceeded or non-cacheable cases.\n- Functions: IC::ConfigureVectorState variants configure Monomorphic/Polymorphic/Megamorphic states; UpdateLoadElement and UpdatePolymorphicIC orchestrate transitions.\n\nProtector interactions:\n- When protector invalidates (Protectors::InvalidateStringWrapperToPrimitive), CompilationDependencies listeners (TF/Maglev) and isolate-level validity cells cause optimized code to deopt and regen; ICs may miss (guard failure) and reconfigure feedback (remove kIndexedString handler or move to megamorphic).\n- Code points: AccessorAssembler guard-failure paths, IC miss handlers in ic.cc (Runtime_KeyedLoadIC_Miss), and CompilationDependencies::DependOnStringWrapperToPrimitiveProtector attach dependency so TF code can be deopted when protector flips.\n\nBehavior: optimized code relying on the protector will bail out to runtime when protector invalidates; subsequent loads observe slow path semantics and ICs update their handlers accordingly.",
+  "context": [
+    "inventory",
+    "protector",
+    "pipeline"
+  ],
+  "explanation": "Describes how inline-cache states evolve for keyed string loads and how protector invalidation causes deopts and IC reconfiguration.",
+  "file_line": "src/ic/ic.cc:ConfigureVectorState, UpdateLoadElement, UpdatePolymorphicIC; src/compiler/compilation-dependencies.cc:DependOnStringWrapperToPrimitiveProtector; src/execution/protectors.cc:InvalidateStringWrapperToPrimitive"
+}

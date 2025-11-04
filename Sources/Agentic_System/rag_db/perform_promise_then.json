@@ -1,0 +1,11 @@
+{
+  "body": "transitioning macro PerformPromiseThenImpl(\n    implicit context: Context)(promise: JSPromise,\n    onFulfilled: Callable|Undefined, onRejected: Callable|Undefined,\n    resultPromiseOrCapability: JSPromise|PromiseCapability|Undefined): void {\n  if (promise.Status() == PromiseState::kPending) {\n    const promiseReactions = UnsafeCast<(Zero | PromiseReaction)>(promise.reactions_or_result);\n    const reaction = NewPromiseReaction(promiseReactions, resultPromiseOrCapability, onFulfilled, onRejected);\n    promise.reactions_or_result = reaction;\n  } else {\n    ...\n    EnqueueMicrotask(handlerContext, microtask);\n  }\n  promise.SetHasHandler();\n}\n\nRelated generated C++ stub: builtins/builtins-promise-gen.h/cc provide PromiseBuiltinsAssembler for helpers (AllocateJSPromise, ZeroOutEmbedderOffsets) used by Torque-built promise builtins.",
+  "context": [
+    "promise_resolve_thenable_job",
+    "fulfill_promise",
+    "promise_resolve",
+    "trigger_promise_reactions"
+  ],
+  "explanation": "This entry anchors the Torque implementation of PerformPromiseThen / PerformPromiseThenImpl used throughout builtins (promise-then.tq, promise-jobs.tq, many callsites). The snippet shows the macro signature and key lines where it records a PromiseReaction when promise is pending or otherwise enqueues a PromiseReactionJobTask via EnqueueMicrotask. The generated C++ helpers live in builtins-promise-gen.{h,cc}.",
+  "file_line": "src/builtins/promise-abstract-operations.tq: (PerformPromiseThenImpl signature and body)"
+}
