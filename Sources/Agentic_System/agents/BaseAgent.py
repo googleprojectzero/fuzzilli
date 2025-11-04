@@ -5,6 +5,7 @@ import threading
 import time
 import os
 import logging
+from datetime import datetime
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -323,7 +324,7 @@ class Agent(ABC):
                 agent_output = manager_agent.run(prompt)
                 agent_output = str(agent_output)
                 
-                logger.info(f"Task '{task_description}' completed successfully by {manager_agent.name}")
+                logger.info(f"Task '{task_description}' completed successfully by {manager_agent.name} at {datetime.now()}")
             finally:
                 _restore_litellm_completion(litellm_original)
                 _restore_agent_runs(run_originals)

@@ -7,6 +7,7 @@ import sys
 import subprocess
 from pathlib import Path
 import logging 
+from datetime import datetime
 import config_loader as config_loader 
 from agents.FoG import Father
 from agents.EBG import EBG
@@ -105,6 +106,7 @@ def main():
         os.environ["FOG_DEBUG"] = "1"
 
     logger.info("I must go in; the fog is rising")
+    logger.info(f"time: {datetime.now()}")
     a = FatherOfGod()
     path = os.path.join(os.getenv('FUZZILLI_PATH', ''), "Sources", "Agentic_System")
     if (not os.path.exists(os.path.join(path, "regressions.json"))):
