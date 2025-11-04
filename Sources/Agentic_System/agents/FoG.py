@@ -126,6 +126,7 @@ class Father(Agent):
                 init_rag_db,
                 read_file,
                 get_realpath,
+                get_runtime_db_ids,
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),  
             max_steps=50,
@@ -147,8 +148,6 @@ class Father(Agent):
                 get_rag_collection,
                 # Chroma-based RAG queries
                 search_rag_db,
-                update_rag_db,
-                delete_rag_db,
                 list_rag_db,
                 get_rag_doc,
                 # FAISS knowledge base queries
@@ -157,7 +156,7 @@ class Father(Agent):
                 read_rag_db_id,
                 search_v8_source_rag,
                 get_v8_source_rag_doc, 
-                
+                get_runtime_db_ids,
                  
                 ], # add rag db tools here aswell
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
