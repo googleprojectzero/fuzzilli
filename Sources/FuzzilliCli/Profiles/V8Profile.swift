@@ -41,6 +41,9 @@ let v8Profile = Profile(
         //
         if probability(0.1) {
             args.append("--no-turbofan")
+            if probability(0.5) {
+                args.append("--maglev-as-top-tier")
+            }
         }
 
         if probability(0.1) {
@@ -91,6 +94,13 @@ let v8Profile = Profile(
             args.append("--maglev-future")
         }
 
+        if probability(0.2) && !args.contains("--no-maglev") {
+            args.append("--maglev-non-eager-inlining")
+            if probability(0.4) { // TODO: @tacet decrease this probability to max 0.2
+                args.append("--max_maglev_inlined_bytecode_size_small=0")
+            }
+        }
+
         if probability(0.1) {
             args.append("--turboshaft-typed-optimizations")
         }
@@ -99,6 +109,9 @@ let v8Profile = Profile(
             args.append("--turbolev")
             if probability(0.82) {
                 args.append("--turbolev-future")
+                if probability(0.3) { // TODO: @tacet change to 0.15
+                    args.append("--max_inlined_bytecode_size_small=0")
+                }
             }
         }
 
