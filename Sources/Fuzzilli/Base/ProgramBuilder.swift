@@ -566,7 +566,7 @@ public class ProgramBuilder {
     //
     // This will attempt to find a parameter types for which at least a few variables of a compatible types are
     // currently available to (potentially) later be used as arguments for calling the generated subroutine.
-    public func randomParameters(n wantedNumberOfParameters: Int? = nil) -> SubroutineDescriptor {
+    public func randomParameters(n wantedNumberOfParameters: Int? = nil, withRestParameterProbability restProbability: Double = 0.2) -> SubroutineDescriptor {
         assert(probabilityOfUsingAnythingAsParameterTypeIfAvoidable >= 0 && probabilityOfUsingAnythingAsParameterTypeIfAvoidable <= 1)
 
         // If the caller didn't specify how many parameters to generated, find an appropriate
@@ -574,7 +574,7 @@ public class ProgramBuilder {
         // therefore later be used as arguments for calling the new function).
         let n: Int
         if let requestedN = wantedNumberOfParameters {
-            assert(requestedN > 0)
+            assert(requestedN >= 0)
             n = requestedN
         } else {
             switch numberOfVisibleVariables {
@@ -603,15 +603,27 @@ public class ProgramBuilder {
         }
 
         var params = ParameterList()
-        for _ in 0..<n {
+
+        let generateRestParameter = n > 0 && probability(restProbability)
+        let numPlainParams = generateRestParameter ? n - 1 : n
+
+        func randomParamType() -> ILType {
             if probability(probabilityOfUsingAnythingAsParameterTypeIfAvoidable) {
-                params.append(.jsAnything)
+                return .jsAnything
             } else {
-                params.append(.plain(chooseUniform(from: candidates)))
+                return chooseUniform(from: candidates)
             }
         }
 
-        // TODO: also generate rest parameters and maybe even optional ones sometimes?
+        for _ in 0..<numPlainParams {
+            params.append(.plain(randomParamType()))
+        }
+
+        if generateRestParameter {
+            params.append(.rest(randomParamType()))
+        }
+
+        // TODO: also generate optional parameters sometimes?
 
         return .parameters(params)
     }
