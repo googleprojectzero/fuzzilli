@@ -123,7 +123,6 @@ class Father(Agent):
                 tree,
                 read_rag_db_id,
                 write_rag_db_id,
-                init_rag_db,
                 read_file,
                 get_realpath,
                 get_runtime_db_ids,
