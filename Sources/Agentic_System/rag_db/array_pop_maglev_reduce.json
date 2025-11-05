@@ -1,0 +1,12 @@
+{
+  "body": "MaybeReduceResult MaglevGraphBuilder::TryReduceArrayPrototypePop(compiler::JSFunctionRef target, CallArguments& args) { ... } (full function in maglev/maglev-graph-builder.cc lines ~10350-10880)",
+  "context": [
+    "maglev_graph_builder",
+    "array_pop",
+    "ensure_writable",
+    "elements_kind",
+    "jsproxy_checks"
+  ],
+  "explanation": "This RAG entry captures MaglevGraphBuilder's TryReduceArrayPrototypePop implementation which groups possible receiver maps by elements kind, checks NoElementsProtector, builds a subgraph branching on elements kinds and uses EnsureWritableFastElements/MaybeGrow and array element loads/stores; includes checks for proxies indirectly via map checks and NoElementsProtector dependencies.",
+  "file_line": "maglev/maglev-graph-builder.cc:~10350-10880"
+}

@@ -33,9 +33,9 @@ CODE REGION.
 ONLY AFTER ENSURING YOU HAVE FOUND ALL THE NECESSARY INFORMATION FOR YOUR PROVIDED CODE REGION SHOULD YOU MOVE ONTO STAGE 5.
 
 ## STAGE 5
-USE init_rag_db TO ENSURE THE JSON FILE FOR THE RAG DB EXISTS AND IS VALID. AFTER THAT, WRITE YOUR FINDINGS USING
-write_rag_db_id, THEN VERIFY WITH read_rag_db_id. PLEASE WRITE AS MANY TIMES AS NEEDED, YOU ARE FULLY WELCOME TO use 
-write_rag_db_id 3,5,6 or 10 times as much as you think is needed for the task at hand. 
+USE write_rag_db_id TO SAVE ALL RELEVANT FINDINGS. Call write_rag_db_id multiple times (3, 5, 10, or more) to capture 
+each distinct code pattern, function, or concept you discovered. Write as many entries as necessary to thoroughly document 
+the code region. 
 
 
 ## STAGE 6 

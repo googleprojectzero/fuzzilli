@@ -1,4 +1,5 @@
 from smolagents import tool
+from openai import OpenAI
 from tools.common_tools import * 
 from fuzzywuzzy import fuzz
 from pathlib import Path
@@ -196,7 +197,7 @@ def tree(options: str = "") -> str:
 
 
 @tool
-def ripgrep(pattern: str, paths: str = "", options: str = "") -> str:
+def ripgrep(pattern: str, options: str = "") -> str:
     """
     Search for text patterns in files using ripgrep (rg) for fast text searching.
     
@@ -206,9 +207,6 @@ def ripgrep(pattern: str, paths: str = "", options: str = "") -> str:
     Args:
         pattern (str): The text or regular expression pattern to search for.
             Example: `"TODO"` → searches for the string "TODO" in files.
-
-        paths (str): Optional file(s) or directory(ies) to limit the search to. Can be empty.
-            Example: "maglev/maglev-graph-builder.cc"
 
         options (str): Additional ripgrep command-line options and paths.
             You can use any of the following commonly used flags:
@@ -267,7 +265,7 @@ def ripgrep(pattern: str, paths: str = "", options: str = "") -> str:
     
     flags_str = ' '.join(flags) if flags else ''
 
-    cmd = f"cd {V8_PATH} && rg '{pattern}' {paths} {flags_str} | head -n 1000"
+    cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}' | head -n 1000"
     
     return get_output(run_command(cmd))
 
@@ -648,13 +646,9 @@ def search_template_file_json(pattern: str, return_topic: int = 0) -> str:
 @tool
 def search_regex_template_swift(regex: str) -> str:
     """
+
     Regex search over ProgramTemplateSwift in templates.json.
     Returns matching snippets with template names.
-
-    When using regex search tools, only run well-formed, 
-    specific patterns that match real identifiers or function names. 
-    Avoid broad, guessy, or repeated searches.
-
     Args:
         regex (str): The regex pattern to search for in the templates.json ProgramTemplateSwift files.
     Returns:
@@ -837,20 +831,19 @@ def read_rag_db_id(id: str) -> str:
     db = _load_rag_db(id)
     return json.dumps(db)
 
-
-@tool
-def init_rag_db(id: str) -> str:
-    """
-    Initialize a non-vector RAG database identified by rag_db_id.
-    Creates an empty JSON file under rag_db/<rag_db_id>.json if missing.
+# @tool
+# def init_rag_db(id: str) -> str:
+#     """
+#     Initialize a non-vector RAG database identified by rag_db_id.
+#     Creates an empty JSON file under rag_db/<rag_db_id>.json if missing.
     
-    Args:
-        id (str): The RAG database identifier to initialize. Should be in either "id" OR "ID:{...}" format.
-    Returns:
-        str: A confirmation message with the initialized path.
-    """
-    _ensure_rag_db_initialized(id)
-    return f"OK: initialized RAG DB {id} at {_rag_db_path(id)}"
+#     Args:
+#         id (str): The RAG database identifier to initialize. Should be in either "id" OR "ID:{...}" format.
+#     Returns:
+#         str: A confirmation message with the initialized path.
+#     """
+#     _ensure_rag_db_initialized(id)
+#     return f"OK: initialized RAG DB {id} at {_rag_db_path(id)}"
 
 
 @tool 
@@ -1272,10 +1265,7 @@ def swift_ripgrep(pattern: str, options: str = "") -> str:
 
     cmd = f"cd {resolved_path} && rg {flags_str} '{pattern}' | head -n 1000"
     
-    output = get_output(run_command(cmd))
-    if not output.strip():
-        return "No matches found"
-    return output
+    return get_output(run_command(cmd))
 
 
 @tool

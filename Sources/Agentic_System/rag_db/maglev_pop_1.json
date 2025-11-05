@@ -1,0 +1,11 @@
+{
+  "body": "maglev/maglev-graph-builder.cc: TryReduceArrayPrototypePop - implementation of lowering for Array.prototype.pop. Key checks: CanSpeculateCall, receiver presence, possible_maps via known_node_aspects().TryGetPossibleMaps(receiver), DependOnNoElementsProtector(), grouping maps by elements kinds, CanInlineArrayResizingBuiltin(), BuildJSArrayBuiltinMapSwitchOnElementsKind() branching on elements kinds, EnsureWritableFastElements for Smi/Object kinds, StoreTaggedFieldNoWriteBarrier for length update, LoadFixedArrayElement/LoadFixedDoubleArrayElement and StoreFixedArrayElement/StoreFixedDoubleArrayElement to replace slot with the hole (the hole for doubles as kHoleNanInt64). Records known property length via RecordKnownProperty. Deopt situations: FAILs and EmitUnconditionalDeopt calls where DependOnNoElementsProtector invalid or unknown receiver maps, Map doesn't support fast resizing, etc. Records ID: maglev_pop_1",
+  "context": [
+    "maglev_graph_builder",
+    "array_pop",
+    "no_elements_protector",
+    "ensure_writable_fast_elements"
+  ],
+  "explanation": "This entry captures the main Maglev lowering path for Array.prototype.pop, including elements-kind switch, ensuring writable elements, element load/store nodes used, and prototype dependency registration on NoElementsProtector.",
+  "file_line": "maglev/maglev-graph-builder.cc:10248-10420"
+}

@@ -1,0 +1,17 @@
+{
+  "body": "MaybeReduceResult MaglevGraphBuilder::TryReduceArrayPrototypePop(compiler::JSFunctionRef target, CallArguments& args) { ... }",
+  "context": [
+    "maglev-graph-builder.cc",
+    "BuildJSArrayBuiltinMapSwitchOnElementsKind",
+    "CanInlineArrayResizingBuiltin",
+    "DependOnNoElementsProtector",
+    "EnsureWritableFastElements",
+    "ConvertHoleToUndefined",
+    "StoreTaggedFieldNoWriteBarrier",
+    "LoadFixedArrayElement",
+    "StoreFixedArrayElement",
+    "BuildLoadJSArrayLength"
+  ],
+  "explanation": "Core Maglev reduction for Array.prototype.pop: checks DependOnNoElementsProtector, groups maps by elements kind via CanInlineArrayResizingBuiltin, uses BuildJSArrayBuiltinMapSwitchOnElementsKind to emit per-kind pop behavior; uses EnsureWritableFastElements for COW handling, updates JSArray::kLength via StoreTaggedFieldNoWriteBarrier, loads element via BuildLoadFixedArrayElement or BuildLoadFixedDoubleArrayElement, converts hole to undefined when holey; records known length property.",
+  "file_line": "maglev/maglev-graph-builder.cc:10248-10397"
+}
