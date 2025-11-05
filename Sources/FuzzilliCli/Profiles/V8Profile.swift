@@ -15,7 +15,9 @@
 import Fuzzilli
 
 let v8Profile = Profile(
-    processArgs: v8ProcessArgs,
+    processArgs: {randomize in
+      v8ProcessArgs(randomize: randomize, forSandbox: false)
+    },
 
     // We typically fuzz without any sanitizer instrumentation, but if any sanitizers are active, "abort_on_error=1" must probably be set so that sanitizer errors can be detected.
     processEnv: [:],

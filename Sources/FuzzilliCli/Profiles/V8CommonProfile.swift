@@ -651,7 +651,10 @@ public let FastApiCallFuzzer = ProgramTemplate("FastApiCallFuzzer") { b in
     b.build(n: 10)
 }
 
-public func v8ProcessArgs(randomize: Bool) -> [String] {
+// Configure V8 invocation arguments. `forSandbox` is used by the V8SandboxProfile. As the sandbox
+// fuzzer does not crash on regular assertions, most validation flags do not make sense in that
+// configuraiton.
+public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
     var args = [
         "--expose-gc",
         "--expose-externalize-string",
@@ -699,7 +702,7 @@ public func v8ProcessArgs(randomize: Bool) -> [String] {
     // Note that this flag only affects WebAssembly.
     if probability(0.5) {
         args.append("--no-liftoff")
-        if probability(0.3) {
+        if probability(0.3) && !forSandbox {
             args.append("--wasm-assert-types")
         }
     }
@@ -807,21 +810,27 @@ public func v8ProcessArgs(randomize: Bool) -> [String] {
     //
     // Sometimes enable additional verification/stressing logic (which may be fairly expensive).
     //
-    if probability(0.1) {
-        args.append("--verify-heap")
+    if !forSandbox {
+        if probability(0.1) {
+            args.append("--verify-heap")
+        }
+        if probability(0.1) {
+            args.append("--turbo-verify")
+        }
+        if probability(0.1) {
+            args.append("--turbo-verify-allocation")
+        }
+        if probability(0.1) {
+            args.append("--assert-types")
+        }
+        if probability(0.1) {
+            args.append("--turboshaft-assert-types")
+        }
+        if probability(0.2) {
+            args.append("--turboshaft-verify-load-elimination")
+        }
     }
-    if probability(0.1) {
-        args.append("--turbo-verify")
-    }
-    if probability(0.1) {
-        args.append("--turbo-verify-allocation")
-    }
-    if probability(0.1) {
-        args.append("--assert-types")
-    }
-    if probability(0.1) {
-        args.append("--turboshaft-assert-types")
-    }
+
     if probability(0.1) {
         args.append("--deopt-every-n-times=\(chooseUniform(from: [100, 250, 500, 1000, 2500, 5000, 10000]))")
     }
@@ -830,9 +839,6 @@ public func v8ProcessArgs(randomize: Bool) -> [String] {
     }
     if probability(0.1) {
         args.append("--optimize-on-next-call-optimizes-to-maglev")
-    }
-    if probability(0.2) {
-        args.append("--turboshaft-verify-load-elimination")
     }
 
     //

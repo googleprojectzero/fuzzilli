@@ -53,18 +53,7 @@ fileprivate struct SandboxFuzzingPostProcessor: FuzzingPostProcessor {
 
 let v8SandboxProfile = Profile(
     processArgs: { randomize in
-        var args = [
-            "--expose-gc",
-            "--omit-quit",
-            "--allow-natives-syntax",
-            "--fuzzing",
-            "--jit-fuzzing",
-            "--sandbox-fuzzing",
-            // This is so that we get an ASan splat directly in the reproducer file.
-            "--disable-in-process-stack-traces"
-        ]
-
-        return args
+        v8ProcessArgs(randomize: randomize, forSandbox: true)
     },
 
     // ASan options.
