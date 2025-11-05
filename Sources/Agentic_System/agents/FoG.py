@@ -77,15 +77,17 @@ class Father(Agent):
                 swift_ripgrep,
                 swift_read_file,
                 write_program_template,
-                build_program_template,
-                excute_program_template,
+                remove_program_template,
+                compile_program_template,
+                execute_program_template,
+                list_program_templates,
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[],
             max_steps=50,
             planning_interval=None
         )
-        self.agents['george_foreman'].prompt_templates["system_prompt"] = system_prompt
+        self.agents['compiler'].prompt_templates["system_prompt"] = system_prompt 
 
         # L2 Worker: Retriever of Code (under CodeAnalyzer)
         self.agents['reviewer_of_code'] = ToolCallingAgent(
@@ -130,7 +132,7 @@ class Father(Agent):
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),  
             max_steps=50,
-            planning_interval=None,
+            planning_interval=10,
         )
         self.agents['v8_search'].prompt_templates["system_prompt"] = self.get_prompt("v8_search.txt") + "THIS IS THE CURRENT V8 PATH ASSUMING YOU ARE INSIDE THE V8 SOURCE CODE DIRECTORY FOR ALL TOOL CALLS ALREADY: " + get_v8_path()
 
@@ -165,7 +167,7 @@ class Father(Agent):
                 self.agents['v8_search']
                 ],
             max_steps=15,
-            planning_interval=None,
+            planning_interval=5,
         )
         self.agents['code_analyzer'].prompt_templates["system_prompt"] = self.get_prompt("code_analyzer.txt")
         
@@ -191,7 +193,7 @@ class Father(Agent):
                 self.agents['compiler']
             ],
             max_steps=30,
-            planning_interval=None,
+            planning_interval=4,
         )
         self.agents['program_builder'].prompt_templates["system_prompt"] = self.get_prompt("program_builder.txt")
 
@@ -206,10 +208,11 @@ class Father(Agent):
                 get_random_entry_data,
                 search_knowledge_base,
                 get_knowledge_doc,
+                list_program_templates,
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             max_steps=20,
-            planning_interval=None,
+            planning_interval=10,
         )
         self.agents['pick_section'].prompt_templates["system_prompt"] = self.get_prompt("pick_section.txt")
         

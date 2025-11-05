@@ -117,7 +117,6 @@ def _parse_rag_entry(raw: str):
     return None, None
 
 
-
 @tool
 def run_python(code: str) -> str:
     """
@@ -146,6 +145,7 @@ def get_v8_path() -> str:
     """
     return V8_PATH
 
+
 @tool 
 def get_realpath(path: str) -> str:
     """
@@ -159,6 +159,7 @@ def get_realpath(path: str) -> str:
         str: The realpath of the given path.
     """
     return get_output(run_command(f"cd {V8_PATH} && realpath {path}"))
+
 
 @tool
 def tree(options: str = "") -> str:
@@ -192,6 +193,7 @@ def tree(options: str = "") -> str:
                 opts = " ".join(parts)
     final_opts = opts if opts else "-L 2 -f ."
     return get_output(run_command(f"cd {V8_PATH} && tree {final_opts} | head -n 1000"))
+
 
 @tool
 def ripgrep(pattern: str, paths: str = "", options: str = "") -> str:
@@ -269,6 +271,7 @@ def ripgrep(pattern: str, paths: str = "", options: str = "") -> str:
     
     return get_output(run_command(cmd))
 
+
 @tool
 def fuzzy_finder(pattern: str, options: str = "") -> str:
     """
@@ -304,6 +307,7 @@ def fuzzy_finder(pattern: str, options: str = "") -> str:
     file_list_cmd = "rg --hidden --no-follow --no-ignore-vcs --files 2>/dev/null"
     return get_output(run_command(f"cd {V8_PATH} && {file_list_cmd} | fzf {options} '{pattern}' | head -n 1000")) 
 
+
 @tool
 def lift_fuzzil_to_js(target: str) -> str:
     """
@@ -319,6 +323,7 @@ def lift_fuzzil_to_js(target: str) -> str:
     """
     return get_output(run_command(f"{FUZZILLI_TOOL_BIN} --liftToFuzzIL {target} | head -n 1000"))
 
+
 @tool
 def compile_js_to_fuzzil(target: str) -> str:
     """
@@ -333,6 +338,7 @@ def compile_js_to_fuzzil(target: str) -> str:
         str: The compiled FuzzIL program the given JS program
     """
     return get_output(run_command(f"{FUZZILLI_TOOL_BIN} --compile {target} | head -n 1000"))
+
 
 @tool 
 def run_d8(target: str, options: str = "") -> str:
@@ -401,8 +407,6 @@ def search_js_file_name_by_pattern(pattern: str) -> str:
         return "No results found"
 
 
-
-
 @tool
 def get_js_entry_data_by_name(file_name: str) -> str:
     """
@@ -416,8 +420,6 @@ def get_js_entry_data_by_name(file_name: str) -> str:
     """
     data = _load_regressions_once()
     return json.dumps(data.get(file_name, {})) if data.get(file_name) else "No results found for " + file_name
-
-
 
 
 @tool
@@ -447,6 +449,7 @@ def search_regex_js(regex: str) -> str:
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds for search_regex_js")
         return "No matches found"
+
 
 @tool
 def search_regex_fuzzilli(regex: str) -> str:
@@ -505,6 +508,7 @@ def search_regex_execution_data(regex: str) -> str:
         print(f"Time taken: {end_time - start_time} seconds for search_regex_execution_data")
         return "No matches found"
 
+
 @tool
 def get_random_entry_data() -> str:
     """
@@ -516,6 +520,7 @@ def get_random_entry_data() -> str:
     data = _load_regressions_once()
     key = random.choice(list(data.keys()))
     return "this is entry data for " + key + "\n" + json.dumps(data[key])
+
 
 @tool 
 def simliar_js_code(JS_File_Name: str) -> str:
@@ -538,6 +543,7 @@ def simliar_js_code(JS_File_Name: str) -> str:
     simlair_js_code.sort(key=lambda x: x[1], reverse=True)
     return "the most similar JS code to " + JS_File_Name + " are " + str(simlair_js_code)
 
+
 @tool 
 def simliar_fuzzilli_code(JS_File_Name: str) -> str:
     """
@@ -558,6 +564,7 @@ def simliar_fuzzilli_code(JS_File_Name: str) -> str:
             simlair_fuzzilli_code.append((key, fuzz_score))
     simlair_fuzzilli_code.sort(key=lambda x: x[1], reverse=True)
     return "the most similar Fuzzilli code to " + JS_File_Name + " are " + str(simlair_fuzzilli_code)
+
 
 @tool
 def simliar_execution_data(JS_File_Name: str) -> str:
@@ -614,6 +621,7 @@ def get_js_file_by_name(file_name: str) -> str:
 # templates.json query helpers
 # =============================
 
+
 @tool
 def search_template_file_json(pattern: str, return_topic: int = 0) -> str:
     """
@@ -635,6 +643,7 @@ def search_template_file_json(pattern: str, return_topic: int = 0) -> str:
             elif return_topic == 3:
                 return value.get("ProgramTemplateName", "")
     return "No results found"
+
 
 @tool
 def search_regex_template_swift(regex: str) -> str:
@@ -663,6 +672,7 @@ def search_regex_template_swift(regex: str) -> str:
     print(f"Time taken: {end_time - start_time} seconds for search_regex_template_swift ")
     return "\n".join(results) if results else "No matches found"
 
+
 @tool
 def search_regex_template_fuzzil(regex: str) -> str:
     """
@@ -683,6 +693,7 @@ def search_regex_template_fuzzil(regex: str) -> str:
             results.append(f"this is fuzzil template for {key}\n{txt}\n")
     return "\n".join(results) if results else "No matches found"
 
+
 @tool
 def get_random_template_swift() -> str:
     """Return a random ProgramTemplateSwift from templates.json."""
@@ -693,6 +704,7 @@ def get_random_template_swift() -> str:
     name = random.choice(keys)
     return "this is swift template for " + name + "\n" + data[name].get("ProgramTemplateSwift", "")
 
+
 @tool
 def get_random_template_fuzzil() -> str:
     """Return a random ProgramTemplateFuzzIL from templates.json."""
@@ -702,6 +714,7 @@ def get_random_template_fuzzil() -> str:
         return "No matches found"
     name = random.choice(keys)
     return "this is fuzzil template for " + name + "\n" + data[name].get("ProgramTemplateFuzzIL", "")
+
 
 @tool
 def similar_template_swift(template_name: str) -> str:
@@ -726,6 +739,7 @@ def similar_template_swift(template_name: str) -> str:
             sims.append((key, score))
     sims.sort(key=lambda x: x[1], reverse=True)
     return "the most similar Swift templates to " + template_name + " are " + str(sims)
+
 
 @tool
 def similar_template_fuzzil(template_name: str) -> str:
@@ -809,6 +823,7 @@ def write_rag_db_id(id: str, Body: str, Context: list[str], Explanation: str, Fi
     RUNTIME_DB_IDS.append(id)
     return f"OK: wrote {id} to {_rag_db_path(id)}"
 
+
 @tool
 def read_rag_db_id(id: str) -> str:
     """
@@ -821,6 +836,7 @@ def read_rag_db_id(id: str) -> str:
     """
     db = _load_rag_db(id)
     return json.dumps(db)
+
 
 @tool
 def init_rag_db(id: str) -> str:
@@ -848,7 +864,6 @@ def get_runtime_db_ids() -> str:
     return json.dumps(RUNTIME_DB_IDS)
 
 
-
 @tool 
 def read_program_template_input_file() -> str:
     """
@@ -859,6 +874,138 @@ def read_program_template_input_file() -> str:
     """
     program_templates_file = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplates.swift")
     return get_output(run_command(f"cat '{program_templates_file}'"))
+
+
+@tool
+def list_program_templates() -> str:
+    """
+    Lists all the existing program templates in ProgramTemplates.swift
+
+    Returns:
+        str: List of all the program templates in ProgramTemplates.swift. Duplicates are included for validation purposes.
+    """
+    program_templates_file = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplates.swift")
+    
+    if not os.path.exists(program_templates_file):
+        return f"Error: ProgramTemplates.swift not found at {program_templates_file}"
+    
+    try:
+        with open(program_templates_file, 'r') as f:
+            content = f.read()
+    except Exception as e:
+        return f"Error reading ProgramTemplates.swift: {e}"
+
+    pattern = r'(?:WasmProgramTemplate|ProgramTemplate)\s*\("([^"]+)"\)'
+
+    program_templates = re.findall(pattern, content)
+    
+    #TODO: can also double check against ProgramTemplateWeights.swift for the found program_templates
+    return f"Found program templates: {program_templates}"
+
+
+@tool
+def remove_program_template(program_template: str) -> str:
+    """
+    Remove a program template from the ProgramTemplates.swift file.
+    Remove the template from the ProgramTemplates array before the closing bracket.
+
+    Args:
+        program_template (str): The name of the swift program template to remove (must be a program template that's been added dynamically by write_program_template)
+    Returns:
+        str: whether removing the program template was successfull or failed 
+    """
+    default_program_templates = ['Codegen100', 'Codegen50', 'WasmCodegen50', 'WasmCodegen100', 'MixedJsAndWasm1', 'MixedJsAndWasm2', 'JSPI', 
+'ThrowInWasmCatchInJS', 'WasmReturnCalls', 'JIT1Function', 'JIT2Functions', 'JITTrickyFunction', 'JSONFuzzer']
+
+    if program_template in default_program_templates:
+        return f"Do not remove a 'default' program template! Here are the defaults: {default_program_template}"
+
+    program_templates_file = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplates.swift")
+    
+    if not os.path.exists(program_templates_file):
+        return f"Error: ProgramTemplates.swift not found at {program_templates_file}"
+    
+    try:
+        with open(program_templates_file, 'r') as f:
+            content = f.read()
+    except Exception as e:
+        return f"Error reading ProgramTemplates.swift: {e}"
+    
+    block_start_pattern = re.compile(
+        r'^\s*(?:WasmProgramTemplate|ProgramTemplate)\s*\(\s*"' + re.escape(program_template) + r'"\s*\)\s*\{',
+        re.MULTILINE
+    )
+
+    start_match = block_start_pattern.search(content)
+
+    if not start_match:
+        return f"Error: Program template '{program_template}' not found in file (start tag missing)."
+
+    start_index = start_match.start()
+
+    brace_count = 1
+    end_index = -1
+    for i in range(start_match.end(), len(content)):
+        if content[i] == '{':
+            brace_count += 1
+        elif content[i] == '}':
+            brace_count -= 1
+            if brace_count == 0:
+                end_index = i
+                break
+
+    if end_index == -1:
+        return f"Error: Could not find matching closing brace '}}' for template '{program_template}'."
+
+    separator_after_match = re.search(r'^\s*,\s*', content[end_index + 1:], re.MULTILINE | re.DOTALL)
+
+    if separator_after_match:
+        end_of_block_to_remove = end_index + 1 + separator_after_match.end()
+    else:
+        end_of_block_to_remove = end_index + 1
+
+    preceding_separator_match = re.search(r'^\s*,?\s*', content[:start_index][::-1], re.MULTILINE | re.DOTALL)
+
+    if preceding_separator_match:
+        start_of_block_to_remove = start_index - preceding_separator_match.end()
+        start_of_block_to_remove += (len(content[:start_index]) - len(content[:start_index].lstrip()))
+    else:
+        start_of_block_to_remove = start_index
+
+    content = content[:start_of_block_to_remove] + content[end_of_block_to_remove:]
+
+    try:
+        with open(program_templates_file, 'w') as f:
+            f.write(content)
+        ret = f"OK: Successfully removed program template {program_template} from {program_templates_file}"
+    except Exception as e:
+        return f"Error writing to ProgramTemplates.swift: {e}"
+
+    # remove from ProgramTemplateWeights.swift below
+    program_template_weights_file = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplateWeights.swift")
+    
+    if not os.path.exists(program_template_weights_file):
+        return f"Error: ProgramTemplateWeights.swift not found at {program_template_weights_file}"
+
+    try:
+        with open(program_template_weights_file, 'r') as f:
+            content_weight = f.read()
+    except Exception as e:
+        return f"Error reading ProgramTemplateWeights.swift: {e}"
+
+    weight_removal_pattern = re.compile(
+        r'^\s*"' + re.escape(program_template) + r'"\s*:\s*\d+\s*,\s*$',
+        re.MULTILINE
+    )
+    content_weight = weight_removal_pattern.sub('', content_weight)
+    content_weight = re.sub(r'\n\s*\n', '\n', content_weight)
+
+    try:
+        with open(program_template_weights_file, 'w') as f:
+            f.write(content_weight)
+        return ret + f"\nOK: Successfully removed program template {program_template} weight from {program_template_weights_file}"
+    except Exception as e:
+        return f"Error writing to ProgramTemplateWeights.swift: {e}"
 
 @tool 
 def write_program_template(program_template: str) -> str:
@@ -891,16 +1038,51 @@ def write_program_template(program_template: str) -> str:
         template_code += ','
     
     content = content[:-1] + '\n\n    ' + template_code + '\n]'
-    
+
     try:
         with open(program_templates_file, 'w') as f:
             f.write(content)
-        return f"OK: Successfully wrote program template to {program_templates_file}"
+        ret = f"OK: Successfully wrote program template to {program_templates_file}"
     except Exception as e:
         return f"Error writing to ProgramTemplates.swift: {e}"
 
+    # update program template weights below
+    program_template_weights_file = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplateWeights.swift")
+
+    template_name_pattern = r'(?:WasmProgramTemplate|ProgramTemplate)\s*\("([^"]+)"\)'
+    name_match = re.search(template_name_pattern, program_template)
+    if not name_match:
+        return f"Error: Could not extract template name to update weights."
+    template_name = name_match.group(1)
+
+    if not os.path.exists(program_template_weights_file):
+        return f"Error: ProgramTemplateWeights.swift not found at {program_template_weights_file}"
+    
+    try:
+        with open(program_template_weights_file, 'r') as f:
+            content_weights = f.read()
+    except Exception as e:
+        return f"Error reading ProgramTemplates.swift: {e}"
+    
+    content_weights = content_weights.rstrip()
+    if not content_weights.endswith(']'):
+        return "Error: ProgramTemplates.swift does not end with closing bracket"
+
+    # default weight is 2. maybe update this?
+    new_weight_entry = f'\n\t"{template_name}": \t\t\t\t2,'
+
+    content_weights = content_weights[:-1] + new_weight_entry + '\n]'
+
+    try:
+        with open(program_template_weights_file, 'w') as f:
+            f.write(content_weights)
+        return ret + f"\nOK: Successfully wrote program template weight to {program_template_weights_file}"
+    except Exception as e:
+        return f"Error writing to ProgramTemplateWeights.swift: {e}"
+
+
 @tool 
-def build_program_template(template: str) -> str:
+def compile_program_template(template: str) -> str:
     """
     Compile a program template file to JavaScript
     
@@ -915,15 +1097,22 @@ def build_program_template(template: str) -> str:
     fake_path DOES NOT GET USED ANYWHERE
     """
     # fake_path is passed in because FuzzILTool requires a path to run
-    # FuzzILTool could maybe get updated to not always require a path 
-    javascript = get_output(run_command(f"{FUZZILLI_TOOL_BIN} --compileTemplate={template} fake_path"))
+    # use swift run to recompile ProgramTemplates.swift and check for errors
+    build = run_command(f"swift run FuzzILTool --compileTemplate={template} fake_path")
+    if build.stderr and not build.stdout:
+        return f"swift build failed, likely errors with generated program template: {build.stderr}" 
+
+    javascript = build.stdout
+
     path = f"{GENERATED_TEMPLATE_DIR}{template}-{hash(javascript)}.js"
     with open(path, "w") as f:
         f.write(javascript)  
+
     return f"Generated JavaScript from {template} template, stored at {path}, full JavaScript: {javascript}"
 
+
 @tool 
-def excute_program_template(template_js_path: str) -> str:
+def execute_program_template(template_js_path: str) -> str:
     """
     Excute a JavaScript program generated from a program template
 
@@ -934,11 +1123,9 @@ def excute_program_template(template_js_path: str) -> str:
         str: The result of the excuting the program template's javascript
 
     """
-    return get_output(run_command(f"{D8_PATH} {D8_COMMON_FLAGS} {template_js_path}"))
-    
-
-
-
+    #TODO: update D8_COMMON_FLAGS so compiler can better examine the ouput for success/get more info. Also update the STAGE 7 prompt in compiler.txt if this is done.
+    d8 = run_command(f"{D8_PATH} {D8_COMMON_FLAGS} {template_js_path}")
+    return f"Program execution result: {d8.stderr}"
 
 @tool
 def swift_fuzzy_finder(pattern: str, options: str = "") -> str:
@@ -1009,14 +1196,13 @@ def swift_tree(options: str = "") -> str:
     return get_output(run_command(f"cd {SWIFT_PATH} && tree {final_opts} | head -n 1000"))
 
 
-
 @tool
 def swift_ripgrep(pattern: str, options: str = "") -> str:
     """
     Search for text patterns in the Fuzzilli Swift codebase using ripgrep (rg) for fast text searching.
     
     MAX OUTPUT 1000 lines, if output getting cut out please use a more specific search
-    
+
     command: cd {SWIFT_PATH} && rg {options} '{pattern}' [paths...]
     Args:
         pattern (str): The text or regular expression pattern to search for.
@@ -1057,8 +1243,13 @@ def swift_ripgrep(pattern: str, options: str = "") -> str:
     Returns:
         str: Search results showing matching lines with context.
     """
+    if "ProgramTemplate" in pattern:
+        resolved_path = os.path.join(SWIFT_PATH, "CodeGen")
+    else:
+        resolved_path = SWIFT_PATH
+
     if not options:
-        return get_output(run_command(f"cd {SWIFT_PATH} && rg '{pattern}' | head -n 10000"))
+        return get_output(run_command(f"cd {resolved_path} && rg '{pattern}' | head -n 10000"))
     
     parts = options.split()
     flags = []
@@ -1079,7 +1270,7 @@ def swift_ripgrep(pattern: str, options: str = "") -> str:
     
     flags_str = ' '.join(flags) if flags else ''
 
-    cmd = f"cd {SWIFT_PATH} && rg {flags_str} '{pattern}' | head -n 1000"
+    cmd = f"cd {resolved_path} && rg {flags_str} '{pattern}' | head -n 1000"
     
     output = get_output(run_command(cmd))
     if not output.strip():
@@ -1103,13 +1294,13 @@ def swift_read_file(file_path: str, section: int = None) -> str:
         If the file is <= 3000 lines, returns its content. If more, returns only the requested section and info about total sections. If section is not specified, instruct agent to pick a section.
     """
     if file_path.startswith('Sources/') or file_path.startswith('Fuzzilli/'):
-        resolved_path = os.path.join(SWIFT_PATH, file_path)
+        resolved_path = os.path.join(FUZZILLI_PATH, file_path)
     elif not os.path.isabs(file_path):
         resolved_path = os.path.join(SWIFT_PATH, file_path)
     else:
         resolved_path = file_path
 
-    line_count_result = get_output(run_command(f"cd {SWIFT_PATH} && wc -l '{resolved_path}'"))
+    line_count_result = get_output(run_command(f"wc -l '{resolved_path}'"))
     try:
         line_count = int(line_count_result.strip().split()[0])
     except Exception:
@@ -1119,7 +1310,7 @@ def swift_read_file(file_path: str, section: int = None) -> str:
     num_sections = (line_count + lines_per_section - 1) // lines_per_section
 
     if line_count <= lines_per_section:
-        return get_output(run_command(f"cd {SWIFT_PATH} && cat '{resolved_path}'"))
+        return get_output(run_command(f"cat '{resolved_path}'"))
 
     if section is None or section < 1 or section > num_sections:
         return (
@@ -1131,7 +1322,7 @@ def swift_read_file(file_path: str, section: int = None) -> str:
 
     start_line = 1 + (section - 1) * lines_per_section
     end_line = min(start_line + lines_per_section - 1, line_count)
-    read_cmd = f"cd {SWIFT_PATH} && sed -n '{start_line},{end_line}p' '{resolved_path}'"
+    read_cmd = f"sed -n '{start_line},{end_line}p' '{resolved_path}'"
     content = get_output(run_command(read_cmd))
     return (
         f"Showing section {section}/{num_sections} (lines {start_line}-{end_line}) of '{file_path}':\n"

@@ -68,7 +68,10 @@ def main():
                             num = int(name[len('rises_the_fog'):-len('.log')])
                             if num > latest_num:
                                 latest_num = num
-        log_path = str(log_dir / f'rises_the_fog{latest_num + 1}.log')
+            log_path = str(log_dir / f'rises_the_fog{latest_num + 1}.log')
+        else: 
+            log_path = str(log_dir / f'rises_the_fog.log')
+
         if os.path.exists(log_path):
             print(f"Log file already exists: {log_path}")
             sys.exit(0)
