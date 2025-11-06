@@ -1091,7 +1091,7 @@ def compile_program_template(template: str) -> str:
     """
     # fake_path is passed in because FuzzILTool requires a path to run
     # use swift run to recompile ProgramTemplates.swift and check for errors
-    build = run_command(f"swift run FuzzILTool --compileTemplate={template} fake_path")
+    build = run_command(f'swift run FuzzILTool --compileTemplate="{template}" fake_path')
     if build.stderr and not build.stdout:
         return f"swift build failed, likely errors with generated program template: {build.stderr}" 
 
