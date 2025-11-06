@@ -671,6 +671,11 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         "--expose-fast-api",
         "--wasm-test-streaming", // WebAssembly.compileStreaming & WebAssembly.instantiateStreaming()
     ]
+    if forSandbox {
+        args.append("--sandbox-fuzzing")
+        // This is so that we get an ASan splat directly in the reproducer file.
+        args.append("--disable-in-process-stack-traces")
+    }
 
     guard randomize else { return args }
 
