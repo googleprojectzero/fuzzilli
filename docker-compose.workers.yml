@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+
+  # Worker 1 - Local Postgres
+  postgres-local-1:
+    image: postgres:15-alpine
+    container_name: postgres-local-1
+    environment:
+      POSTGRES_DB: fuzzilli_local
+      POSTGRES_USER: fuzzilli
+      POSTGRES_PASSWORD: fuzzilli123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_local_data_1:/var/lib/postgresql/data
+      - /home/tropic/vrig/fuzzilli-vrig-proj/fuzzillai/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuzzilli -d fuzzilli_local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - fuzzing-network
+
+  # Worker 1 - Fuzzilli Container
+  fuzzer-worker-1:
+    build:
+      context: /home/tropic/vrig/fuzzilli-vrig-proj/fuzzillai
+      dockerfile: Cloud/VRIG/Dockerfile.distributed
+    container_name: fuzzer-worker-1
+    environment:
+      - MASTER_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-master:5432/fuzzilli_master
+      - LOCAL_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-local-1:5432/fuzzilli_local
+      - FUZZER_INSTANCE_NAME=fuzzer-1
+      - SYNC_INTERVAL=300
+      - TIMEOUT=2500
+      - MIN_MUTATIONS_PER_SAMPLE=25
+      - DEBUG_LOGGING=false
+    depends_on:
+      postgres-master:
+        condition: service_healthy
+      postgres-local-1:
+        condition: service_healthy
+    volumes:
+      - fuzzer_data_1:/home/app/Corpus
+      - /home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild:/home/app/fuzzbuild:ro
+    restart: unless-stopped
+    networks:
+      - fuzzing-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+
+  # Worker 2 - Local Postgres
+  postgres-local-2:
+    image: postgres:15-alpine
+    container_name: postgres-local-2
+    environment:
+      POSTGRES_DB: fuzzilli_local
+      POSTGRES_USER: fuzzilli
+      POSTGRES_PASSWORD: fuzzilli123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_local_data_2:/var/lib/postgresql/data
+      - /home/tropic/vrig/fuzzilli-vrig-proj/fuzzillai/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuzzilli -d fuzzilli_local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - fuzzing-network
+
+  # Worker 2 - Fuzzilli Container
+  fuzzer-worker-2:
+    build:
+      context: /home/tropic/vrig/fuzzilli-vrig-proj/fuzzillai
+      dockerfile: Cloud/VRIG/Dockerfile.distributed
+    container_name: fuzzer-worker-2
+    environment:
+      - MASTER_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-master:5432/fuzzilli_master
+      - LOCAL_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-local-2:5432/fuzzilli_local
+      - FUZZER_INSTANCE_NAME=fuzzer-2
+      - SYNC_INTERVAL=300
+      - TIMEOUT=2500
+      - MIN_MUTATIONS_PER_SAMPLE=25
+      - DEBUG_LOGGING=false
+    depends_on:
+      postgres-master:
+        condition: service_healthy
+      postgres-local-2:
+        condition: service_healthy
+    volumes:
+      - fuzzer_data_2:/home/app/Corpus
+      - /home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild:/home/app/fuzzbuild:ro
+    restart: unless-stopped
+    networks:
+      - fuzzing-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+
+volumes:
+  postgres_local_data_1:
+  fuzzer_data_1:
+  postgres_local_data_2:
+  fuzzer_data_2:
