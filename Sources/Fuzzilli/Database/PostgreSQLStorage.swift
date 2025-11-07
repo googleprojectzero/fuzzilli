@@ -734,7 +734,12 @@ public class PostgreSQLStorage {
     // MARK: - Query Operations
     
     /// Get recent programs with metadata for a fuzzer
-    public func getRecentPrograms(fuzzerId: Int, since: Date, limit: Int = 100) async throws -> [(Program, ExecutionMetadata)] {
+    /// Get all programs from master database (from all fuzzers)
+    public func getAllPrograms(since: Date) async throws -> [(Program, ExecutionMetadata)] {
+        return try await getRecentPrograms(fuzzerId: nil, since: since, limit: nil)
+    }
+    
+    public func getRecentPrograms(fuzzerId: Int?, since: Date, limit: Int? = nil) async throws -> [(Program, ExecutionMetadata)] {
         if enableLogging {
             logger.info("Getting recent programs: fuzzerId=\(fuzzerId), since=\(since), limit=\(limit)")
         }
@@ -745,7 +750,7 @@ public class PostgreSQLStorage {
         
         // Query for recent programs with their latest execution metadata
         let queryString = """
-            SELECT 
+            SELECT DISTINCT ON (p.program_hash)
                 p.program_hash,
                 p.program_size,
                 p.program_base64,
@@ -759,10 +764,10 @@ public class PostgreSQLStorage {
             FROM program p
             LEFT JOIN execution e ON p.program_hash = e.program_hash
             LEFT JOIN execution_outcome eo ON e.execution_outcome_id = eo.id
-            WHERE p.fuzzer_id = \(fuzzerId)
-            AND p.created_at >= '\(since.ISO8601Format())'
-            ORDER BY p.created_at DESC
-            LIMIT \(limit)
+            WHERE \(fuzzerId != nil ? "p.fuzzer_id = \(fuzzerId!) AND " : "")
+            p.created_at >= '\(since.ISO8601Format())'
+            ORDER BY p.program_hash, p.created_at DESC, e.created_at DESC NULLS LAST
+            \(limit != nil ? "LIMIT \(limit!)" : "")
         """
         
         let query = PostgresQuery(stringLiteral: queryString)
@@ -772,16 +777,39 @@ public class PostgreSQLStorage {
         var programs: [(Program, ExecutionMetadata)] = []
         
         for row in rows {
-            let programHash = try row.decode(String.self, context: PostgresDecodingContext.default)
-            _ = try row.decode(Int.self, context: PostgresDecodingContext.default) // programSize
-            let programBase64 = try row.decode(String.self, context: PostgresDecodingContext.default)
-            _ = try row.decode(Date.self, context: PostgresDecodingContext.default) // createdAt
-            let outcome = try row.decode(String?.self, context: PostgresDecodingContext.default)
-            let description = try row.decode(String?.self, context: PostgresDecodingContext.default)
-            _ = try row.decode(Int?.self, context: PostgresDecodingContext.default) // executionTimeMs
-            let coverageTotal = try row.decode(Double?.self, context: PostgresDecodingContext.default)
-            _ = try row.decode(Int?.self, context: PostgresDecodingContext.default) // signalCode
-            _ = try row.decode(Int?.self, context: PostgresDecodingContext.default) // exitCode
+            // Decode with error handling for each field
+            let programHash: String
+            let programSize: Int
+            let programBase64: String
+            let createdAt: Date
+            let outcome: String?
+            let description: String?
+            let executionTimeMs: Int?
+            let coverageTotal: Double?
+            let signalCode: Int?
+            let exitCode: Int?
+            
+            do {
+                // Decode required fields (these should never be NULL)
+                programHash = try row.decode(String.self, context: PostgresDecodingContext.default)
+                programSize = try row.decode(Int.self, context: PostgresDecodingContext.default)
+                programBase64 = try row.decode(String.self, context: PostgresDecodingContext.default)
+                createdAt = try row.decode(Date.self, context: PostgresDecodingContext.default)
+                
+                // Decode optional fields (these can be NULL from LEFT JOIN)
+                // PostgresNIO handles NULL values when decoding to Optional types
+                outcome = try row.decode(String?.self, context: PostgresDecodingContext.default)
+                description = try row.decode(String?.self, context: PostgresDecodingContext.default)
+                executionTimeMs = try row.decode(Int?.self, context: PostgresDecodingContext.default)
+                coverageTotal = try row.decode(Double?.self, context: PostgresDecodingContext.default)
+                signalCode = try row.decode(Int?.self, context: PostgresDecodingContext.default)
+                exitCode = try row.decode(Int?.self, context: PostgresDecodingContext.default)
+            } catch {
+                if enableLogging {
+                    logger.warning("Failed to decode row: \(String(reflecting: error)). Skipping this program.")
+                }
+                continue
+            }
             
             // Decode the program from base64
             guard let programData = Data(base64Encoded: programBase64) else {

@@ -523,6 +523,14 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     public func addInternal(_ program: Program, aspects: ProgramAspects? = nil) {
         guard program.size > 0 else { return }
         
+        // Filter out test programs with FUZZILLI_CRASH (false positive crashes)
+        if DatabaseUtils.containsFuzzilliCrash(program: program) {
+            if enableLogging {
+                logger.info("Skipping program with FUZZILLI_CRASH (test case)")
+            }
+            return
+        }
+        
         let programHash = DatabaseUtils.calculateProgramHash(program: program)
         
         cacheLock.lock()
@@ -653,8 +661,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             let since = Date().addingTimeInterval(-24 * 60 * 60) // 24 hours ago
             let recentPrograms = try await storage.getRecentPrograms(
                 fuzzerId: fuzzerId, 
-                since: since, 
-                limit: maxSize
+                since: since
             )
             
             if enableLogging {
@@ -710,69 +717,73 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     
     /// Perform actual database synchronization
     private func performDatabaseSync() async {
-        let hashesToSync: Set<String>
-        
-        // Use async-safe lock for getting pending operations
-        hashesToSync = withLock(syncLock) {
-            let hashes = Set(pendingSyncOperations)
-            pendingSyncOperations.removeAll()
-            return hashes
+        // Sync ALL programs from local database to master, not just from cache
+        // This ensures the master has the complete corpus from this worker
+        guard let masterStorage = masterStorage, let masterId = masterFuzzerId, let localId = fuzzerId else {
+            return
         }
         
-        guard !hashesToSync.isEmpty else { return }
-        
-        // Syncing programs with PostgreSQL silently
-        
-        // Get programs to sync from cache
-        let programsToSync = withLock(cacheLock) {
-            hashesToSync.compactMap { hash -> (Program, ExecutionMetadata)? in
-                guard let (program, metadata) = programCache[hash] else { return nil }
-                return (program, metadata)
+        do {
+            // Get all programs from local database (not just cache)
+            // Use a date far in the past to get all programs
+            let allTimeDate = Date(timeIntervalSince1970: 0)
+            let localPrograms = try await storage.getRecentPrograms(
+                fuzzerId: localId,
+                since: allTimeDate,
+                limit: nil // No limit - get all programs
+            )
+            
+            guard !localPrograms.isEmpty else {
+                if enableLogging {
+                    logger.info("No programs in local database to sync")
+                }
+                return
             }
-        }
-        
-        // Store each program in the database
-        for (program, metadata) in programsToSync {
-            do {
-                // Use the registered fuzzer ID
-                guard let fuzzerId = fuzzerId else {
-                    logger.error("Cannot sync program: fuzzer not registered")
-                    return
+            
+            if enableLogging {
+                logger.info("Syncing \(localPrograms.count) programs from local database to master")
+            }
+            
+            // Store each program in the master database (filter out FUZZILLI_CRASH test cases)
+            var syncedCount = 0
+            var skippedCount = 0
+            for (program, metadata) in localPrograms {
+                // Skip test programs with FUZZILLI_CRASH
+                if DatabaseUtils.containsFuzzilliCrash(program: program) {
+                    skippedCount += 1
+                    continue
                 }
                 
-                // Store the program with metadata to master (if available) for sync
-                // Use master fuzzer ID for master sync, local fuzzer ID for local storage
-                if let masterStorage = masterStorage, let masterId = masterFuzzerId {
+                do {
                     _ = try await masterStorage.storeProgram(
                         program: program,
                         fuzzerId: masterId,
                         metadata: metadata
                     )
-                } else {
-                    // Fallback to local storage if master not available
-                    _ = try await storage.storeProgram(
-                        program: program,
-                        fuzzerId: fuzzerId,
-                        metadata: metadata
-                    )
-                }
-                
-                // Program synced to database silently
-                
-            } catch {
-                if enableLogging {
-                    logger.error("Failed to sync program to database: \(String(reflecting: error))")
-                } else {
-                    logger.error("Failed to sync program to database: \(error)")
-                }
-                // Re-add to pending sync for retry
-                _ = withLock(syncLock) {
-                    pendingSyncOperations.insert(DatabaseUtils.calculateProgramHash(program: program))
+                    syncedCount += 1
+                } catch {
+                    if enableLogging {
+                        logger.error("Failed to sync program to master: \(error)")
+                    }
                 }
             }
+            
+            if skippedCount > 0 && enableLogging {
+                logger.info("Skipped \(skippedCount) test programs with FUZZILLI_CRASH during sync")
+            }
+            
+            if enableLogging {
+                logger.info("Successfully synced \(syncedCount)/\(localPrograms.count) programs to master")
+            }
+            
+            // Clear pending sync operations since we've synced everything
+            _ = withLock(syncLock) {
+                pendingSyncOperations.removeAll()
+            }
+            
+        } catch {
+            logger.error("Failed to sync programs to master: \(error)")
         }
-        
-        // Database sync completed silently
     }
     
     /// Pull sync from master database
@@ -790,13 +801,11 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
         
         do {
-            // Get recent programs from master (last 24 hours, limit 100)
-            // Use master fuzzer ID to query master database
-            let sinceDate = Date().addingTimeInterval(-24 * 60 * 60) // 24 hours ago
-            let masterPrograms = try await masterStorage.getRecentPrograms(
-                fuzzerId: masterId,
-                since: sinceDate,
-                limit: 100
+            // Get ALL programs from master database (from all fuzzers)
+            // Use a date far in the past to get all programs
+            let sinceDate = Date(timeIntervalSince1970: 0) // Get all programs from the beginning
+            let masterPrograms = try await masterStorage.getAllPrograms(
+                since: sinceDate
             )
             
             guard !masterPrograms.isEmpty else {
@@ -827,8 +836,16 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 logger.info("Pulling \(newPrograms.count) new programs from master")
             }
             
-            // Add new programs to local cache and local postgres
+            // Add new programs to local cache and local postgres (filter out FUZZILLI_CRASH test cases)
+            var pulledCount = 0 
+            var skippedCount = 0
             for (program, metadata) in newPrograms {
+                // Skip test programs with FUZZILLI_CRASH
+                if DatabaseUtils.containsFuzzilliCrash(program: program) {
+                    skippedCount += 1
+                    continue
+                }
+                
                 let hash = DatabaseUtils.calculateProgramHash(program: program)
                 
                 // Add to local cache
@@ -852,6 +869,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                         totalEntryCounter += 1
                     }
                     
+                    pulledCount += 1
                     if enableLogging {
                         logger.info("Pulled program from master: hash=\(hash.prefix(8))...")
                     }
@@ -861,7 +879,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             }
             
             if enableLogging {
-                logger.info("Successfully pulled \(newPrograms.count) programs from master")
+                logger.info("Successfully pulled \(pulledCount) programs from master (skipped \(skippedCount) test programs with FUZZILLI_CRASH)")
             }
             
         } catch {

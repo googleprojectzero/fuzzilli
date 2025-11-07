@@ -12,7 +12,7 @@
 # Environment variables:
 #   - V8_BUILD_PATH: Path to V8 build directory on host (default: /home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild)
 #   - POSTGRES_PASSWORD: PostgreSQL password (default: fuzzilli123)
-#   - SYNC_INTERVAL: Sync interval in seconds (default: 300)
+#   - SYNC_INTERVAL: Sync interval in seconds (default: 60)
 #   - TIMEOUT: Execution timeout in ms (default: 2500)
 #   - MIN_MUTATIONS_PER_SAMPLE: Minimum mutations per sample (default: 25)
 #   - DEBUG_LOGGING: Enable debug logging (default: false)
@@ -64,7 +64,7 @@ fi
 # Set defaults
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fuzzilli123}
 V8_BUILD_PATH=${V8_BUILD_PATH:-/home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild}
-SYNC_INTERVAL=${SYNC_INTERVAL:-300}
+SYNC_INTERVAL=${SYNC_INTERVAL:-60}
 TIMEOUT=${TIMEOUT:-2500}
 MIN_MUTATIONS_PER_SAMPLE=${MIN_MUTATIONS_PER_SAMPLE:-25}
 DEBUG_LOGGING=${DEBUG_LOGGING:-false}

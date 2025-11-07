@@ -94,6 +94,30 @@ public class DatabaseUtils {
         return try JSONDecoder().decode(ExecutionMetadata.self, from: data)
     }
     
+    // MARK: - Program Filtering
+    
+    /// Check if a program contains FUZZILLI_CRASH test calls (false positive crashes)
+    public static func containsFuzzilliCrash(program: Program) -> Bool {
+        // Lift program to JavaScript and check for FUZZILLI_CRASH pattern
+        let jsLifter = JavaScriptLifter(prefix: "", suffix: "", ecmaVersion: .es6)
+        let jsCode = jsLifter.lift(program, withOptions: [])
+        
+        // Check for patterns like fuzzilli('FUZZILLI_CRASH', ...) or fuzzilli("FUZZILLI_CRASH", ...)
+        let patterns = [
+            "fuzzilli('FUZZILLI_CRASH'",
+            "fuzzilli(\"FUZZILLI_CRASH\"",
+            "fuzzilli(`FUZZILLI_CRASH`"
+        ]
+        
+        for pattern in patterns {
+            if jsCode.contains(pattern) {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
     // MARK: - Execution Outcome Mapping
     
     /// Map ExecutionOutcome to database ID
