@@ -417,6 +417,14 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             var executionBatchData: [ExecutionBatchData] = []
             
             for (program, aspects, executionType) in batch {
+                // Filter out test programs with FUZZILLI_CRASH (false positive crashes)
+                if DatabaseUtils.containsFuzzilliCrash(program: program) {
+                    if enableLogging {
+                        logger.info("Skipping execution with FUZZILLI_CRASH (test case) in batch processing")
+                    }
+                    continue
+                }
+                
                 let programHash = DatabaseUtils.calculateProgramHash(program: program)
                 
                 // Only store unique programs
@@ -936,6 +944,14 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     
     /// Store execution with cached data to avoid REPRL context issues
     private func storeExecutionWithCachedData(_ program: Program, _ executionData: ExecutionData, _ executionType: DatabaseExecutionPurpose, _ aspects: ProgramAspects) async {
+        // Filter out test programs with FUZZILLI_CRASH (false positive crashes)
+        if DatabaseUtils.containsFuzzilliCrash(program: program) {
+            if enableLogging {
+                logger.info("Skipping execution storage for program with FUZZILLI_CRASH (test case)")
+            }
+            return
+        }
+        
         do {
             // Use the registered fuzzer ID
             guard let fuzzerId = fuzzerId else {

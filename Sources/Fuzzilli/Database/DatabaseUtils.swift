@@ -103,14 +103,30 @@ public class DatabaseUtils {
         let jsCode = jsLifter.lift(program, withOptions: [])
         
         // Check for patterns like fuzzilli('FUZZILLI_CRASH', ...) or fuzzilli("FUZZILLI_CRASH", ...)
+        // Specifically check for fuzzilli('FUZZILLI_CRASH', 3) which is a test case
         let patterns = [
             "fuzzilli('FUZZILLI_CRASH'",
             "fuzzilli(\"FUZZILLI_CRASH\"",
-            "fuzzilli(`FUZZILLI_CRASH`"
+            "fuzzilli(`FUZZILLI_CRASH`",
+            "fuzzilli('FUZZILLI_CRASH', 3)",
+            "fuzzilli(\"FUZZILLI_CRASH\", 3)",
+            "fuzzilli(`FUZZILLI_CRASH`, 3)"
         ]
         
         for pattern in patterns {
             if jsCode.contains(pattern) {
+                return true
+            }
+        }
+        
+        // Also check for the pattern with any whitespace variations
+        let regexPatterns = [
+            "fuzzilli\\s*\\(\\s*['\"`]FUZZILLI_CRASH['\"`]\\s*,\\s*3\\s*\\)",
+            "fuzzilli\\s*\\(\\s*['\"`]FUZZILLI_CRASH['\"`]"
+        ]
+        
+        for pattern in regexPatterns {
+            if jsCode.range(of: pattern, options: .regularExpression) != nil {
                 return true
             }
         }

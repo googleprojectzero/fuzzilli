@@ -58,26 +58,44 @@ get_db_stats() {
     local execution_count=$(docker exec "$container" psql -U fuzzilli -d "$database" -t -c "SELECT COUNT(*) FROM execution;" 2>/dev/null | tr -d ' ' || echo "0")
     local program_table_count=$(docker exec "$container" psql -U fuzzilli -d "$database" -t -c "SELECT COUNT(*) FROM program;" 2>/dev/null | tr -d ' ' || echo "0")
     
-    # Crash count
-    local crash_count=$(docker exec "$container" psql -U fuzzilli -d "$database" -t -c "SELECT COUNT(*) FROM execution e JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed';" 2>/dev/null | tr -d ' ' || echo "0")
+    # Crash count (excluding only FUZZILLI_CRASH test cases with signal 3)
+    # Show all other crashes including signal 11 and all other signals
+    local crash_count=$(docker exec "$container" psql -U fuzzilli -d "$database" -t -c "SELECT COUNT(*) FROM execution e JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed' AND (e.signal_code IS NULL OR e.signal_code != 3);" 2>/dev/null | tr -d ' ' || echo "0")
     
     echo -e "${YELLOW}Statistics:${NC}"
     echo "  Programs (corpus): $program_count"
     echo "  Programs (executed): $program_table_count"
     echo "  Executions: $execution_count"
-    echo "  Crashes: $crash_count"
+    echo "  Crashes (excluding test cases - signal 3): $crash_count"
     
     # Recent activity (last 5 programs)
     echo -e "${YELLOW}Recent Programs (last 5):${NC}"
     docker exec "$container" psql -U fuzzilli -d "$database" -c "SELECT program_hash, program_size, created_at FROM fuzzer ORDER BY created_at DESC LIMIT 5;" 2>/dev/null || echo "  No programs found"
     
-    # Crash details
+    # Crash details (excluding only FUZZILLI_CRASH test cases - signal 3)
+    # Show all other crashes including signal 11 and all other signals
     if [ "$crash_count" != "0" ] && [ "$crash_count" != "" ]; then
-        echo -e "${YELLOW}Crashes (last 3):${NC}"
-        docker exec "$container" psql -U fuzzilli -d "$database" -c "SELECT e.execution_id, e.program_hash, e.execution_time_ms, e.signal_code, e.exit_code, eo.description, e.created_at FROM execution e JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed' ORDER BY e.created_at DESC LIMIT 3;" 2>/dev/null || echo "  No crash details available"
+        echo -e "${YELLOW}Crashes (last 3, excluding test cases - signal 3):${NC}"
+        docker exec "$container" psql -U fuzzilli -d "$database" -c "SELECT e.execution_id, e.program_hash, e.execution_time_ms, e.signal_code, e.exit_code, eo.description, e.created_at FROM execution e JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed' AND (e.signal_code IS NULL OR e.signal_code != 3) ORDER BY e.created_at DESC LIMIT 3;" 2>/dev/null || echo "  No crash details available"
     fi
     
     echo ""
+}
+
+# Get all postgres-local-* containers
+get_local_postgres_containers() {
+    docker ps --format '{{.Names}}' | grep '^postgres-local-' | sort
+}
+
+# Get all fuzzer-worker-* containers
+get_worker_containers() {
+    docker ps --format '{{.Names}}' | grep '^fuzzer-worker-' | sort
+}
+
+# Get worker number from container name
+get_worker_num() {
+    local container=$1
+    echo "$container" | sed 's/.*-\([0-9]*\)$/\1/'
 }
 
 # Get worker container stats
@@ -87,7 +105,7 @@ get_worker_stats() {
     local postgres_container="postgres-local-${worker_num}"
     
     if ! check_container "$container"; then
-        echo -e "${RED}Worker ${worker_num}: Container not running${NC}"
+        echo -e "${RED}Worker ${worker_num}: Fuzzer container not running${NC}"
         echo ""
         return
     fi
@@ -121,9 +139,17 @@ else
     echo ""
 fi
 
-# Worker stats
-get_worker_stats 1
-get_worker_stats 2
+# Worker stats - dynamically discover all workers
+local_postgres_containers=($(get_local_postgres_containers))
+if [ ${#local_postgres_containers[@]} -eq 0 ]; then
+    echo -e "${YELLOW}No postgres-local-* containers found${NC}"
+    echo ""
+else
+    for postgres_container in "${local_postgres_containers[@]}"; do
+        worker_num=$(get_worker_num "$postgres_container")
+        get_worker_stats "$worker_num"
+    done
+fi
 
 # Summary
 echo -e "${CYAN}========================================${NC}"
@@ -136,16 +162,17 @@ if check_container "fuzzilli-postgres-master"; then
     echo -e "Master: ${GREEN}${master_programs}${NC} programs, ${GREEN}${master_executions}${NC} executions"
 fi
 
-if check_container "postgres-local-1"; then
-    w1_programs=$(docker exec postgres-local-1 psql -U fuzzilli -d fuzzilli_local -t -c "SELECT COUNT(*) FROM fuzzer;" 2>/dev/null | tr -d ' ' || echo "0")
-    w1_executions=$(docker exec postgres-local-1 psql -U fuzzilli -d fuzzilli_local -t -c "SELECT COUNT(*) FROM execution;" 2>/dev/null | tr -d ' ' || echo "0")
-    echo -e "Worker 1: ${GREEN}${w1_programs}${NC} programs, ${GREEN}${w1_executions}${NC} executions"
-fi
-
-if check_container "postgres-local-2"; then
-    w2_programs=$(docker exec postgres-local-2 psql -U fuzzilli -d fuzzilli_local -t -c "SELECT COUNT(*) FROM fuzzer;" 2>/dev/null | tr -d ' ' || echo "0")
-    w2_executions=$(docker exec postgres-local-2 psql -U fuzzilli -d fuzzilli_local -t -c "SELECT COUNT(*) FROM execution;" 2>/dev/null | tr -d ' ' || echo "0")
-    echo -e "Worker 2: ${GREEN}${w2_programs}${NC} programs, ${GREEN}${w2_executions}${NC} executions"
+# Dynamically get stats for all local postgres containers
+local_postgres_containers=($(get_local_postgres_containers))
+if [ ${#local_postgres_containers[@]} -gt 0 ]; then
+    for postgres_container in "${local_postgres_containers[@]}"; do
+        worker_num=$(get_worker_num "$postgres_container")
+        if check_container "$postgres_container"; then
+            worker_programs=$(docker exec "$postgres_container" psql -U fuzzilli -d fuzzilli_local -t -c "SELECT COUNT(*) FROM fuzzer;" 2>/dev/null | tr -d ' ' || echo "0")
+            worker_executions=$(docker exec "$postgres_container" psql -U fuzzilli -d fuzzilli_local -t -c "SELECT COUNT(*) FROM execution;" 2>/dev/null | tr -d ' ' || echo "0")
+            echo -e "Worker ${worker_num}: ${GREEN}${worker_programs}${NC} programs, ${GREEN}${worker_executions}${NC} executions"
+        fi
+    done
 fi
 
 echo ""
