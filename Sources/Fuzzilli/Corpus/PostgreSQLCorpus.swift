@@ -22,9 +22,11 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     private let maxSize: Int
     private let minMutationsPerSample: Int
     private let syncInterval: TimeInterval
-    private let databasePool: DatabasePool
+    private let databasePool: DatabasePool // Local database pool
+    private let masterDatabasePool: DatabasePool? // Optional master database pool for sync
     private let fuzzerInstanceId: String
-    private let storage: PostgreSQLStorage
+    private let storage: PostgreSQLStorage // Local storage
+    private let masterStorage: PostgreSQLStorage? // Optional master storage for sync
     private let resume: Bool
     private let enableLogging: Bool
     
@@ -52,7 +54,8 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     
     /// Track fuzzer registration status
     private var fuzzerRegistered = false
-    private var fuzzerId: Int?
+    private var fuzzerId: Int? // Local database fuzzer ID
+    private var masterFuzzerId: Int? // Master database fuzzer ID (for sync operations)
     
     /// Batch execution storage
     private var pendingExecutions: [(Program, ProgramAspects, DatabaseExecutionPurpose)] = []
@@ -65,11 +68,12 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         minSize: Int,
         maxSize: Int,
         minMutationsPerSample: Int,
-        databasePool: DatabasePool,
+        databasePool: DatabasePool, // Local database pool
         fuzzerInstanceId: String,
         syncInterval: TimeInterval = 60.0, // Default 1 minute sync interval
         resume: Bool = true, // Default to resume from previous state
-        enableLogging: Bool = false
+        enableLogging: Bool = false,
+        masterDatabasePool: DatabasePool? = nil // Optional master database pool for sync
     ) {
         // The corpus must never be empty
         assert(minSize >= 1)
@@ -79,11 +83,13 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         self.maxSize = maxSize
         self.minMutationsPerSample = minMutationsPerSample
         self.databasePool = databasePool
+        self.masterDatabasePool = masterDatabasePool
         self.fuzzerInstanceId = fuzzerInstanceId
         self.syncInterval = syncInterval
         self.resume = resume
         self.enableLogging = enableLogging
         self.storage = PostgreSQLStorage(databasePool: databasePool, enableLogging: enableLogging)
+        self.masterStorage = masterDatabasePool.map { PostgreSQLStorage(databasePool: $0, enableLogging: enableLogging) }
         
         // Set optimized batch size for better throughput (reduced from 1M to 100k for more frequent processing)
         self.executionBatchSize = 100_000
@@ -181,19 +187,52 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         // Initialize database pool and register fuzzer (only once)
         Task {
             do {
+                // Initialize local database pool
                 try await databasePool.initialize()
                 if enableLogging {
-                    self.logger.info("Database pool initialized successfully")
+                    self.logger.info("Local database pool initialized successfully")
+                }
+                
+                // Initialize master database pool if available
+                if let masterPool = masterDatabasePool {
+                    try await masterPool.initialize()
+                    if enableLogging {
+                        self.logger.info("Master database pool initialized successfully")
+                    }
                 }
                 
                 // Register this fuzzer instance in the database (only once)
                 if !fuzzerRegistered {
                     do {
-                        let id = try await registerFuzzerWithRetry()
-                        fuzzerId = id
+                        // Register in master database first (for sync)
+                        let masterId: Int?
+                        if let masterStorage = masterStorage {
+                            masterId = try await masterStorage.registerFuzzer(
+                                name: fuzzerInstanceId,
+                                engineType: "v8"
+                            )
+                            if enableLogging {
+                                self.logger.info("Fuzzer registered in master database with ID: \(masterId ?? -1)")
+                            }
+                        } else {
+                            masterId = nil
+                        }
+                        
+                        // Register in local database (for local storage)
+                        let localId = try await storage.registerFuzzer(
+                            name: fuzzerInstanceId,
+                            engineType: "v8"
+                        )
+                        if enableLogging {
+                            self.logger.info("Fuzzer registered in local database with ID: \(localId)")
+                        }
+                        
+                        // Use local ID for local operations, master ID is used for sync operations
+                        fuzzerId = localId
+                        masterFuzzerId = masterId
                         fuzzerRegistered = true
                         if enableLogging {
-                            self.logger.info("Fuzzer registered in database with ID: \(id)")
+                            self.logger.info("Fuzzer registration complete - local ID: \(localId), master ID: \(masterId?.description ?? "none")")
                         }
                     } catch {
                         logger.error("Failed to register fuzzer after retries: \(error)")
@@ -280,10 +319,18 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             }
         }
         
-        // Schedule periodic synchronization with PostgreSQL
+        // Schedule periodic synchronization with PostgreSQL (push to master)
         fuzzer.timers.scheduleTask(every: syncInterval, syncWithDatabase)
         if self.enableLogging {
-            logger.info("Scheduled database sync every \(syncInterval) seconds")
+            logger.info("Scheduled database sync (push) every \(syncInterval) seconds")
+        }
+        
+        // Schedule periodic pull sync from master (if master storage is available)
+        if masterStorage != nil {
+            fuzzer.timers.scheduleTask(every: syncInterval, pullFromMaster)
+            if self.enableLogging {
+                logger.info("Scheduled database sync (pull) every \(syncInterval) seconds")
+            }
         }
         
         // Schedule periodic flush of execution batch
@@ -693,17 +740,31 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                     return
                 }
                 
-                // Store the program with metadata
-                _ = try await storage.storeProgram(
-                    program: program,
-                    fuzzerId: fuzzerId,
-                    metadata: metadata
-                )
+                // Store the program with metadata to master (if available) for sync
+                // Use master fuzzer ID for master sync, local fuzzer ID for local storage
+                if let masterStorage = masterStorage, let masterId = masterFuzzerId {
+                    _ = try await masterStorage.storeProgram(
+                        program: program,
+                        fuzzerId: masterId,
+                        metadata: metadata
+                    )
+                } else {
+                    // Fallback to local storage if master not available
+                    _ = try await storage.storeProgram(
+                        program: program,
+                        fuzzerId: fuzzerId,
+                        metadata: metadata
+                    )
+                }
                 
                 // Program synced to database silently
                 
             } catch {
-                logger.error("Failed to sync program to database: \(error)")
+                if enableLogging {
+                    logger.error("Failed to sync program to database: \(String(reflecting: error))")
+                } else {
+                    logger.error("Failed to sync program to database: \(error)")
+                }
                 // Re-add to pending sync for retry
                 _ = withLock(syncLock) {
                     pendingSyncOperations.insert(DatabaseUtils.calculateProgramHash(program: program))
@@ -712,6 +773,100 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
         
         // Database sync completed silently
+    }
+    
+    /// Pull sync from master database
+    private func pullFromMaster() {
+        Task {
+            await performPullFromMaster()
+        }
+    }
+    
+    /// Perform pull sync from master: fetch new programs and add to local cache
+    private func performPullFromMaster() async {
+        // Only pull if master storage is available
+        guard let masterStorage = masterStorage, let masterId = masterFuzzerId, let localId = fuzzerId else {
+            return
+        }
+        
+        do {
+            // Get recent programs from master (last 24 hours, limit 100)
+            // Use master fuzzer ID to query master database
+            let sinceDate = Date().addingTimeInterval(-24 * 60 * 60) // 24 hours ago
+            let masterPrograms = try await masterStorage.getRecentPrograms(
+                fuzzerId: masterId,
+                since: sinceDate,
+                limit: 100
+            )
+            
+            guard !masterPrograms.isEmpty else {
+                if enableLogging {
+                    logger.info("No new programs to pull from master")
+                }
+                return
+            }
+            
+            // Filter out programs already in local cache
+            let localHashes = withLock(cacheLock) {
+                Set(programCache.keys)
+            }
+            
+            let newPrograms = masterPrograms.filter { program, _ in
+                let hash = DatabaseUtils.calculateProgramHash(program: program)
+                return !localHashes.contains(hash)
+            }
+            
+            guard !newPrograms.isEmpty else {
+                if enableLogging {
+                    logger.info("All programs from master already in local cache")
+                }
+                return
+            }
+            
+            if enableLogging {
+                logger.info("Pulling \(newPrograms.count) new programs from master")
+            }
+            
+            // Add new programs to local cache and local postgres
+            for (program, metadata) in newPrograms {
+                let hash = DatabaseUtils.calculateProgramHash(program: program)
+                
+                // Add to local cache
+                withLock(cacheLock) {
+                    programCache[hash] = (program: program, metadata: metadata)
+                }
+                
+                // Add to local postgres using local fuzzer ID
+                do {
+                    _ = try await storage.storeProgram(
+                        program: program,
+                        fuzzerId: localId,
+                        metadata: metadata
+                    )
+                    
+                    // Add to ring buffer for fast access
+                    withLock(cacheLock) {
+                        programs.append(program)
+                        ages.append(0)
+                        programHashes.append(hash)
+                        totalEntryCounter += 1
+                    }
+                    
+                    if enableLogging {
+                        logger.info("Pulled program from master: hash=\(hash.prefix(8))...")
+                    }
+                } catch {
+                    logger.error("Failed to store pulled program in local database: \(error)")
+                }
+            }
+            
+            if enableLogging {
+                logger.info("Successfully pulled \(newPrograms.count) programs from master")
+            }
+            
+        } catch {
+            logger.error("Failed to pull programs from master: \(error)")
+        }
     }
     
     /// Register fuzzer with retry logic
@@ -728,7 +883,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 if enableLogging {
                     self.logger.info("Attempting to register fuzzer (attempt \(attempt)/\(maxRetries))")
                 }
-                let id = try await storage.registerFuzzer(
+                // Use master storage if available, otherwise use local storage
+                let storageToUse = masterStorage ?? storage
+                let id = try await storageToUse.registerFuzzer(
                     name: fuzzerName,
                     engineType: engineType
                 )

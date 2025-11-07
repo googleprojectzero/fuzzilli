@@ -164,7 +164,9 @@ let enableWasm = args.has("--wasm")
 let forDifferentialFuzzing = args.has("--forDifferentialFuzzing")
 
 // PostgreSQL corpus specific arguments
-let postgresUrl = args["--postgres-url"]
+let postgresUrl = args["--postgres-url"] ?? ProcessInfo.processInfo.environment["POSTGRES_URL"]
+let localPostgresUrl = args["--local-postgres-url"] ?? ProcessInfo.processInfo.environment["LOCAL_POSTGRES_URL"]
+let masterPostgresUrl = args["--master-postgres-url"] ?? ProcessInfo.processInfo.environment["MASTER_POSTGRES_URL"]
 let syncInterval = args.int(for: "--sync-interval") ?? 10
 let validateBeforeCache = args.has("--validate-before-cache") || !args.has("--no-validate-before-cache") // Default to true
 let executionHistorySize = args.int(for: "--execution-history-size") ?? 10
@@ -222,11 +224,16 @@ if corpusName == "markov" && staticCorpus {
 
 // PostgreSQL corpus validation
 if corpusName == "postgresql" {
-    if postgresUrl == nil {
-        configError("PostgreSQL corpus requires --postgres-url")
-    }
-    if syncInterval <= 0 {
-        configError("--sync-interval must be greater than 0")
+    // If dual database mode (local + master), both URLs are required
+    // Otherwise, single postgresUrl is required
+    if localPostgresUrl != nil && masterPostgresUrl != nil {
+        // Dual database mode - both URLs provided
+        if syncInterval <= 0 {
+            configError("--sync-interval must be greater than 0")
+        }
+    } else if postgresUrl == nil {
+        // Single database mode - postgresUrl required
+        configError("PostgreSQL corpus requires --postgres-url (or --local-postgres-url and --master-postgres-url for dual database mode)")
     }
     if executionHistorySize <= 0 {
         configError("--execution-history-size must be greater than 0")
@@ -544,14 +551,14 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
     case "postgresql":
         // Create PostgreSQL corpus with database connection
-        guard let postgresUrl = postgresUrl else {
-            logger.fatal("PostgreSQL URL is required for PostgreSQL corpus")
-        }
-        
-        // Use the existing fuzzilli_master database for all instances
+        // Support dual database mode (local + master) or single database mode
         let fuzzerInstanceId: String
         
-        if resume {
+        // Check for explicit fuzzer instance name from environment or CLI args
+        if let explicitName = args["--fuzzer-instance-name"] ?? ProcessInfo.processInfo.environment["FUZZER_INSTANCE_NAME"], !explicitName.isEmpty {
+            fuzzerInstanceId = explicitName
+            logger.info("Using explicit fuzzer instance ID: \(fuzzerInstanceId)")
+        } else if resume {
             // Use fixed fuzzer instance ID for resume
             fuzzerInstanceId = "fuzzer-main"
         } else {
@@ -560,23 +567,39 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
             fuzzerInstanceId = "fuzzer-\(randomHash)"
         }
         
-        // Use the original postgres URL without modification
-        let modifiedPostgresUrl = postgresUrl
+        let localPool: DatabasePool
+        let masterPool: DatabasePool?
         
-        let databasePool = DatabasePool(connectionString: modifiedPostgresUrl, enableLogging: postgresLogging)
+        if let localUrl = localPostgresUrl, let masterUrl = masterPostgresUrl {
+            // Dual database mode: local for fast operations, master for sync
+            localPool = DatabasePool(connectionString: localUrl, enableLogging: postgresLogging)
+            masterPool = DatabasePool(connectionString: masterUrl, enableLogging: postgresLogging)
+            logger.info("Dual database mode enabled")
+            logger.info("Local PostgreSQL URL: \(localUrl)")
+            logger.info("Master PostgreSQL URL: \(masterUrl)")
+        } else if let url = postgresUrl {
+            // Single database mode: use provided URL for both
+            localPool = DatabasePool(connectionString: url, enableLogging: postgresLogging)
+            masterPool = nil
+            logger.info("Single database mode")
+            logger.info("PostgreSQL URL: \(url)")
+        } else {
+            logger.fatal("PostgreSQL URL is required for PostgreSQL corpus")
+        }
         
         corpus = PostgreSQLCorpus(
             minSize: minCorpusSize,
             maxSize: maxCorpusSize,
             minMutationsPerSample: minMutationsPerSample,
-            databasePool: databasePool,
+            databasePool: localPool,
             fuzzerInstanceId: fuzzerInstanceId,
+            syncInterval: TimeInterval(syncInterval),
             resume: resume,
-            enableLogging: postgresLogging
+            enableLogging: postgresLogging,
+            masterDatabasePool: masterPool
         )
         
         logger.info("Created PostgreSQL corpus with instance ID: \(fuzzerInstanceId)")
-        logger.info("PostgreSQL URL: \(modifiedPostgresUrl)")
         logger.info("Resume mode: \(resume)")
         logger.info("Sync interval: \(syncInterval) seconds")
         logger.info("Validate before cache: \(validateBeforeCache)")

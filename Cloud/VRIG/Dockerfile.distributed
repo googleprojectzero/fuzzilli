@@ -44,6 +44,7 @@ RUN mkdir -p ./Corpus
 
 # Environment variables for distributed fuzzing
 ENV MASTER_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-master:5432/fuzzilli
+ENV POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-master:5432/fuzzilli_master
 ENV FUZZER_INSTANCE_NAME=fuzzer-default
 ENV SYNC_INTERVAL=300
 ENV TIMEOUT=2500
@@ -51,4 +52,21 @@ ENV MIN_MUTATIONS_PER_SAMPLE=25
 ENV DEBUG_LOGGING=false
 
 # Default command for distributed fuzzing
-CMD ./FuzzilliCli --profile=v8debug --engine=multi --resume --corpus=postgresql --master-postgres-url="${MASTER_POSTGRES_URL}" --fuzzer-instance-name="${FUZZER_INSTANCE_NAME}" --sync-interval="${SYNC_INTERVAL}" --timeout="${TIMEOUT}" --minMutationsPerSample="${MIN_MUTATIONS_PER_SAMPLE}" --postgres-logging ./fuzzbuild/d8
+# Use dual database mode if both LOCAL_POSTGRES_URL and MASTER_POSTGRES_URL are set
+# Otherwise fall back to single database mode with POSTGRES_URL
+CMD if [ -n "$LOCAL_POSTGRES_URL" ] && [ -n "$MASTER_POSTGRES_URL" ]; then \
+      ./FuzzilliCli --profile=v8debug --engine=multi --resume --corpus=postgresql \
+        --local-postgres-url="${LOCAL_POSTGRES_URL}" \
+        --master-postgres-url="${MASTER_POSTGRES_URL}" \
+        --sync-interval="${SYNC_INTERVAL}" \
+        --timeout="${TIMEOUT}" \
+        --minMutationsPerSample="${MIN_MUTATIONS_PER_SAMPLE}" \
+        --postgres-logging ./fuzzbuild/d8; \
+    else \
+      ./FuzzilliCli --profile=v8debug --engine=multi --resume --corpus=postgresql \
+        --postgres-url="${POSTGRES_URL}" \
+        --sync-interval="${SYNC_INTERVAL}" \
+        --timeout="${TIMEOUT}" \
+        --minMutationsPerSample="${MIN_MUTATIONS_PER_SAMPLE}" \
+        --postgres-logging ./fuzzbuild/d8; \
+    fi

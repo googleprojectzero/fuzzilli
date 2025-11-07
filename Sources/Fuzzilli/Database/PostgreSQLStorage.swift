@@ -27,6 +27,49 @@ public class PostgreSQLStorage {
         self.logger = Logging.Logger(label: "PostgreSQLStorage")
     }
     
+    // MARK: - Helper Methods
+    
+    /// Create a direct connection using the database pool's configuration
+    private func createDirectConnection() async throws -> PostgresConnection {
+        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
+            throw PostgreSQLStorageError.noResult
+        }
+        
+        // Get the connection string and parse it
+        let connectionString = databasePool.getConnectionString()
+        guard let url = URL(string: connectionString) else {
+            throw PostgreSQLStorageError.connectionFailed
+        }
+        
+        guard url.scheme == "postgresql" || url.scheme == "postgres" else {
+            throw PostgreSQLStorageError.connectionFailed
+        }
+        
+        let host = url.host ?? "localhost"
+        let port = url.port ?? 5432
+        let username = url.user ?? "postgres"
+        let password = url.password ?? ""
+        let database = url.path.isEmpty ? nil : String(url.path.dropFirst()) // Remove leading slash
+        
+        if enableLogging {
+            logger.info("Creating direct connection to: host=\(host), port=\(port), database=\(database ?? "none")")
+        }
+        
+        return try await PostgresConnection.connect(
+            on: eventLoopGroup.next(),
+            configuration: PostgresConnection.Configuration(
+                host: host,
+                port: port,
+                username: username,
+                password: password,
+                database: database,
+                tls: .disable // For now, disable TLS
+            ),
+            id: 0,
+            logger: logger
+        )
+    }
+    
     // MARK: - Fuzzer Management
     
     /// Register a new fuzzer instance in the database
@@ -36,27 +79,25 @@ public class PostgreSQLStorage {
         }
         
         // Use direct connection to avoid connection pool deadlock
-        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
-            throw PostgreSQLStorageError.noResult
+        let connection: PostgresConnection
+        do {
+            connection = try await createDirectConnection()
+            if enableLogging {
+                let connString = databasePool.getConnectionString()
+                logger.info("Created direct connection to: \(connString)")
+            }
+        } catch {
+            if enableLogging {
+                logger.error("Failed to create direct connection: \(error)")
+            }
+            throw error
         }
-        
-        let connection = try await PostgresConnection.connect(
-            on: eventLoopGroup.next(),
-            configuration: PostgresConnection.Configuration(
-                host: "localhost",
-                port: 5432,
-                username: "fuzzilli",
-                password: "fuzzilli123",
-                database: "fuzzilli_master",
-                tls: .disable
-            ),
-            id: 0,
-            logger: logger
-        )
         defer { Task { _ = try? await connection.close() } }
         
         // First, check if a fuzzer with this name already exists
-        let checkQuery: PostgresQuery = "SELECT fuzzer_id, status FROM main WHERE fuzzer_name = \(name)"
+        // Escape single quotes in name
+        let escapedName = name.replacingOccurrences(of: "'", with: "''")
+        let checkQuery = PostgresQuery(stringLiteral: "SELECT fuzzer_id, status FROM main WHERE fuzzer_name = '\(escapedName)'")
         let checkResult = try await connection.query(checkQuery, logger: self.logger)
         let checkRows = try await checkResult.collect()
         
@@ -81,15 +122,48 @@ public class PostgreSQLStorage {
         }
         
         // If no existing fuzzer found, create a new one
-        let insertQuery: PostgresQuery = """
+        // Escape single quotes in engine type (name already escaped above)
+        let escapedEngineType = engineType.replacingOccurrences(of: "'", with: "''")
+        let insertQuery = PostgresQuery(stringLiteral: """
             INSERT INTO main (fuzzer_name, engine_type, status) 
-            VALUES (\(name), \(engineType), 'active') 
+            VALUES ('\(escapedName)', '\(escapedEngineType)', 'active') 
             RETURNING fuzzer_id
-        """
+        """)
         
-        let result = try await connection.query(insertQuery, logger: self.logger)
-        let rows = try await result.collect()
+        if enableLogging {
+            logger.info("Executing INSERT query to create new fuzzer")
+        }
+        
+        let result: PostgresRowSequence
+        do {
+            if enableLogging {
+                logger.info("Executing INSERT query: INSERT INTO main (fuzzer_name, engine_type, status) VALUES ('\(escapedName)', '\(escapedEngineType)', 'active') RETURNING fuzzer_id")
+            }
+            result = try await connection.query(insertQuery, logger: self.logger)
+        } catch {
+            if enableLogging {
+                logger.error("INSERT query failed with error: \(error)")
+            }
+            throw error
+        }
+        
+        let rows: [PostgresRow]
+        do {
+            rows = try await result.collect()
+            if enableLogging {
+                logger.info("INSERT query returned \(rows.count) rows")
+            }
+        } catch {
+            if enableLogging {
+                logger.error("Failed to collect rows from INSERT query: \(error)")
+            }
+            throw error
+        }
+        
         guard let row = rows.first else {
+            if enableLogging {
+                logger.error("INSERT query returned no rows - registration failed. This might indicate a connection issue or the query didn't execute properly.")
+            }
             throw PostgreSQLStorageError.noResult
         }
         
@@ -107,23 +181,7 @@ public class PostgreSQLStorage {
         }
         
         // Use direct connection to avoid connection pool deadlock
-        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
-            throw PostgreSQLStorageError.noResult
-        }
-        
-        let connection = try await PostgresConnection.connect(
-            on: eventLoopGroup.next(),
-            configuration: PostgresConnection.Configuration(
-                host: "localhost",
-                port: 5432,
-                username: "fuzzilli",
-                password: "fuzzilli123",
-                database: "fuzzilli_master",
-                tls: .disable
-            ),
-            id: 0,
-            logger: logger
-        )
+        let connection = try await createDirectConnection()
         defer { Task { _ = try? await connection.close() } }
         
         let query: PostgresQuery = "SELECT fuzzer_id, created_at, fuzzer_name, engine_type, status FROM main WHERE fuzzer_name = \(name)"
@@ -161,23 +219,7 @@ public class PostgreSQLStorage {
         }
         
         // Use direct connection to avoid connection pool deadlock
-        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
-            throw PostgreSQLStorageError.noResult
-        }
-        
-        let connection = try await PostgresConnection.connect(
-            on: eventLoopGroup.next(),
-            configuration: PostgresConnection.Configuration(
-                host: "localhost",
-                port: 5432,
-                username: "fuzzilli",
-                password: "fuzzilli123",
-                database: "fuzzilli_master",
-                tls: .disable
-            ),
-            id: 0,
-            logger: logger
-        )
+        let connection = try await createDirectConnection()
         defer { Task { _ = try? await connection.close() } }
         
         // Get program count for this fuzzer
@@ -229,23 +271,7 @@ public class PostgreSQLStorage {
         guard !programs.isEmpty else { return [] }
         
         // Use direct connection to avoid connection pool deadlock
-        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
-            throw PostgreSQLStorageError.noResult
-        }
-        
-        let connection = try await PostgresConnection.connect(
-            on: eventLoopGroup.next(),
-            configuration: PostgresConnection.Configuration(
-                host: "localhost",
-                port: 5432,
-                username: "fuzzilli",
-                password: "fuzzilli123",
-                database: "fuzzilli_master",
-                tls: .disable
-            ),
-            id: 0,
-            logger: logger
-        )
+        let connection = try await createDirectConnection()
         defer { Task { _ = try? await connection.close() } }
         
         var programHashes: [String] = []
@@ -330,23 +356,7 @@ public class PostgreSQLStorage {
         }
         
         // Use direct connection to avoid connection pool deadlock
-        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
-            throw PostgreSQLStorageError.noResult
-        }
-        
-        let connection = try await PostgresConnection.connect(
-            on: eventLoopGroup.next(),
-            configuration: PostgresConnection.Configuration(
-                host: "localhost",
-                port: 5432,
-                username: "fuzzilli",
-                password: "fuzzilli123",
-                database: "fuzzilli_master",
-                tls: .disable
-            ),
-            id: 0,
-            logger: logger
-        )
+        let connection = try await createDirectConnection()
         defer { Task { _ = try? await connection.close() } }
         
         // Start transaction
@@ -445,23 +455,7 @@ public class PostgreSQLStorage {
         }
         
         // Use direct connection to avoid connection pool deadlock
-        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
-            throw PostgreSQLStorageError.noResult
-        }
-        
-        let connection = try await PostgresConnection.connect(
-            on: eventLoopGroup.next(),
-            configuration: PostgresConnection.Configuration(
-                host: "localhost",
-                port: 5432,
-                username: "fuzzilli",
-                password: "fuzzilli123",
-                database: "fuzzilli_master",
-                tls: .disable
-            ),
-            id: 0,
-            logger: logger
-        )
+        let connection = try await createDirectConnection()
         defer { Task { _ = try? await connection.close() } }
         
         // Insert into fuzzer table (corpus)
@@ -482,7 +476,7 @@ public class PostgreSQLStorage {
                 fuzzer_id = \(fuzzerId),
                 program_size = \(program.size),
                 program_base64 = '\(programBase64)'
-            WHERE program_hash = '\(programHash)'rm
+            WHERE program_hash = '\(programHash)'
         """
         let updateResult = try await connection.query(updateQuery, logger: self.logger)
         let updateRows = try await updateResult.collect()
@@ -538,23 +532,7 @@ public class PostgreSQLStorage {
         guard !executions.isEmpty else { return [] }
         
         // Use direct connection to avoid connection pool deadlock
-        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
-            throw PostgreSQLStorageError.noResult
-        }
-        
-        let connection = try await PostgresConnection.connect(
-            on: eventLoopGroup.next(),
-            configuration: PostgresConnection.Configuration(
-                host: "localhost",
-                port: 5432,
-                username: "fuzzilli",
-                password: "fuzzilli123",
-                database: "fuzzilli_master",
-                tls: .disable
-            ),
-            id: 0,
-            logger: logger
-        )
+        let connection = try await createDirectConnection()
         defer { Task { _ = try? await connection.close() } }
         
         var executionIds: [Int] = []
@@ -652,23 +630,7 @@ public class PostgreSQLStorage {
         }
         
         // Use direct connection to avoid connection pool deadlock
-        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
-            throw PostgreSQLStorageError.noResult
-        }
-        
-        let connection = try await PostgresConnection.connect(
-            on: eventLoopGroup.next(),
-            configuration: PostgresConnection.Configuration(
-                host: "localhost",
-                port: 5432,
-                username: "fuzzilli",
-                password: "fuzzilli123",
-                database: "fuzzilli_master",
-                tls: .disable
-            ),
-            id: 0,
-            logger: logger
-        )
+        let connection = try await createDirectConnection()
         defer { Task { _ = try? await connection.close() } }
         
         let executionTypeId = DatabaseUtils.mapExecutionType(purpose: executionType)
@@ -777,23 +739,8 @@ public class PostgreSQLStorage {
             logger.info("Getting recent programs: fuzzerId=\(fuzzerId), since=\(since), limit=\(limit)")
         }
         
-        guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
-            throw PostgreSQLStorageError.noResult
-        }
-        
-        let connection = try await PostgresConnection.connect(
-            on: eventLoopGroup.next(),
-            configuration: PostgresConnection.Configuration(
-                host: "localhost",
-                port: 5432,
-                username: "fuzzilli",
-                password: "fuzzilli123",
-                database: "fuzzilli_master",
-                tls: .disable
-            ),
-            id: 0,
-            logger: logger
-        )
+        // Use direct connection using the database pool's configuration
+        let connection = try await createDirectConnection()
         defer { Task { _ = try? await connection.close() } }
         
         // Query for recent programs with their latest execution metadata

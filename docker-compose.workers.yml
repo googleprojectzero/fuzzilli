@@ -32,6 +32,7 @@ services:
     environment:
       - MASTER_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-master:5432/fuzzilli_master
       - LOCAL_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-local-1:5432/fuzzilli_local
+      - POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-local-1:5432/fuzzilli_local
       - FUZZER_INSTANCE_NAME=fuzzer-1
       - SYNC_INTERVAL=300
       - TIMEOUT=2500
@@ -46,6 +47,12 @@ services:
       - fuzzer_data_1:/home/app/Corpus
       - /home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild:/home/app/fuzzbuild:ro
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f FuzzilliCli || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - fuzzing-network
     deploy:
@@ -86,6 +93,7 @@ services:
     environment:
       - MASTER_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-master:5432/fuzzilli_master
       - LOCAL_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-local-2:5432/fuzzilli_local
+      - POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-local-2:5432/fuzzilli_local
       - FUZZER_INSTANCE_NAME=fuzzer-2
       - SYNC_INTERVAL=300
       - TIMEOUT=2500
@@ -100,6 +108,12 @@ services:
       - fuzzer_data_2:/home/app/Corpus
       - /home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild:/home/app/fuzzbuild:ro
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f FuzzilliCli || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - fuzzing-network
     deploy:

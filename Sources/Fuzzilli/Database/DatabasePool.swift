@@ -147,6 +147,11 @@ public class DatabasePool {
         return connectionString
     }
     
+    /// Get parsed connection configuration for direct connections
+    public func getConnectionConfiguration() -> SQLPostgresConfiguration? {
+        return configuration
+    }
+    
     /// Get the database configuration
     public func getConfiguration() throws -> SQLPostgresConfiguration {
         guard let config = configuration else {
