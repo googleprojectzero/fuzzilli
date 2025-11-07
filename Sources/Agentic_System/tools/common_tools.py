@@ -16,6 +16,7 @@ import os
 import json
 import pathlib
 import sys
+import re
 
 from config_loader import get_openai_api_key, get_anthropic_api_key
 client = OpenAI(api_key=get_openai_api_key())
@@ -96,6 +97,14 @@ def get_output(completed_process) -> str:
     p_stdout = completed_process.stdout if completed_process.stdout else None
     p_stderr = completed_process.stderr if completed_process.stderr else None
     return p_stdout if p_stdout else p_stderr
+
+def is_valid_regex(pattern: str) -> tuple[bool, re.error | None]:
+    try:
+        re.compile(pattern)
+        return True, None
+    except re.error as e:
+        return False, e
+        
 
 @tool
 def run_command(command: str) -> str:

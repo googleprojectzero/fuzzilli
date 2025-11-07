@@ -500,4 +500,46 @@ public let ProgramTemplates = [
         // Generate some more random code to (hopefully) use the parsed JSON in some interesting way.
         b.build(n: 25)
     },
+
+
+    ProgramTemplate("MaglevClosureEscapeNumericField") { b in
+        // Keep generation bounded and deterministic
+        b.buildPrefix()
+        b.build(n: 10)
+
+        // Object with numeric-string properties to avoid implicit array element semantics
+        let zero = b.loadInt(0)
+        let one  = b.loadInt(1)
+let obj  = b.createObject(with: ["p0": zero, "p1": one])
+
+        // Holder for escaping closure
+        let holder = b.createObject(with: [:])
+
+        // Outer function that creates and leaks a closure capturing `obj`
+        let makeClosure = b.buildPlainFunction(with: .parameters()) { _ in
+            // Closure that reads and bumps obj["0"]
+            let inner = b.buildPlainFunction(with: .parameters()) { _ in
+let cur = b.getProperty("p0", of: obj, guard: true)
+                let inc = b.loadInt(1)
+                let nxt = b.binary(cur, inc, with: .Add)
+b.setProperty("p0", of: obj, to: nxt, guard: true)
+                b.doReturn(nxt)
+            }
+            // Leak closure by storing it on a reachable object
+            b.setProperty("leaked", of: holder, to: inner)
+            b.doReturn(inner)
+        }
+
+        // Instantiate and leak the closure
+        let _ = b.callFunction(makeClosure, withArgs: [], guard: true)
+
+        // Bounded warmup loop to exercise Maglev closure escape/optimization
+        b.buildRepeatLoop(n: 32) { _ in
+            let c = b.getProperty("leaked", of: holder, guard: true)
+            _ = b.callFunction(c, withArgs: [], guard: true)
+        }
+
+        // Mix in a small random tail
+        b.build(n: 5)
+    },
 ]

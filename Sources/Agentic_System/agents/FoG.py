@@ -43,8 +43,8 @@ class Father(Agent):
             name="GeorgeForeman",
             description="L2 Worker responsible for validating program templates built by the program builder",
             tools=[
-                get_all_template_names,
-                get_template_by_name,
+                get_all_template_names_from_json,
+                get_template_from_json_by_name,
                 search_template_file_json,
                 search_regex_template_swift,
                 search_regex_template_fuzzil,
@@ -77,15 +77,17 @@ class Father(Agent):
                 swift_ripgrep,
                 swift_read_file,
                 write_program_template,
+                edit_template_by_regex,
                 remove_program_template,
                 compile_program_template,
                 execute_program_template,
                 list_program_templates,
+                web_search,
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[],
-            max_steps=50,
-            planning_interval=None
+            max_steps=100,
+            planning_interval=25
         )
         self.agents['compiler'].prompt_templates["system_prompt"] = system_prompt 
 
@@ -176,8 +178,9 @@ class Father(Agent):
             description="L1 Manager responsible for building program templates using corpus and context",
             tools=[
                 run_d8,
-                get_all_template_names,
-                get_template_by_name,
+                get_all_template_names_from_json,
+                get_template_from_json_by_name,
+                list_program_templates,
                 get_random_template_swift,
                 get_random_template_fuzzil,
                 search_template_file_json,

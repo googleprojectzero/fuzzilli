@@ -3,6 +3,7 @@ from openai import OpenAI
 from tools.common_tools import * 
 from fuzzywuzzy import fuzz
 from pathlib import Path
+from typing_extensions import Literal
 
 import json
 import os
@@ -243,6 +244,13 @@ def ripgrep(pattern: str, options: str = "") -> str:
     Returns:
         str: Search results showing matching lines with context.
     """
+    valid, error = is_valid_regex(pattern)
+    if not valid:
+        return f"Invalid regex passed in as pattern with error: {error}"
+
+    #debugging
+    print(f"VALID REGEX FOUND, IS VALID? {valid}") 
+
     if not options:
         return get_output(run_command(f"cd {V8_PATH} && rg '{pattern}' | head -n 10000"))
     
@@ -760,13 +768,13 @@ def similar_template_fuzzil(template_name: str) -> str:
     return "the most similar FuzzIL templates to " + template_name + " are " + str(sims)
 
 @tool
-def get_all_template_names() -> str:
+def get_all_template_names_from_json() -> str:
     """List all template keys in templates.json."""
     data = _load_templates_once()
     return list(data.keys())
 
 @tool
-def get_template_by_name(name: str) -> str:
+def get_template_from_json_by_name(name: str) -> str:
     """
     Get full template entry by key.
     
@@ -896,6 +904,8 @@ def list_program_templates() -> str:
     return f"Found program templates: {program_templates}"
 
 
+# TODO: fix, this seems to remove the ","" from "JSONFUzzer" when there's only one program template
+# TODO: potentially separate writing/removing templates and weights so in the case that the template exists but the weight doesn't, we don't error and can fix the state
 @tool
 def remove_program_template(program_template: str) -> str:
     """
@@ -932,7 +942,7 @@ def remove_program_template(program_template: str) -> str:
     start_match = block_start_pattern.search(content)
 
     if not start_match:
-        return f"Error: Program template '{program_template}' not found in file (start tag missing)."
+        return f"Error: Program template '{program_template}' not found in file {program_templates_file} (start tag missing)."
 
     start_index = start_match.start()
 
@@ -961,7 +971,7 @@ def remove_program_template(program_template: str) -> str:
 
     if preceding_separator_match:
         start_of_block_to_remove = start_index - preceding_separator_match.end()
-        start_of_block_to_remove += (len(content[:start_index]) - len(content[:start_index].lstrip()))
+        #start_of_block_to_remove += (len(content[:start_index]) - len(content[:start_index].lstrip()))
     else:
         start_of_block_to_remove = start_index
 
@@ -1000,6 +1010,8 @@ def remove_program_template(program_template: str) -> str:
     except Exception as e:
         return f"Error writing to ProgramTemplateWeights.swift: {e}"
 
+
+# TODO: potentially separate writing/removing templates and weights so in the case that the template exists but the weight doesn't, we don't error and can fix the state
 @tool 
 def write_program_template(program_template: str) -> str:
     """
@@ -1062,7 +1074,7 @@ def write_program_template(program_template: str) -> str:
         return "Error: ProgramTemplates.swift does not end with closing bracket"
 
     # default weight is 2. maybe update this?
-    new_weight_entry = f'\n\t"{template_name}": \t\t\t\t2,'
+    new_weight_entry = f'\n\t"{template_name}": 2,'
 
     content_weights = content_weights[:-1] + new_weight_entry + '\n]'
 
@@ -1072,6 +1084,101 @@ def write_program_template(program_template: str) -> str:
         return ret + f"\nOK: Successfully wrote program template weight to {program_template_weights_file}"
     except Exception as e:
         return f"Error writing to ProgramTemplateWeights.swift: {e}"
+
+@tool
+def edit_template_by_regex( 
+    search_pattern: str, 
+    new_content: str, 
+    start_line: int = None, 
+    end_line: int = None,
+    mode: Literal["replace", "insert_after", "insert_before"] = "replace"
+) -> str:
+    """
+    Performs precise, line-based editing of ProgramTemplates.swift using a regular expression
+    to locate the target insertion or replacement point, optionally limited by line numbers.
+
+    Args:
+        search_pattern (str): The regex pattern to find the target line. The pattern
+                              must match the ENTIRE line for 'replace' mode, or any part
+                              of the line for 'insert_after'/'insert_before' modes.
+        new_content (str): The content to be inserted or replaced.
+        mode (Literal["replace", "insert_after", "insert_before"]):
+            - 'replace': Replace the line that matches the search_pattern with 'new_content'.
+            - 'insert_after': Insert 'new_content' immediately after the matching line.
+            - 'insert_before': Insert 'new_content' immediately before the matching line.
+        start_line (int): The 1-based line number to start the search from (inclusive).
+        end_line (int): The 1-based line number to end the search at (inclusive).
+
+    Returns:
+        str: A status message indicating success or failure in editing the ProgramTemplates.swift file.
+    """
+    valid, error = is_valid_regex(search_pattern)
+    if not valid:
+        return f"Invalid regex passed in as pattern with error: {error}"
+
+    # TODO: could check these line numbers fall within the range for ProgramTemplates.swift and give more verbose feedback
+    if not (start_line and end_line):
+        return "Must pass in a start_line AND end_line to limit the scope of your replacements."
+
+    filepath = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplates.swift")
+    if not os.path.exists(filepath):
+        return f"Error: File not found at {filepath}"
+
+    try:
+        with open(filepath, 'r') as f:
+            lines = f.readlines()
+    except Exception as e:
+        return f"Error reading file {filepath}: {e}"
+
+    # Pattern compilation is already checked by is_valid_regex, but kept for strictness
+    try:
+        pattern = re.compile(search_pattern)
+    except re.error as e:
+        return f"Error: Internal regex compilation failed: {e}"
+
+    new_lines = []
+    found_match = False
+    match_count = 0
+
+    if new_content and not new_content.endswith('\n'):
+        new_content += '\n'
+
+    for i, line in enumerate(lines):
+        # Line numbers are 1-based for the user/agent
+        line_number = i + 1 
+        is_in_range = True
+
+        if start_line is not None and line_number < start_line:
+            is_in_range = False
+        if end_line is not None and line_number > end_line:
+            is_in_range = False 
+        
+        if is_in_range and pattern.search(line):
+            found_match = True
+            match_count += 1
+            if mode == "insert_before":
+                new_lines.append(new_content)
+                new_lines.append(line)
+            elif mode == "insert_after":
+                new_lines.append(line)
+                new_lines.append(new_content)
+            elif mode == "replace":
+                # Partial replacement: replace the matched substring with new_content.
+                modified_line = pattern.sub(new_content.strip(), line)
+                new_lines.append(modified_line)
+        else:
+            new_lines.append(line)
+
+    if match_count == 0:
+        range_str = f" in line range {start_line}-{end_line}" if start_line or end_line else ""
+        return f"Error: Search pattern '{search_pattern}' not found{range_str} in {filepath}. No changes made."
+
+    try:
+        with open(filepath, 'w') as f:
+            f.writelines(new_lines)
+        return f"OK: Successfully updated {filepath} using mode '{mode}' and pattern '{search_pattern}'. {match_count} matches applied."
+    except Exception as e:
+        return f"Error writing to file {filepath}: {e}"
 
 
 @tool 
@@ -1097,6 +1204,10 @@ def compile_program_template(template: str) -> str:
 
     javascript = build.stdout
 
+    # TODO: remove old program template if it failed to compile, 
+    #   maybe at the end once it gets a successfull execution remove the other JS files that don't 
+    #   match the successfull hash with the same program template name.
+    # OR maybe let compiler read these to see the previous failers.
     path = f"{GENERATED_TEMPLATE_DIR}{template}-{hash(javascript)}.js"
     with open(path, "w") as f:
         f.write(javascript)  
@@ -1118,7 +1229,7 @@ def execute_program_template(template_js_path: str) -> str:
     """
     #TODO: update D8_COMMON_FLAGS so compiler can better examine the ouput for success/get more info. Also update the STAGE 7 prompt in compiler.txt if this is done.
     d8 = run_command(f"{D8_PATH} {D8_COMMON_FLAGS} {template_js_path}")
-    return f"Program execution result: {d8.stderr}"
+    return f"Program execution result:\n{d8.stderr}\n{d8.stdout}"
 
 @tool
 def swift_fuzzy_finder(pattern: str, options: str = "") -> str:
@@ -1236,6 +1347,13 @@ def swift_ripgrep(pattern: str, options: str = "") -> str:
     Returns:
         str: Search results showing matching lines with context.
     """
+    valid, error = is_valid_regex(pattern)
+    if not valid:
+        return f"Invalid regex passed in as pattern with error: {error}"
+    
+    #debugging
+    print(f"VALID REGEX FOUND, IS VALID? {valid}") 
+
     if "ProgramTemplate" in pattern:
         resolved_path = os.path.join(SWIFT_PATH, "CodeGen")
     else:
@@ -1263,7 +1381,7 @@ def swift_ripgrep(pattern: str, options: str = "") -> str:
     
     flags_str = ' '.join(flags) if flags else ''
 
-    cmd = f"cd {resolved_path} && rg {flags_str} '{pattern}' | head -n 1000"
+    cmd = f"cd {resolved_path} && rg '{pattern}' {flags_str} | head -n 1000"
     
     return get_output(run_command(cmd))
 

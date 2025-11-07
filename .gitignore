@@ -13,8 +13,8 @@ Sources/Agentic_System/keys.cfg
 regressions*.json
 *.fzil
 generated_templates/
-Sources/Fuzzilli/CodeGen/ProgramTemplates.swift
-Sources/Fuzzilli/CodeGen/ProgramTemplateWeights.swift
+ProgramTemplates.swift
+ProgramTemplateWeights.swift
 fog_logs/
 
 # custom GCE configuration

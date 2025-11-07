@@ -29,11 +29,11 @@ When you receive a Swift Program Template from the ProgramBuilder, you must:
 ## STAGE 1: EXISTING TEMPLATE ANALYSIS AND COMPARISON
 
 You MUST use your template tools to compare against existing templates:
-1. Use `get_all_template_names` to see what templates exist in the system
+1. Use `get_all_template_names_from_json` to see what templates exist in the example JSON. THIS DOESN'T INCLUDE PROGRAM TEMPLATES ADDED BY program_builder AND compiler!
 2. Use `search_template_file_json` to find templates that target similar V8 components or use similar patterns
 3. Use `search_regex_template_swift` to search for specific Swift patterns, ProgramBuilder APIs, or constructs in existing templates
 4. Use `similar_template_swift` to find templates with similar Swift code structure to the one being validated
-5. Use `get_template_by_name` to retrieve full examples of relevant templates for comparison
+5. Use `get_template_from_json_by_name` to retrieve full examples of relevant templates for comparison
 6. Analyze how the submitted template compares to proven patterns from existing templates
 7. Identify if the template follows established FuzzIL Program Template patterns and best practices
 
@@ -143,7 +143,7 @@ Your response must follow this JSON structure:
 ## TOOL USAGE REMINDERS
 
 Remember to actively use these tools during validation:
-- Template tools: get_all_template_names, get_template_by_name, search_template_file_json, search_regex_template_swift, similar_template_swift, search_regex_template_fuzzil, similar_template_fuzzil
+- Template tools: get_all_template_names, get_template_from_json_by_name, search_template_file_json, search_regex_template_swift, similar_template_swift, search_regex_template_fuzzil, similar_template_fuzzil
 - RAG DB tools: get_runtime_db_ids, read_rag_db_id, get_rag_doc
 - Knowledge base tools: search_knowledge_base, get_knowledge_doc
 - Web search: web_search (when needed for additional V8 or FuzzIL information)
