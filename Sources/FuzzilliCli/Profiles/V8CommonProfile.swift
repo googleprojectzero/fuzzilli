@@ -733,14 +733,21 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         args.append(Bool.random() ? "--shared-string-table" : "--shared-strings")
     }
 
-    if probability(0.25) && !args.contains("--no-maglev") {
-        args.append("--maglev-future")
-    }
-
-    if probability(0.2) && !args.contains("--no-maglev") {
-        args.append("--maglev-non-eager-inlining")
-        if probability(0.4) { // TODO: @tacet decrease this probability to max 0.2
-            args.append("--max_maglev_inlined_bytecode_size_small=0")
+    if !args.contains("--no-maglev") {
+        if probability(0.25) {
+            args.append("--maglev-future")
+        }
+        if probability(0.1) {
+            args.append("--maglev-assert")
+        }
+        if probability(0.05) {
+            args.append("--maglev-assert-stack-size")
+        }
+        if probability(0.2) {
+            args.append("--maglev-non-eager-inlining")
+            if probability(0.4) { // TODO: @tacet decrease this probability to max 0.2
+                args.append("--max-maglev-inlined-bytecode-size-small=0")
+            }
         }
     }
 
@@ -753,7 +760,7 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         if probability(0.82) {
             args.append("--turbolev-future")
             if probability(0.3) { // TODO: @tacet change to 0.15
-                args.append("--max_inlined_bytecode_size_small=0")
+                args.append("--max-inlined-bytecode-size-small=0")
             }
         }
     }
@@ -882,6 +889,11 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
     // More exotic configuration changes.
     //
     if probability(0.05) {
+        func chooseBooleanFlag(_ flag: String) {
+            assert(!flag.starts(with: "--"))
+            args.append(probability(0.5) ? "--\(flag)" : "--no-\(flag)")
+        }
+
         if probability(0.5) { args.append("--stress-gc-during-compilation") }
         if probability(0.5) { args.append("--lazy-new-space-shrinking") }
         if probability(0.5) { args.append("--stress-wasm-memory-moving") }
@@ -889,32 +901,43 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         if probability(0.5) { args.append("--parallel-compile-tasks-for-lazy") }
         if probability(0.5) { args.append("--parallel-compile-tasks-for-eager-toplevel") }
 
-        args.append(probability(0.5) ? "--always-sparkplug" : "--no-always-sparkplug")
-        args.append(probability(0.5) ? "--always-osr" : "--no-always-osr")
-        args.append(probability(0.5) ? "--concurrent-osr" : "--no-concurrent-osr")
-        args.append(probability(0.5) ? "--force-slow-path" : "--no-force-slow-path")
+        chooseBooleanFlag("always-sparkplug")
+        chooseBooleanFlag("always-osr")
+        chooseBooleanFlag("concurrent-osr")
+        chooseBooleanFlag("force-slow-path")
 
         // Maglev related flags
-        args.append(probability(0.5) ? "--maglev-inline-api-calls" : "--no-maglev-inline-api-calls")
+        chooseBooleanFlag("maglev-inline-api-calls")
+        chooseBooleanFlag("maglev-inlining")
+        chooseBooleanFlag("maglev-loop-peeling")
+        chooseBooleanFlag("maglev-optimistic-peeled-loops")
+        chooseBooleanFlag("maglev-pretenure-store-values")
+        chooseBooleanFlag("maglev-poly-calls")
+        chooseBooleanFlag("maglev-truncation")
+        chooseBooleanFlag("maglev-cse")
+        chooseBooleanFlag("maglev-range-analysis")
+        chooseBooleanFlag("maglev-escape-analysis")
+        chooseBooleanFlag("maglev-licm")
+        chooseBooleanFlag("maglev-untagged-phis")
 
         // Compiler related flags
-        args.append(probability(0.5) ? "--turbo-move-optimization" : "--no-turbo-move-optimization")
-        args.append(probability(0.5) ? "--turbo-jt" : "--no-turbo-jt")
-        args.append(probability(0.5) ? "--turbo-loop-peeling" : "--no-turbo-loop-peeling")
-        args.append(probability(0.5) ? "--turbo-loop-variable" : "--no-turbo-loop-variable")
-        args.append(probability(0.5) ? "--turbo-loop-rotation" : "--no-turbo-loop-rotation")
-        args.append(probability(0.5) ? "--turbo-cf-optimization" : "--no-turbo-cf-optimization")
-        args.append(probability(0.5) ? "--turbo-escape" : "--no-turbo-escape")
-        args.append(probability(0.5) ? "--turbo-allocation-folding" : "--no-turbo-allocation-folding")
-        args.append(probability(0.5) ? "--turbo-instruction-scheduling" : "--no-turbo-instruction-scheduling")
-        args.append(probability(0.5) ? "--turbo-stress-instruction-scheduling" : "--no-turbo-stress-instruction-scheduling")
-        args.append(probability(0.5) ? "--turbo-store-elimination" : "--no-turbo-store-elimination")
-        args.append(probability(0.5) ? "--turbo-rewrite-far-jumps" : "--no-turbo-rewrite-far-jumps")
-        args.append(probability(0.5) ? "--turbo-optimize-apply" : "--no-turbo-optimize-apply")
+        chooseBooleanFlag("turbo-move-optimization")
+        chooseBooleanFlag("turbo-jt") // jump threading
+        chooseBooleanFlag("turbo-loop-peeling")
+        chooseBooleanFlag("turbo-loop-variable")
+        chooseBooleanFlag("turbo-loop-rotation")
+        chooseBooleanFlag("turbo-cf-optimization")
+        chooseBooleanFlag("turbo-escape")
+        chooseBooleanFlag("turbo-allocation-folding")
+        chooseBooleanFlag("turbo-instruction-scheduling")
+        chooseBooleanFlag("turbo-stress-instruction-scheduling")
+        chooseBooleanFlag("turbo-store-elimination")
+        chooseBooleanFlag("turbo-rewrite-far-jumps")
+        chooseBooleanFlag("turbo-optimize-apply")
+        chooseBooleanFlag("turbo-load-elimination")
+        chooseBooleanFlag("turbo-inlining")
+        chooseBooleanFlag("turbo-splitting")
         args.append(chooseUniform(from: ["--no-enable-sse3", "--no-enable-ssse3", "--no-enable-sse4-1", "--no-enable-sse4-2", "--no-enable-avx", "--no-enable-avx2"]))
-        args.append(probability(0.5) ? "--turbo-load-elimination" : "--no-turbo-load-elimination")
-        args.append(probability(0.5) ? "--turbo-inlining" : "--no-turbo-inlining")
-        args.append(probability(0.5) ? "--turbo-splitting" : "--no-turbo-splitting")
     }
 
     return args
