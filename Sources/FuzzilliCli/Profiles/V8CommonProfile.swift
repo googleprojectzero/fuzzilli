@@ -840,6 +840,9 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         if probability(0.2) {
             args.append("--turboshaft-verify-load-elimination")
         }
+        if probability(0.1) {
+            args.append("--turboshaft-verify-reductions")
+        }
     }
 
     if probability(0.1) {
@@ -869,6 +872,9 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         if probability(0.5) {
             args.append("--wasm-code-gc")
             args.append("--stress-wasm-code-gc")
+        }
+        if probability(0.5) {
+            args.append("--stress-wasm-memory-moving")
         }
         if probability(0.4) {
             args.append(chooseUniform(
@@ -938,6 +944,24 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         chooseBooleanFlag("turbo-inlining")
         chooseBooleanFlag("turbo-splitting")
         args.append(chooseUniform(from: ["--no-enable-sse3", "--no-enable-ssse3", "--no-enable-sse4-1", "--no-enable-sse4-2", "--no-enable-avx", "--no-enable-avx2"]))
+
+        chooseBooleanFlag("turboshaft-loop-unrolling")
+        chooseBooleanFlag("turboshaft-load-elimination")
+        chooseBooleanFlag("turboshaft-string-concat-escape-analysis")
+
+        // Wasm related flags
+        chooseBooleanFlag("wasm-loop-peeling")
+        chooseBooleanFlag("turboshaft-wasm-load-elimination")
+        chooseBooleanFlag("wasm-loop-unrolling")
+        chooseBooleanFlag("wasm-inlining")
+        chooseBooleanFlag("wasm-opt")
+        chooseBooleanFlag("wasm-deopt")
+        chooseBooleanFlag("wasm-enforce-bounds-checks")
+        chooseBooleanFlag("wasm-math-intrinsics")
+        chooseBooleanFlag("wasm-bulkmem-inlining")
+        chooseBooleanFlag("wasm-lazy-compilation")
+        chooseBooleanFlag("wasm-lazy-validation")
+        chooseBooleanFlag("wasm-simd-ssse3-codegen")
     }
 
     return args
