@@ -1,0 +1,10 @@
+{
+  "body": "MaybeReduceResult MaglevGraphBuilder::TryBuildStoreField(\n    compiler::PropertyAccessInfo const& access_info, ValueNode* receiver,\n    compiler::AccessMode access_mode) { ... }\n\nLocated in maglev/maglev-graph-builder.cc. This routine lowers stores to fields. For double fields: if access_info.HasTransitionMap() -> creates Float64ToHeapNumberForField({value}) and uses BuildStoreTaggedField(store_target, heapnumber_value, field_index.offset(), StoreTaggedMode::kTransitioning) and then BuildStoreMap(receiver, access_info.transition_map(), StoreMap::Kind::kTransitioning). Otherwise loads the existing HeapNumber with LoadTaggedField and emits StoreFloat64({heap_number, value}, offsetof(HeapNumber,value_)) to update in-place. For tagged fields it delegates to BuildStoreTaggedField/BuildStoreTaggedFieldNoWriteBarrier based on CanElideWriteBarrier.\n",
+  "context": [
+    "maglev_BuildStoreTaggedField",
+    "maglev_BuildStoreMap",
+    "maglev_Float64ToHeapNumberForField"
+  ],
+  "explanation": "Key lowering site for SMI->double field transition and in-place update vs allocate-and-store. Anchor for understanding aliasing (HeapNumber mutation) vs replacement semantics for field transitions.",
+  "file_line": "maglev/maglev-graph-builder.cc:~7450-7530"
+}

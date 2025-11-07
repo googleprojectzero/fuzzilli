@@ -1,0 +1,6 @@
+{
+  "body": "ReduceResult MaglevGraphBuilder::BuildStoreTaggedField(\n    ValueNode* object, ValueNode* value, int offset, StoreTaggedMode store_mode,\n    Node** store) { ... }\n\nLocated in maglev/maglev-graph-builder.cc. This emits either StoreTaggedFieldNoWriteBarrier or StoreTaggedFieldWithWriteBarrier depending on CanElideWriteBarrier. It also handles escaping/virtual object initialization and delegates to TryBuildStoreTaggedFieldToAllocation when appropriate. Used in TryBuildStoreField for field stores and in other contexts (context cell stores, property cell stores, etc.).\n",
+  "context": [],
+  "explanation": "Centralized helper that chooses the correct store node (with/without write barrier) and performs allocation/virtual-object notifications. Important anchor for store emission after Float64ToHeapNumberForField allocation path.",
+  "file_line": "maglev/maglev-graph-builder.cc:~7250-7360"
+}

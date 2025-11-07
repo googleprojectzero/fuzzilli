@@ -1,0 +1,10 @@
+{
+  "body": "Node: Float64ToHeapNumberForField\n\nDefined: src/maglev/maglev-ir.h class Float64ToHeapNumberForField : public FixedInputValueNodeT<1, Float64ToHeapNumberForField>\n\nUsage: Created in maglev-graph-builder.cc in BuildStoreField when field_representation.IsDouble() and access_info.HasTransitionMap(). The builder emits AddNewNode<Float64ToHeapNumberForField>({value}) to allocate a new HeapNumber for the field.\n\nProperties:\n- InputTypes: HoleyFloat64\n- OpProperties: NotIdempotent, CanAllocate, DeferredCall (conversion node that forces allocation)\n- GenerateCode and SetValueLocationConstraints implemented in maglev-ir.cc (GenerateCode will allocate a HeapNumber and return its reference; used specifically for field transitions where a new mutable HeapNumber is needed)\n\nWhere it's interesting: This node implements \"AllocateMutableHeapNumber\" semantics when storing a double into a field whose representation requires a boxed HeapNumber (transition). It is distinct from Float64ToTagged (which can canonicalize to Smi or HeapNumber) since it forces allocation for field ownership.\n\nFileLine: maglev/maglev-ir.h:4371-4378, maglev/maglev-ir.cc:5282-5294\n",
+  "context": [
+    "heapnumber",
+    "field_transition",
+    "allocation"
+  ],
+  "explanation": "Float64ToHeapNumberForField is the IR allocation node for creating a mutable HeapNumber specifically to own a field's double value. The graph builder adds it whenever a double store requires a transition_map allocation; otherwise Maglev uses StoreFloat64 to update an existing HeapNumber.value_ in-place.",
+  "file_line": "maglev/maglev-graph-builder.cc:5322; maglev/maglev-ir.h:4371-4378"
+}

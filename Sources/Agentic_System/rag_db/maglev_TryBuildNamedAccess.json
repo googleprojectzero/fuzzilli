@@ -1,0 +1,10 @@
+{
+  "body": "MaybeReduceResult MaglevGraphBuilder::TryBuildNamedAccess(\n    ValueNode* receiver, ValueNode* lookup_start_object,\n    compiler::NamedAccessFeedback const& feedback,\n    compiler::FeedbackSource const& feedback_source,\n    compiler::AccessMode access_mode,\n    GenericAccessFunc&& build_generic_access) { ... }\n\nThis builder routine implements lowering of IC-based named property access using feedback (monomorphic/polymorphic/megamorphic). It collects inferred maps from feedback or known_node_aspects, builds PropertyAccessInfo via AccessInfoFactory, emits map checks (BuildCheckMaps/CheckMapsWithMigration) and then calls TryBuildPropertyAccess or TryBuildPolymorphicPropertyAccess. It chooses fast-paths for string/number maps, in-place double field stores vs Float64ToHeapNumberForField when transitioning.\n",
+  "context": [
+    "maglev_BuildCheckMaps",
+    "maglev_TryBuildPropertyLoad",
+    "maglev_TryBuildPropertyStore"
+  ],
+  "explanation": "Core named-access lowering entrypoint in maglev/maglev-graph-builder.cc. Key to understanding how feedback drives monomorphic/polymorphic/mode decisions, and where CheckMaps and StoreMap/transition logic are emitted. Contains the logic that selects BuildLoadField/TryBuildStoreField paths.",
+  "file_line": "maglev/maglev-graph-builder.cc:5513-5720"
+}

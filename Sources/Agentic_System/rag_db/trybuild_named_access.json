@@ -1,0 +1,11 @@
+{
+  "body": "Function: MaybeReduceResult MaglevGraphBuilder::TryBuildNamedAccess(\n    ValueNode* receiver, ValueNode* lookup_start_object,\n    compiler::NamedAccessFeedback const& feedback,\n    compiler::FeedbackSource const& feedback_source,\n    compiler::AccessMode access_mode,\n    GenericAccessFunc&& build_generic_access)\n\nLocation: src/maglev/maglev-graph-builder.cc\n\nSummary:\n- Central dispatcher for lowering named property accesses using feedback.\n- Uses feedback.maps() or known_node_aspects to compute inferred_maps.\n- For megamorphic feedback casts to builtin IC megamorphic slow paths (LoadIC_Megamorphic/StoreIC_Megamorphic).\n- For monomorphic case emits map/primitive checks via BuildCheckMaps/BuildCheckString/BuildCheckNumber and then delegates to TryBuildPropertyAccess (fast field or accessor or constant loads).\n- For polymorphic case, collects PropertyAccessInfo per map and calls TryBuildPolymorphicPropertyAccess to generate per-map arms or a generic fallback.\n- Produces DeoptimizeReason::kInsufficientTypeFeedbackForGenericNamedAccess if processed feedback is insufficient.\n\nWhy it's interesting: This function is the key point where IC feedback, map sets and property access info drive Maglev to pick fast field load/store paths, polymorphic inline sequences, or generic builtin calls. It controls generation of map checks (CheckMaps/CompareMaps), migration-aware checks, and selection between boxed-double allocation vs in-place update when dealing with Double fields.\n",
+  "context": [
+    "maglev_graph_builder",
+    "property_access",
+    "feedback_nexus",
+    "map_checks"
+  ],
+  "explanation": "TryBuildNamedAccess coordinates feedback-driven named access lowering: it takes feedback and receiver/lookup_start_object, computes inferred maps, emits map checks, and calls TryBuildPropertyLoad/TryBuildPropertyStore or polymorphic builder. Crucial for fast-path generation and deopt insertion.",
+  "file_line": "maglev/maglev-graph-builder.cc:6800-7280"
+}
