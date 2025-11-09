@@ -248,9 +248,6 @@ def ripgrep(pattern: str, options: str = "") -> str:
     if not valid:
         return f"Invalid regex passed in as pattern with error: {error}"
 
-    #debugging
-    print(f"VALID REGEX FOUND, IS VALID? {valid}") 
-
     if not options:
         return get_output(run_command(f"cd {V8_PATH} && rg '{pattern}' | head -n 10000"))
     
@@ -273,7 +270,7 @@ def ripgrep(pattern: str, options: str = "") -> str:
     
     flags_str = ' '.join(flags) if flags else ''
 
-    cmd = f"cd {V8_PATH} && rg {flags_str} '{pattern}' | head -n 1000"
+    cmd = f"cd {V8_PATH} && rg '{pattern}' {flags_str} | head -n 1000"
     
     return get_output(run_command(cmd))
 
@@ -1116,10 +1113,6 @@ def edit_template_by_regex(
     if not valid:
         return f"Invalid regex passed in as pattern with error: {error}"
 
-    # TODO: could check these line numbers fall within the range for ProgramTemplates.swift and give more verbose feedback
-    if not (start_line and end_line):
-        return "Must pass in a start_line AND end_line to limit the scope of your replacements."
-
     filepath = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplates.swift")
     if not os.path.exists(filepath):
         return f"Error: File not found at {filepath}"
@@ -1129,6 +1122,19 @@ def edit_template_by_regex(
             lines = f.readlines()
     except Exception as e:
         return f"Error reading file {filepath}: {e}"
+
+    if not (start_line and end_line):
+        return "Error: Must pass in a start_line AND end_line to limit the scope of your replacements."
+
+    total_lines = len(lines)
+    if start_line < 1 or start_line > total_lines:
+        return f"Error: Invalid start_line ({start_line}). ProgramTemplates.swift has {total_lines} lines. start_line must be between 1 and {total_lines}"
+
+    if end_line < 1 or end_line > total_lines:
+        return f"Error: Invalid end_line ({end_line}). ProgramTemplates.swift has {total_lines} lines. end_line must be between 1 and {total_lines}"
+    
+    if start_line > end_line:
+        return f"Error: start_line ({start_line}) cannot be greater than end_line ({end_line})"
 
     # Pattern compilation is already checked by is_valid_regex, but kept for strictness
     try:
@@ -1218,7 +1224,7 @@ def compile_program_template(template: str) -> str:
 @tool 
 def execute_program_template(template_js_path: str) -> str:
     """
-    Excute a JavaScript program generated from a program template
+    Execute a JavaScript program generated from a program template
 
     Args:
         template_js_path (str): The path to the given JavaScript program generated from a program template
@@ -1351,9 +1357,6 @@ def swift_ripgrep(pattern: str, options: str = "") -> str:
     if not valid:
         return f"Invalid regex passed in as pattern with error: {error}"
     
-    #debugging
-    print(f"VALID REGEX FOUND, IS VALID? {valid}") 
-
     if "ProgramTemplate" in pattern:
         resolved_path = os.path.join(SWIFT_PATH, "CodeGen")
     else:

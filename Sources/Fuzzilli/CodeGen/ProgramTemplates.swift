@@ -541,5 +541,210 @@ b.setProperty("p0", of: obj, to: nxt, guard: true)
 
         // Mix in a small random tail
         b.build(n: 5)
+    }
+
+    ,
+    ProgramTemplate("KeyedStore_ElementsTransition_Stress") { b in
+        // Global knobs (bounded randomness to stress tiering while staying performant)
+        let warmIters = Int.random(in: 8000...12000)
+        let appendCount = Int.random(in: 256...1024)
+        let bigIndexSparse = Int.random(in: 65536...131072)
+        let cowSliceLen = Int.random(in: 64...256)
+
+        // Seed program and values
+        b.buildPrefix()
+        b.build(n: 10)
+
+        // Helper: maybeGC (no-op, portable)
+        let maybeGC = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+            b.doReturn(b.loadUndefined())
+        }
+
+        // Common builtins/objects
+        let ArrayCtor = b.createNamedVariable(forBuiltin: "Array")
+        let ObjectCtor = b.createNamedVariable(forBuiltin: "Object")
+        let MathObj   = b.createNamedVariable(forBuiltin: "Math")
+        let ReflectObj = b.createNamedVariable(forBuiltin: "Reflect")
+        let Uint8ArrayCtor = b.createNamedVariable(forBuiltin: "Uint8Array")
+
+        // Part A setup: array `a` (start PACKED_SMI), create holes by writing at a high index.
+        var a = b.createArray(with: [b.loadInt(1), b.loadInt(2), b.loadInt(3)])
+        b.setElement(10, of: a, to: b.loadInt(9))  // grow with holes => HOLEY
+
+        // f1: SMI → DOUBLE → OBJECT transitions via phased stores into a[0]
+        let f1 = b.buildPlainFunction(with: .parameters(.object(), .jsAnything)) { args in
+            let arr = args[0]
+            let smiVal = b.loadInt(1)
+            let dblVal = b.loadFloat(1.5)
+            let objVal = MathObj  // any object
+            b.buildRepeatLoop(n: Int(warmIters)) { i in
+                let t1 = b.compare(i, with: b.loadInt(Int64(warmIters/3)), using: .lessThan)
+                b.buildIfElse(t1) {
+                    b.setElement(0, of: arr, to: smiVal)
+                } elseBody: {
+                    let t2 = b.compare(i, with: b.loadInt(Int64(2*warmIters/3)), using: .lessThan)
+                    b.buildIfElse(t2) {
+                        b.setElement(0, of: arr, to: dblVal)  // transition SMI→DOUBLE
+                    } elseBody: {
+                        b.setElement(0, of: arr, to: objVal)  // transition DOUBLE→OBJECT
+                    }
+                }
+                _ = b.getElement(0, of: arr)
+                // Rare no-op GC call to create phase boundaries without affecting portability
+                let mod = b.binary(i, b.loadInt(1024), with: .Mod)
+                let cond = b.compare(mod, with: b.loadInt(0), using: .equal)
+                b.buildIf(cond) {
+                    _ = b.callFunction(maybeGC, withArgs: [])
+                }
+            }
+            b.doReturn(arr)
+        }
+
+        // Part B: HOLEY_DOUBLE with NaN holes, then transition to OBJECT
+        let zeroF = b.loadFloat(0.0)
+        let nanVal = b.binary(zeroF, zeroF, with: .Div)  // 0.0 / 0.0 => NaN
+        var bArr = b.createArray(with: [])
+        b.setElement(0, of: bArr, to: b.loadFloat(1.1))
+        b.setElement(2, of: bArr, to: nanVal)
+        b.setElement(5, of: bArr, to: b.loadFloat(3.3))
+
+        let f2 = b.buildPlainFunction(with: .parameters(.object(), .integer)) { args in
+            let arr = args[0]
+            let idx = args[1]
+            let dbl = b.loadFloat(4.4)
+            b.buildRepeatLoop(n: Int(warmIters)) { i in
+                let before = b.compare(i, with: b.loadInt(Int64(3*warmIters/4)), using: .lessThan)
+                b.buildIfElse(before) {
+                    b.setComputedProperty(idx, of: arr, to: dbl)   // stay DOUBLE
+                } elseBody: {
+                    b.setComputedProperty(idx, of: arr, to: MathObj)  // transition DOUBLE→OBJECT on HOLEY
+                }
+                _ = b.getComputedProperty(idx, of: arr)
+            }
+            b.doReturn(arr)
+        }
+
+        // Part C: Capacity growth + COW via slice
+        let cLen = b.loadInt(Int64(cowSliceLen))
+        let cArr = b.construct(ArrayCtor, withArgs: [cLen])
+        _ = b.callMethod("fill", on: cArr, withArgs: [b.loadInt(1)])  // PACKED_SMI
+        let dArr = b.callMethod("slice", on: cArr, withArgs: [b.loadInt(0)])  // COW backing store
+
+        let f3 = b.buildPlainFunction(with: .parameters(.object(), .integer)) { args in
+            let t = args[0]
+            let _ = args[1]  // n (unused, kept for signature richness)
+            b.buildRepeatLoop(n: appendCount) { j in
+                b.setComputedProperty(j, of: t, to: j)
+                _ = b.getComputedProperty(j, of: t)
+            }
+            b.doReturn(t)
+        }
+
+        // Part D: Packed→Holey flip and sparse write to force handler update/deopt
+        let f4 = b.buildPlainFunction(with: .parameters(.object())) { args in
+            let arr = args[0]
+            b.buildRepeatLoop(n: Int(warmIters)) { i in
+                // Densely update index 1 for packed feedback
+                b.setElement(1, of: arr, to: i)
+                // Flip near end to HOLEY by deleting index 1 and perform a large sparse write
+                let trigger = b.compare(i, with: b.loadInt(Int64(warmIters - 1)), using: .equal)
+                b.buildIf(trigger) {
+                    _ = b.callMethod("deleteProperty", on: ReflectObj, withArgs: [arr, b.loadString("1")])
+                    b.setElement(Int64(bigIndexSparse), of: arr, to: b.loadInt(7))
+                }
+            }
+            b.doReturn(arr)
+        }
+
+        // Part E: Integrity levels and non-extensible arrays
+        let f5 = b.buildPlainFunction(with: .parameters(.object())) { args in
+            let z = args[0]
+            b.buildRepeatLoop(n: Int(warmIters)) { i in
+                b.setElement(0, of: z, to: i)
+                let trigger = b.compare(i, with: b.loadInt(Int64(warmIters - 2)), using: .equal)
+                b.buildIf(trigger) {
+                    _ = b.callMethod("preventExtensions", on: ObjectCtor, withArgs: [z])
+                }
+            }
+            // Post preventExtensions: in-bounds and append attempts
+            b.setElement(1, of: z, to: b.loadInt(99))
+            b.setElement(100, of: z, to: b.loadInt(42))
+            _ = b.getProperty("length", of: z)
+            b.doReturn(z)
+        }
+
+        // Part F: TypedArray OOB ignore semantics + polymorphism with normal arrays
+        let ta = b.construct(Uint8ArrayCtor, withArgs: [b.loadInt(64)])
+        let f6 = b.buildPlainFunction(with: .parameters(.object())) { args in
+            let tarr = args[0]
+            let L = b.getProperty("length", of: tarr)
+            b.buildRepeatLoop(n: Int(warmIters)) { i in
+                let before = b.compare(i, with: b.loadInt(Int64(warmIters - 8)), using: .lessThan)
+                b.buildIfElse(before) {
+                    let idx = b.binary(i, b.loadInt(63), with: .Mod)
+                    b.setComputedProperty(idx, of: tarr, to: b.loadInt(255))
+                } elseBody: {
+                    let big = b.binary(L, b.loadInt(1024), with: .Add)
+                    b.setComputedProperty(big, of: tarr, to: b.loadInt(1))  // OOB for TAs, ignored
+                }
+            }
+            b.doReturn(tarr)
+        }
+
+        // Part G: Prototype validity cell invalidation
+        let proto = b.getProperty("prototype", of: ArrayCtor)
+        let f7 = b.buildPlainFunction(with: .parameters(.object())) { args in
+            let arr = args[0]
+            b.buildRepeatLoop(n: Int(warmIters)) { i in
+                b.setElement(0, of: arr, to: i)
+                let t1 = b.compare(i, with: b.loadInt(Int64(warmIters/2)), using: .equal)
+                b.buildIf(t1) {
+                    b.setComputedProperty(b.loadString("0"), of: proto, to: b.loadInt(123))
+                }
+                let t2 = b.compare(i, with: b.loadInt(Int64(warmIters - 1)), using: .equal)
+                b.buildIf(t2) {
+                    _ = b.callMethod("deleteProperty", on: ReflectObj, withArgs: [proto, b.loadString("0")])
+                }
+            }
+            b.doReturn(arr)
+        }
+
+        // Orchestration & sequencing
+        // f1: transition pipeline
+        _ = b.callFunction(f1, withArgs: [a, b.loadInt(1)])
+
+        // f2: HOLEY_DOUBLE to OBJECT on chosen index
+        _ = b.callFunction(f2, withArgs: [bArr, b.loadInt(2)])
+
+        // f3: growth on c, then EnsureWritable+COW split on d
+        let cOut = b.callFunction(f3, withArgs: [cArr, b.loadInt(Int64(appendCount))])
+        let dOut = b.callFunction(f3, withArgs: [dArr, b.loadInt(Int64(appendCount))])
+        // Alternate writes to test aliasing absence
+        b.setElement(0, of: cArr, to: b.loadInt(101))
+        b.setElement(0, of: dArr, to: b.loadInt(202))
+        _ = cOut; _ = dOut
+
+        // f4: packed→holey and sparse write
+        let eArr = b.createArray(with: [b.loadInt(0), b.loadInt(0), b.loadInt(0)])
+        _ = b.callFunction(f4, withArgs: [eArr])
+
+        // f5: integrity levels after warmup
+        let zArr = b.createArray(with: [b.loadInt(0), b.loadInt(0)])
+        _ = b.callFunction(f5, withArgs: [zArr])
+
+        // f6: typed array first, then normal JS array for polymorphism
+        _ = b.callFunction(f6, withArgs: [ta])
+        _ = b.callFunction(f6, withArgs: [a])
+
+        // f7: prototype validity invalidation
+        _ = b.callFunction(f7, withArgs: [a])
+
+        // Verification reads to keep values live
+        _ = b.getElement(0, of: a)
+        _ = b.getElement(2, of: bArr)
+        _ = b.getProperty("length", of: cArr)
+        _ = b.getProperty("length", of: dArr)
+        _ = b.getProperty("length", of: zArr)
+        _ = b.getProperty("length", of: eArr)
     },
 ]
