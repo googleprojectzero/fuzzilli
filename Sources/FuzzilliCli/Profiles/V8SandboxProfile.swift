@@ -476,6 +476,8 @@ let v8SandboxProfile = Profile(
         (WasmArrayGenerator,                       5),
         (SharedObjectGenerator,                    5),
         (PretenureAllocationSiteGenerator,         5),
+        (HoleNanGenerator,                         5),
+        (UndefinedNanGenerator,                    5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([

@@ -143,6 +143,14 @@ public let PretenureAllocationSiteGenerator = CodeGenerator("PretenureAllocation
     b.eval("%PretenureAllocationSite(%@)", with: [obj]);
 }
 
+public let HoleNanGenerator = CodeGenerator("HoleNanGenerator") { b in
+    b.eval("%GetHoleNaN()", hasOutput: true);
+}
+
+public let UndefinedNanGenerator = CodeGenerator("UndefinedNanGenerator") { b in
+    b.eval("%GetUndefinedNaN()", hasOutput: true);
+}
+
 public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
     // This template is meant to stress the v8 Map transition mechanisms.
     // Basically, it generates a bunch of CreateObject, GetProperty, SetProperty, FunctionDefinition,
