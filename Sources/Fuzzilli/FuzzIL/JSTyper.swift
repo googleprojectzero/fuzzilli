@@ -453,7 +453,8 @@ public struct JSTyper: Analyzer {
                     selfReferences[typeDef, default: []].append({typer, replacement in
                         let desc = typer.type(of: def).wasmTypeDefinition!.description as! WasmSignatureTypeDescription
                         var params = desc.signature.parameterTypes
-                        params[i] = typer.type(of: replacement ?? def)
+                        let nullability = params[i].wasmReferenceType!.nullability
+                        params[i] = typer.type(of: replacement ?? def).wasmTypeDefinition!.getReferenceTypeTo(nullability: nullability)
                         desc.signature = params => desc.signature.outputTypes
                     })
                 } else {

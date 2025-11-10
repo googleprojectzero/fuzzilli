@@ -118,6 +118,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 elementType: .wasmRef(.Index(), nullability: nullability),
                 mutability: mutability, indexType: elementType)
         } else {
+            // TODO(mliedtke): Extend list with abstract heap types.
             b.wasmDefineArrayType(
                 elementType: chooseUniform(from: [
                     .wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
@@ -138,6 +139,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 indexTypes.append(elementType)
                 type = .wasmRef(.Index(), nullability: nullability)
             } else {
+                // TODO(mliedtke): Extend list with abstract heap types.
                 type = chooseUniform(from: [
                     .wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
                 ])
@@ -147,6 +149,36 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
 
         b.wasmDefineStructType(fields: fields, indexTypes: indexTypes)
+    },
+
+    CodeGenerator(
+        "WasmSignatureTypeGenerator",
+        inContext: .single(.wasmTypeGroup),
+        produces: [.wasmTypeDef()]
+    ) { b in
+        let typeCount = Int.random(in: 0...10)
+        let returnCount = Int.random(in: 0...typeCount)
+        let parameterCount = typeCount - returnCount
+
+        var indexTypes: [Variable] = []
+        let chooseType = {
+            var type: ILType
+            if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
+                probability(0.25)
+            {
+                let nullability =
+                    b.type(of: elementType).wasmTypeDefinition!.description
+                    == .selfReference || probability(0.5)
+                indexTypes.append(elementType)
+                return ILType.wasmRef(.Index(), nullability: nullability)
+            } else {
+                // TODO(mliedtke): Extend list with abstract heap types.
+                return chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128])
+            }
+        }
+        let signature = (0..<parameterCount).map {_ in chooseType()}
+                        => (0..<returnCount).map {_ in chooseType()}
+        b.wasmDefineSignatureType(signature: signature, indexTypes: indexTypes)
     },
 
     CodeGenerator("WasmSelfReferenceGenerator", inContext: .single(.wasmTypeGroup), produces: [.wasmSelfReference()]) { b in
