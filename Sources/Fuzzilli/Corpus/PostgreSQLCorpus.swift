@@ -33,8 +33,8 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     private var fuzzerRegistered = false
     private var fuzzerId: Int? // Master database fuzzer ID
     
-    /// Batch execution storage
-    private var pendingExecutions: [(Program, ProgramAspects, DatabaseExecutionPurpose)] = []
+    /// Batch execution storage - includes execution metadata
+    private var pendingExecutions: [(Program, ProgramAspects, DatabaseExecutionPurpose, ExecutionData)] = []
     private var executionBatchSize: Int // Dynamic batch size
     private let executionBatchLock = NSLock()
     
@@ -178,7 +178,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         guard fuzzerId != nil else { return }
         
         // Commit pending executions
-        let queuedExecutions = executionBatchLock.withLock {
+        let queuedExecutions: [(Program, ProgramAspects, DatabaseExecutionPurpose, ExecutionData)] = executionBatchLock.withLock {
             let queuedExecutions = pendingExecutions
             pendingExecutions.removeAll()
             return queuedExecutions
@@ -390,10 +390,10 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     }
     
     /// Add execution to batch for later processing
-    private func addToExecutionBatch(_ program: Program, _ aspects: ProgramAspects, executionType: DatabaseExecutionPurpose) {
+    private func addToExecutionBatch(_ program: Program, _ aspects: ProgramAspects, executionType: DatabaseExecutionPurpose, executionData: ExecutionData) {
         // Use atomic operations to avoid blocking locks
-        let shouldProcessBatch: [(Program, ProgramAspects, DatabaseExecutionPurpose)]? = executionBatchLock.withLock {
-            pendingExecutions.append((program, aspects, executionType))
+        let shouldProcessBatch: [(Program, ProgramAspects, DatabaseExecutionPurpose, ExecutionData)]? = executionBatchLock.withLock {
+            pendingExecutions.append((program, aspects, executionType, executionData))
             let currentBatchSize = executionBatchSize
             let shouldProcess = pendingExecutions.count >= currentBatchSize
             if shouldProcess {
@@ -413,7 +413,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     }
     
     /// Process a batch of executions
-    private func processExecutionBatch(_ batch: [(Program, ProgramAspects, DatabaseExecutionPurpose)]) async {
+    private func processExecutionBatch(_ batch: [(Program, ProgramAspects, DatabaseExecutionPurpose, ExecutionData)]) async {
         guard let fuzzerId = fuzzerId else {
             logger.error("Cannot process execution batch: fuzzer not registered")
             return
@@ -428,7 +428,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             var uniquePrograms: [String: (Program, ExecutionMetadata)] = [:]
             var executionBatchData: [ExecutionBatchData] = []
             
-            for (program, aspects, executionType) in batch {
+            for (program, aspects, executionType, execData) in batch {
                 // Filter out test programs with FUZZILLI_CRASH (false positive crashes)
                 if DatabaseUtils.containsFuzzilliCrash(program: program) {
                     if enableLogging {
@@ -464,7 +464,11 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                     mutatorType: nil,
                     outcome: aspects.outcome,
                     coverage: coveragePct,
-                    coverageEdges: (aspects as? CovEdgeSet).map { Set($0.getEdges().map { Int($0) }) } ?? Set<Int>()
+                    executionTimeMs: Int(execData.execTime * 1000),
+                    coverageEdges: (aspects as? CovEdgeSet).map { Set($0.getEdges().map { Int($0) }) } ?? Set<Int>(),
+                    stdout: execData.stdout,
+                    stderr: execData.stderr,
+                    fuzzout: execData.fuzzout
                 )
                 executionBatchData.append(executionData)
             }
@@ -491,7 +495,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     
     /// Flush any pending executions in the batch
     private func flushExecutionBatch() {
-        let batch = executionBatchLock.withLock {
+        let batch: [(Program, ProgramAspects, DatabaseExecutionPurpose, ExecutionData)] = executionBatchLock.withLock {
             let batch = pendingExecutions
             pendingExecutions.removeAll()
             return batch
@@ -521,7 +525,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 }
                 
                 // Process any queued executions
-                let queuedExecutions = executionBatchLock.withLock {
+                let queuedExecutions: [(Program, ProgramAspects, DatabaseExecutionPurpose, ExecutionData)] = executionBatchLock.withLock {
                     let queuedExecutions = pendingExecutions
                     pendingExecutions.removeAll()
                     return queuedExecutions
@@ -681,53 +685,15 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             return
         }
         
-        do {
-            // Use the registered fuzzer ID
-            guard let fuzzerId = fuzzerId else {
-                if enableLogging {
-                    self.logger.info("Cannot store execution: fuzzer not registered")
-                }
-                return
+        // Add to execution batch for batched storage (even if fuzzer not registered yet)
+        addToExecutionBatch(program, aspects, executionType: executionType, executionData: executionData)
+        
+        if enableLogging {
+            if fuzzerId == nil {
+                self.logger.info("Queued execution for later (fuzzer not registered yet)")
+            } else {
+                self.logger.info("Added execution to batch: outcome=\(executionData.outcome), execTime=\(executionData.execTime)")
             }
-            
-            // DEBUG: Log execution storage attempt
-            if enableLogging {
-                self.logger.info("Storing execution: fuzzerId=\(fuzzerId), outcome=\(executionData.outcome), execTime=\(executionData.execTime)")
-            }
-
-            // Derive coverage percentage (0-100) from evaluator if available
-            let coveragePct: Double = {
-                if let coverageEvaluator = self.fuzzer.evaluator as? ProgramCoverageEvaluator {
-                    return coverageEvaluator.currentScore * 100.0
-                } else {
-                    return 0.0
-                }
-            }()
-
-            // Store both program and execution in a single transaction to avoid foreign key issues
-            _ = try await storage.storeProgramAndExecution(
-                program: program,
-                fuzzerId: fuzzerId,
-                executionType: executionType,
-                outcome: executionData.outcome,
-                coverage: coveragePct,
-                executionTimeMs: Int(executionData.execTime * 1000),
-                stdout: executionData.stdout,
-                stderr: executionData.stderr,
-                fuzzout: executionData.fuzzout,
-                metadata: ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
-                    id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
-                    outcome: aspects.outcome.description,
-                    description: aspects.outcome.description
-                ))
-            )
-
-            if enableLogging {
-                self.logger.info("Successfully stored program and execution")
-            }
-            
-        } catch {
-            logger.error("Failed to store execution: \(String(reflecting: error))")
         }
     }
     
