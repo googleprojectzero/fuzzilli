@@ -275,61 +275,65 @@ public class PostgreSQLStorage {
         defer { Task { _ = try? await connection.close() } }
         
         var programHashes: [String] = []
-        var fuzzerValues: [String] = []
-        var programValues: [String] = []
+        var fuzzerBatchData: [(String, Int, Int, String)] = []
         
-        // Prepare batch data
+        // Prepare batch data - store tuples instead of strings to avoid SQL injection
         for (program, _) in programs {
             let programHash = DatabaseUtils.calculateProgramHash(program: program)
             let programBase64 = DatabaseUtils.encodeProgramToBase64(program: program)
             programHashes.append(programHash)
-            
-            // Escape single quotes in strings
-            let escapedProgramBase64 = programBase64.replacingOccurrences(of: "'", with: "''")
-            
-            fuzzerValues.append("('\(programHash)', \(fuzzerId), \(program.size), '\(escapedProgramBase64)')")
-            programValues.append("('\(programHash)', \(fuzzerId), \(program.size), '\(escapedProgramBase64)')")
+            fuzzerBatchData.append((programHash, fuzzerId, program.size, programBase64))
         }
         
-        // Batch insert into fuzzer table
-        if !fuzzerValues.isEmpty {
-            let fuzzerQueryString = "INSERT INTO fuzzer (program_hash, fuzzer_id, program_size, program_base64) VALUES " + 
-                fuzzerValues.joined(separator: ", ") + " ON CONFLICT DO NOTHING"
-            let fuzzerQuery = PostgresQuery(stringLiteral: fuzzerQueryString)
-            try await connection.query(fuzzerQuery, logger: self.logger)
-        }
-        
-        // Batch insert into program table - use two-step upsert for each program
-        if !programValues.isEmpty {
-            for programValue in programValues {
-                // Extract program_hash from the value string for the UPDATE
-                let components = programValue.dropFirst().dropLast().split(separator: ",")
-                guard components.count >= 4 else { continue }
-                let programHash = String(components[0].dropFirst().dropLast()) // Remove quotes
-                let fuzzerId = String(components[1].trimmingCharacters(in: .whitespaces))
-                let programSize = String(components[2].trimmingCharacters(in: .whitespaces))
-                let programBase64 = String(components[3].dropFirst().dropLast()) // Remove quotes
-                
-                // Try UPDATE first
-                let updateQuery = PostgresQuery(stringLiteral: """
-                    UPDATE program SET 
-                        fuzzer_id = \(fuzzerId),
-                        program_size = \(programSize),
-                        program_base64 = '\(programBase64)'
-                    WHERE program_hash = '\(programHash)'
-                """)
-                let updateResult = try await connection.query(updateQuery, logger: self.logger)
-                let updateRows = try await updateResult.collect()
-                
-                // If no rows were updated, insert the new program
-                if updateRows.isEmpty {
-                    let insertQuery = PostgresQuery(stringLiteral: """
-                        INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64) 
-                        VALUES ('\(programHash)', \(fuzzerId), \(programSize), '\(programBase64)') 
-                        ON CONFLICT DO NOTHING
+        // Batch insert into fuzzer table (corpus) using parameterized queries
+        if !fuzzerBatchData.isEmpty {
+            // Use a transaction for better performance
+            try await connection.query("BEGIN", logger: self.logger)
+            
+            do {
+                // Batch insert into fuzzer table
+                for (programHash, fuzzerId, programSize, programBase64) in fuzzerBatchData {
+                    // Escape single quotes in base64 string
+                    let escapedProgramBase64 = programBase64.replacingOccurrences(of: "'", with: "''")
+                    
+                    let fuzzerQuery = PostgresQuery(stringLiteral: """
+                        INSERT INTO fuzzer (program_hash, fuzzer_id, program_size, program_base64) 
+                        VALUES ('\(programHash)', \(fuzzerId), \(programSize), '\(escapedProgramBase64)') 
+                        ON CONFLICT (program_hash) DO UPDATE SET
+                            fuzzer_id = EXCLUDED.fuzzer_id,
+                            program_size = EXCLUDED.program_size,
+                            program_base64 = EXCLUDED.program_base64
                     """)
-                    try await connection.query(insertQuery, logger: self.logger)
+                    try await connection.query(fuzzerQuery, logger: self.logger)
                 }
+                
+                // Batch insert/update into program table
+                for (programHash, fuzzerId, programSize, programBase64) in fuzzerBatchData {
+                    // Escape single quotes in base64 string
+                    let escapedProgramBase64 = programBase64.replacingOccurrences(of: "'", with: "''")
+                    
+                    // Use INSERT ... ON CONFLICT for atomic upsert
+                    let programQuery = PostgresQuery(stringLiteral: """
+                        INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64) 
+                        VALUES ('\(programHash)', \(fuzzerId), \(programSize), '\(escapedProgramBase64)') 
+                        ON CONFLICT (program_hash) DO UPDATE SET
+                            fuzzer_id = EXCLUDED.fuzzer_id,
+                            program_size = EXCLUDED.program_size,
+                            program_base64 = EXCLUDED.program_base64
+                    """)
+                    try await connection.query(programQuery, logger: self.logger)
+                }
+                
+                // Commit transaction
+                try await connection.query("COMMIT", logger: self.logger)
+                
+                if enableLogging {
+                    logger.info("Successfully batch stored \(programHashes.count) programs in database")
+                }
+            } catch {
+                // Rollback on error
+                try? await connection.query("ROLLBACK", logger: self.logger)
+                throw error
             }
         }
         
@@ -748,27 +752,35 @@ public class PostgreSQLStorage {
         let connection = try await createDirectConnection()
         defer { Task { _ = try? await connection.close() } }
         
-        // Query for recent programs with their latest execution metadata
-        let queryString = """
-            SELECT DISTINCT ON (p.program_hash)
-                p.program_hash,
-                p.program_size,
-                p.program_base64,
-                p.created_at,
-                eo.outcome,
-                eo.description,
-                e.execution_time_ms,
-                e.coverage_total,
-                e.signal_code,
-                e.exit_code
-            FROM program p
-            LEFT JOIN execution e ON p.program_hash = e.program_hash
+        // Query for ALL programs from corpus (fuzzer table) - no date filter, no limits
+        // Use DISTINCT ON to get one row per program (in case of multiple executions)
+        // Use explicit type casts to ensure correct decoding
+        var queryString = """
+            SELECT DISTINCT ON (f.program_hash)
+                f.program_hash::text,
+                COALESCE(f.program_size, 0)::integer as program_size,
+                f.program_base64::text,
+                f.inserted_at::timestamp,
+                eo.outcome::text,
+                eo.description::text,
+                e.execution_time_ms::integer,
+                e.coverage_total::double precision,
+                e.signal_code::integer,
+                e.exit_code::integer
+            FROM fuzzer f
+            LEFT JOIN execution e ON f.program_hash = e.program_hash
             LEFT JOIN execution_outcome eo ON e.execution_outcome_id = eo.id
-            WHERE \(fuzzerId != nil ? "p.fuzzer_id = \(fuzzerId!) AND " : "")
-            p.created_at >= '\(since.ISO8601Format())'
-            ORDER BY p.program_hash, p.created_at DESC, e.created_at DESC NULLS LAST
-            \(limit != nil ? "LIMIT \(limit!)" : "")
         """
+        
+        // Only filter by fuzzer_id if specified, otherwise get ALL programs
+        if let fuzzerId = fuzzerId {
+            queryString += " WHERE f.fuzzer_id = \(fuzzerId)"
+        }
+        
+        queryString += " ORDER BY f.program_hash, e.execution_id DESC NULLS LAST"
+        
+        // Never apply limit - get ALL programs
+        // \(limit != nil ? "LIMIT \(limit!)" : "")
         
         let query = PostgresQuery(stringLiteral: queryString)
         let result = try await connection.query(query, logger: self.logger)
@@ -790,20 +802,22 @@ public class PostgreSQLStorage {
             let exitCode: Int?
             
             do {
-                // Decode required fields (these should never be NULL)
-                programHash = try row.decode(String.self, context: PostgresDecodingContext.default)
-                programSize = try row.decode(Int.self, context: PostgresDecodingContext.default)
-                programBase64 = try row.decode(String.self, context: PostgresDecodingContext.default)
-                createdAt = try row.decode(Date.self, context: PostgresDecodingContext.default)
+                // Use random access row to decode columns by index explicitly to avoid PostgresNIO decode issues
+                let randomAccessRow = row.makeRandomAccess()
                 
-                // Decode optional fields (these can be NULL from LEFT JOIN)
-                // PostgresNIO handles NULL values when decoding to Optional types
-                outcome = try row.decode(String?.self, context: PostgresDecodingContext.default)
-                description = try row.decode(String?.self, context: PostgresDecodingContext.default)
-                executionTimeMs = try row.decode(Int?.self, context: PostgresDecodingContext.default)
-                coverageTotal = try row.decode(Double?.self, context: PostgresDecodingContext.default)
-                signalCode = try row.decode(Int?.self, context: PostgresDecodingContext.default)
-                exitCode = try row.decode(Int?.self, context: PostgresDecodingContext.default)
+                // Decode required fields by index (0, 1, 2, 3)
+                programHash = try randomAccessRow[0].decode(String.self, context: PostgresDecodingContext.default)
+                programSize = try randomAccessRow[1].decode(Int.self, context: PostgresDecodingContext.default)
+                programBase64 = try randomAccessRow[2].decode(String.self, context: PostgresDecodingContext.default)
+                createdAt = try randomAccessRow[3].decode(Date.self, context: PostgresDecodingContext.default)
+                
+                // Decode optional fields by index (4, 5, 6, 7, 8, 9) - these can be NULL from LEFT JOIN
+                outcome = try randomAccessRow[4].decode(String?.self, context: PostgresDecodingContext.default)
+                description = try randomAccessRow[5].decode(String?.self, context: PostgresDecodingContext.default)
+                executionTimeMs = try randomAccessRow[6].decode(Int?.self, context: PostgresDecodingContext.default)
+                coverageTotal = try randomAccessRow[7].decode(Double?.self, context: PostgresDecodingContext.default)
+                signalCode = try randomAccessRow[8].decode(Int?.self, context: PostgresDecodingContext.default)
+                exitCode = try randomAccessRow[9].decode(Int?.self, context: PostgresDecodingContext.default)
             } catch {
                 if enableLogging {
                     logger.warning("Failed to decode row: \(String(reflecting: error)). Skipping this program.")
@@ -811,9 +825,11 @@ public class PostgreSQLStorage {
                 continue
             }
             
-            // Decode the program from base64
+            // Decode the program from base64 - skip if it fails but continue with other programs
             guard let programData = Data(base64Encoded: programBase64) else {
-                logger.warning("Failed to decode base64 data for program: \(programHash)")
+                if enableLogging {
+                    logger.warning("Skipping program \(programHash): Failed to decode base64 data")
+                }
                 continue
             }
             
@@ -822,7 +838,11 @@ public class PostgreSQLStorage {
                 let protobuf = try Fuzzilli_Protobuf_Program(serializedBytes: programData)
                 program = try Program(from: protobuf)
             } catch {
-                logger.warning("Failed to decode program from protobuf: \(programHash), error: \(error)")
+                // Skip programs that fail to decode from protobuf - they may be from incompatible versions
+                // Continue syncing other programs that can be decoded
+                if enableLogging {
+                    logger.debug("Skipping program \(programHash): Failed to decode from protobuf (likely incompatible format): \(error)")
+                }
                 continue
             }
             

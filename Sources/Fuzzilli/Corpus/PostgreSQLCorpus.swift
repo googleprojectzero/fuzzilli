@@ -718,8 +718,15 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     
     /// Synchronize with PostgreSQL database
     private func syncWithDatabase() {
+        if enableLogging {
+            logger.info("syncWithDatabase() called - starting sync task")
+        }
         Task {
-            await performDatabaseSync()
+            do {
+                await performDatabaseSync()
+            } catch {
+                logger.error("syncWithDatabase() failed: \(error)")
+            }
         }
     }
     
@@ -727,62 +734,181 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     private func performDatabaseSync() async {
         // Sync ALL programs from local database to master, not just from cache
         // This ensures the master has the complete corpus from this worker
+        if enableLogging {
+            logger.info("performDatabaseSync() started - masterStorage: \(masterStorage != nil), masterId: \(masterFuzzerId?.description ?? "nil"), localId: \(fuzzerId?.description ?? "nil")")
+        }
         guard let masterStorage = masterStorage, let masterId = masterFuzzerId, let localId = fuzzerId else {
+            if enableLogging {
+                logger.warning("performDatabaseSync() aborted - missing required values: masterStorage=\(masterStorage != nil), masterId=\(masterFuzzerId?.description ?? "nil"), localId=\(fuzzerId?.description ?? "nil")")
+            }
             return
         }
         
         do {
-            // Get all programs from local database (not just cache)
-            // Use a date far in the past to get all programs
-            let allTimeDate = Date(timeIntervalSince1970: 0)
+            // Get ALL programs from local database - no date filter, no limits
+            if enableLogging {
+                logger.info("Querying local database for ALL programs: fuzzerId=\(localId)")
+            }
             let localPrograms = try await storage.getRecentPrograms(
                 fuzzerId: localId,
-                since: allTimeDate,
+                since: Date(timeIntervalSince1970: 0), // This will be ignored in the query now
                 limit: nil // No limit - get all programs
             )
             
-            guard !localPrograms.isEmpty else {
+            if enableLogging {
+                logger.info("Retrieved \(localPrograms.count) programs from local database")
+            }
+            
+            if localPrograms.isEmpty {
                 if enableLogging {
                     logger.info("No programs in local database to sync")
                 }
                 return
             }
             
-            if enableLogging {
-                logger.info("Syncing \(localPrograms.count) programs from local database to master")
+            // Deduplicate programs by hash (in case query returned duplicates)
+            var uniquePrograms: [String: (Program, ExecutionMetadata)] = [:]
+            for (program, metadata) in localPrograms {
+                let hash = DatabaseUtils.calculateProgramHash(program: program)
+                // Keep the first occurrence (or you could merge metadata)
+                if uniquePrograms[hash] == nil {
+                    uniquePrograms[hash] = (program, metadata)
+                }
             }
             
-            // Store each program in the master database (filter out FUZZILLI_CRASH test cases)
-            var syncedCount = 0
-            var skippedCount = 0
-            for (program, metadata) in localPrograms {
-                // Skip test programs with FUZZILLI_CRASH
-                if DatabaseUtils.containsFuzzilliCrash(program: program) {
-                    skippedCount += 1
-                    continue
+            let deduplicatedPrograms = Array(uniquePrograms.values)
+            
+            if enableLogging {
+                logger.info("Deduplicated to \(deduplicatedPrograms.count) unique programs (from \(localPrograms.count) total)")
+            }
+            
+            // Store ALL programs in the master database using BATCH storage
+            if enableLogging {
+                logger.info("Syncing \(deduplicatedPrograms.count) unique programs from local database to master database (fuzzerId=\(masterId))")
+            }
+            
+            do {
+                // Use batch storage for better performance
+                let programHashes = try await masterStorage.storeProgramsBatch(
+                    programs: deduplicatedPrograms,
+                    fuzzerId: masterId
+                )
+                
+                if enableLogging {
+                    logger.info("✅ Successfully batch synced \(programHashes.count) programs to master database (fuzzerId=\(masterId))")
+                    if programHashes.count > 0 {
+                        logger.info("   Sample program hashes: \(programHashes.prefix(5).joined(separator: ", "))\(programHashes.count > 5 ? "..." : "")")
+                    }
+                }
+            } catch {
+                logger.error("❌ Failed to batch sync programs to master: \(error)")
+                // Fallback to individual storage if batch fails
+                if enableLogging {
+                    logger.info("Attempting individual program storage as fallback...")
+                }
+                var syncedCount = 0
+                var failedCount = 0
+                for (program, metadata) in deduplicatedPrograms {
+                    do {
+                        _ = try await masterStorage.storeProgram(
+                            program: program,
+                            fuzzerId: masterId,
+                            metadata: metadata
+                        )
+                        syncedCount += 1
+                    } catch {
+                        failedCount += 1
+                        if enableLogging {
+                            logger.error("Failed to sync individual program to master: \(error)")
+                        }
+                    }
+                }
+                if enableLogging {
+                    logger.info("Fallback sync completed: \(syncedCount) succeeded, \(failedCount) failed")
+                }
+                // Re-throw if all failed
+                if syncedCount == 0 && failedCount > 0 {
+                    throw error
+                }
+            }
+            
+            // TODO: Execution sync temporarily disabled - need to implement getRecentExecutions method
+            // Sync ALL executions from local database to master - no date filter, no limits
+            // For now, skip execution sync and focus on program sync
+            if enableLogging {
+                logger.info("Execution sync temporarily disabled - focusing on program sync")
+            }
+            
+            /* Execution sync code - temporarily disabled
+            let localExecutions = try await storage.getRecentExecutions(
+                fuzzerId: localId,
+                since: Date(timeIntervalSince1970: 0),
+                limit: nil
+            )
+            
+            if localExecutions.isEmpty {
+                if enableLogging {
+                    logger.info("No executions in local database to sync")
+                }
+            } else {
+                if enableLogging {
+                    logger.info("Syncing \(localExecutions.count) executions from local database to master")
                 }
                 
-                do {
-                    _ = try await masterStorage.storeProgram(
-                        program: program,
-                        fuzzerId: masterId,
-                        metadata: metadata
-                    )
-                    syncedCount += 1
-                } catch {
-                    if enableLogging {
-                        logger.error("Failed to sync program to master: \(error)")
+                // Convert ALL executions to batch data - NO FILTERING
+                var executionBatchData: [ExecutionBatchData] = []
+                
+                for executionWithProgram in localExecutions {
+                    // NO FILTERING - sync ALL executions including FUZZILLI_CRASH
+                    
+                    // Convert to ExecutionBatchData for batch storage
+                    executionBatchData.append(executionWithProgram.toExecutionBatchData())
+                }
+                
+                // Batch store executions in master database with original fuzzer_id
+                if !executionBatchData.isEmpty {
+                    do {
+                        // Store programs first (in case they don't exist in master)
+                        var uniquePrograms: [String: (Program, ExecutionMetadata)] = [:]
+                        for execData in executionBatchData {
+                            let programHash = DatabaseUtils.calculateProgramHash(program: execData.program)
+                            if uniquePrograms[programHash] == nil {
+                                let metadata = ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
+                                    id: DatabaseUtils.mapExecutionOutcome(outcome: execData.outcome),
+                                    outcome: execData.outcome.description,
+                                    description: execData.outcome.description
+                                ))
+                                uniquePrograms[programHash] = (execData.program, metadata)
+                            }
+                        }
+                        
+                        // Store unique programs in master using batch storage
+                        let programBatch = Array(uniquePrograms.values)
+                        if !programBatch.isEmpty {
+                            if enableLogging {
+                                logger.info("Storing \(programBatch.count) unique programs in master before syncing executions")
+                            }
+                            let programHashes = try await masterStorage.storeProgramsBatch(programs: programBatch, fuzzerId: masterId)
+                            if enableLogging {
+                                logger.info("✅ Stored \(programHashes.count) programs in master database")
+                            }
+                        }
+                        
+                        // Store executions in master with original fuzzer_id using batch storage
+                        if enableLogging {
+                            logger.info("Storing \(executionBatchData.count) executions in master database (fuzzerId=\(masterId))")
+                        }
+                        let executionIds = try await masterStorage.storeExecutionsBatch(executions: executionBatchData, fuzzerId: masterId)
+                        
+                        if enableLogging {
+                            logger.info("✅ Successfully batch synced \(executionIds.count) executions to master database")
+                        }
+                    } catch {
+                        logger.error("Failed to sync executions to master: \(error)")
                     }
                 }
             }
-            
-            if skippedCount > 0 && enableLogging {
-                logger.info("Skipped \(skippedCount) test programs with FUZZILLI_CRASH during sync")
-            }
-            
-            if enableLogging {
-                logger.info("Successfully synced \(syncedCount)/\(localPrograms.count) programs to master")
-            }
+            */
             
             // Clear pending sync operations since we've synced everything
             _ = withLock(syncLock) {
@@ -790,14 +916,18 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             }
             
         } catch {
-            logger.error("Failed to sync programs to master: \(error)")
+            logger.error("Failed to sync to master: \(error)")
         }
     }
     
     /// Pull sync from master database
     private func pullFromMaster() {
         Task {
-            await performPullFromMaster()
+            do {
+                await performPullFromMaster()
+            } catch {
+                logger.error("pullFromMaster() failed: \(error)")
+            }
         }
     }
     
@@ -812,86 +942,236 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             // Get ALL programs from master database (from all fuzzers)
             // Use a date far in the past to get all programs
             let sinceDate = Date(timeIntervalSince1970: 0) // Get all programs from the beginning
+            if enableLogging {
+                logger.info("performPullFromMaster() started - fetching all programs from master...")
+            }
             let masterPrograms = try await masterStorage.getAllPrograms(
                 since: sinceDate
             )
             
+            if enableLogging {
+                logger.info("Retrieved \(masterPrograms.count) programs from master database")
+            }
+            
             guard !masterPrograms.isEmpty else {
                 if enableLogging {
-                    logger.info("No new programs to pull from master")
+                    logger.info("No programs to pull from master")
                 }
                 return
             }
             
-            // Filter out programs already in local cache
-            let localHashes = withLock(cacheLock) {
-                Set(programCache.keys)
-            }
-            
-            let newPrograms = masterPrograms.filter { program, _ in
-                let hash = DatabaseUtils.calculateProgramHash(program: program)
-                return !localHashes.contains(hash)
-            }
-            
-            guard !newPrograms.isEmpty else {
-                if enableLogging {
-                    logger.info("All programs from master already in local cache")
-                }
-                return
-            }
-            
+            // Pull ALL programs from master - NO filtering by cache or FUZZILLI_CRASH
             if enableLogging {
-                logger.info("Pulling \(newPrograms.count) new programs from master")
+                logger.info("Pulling ALL \(masterPrograms.count) programs from master (no filtering)")
             }
             
-            // Add new programs to local cache and local postgres (filter out FUZZILLI_CRASH test cases)
+            // Add ALL programs to local cache and local postgres - NO FILTERING
+            // Use batch storage for better performance when pulling many programs
             var pulledCount = 0 
-            var skippedCount = 0
-            for (program, metadata) in newPrograms {
-                // Skip test programs with FUZZILLI_CRASH
-                if DatabaseUtils.containsFuzzilliCrash(program: program) {
-                    skippedCount += 1
-                    continue
+            var failedCount = 0
+            
+            // Check if we already have these programs to avoid duplicates
+            // Check both cache and local database
+            var programsToPull: [(Program, ExecutionMetadata)] = []
+            var existingHashes = Set<String>()
+            
+            // Get existing hashes from cache
+            withLock(cacheLock) {
+                existingHashes = Set(programCache.keys)
+            }
+            
+            // Also check local database for existing programs (check ALL programs, not just this fuzzer's)
+            do {
+                // Get ALL programs from local database regardless of fuzzer_id
+                let localPrograms = try await storage.getRecentPrograms(
+                    fuzzerId: nil, // Get all programs, not just this fuzzer's
+                    since: Date(timeIntervalSince1970: 0),
+                    limit: nil
+                )
+                for (program, _) in localPrograms {
+                    let hash = DatabaseUtils.calculateProgramHash(program: program)
+                    existingHashes.insert(hash)
                 }
-                
+                if enableLogging {
+                    logger.info("Found \(existingHashes.count) existing program hashes in local database and cache")
+                }
+            } catch {
+                if enableLogging {
+                    logger.warning("Failed to check local database for existing programs: \(error)")
+                }
+            }
+            
+            // Filter out programs we already have
+            for (program, metadata) in masterPrograms {
                 let hash = DatabaseUtils.calculateProgramHash(program: program)
-                
-                // Add to local cache
-                withLock(cacheLock) {
-                    programCache[hash] = (program: program, metadata: metadata)
-                }
-                
-                // Add to local postgres using local fuzzer ID
-                do {
-                    _ = try await storage.storeProgram(
-                        program: program,
-                        fuzzerId: localId,
-                        metadata: metadata
-                    )
-                    
-                    // Add to ring buffer for fast access
-                    withLock(cacheLock) {
-                        programs.append(program)
-                        ages.append(0)
-                        programHashes.append(hash)
-                        totalEntryCounter += 1
-                    }
-                    
-                    pulledCount += 1
-                    if enableLogging {
-                        logger.info("Pulled program from master: hash=\(hash.prefix(8))...")
-                    }
-                } catch {
-                    logger.error("Failed to store pulled program in local database: \(error)")
+                if !existingHashes.contains(hash) {
+                    programsToPull.append((program, metadata))
                 }
             }
             
             if enableLogging {
-                logger.info("Successfully pulled \(pulledCount) programs from master (skipped \(skippedCount) test programs with FUZZILLI_CRASH)")
+                logger.info("Filtered \(programsToPull.count) new programs to pull (out of \(masterPrograms.count) total, \(masterPrograms.count - programsToPull.count) already exist)")
             }
+            
+            // Use batch storage for better performance
+            // Process in chunks to avoid memory issues with very large datasets
+            let chunkSize = 10000 // Process 10k programs at a time
+            if !programsToPull.isEmpty {
+                if enableLogging {
+                    logger.info("Processing \(programsToPull.count) programs to pull in chunks of \(chunkSize)...")
+                }
+                
+                for chunkStart in stride(from: 0, to: programsToPull.count, by: chunkSize) {
+                    let chunkEnd = min(chunkStart + chunkSize, programsToPull.count)
+                    let chunk = Array(programsToPull[chunkStart..<chunkEnd])
+                    
+                    if enableLogging {
+                        logger.info("Processing chunk \(chunkStart/chunkSize + 1): programs \(chunkStart) to \(chunkEnd-1) of \(programsToPull.count)")
+                    }
+                    
+                    do {
+                        let storedHashes = try await storage.storeProgramsBatch(
+                            programs: chunk,
+                            fuzzerId: localId
+                        )
+                        
+                        // Add to cache and ring buffer
+                        withLock(cacheLock) {
+                            for (program, metadata) in chunk {
+                                let hash = DatabaseUtils.calculateProgramHash(program: program)
+                                programCache[hash] = (program: program, metadata: metadata)
+                                programs.append(program)
+                                ages.append(0)
+                                self.programHashes.append(hash)
+                                totalEntryCounter += 1
+                            }
+                        }
+                        
+                        pulledCount += storedHashes.count
+                        
+                        if enableLogging {
+                            logger.info("✅ Successfully batch pulled chunk: \(storedHashes.count) programs (total so far: \(pulledCount))")
+                        }
+                    } catch {
+                        logger.error("❌ Failed to batch pull chunk from master: \(error)")
+                        // Fallback to individual storage for this chunk
+                        if enableLogging {
+                            logger.info("Attempting individual program storage as fallback for chunk...")
+                        }
+                        for (program, metadata) in chunk {
+                            let hash = DatabaseUtils.calculateProgramHash(program: program)
+                            do {
+                                _ = try await storage.storeProgram(
+                                    program: program,
+                                    fuzzerId: localId,
+                                    metadata: metadata
+                                )
+                                
+                                // Add to ring buffer for fast access
+                                withLock(cacheLock) {
+                                    programCache[hash] = (program: program, metadata: metadata)
+                                    programs.append(program)
+                                    ages.append(0)
+                                    self.programHashes.append(hash)
+                                    totalEntryCounter += 1
+                                }
+                                
+                                pulledCount += 1
+                            } catch {
+                                failedCount += 1
+                                if enableLogging {
+                                    logger.error("Failed to store pulled program in local database: \(error)")
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if enableLogging {
+                    logger.info("✅ Successfully completed pull: \(pulledCount) programs pulled from master (failed: \(failedCount))")
+                }
+            } else {
+                if enableLogging {
+                    logger.info("No new programs to pull - all \(masterPrograms.count) programs from master already exist locally")
+                }
+            }
+            
+            // TODO: Execution pull temporarily disabled - need to implement getAllExecutions method
+            // Pull executions from master database
+            // For now, skip execution pull and focus on program pull
+            if enableLogging {
+                logger.info("Execution pull temporarily disabled - focusing on program pull")
+            }
+            
+            /* Execution pull code - temporarily disabled
+            let masterExecutions = try await masterStorage.getAllExecutions(since: sinceDate)
+            
+            if masterExecutions.isEmpty {
+                if enableLogging {
+                    logger.info("No executions to pull from master")
+                }
+            } else {
+                if enableLogging {
+                    logger.info("Pulling \(masterExecutions.count) executions from master")
+                }
+                
+                // Convert ALL executions to batch data - NO FILTERING
+                var executionBatchData: [ExecutionBatchData] = []
+                
+                for executionWithProgram in masterExecutions {
+                    // NO FILTERING - pull ALL executions including FUZZILLI_CRASH
+                    
+                    // Convert to ExecutionBatchData for batch storage
+                    executionBatchData.append(executionWithProgram.toExecutionBatchData())
+                }
+                
+                // Batch store executions in local database, preserving original fuzzer_id
+                if !executionBatchData.isEmpty {
+                    do {
+                        // Store programs first (in case they don't exist locally)
+                        var uniquePrograms: [String: (Program, ExecutionMetadata)] = [:]
+                        for execData in executionBatchData {
+                            let programHash = DatabaseUtils.calculateProgramHash(program: execData.program)
+                            if uniquePrograms[programHash] == nil {
+                                let metadata = ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
+                                    id: DatabaseUtils.mapExecutionOutcome(outcome: execData.outcome),
+                                    outcome: execData.outcome.description,
+                                    description: execData.outcome.description
+                                ))
+                                uniquePrograms[programHash] = (execData.program, metadata)
+                            }
+                        }
+                        
+                        // Store unique programs in local database using batch storage
+                        let programBatch = Array(uniquePrograms.values)
+                        if !programBatch.isEmpty {
+                            if enableLogging {
+                                logger.info("Storing \(programBatch.count) unique programs locally before syncing executions")
+                            }
+                            let programHashes = try await storage.storeProgramsBatch(programs: programBatch, fuzzerId: localId)
+                            if enableLogging {
+                                logger.info("✅ Stored \(programHashes.count) programs in local database from master")
+                            }
+                        }
+                        
+                        // Store executions in local database with local fuzzer ID using batch storage
+                        if enableLogging {
+                            logger.info("Storing \(executionBatchData.count) executions in local database (fuzzerId=\(localId))")
+                        }
+                        let executionIds = try await storage.storeExecutionsBatch(executions: executionBatchData, fuzzerId: localId)
+                        
+                        if enableLogging {
+                            logger.info("✅ Successfully batch pulled \(executionIds.count) executions from master to local database")
+                        }
+                    } catch {
+                        logger.error("Failed to pull executions from master: \(error)")
+                    }
+                }
+            }
+            */
             
         } catch {
-            logger.error("Failed to pull programs from master: \(error)")
+            logger.error("Failed to pull from master: \(error)")
         }
     }
     

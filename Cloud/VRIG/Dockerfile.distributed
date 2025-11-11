@@ -46,7 +46,7 @@ RUN mkdir -p ./Corpus
 ENV MASTER_POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-master:5432/fuzzilli
 ENV POSTGRES_URL=postgresql://fuzzilli:fuzzilli123@postgres-master:5432/fuzzilli_master
 ENV FUZZER_INSTANCE_NAME=fuzzer-default
-ENV SYNC_INTERVAL=300
+ENV SYNC_INTERVAL=5
 ENV TIMEOUT=2500
 ENV MIN_MUTATIONS_PER_SAMPLE=25
 ENV DEBUG_LOGGING=false

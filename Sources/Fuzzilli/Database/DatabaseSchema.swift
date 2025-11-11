@@ -105,7 +105,7 @@ public class DatabaseSchema {
         execution_id SERIAL PRIMARY KEY,
         program_hash VARCHAR(64) NOT NULL REFERENCES program(program_hash) ON DELETE CASCADE,
         execution_type_id INTEGER NOT NULL REFERENCES execution_type(id),
-        mutator_type_id INTEGER REFERENCES mutator_type(id),
+        mutator_type_id TEXT, -- Store mutator name directly instead of ID
         execution_outcome_id INTEGER NOT NULL REFERENCES execution_outcome(id),
         
         -- Execution results
