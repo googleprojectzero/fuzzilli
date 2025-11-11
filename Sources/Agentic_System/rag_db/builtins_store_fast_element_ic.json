@@ -1,0 +1,9 @@
+{
+  "body": "HandlerBuiltinsAssembler::Generate_StoreFastElementIC and TF_BUILTIN(StoreFastElementIC_*) implementations in src/builtins/builtins-handler-gen.cc. These builtins dispatch over elements_kind and call CodeStubAssembler::EmitElementStore for each supported elements kind; they tail-call Runtime::kKeyedStoreIC_Miss on miss. They handle typed array conversions by possibly passing a maybe_converted_value to the runtime. Store modes: InBounds, GrowAndHandleCOW, IgnoreTypedArrayOOB, HandleCOW. Guard conditions: load of elements kind from receiver, dispatch by elements kind, miss label if v8_flags.trace_elements_transitions set or EmitElementStore signals miss. Callers: StoreHandler::StoreFastElementBuiltin() resolves builtin code in handler-configuration and is used by KeyedStoreIC::StoreElementHandler. Typed array variants use PrepareValueForWriteToTypedArray. ",
+  "context": [
+    "keyed_store_ic_UpdateStoreElement",
+    "builtins_elements_transition_and_store"
+  ],
+  "explanation": "CSA-generated store fast element builtins that implement the fast-path element stores for different elements kinds and store modes. They are central points for EmitElementStore calls and typed-array value preparation.",
+  "file_line": "builtins/builtins-handler-gen.cc : HandlerBuiltinsAssembler::Generate_StoreFastElementIC and TF_BUILTIN(StoreFastElementIC_*)"
+}

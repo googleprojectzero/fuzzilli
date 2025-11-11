@@ -1,0 +1,10 @@
+{
+  "body": "ElementsAccessor::TransitionElementsKind and GrowCapacityAndConvert implementations are in objects/elements.cc. TransitionElementsKindImpl handles map-only transitions (no conversion) by calling JSObject::MigrateToMap or converts elements with ConvertElementsWithCapacity when switching between double/object, then JSObject::SetMapAndElements and updates allocation site. GrowCapacityAndConvertImpl computes new capacity, allocates a new backing store via ConvertElementsWithCapacity and sets map/elements similarly. Copy helpers include CopyObjectToObjectElements, CopyDoubleToObjectElements, CopySmiToDoubleElements, CopyObjectToDoubleElements and dictionary copies. These handle hole initialization and write barriers appropriately.",
+  "context": [
+    "elements_cc",
+    "elements_accessor",
+    "copy_helpers"
+  ],
+  "explanation": "This RAG entry documents the C++ runtime that actually performs backing-store allocation, copying, conversion among SMI/DOUBLE/OBJECT, and sets map+elements. It's central to understanding what builtins call when they need to convert elements kinds or grow capacity.",
+  "file_line": "objects/elements.cc:TransitionElementsKindImpl, GrowCapacityAndConvertImpl, ConvertElementsWithCapacity"
+}
