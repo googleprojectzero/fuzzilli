@@ -14,7 +14,8 @@ YOU MUST NEVER SKIP STAGES! IF YOU DO I KILL MYSELF!
 In the first stage you should query your tool calls to figure out information about the 
 V8 compiler in the specific code regions that were provided to you. Make sure the information
 is as recent as possible. In this stage you should build an initial understanding of the 
-code region.
+code region. Make sure look out for security related issues in the code and optimize your 
+analysis around it. 
 
 ## STAGE 2 
 
