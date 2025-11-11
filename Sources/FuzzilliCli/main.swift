@@ -100,9 +100,9 @@ Options:
     --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
     --forDifferentialFuzzing     : Enable additional features for better support of external differential fuzzing.
     --postgres-url=url           : PostgreSQL connection string for PostgreSQL corpus (e.g., postgresql://user:pass@host:port/db).
-    --sync-interval=n            : Sync interval in seconds for PostgreSQL corpus (default: 10).
     --validate-before-cache      : Enable program validation before caching in PostgreSQL corpus (default: true).
     --execution-history-size=n   : Number of recent executions to keep in memory for PostgreSQL corpus (default: 10).
+    --postgres-logging           : Enable PostgreSQL database operation logging.
 
 """)
     exit(0)
@@ -163,10 +163,8 @@ let enableWasm = args.has("--wasm")
 let forDifferentialFuzzing = args.has("--forDifferentialFuzzing")
 
 // PostgreSQL corpus specific arguments
-let postgresUrl = args["--postgres-url"]
-let syncInterval = args.int(for: "--sync-interval") ?? 10
-let validateBeforeCache = args.has("--validate-before-cache") || !args.has("--no-validate-before-cache") // Default to true
-let executionHistorySize = args.int(for: "--execution-history-size") ?? 10
+let postgresUrl = args["--postgres-url"] ?? ProcessInfo.processInfo.environment["POSTGRES_URL"]
+let postgresLogging = args.has("--postgres-logging")
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -221,13 +219,7 @@ if corpusName == "markov" && staticCorpus {
 // PostgreSQL corpus validation
 if corpusName == "postgresql" {
     if postgresUrl == nil {
-        configError("PostgreSQL corpus requires --postgres-url")
-    }
-    if syncInterval <= 0 {
-        configError("--sync-interval must be greater than 0")
-    }
-    if executionHistorySize <= 0 {
-        configError("--execution-history-size must be greater than 0")
+        configError("PostgreSQL corpus requires --postgres-url (or POSTGRES_URL environment variable)")
     }
 }
 
@@ -541,46 +533,42 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     case "markov":
         corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
     case "postgresql":
-        // Create PostgreSQL corpus with database connection
-        guard let postgresUrl = postgresUrl else {
-            logger.fatal("PostgreSQL URL is required for PostgreSQL corpus")
-        }
-        
-        // Generate database name based on resume flag
-        let databaseName: String
+        // Create PostgreSQL corpus with master database connection
         let fuzzerInstanceId: String
         
-        if resume {
-            // Use fixed database name for resume
-            databaseName = "database-main"
+        // Check for explicit fuzzer instance name from environment or CLI args
+        if let explicitName = args["--fuzzer-instance-name"] ?? ProcessInfo.processInfo.environment["FUZZER_INSTANCE_NAME"], !explicitName.isEmpty {
+            fuzzerInstanceId = explicitName
+            logger.info("Using explicit fuzzer instance ID: \(fuzzerInstanceId)")
+        } else if resume {
+            // Use fixed fuzzer instance ID for resume
             fuzzerInstanceId = "fuzzer-main"
         } else {
-            // Generate dynamic database name with 8-char hash
+            // Generate dynamic fuzzer instance ID with 8-char hash
             let randomHash = String(UUID().uuidString.prefix(8))
-            databaseName = "database-\(randomHash)"
             fuzzerInstanceId = "fuzzer-\(randomHash)"
         }
         
-        // Replace database name in the connection string
-        let modifiedPostgresUrl = postgresUrl.replacingOccurrences(of: "/fuzzilli", with: "/\(databaseName)")
+        guard let url = postgresUrl else {
+            logger.fatal("PostgreSQL URL is required for PostgreSQL corpus")
+        }
         
-        let databasePool = DatabasePool(connectionString: modifiedPostgresUrl)
+        let databasePool = DatabasePool(connectionString: url, enableLogging: postgresLogging)
+        logger.info("Connecting to master PostgreSQL database")
+        logger.info("PostgreSQL URL: \(url)")
         
         corpus = PostgreSQLCorpus(
             minSize: minCorpusSize,
             maxSize: maxCorpusSize,
             minMutationsPerSample: minMutationsPerSample,
             databasePool: databasePool,
-            fuzzerInstanceId: fuzzerInstanceId
+            fuzzerInstanceId: fuzzerInstanceId,
+            resume: resume,
+            enableLogging: postgresLogging
         )
         
         logger.info("Created PostgreSQL corpus with instance ID: \(fuzzerInstanceId)")
-        logger.info("Database name: \(databaseName)")
-        logger.info("PostgreSQL URL: \(modifiedPostgresUrl)")
         logger.info("Resume mode: \(resume)")
-        logger.info("Sync interval: \(syncInterval) seconds")
-        logger.info("Validate before cache: \(validateBeforeCache)")
-        logger.info("Execution history size: \(executionHistorySize)")
     default:
         logger.fatal("Invalid corpus name provided")
     }

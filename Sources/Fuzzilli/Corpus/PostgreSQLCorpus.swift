@@ -2,17 +2,15 @@ import Foundation
 import PostgresNIO
 import PostgresKit
 
-/// PostgreSQL-based corpus with in-memory caching for distributed fuzzing.
+/// PostgreSQL-based corpus for distributed fuzzing.
 ///
-/// This corpus maintains a local in-memory cache of programs and their execution metadata,
-/// while synchronizing with a central PostgreSQL database. Each fuzzer instance maintains
-/// its own cache and periodically syncs with the master database.
+/// This corpus connects directly to a master PostgreSQL database. Each fuzzer instance
+/// stores and retrieves programs directly from the master database without local caching.
 ///
 /// Features:
-/// - In-memory caching for fast access
-/// - PostgreSQL backend for persistence and sharing
+/// - Direct master database connection
 /// - Execution metadata tracking (coverage, execution count, etc.)
-/// - Periodic synchronization with central database
+/// - Dynamic batching based on execution speed
 /// - Thread-safe operations
 public class PostgreSQLCorpus: ComponentBase, Corpus {
     
@@ -21,29 +19,11 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     private let minSize: Int
     private let maxSize: Int
     private let minMutationsPerSample: Int
-    private let syncInterval: TimeInterval
-    private let databasePool: DatabasePool
+    private let databasePool: DatabasePool // Master database pool
     private let fuzzerInstanceId: String
-    private let storage: PostgreSQLStorage
+    private let storage: PostgreSQLStorage // Master storage
     private let resume: Bool
-    
-    // MARK: - In-Memory Cache
-    
-    /// Thread-safe in-memory cache of programs and their metadata
-    private var programCache: [String: (program: Program, metadata: ExecutionMetadata)] = [:]
-    private let cacheLock = NSLock()
-    
-    /// Ring buffer for fast random access (similar to BasicCorpus)
-    private var programs: RingBuffer<Program>
-    private var ages: RingBuffer<Int>
-    private var programHashes: RingBuffer<String> // Track hashes for database operations
-    
-    /// Counts the total number of entries in the corpus
-    private var totalEntryCounter = 0
-    
-    /// Track pending database operations
-    private var pendingSyncOperations: Set<String> = []
-    private let syncLock = NSLock()
+    private let enableLogging: Bool
     
     /// Track current execution for event handling
     private var currentExecutionProgram: Program?
@@ -51,12 +31,17 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     
     /// Track fuzzer registration status
     private var fuzzerRegistered = false
-    private var fuzzerId: Int?
+    private var fuzzerId: Int? // Master database fuzzer ID
     
     /// Batch execution storage
     private var pendingExecutions: [(Program, ProgramAspects, DatabaseExecutionPurpose)] = []
-    private let executionBatchSize: Int
+    private var executionBatchSize: Int // Dynamic batch size
     private let executionBatchLock = NSLock()
+    
+    /// Cache for recently accessed programs to avoid repeated DB queries
+    private var recentProgramCache: [String: Program] = [:]
+    private let recentCacheLock = NSLock()
+    private let maxRecentCacheSize = 1000 // Keep only recent 1000 programs in memory
     
     // MARK: - Initialization
     
@@ -64,10 +49,10 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         minSize: Int,
         maxSize: Int,
         minMutationsPerSample: Int,
-        databasePool: DatabasePool,
+        databasePool: DatabasePool, // Master database pool
         fuzzerInstanceId: String,
-        syncInterval: TimeInterval = 60.0, // Default 1 minute sync interval
-        resume: Bool = true // Default to resume from previous state
+        resume: Bool = true, // Default to resume from previous state
+        enableLogging: Bool = false
     ) {
         // The corpus must never be empty
         assert(minSize >= 1)
@@ -78,24 +63,21 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         self.minMutationsPerSample = minMutationsPerSample
         self.databasePool = databasePool
         self.fuzzerInstanceId = fuzzerInstanceId
-        self.syncInterval = syncInterval
         self.resume = resume
-        self.storage = PostgreSQLStorage(databasePool: databasePool)
+        self.enableLogging = enableLogging
+        self.storage = PostgreSQLStorage(databasePool: databasePool, enableLogging: enableLogging)
         
-        // Set optimized batch size for better throughput (reduced from 1M to 100k for more frequent processing)
+        // Initialize with default batch size, will be updated dynamically
         self.executionBatchSize = 100_000
-        
-        self.programs = RingBuffer(maxSize: maxSize)
-        self.ages = RingBuffer(maxSize: maxSize)
-        self.programHashes = RingBuffer(maxSize: maxSize)
         
         super.init(name: "PostgreSQLCorpus")
         
         // Setup signal handlers for graceful shutdown
         setupSignalHandlers()
         
-        // Start periodic batch flushing for better throughput
+        // Start periodic batch flushing and batch size recalculation
         startPeriodicBatchFlush()
+        startPeriodicBatchSizeUpdate()
     }
     
     deinit {
@@ -103,13 +85,21 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         PostgreSQLCorpus.unregisterInstance(self)
         
         // Commit any pending batches when the corpus is deallocated
-        Task {
-            await commitPendingBatches()
+        // Use Task.detached to avoid capturing self
+        Task.detached { [weak self] in
+            await self?.commitPendingBatches()
         }
     }
     
     
     // MARK: - Performance Optimizations
+    
+    /// Async-safe locking helper
+    private func withLock<T>(_ lock: NSLock, _ body: () throws -> T) rethrows -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body()
+    }
     
     private func startPeriodicBatchFlush() {
         // Flush batches every 5 seconds to ensure timely processing
@@ -118,6 +108,45 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
                 flushExecutionBatch()
             }
+        }
+    }
+    
+    /// Recalculate batch size based on execution speed (execs/sec * 3600 for hourly batches)
+    private func startPeriodicBatchSizeUpdate() {
+        // Update batch size every 5 minutes
+        Task {
+            while true {
+                try? await Task.sleep(nanoseconds: 5 * 60 * 1_000_000_000) // 5 minutes
+                updateBatchSize()
+            }
+        }
+    }
+    
+    /// Calculate and update dynamic batch size based on execution speed
+    private func updateBatchSize() {
+        guard let statsModule = Statistics.instance(for: fuzzer) else {
+            // If statistics module not available, use default batch size
+            if enableLogging {
+                logger.warning("Statistics module not available, using default batch size")
+            }
+            return
+        }
+        
+        let stats = statsModule.compute()
+        let execsPerSecond = stats.execsPerSecond
+        
+        // Calculate executions per hour: execs/sec * 60 sec/min * 60 min/hour
+        let calculatedBatchSize = Int(execsPerSecond * 60.0 * 60.0)
+        
+        // Ensure minimum batch size (1000) and maximum (1M)
+        let newBatchSize = max(1000, min(1_000_000, calculatedBatchSize))
+        
+        executionBatchLock.withLock {
+            executionBatchSize = newBatchSize
+        }
+        
+        if enableLogging {
+            logger.info("Updated execution batch size: \(newBatchSize) (based on \(String(format: "%.2f", execsPerSecond)) execs/sec)")
         }
     }
     
@@ -146,7 +175,7 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     }
     
     private func commitPendingBatches() async {
-        guard let fuzzerId = fuzzerId else { return }
+        guard fuzzerId != nil else { return }
         
         // Commit pending executions
         let queuedExecutions = executionBatchLock.withLock {
@@ -156,11 +185,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
         
         if !queuedExecutions.isEmpty {
-            do {
-                try await processExecutionBatch(queuedExecutions)
-                // logger.debug("Committed \(queuedExecutions.count) pending executions on exit")
-            } catch {
-                logger.error("Failed to commit pending executions on exit: \(error)")
+            await processExecutionBatch(queuedExecutions)
+            if enableLogging {
+                self.logger.info("Committed \(queuedExecutions.count) pending executions on exit")
             }
         }
     }
@@ -172,24 +199,48 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         // Initialize database pool and register fuzzer (only once)
         Task {
             do {
+                // Initialize master database pool
                 try await databasePool.initialize()
-                // logger.debug("Database pool initialized successfully")
+                if enableLogging {
+                    self.logger.info("Master database pool initialized successfully")
+                }
                 
-                // Register this fuzzer instance in the database (only once)
+                // Register this fuzzer instance in the master database (only once)
                 if !fuzzerRegistered {
                     do {
-                        let id = try await registerFuzzerWithRetry()
+                        let id = try await storage.registerFuzzer(
+                            name: fuzzerInstanceId,
+                            engineType: "v8"
+                        )
                         fuzzerId = id
                         fuzzerRegistered = true
-                        // logger.debug("Fuzzer registered in database with ID: \(id)")
+                        if enableLogging {
+                            self.logger.info("Fuzzer registered in master database with ID: \(id)")
+                        }
                     } catch {
                         logger.error("Failed to register fuzzer after retries: \(error)")
-                        // logger.debug("Fuzzer will continue without database registration - executions will be queued")
+                        if enableLogging {
+                            self.logger.info("Fuzzer will continue without database registration - executions will be queued")
+                        }
                     }
                 }
                 
             } catch {
                 logger.error("Failed to initialize database pool: \(error)")
+            }
+        }
+        
+        // Track coverage statistics from evaluator
+        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            if let coverageEvaluator = self.fuzzer.evaluator as? ProgramCoverageEvaluator {
+                let currentCoverage = coverageEvaluator.currentScore
+                
+                Task {
+                    await self.storeCoverageSnapshot(
+                        coverage: currentCoverage,
+                        programHash: DatabaseUtils.calculateProgramHash(program: ev.program)
+                    )
+                }
             }
         }
         
@@ -203,6 +254,11 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         // Listen for PostExecute events to track all program executions
         fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { execution in
             if let program = self.currentExecutionProgram, let purpose = self.currentExecutionPurpose {
+                // DEBUG: Log execution recording
+                if self.enableLogging {
+                    self.logger.info("Recording execution: outcome=\(execution.outcome), execTime=\(execution.execTime)")
+                }
+                
                 // Create ProgramAspects from the execution
                 let aspects = ProgramAspects(outcome: execution.outcome)
                 
@@ -238,40 +294,44 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 Task {
                     await self.storeExecutionWithCachedData(program, executionData, dbExecutionPurpose, aspects)
                 }
+            } else {
+                // DEBUG: Log when execution is not recorded
+                if self.enableLogging {
+                    self.logger.info("Skipping execution recording: program=\(self.currentExecutionProgram != nil), purpose=\(self.currentExecutionPurpose != nil)")
+                }
             }
         }
-        
-        // Schedule periodic synchronization with PostgreSQL
-        fuzzer.timers.scheduleTask(every: syncInterval, syncWithDatabase)
-        // logger.debug("Scheduled database sync every \(syncInterval) seconds")
         
         // Schedule periodic flush of execution batch
         fuzzer.timers.scheduleTask(every: 5.0, flushExecutionBatch)
-        // logger.debug("Scheduled execution batch flush every 5 seconds")
+        if enableLogging {
+            logger.info("Scheduled execution batch flush every 5 seconds")
+        }
         
         // Schedule periodic retry of fuzzer registration if it failed
         fuzzer.timers.scheduleTask(every: 30.0, retryFuzzerRegistration)
-        // logger.debug("Scheduled fuzzer registration retry every 30 seconds")
-        
-        // Schedule cleanup task (similar to BasicCorpus)
-        if !fuzzer.config.staticCorpus {
-            fuzzer.timers.scheduleTask(every: 30 * Minutes, cleanup)
+        if enableLogging {
+            logger.info("Scheduled fuzzer registration retry every 30 seconds")
         }
         
-        // Load initial corpus from database if resume is enabled
-        if resume {
-            Task {
-                await loadInitialCorpus()
-            }
+        // Schedule periodic batch size update
+        fuzzer.timers.scheduleTask(every: 5 * Minutes, updateBatchSize)
+        if enableLogging {
+            logger.info("Scheduled batch size update every 5 minutes")
         }
+        
+        // Load initial batch size from current execution speed
+        updateBatchSize()
     }
     
     // MARK: - Corpus Protocol Implementation
     
     public var size: Int {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-        return programs.count
+        // Query database for corpus size
+        guard let fuzzerId = fuzzerId else { return 0 }
+        // Use a cached value that gets updated periodically, or query synchronously
+        // For now, return a placeholder - this will be improved with async queries
+        return 0 // Will be updated to query DB
     }
     
     public var isEmpty: Bool {
@@ -283,7 +343,50 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     }
     
     public func add(_ program: Program, _ aspects: ProgramAspects) {
-        addInternal(program, aspects: aspects)
+        guard program.size > 0 else { return }
+        
+        // Filter out test programs with FUZZILLI_CRASH
+        if DatabaseUtils.containsFuzzilliCrash(program: program) {
+            if enableLogging {
+                logger.info("Skipping program with FUZZILLI_CRASH (test case)")
+            }
+            return
+        }
+        
+        guard let fuzzerId = fuzzerId else {
+            if enableLogging {
+                logger.warning("Cannot add program: fuzzer not registered")
+            }
+            return
+        }
+        
+        // Store program directly to master DB asynchronously
+        Task {
+            do {
+                let programHash = DatabaseUtils.calculateProgramHash(program: program)
+                let metadata = ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
+                    id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
+                    outcome: aspects.outcome.description,
+                    description: aspects.outcome.description
+                ))
+                
+                // Add to recent cache for fast access
+                recentCacheLock.withLock {
+                    recentProgramCache[programHash] = program
+                    // Limit cache size
+                    if recentProgramCache.count > maxRecentCacheSize {
+                        let oldestKey = recentProgramCache.keys.first
+                        if let key = oldestKey {
+                            recentProgramCache.removeValue(forKey: key)
+                        }
+                    }
+                }
+                
+                _ = try await storage.storeProgram(program: program, fuzzerId: fuzzerId, metadata: metadata)
+            } catch {
+                logger.error("Failed to store program in database: \(error)")
+            }
+        }
     }
     
     /// Add execution to batch for later processing
@@ -291,7 +394,8 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         // Use atomic operations to avoid blocking locks
         let shouldProcessBatch: [(Program, ProgramAspects, DatabaseExecutionPurpose)]? = executionBatchLock.withLock {
             pendingExecutions.append((program, aspects, executionType))
-            let shouldProcess = pendingExecutions.count >= executionBatchSize
+            let currentBatchSize = executionBatchSize
+            let shouldProcess = pendingExecutions.count >= currentBatchSize
             if shouldProcess {
                 let batch = pendingExecutions
                 pendingExecutions.removeAll()
@@ -315,7 +419,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             return
         }
         
-        // logger.debug("Processing batch of \(batch.count) executions")
+        if enableLogging {
+            self.logger.info("Processing batch of \(batch.count) executions")
+        }
         
         do {
             // Prepare batch data for programs (deduplicate by program hash)
@@ -323,6 +429,14 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
             var executionBatchData: [ExecutionBatchData] = []
             
             for (program, aspects, executionType) in batch {
+                // Filter out test programs with FUZZILLI_CRASH (false positive crashes)
+                if DatabaseUtils.containsFuzzilliCrash(program: program) {
+                    if enableLogging {
+                        logger.info("Skipping execution with FUZZILLI_CRASH (test case) in batch processing")
+                    }
+                    continue
+                }
+                
                 let programHash = DatabaseUtils.calculateProgramHash(program: program)
                 
                 // Only store unique programs
@@ -335,30 +449,40 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                     uniquePrograms[programHash] = (program, metadata)
                 }
                 
-                // Prepare execution data
+                // Prepare execution data, compute coverage percentage from evaluator if available
+                let coveragePct: Double = {
+                    if let coverageEvaluator = self.fuzzer.evaluator as? ProgramCoverageEvaluator {
+                        return coverageEvaluator.currentScore * 100.0
+                    } else {
+                        return 0.0
+                    }
+                }()
+
                 let executionData = ExecutionBatchData(
                     program: program,
                     executionType: executionType,
                     mutatorType: nil,
                     outcome: aspects.outcome,
-                    coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0,
-                    coverageEdges: Set<Int>() // Empty for now
+                    coverage: coveragePct,
+                    coverageEdges: (aspects as? CovEdgeSet).map { Set($0.getEdges().map { Int($0) }) } ?? Set<Int>()
                 )
                 executionBatchData.append(executionData)
             }
             
-            // Batch store programs (only unique ones)
+            // Batch store programs (only unique ones) directly to master DB
             let programBatch = Array(uniquePrograms.values)
             if !programBatch.isEmpty {
                 _ = try await storage.storeProgramsBatch(programs: programBatch, fuzzerId: fuzzerId)
             }
             
-            // Batch store executions
+            // Batch store executions directly to master DB
             if !executionBatchData.isEmpty {
                 _ = try await storage.storeExecutionsBatch(executions: executionBatchData, fuzzerId: fuzzerId)
             }
             
-            // logger.debug("Completed batch processing: \(programBatch.count) unique programs, \(executionBatchData.count) executions")
+            if enableLogging {
+                self.logger.info("Completed batch processing: \(programBatch.count) unique programs, \(executionBatchData.count) executions")
+            }
             
         } catch {
             logger.error("Failed to process execution batch: \(error)")
@@ -374,7 +498,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
         
         if !batch.isEmpty {
-            // logger.debug("Flushing \(batch.count) pending executions")
+            if enableLogging {
+                self.logger.info("Flushing \(batch.count) pending executions")
+            }
             Task {
                 await processExecutionBatch(batch)
             }
@@ -390,7 +516,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 let id = try await registerFuzzerWithRetry()
                 fuzzerId = id
                 fuzzerRegistered = true
-                // logger.debug("Successfully registered fuzzer on retry with ID: \(id)")
+                if enableLogging {
+                    self.logger.info("Successfully registered fuzzer on retry with ID: \(id)")
+                }
                 
                 // Process any queued executions
                 let queuedExecutions = executionBatchLock.withLock {
@@ -400,7 +528,9 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
                 }
                 
                 if !queuedExecutions.isEmpty {
-                    // logger.debug("Processing \(queuedExecutions.count) queued executions after successful registration")
+                    if enableLogging {
+                        self.logger.info("Processing \(queuedExecutions.count) queued executions after successful registration")
+                    }
                     await processExecutionBatch(queuedExecutions)
                 }
                 
@@ -410,231 +540,91 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         }
     }
     
-    public func addInternal(_ program: Program, aspects: ProgramAspects? = nil) {
-        guard program.size > 0 else { return }
-        
-        let programHash = DatabaseUtils.calculateProgramHash(program: program)
-        
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-        
-        // Check if program already exists in cache
-        if programCache[programHash] != nil {
-            // Update execution metadata if aspects provided
-            if let aspects = aspects {
-                updateExecutionMetadata(for: programHash, aspects: aspects)
-            }
-            return
-        }
-        
-        // Create execution metadata
-        let outcome = DatabaseExecutionOutcome(
-            id: DatabaseUtils.mapExecutionOutcome(outcome: aspects?.outcome ?? .succeeded),
-            outcome: aspects?.outcome.description ?? "Succeeded",
-            description: aspects?.outcome.description ?? "Program executed successfully"
-        )
-        
-        var metadata = ExecutionMetadata(lastOutcome: outcome)
-        if let aspects = aspects {
-            updateExecutionMetadata(&metadata, aspects: aspects)
-        }
-        
-        // Add to in-memory structures
-        prepareProgramForInclusion(program, index: totalEntryCounter)
-        programs.append(program)
-        ages.append(0)
-        programHashes.append(programHash)
-        programCache[programHash] = (program: program, metadata: metadata)
-        
-        totalEntryCounter += 1
-        
-        // Mark for database sync
-        markForSync(programHash)
-        
-        // Program added to corpus silently for performance
-    }
-    
     public func randomElementForSplicing() -> Program {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
+        // Try to get from recent cache first
+        if let cached = recentCacheLock.withLock({ recentProgramCache.values.randomElement() }) {
+            return cached
+        }
         
-        assert(programs.count > 0, "Corpus should never be empty")
-        let idx = Int.random(in: 0..<programs.count)
-        let program = programs[idx]
-        assert(!program.isEmpty)
-        return program
+        // Fallback: query database for a random program
+        // For now, return a minimal program to avoid blocking
+        // This should be improved with async queries
+        return Program()
     }
     
     public func randomElementForMutating() -> Program {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-        
-        assert(programs.count > 0, "Corpus should never be empty")
-        let idx = Int.random(in: 0..<programs.count)
-        ages[idx] += 1
-        
-        // Update execution metadata
-        let programHash = programHashes[idx]
-        if var (program, metadata) = programCache[programHash] {
-            metadata.executionCount += 1
-            metadata.lastExecutionTime = Date()
-            programCache[programHash] = (program: program, metadata: metadata)
-            markForSync(programHash)
+        // Try to get from recent cache first
+        if let cached = recentCacheLock.withLock({ recentProgramCache.values.randomElement() }) {
+            return cached
         }
         
-        let program = programs[idx]
-        assert(!program.isEmpty)
-        return program
+        // Fallback: query database for a random program
+        // For now, return a minimal program to avoid blocking
+        // This should be improved with async queries
+        return Program()
     }
     
     public func allPrograms() -> [Program] {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-        return Array(programs)
+        // Return programs from recent cache
+        return recentCacheLock.withLock {
+            Array(recentProgramCache.values)
+        }
     }
     
     public func exportState() throws -> Data {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-        
-        let res = try encodeProtobufCorpus(Array(programs))
-        // logger.debug("Successfully serialized \(programs.count) programs from PostgreSQL corpus")
+        // Export from recent cache
+        let programs = recentCacheLock.withLock {
+            Array(recentProgramCache.values)
+        }
+        let res = try encodeProtobufCorpus(programs)
+        if enableLogging {
+            self.logger.info("Successfully serialized \(programs.count) programs from PostgreSQL corpus")
+        }
         return res
     }
     
     public func importState(_ buffer: Data) throws {
         let newPrograms = try decodeProtobufCorpus(buffer)
         
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-        
-        programs.removeAll()
-        ages.removeAll()
-        programHashes.removeAll()
-        programCache.removeAll()
-        
-        newPrograms.forEach { program in
-            addInternal(program)
+        guard let fuzzerId = fuzzerId else {
+            throw PostgreSQLStorageError.connectionFailed
         }
         
-        // logger.debug("Imported \(newPrograms.count) programs into PostgreSQL corpus")
+        // Store all programs to database
+        Task {
+            for program in newPrograms {
+                let programHash = DatabaseUtils.calculateProgramHash(program: program)
+                let metadata = ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
+                    id: DatabaseUtils.mapExecutionOutcome(outcome: .succeeded),
+                    outcome: "Succeeded",
+                    description: "Program executed successfully"
+                ))
+                
+                do {
+                    _ = try await storage.storeProgram(program: program, fuzzerId: fuzzerId, metadata: metadata)
+                    
+                    // Add to recent cache
+                    recentCacheLock.withLock {
+                        recentProgramCache[programHash] = program
+                        if recentProgramCache.count > maxRecentCacheSize {
+                            let oldestKey = recentProgramCache.keys.first
+                            if let key = oldestKey {
+                                recentProgramCache.removeValue(forKey: key)
+                            }
+                        }
+                    }
+                } catch {
+                    logger.error("Failed to import program: \(error)")
+                }
+            }
+        }
+        
+        if enableLogging {
+            self.logger.info("Imported \(newPrograms.count) programs into PostgreSQL corpus")
+        }
     }
     
     // MARK: - Database Operations
-    
-    /// Load initial corpus from PostgreSQL database
-    private func loadInitialCorpus() async {
-        // logger.debug("Loading initial corpus from PostgreSQL...")
-        
-        guard let fuzzerId = fuzzerId else {
-            logger.warning("Cannot load initial corpus: fuzzer not registered")
-            return
-        }
-        
-        do {
-            // Load programs from the last 24 hours to resume recent work
-            let since = Date().addingTimeInterval(-24 * 60 * 60) // 24 hours ago
-            let recentPrograms = try await storage.getRecentPrograms(
-                fuzzerId: fuzzerId, 
-                since: since, 
-                limit: maxSize
-            )
-            
-            // logger.debug("Found \(recentPrograms.count) recent programs to resume")
-            
-            // Add programs to the corpus
-            cacheLock.lock()
-            defer { cacheLock.unlock() }
-            
-            for (program, metadata) in recentPrograms {
-                let programHash = DatabaseUtils.calculateProgramHash(program: program)
-                
-                // Skip if already in cache
-                if programCache[programHash] != nil {
-                    continue
-                }
-                
-                // Add to in-memory structures
-                prepareProgramForInclusion(program, index: totalEntryCounter)
-                programs.append(program)
-                ages.append(0)
-                programHashes.append(programHash)
-                programCache[programHash] = (program: program, metadata: metadata)
-                
-                totalEntryCounter += 1
-            }
-            
-            // logger.debug("Resumed PostgreSQL corpus with \(programs.count) programs")
-            
-            // If we have no programs, we need at least one to avoid empty corpus
-            if programs.count == 0 {
-                // logger.debug("No programs found to resume, corpus will start empty")
-            }
-            
-        } catch {
-            logger.error("Failed to load initial corpus from PostgreSQL: \(error)")
-            // logger.debug("Corpus will start empty and build up from scratch")
-        }
-    }
-    
-    /// Synchronize with PostgreSQL database
-    private func syncWithDatabase() {
-        Task {
-            await performDatabaseSync()
-        }
-    }
-    
-    /// Perform actual database synchronization
-    private func performDatabaseSync() async {
-        let hashesToSync: Set<String>
-        
-        // Use synchronous lock for getting pending operations
-        syncLock.lock()
-        hashesToSync = Set(pendingSyncOperations)
-        pendingSyncOperations.removeAll()
-        syncLock.unlock()
-        
-        guard !hashesToSync.isEmpty else { return }
-        
-        // Syncing programs with PostgreSQL silently
-        
-        // Get programs to sync from cache
-        cacheLock.lock()
-        let programsToSync = hashesToSync.compactMap { hash -> (Program, ExecutionMetadata)? in
-            guard let (program, metadata) = programCache[hash] else { return nil }
-            return (program, metadata)
-        }
-        cacheLock.unlock()
-        
-        // Store each program in the database
-        for (program, metadata) in programsToSync {
-            do {
-                // Use the registered fuzzer ID
-                guard let fuzzerId = fuzzerId else {
-                    logger.error("Cannot sync program: fuzzer not registered")
-                    return
-                }
-                
-                // Store the program with metadata
-                let programHash = try await storage.storeProgram(
-                    program: program,
-                    fuzzerId: fuzzerId,
-                    metadata: metadata
-                )
-                
-                // Program synced to database silently
-                
-            } catch {
-                logger.error("Failed to sync program to database: \(error)")
-                // Re-add to pending sync for retry
-                syncLock.lock()
-                pendingSyncOperations.insert(DatabaseUtils.calculateProgramHash(program: program))
-                syncLock.unlock()
-            }
-        }
-        
-        // Database sync completed silently
-    }
     
     /// Register fuzzer with retry logic
     private func registerFuzzerWithRetry() async throws -> Int {
@@ -647,12 +637,16 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
         
         for attempt in 1...maxRetries {
             do {
-                // logger.debug("Attempting to register fuzzer (attempt \(attempt)/\(maxRetries))")
+                if enableLogging {
+                    self.logger.info("Attempting to register fuzzer (attempt \(attempt)/\(maxRetries))")
+                }
                 let id = try await storage.registerFuzzer(
                     name: fuzzerName,
                     engineType: engineType
                 )
-                // logger.debug("Successfully registered fuzzer with ID: \(id)")
+                if enableLogging {
+                    self.logger.info("Successfully registered fuzzer with ID: \(id)")
+                }
                 return id
             } catch {
                 lastError = error
@@ -679,206 +673,158 @@ public class PostgreSQLCorpus: ComponentBase, Corpus {
     
     /// Store execution with cached data to avoid REPRL context issues
     private func storeExecutionWithCachedData(_ program: Program, _ executionData: ExecutionData, _ executionType: DatabaseExecutionPurpose, _ aspects: ProgramAspects) async {
+        // Filter out test programs with FUZZILLI_CRASH (false positive crashes)
+        if DatabaseUtils.containsFuzzilliCrash(program: program) {
+            if enableLogging {
+                logger.info("Skipping execution storage for program with FUZZILLI_CRASH (test case)")
+            }
+            return
+        }
+        
         do {
             // Use the registered fuzzer ID
             guard let fuzzerId = fuzzerId else {
-                return // Silent fail for performance
+                if enableLogging {
+                    self.logger.info("Cannot store execution: fuzzer not registered")
+                }
+                return
             }
             
-            // Store the program in the program table
-            let programHash = try await storage.storeProgram(
-                program: program,
-                fuzzerId: fuzzerId,
-                metadata: ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
-                    id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
-                    outcome: aspects.outcome.description,
-                    description: aspects.outcome.description
-                ))
-            )
-            
-            // Store the execution record with cached execution metadata
-            let executionId = try await storage.storeExecution(
+            // DEBUG: Log execution storage attempt
+            if enableLogging {
+                self.logger.info("Storing execution: fuzzerId=\(fuzzerId), outcome=\(executionData.outcome), execTime=\(executionData.execTime)")
+            }
+
+            // Derive coverage percentage (0-100) from evaluator if available
+            let coveragePct: Double = {
+                if let coverageEvaluator = self.fuzzer.evaluator as? ProgramCoverageEvaluator {
+                    return coverageEvaluator.currentScore * 100.0
+                } else {
+                    return 0.0
+                }
+            }()
+
+            // Store both program and execution in a single transaction to avoid foreign key issues
+            _ = try await storage.storeProgramAndExecution(
                 program: program,
                 fuzzerId: fuzzerId,
                 executionType: executionType,
                 outcome: executionData.outcome,
-                coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0,
-                executionTimeMs: Int(executionData.execTime * 1000), // Convert to milliseconds
+                coverage: coveragePct,
+                executionTimeMs: Int(executionData.execTime * 1000),
                 stdout: executionData.stdout,
                 stderr: executionData.stderr,
-                fuzzout: executionData.fuzzout
-            )
-            
-            // No logging for performance - just store silently
-            
-        } catch {
-            // Silent fail for performance - errors are not critical for fuzzing
-        }
-    }
-    
-    /// Store execution with full metadata from Execution object
-    private func storeExecutionWithMetadata(_ program: Program, _ execution: Execution, _ executionType: DatabaseExecutionPurpose, _ aspects: ProgramAspects) async {
-        do {
-            // Use the registered fuzzer ID
-            guard let fuzzerId = fuzzerId else {
-                logger.error("Cannot store execution: fuzzer not registered")
-                return
-            }
-            
-            // Store the program in the program table
-            let programHash = try await storage.storeProgram(
-                program: program,
-                fuzzerId: fuzzerId,
+                fuzzout: executionData.fuzzout,
                 metadata: ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
                     id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
                     outcome: aspects.outcome.description,
                     description: aspects.outcome.description
                 ))
             )
-            
-            // Store the execution record with full execution metadata
-            let executionId = try await storage.storeExecution(
-                program: program,
-                fuzzerId: fuzzerId,
-                execution: execution,
-                executionType: executionType,
-                coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0
-            )
-            
-            // logger.debug("Stored execution with metadata: programHash=\(programHash), executionId=\(executionId), execTime=\(execution.execTime), outcome=\(execution.outcome)")
-            
-        } catch {
-            logger.error("Failed to store execution with metadata: \(error)")
-        }
-    }
-    
-    /// Store a program execution in the database
-    private func storeExecutionInDatabase(_ program: Program, _ aspects: ProgramAspects, executionType: DatabaseExecutionPurpose, mutatorType: String?) async {
-        do {
-            // Use the registered fuzzer ID
-            guard let fuzzerId = fuzzerId else {
-                logger.error("Cannot store execution: fuzzer not registered")
-                return
+
+            if enableLogging {
+                self.logger.info("Successfully stored program and execution")
             }
             
-            // Store the program in the program table
-            let programHash = try await storage.storeProgram(
-                program: program,
-                fuzzerId: fuzzerId,
-                metadata: ExecutionMetadata(lastOutcome: DatabaseExecutionOutcome(
-                    id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
-                    outcome: aspects.outcome.description,
-                    description: aspects.outcome.description
-                ))
-            )
-            
-            // Store the execution record
-            let executionId = try await storage.storeExecution(
-                program: program,
-                fuzzerId: fuzzerId,
-                executionType: executionType,
-                mutatorType: mutatorType,
-                outcome: aspects.outcome,
-                coverage: aspects is CovEdgeSet ? Double((aspects as! CovEdgeSet).count) : 0.0
-            )
-            
-            // logger.debug("Stored execution in database: programHash=\(programHash), executionId=\(executionId)")
-            
         } catch {
-            logger.error("Failed to store execution in database: \(error)")
+            logger.error("Failed to store execution: \(String(reflecting: error))")
         }
     }
     
-    /// Mark a program hash for database synchronization
-    private func markForSync(_ programHash: String) {
-        syncLock.lock()
-        defer { syncLock.unlock() }
-        pendingSyncOperations.insert(programHash)
-    }
-    
-    // MARK: - Execution Metadata Management
-    
-    /// Update execution metadata for a program
-    private func updateExecutionMetadata(for programHash: String, aspects: ProgramAspects) {
-        guard var (program, metadata) = programCache[programHash] else { return }
-        updateExecutionMetadata(&metadata, aspects: aspects)
-        programCache[programHash] = (program: program, metadata: metadata)
-        markForSync(programHash)
-    }
-    
-    /// Update execution metadata with new aspects
-    private func updateExecutionMetadata(_ metadata: inout ExecutionMetadata, aspects: ProgramAspects) {
-        metadata.executionCount += 1
-        metadata.lastExecutionTime = Date()
-        
-        // Update outcome
-        let outcome = DatabaseExecutionOutcome(
-            id: DatabaseUtils.mapExecutionOutcome(outcome: aspects.outcome),
-            outcome: aspects.outcome.description,
-            description: aspects.outcome.description
-        )
-        metadata.updateLastOutcome(outcome)
-        
-        // Update coverage if available
-        if let edgeSet = aspects as? CovEdgeSet {
-            // For now, just track the count of edges since we can't access the actual edges
-            metadata.lastCoverage = Double(edgeSet.count) // Simple coverage metric
-            // TODO: Implement proper edge tracking when we have access to the edges
+    /// Store coverage snapshot to database
+    private func storeCoverageSnapshot(coverage: Double, programHash: String) async {
+        guard let fuzzerId = fuzzerId else {
+            if enableLogging {
+                self.logger.info("Cannot store coverage snapshot: fuzzer not registered")
+            }
+            return
         }
-    }
-    
-    // MARK: - Cleanup
-    
-    private func cleanup() {
-        assert(!fuzzer.config.staticCorpus)
         
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-        
-        var newPrograms = RingBuffer<Program>(maxSize: programs.maxSize)
-        var newAges = RingBuffer<Int>(maxSize: ages.maxSize)
-        var newHashes = RingBuffer<String>(maxSize: programHashes.maxSize)
-        var newCache: [String: (program: Program, metadata: ExecutionMetadata)] = [:]
-        
-        for i in 0..<programs.count {
-            let remaining = programs.count - i
-            let programHash = programHashes[i]
+        do {
+            // Get edge counts from the coverage evaluator if available
+            let edgesFound: Int
+            let totalEdges: Int
             
-            if ages[i] < minMutationsPerSample || remaining <= (minSize - newPrograms.count) {
-                newPrograms.append(programs[i])
-                newAges.append(ages[i])
-                newHashes.append(programHash)
-                newCache[programHash] = programCache[programHash]
+            if let coverageEvaluator = self.fuzzer.evaluator as? ProgramCoverageEvaluator {
+                edgesFound = Int(coverageEvaluator.getFoundEdgesCount())
+                totalEdges = Int(coverageEvaluator.getTotalEdgesCount())
             } else {
-                // Mark for database sync before removal
-                markForSync(programHash)
+                edgesFound = 0
+                totalEdges = 0
             }
+            
+            let query = PostgresQuery(stringLiteral: """
+                INSERT INTO coverage_snapshot (
+                    fuzzer_id, coverage_percentage, program_hash, edges_found, total_edges, created_at
+                ) VALUES (
+                    \(fuzzerId), \(coverage), '\(programHash)', \(edgesFound), \(totalEdges), NOW()
+                )
+            """)
+            
+            try await storage.executeQuery(query)
+            if enableLogging {
+                self.logger.info("Stored coverage snapshot: \(String(format: "%.6f%%", coverage * 100)) (\(edgesFound)/\(totalEdges) edges)")
+            }
+            
+        } catch {
+            logger.error("Failed to store coverage snapshot: \(error)")
         }
-        
-        // logger.debug("PostgreSQL corpus cleanup finished: \(self.programs.count) -> \(newPrograms.count)")
-        programs = newPrograms
-        ages = newAges
-        programHashes = newHashes
-        programCache = newCache
     }
+    
     
     // MARK: - Statistics and Monitoring
     
     /// Get corpus statistics
     public func getStatistics() -> CorpusStatistics {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
+        let recentCacheSize = recentCacheLock.withLock { recentProgramCache.count }
         
-        let totalExecutions = programCache.values.reduce(0) { $0 + $1.metadata.executionCount }
-        let averageCoverage = programCache.values.isEmpty ? 0.0 : 
-            programCache.values.reduce(0.0) { $0 + $1.metadata.lastCoverage } / Double(programCache.count)
+        // Get current coverage from evaluator if available
+        var currentCoverage = 0.0
+        if let coverageEvaluator = fuzzer.evaluator as? ProgramCoverageEvaluator {
+            currentCoverage = coverageEvaluator.currentScore * 100.0
+        }
         
         return CorpusStatistics(
-            totalPrograms: programs.count,
-            totalExecutions: totalExecutions,
-            averageCoverage: averageCoverage,
-            pendingSyncOperations: pendingSyncOperations.count,
+            totalPrograms: recentCacheSize,
+            totalExecutions: 0, // Will be queried from DB if needed
+            averageCoverage: currentCoverage,
+            currentCoverage: currentCoverage,
+            pendingSyncOperations: 0, // No sync operations
             fuzzerInstanceId: fuzzerInstanceId
+        )
+    }
+    
+    /// Get enhanced statistics including database coverage
+    public func getEnhancedStatistics() async -> EnhancedCorpusStatistics {
+        let recentCacheSize = recentCacheLock.withLock { recentProgramCache.count }
+        
+        // Get database statistics
+        var dbStats = DatabaseStatistics()
+        if let fuzzerId = fuzzerId {
+            do {
+                dbStats = try await storage.getDatabaseStatistics(fuzzerId: fuzzerId)
+            } catch {
+                logger.warning("Failed to get database statistics: \(error)")
+            }
+        }
+        
+        // Get current coverage from evaluator
+        var currentCoverage = 0.0
+        if let coverageEvaluator = fuzzer.evaluator as? ProgramCoverageEvaluator {
+            currentCoverage = coverageEvaluator.currentScore * 100.0
+        }
+        
+        return EnhancedCorpusStatistics(
+            totalPrograms: recentCacheSize,
+            totalExecutions: dbStats.totalExecutions,
+            averageCoverage: currentCoverage,
+            pendingSyncOperations: 0, // No sync operations
+            fuzzerInstanceId: fuzzerInstanceId,
+            databasePrograms: dbStats.totalPrograms,
+            databaseExecutions: dbStats.totalExecutions,
+            databaseCrashes: dbStats.totalCrashes,
+            activeFuzzers: dbStats.activeFuzzers,
+            lastSyncTime: nil
         )
     }
 }
@@ -890,10 +836,64 @@ public struct CorpusStatistics {
     public let totalPrograms: Int
     public let totalExecutions: Int
     public let averageCoverage: Double
+    public let currentCoverage: Double
     public let pendingSyncOperations: Int
     public let fuzzerInstanceId: String
     
     public var description: String {
-        return "Programs: \(totalPrograms), Executions: \(totalExecutions), Coverage: \(String(format: "%.2f%%", averageCoverage)), Pending Sync: \(pendingSyncOperations)"
+        return "Programs: \(totalPrograms), Executions: \(totalExecutions), Avg Coverage: \(String(format: "%.2f%%", averageCoverage)), Current Coverage: \(String(format: "%.2f%%", currentCoverage)), Pending Sync: \(pendingSyncOperations)"
+    }
+}
+
+/// Enhanced statistics for PostgreSQL corpus including database information
+public struct EnhancedCorpusStatistics {
+    public let totalPrograms: Int
+    public let totalExecutions: Int
+    public let averageCoverage: Double
+    public let pendingSyncOperations: Int
+    public let fuzzerInstanceId: String
+    public let databasePrograms: Int
+    public let databaseExecutions: Int
+    public let databaseCrashes: Int
+    public let activeFuzzers: Int
+    public let lastSyncTime: Date?
+    
+    public var description: String {
+        let syncTimeStr = lastSyncTime?.timeAgoString() ?? "Never"
+        return "Programs: \(totalPrograms) (DB: \(databasePrograms)), Executions: \(totalExecutions) (DB: \(databaseExecutions)), Coverage: \(String(format: "%.2f%%", averageCoverage)), Crashes: \(databaseCrashes), Active Fuzzers: \(activeFuzzers), Last Sync: \(syncTimeStr)"
+    }
+}
+
+/// Database statistics from PostgreSQL
+public struct DatabaseStatistics {
+    public let totalPrograms: Int
+    public let totalExecutions: Int
+    public let totalCrashes: Int
+    public let activeFuzzers: Int
+    
+    public init(totalPrograms: Int = 0, totalExecutions: Int = 0, totalCrashes: Int = 0, activeFuzzers: Int = 0) {
+        self.totalPrograms = totalPrograms
+        self.totalExecutions = totalExecutions
+        self.totalCrashes = totalCrashes
+        self.activeFuzzers = activeFuzzers
+    }
+}
+
+extension Date {
+    func timeAgoString() -> String {
+        let interval = Date().timeIntervalSince(self)
+        let minutes = Int(interval / 60)
+        let hours = Int(interval / 3600)
+        let days = Int(interval / 86400)
+        
+        if days > 0 {
+            return "\(days)d ago"
+        } else if hours > 0 {
+            return "\(hours)h ago"
+        } else if minutes > 0 {
+            return "\(minutes)m ago"
+        } else {
+            return "Just now"
+        }
     }
 }

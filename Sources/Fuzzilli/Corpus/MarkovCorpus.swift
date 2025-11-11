@@ -57,6 +57,10 @@ public class MarkovCorpus: ComponentBase, Corpus {
 
     override func initialize() {
         assert(covEvaluator === fuzzer.evaluator as! ProgramCoverageEvaluator)
+        
+        // Log initial coverage state
+        let stats = getCoverageStatistics()
+        logger.info("MarkovCorpus: Initialized with \(stats.description)")
     }
 
     public func add(_ program: Program, _ aspects: ProgramAspects) {
@@ -69,9 +73,18 @@ public class MarkovCorpus: ComponentBase, Corpus {
         prepareProgramForInclusion(program, index: self.size)
 
         allIncludedPrograms.append(program)
-        for e in origCov.getEdges() {
+        let edges = origCov.getEdges()
+        for e in edges {
             edgeMap[e] = program
         }
+        
+        // Log coverage statistics for the added program
+        let edgeCount = edges.count
+        let currentCoverage = covEvaluator.currentScore
+        let totalEdges = covEvaluator.getEdgeHitCounts().count
+        let coveragePercentage = totalEdges > 0 ? Double(edgeCount) / Double(totalEdges) * 100.0 : 0.0
+        
+        logger.info("MarkovCorpus: Added program with \(edgeCount) edges, coverage: \(String(format: "%.6f%%", coveragePercentage)), current total coverage: \(String(format: "%.6f%%", currentCoverage * 100))")
     }
 
     /// Split evenly between programs in the current queue and all programs available to the corpus
@@ -88,6 +101,22 @@ public class MarkovCorpus: ComponentBase, Corpus {
     /// Once that base is acquired, provide samples that trigger an infrequently hit edge
     public func randomElementForMutating() -> Program {
         totalExecs += 1
+        
+        // Log transition from random to coverage-based selection
+        if totalExecs == 251 {
+            let currentCoverage = covEvaluator.currentScore
+            let edgeCounts = covEvaluator.getEdgeHitCounts()
+            let hitEdges = edgeCounts.filter { $0 > 0 }.count
+            logger.info("MarkovCorpus: Switching to coverage-based selection at exec \(totalExecs), corpus size: \(size), hit edges: \(hitEdges), current coverage: \(String(format: "%.6f%%", currentCoverage * 100))")
+        }
+        
+        // Log periodic coverage statistics every 1000 executions
+        if totalExecs % 1000 == 0 {
+            let stats = getCoverageStatistics()
+            logger.info("MarkovCorpus: Periodic stats at exec \(totalExecs) - \(stats.description)")
+            logger.info("MarkovCorpus: \(stats.edgeHitSummary)")
+        }
+        
         // Only do computationally expensive work choosing the next program when there is a solid
         // baseline of execution data. The data tracked in the statistics module is not used, as modules are intended
         // to not be required for the fuzzer to function.
@@ -114,6 +143,16 @@ public class MarkovCorpus: ComponentBase, Corpus {
         }
         let edgeCounts = covEvaluator.getEdgeHitCounts()
         let edgeCountsSorted = edgeCounts.sorted()
+        
+        // Log comprehensive coverage statistics
+        let currentCoverage = covEvaluator.currentScore
+        let totalEdges = edgeCounts.count
+        let hitEdges = edgeCounts.filter { $0 > 0 }.count
+        let hitPercentage = totalEdges > 0 ? Double(hitEdges) / Double(totalEdges) * 100.0 : 0.0
+        let totalHits = edgeCounts.reduce(0, +)
+        let averageHitsPerEdge = hitEdges > 0 ? Double(totalHits) / Double(hitEdges) : 0.0
+        
+        logger.info("MarkovCorpus: Coverage stats - Total edges: \(totalEdges), Hit edges: \(hitEdges) (\(String(format: "%.2f%%", hitPercentage))), Total hits: \(totalHits), Avg hits/edge: \(String(format: "%.2f", averageHitsPerEdge)), Current coverage: \(String(format: "%.6f%%", currentCoverage * 100))")
 
         // Find the edge with the smallest count
         var startIndex = -1
@@ -131,8 +170,11 @@ public class MarkovCorpus: ComponentBase, Corpus {
         let desiredEdgeCount = max(size / desiredSelectionProportion, 30)
         let endIndex = min(startIndex + desiredEdgeCount, edgeCountsSorted.count - 1)
         let maxEdgeCountToFind = edgeCountsSorted[endIndex]
+        
+        logger.info("MarkovCorpus: Edge selection - Desired count: \(desiredEdgeCount), Max edge count to find: \(maxEdgeCountToFind), Start index: \(startIndex), End index: \(endIndex)")
 
         // Find the n edges with counts <= maxEdgeCountToFind.
+        var selectedEdges = 0
         for (i, val) in edgeCounts.enumerated() {
             // Applies dropout on otherwise valid samples, to ensure variety between instances
             // This will likely select some samples multiple times, which is acceptable as
@@ -140,9 +182,12 @@ public class MarkovCorpus: ComponentBase, Corpus {
             if val != 0 && val <= maxEdgeCountToFind && (probability(1 - dropoutRate) || programExecutionQueue.isEmpty) {
                 if let prog = edgeMap[UInt32(i)] {
                     programExecutionQueue.append(prog)
+                    selectedEdges += 1
                 }
             }
         }
+        
+        logger.info("MarkovCorpus: Selected \(selectedEdges) edges for program queue generation")
 
         // Determine how many edges have been leaked and produce a warning if over 1% of total edges
         // Done as second pass for code clarity
@@ -204,5 +249,61 @@ public class MarkovCorpus: ComponentBase, Corpus {
     // Ramp up the number of times a sample is used as the initial seed over time
     private func energyBase() -> UInt32 {
         return UInt32(Foundation.log10(Float(totalExecs))) + 1
+    }
+    
+    /// Get comprehensive coverage statistics for the MarkovCorpus
+    public func getCoverageStatistics() -> MarkovCorpusStatistics {
+        let edgeCounts = covEvaluator.getEdgeHitCounts()
+        let currentCoverage = covEvaluator.currentScore
+        let totalEdges = edgeCounts.count
+        let hitEdges = edgeCounts.filter { $0 > 0 }.count
+        let hitPercentage = totalEdges > 0 ? Double(hitEdges) / Double(totalEdges) * 100.0 : 0.0
+        let totalHits = edgeCounts.reduce(0, +)
+        let averageHitsPerEdge = hitEdges > 0 ? Double(totalHits) / Double(hitEdges) : 0.0
+        
+        // Calculate edge hit distribution
+        let edgeHitDistribution = edgeCounts.reduce(into: [Int: Int]()) { counts, hitCount in
+            counts[Int(hitCount), default: 0] += 1
+        }
+        
+        return MarkovCorpusStatistics(
+            totalPrograms: allIncludedPrograms.count,
+            totalExecutions: Int(totalExecs),
+            currentCoverage: currentCoverage,
+            totalEdges: totalEdges,
+            hitEdges: hitEdges,
+            hitPercentage: hitPercentage,
+            totalHits: Int(totalHits),
+            averageHitsPerEdge: averageHitsPerEdge,
+            queueSize: programExecutionQueue.count,
+            edgeHitDistribution: edgeHitDistribution
+        )
+    }
+}
+
+// MARK: - Supporting Types
+
+/// Statistics for MarkovCorpus coverage tracking
+public struct MarkovCorpusStatistics {
+    public let totalPrograms: Int
+    public let totalExecutions: Int
+    public let currentCoverage: Double
+    public let totalEdges: Int
+    public let hitEdges: Int
+    public let hitPercentage: Double
+    public let totalHits: Int
+    public let averageHitsPerEdge: Double
+    public let queueSize: Int
+    public let edgeHitDistribution: [Int: Int]
+    
+    public var description: String {
+        return "Programs: \(totalPrograms), Executions: \(totalExecutions), Coverage: \(String(format: "%.6f%%", currentCoverage * 100)), Edges: \(hitEdges)/\(totalEdges) (\(String(format: "%.2f%%", hitPercentage))), Total hits: \(totalHits), Avg hits/edge: \(String(format: "%.2f", averageHitsPerEdge)), Queue: \(queueSize)"
+    }
+    
+    /// Get a summary of edge hit distribution
+    public var edgeHitSummary: String {
+        let sortedDistribution = edgeHitDistribution.sorted { $0.key < $1.key }
+        let summary = sortedDistribution.prefix(10).map { "\($0.key):\($0.value)" }.joined(separator: ", ")
+        return "Edge hit distribution (hit_count:edge_count): \(summary)\(sortedDistribution.count > 10 ? "..." : "")"
     }
 }

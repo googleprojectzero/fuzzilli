@@ -4,8 +4,10 @@ import PostgresNIO
 /// Manages database schema creation and verification
 public class DatabaseSchema {
     private let logger: Logger
+    private let enableLogging: Bool
     
-    public init() {
+    public init(enableLogging: Bool = false) {
+        self.enableLogging = enableLogging
         self.logger = Logger(withLabel: "DatabaseSchema")
     }
     
@@ -25,22 +27,22 @@ public class DatabaseSchema {
 
     -- Fuzzer programs table (corpus)
     CREATE TABLE IF NOT EXISTS fuzzer (
-        program_base64 TEXT PRIMARY KEY,
+        program_hash VARCHAR(64) PRIMARY KEY, -- SHA256 hash for deduplication
         fuzzer_id INT NOT NULL REFERENCES main(fuzzer_id) ON DELETE CASCADE,
         inserted_at TIMESTAMP DEFAULT NOW(),
         program_size INT,
-        program_hash VARCHAR(64) -- SHA256 hash for deduplication
+        program_base64 TEXT -- Keep for backward compatibility and lookups
     );
 
     -- Programs table (executed programs)
     CREATE TABLE IF NOT EXISTS program (
-        program_base64 TEXT PRIMARY KEY,
+        program_hash VARCHAR(64) PRIMARY KEY, -- SHA256 hash for deduplication
         fuzzer_id INT NOT NULL REFERENCES main(fuzzer_id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT NOW(),
         program_size INT,
-        program_hash VARCHAR(64),
+        program_base64 TEXT, -- Keep for backward compatibility and lookups
         source_mutator VARCHAR(50), -- Which mutator created this program
-        parent_program_base64 TEXT REFERENCES program(program_base64) -- For mutation lineage
+        parent_program_hash VARCHAR(64) REFERENCES program(program_hash) -- For mutation lineage
     );
 
     -- Execution Type lookup table (based on Fuzzilli execution purposes and mutators)
@@ -101,9 +103,9 @@ public class DatabaseSchema {
     -- Main execution table
     CREATE TABLE IF NOT EXISTS execution (
         execution_id SERIAL PRIMARY KEY,
-        program_base64 TEXT NOT NULL REFERENCES program(program_base64) ON DELETE CASCADE,
+        program_hash VARCHAR(64) NOT NULL REFERENCES program(program_hash) ON DELETE CASCADE,
         execution_type_id INTEGER NOT NULL REFERENCES execution_type(id),
-        mutator_type_id INTEGER REFERENCES mutator_type(id),
+        mutator_type_id TEXT, -- Store mutator name directly instead of ID
         execution_outcome_id INTEGER NOT NULL REFERENCES execution_outcome(id),
         
         -- Execution results
@@ -162,7 +164,7 @@ public class DatabaseSchema {
     );
 
     -- Performance indexes for common queries
-    CREATE INDEX IF NOT EXISTS idx_execution_program ON execution(program_base64);
+    CREATE INDEX IF NOT EXISTS idx_execution_program ON execution(program_hash);
     CREATE INDEX IF NOT EXISTS idx_execution_type ON execution(execution_type_id);
     CREATE INDEX IF NOT EXISTS idx_execution_mutator ON execution(mutator_type_id);
     CREATE INDEX IF NOT EXISTS idx_execution_outcome ON execution(execution_outcome_id);
@@ -173,17 +175,29 @@ public class DatabaseSchema {
     CREATE INDEX IF NOT EXISTS idx_coverage_detail_execution ON coverage_detail(execution_id);
     CREATE INDEX IF NOT EXISTS idx_crash_analysis_execution ON crash_analysis(execution_id);
 
+    -- Additional indexes for performance on fuzzer joins
+    CREATE INDEX IF NOT EXISTS idx_program_fuzzer_id ON program(fuzzer_id);
+    CREATE INDEX IF NOT EXISTS idx_fuzzer_fuzzer_id ON fuzzer(fuzzer_id);
+    CREATE INDEX IF NOT EXISTS idx_execution_signal_code ON execution(signal_code) WHERE signal_code IS NOT NULL;
+
+    -- Fuzzer statistics tracking table
+    CREATE TABLE IF NOT EXISTS fuzzer_statistics (
+        fuzzer_id INTEGER PRIMARY KEY REFERENCES main(fuzzer_id) ON DELETE CASCADE,
+        execs_per_second NUMERIC(10,2),
+        last_updated TIMESTAMP DEFAULT NOW()
+    );
+
     -- Foreign key constraint for program table
     ALTER TABLE program
     ADD CONSTRAINT IF NOT EXISTS fk_program_fuzzer
-    FOREIGN KEY (program_base64)
-    REFERENCES fuzzer(program_base64);
+    FOREIGN KEY (program_hash)
+    REFERENCES fuzzer(program_hash);
 
     -- Views for common queries
     CREATE OR REPLACE VIEW execution_summary AS
     SELECT 
         e.execution_id,
-        e.program_base64,
+        e.program_hash,
         et.title as execution_type,
         mt.name as mutator_type,
         eo.outcome as execution_outcome,
@@ -198,7 +212,7 @@ public class DatabaseSchema {
     CREATE OR REPLACE VIEW crash_summary AS
     SELECT 
         e.execution_id,
-        e.program_base64,
+        e.program_hash,
         eo.outcome,
         e.signal_code,
         e.exit_code,
@@ -228,22 +242,80 @@ public class DatabaseSchema {
             MIN(e.coverage_total) as min_coverage,
             COUNT(CASE WHEN eo.outcome = 'Crashed' THEN 1 END) as crash_count
         FROM execution e
-        JOIN program p ON e.program_base64 = p.program_base64
+        JOIN program p ON e.program_hash = p.program_hash
         JOIN execution_outcome eo ON e.execution_outcome_id = eo.id
         WHERE p.fuzzer_id = fuzzer_instance_id;
     END;
     $$ LANGUAGE plpgsql;
+
+    -- View for per-fuzzer performance summary
+    CREATE OR REPLACE VIEW fuzzer_performance_summary AS
+    SELECT 
+        m.fuzzer_id,
+        m.fuzzer_name,
+        m.status,
+        m.created_at,
+        -- Calculate execs/s from last hour of executions
+        COALESCE(
+            (SELECT COUNT(*)::NUMERIC / 3600.0 
+             FROM execution e
+             JOIN program p ON e.program_hash = p.program_hash
+             WHERE p.fuzzer_id = m.fuzzer_id
+             AND e.created_at > NOW() - INTERVAL '1 hour'), 0
+        ) as execs_per_second,
+        (SELECT COUNT(*) FROM program WHERE fuzzer_id = m.fuzzer_id) as programs_count,
+        (SELECT COUNT(*) FROM execution e JOIN program p ON e.program_hash = p.program_hash WHERE p.fuzzer_id = m.fuzzer_id) as executions_count,
+        (SELECT COUNT(*) FROM execution e JOIN program p ON e.program_hash = p.program_hash JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE p.fuzzer_id = m.fuzzer_id AND eo.outcome = 'Crashed') as crash_count,
+        (SELECT MAX(coverage_total) FROM execution e JOIN program p ON e.program_hash = p.program_hash WHERE p.fuzzer_id = m.fuzzer_id AND e.coverage_total IS NOT NULL) as highest_coverage_pct
+    FROM main m;
+
+    -- View for crash breakdown by signal per fuzzer
+    CREATE OR REPLACE VIEW crash_by_signal AS
+    SELECT 
+        p.fuzzer_id,
+        m.fuzzer_name,
+        e.signal_code,
+        CASE 
+            WHEN e.signal_code = 11 THEN 'SIGSEGV'
+            WHEN e.signal_code = 6 THEN 'SIGABRT'
+            WHEN e.signal_code = 4 THEN 'SIGILL'
+            WHEN e.signal_code = 8 THEN 'SIGFPE'
+            WHEN e.signal_code = 3 THEN 'SIGQUIT'
+            WHEN e.signal_code IS NULL THEN 'NO_SIGNAL'
+            ELSE 'SIG' || e.signal_code::TEXT
+        END as signal_name,
+        COUNT(*) as crash_count
+    FROM execution e
+    JOIN program p ON e.program_hash = p.program_hash
+    JOIN main m ON p.fuzzer_id = m.fuzzer_id
+    JOIN execution_outcome eo ON e.execution_outcome_id = eo.id
+    WHERE eo.outcome = 'Crashed'
+    GROUP BY p.fuzzer_id, m.fuzzer_name, e.signal_code
+    ORDER BY p.fuzzer_id, crash_count DESC;
+
+    -- View for global statistics
+    CREATE OR REPLACE VIEW global_statistics AS
+    SELECT 
+        (SELECT MAX(coverage_total) FROM execution WHERE coverage_total IS NOT NULL) as highest_coverage_pct,
+        (SELECT COUNT(*) FROM fuzzer) as total_programs,
+        (SELECT COUNT(*) FROM execution) as total_executions,
+        (SELECT COUNT(*) FROM execution e JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed') as total_crashes,
+        (SELECT COUNT(*) FROM main WHERE status = 'active') as active_fuzzers;
     """
     
     /// Create all database tables and indexes
     public func createTables(connection: PostgresConnection) async throws {
-        logger.info("Creating database schema...")
+        if enableLogging {
+            logger.info("Creating database schema...")
+        }
         
         do {
             let query = PostgresQuery(stringLiteral: DatabaseSchema.schemaSQL)
-            let result = try await connection.query(query, logger: Logging.Logger(label: "DatabaseSchema"))
-            logger.info("Database schema created successfully")
-            logger.info("Schema SQL length: \(DatabaseSchema.schemaSQL.count) characters")
+            _ = try await connection.query(query, logger: Logging.Logger(label: "DatabaseSchema"))
+            if enableLogging {
+                logger.info("Database schema created successfully")
+                logger.info("Schema SQL length: \(DatabaseSchema.schemaSQL.count) characters")
+            }
         } catch {
             logger.error("Failed to create database schema: \(error)")
             throw error
@@ -252,9 +324,11 @@ public class DatabaseSchema {
     
     /// Verify that all required tables exist
     public func verifySchema(connection: PostgresConnection) async throws -> Bool {
-        logger.info("Verifying database schema...")
+        if enableLogging {
+            logger.info("Verifying database schema...")
+        }
         
-        let requiredTables = ["main", "fuzzer", "program", "execution_type", "mutator_type", "execution_outcome", "execution", "feedback_vector_detail", "coverage_detail", "crash_analysis"]
+        let requiredTables = ["main", "fuzzer", "program", "execution_type", "mutator_type", "execution_outcome", "execution", "feedback_vector_detail", "coverage_detail", "crash_analysis", "fuzzer_statistics"]
         
         for table in requiredTables {
             let query: PostgresQuery = "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = \(table))"
@@ -272,7 +346,9 @@ public class DatabaseSchema {
             }
         }
         
-        logger.info("Database schema verification successful")
+        if enableLogging {
+            logger.info("Database schema verification successful")
+        }
         return true
     }
     
@@ -291,7 +367,9 @@ public class DatabaseSchema {
     
     /// Get lookup table data
     public func getExecutionTypes(connection: PostgresConnection) async throws -> [ExecutionType] {
-        logger.info("Getting execution types from database...")
+        if enableLogging {
+            logger.info("Getting execution types from database...")
+        }
         
         let query: PostgresQuery = "SELECT id, title, description FROM execution_type ORDER BY id"
         let result = try await connection.query(query, logger: Logging.Logger(label: "DatabaseSchema"))
@@ -304,12 +382,16 @@ public class DatabaseSchema {
             executionTypes.append(ExecutionType(id: id, title: title, description: description))
         }
         
-        logger.info("Retrieved \(executionTypes.count) execution types")
+        if enableLogging {
+            logger.info("Retrieved \(executionTypes.count) execution types")
+        }
         return executionTypes
     }
     
     public func getMutatorTypes(connection: PostgresConnection) async throws -> [MutatorType] {
-        logger.info("Getting mutator types from database...")
+        if enableLogging {
+            logger.info("Getting mutator types from database...")
+        }
         
         let query: PostgresQuery = "SELECT id, name, description, category FROM mutator_type ORDER BY id"
         let result = try await connection.query(query, logger: Logging.Logger(label: "DatabaseSchema"))
@@ -323,12 +405,16 @@ public class DatabaseSchema {
             mutatorTypes.append(MutatorType(id: id, name: name, description: description, category: category))
         }
         
-        logger.info("Retrieved \(mutatorTypes.count) mutator types")
+        if enableLogging {
+            logger.info("Retrieved \(mutatorTypes.count) mutator types")
+        }
         return mutatorTypes
     }
     
     public func getExecutionOutcomes(connection: PostgresConnection) async throws -> [DatabaseExecutionOutcome] {
-        logger.info("Getting execution outcomes from database...")
+        if enableLogging {
+            logger.info("Getting execution outcomes from database...")
+        }
         
         let query: PostgresQuery = "SELECT id, outcome, description FROM execution_outcome ORDER BY id"
         let result = try await connection.query(query, logger: Logging.Logger(label: "DatabaseSchema"))
@@ -341,7 +427,9 @@ public class DatabaseSchema {
             executionOutcomes.append(DatabaseExecutionOutcome(id: id, outcome: outcome, description: description))
         }
         
-        logger.info("Retrieved \(executionOutcomes.count) execution outcomes")
+        if enableLogging {
+            logger.info("Retrieved \(executionOutcomes.count) execution outcomes")
+        }
         return executionOutcomes
     }
 }

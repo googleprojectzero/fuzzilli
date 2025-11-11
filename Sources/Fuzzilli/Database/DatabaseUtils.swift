@@ -94,6 +94,46 @@ public class DatabaseUtils {
         return try JSONDecoder().decode(ExecutionMetadata.self, from: data)
     }
     
+    // MARK: - Program Filtering
+    
+    /// Check if a program contains FUZZILLI_CRASH test calls (false positive crashes)
+    public static func containsFuzzilliCrash(program: Program) -> Bool {
+        // Lift program to JavaScript and check for FUZZILLI_CRASH pattern
+        let jsLifter = JavaScriptLifter(prefix: "", suffix: "", ecmaVersion: .es6)
+        let jsCode = jsLifter.lift(program, withOptions: [])
+        
+        // Check for patterns like fuzzilli('FUZZILLI_CRASH', ...) or fuzzilli("FUZZILLI_CRASH", ...)
+        // Specifically check for fuzzilli('FUZZILLI_CRASH', 3) which is a test case
+        let patterns = [
+            "fuzzilli('FUZZILLI_CRASH'",
+            "fuzzilli(\"FUZZILLI_CRASH\"",
+            "fuzzilli(`FUZZILLI_CRASH`",
+            "fuzzilli('FUZZILLI_CRASH', 3)",
+            "fuzzilli(\"FUZZILLI_CRASH\", 3)",
+            "fuzzilli(`FUZZILLI_CRASH`, 3)"
+        ]
+        
+        for pattern in patterns {
+            if jsCode.contains(pattern) {
+                return true
+            }
+        }
+        
+        // Also check for the pattern with any whitespace variations
+        let regexPatterns = [
+            "fuzzilli\\s*\\(\\s*['\"`]FUZZILLI_CRASH['\"`]\\s*,\\s*3\\s*\\)",
+            "fuzzilli\\s*\\(\\s*['\"`]FUZZILLI_CRASH['\"`]"
+        ]
+        
+        for pattern in regexPatterns {
+            if jsCode.range(of: pattern, options: .regularExpression) != nil {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
     // MARK: - Execution Outcome Mapping
     
     /// Map ExecutionOutcome to database ID
@@ -124,7 +164,7 @@ public class DatabaseUtils {
             if signal == 11 || signal == 7 {
                 return 1  // Real crashes: SIGSEGV (11) and SIGBUS (7)
             } else {
-                return 34 // SigCheck: SIGTRAP (5), SIGABRT (6), and others
+                return 5 // SigCheck: SIGTRAP (5), SIGABRT (6), and others
             }
         case .timedOut:
             return 4  // TimedOut maps to ID 4

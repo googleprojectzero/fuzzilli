@@ -12,22 +12,22 @@ CREATE TABLE IF NOT EXISTS main (
 
 -- Create the fuzzer programs table (corpus)
 CREATE TABLE IF NOT EXISTS fuzzer (
-    program_base64 TEXT PRIMARY KEY,
+    program_hash VARCHAR(64) PRIMARY KEY, -- SHA256 hash for deduplication
     fuzzer_id INT NOT NULL REFERENCES main(fuzzer_id) ON DELETE CASCADE,
     inserted_at TIMESTAMP DEFAULT NOW(),
     program_size INT,
-    program_hash VARCHAR(64) -- SHA256 hash for deduplication
+    program_base64 TEXT -- Keep for backward compatibility and lookups
 );
 
 -- Create the programs table (executed programs)
 CREATE TABLE IF NOT EXISTS program (
-    program_base64 TEXT PRIMARY KEY,
+    program_hash VARCHAR(64) PRIMARY KEY, -- SHA256 hash for deduplication
     fuzzer_id INT NOT NULL REFERENCES main(fuzzer_id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT NOW(),
     program_size INT,
-    program_hash VARCHAR(64),
+    program_base64 TEXT, -- Keep for backward compatibility and lookups
     source_mutator VARCHAR(50), -- Which mutator created this program
-    parent_program_base64 TEXT REFERENCES program(program_base64) -- For mutation lineage
+    parent_program_hash VARCHAR(64) REFERENCES program(program_hash) -- For mutation lineage
 );
 
 -- Create execution type lookup table
@@ -89,9 +89,9 @@ ON CONFLICT (outcome) DO NOTHING;
 -- Create the main execution table
 CREATE TABLE IF NOT EXISTS execution (
     execution_id SERIAL PRIMARY KEY,
-    program_base64 TEXT NOT NULL REFERENCES program(program_base64) ON DELETE CASCADE,
+    program_hash VARCHAR(64) NOT NULL REFERENCES program(program_hash) ON DELETE CASCADE,
     execution_type_id INTEGER NOT NULL REFERENCES execution_type(id),
-    mutator_type_id INTEGER REFERENCES mutator_type(id),
+    mutator_type_id TEXT, -- Store mutator name directly instead of ID
     execution_outcome_id INTEGER NOT NULL REFERENCES execution_outcome(id),
     
     -- Execution results
@@ -149,8 +149,24 @@ CREATE TABLE IF NOT EXISTS crash_analysis (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Coverage tracking over time
+CREATE TABLE IF NOT EXISTS coverage_snapshot (
+    snapshot_id SERIAL PRIMARY KEY,
+    fuzzer_id INTEGER NOT NULL,
+    coverage_percentage NUMERIC(10, 8) NOT NULL,
+    program_hash TEXT,
+    edges_found INTEGER,
+    total_edges INTEGER,
+    created_at TIMESTAMP DEFAULT NOW(),
+    
+    FOREIGN KEY (fuzzer_id) REFERENCES main(fuzzer_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_coverage_snapshot_fuzzer ON coverage_snapshot(fuzzer_id);
+CREATE INDEX IF NOT EXISTS idx_coverage_snapshot_created ON coverage_snapshot(created_at);
+
 -- Create performance indexes
-CREATE INDEX IF NOT EXISTS idx_execution_program ON execution(program_base64);
+CREATE INDEX IF NOT EXISTS idx_execution_program ON execution(program_hash);
 CREATE INDEX IF NOT EXISTS idx_execution_type ON execution(execution_type_id);
 CREATE INDEX IF NOT EXISTS idx_execution_mutator ON execution(mutator_type_id);
 CREATE INDEX IF NOT EXISTS idx_execution_outcome ON execution(execution_outcome_id);
@@ -164,29 +180,28 @@ CREATE INDEX IF NOT EXISTS idx_crash_analysis_execution ON crash_analysis(execut
 -- Create foreign key constraint for program table
 ALTER TABLE program
 ADD CONSTRAINT IF NOT EXISTS fk_program_fuzzer
-FOREIGN KEY (program_base64)
-REFERENCES fuzzer(program_base64);
+FOREIGN KEY (program_hash)
+REFERENCES fuzzer(program_hash);
 
 -- Create views for common queries
 CREATE OR REPLACE VIEW execution_summary AS
 SELECT 
     e.execution_id,
-    e.program_base64,
+    e.program_hash,
     et.title as execution_type,
-    mt.name as mutator_type,
+    e.mutator_type_id as mutator_type, -- Use the TEXT field directly
     eo.outcome as execution_outcome,
     e.coverage_total,
     e.execution_time_ms,
     e.created_at
 FROM execution e
 JOIN execution_type et ON e.execution_type_id = et.id
-LEFT JOIN mutator_type mt ON e.mutator_type_id = mt.id
 JOIN execution_outcome eo ON e.execution_outcome_id = eo.id;
 
 CREATE OR REPLACE VIEW crash_summary AS
 SELECT 
     e.execution_id,
-    e.program_base64,
+    e.program_hash,
     eo.outcome,
     e.signal_code,
     e.exit_code,
@@ -216,7 +231,7 @@ BEGIN
         MIN(e.coverage_total) as min_coverage,
         COUNT(CASE WHEN eo.outcome = 'Crashed' THEN 1 END) as crash_count
     FROM execution e
-    JOIN program p ON e.program_base64 = p.program_base64
+    JOIN program p ON e.program_hash = p.program_hash
     JOIN execution_outcome eo ON e.execution_outcome_id = eo.id
     WHERE p.fuzzer_id = fuzzer_instance_id;
 END;
