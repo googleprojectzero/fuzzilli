@@ -85,10 +85,10 @@ class Father(Agent):
                 list_program_templates,
                 web_search,
             ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key, temperature=0.0),
             managed_agents=[],
             max_steps=100,
-            planning_interval=25
+            planning_interval=25,
         )
         self.agents['compiler'].prompt_templates["system_prompt"] = system_prompt 
 
@@ -134,7 +134,7 @@ class Father(Agent):
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),  
             max_steps=50,
-            planning_interval=10,
+            planning_interval=20,
         )
         self.agents['v8_search'].prompt_templates["system_prompt"] = self.get_prompt("v8_search.txt") + "THIS IS THE CURRENT V8 PATH ASSUMING YOU ARE INSIDE THE V8 SOURCE CODE DIRECTORY FOR ALL TOOL CALLS ALREADY: " + get_v8_path()
 
@@ -213,9 +213,9 @@ class Father(Agent):
                 get_knowledge_doc,
                 list_program_templates,
             ],
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
-            max_steps=20,
-            planning_interval=10,
+            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key, temperature=1.0),
+            max_steps=30,
+            planning_interval=None,
         )
         self.agents['pick_section'].prompt_templates["system_prompt"] = self.get_prompt("pick_section.txt")
         

@@ -974,7 +974,7 @@ def remove_program_template(program_template: str) -> str:
         return f"Error writing to ProgramTemplates.swift: {e}"
 
 @tool
-def remove_program_template_weight(program_template: str) => str:
+def remove_program_template_weight(program_template: str) -> str:
     """
     Remove a program template from the ProgramTemplateWeights.swift file.
 
@@ -987,7 +987,7 @@ def remove_program_template_weight(program_template: str) => str:
 'ThrowInWasmCatchInJS', 'WasmReturnCalls', 'JIT1Function', 'JIT2Functions', 'JITTrickyFunction', 'JSONFuzzer']
 
     if program_template in default_program_templates:
-        return f"Do not remove a 'default' program template! Here are the defaults: {default_program_template}"
+        return f"Do not remove a 'default' program template! Here are the defaults: {default_program_templates}"
 
     # remove from ProgramTemplateWeights.swift below
     program_template_weights_file = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplateWeights.swift")
