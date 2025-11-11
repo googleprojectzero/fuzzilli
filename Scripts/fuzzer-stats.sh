@@ -74,13 +74,15 @@ main() {
     
     # Get global statistics
     echo -e "${GREEN}=== Global Statistics ===${NC}"
-    global_stats=$(run_query "SELECT total_programs, total_executions, total_crashes, active_fuzzers FROM global_statistics;")
-    if [ -n "$global_stats" ]; then
+    global_stats=$(run_query "SELECT total_programs, total_executions, total_crashes, active_fuzzers FROM global_statistics;" | xargs)
+    if [ -n "$global_stats" ] && [ "$global_stats" != "" ]; then
         IFS='|' read -r total_programs total_executions total_crashes active_fuzzers <<< "$global_stats"
         echo -e "  ${YELLOW}Total Programs:${NC} $(format_number "$total_programs")"
         echo -e "  ${YELLOW}Total Executions:${NC} $(format_number "$total_executions")"
         echo -e "  ${YELLOW}Total Crashes:${NC} ${RED}$(format_number "$total_crashes")${NC}"
         echo -e "  ${YELLOW}Active Fuzzers:${NC} $(format_number "$active_fuzzers")"
+    else
+        echo -e "  ${YELLOW}No global statistics available${NC}"
     fi
     echo ""
     
@@ -89,7 +91,7 @@ main() {
     echo ""
     
     # Header
-    printf "%-6s %-20s %-10s %-12s %-12s %-10s %-15s\n" \
+    printf "%-6s %-20s %-10s %-12s %-12s %-12s %-10s %-15s\n" \
         "ID" "Name" "Status" "Execs/s" "Programs" "Executions" "Crashes" "Highest Coverage %"
     echo "--------------------------------------------------------------------------------------------------------"
     
@@ -125,15 +127,15 @@ main() {
                 status_color="${RED}"
             fi
             
-            printf "%-6s %-20s ${status_color}%-10s${NC} %-12s %-12s %-12s %-10s %-15s\n" \
+            printf "%-6s %-20s ${status_color}%-10s${NC} %-12s %-12s %-12s ${RED}%-10s${NC} ${CYAN}%-15s${NC}\n" \
                 "$fuzzer_id" \
                 "$fuzzer_name" \
                 "$status" \
                 "$execs_formatted" \
                 "$(format_number "$programs")" \
                 "$(format_number "$executions")" \
-                "${RED}$(format_number "$crashes")${NC}" \
-                "${CYAN}${cov_formatted}%${NC}"
+                "$(format_number "$crashes")" \
+                "${cov_formatted}%"
         done <<< "$fuzzer_data"
     fi
     echo ""
