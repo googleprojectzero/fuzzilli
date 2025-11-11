@@ -958,19 +958,11 @@ def remove_program_template(program_template: str) -> str:
         return f"Error: Could not find matching closing brace '}}' for template '{program_template}'."
 
     separator_after_match = re.search(r'^\s*,\s*', content[end_index + 1:], re.MULTILINE | re.DOTALL)
-
     if separator_after_match:
+        start_of_block_to_remove = start_index
         end_of_block_to_remove = end_index + 1 + separator_after_match.end()
     else:
-        end_of_block_to_remove = end_index + 1
-
-    preceding_separator_match = re.search(r'^\s*,?\s*', content[:start_index][::-1], re.MULTILINE | re.DOTALL)
-
-    if preceding_separator_match:
-        start_of_block_to_remove = start_index - preceding_separator_match.end()
-        #start_of_block_to_remove += (len(content[:start_index]) - len(content[:start_index].lstrip()))
-    else:
-        start_of_block_to_remove = start_index
+        return f"Failed to remove program template {program_template}... maybe try again?"
 
     content = content[:start_of_block_to_remove] + content[end_of_block_to_remove:]
 
