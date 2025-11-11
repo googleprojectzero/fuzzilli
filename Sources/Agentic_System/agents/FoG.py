@@ -79,6 +79,7 @@ class Father(Agent):
                 write_program_template,
                 edit_template_by_regex,
                 remove_program_template,
+                remove_program_template_weight,
                 compile_program_template,
                 execute_program_template,
                 list_program_templates,

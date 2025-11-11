@@ -910,7 +910,7 @@ def remove_program_template(program_template: str) -> str:
     Remove the template from the ProgramTemplates array before the closing bracket.
 
     Args:
-        program_template (str): The name of the swift program template to remove (must be a program template that's been added dynamically by write_program_template)
+        program_template (str): The name of the swift program template to remove from ProgramTemplates.swift (must be a program template that's been added dynamically by write_program_template)
     Returns:
         str: whether removing the program template was successfull or failed 
     """
@@ -977,9 +977,25 @@ def remove_program_template(program_template: str) -> str:
     try:
         with open(program_templates_file, 'w') as f:
             f.write(content)
-        ret = f"OK: Successfully removed program template {program_template} from {program_templates_file}"
+        return f"OK: Successfully removed program template {program_template} from {program_templates_file}"
     except Exception as e:
         return f"Error writing to ProgramTemplates.swift: {e}"
+
+@tool
+def remove_program_template_weight(program_template: str) => str:
+    """
+    Remove a program template from the ProgramTemplateWeights.swift file.
+
+    Args:
+        program_template (str): The name of the swift program template to remove from ProgramTempalteWeights.swift (must be a program template that's been added dynamically by write_program_template)
+    Returns:
+        str: whether removing the program template was successfull or failed 
+    """
+    default_program_templates = ['Codegen100', 'Codegen50', 'WasmCodegen50', 'WasmCodegen100', 'MixedJsAndWasm1', 'MixedJsAndWasm2', 'JSPI', 
+'ThrowInWasmCatchInJS', 'WasmReturnCalls', 'JIT1Function', 'JIT2Functions', 'JITTrickyFunction', 'JSONFuzzer']
+
+    if program_template in default_program_templates:
+        return f"Do not remove a 'default' program template! Here are the defaults: {default_program_template}"
 
     # remove from ProgramTemplateWeights.swift below
     program_template_weights_file = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplateWeights.swift")
@@ -1003,7 +1019,7 @@ def remove_program_template(program_template: str) -> str:
     try:
         with open(program_template_weights_file, 'w') as f:
             f.write(content_weight)
-        return ret + f"\nOK: Successfully removed program template {program_template} weight from {program_template_weights_file}"
+        return f"OK: Successfully removed program template {program_template} weight from {program_template_weights_file}"
     except Exception as e:
         return f"Error writing to ProgramTemplateWeights.swift: {e}"
 

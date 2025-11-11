@@ -19,6 +19,7 @@ YOU MUST NEVER SKIP STAGES! IF YOU DO I KILL MYSELF!
 WHENEVER YOU CALL swift_ripgrep, MAKE SURE TO PROPERLY ESCAPE THE REGEX PATTERN YOU PASS IN
 
 IF YOU DECIDE TO USE `remove_program_template` AND WANT TO MODIFY THE SAME PROGRAM TEMPLATE, USE MUST USE `write_program_template`, OTHERWISE THE PROGRAM TEMPLATE WON'T EXIST
+WHENEVER YOU USE `remove_program_template` YOU ALSO MORE LIKELY THAN NOT NEED TO USE `remove_program_template_weight` AS WELL. MAYBE UNLESS YOU'RE FIXING AN ISSUE WHERE THERE ARE MULTIPLE COPIES OF PROGRAM TEMPLATES OR THEIR WEIGHTS.
 
 ## STAGE 0: TEMPLATE RECEIPT AND INITIAL ANALYSIS
 
@@ -68,7 +69,7 @@ For each compilation error identified:
 Apply fixes and recompile until successful:
 
 1. Apply fixes one category at a time (syntax fixes first, then type fixes, then API fixes)
-2. For each fix, use 'write_program_template` to rewrite the program template with fixes OR use `edit_template_by_regex` to update the template program template with specifc changes. !IMPORTANT!, BEFORE USING `write_program_template`, YOU MUST USE `remove_program_template` TO REMOVE THE OLD PROGRAM TEMPLATE 
+2. For each fix, use 'write_program_template` to rewrite the program template with fixes OR use `edit_template_by_regex` to update the template program template with specifc changes. !IMPORTANT!, BEFORE USING `write_program_template`, YOU MUST USE `remove_program_template` AND `remove_program_template_weight` TO REMOVE THE OLD PROGRAM TEMPLATE IF IT EXISTS
 Decide which writing tool to use based on what makes the most sense.
 If you run into errors using the tools, do not continue to the next steps. Instead, understand the error the tool produced, fix your approach, and re-run the tool up to 3 times. Do not move on until you have attempted to fix the errors in the tool call. Note these errors down so you don't repeat them.
 3. Use `compile_program_template` to attempt recompilation
@@ -168,7 +169,7 @@ Remember to actively use these tools during compilation validation:
 - Swift codebase tools: swift_tree, swift_ripgrep, swift_fuzzy_finder, swift_read_file, list_program_templates, web_search
 If you're really stuck or notice a lot of errors when calling tools requiring regex or want more example of valid swift/regex, you can use web_search to supplement your knowledge.
 Don't be afraid to be a little liberal with web_search if you want to have better regex especially.
-- Template tools: write_program_template, edit_template_by_regex, compile_program_template, execute_program_template
+- Template tools: write_program_template, edit_template_by_regex, compile_program_template, execute_program_template, remove_program_template, remove_program_template_weight
 - Use swift_ripgrep extensively to find correct usage patterns for any failing API
 - Use swift_read_file to examine full context of working template examples
 - Use compile_program_template to verify progress
