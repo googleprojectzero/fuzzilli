@@ -99,13 +99,32 @@ public let ProgramTemplates = [
 
         let signature = b.type(of: f!).signature ?? Signature.forUnknownFunction
         // As we do not yet know what types we have in the Wasm module when we try to call this, let Fuzzilli know that it could potentially use all Wasm types here.
-        let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
+
+    
+        let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)
+
+
+
+
+])
 
         var wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(signature, availableTypes: allWasmTypes)
         let wrapped = b.wrapSuspending(function: f!)
 
         let m = b.buildWasmModule { mod in
-            mod.addWasmFunction(with: [] => []) { fbuilder, _, _  in
+
+    
+            mod.addWasmFunction(with: [
+
+
+
+
+] => [
+
+
+
+
+]) { fbuilder, _, _  in
                 // This will create a bunch of locals, which should create large (>4KB) frames.
                 if probability(0.02) {
                     for _ in 0..<1000 {
@@ -120,7 +139,14 @@ public let ProgramTemplates = [
                     fbuilder.wasmJsCall(function: wrapped, withArgs: args, withWasmSignature: wasmSignature)
                 }
                 b.build(n: 4)
-                return []
+
+    
+                return [
+
+
+
+
+]
             }
             if probability(0.2) {
                 b.build(n: 20)
@@ -148,33 +174,90 @@ public let ProgramTemplates = [
         let wasmTags = (0...Int.random(in: 0..<5)).map { _ in
             b.createWasmTag(parameterTypes: b.randomTagParameters())
         }
-        let tags = [b.createWasmJSTag()] + wasmTags
+
+    
+        let tags = [b.createWasmJSTag()
+
+
+
+
+] + wasmTags
         let tagToThrow = chooseUniform(from: wasmTags)
         let throwParamTypes = b.type(of: tagToThrow).wasmTagType!.parameters
         let tagToCatchForRethrow = chooseUniform(from: tags)
-        let catchBlockOutputTypes = b.type(of: tagToCatchForRethrow).wasmTagType!.parameters + [.wasmExnRef]
+
+    
+        let catchBlockOutputTypes = b.type(of: tagToCatchForRethrow).wasmTagType!.parameters + [.wasmExnRef
+
+
+
+
+]
 
         let module = b.buildWasmModule { wasmModule in
             // Wasm function that throws a tag, catches a tag (the same or a different one) to
             // rethrow it again (or another exnref if present).
-            wasmModule.addWasmFunction(with: [] => []) { function, label, args in
+
+    
+            wasmModule.addWasmFunction(with: [
+
+
+
+
+] => [
+
+
+
+]) { function, label, args in
                 b.build(n: 10)
-                let caughtValues = function.wasmBuildBlockWithResults(with: [] => catchBlockOutputTypes, args: []) { catchRefLabel, _ in
+
+    
+                let caughtValues = function.wasmBuildBlockWithResults(with: [
+
+
+
+] => catchBlockOutputTypes, args: [
+
+
+
+]) { catchRefLabel, _ in
                     // TODO(mliedtke): We should probably allow mutations of try_tables to make
                     // these cases more generic. This would probably require being able to wrap
                     // things in a new block (so we can insert a target destination for a new catch
                     // with a matching signature) or to at least create a new tag for an existing
                     // block target. Either way, this is non-trivial.
-                    function.wasmBuildTryTable(with: [] => [], args: [tagToCatchForRethrow, catchRefLabel], catches: [.Ref]) { _, _ in
+
+    
+                    function.wasmBuildTryTable(with: [
+
+
+] => [
+
+
+], args: [tagToCatchForRethrow, catchRefLabel
+
+
+], catches: [.Ref
+
+
+]) { _, _ in
                         b.build(n: 10)
                         function.WasmBuildThrow(tag: tagToThrow, inputs: throwParamTypes.map(function.findOrGenerateWasmVar))
-                        return []
+
+    
+                        return [
+
+]
                     }
                     return catchBlockOutputTypes.map(function.findOrGenerateWasmVar)
                 }
                 b.build(n: 10)
                 function.wasmBuildThrowRef(exception: b.randomVariable(ofType: .wasmExnRef)!)
-                return []
+
+    
+                return [
+
+]
             }
         }
 
@@ -182,7 +265,10 @@ public let ProgramTemplates = [
         b.buildTryCatchFinally {
             b.build(n: 10)
             // Call the exported wasm function.
-            b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(42)])
+
+    
+
+])
             b.build(n: 5)
         } catchBody: { exception in
             // Do something, potentially using the `exception` thrown by wasm.
@@ -374,6 +460,8 @@ public let ProgramTemplates = [
                 cond = b.compare(iterationCount, with: b.loadInt(Int64(selectedIteration)), using: .equal)
             } else {
                 // Run the code every nth iteration
+
+    
                 let modulus = b.loadInt(chooseUniform(from: [2, 5, 10, 25]))
                 let remainder = b.binary(iterationCount, modulus, with: .Mod)
                 cond = b.compare(remainder, with: b.loadInt(0), using: .equal)
@@ -397,6 +485,7 @@ public let ProgramTemplates = [
         // Here we simply prepend the iteration count to randomly generated parameters.
         // This way, the signature is still valid even if the last parameter is a rest parameter.
         let baseParams = b.randomParameters().parameterTypes
+
         let actualParams = [.integer] + baseParams
         let f = b.buildPlainFunction(with: .parameters(actualParams)) { args in
             // Generate a few "prefix" instructions
@@ -746,5 +835,119 @@ b.setProperty("p0", of: obj, to: nxt, guard: true)
         _ = b.getProperty("length", of: dArr)
         _ = b.getProperty("length", of: zArr)
         _ = b.getProperty("length", of: eArr)
-    },
+}ProgramTemplate("MaglevDeopt_HoleyDoubleArray_Materialization_A") { b in
+    // 1) Define function f(o, flagBool)
+    let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+        let o = args[0]
+        let flag = args[1]
+
+        // Start with a packed double array a = [1.1 + 0.0, 2.2, 3.3]
+        var d11 = b.loadFloat(1.1)
+        let d00 = b.loadFloat(0.0)
+        d11 = b.binary(d11, d00, with: .Add)
+        let d22 = b.loadFloat(2.2)
+        let d33 = b.loadFloat(3.3)
+        let a = b.createArray(with: [d11, d22, d33])
+
+        // a[5] = -0.0 (creates holes at 3,4)
+        let negZero = b.loadFloat(-0.0)
+        b.setElement(5, of: a, to: negZero)
+
+        // Reflect.deleteProperty(a, "1")
+        let Reflect = b.createNamedVariable(forBuiltin: "Reflect")
+        _ = b.callMethod("deleteProperty", on: Reflect, withArgs: [a, b.loadString("1")])
+
+        // a[2] = NaN (compute via 0.0 / 0.0 to avoid introducing non-number)
+        let z = b.loadFloat(0.0)
+        let nanv = b.binary(z, z, with: .Div)
+        b.setElement(2, of: a, to: nanv)
+
+        // a[0] = 1/0 (Infinity)
+        let one = b.loadFloat(1.0)
+        let infv = b.binary(one, d00, with: .Div)
+        b.setElement(0, of: a, to: infv)
+
+        // if (flagBool === true) { void o.x; a.length = 32; }
+        let cond = b.compare(flag, with: b.loadBool(true), using: .equal)
+        b.buildIf(cond) {
+            let xprop = b.getProperty("x", of: o)
+            b.hide(xprop)
+            b.setProperty("length", of: a, to: b.loadInt(32))
+        }
+
+        b.doReturn(a)
+    }
+
+    // 2) Warmup and optimize
+    // o_good = {x:42}
+    let ObjectCtor = b.createNamedVariable(forBuiltin: "Object")
+    let o_good = b.construct(ObjectCtor, withArgs: [])
+    b.setProperty("x", of: o_good, to: b.loadInt(42))
+
+    let falseVar = b.loadBool(false)
+    b.buildRepeatLoop(n: 1000) { _ in
+        b.callFunction(f, withArgs: [o_good, falseVar])
+    }
+
+    // try { new Function("f", "%PrepareFunctionForOptimization(f)")(f); } catch {}
+    b.buildTryCatchFinally {
+        let FunctionCtor = b.createNamedVariable(forBuiltin: "Function")
+        let prep = b.construct(FunctionCtor, withArgs: [b.loadString("f"), b.loadString("%PrepareFunctionForOptimization(f)")])
+        b.callFunction(prep, withArgs: [f])
+    } catchBody: { _ in }
+
+    // try { new Function("f", "%OptimizeFunctionOnNextCall(f)")(f); } catch {}
+    b.buildTryCatchFinally {
+        let FunctionCtor = b.createNamedVariable(forBuiltin: "Function")
+        let opt = b.construct(FunctionCtor, withArgs: [b.loadString("f"), b.loadString("%OptimizeFunctionOnNextCall(f)")])
+        b.callFunction(opt, withArgs: [f])
+    } catchBody: { _ in }
+
+    // Call f twice to trigger optimization
+    b.callFunction(f, withArgs: [o_good, falseVar])
+    b.callFunction(f, withArgs: [o_good, falseVar])
+
+    // arr = f({}, true) // induce deopt on missing property in guarded block
+    let o_bad = b.construct(ObjectCtor, withArgs: [])
+    let trueVar = b.loadBool(true)
+    let arr = b.callFunction(f, withArgs: [o_bad, trueVar])
+
+    // 3) Post-deopt consumers (inside try/catch)
+    b.buildTryCatchFinally {
+        let v0 = b.getElement(0, of: arr)
+        let v1 = b.getElement(1, of: arr)
+        let v2 = b.getElement(2, of: arr)
+        let v5 = b.getElement(5, of: arr)
+
+        let one = b.loadFloat(1.0)
+        _ = b.binary(one, v5, with: .Div)
+
+        let NumberObj = b.createNamedVariable(forBuiltin: "Number")
+        _ = b.callMethod("isNaN", on: NumberObj, withArgs: [v2])
+
+        _ = b.callMethod("includes", on: arr, withArgs: [b.loadUndefined()])
+        _ = b.callMethod("join", on: arr, withArgs: [b.loadString("|")])
+        _ = b.callMethod("copyWithin", on: arr, withArgs: [b.loadInt(0), b.loadInt(2)])
+        _ = b.callMethod("fill", on: arr, withArgs: [b.loadFloat(4.4), b.loadInt(3), b.loadInt(6)])
+
+        let s = b.callMethod("slice", on: arr, withArgs: [])
+        let reducer = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+            let sum = b.binary(args[0], args[1], with: .Add)
+            b.doReturn(sum)
+        }
+        _ = b.callMethod("reduce", on: s, withArgs: [reducer, b.loadFloat(0.0)])
+        _ = b.callMethod("indexOf", on: arr, withArgs: [b.loadUndefined()])
+    } catchBody: { _ in }
+
+    // 4) GC pressure best-effort
+    b.buildTryCatchFinally {
+        let gcFn = b.createNamedVariable(forBuiltin: "gc")
+        _ = b.callFunction(gcFn, withArgs: [])
+    } catchBody: { _ in }
+
+    b.buildRepeatLoop(n: 20) { _ in
+        let dA = b.createArray(with: [b.loadFloat(0.1), b.loadFloat(0.2)])
+        b.setElement(1000, of: dA, to: b.loadFloat(9.9))
+    }
+},
 ]

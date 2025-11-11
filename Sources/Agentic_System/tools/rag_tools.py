@@ -25,6 +25,9 @@ try:
     import numpy as np
     import faiss
     import pickle
+    # Set environment variables before importing SentenceTransformer to prevent meta device issues
+    os.environ.setdefault('ACCELERATE_USE_CPU', '1')
+    os.environ.setdefault('ACCELERATE_USE_META_DEVICE', '0')
     from sentence_transformers import SentenceTransformer
     FAISS_AVAILABLE = True
 except ImportError:
@@ -290,8 +293,40 @@ class FAISSKnowledgeBase:
         # Force CPU device to avoid accidental meta device transfers that cause
         # "Cannot copy out of meta tensor" errors in some torch/accelerate setups.
         import torch
-        self.model = SentenceTransformer(model_name)
-        self.model = self.model.to('cpu')
+        # Environment variables should already be set at module level, but ensure they're set here too
+        os.environ.setdefault('ACCELERATE_USE_CPU', '1')
+        os.environ.setdefault('ACCELERATE_USE_META_DEVICE', '0')
+        try:
+            # Try loading directly to CPU if supported
+            self.model = SentenceTransformer(model_name, device='cpu')
+        except (TypeError, ValueError):
+            # Fallback: load normally and move to CPU
+            self.model = SentenceTransformer(model_name)
+            try:
+                self.model = self.model.to('cpu')
+            except RuntimeError as e:
+                if "meta tensor" in str(e) or "Cannot copy out of meta tensor" in str(e):
+                    # If model is on meta device, reload with accelerate disabled
+                    del self.model
+                    import gc
+                    gc.collect()
+                    # Temporarily disable accelerate meta device
+                    old_accel = os.environ.get('ACCELERATE_USE_META_DEVICE', None)
+                    os.environ['ACCELERATE_USE_META_DEVICE'] = '0'
+                    try:
+                        # Reload model - this should load weights directly to CPU
+                        self.model = SentenceTransformer(model_name)
+                        # Explicitly move to CPU if not already there
+                        if next(self.model.parameters()).device.type != 'cpu':
+                            self.model = self.model.to('cpu')
+                    finally:
+                        # Restore original setting
+                        if old_accel is not None:
+                            os.environ['ACCELERATE_USE_META_DEVICE'] = old_accel
+                        elif 'ACCELERATE_USE_META_DEVICE' in os.environ:
+                            del os.environ['ACCELERATE_USE_META_DEVICE']
+                else:
+                    raise
         if hasattr(self.model, 'eval'):
             self.model.eval()
     
@@ -429,8 +464,40 @@ class FAISSV8SourceRag:
         # Force CPU device to avoid accidental meta device transfers that cause
         # "Cannot copy out of meta tensor" errors in some torch/accelerate setups.
         import torch
-        self.model = SentenceTransformer(model_name)
-        self.model = self.model.to('cpu')
+        # Environment variables should already be set at module level, but ensure they're set here too
+        os.environ.setdefault('ACCELERATE_USE_CPU', '1')
+        os.environ.setdefault('ACCELERATE_USE_META_DEVICE', '0')
+        try:
+            # Try loading directly to CPU if supported
+            self.model = SentenceTransformer(model_name, device='cpu')
+        except (TypeError, ValueError):
+            # Fallback: load normally and move to CPU
+            self.model = SentenceTransformer(model_name)
+            try:
+                self.model = self.model.to('cpu')
+            except RuntimeError as e:
+                if "meta tensor" in str(e) or "Cannot copy out of meta tensor" in str(e):
+                    # If model is on meta device, reload with accelerate disabled
+                    del self.model
+                    import gc
+                    gc.collect()
+                    # Temporarily disable accelerate meta device
+                    old_accel = os.environ.get('ACCELERATE_USE_META_DEVICE', None)
+                    os.environ['ACCELERATE_USE_META_DEVICE'] = '0'
+                    try:
+                        # Reload model - this should load weights directly to CPU
+                        self.model = SentenceTransformer(model_name)
+                        # Explicitly move to CPU if not already there
+                        if next(self.model.parameters()).device.type != 'cpu':
+                            self.model = self.model.to('cpu')
+                    finally:
+                        # Restore original setting
+                        if old_accel is not None:
+                            os.environ['ACCELERATE_USE_META_DEVICE'] = old_accel
+                        elif 'ACCELERATE_USE_META_DEVICE' in os.environ:
+                            del os.environ['ACCELERATE_USE_META_DEVICE']
+                else:
+                    raise
         if hasattr(self.model, 'eval'):
             self.model.eval()
     
