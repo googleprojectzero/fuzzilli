@@ -27,6 +27,5 @@ public let programTemplateWeights = [
     "JSONFuzzer":            1,
     "WasmReturnCalls":       2,
 	"MaglevClosureEscapeNumericField": 2,
-
 	"KeyedStore_ElementsTransition_Stress": 2,
 ]

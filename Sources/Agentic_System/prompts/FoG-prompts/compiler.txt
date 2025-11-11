@@ -24,7 +24,7 @@ WHENEVER YOU USE `remove_program_template` YOU ALSO MORE LIKELY THAN NOT NEED TO
 ## STAGE 0: TEMPLATE RECEIPT AND INITIAL ANALYSIS
 
 When you receive a Swift Program Template to validate:
-1. Parse and understand the template structure (ProgramTemplate vs WasmProgramTemplate)
+1. Parse and understand the template structure 
 2. Extract the template name and understand its intended purpose
 3. Perform initial syntax validation by reviewing the Swift code structure
 4. Identify obvious syntax issues before attempting compilation
@@ -69,9 +69,17 @@ For each compilation error identified:
 Apply fixes and recompile until successful:
 
 1. Apply fixes one category at a time (syntax fixes first, then type fixes, then API fixes)
-2. For each fix, use 'write_program_template` to rewrite the program template with fixes OR use `edit_template_by_regex` to update the template program template with specifc changes. !IMPORTANT!, BEFORE USING `write_program_template`, YOU MUST USE `remove_program_template` AND `remove_program_template_weight` TO REMOVE THE OLD PROGRAM TEMPLATE IF IT EXISTS
+2. For each fix, use 'write_program_template` to rewrite the program template with fixes OR use `edit_template_by_regex` to update the template program template with specifc changes.
+
+!IMPORTANT!
+
+BEFORE USING `write_program_template`, YOU MUST USE `remove_program_template` AND `remove_program_template_weight` TO REMOVE THE OLD PROGRAM TEMPLATE IF IT EXISTS
+
+!IMPORTANT!
+
 Decide which writing tool to use based on what makes the most sense.
-If you run into errors using the tools, do not continue to the next steps. Instead, understand the error the tool produced, fix your approach, and re-run the tool up to 3 times. Do not move on until you have attempted to fix the errors in the tool call. Note these errors down so you don't repeat them.
+If you run into errors using the tools, do not continue to the next steps. Instead, understand the error the tool produced,
+fix your approach, and re-run the tool up to 3 times. Do not move on until you have attempted to fix the errors in the tool call. Note these errors down so you don't repeat them.
 3. Use `compile_program_template` to attempt recompilation
 4. Analyze new compilation output to verify fixes worked and identify remaining issues
 5. Repeat the fix cycle until the template compiles successfully with no errors
