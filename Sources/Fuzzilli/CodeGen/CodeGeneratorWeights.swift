@@ -94,6 +94,7 @@ public let codeGeneratorWeights = [
     "ObjectWithSpreadGenerator":                2,
     "ArrayWithSpreadGenerator":                 2,
     "TemplateStringGenerator":                  1,
+    "ConcatenatedStringGenerator":              2,
     "StringNormalizeGenerator":                 1,
     "PlainFunctionGenerator":                   15,
     "StrictModeFunctionGenerator":              3,

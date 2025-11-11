@@ -161,6 +161,22 @@ public let CodeGenerators: [CodeGenerator] = [
         b.loadString(b.randomString())
     },
 
+    CodeGenerator("ConcatenatedStringGenerator", inputs: .required(.string), produces: [.string]) { b, inputString in
+        // Emit a dynamically concatenated string, e.g. something like:
+        // let select = someVar ? "string a" : "string b";
+        // let result = select + "other string";
+        let selectLhs = inputString
+        let selectRhs = b.randomVariable(ofType: .string)!
+        let cond = b.randomJsVariable()
+        let select = b.ternary(cond, selectLhs, selectRhs)
+        let other = b.randomVariable(ofType: .string)!
+        if Bool.random() {
+            b.binary(select, other, with: .Add)
+        } else {
+            b.binary(other, select, with: .Add)
+        }
+    },
+
     CodeGenerator("BooleanGenerator", produces: [.boolean]) { b in
         // It's probably not too useful to generate multiple boolean values here.
         b.loadBool(Bool.random())
