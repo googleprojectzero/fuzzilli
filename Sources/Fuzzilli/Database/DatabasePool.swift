@@ -87,56 +87,6 @@ public class DatabasePool {
         }
     }
     
-    /// Execute an operation with a pooled connection
-    public func withConnection<T>(_ operation: @escaping (PostgresConnection) -> EventLoopFuture<T>) async throws -> T {
-        guard isInitialized, let pool = connectionPool else {
-            throw DatabasePoolError.notInitialized
-        }
-        
-        return try await pool.withConnection(logger: logger) { connection in
-            return operation(connection)
-        }.get()
-    }
-    
-    /// Test the connection pool by executing a simple query
-    public func testConnection() async throws -> Bool {
-        do {
-            let result = try await withConnection { connection in
-                connection.query("SELECT 1 as test", logger: self.logger)
-            }
-            
-            // Check if we got a result
-            if result.count > 0 {
-                if enableLogging {
-                    logger.info("Database connection test successful")
-                }
-                return true
-            } else {
-                logger.error("Database connection test failed: no results")
-                return false
-            }
-        } catch {
-            logger.error("Database connection test failed: \(error)")
-            return false
-        }
-    }
-    
-    /// Get connection pool statistics
-    public func getPoolStats() async throws -> PoolStats {
-        guard isInitialized, let _ = connectionPool else {
-            throw DatabasePoolError.notInitialized
-        }
-        
-        // For now, return basic stats
-        // TODO: Implement actual pool statistics when PostgresKit supports it
-        return PoolStats(
-            totalConnections: maxConnections,
-            activeConnections: 0, // Not available in current PostgresKit version
-            idleConnections: 0,   // Not available in current PostgresKit version
-            isHealthy: true
-        )
-    }
-    
     /// Get event loop group for direct connections
     public func getEventLoopGroup() -> EventLoopGroup? {
         return eventLoopGroup
@@ -253,21 +203,6 @@ public class DatabasePool {
 }
 
 // MARK: - Supporting Types
-
-/// Connection pool statistics
-public struct PoolStats {
-    public let totalConnections: Int
-    public let activeConnections: Int
-    public let idleConnections: Int
-    public let isHealthy: Bool
-    
-    public init(totalConnections: Int, activeConnections: Int, idleConnections: Int, isHealthy: Bool) {
-        self.totalConnections = totalConnections
-        self.activeConnections = activeConnections
-        self.idleConnections = idleConnections
-        self.isHealthy = isHealthy
-    }
-}
 
 /// Database pool errors
 public enum DatabasePoolError: Error, LocalizedError {

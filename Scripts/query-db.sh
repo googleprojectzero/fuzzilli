@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Fuzzilli PostgreSQL Database Query Script using Docker
-# This script uses Docker to connect to the PostgreSQL container and run queries
+# Consolidated script for querying the master database
 
 # Database connection parameters
-DB_CONTAINER="fuzzilli-postgres"  # Adjust this to match your container name
-DB_NAME="fuzzilli"
+DB_CONTAINER="fuzzilli-postgres-master"
+DB_NAME="fuzzilli_master"
 DB_USER="fuzzilli"
 DB_PASSWORD="fuzzilli123"
 
@@ -88,11 +88,13 @@ main() {
     run_query "Program Count by Fuzzer" "
         SELECT 
             p.fuzzer_id,
+            m.fuzzer_name,
             COUNT(*) as program_count,
             MIN(p.created_at) as first_program,
             MAX(p.created_at) as latest_program
-        FROM program p 
-        GROUP BY p.fuzzer_id 
+        FROM program p
+        JOIN main m ON p.fuzzer_id = m.fuzzer_id
+        GROUP BY p.fuzzer_id, m.fuzzer_name
         ORDER BY program_count DESC;
     "
     
@@ -124,12 +126,14 @@ main() {
     run_query "Recent Programs (Last 10)" "
         SELECT 
             LEFT(program_base64, 20) as program_preview,
-            fuzzer_id,
-            LEFT(program_hash, 12) as hash_prefix,
-            program_size,
-            created_at
-        FROM program 
-        ORDER BY created_at DESC 
+            p.fuzzer_id,
+            m.fuzzer_name,
+            LEFT(p.program_hash, 12) as hash_prefix,
+            p.program_size,
+            p.created_at
+        FROM program p
+        JOIN main m ON p.fuzzer_id = m.fuzzer_id
+        ORDER BY p.created_at DESC 
         LIMIT 10;
     "
     
@@ -138,12 +142,14 @@ main() {
         SELECT 
             e.execution_id,
             p.fuzzer_id,
+            m.fuzzer_name,
             LEFT(p.program_hash, 12) as hash_prefix,
             eo.outcome,
             e.execution_time_ms,
             e.created_at
         FROM execution e
         JOIN program p ON e.program_hash = p.program_hash
+        JOIN main m ON p.fuzzer_id = m.fuzzer_id
         JOIN execution_outcome eo ON e.execution_outcome_id = eo.id
         ORDER BY e.created_at DESC 
         LIMIT 10;
@@ -153,14 +159,16 @@ main() {
     run_query "Crash Analysis" "
         SELECT 
             p.fuzzer_id,
+            m.fuzzer_name,
             COUNT(*) as crash_count,
             MIN(e.created_at) as first_crash,
             MAX(e.created_at) as latest_crash
         FROM execution e
         JOIN program p ON e.program_hash = p.program_hash
+        JOIN main m ON p.fuzzer_id = m.fuzzer_id
         JOIN execution_outcome eo ON e.execution_outcome_id = eo.id
         WHERE eo.outcome = 'Crashed'
-        GROUP BY p.fuzzer_id
+        GROUP BY p.fuzzer_id, m.fuzzer_name
         ORDER BY crash_count DESC;
     "
     
@@ -202,13 +210,13 @@ main() {
 # Handle command line arguments
 case "${1:-}" in
     "programs")
-        run_query "All Programs" "SELECT LEFT(program_base64, 30) as program_preview, fuzzer_id, program_size, created_at FROM program ORDER BY created_at DESC LIMIT 20;"
+        run_query "All Programs" "SELECT LEFT(program_base64, 30) as program_preview, p.fuzzer_id, m.fuzzer_name, p.program_size, p.created_at FROM program p JOIN main m ON p.fuzzer_id = m.fuzzer_id ORDER BY p.created_at DESC LIMIT 20;"
         ;;
     "executions")
-        run_query "All Executions" "SELECT e.execution_id, LEFT(p.program_base64, 20) as program_preview, eo.outcome, e.execution_time_ms, e.created_at FROM execution e JOIN program p ON e.program_hash = p.program_hash JOIN execution_outcome eo ON e.execution_outcome_id = eo.id ORDER BY e.created_at DESC LIMIT 20;"
+        run_query "All Executions" "SELECT e.execution_id, LEFT(p.program_base64, 20) as program_preview, m.fuzzer_name, eo.outcome, e.execution_time_ms, e.created_at FROM execution e JOIN program p ON e.program_hash = p.program_hash JOIN main m ON p.fuzzer_id = m.fuzzer_id JOIN execution_outcome eo ON e.execution_outcome_id = eo.id ORDER BY e.created_at DESC LIMIT 20;"
         ;;
     "crashes")
-        run_query "All Crashes" "SELECT e.execution_id, LEFT(p.program_base64, 20) as program_preview, e.stdout, e.stderr, e.created_at FROM execution e JOIN program p ON e.program_hash = p.program_hash JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed' ORDER BY e.created_at DESC LIMIT 20;"
+        run_query "All Crashes" "SELECT e.execution_id, LEFT(p.program_base64, 20) as program_preview, m.fuzzer_name, e.stdout, e.stderr, e.created_at FROM execution e JOIN program p ON e.program_hash = p.program_hash JOIN main m ON p.fuzzer_id = m.fuzzer_id JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed' ORDER BY e.created_at DESC LIMIT 20;"
         ;;
     "stats")
         run_query "Quick Stats" "SELECT COUNT(*) as programs, (SELECT COUNT(*) FROM execution) as executions, (SELECT COUNT(*) FROM execution e JOIN execution_outcome eo ON e.execution_outcome_id = eo.id WHERE eo.outcome = 'Crashed') as crashes FROM program;"
@@ -240,3 +248,4 @@ case "${1:-}" in
         exit 1
         ;;
 esac
+

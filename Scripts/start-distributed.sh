@@ -51,7 +51,6 @@ echo "Starting Distributed Fuzzilli"
 echo "=========================================="
 echo "Workers: $NUM_WORKERS"
 echo "Master Postgres: 1"
-echo "Local Postgres: $NUM_WORKERS"
 echo ""
 
 # Load environment variables
@@ -64,7 +63,6 @@ fi
 # Set defaults
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fuzzilli123}
 V8_BUILD_PATH=${V8_BUILD_PATH:-/home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild}
-SYNC_INTERVAL=${SYNC_INTERVAL:-60}
 TIMEOUT=${TIMEOUT:-2500}
 MIN_MUTATIONS_PER_SAMPLE=${MIN_MUTATIONS_PER_SAMPLE:-25}
 DEBUG_LOGGING=${DEBUG_LOGGING:-false}
@@ -77,7 +75,6 @@ fi
 
 echo "Configuration:"
 echo "  V8 Build Path: ${V8_BUILD_PATH}"
-echo "  Sync Interval: ${SYNC_INTERVAL}s"
 echo "  Timeout: ${TIMEOUT}ms"
 echo ""
 
@@ -88,30 +85,9 @@ version: '3.8'
 services:
 EOF
 
-# Generate worker services (local postgres + fuzzer)
+# Generate worker services (fuzzer only, no local postgres)
 for i in $(seq 1 $NUM_WORKERS); do
     cat >> "${WORKER_COMPOSE}" <<EOF
-
-  # Worker $i - Local Postgres
-  postgres-local-${i}:
-    image: postgres:15-alpine
-    container_name: postgres-local-${i}
-    environment:
-      POSTGRES_DB: fuzzilli_local
-      POSTGRES_USER: fuzzilli
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    volumes:
-      - postgres_local_data_${i}:/var/lib/postgresql/data
-      - ${PROJECT_ROOT}/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fuzzilli -d fuzzilli_local"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - fuzzing-network
 
   # Worker $i - Fuzzilli Container
   fuzzer-worker-${i}:
@@ -120,18 +96,13 @@ for i in $(seq 1 $NUM_WORKERS); do
       dockerfile: Cloud/VRIG/Dockerfile.distributed
     container_name: fuzzer-worker-${i}
     environment:
-      - MASTER_POSTGRES_URL=postgresql://fuzzilli:${POSTGRES_PASSWORD}@postgres-master:5432/fuzzilli_master
-      - LOCAL_POSTGRES_URL=postgresql://fuzzilli:${POSTGRES_PASSWORD}@postgres-local-${i}:5432/fuzzilli_local
-      - POSTGRES_URL=postgresql://fuzzilli:${POSTGRES_PASSWORD}@postgres-local-${i}:5432/fuzzilli_local
+      - POSTGRES_URL=postgresql://fuzzilli:${POSTGRES_PASSWORD}@postgres-master:5432/fuzzilli_master
       - FUZZER_INSTANCE_NAME=fuzzer-${i}
-      - SYNC_INTERVAL=${SYNC_INTERVAL}
       - TIMEOUT=${TIMEOUT}
       - MIN_MUTATIONS_PER_SAMPLE=${MIN_MUTATIONS_PER_SAMPLE}
       - DEBUG_LOGGING=${DEBUG_LOGGING}
     depends_on:
       postgres-master:
-        condition: service_healthy
-      postgres-local-${i}:
         condition: service_healthy
     volumes:
       - fuzzer_data_${i}:/home/app/Corpus
@@ -163,7 +134,6 @@ EOF
 
 for i in $(seq 1 $NUM_WORKERS); do
     cat >> "${WORKER_COMPOSE}" <<EOF
-  postgres_local_data_${i}:
   fuzzer_data_${i}:
 EOF
 done
@@ -200,23 +170,6 @@ fi
 echo "Starting worker services..."
 docker compose -f "${MASTER_COMPOSE}" -f "${WORKER_COMPOSE}" up -d --build
 
-# Wait for local postgres containers to be healthy
-echo "Waiting for local postgres containers to be ready..."
-for i in $(seq 1 $NUM_WORKERS); do
-    timeout=60
-    while [ $timeout -gt 0 ]; do
-        if docker exec postgres-local-${i} pg_isready -U fuzzilli -d fuzzilli_local > /dev/null 2>&1; then
-            echo "✓ Local postgres-${i} is ready"
-            break
-        fi
-        sleep 1
-        timeout=$((timeout - 1))
-    done
-    if [ $timeout -eq 0 ]; then
-        echo "⚠ Warning: Local postgres-${i} may not be ready"
-    fi
-done
-
 # Wait a bit for fuzzers to start
 echo ""
 echo "Waiting for fuzzer containers to initialize..."
@@ -230,7 +183,7 @@ echo ""
 echo "Services started:"
 echo "  Master Postgres: fuzzilli-postgres-master"
 for i in $(seq 1 $NUM_WORKERS); do
-    echo "  Worker $i: fuzzer-worker-${i} (local postgres: postgres-local-${i})"
+    echo "  Worker $i: fuzzer-worker-${i}"
 done
 echo ""
 echo "To view logs:"
@@ -246,5 +199,5 @@ echo "To stop all services:"
 echo "  docker compose -f ${MASTER_COMPOSE} -f ${WORKER_COMPOSE} down"
 echo ""
 echo "To stop a specific worker:"
-echo "  docker stop fuzzer-worker-<N> postgres-local-<N>"
+echo "  docker stop fuzzer-worker-<N>"
 echo ""
