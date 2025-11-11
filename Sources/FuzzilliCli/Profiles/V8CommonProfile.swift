@@ -151,6 +151,33 @@ public let UndefinedNanGenerator = CodeGenerator("UndefinedNanGenerator") { b in
     b.eval("%GetUndefinedNaN()", hasOutput: true);
 }
 
+public let StringShapeGenerator = CodeGenerator("StringShapeGenerator") { b in
+    withEqualProbability(
+        {
+            // Use one random input string (can be 1-byte or 2-byte etc.) and a predefined second
+            // string so that the string is guaranteed to be long enough for emitting a cons string.
+            let lhs = b.randomVariable(forUseAs: .jsString)
+            let rhs = b.loadString("ConsStringConcatenation")
+            b.hide(rhs)
+            b.eval("%ConstructConsString(%@, %@)", with: [lhs, rhs], hasOutput: true)
+        }, {
+            let str = b.loadString(
+                Bool.random() ? "Long enough 1-byte string" : "Long enoµgh 2-byte string")
+            b.hide(str)
+            let offset = b.loadInt(Int64.random(in: 1...5))
+            b.eval("%ConstructSlicedString(%@, %@)", with: [str, offset], hasOutput: true)
+        }, {
+            let str = b.randomVariable(forUseAs: .jsString)
+            b.eval("%ConstructInternalizedString(%@)", with: [str], hasOutput: true)
+        }, {
+            let str = b.loadString(
+                Bool.random() ? "Long enough 1-byte string" : "Long enoµgh 2-byte string")
+            b.hide(str)
+            b.eval("%ConstructThinString(%@)", with: [str], hasOutput: true)
+        }
+    )
+}
+
 public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
     // This template is meant to stress the v8 Map transition mechanisms.
     // Basically, it generates a bunch of CreateObject, GetProperty, SetProperty, FunctionDefinition,

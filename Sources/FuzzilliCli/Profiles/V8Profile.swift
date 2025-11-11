@@ -68,6 +68,7 @@ let v8Profile = Profile(
         (PretenureAllocationSiteGenerator,         5),
         (HoleNanGenerator,                         5),
         (UndefinedNanGenerator,                    5),
+        (StringShapeGenerator,                     5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
