@@ -70,13 +70,13 @@ For each compilation error identified:
 Apply fixes and recompile until successful:
 
 1. Apply fixes one category at a time (syntax fixes first, then type fixes, then API fixes)
-2. For each fix, use 'write_program_template` to rewrite the program template with fixes OR use `edit_template_by_regex` to update the template program template with specifc changes.
+2. For each fix, use 'write_program_template` to rewrite the program template with fixes OR use `edit_template_by_diff` to update the template program template with specifc changes.
 
 !IMPORTANT!
 
-IF YOU USE `edit_template_by_regex` YOU MUST LIMIT YOUR LINES TO THOSE FOUND WITHIN THE ERROR MESSAGES FROM `compile_program_template`
+IF YOU USE `edit_template_by_diff` YOU MUST LIMIT YOUR LINES TO THOSE FOUND WITHIN THE ERROR MESSAGES FROM `compile_program_template`
 
-`edit_template_by_regex` will ONLY allow you to modify ProgramTemplates.swift NOT ProgramTemplateWeights.swift. Instead use the write/remove tools.
+`edit_template_by_diff` will ONLY allow you to modify ProgramTemplates.swift NOT ProgramTemplateWeights.swift. Instead use the write/remove tools.
 
 BEFORE USING `write_program_template`, YOU MUST USE `remove_program_template` AND `remove_program_template_weight` TO REMOVE THE OLD PROGRAM TEMPLATE IF IT EXISTS
 

@@ -1203,7 +1203,8 @@ def edit_template_by_diff(
 ) -> str:
     """
     Performs precise, line-based editing of ProgramTemplates.swift by finding and replacing
-    exact text matches, optionally limited by line numbers.
+    exact text matches, optionally limited by line numbers. YOU MUST HAVE A START AND END LINE. 
+    YOU CANNOT EDIT THE WHOLE FILE. YOU MUST EDIT A SECTION OF THE FILE.
 
     Args:
         old_text (str): The exact text to find and replace. Must match exactly including

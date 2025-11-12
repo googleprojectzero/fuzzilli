@@ -1,8 +1,13 @@
 import pytest
 import tempfile
 import os
+import sys
+from pathlib import Path
 from unittest.mock import patch
-from FoG_tools import edit_template_by_diff
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from tools.FoG_tools import edit_template_by_diff
 
 class TestEditTemplateByDiff:
     """Test suite for edit_template_by_diff function"""
@@ -33,7 +38,7 @@ struct Template {
             with open(filepath, 'w') as f:
                 f.write(content)
             
-            with patch('your_module.SWIFT_PATH', tmpdir):
+            with patch('tools.FoG_tools.SWIFT_PATH', tmpdir):
                 yield filepath
     
     def read_file(self, filepath):

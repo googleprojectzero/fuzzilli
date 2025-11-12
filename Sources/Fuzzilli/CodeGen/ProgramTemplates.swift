@@ -99,16 +99,13 @@ public let ProgramTemplates = [
 
         let signature = b.type(of: f!).signature ?? Signature.forUnknownFunction
         // As we do not yet know what types we have in the Wasm module when we try to call this, let Fuzzilli know that it could potentially use all Wasm types here.
-
-])
+        let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
 
         var wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(signature, availableTypes: allWasmTypes)
         let wrapped = b.wrapSuspending(function: f!)
 
         let m = b.buildWasmModule { mod in
-
-
-]) { fbuilder, _, _  in
+            mod.addWasmFunction(with: [] => []) { fbuilder, _, _  in
                 // This will create a bunch of locals, which should create large (>4KB) frames.
                 if probability(0.02) {
                     for _ in 0..<1000 {
@@ -123,8 +120,7 @@ public let ProgramTemplates = [
                     fbuilder.wasmJsCall(function: wrapped, withArgs: args, withWasmSignature: wasmSignature)
                 }
                 b.build(n: 4)
-
-]
+                return []
             }
             if probability(0.2) {
                 b.build(n: 20)
@@ -152,45 +148,33 @@ public let ProgramTemplates = [
         let wasmTags = (0...Int.random(in: 0..<5)).map { _ in
             b.createWasmTag(parameterTypes: b.randomTagParameters())
         }
-
-] + wasmTags
+        let tags = [b.createWasmJSTag()] + wasmTags
         let tagToThrow = chooseUniform(from: wasmTags)
         let throwParamTypes = b.type(of: tagToThrow).wasmTagType!.parameters
         let tagToCatchForRethrow = chooseUniform(from: tags)
-
-]
+        let catchBlockOutputTypes = b.type(of: tagToCatchForRethrow).wasmTagType!.parameters + [.wasmExnRef]
 
         let module = b.buildWasmModule { wasmModule in
             // Wasm function that throws a tag, catches a tag (the same or a different one) to
             // rethrow it again (or another exnref if present).
-
-
-]) { function, label, args in
+            wasmModule.addWasmFunction(with: [] => []) { function, label, args in
                 b.build(n: 10)
-
-
-]) { catchRefLabel, _ in
+                let caughtValues = function.wasmBuildBlockWithResults(with: [] => catchBlockOutputTypes, args: []) { catchRefLabel, _ in
                     // TODO(mliedtke): We should probably allow mutations of try_tables to make
                     // these cases more generic. This would probably require being able to wrap
                     // things in a new block (so we can insert a target destination for a new catch
                     // with a matching signature) or to at least create a new tag for an existing
                     // block target. Either way, this is non-trivial.
-
-
-
-
-]) { _, _ in
+                    function.wasmBuildTryTable(with: [] => [], args: [tagToCatchForRethrow, catchRefLabel], catches: [.Ref]) { _, _ in
                         b.build(n: 10)
                         function.WasmBuildThrow(tag: tagToThrow, inputs: throwParamTypes.map(function.findOrGenerateWasmVar))
-
-]
+                        return []
                     }
                     return catchBlockOutputTypes.map(function.findOrGenerateWasmVar)
                 }
                 b.build(n: 10)
                 function.wasmBuildThrowRef(exception: b.randomVariable(ofType: .wasmExnRef)!)
-
-]
+                return []
             }
         }
 
@@ -198,8 +182,7 @@ public let ProgramTemplates = [
         b.buildTryCatchFinally {
             b.build(n: 10)
             // Call the exported wasm function.
-
-])
+            b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(42)])
             b.build(n: 5)
         } catchBody: { exception in
             // Do something, potentially using the `exception` thrown by wasm.
@@ -519,162 +502,255 @@ public let ProgramTemplates = [
     },
 
 
+    ProgramTemplate("MaglevTypeGuardElimination") { b in
+        let smallCodeBlockSize = 10
+        let numIterations = 100
 
-    b.buildPrefix()
+        // Start with random prefix and setup
+        b.buildPrefix()
+        b.build(n: smallCodeBlockSize)
 
-    // Load constructors and helpers
-    let Int32Array = b.createNamedVariable(forBuiltin: "Int32Array")
-    let Float64Array = b.createNamedVariable(forBuiltin: "Float64Array")
-    let Uint8Array = b.createNamedVariable(forBuiltin: "Uint8Array")
-    let Uint16Array = b.createNamedVariable(forBuiltin: "Uint16Array")
-    let ArrayBuffer = b.createNamedVariable(forBuiltin: "ArrayBuffer")
-    let ArrayCtor = b.createNamedVariable(forBuiltin: "Array")
-    let ObjectCtor = b.createNamedVariable(forBuiltin: "Object")
-    let print = b.createNamedVariable(forBuiltin: "print")
+        // Create objects with unstable type information
+        let obj = b.createObject(with: ["prop": b.loadInt(42)])
+        let arr = b.createArray(with: [b.loadInt(1), b.loadString("test")])
 
-    // Typed arrays
-    let t1 = b.construct(Int32Array, withArgs: [b.loadInt(64)])
-    let t2 = b.construct(Float64Array, withArgs: [b.loadInt(64)])
-    let t3 = b.construct(Uint8Array, withArgs: [b.loadInt(64)])
-
-    // Optional RAB/GSAB: create resizable ArrayBuffer and a Uint16Array view, tolerate lack of support
-    var t4: Variable? = nil
-    var rab: Variable? = nil
-    b.buildTryCatchFinally {
-        let options = b.createObject(with: [
-            "maxByteLength": b.loadInt(512),
-            "resizable": b.loadBool(true)
-        ])
-        rab = b.construct(ArrayBuffer, withArgs: [b.loadInt(256), options])
-        t4 = b.construct(Uint16Array, withArgs: [rab!, b.loadInt(0), b.loadInt(64)])
-    } catchBody: { _ in }
-
-    // Hot function f(ta, i, v): keyed store, named .length/.byteLength/.byteOffset loads, then keyed read with varied index
-    let f = b.buildPlainFunction(with: .parameters([.jsAnything, .jsAnything, .jsAnything])) { args in
-        let ta = args[0]
-        let i = args[1]
-        let v = args[2]
-
-        // Store ta[i] = v
-        b.setElement(i, of: ta, to: v)
-
-        // Named loads
-        let L = b.getProperty("length", of: ta)
-        let bl = b.getProperty("byteLength", of: ta)
-        let bo = b.getProperty("byteOffset", of: ta)
-
-        // Candidate indices: c = (L % 4) selects among {0, L-1, L, i}
-        let zero = b.loadInt(0)
-        let four = b.loadInt(4)
-        let Lm1 = b.binary(L, b.loadInt(1), with: .Sub)
-        let c = b.binary(L, four, with: .Mod)
-        let is0 = b.compare(c, with: b.loadInt(0), using: .equal)
-        let is1 = b.compare(c, with: b.loadInt(1), using: .equal)
-        let is2 = b.compare(c, with: b.loadInt(2), using: .equal)
-        let is3 = b.compare(c, with: b.loadInt(3), using: .equal)
-        var i2 = zero
-        b.buildIf(is0) { i2 = zero }
-        b.buildIf(is1) { i2 = Lm1 }
-        b.buildIf(is2) { i2 = L }
-        b.buildIf(is3) { i2 = i }
-
-        // Keyed load: ta[i2]
-        let read = b.getElement(i2, of: ta)
-
-        // Consume byteLength/byteOffset to avoid DCE and keep named path alive
-        let sum = b.binary(bl, bo, with: .Add)
-        b.callFunction(print, withArgs: [sum])
-
-        // Coerce to int32 with bitwise OR 0
-        let xi32 = b.binary(read, b.loadInt(0), with: .BitOr)
-
-        // Return array-like via new Array(xi32, L)
-        let ret = b.construct(ArrayCtor, withArgs: [xi32, L])
-        b.doReturn(ret)
-    }
-
-    // Phase 1: Warmup monomorphic on t1
-    let L1 = b.getProperty("length", of: t1)
-    b.buildRepeatLoop(n: 6000) { it in
-        let idx = b.binary(it, L1, with: .Mod)
-        var val = b.binary(it, b.loadInt(3), with: .Mod)
-        val = b.binary(val, b.loadInt(1), with: .Add)
-        b.callFunction(f, withArgs: [t1, idx, val])
-    }
-
-    // Boundary indices to trigger deopts
-    let Lm1_t1 = b.binary(L1, b.loadInt(1), with: .Sub)
-    b.callFunction(f, withArgs: [t1, Lm1_t1, b.loadInt(1)])
-    b.callFunction(f, withArgs: [t1, L1, b.loadInt(1)])
-    b.callFunction(f, withArgs: [t1, b.loadInt(-1), b.loadInt(1)])
-
-    // Phase 2: Morph feedback with Float64Array and Uint8Array
-    let L2 = b.getProperty("length", of: t2)
-    b.buildRepeatLoop(n: 256) { it in
-        let idx = b.binary(it, L2, with: .Mod)
-        let itMod2 = b.binary(it, b.loadInt(2), with: .Mod)
-        let isEven = b.compare(itMod2, with: b.loadInt(0), using: .equal)
-        var val2 = b.loadFloat(Double.nan)
-        b.buildIf(isEven) { val2 = b.loadFloat(Double.infinity) }
-        b.callFunction(f, withArgs: [t2, idx, val2])
-    }
-
-    let L3 = b.getProperty("length", of: t3)
-    b.buildRepeatLoop(n: 256) { it in
-        let idx = b.binary(it, L3, with: .Mod)
-        let m4 = b.binary(it, b.loadInt(4), with: .Mod)
-        let is0 = b.compare(m4, with: b.loadInt(0), using: .equal)
-        let is1 = b.compare(m4, with: b.loadInt(1), using: .equal)
-        let is2 = b.compare(m4, with: b.loadInt(2), using: .equal)
-        var val3 = b.loadFloat(Double.nan)
-        b.buildIf(is0) { val3 = b.loadFloat(1.5) }
-        b.buildIf(is1) { val3 = b.loadFloat(-0.0) }
-        b.buildIf(is2) { val3 = b.loadFloat(1099511627776.0) }
-        b.callFunction(f, withArgs: [t3, idx, val3])
-    }
-
-    // Megamorphic fallback: pass a non-typed receiver a few times, in try/catch to be safe
-    b.buildTryCatchFinally {
-        let o = b.construct(ObjectCtor, withArgs: [])
-        b.callFunction(f, withArgs: [o, b.loadInt(0), b.loadInt(1)])
-        b.callFunction(f, withArgs: [o, b.loadInt(1), b.loadInt(2)])
-        b.callFunction(f, withArgs: [o, b.loadInt(2), b.loadInt(3)])
-    } catchBody: { _ in }
-
-    // Prototype/own-property perturbation; tolerate failure
-    let s = b.construct(Uint8Array, withArgs: [b.loadInt(32)])
-    b.buildTryCatchFinally {
-        let getter = b.buildPlainFunction(with: .parameters([])) { _ in
-            b.doReturn(b.loadInt(7))
+        // Generate a function that challenges type inference
+        let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+            // Generate code that creates type instability
+            b.build(n: 15)
+            
+            // Type-changing property access
+            let propAccess = b.getProperty("prop", of: obj)
+            
+            // Mixed-type operations that challenge type guards
+            let mixedOp = b.binary(args[0], args[1], with: .Add)
+            
+            // Computed property access with varying types
+            b.setComputedProperty(b.loadInt(0), of: arr, to: propAccess)
+            
+            // Return value with potential type confusion
+            b.doReturn(mixedOp)
         }
-        let desc = b.createObject(with: ["get": getter])
-        let Obj = b.createNamedVariable(forBuiltin: "Object")
-        b.callMethod("defineProperty", on: Obj, withArgs: [s, b.loadString("length"), desc])
-    } catchBody: { _ in }
-    b.callFunction(f, withArgs: [s, b.loadInt(0), b.loadInt(1)])
-    let sLen = b.getProperty("length", of: s)
-    b.callFunction(print, withArgs: [sLen])
 
-    // Optional RAB/GSAB path usage
-    if let t4var = t4, let rabvar = rab {
-        let L4 = b.getProperty("length", of: t4var)
-        let L4m1 = b.binary(L4, b.loadInt(1), with: .Sub)
-        b.callFunction(f, withArgs: [t4var, L4m1, b.loadInt(1)])
-        b.callFunction(f, withArgs: [t4var, L4, b.loadInt(1)])
-        b.buildTryCatchFinally {
-            b.callMethod("resize", on: rabvar, withArgs: [b.loadInt(512)])
-        } catchBody: { _ in }
-        let L4b = b.getProperty("length", of: t4var)
-        let L4b_m1 = b.binary(L4b, b.loadInt(1), with: .Sub)
-        b.callFunction(f, withArgs: [t4var, L4b_m1, b.loadInt(1)])
-    }
+        // Generate some random code before the main loop
+        b.build(n: smallCodeBlockSize)
 
-    // Extra store coercion stress on integer typed arrays
-    b.callFunction(f, withArgs: [t1, b.loadInt(1), b.loadFloat(1.5)])
-    b.callFunction(f, withArgs: [t1, b.loadInt(2), b.loadFloat(-0.0)])
-    b.callFunction(f, withArgs: [t1, b.loadInt(3), b.loadFloat(1099511627776.0)])
-    b.callFunction(f, withArgs: [t3, b.loadInt(1), b.loadFloat(1.5)])
-    b.callFunction(f, withArgs: [t3, b.loadInt(2), b.loadFloat(-0.0)])
-    b.callFunction(f, withArgs: [t3, b.loadInt(3), b.loadFloat(Double.nan)])
-},
+        // Main loop that triggers type guard elimination issues
+        b.buildRepeatLoop(n: numIterations) { i in
+            // Vary object types in different iterations
+            let remainder = b.binary(i, b.loadInt(2), with: .Mod)
+            let cond = b.compare(remainder, with: b.loadInt(0), using: .equal)
+            b.buildIfElse(cond) {
+                // Change object property to string in some iterations
+                b.setProperty("prop", of: obj, to: b.loadString("changed"))
+            } elseBody: {
+                // Change to different numeric types in other iterations
+                b.setProperty("prop", of: obj, to: i)
+            }
+
+            // Call function with different type combinations
+            let args = [obj, arr] + b.randomArguments(forCallingFunctionWithParameters: [.plain(.jsAnything), .plain(.jsAnything)])
+            b.callFunction(f, withArgs: args)
+        }
+
+        // Additional random code after loop
+        b.build(n: smallCodeBlockSize)
+
+        // Force recompilation with different type patterns
+        b.buildRepeatLoop(n: numIterations) { i in
+            // Create more type instability
+            let mixedValue = b.binary(i, b.loadString("suffix"), with: .Add)
+            b.setProperty("prop", of: obj, to: mixedValue)
+            
+            b.callFunction(f, withArgs: [obj, arr])
+        }
+    },
+
+
+    ProgramTemplate("PhiRepresentationChallenge") { b in
+        let smallCodeBlockSize = 5
+        let numIterations = 100
+
+        // Start with a random prefix and some random code
+        b.buildPrefix()
+        b.build(n: smallCodeBlockSize)
+
+        // Generate a function that creates phi nodes through control flow merging
+        let f = b.buildPlainFunction(with: b.randomParameters()) { args in
+            // Create a variable that will flow through control flow and create phi nodes
+            var result = b.loadInt(0)
+            
+            // Generate some random code
+            b.build(n: 10)
+            
+            // Create control flow that naturally generates phi nodes
+            // This creates a phi node for 'result' at the merge point
+            withEqualProbability({
+                // Branch 1: assign integer
+                result = b.loadInt(42)
+            }, {
+                // Branch 2: assign float  
+                result = b.loadFloat(3.14)
+            }, {
+                // Branch 3: assign string
+                result = b.loadString("test")
+            }, {
+                // Branch 4: assign boolean
+                result = b.loadBool(true)
+            })
+            
+            // This is the merge point where a phi node is created for 'result'
+            
+            // Create loop phis by using the result in a loop
+            var loopCounter = b.loadInt(0)
+            b.buildRepeatLoop(n: 10) { i in
+                // Create type transitions within the loop
+                // This creates loop phis for 'result' and 'loopCounter'
+                withEqualProbability({
+                    result = b.loadInt(0)
+                }, {
+                    result = b.loadFloat(0.0)
+                })
+                
+                // Update loop counter - creates loop phi
+                loopCounter = b.binary(loopCounter, b.loadInt(1), with: .Add)
+            }
+            
+            // Return the result which may have different types from different paths
+            b.doReturn(result)
+        }
+
+        // Generate some more random code
+        b.build(n: smallCodeBlockSize)
+
+        // Call the function with varying argument types to create type pressure
+        b.buildRepeatLoop(n: numIterations) { i in
+            // Create different argument types to stress phi representation selection
+            let arg: Variable
+            if probability(0.25) {
+                arg = b.loadInt(0)
+            } else if probability(0.33) {
+                arg = b.loadFloat(0.0)
+            } else if probability(0.5) {
+                arg = b.loadString("arg")
+            } else {
+                arg = b.loadBool(false)
+            }
+            b.callFunction(f, withArgs: [arg])
+        }
+
+        // More random code to potentially trigger recompilation
+        b.build(n: smallCodeBlockSize)
+        
+        // Final calls with mixed types to stress representation selection
+        b.callFunction(f, withArgs: [b.loadInt(0)])
+        b.callFunction(f, withArgs: [b.loadFloat(1.0)])
+        b.callFunction(f, withArgs: [b.loadString("final")])
+        b.callFunction(f, withArgs: [b.loadBool(false)])
+    },
+
+
+    ProgramTemplate("CheckMapsChallenge") { b in
+        // This template targets CheckMaps node processing vulnerabilities in V8
+        // by creating complex object shapes and type transitions
+        
+        let smallCodeBlockSize = 5
+        let numIterations = 100
+
+        // Start with a random prefix and some random code
+        b.buildPrefix()
+        b.build(n: smallCodeBlockSize)
+
+        // Create multiple objects with different initial shapes
+        // This creates different maps that will be tracked by V8
+        let obj1 = b.buildPlainFunction(with: b.randomParameters()) { args in
+            b.build(n: 10)
+            let obj = b.buildObjectLiteral { obj in
+                obj.addProperty("a", as: b.randomJsVariable())
+                obj.addProperty("b", as: b.randomJsVariable())
+            }
+            b.doReturn(obj)
+        }
+
+        let obj2 = b.buildPlainFunction(with: b.randomParameters()) { args in
+            b.build(n: 10)
+            let obj = b.buildObjectLiteral { obj in
+                obj.addProperty("a", as: b.randomJsVariable())
+                obj.addProperty("c", as: b.randomJsVariable())
+            }
+            b.doReturn(obj)
+        }
+
+        // Generate some random instructions
+        b.build(n: smallCodeBlockSize)
+
+        // Create objects with the different shapes
+        let o1 = b.callFunction(obj1, withArgs: b.randomArguments(forCalling: obj1))
+        let o2 = b.callFunction(obj2, withArgs: b.randomArguments(forCalling: obj2))
+
+        // Create a class to introduce more complex shape transitions
+        let cls = b.buildPlainFunction(with: b.randomParameters()) { args in
+            b.build(n: 10)
+            let classDef = b.buildClassDefinition { cls in
+                cls.addInstanceProperty("x", value: b.randomJsVariable())
+                cls.addInstanceProperty("y", value: b.randomJsVariable())
+            }
+            b.doReturn(classDef)
+        }
+
+        let classObj = b.callFunction(cls, withArgs: b.randomArguments(forCalling: cls))
+
+        // Generate more random code
+        b.build(n: smallCodeBlockSize)
+
+        // Create a function that processes objects with varying types
+        // This will stress CheckMaps node processing
+        let processor = b.buildPlainFunction(with: .parameters(.object())) { args in
+            let obj = args[0]
+            
+            // Access properties that may or may not exist
+            // This creates CheckMaps nodes for property access
+            b.getProperty("a", of: obj, guard: true)
+            b.getProperty("b", of: obj, guard: true) 
+            b.getProperty("c", of: obj, guard: true)
+            
+            // Add new properties to change object shape
+            b.setProperty("newProp", of: obj, to: b.randomJsVariable())
+            
+            b.build(n: 10)
+            b.doReturn(obj)
+        }
+
+        // Call the processor with different object types
+        // This creates type stability transitions
+        b.buildRepeatLoop(n: numIterations) { i in
+            // Alternate between different object types
+            if probability(0.5) {
+                b.callFunction(processor, withArgs: [o1])
+            } else {
+                b.callFunction(processor, withArgs: [o2])
+            }
+            
+            // Occasionally use the class object
+            if probability(0.2) {
+                b.callFunction(processor, withArgs: [classObj])
+            }
+        }
+
+        // More property mutations to create additional map transitions
+        b.build(n: smallCodeBlockSize)
+        
+        // Add properties to existing objects to change their shapes
+        b.setProperty("dynamic1", of: o1, to: b.randomJsVariable())
+        b.setProperty("dynamic2", of: o2, to: b.randomJsVariable())
+        
+        // Final calls to processor with mutated objects
+        b.buildRepeatLoop(n: numIterations / 2) { i in
+            b.callFunction(processor, withArgs: [o1])
+            b.callFunction(processor, withArgs: [o2])
+        }
+
+        // Generate final random code
+        b.build(n: smallCodeBlockSize)
+    },
 ]

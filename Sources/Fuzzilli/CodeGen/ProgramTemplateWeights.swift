@@ -26,6 +26,9 @@ public let programTemplateWeights = [
     "JITTrickyFunction":     2,
     "JSONFuzzer":            1,
     "WasmReturnCalls":       2,
-
 	"MaglevTypedArrayLenAndKeyedAccess": 2,
+	"MaglevTypeGuardElimination": 2,
+	"PhiRepresentationChallenge": 2,
+
+	"CheckMapsChallenge": 2,
 ]

@@ -24,7 +24,7 @@ import sys
 import yaml
 import importlib.resources
 sys.path.append(str(Path(__file__).parent.parent))
-from config_loader import get_openai_api_key, get_anthropic_api_key
+from config_loader import get_openai_api_key, get_anthropic_api_key, get_deepseek_api_key
 
 
 class Father(Agent):
@@ -59,7 +59,7 @@ class Father(Agent):
                 search_v8_source_rag,
                 get_v8_source_rag_doc, 
             ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            model=LiteLLMModel(model_id="deepseek", api_key=self.api_key),
             managed_agents=[],
             max_steps=20,
             planning_interval=None
@@ -75,7 +75,7 @@ class Father(Agent):
                 swift_tree,
                 swift_ripgrep,
                 swift_read_file,
-                write_program_template,edit_template_by_r
+                write_program_template,
                 edit_template_by_diff,
                 remove_program_template,
                 remove_program_template_weight,
@@ -86,7 +86,7 @@ class Father(Agent):
                 remove_old_javascript_programs,
                 list_d8_flags,
             ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            model=LiteLLMModel(model_id="deepseek", api_key=self.api_key),
             managed_agents=[],
             max_steps=100,
             planning_interval=25,
@@ -112,7 +112,7 @@ class Father(Agent):
                 delete_rag_db,
                 list_rag_db,
             ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
+            model=LiteLLMModel(model_id="deepseek", api_key=self.api_key),
             max_steps=20,
             planning_interval=None,
         )
@@ -133,7 +133,7 @@ class Father(Agent):
                 get_realpath,
                 get_runtime_db_ids,
             ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),  
+            model=LiteLLMModel(model_id="deepseek", api_key=self.api_key),  
             max_steps=50,
             planning_interval=20,
         )
@@ -164,7 +164,7 @@ class Father(Agent):
                 get_runtime_db_ids,
                  
                 ], # add rag db tools here aswell
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
+            model=LiteLLMModel(model_id="deepseek", api_key=self.api_key),
             managed_agents=[
                 self.agents['reviewer_of_code'], 
                 self.agents['v8_search']
@@ -190,7 +190,7 @@ class Father(Agent):
                 similar_template_swift,
                 similar_template_fuzzil,
             ], # add rag db stuff here aswell
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
+            model=LiteLLMModel(model_id="deepseek", api_key=self.api_key),
             managed_agents=[
                 self.agents['george_foreman'],
                 self.agents['compiler']
@@ -214,7 +214,7 @@ class Father(Agent):
                 list_program_templates,
                 list_d8_flags,
             ],
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
+            model=LiteLLMModel(model_id="deepseek", api_key=self.api_key),
             max_steps=30,
             planning_interval=None,
         )
@@ -254,7 +254,7 @@ class Father(Agent):
                 get_v8_source_rag_doc, 
                 web_search, # testing only
             ],
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
+            model=LiteLLMModel(model_id="deepseek", api_key=self.api_key),
             managed_agents=[
                 self.agents['code_analyzer'],
                 self.agents['program_builder'],
@@ -301,15 +301,20 @@ class Father(Agent):
     #     return results
 
 def main():
+    import os
     openai_key = get_openai_api_key()
     anthropic_key = get_anthropic_api_key()
+    deepseek_key = get_deepseek_api_key()
+    
+    if deepseek_key:
+        os.environ["DEEPSEEK_API_KEY"] = deepseek_key
     
     model = LiteLLMModel(
-        model_id="gpt-5",
-        api_key=openai_key
+        model_id="deepseek",
+        api_key=deepseek_key
     )
     
-    system = Father(model, api_key=openai_key, anthropic_api_key=anthropic_key)
+    system = Father(model, api_key=deepseek_key, anthropic_api_key=anthropic_key)
     
     # run task
     result = system.run_task(
