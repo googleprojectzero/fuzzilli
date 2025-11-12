@@ -1,0 +1,9 @@
+{
+  "body": "MaglevGraphBuilder::TryBuildLoadNamedProperty -> TryBuildNamedAccess -> handles TypedArray length via PropertyAccessInfo::kTypedArrayLength. Key excerpt:\n\n// maglev/maglev-graph-builder.cc @ ~5437-5933\ncase compiler::PropertyAccessInfo::kTypedArrayLength: {\n  CHECK(!IsRabGsabTypedArrayElementsKind(access_info.elements_kind()));\n  if (receiver != lookup_start_object) {\n    // accessing via prototype: deopt\n    return EmitUnconditionalDeopt(DeoptimizeReason::kWrongMap);\n  }\n  return BuildLoadTypedArrayLength(lookup_start_object, access_info.elements_kind());\n}\n\nThis path records KnownNodeAspects::TypedArrayLength and emits AddNewNode<LoadTypedArrayLength> for JSTypedArray receivers. It uses feedback from ProcessedFeedback::kNamedAccess and AccessInfo to specialize.",
+  "context": [
+    "maglev_trybuild_element_typedarray",
+    "maglev_ir_typedarray_nodes"
+  ],
+  "explanation": "Locates the GraphBuilder entry that specializes named property loads for TypedArray length (length/byteLength/byteOffset are handled similarly via PropertyAccessInfo). Shows how LoadTypedArrayLength nodes are created and when the builder will deopt if accessed via prototype.",
+  "file_line": "maglev/maglev-graph-builder.cc:5437-5933"
+}
