@@ -78,6 +78,53 @@ public class GeneratorStub: Contributor {
     /// How many different values of the same type ValueGenerators should aim to generate.
     public static let numberOfValuesToGenerateByValueGenerators = 3
 
+    public enum AdditionalConstraints {
+        case None
+        case IsWasmArray
+        case IsWasmStruct
+    }
+
+    public struct Constraint : Hashable {
+        let type: ILType
+        let additional: AdditionalConstraints
+
+        public init(_ type: ILType, _ additional: AdditionalConstraints = .None) {
+            self.type = type
+            self.additional = additional
+        }
+
+        public func fulfilled(by type: ILType) -> Bool {
+            if !type.Is(self.type) {
+                return false
+            }
+            return switch additional {
+                case .None:
+                    true
+                case .IsWasmArray:
+                    if type.Is(.wasmTypeDef()) {
+                        type.wasmTypeDefinition?.description is WasmArrayTypeDescription
+                    } else if type.Is(.anyNonNullableIndexRef) {
+                        type.Is(.wasmArrayRef)
+                    } else {
+                        false
+                    }
+                case .IsWasmStruct:
+                    if type.Is(.wasmTypeDef()) {
+                        type.wasmTypeDefinition?.description is WasmStructTypeDescription
+                    } else if type.Is(.anyNonNullableIndexRef) {
+                        type.Is(.wasmStructRef)
+                    } else {
+                        false
+                    }
+            }
+        }
+
+        public func fulfilled(by other: Constraint) -> Bool {
+            other.type.Is(self.type)
+                && (self.additional == .None || self.additional == other.additional)
+        }
+    }
+
     /// Describes the inputs expected by a CodeGenerator.
     public struct Inputs {
         /// How the inputs should be treated.
@@ -92,48 +139,51 @@ public class GeneratorStub: Contributor {
             case strict
         }
 
-        public let types: [ILType]
+        public let constraints: [Constraint]
         public let mode: Mode
         public var count: Int {
-            return types.count
+            return constraints.count
         }
 
         public var isEmpty: Bool {
-            types.count == 0
+            constraints.count == 0
         }
 
         // No inputs.
         public static var none: Inputs {
-            return Inputs(types: [], mode: .loose)
+            return Inputs(constraints: [], mode: .loose)
         }
 
         // One input of type .jsAnything
         public static var one: Inputs {
-            return Inputs(types: [.jsAnything], mode: .loose)
+            return Inputs(constraints: [.init(.jsAnything)], mode: .loose)
         }
 
         // One input of a wasmPrimitive and it has to be strict to ensure type correctness.
         public static var oneWasmPrimitive: Inputs {
-            return Inputs(types: [.wasmPrimitive], mode: .strict)
+            return Inputs(constraints: [.init(.wasmPrimitive)], mode: .strict)
         }
 
         public static var oneWasmNumericalPrimitive: Inputs {
-            return Inputs(types: [.wasmNumericalPrimitive], mode: .strict)
+            return Inputs(constraints: [.init(.wasmNumericalPrimitive)], mode: .strict)
         }
 
         // Two inputs of type .jsAnything
         public static var two: Inputs {
-            return Inputs(types: [.jsAnything, .jsAnything], mode: .loose)
+            let jsAny = Constraint(.jsAnything)
+            return Inputs(constraints: [jsAny, jsAny], mode: .loose)
         }
 
         // Three inputs of type .jsAnything
         public static var three: Inputs {
-            return Inputs(types: [.jsAnything, .jsAnything, .jsAnything], mode: .loose)
+            let jsAny = Constraint(.jsAnything)
+            return Inputs(constraints: [jsAny, jsAny, jsAny], mode: .loose)
         }
 
         // Four inputs of type .jsAnything
         public static var four: Inputs {
-            return Inputs(types: [.jsAnything, .jsAnything, .jsAnything, .jsAnything], mode: .loose)
+            let jsAny = Constraint(.jsAnything)
+            return Inputs(constraints: [jsAny, jsAny, jsAny, jsAny], mode: .loose)
         }
 
 
@@ -142,14 +192,19 @@ public class GeneratorStub: Contributor {
         // be used as inputs during code generation.
         public static func preferred(_ types: ILType...) -> Inputs {
             assert(!types.isEmpty)
-            return Inputs(types: types, mode: .loose)
+            return Inputs(constraints: types.map {Constraint($0)}, mode: .loose)
         }
 
         // A number of inputs that must have the specified type.
         // Only use this if the code generator cannot do anything meaningful if it receives a value of the wrong type.
         public static func required(_ types: ILType...) -> Inputs {
             assert(!types.isEmpty)
-            return Inputs(types: types, mode: .strict)
+            return Inputs(constraints: types.map {Constraint($0)}, mode: .strict)
+        }
+
+        public static func requiredComplex(_ constraints: Constraint...) -> Inputs {
+            assert(!constraints.isEmpty)
+            return Inputs(constraints: constraints, mode: .strict)
         }
     }
     /// The inputs expected by this generator.
@@ -157,7 +212,7 @@ public class GeneratorStub: Contributor {
 
     /// The types this CodeGenerator produces
     /// ProgramBuilding will assert that these types are (newly) available after running this CodeGenerator.
-    public let produces: [ILType]
+    public let produces: [Constraint]
 
     public enum ContextRequirement {
         // If this GeneratorStub has a single Context requirement, which may still be comprised of multiple Context values.
@@ -225,13 +280,13 @@ public class GeneratorStub: Contributor {
     public let requiredContext: ContextRequirement
 
     /// The context that is provided by running this Generator.
-    /// This is always a list of the single contexts that are provided, e.g. [.javascript]
+    /// This is always a list of the single contexts that are provided, e.g. [.javascript].
     public let providedContext: [Context]
 
-    /// Warpper around the actual generator function called.
+    /// Wrapper around the actual generator function called.
     private let adapter: GeneratorAdapter
 
-    fileprivate init(name: String, inputs: Inputs, produces: [ILType] = [], context: ContextRequirement, providedContext: [Context] = [], adapter: GeneratorAdapter) {
+    fileprivate init(name: String, inputs: Inputs, produces: [Constraint] = [], context: ContextRequirement, providedContext: [Context] = [], adapter: GeneratorAdapter) {
 
         self.inputs = inputs
         self.produces = produces
@@ -241,6 +296,10 @@ public class GeneratorStub: Contributor {
         super.init(name: name)
 
         assert(inputs.count == adapter.expectedNumberOfInputs)
+    }
+
+    fileprivate convenience init(name: String, inputs: Inputs, produces: [ILType] = [], context: ContextRequirement, providedContext: [Context] = [], adapter: GeneratorAdapter) {
+        self.init(name: name, inputs: inputs, produces: produces.map {Constraint($0)}, context: context, providedContext: providedContext, adapter: adapter)
     }
 
     /// Execute this code generator, generating new code at the current position in the ProgramBuilder.
@@ -257,6 +316,10 @@ public class GeneratorStub: Contributor {
 
     public convenience init(_ name: String, inContext context: ContextRequirement = .single(.javascript), produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFuncNoArgs) {
         self.init(name: name, inputs: .none, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapterNoArgs(f: f))
+    }
+
+    public convenience init(_ name: String, inContext context: ContextRequirement = .single(.javascript), producesComplex: [Constraint], provides: [Context] = [], _ f: @escaping GeneratorFuncNoArgs) {
+        self.init(name: name, inputs: .none, produces: producesComplex, context: context, providedContext: provides, adapter: GeneratorAdapterNoArgs(f: f))
     }
 
     public convenience init(_ name: String, inContext context: ContextRequirement = .single(.javascript), inputs: Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc1Arg) {
@@ -320,7 +383,7 @@ public class CodeGenerator {
     // TODO(cffsmith): Maybe return an array of ILType Arrays, essentially describing at which yield point which type is available?
     // This would allow us to maybe use "innerOutputs" to find suitable points to insert other Generators (that require such types).
     // Slight complication is that some variables will only be in scope inside the CodeGenerator, e.g. if there is an EndWasmModule somewhere all Wasm variables will go out of scope.
-    public var produces: [ILType] {
+    public var produces: [GeneratorStub.Constraint] {
         return self.parts.last!.produces
     }
 
@@ -345,9 +408,18 @@ public class CodeGenerator {
         self.init(name, [GeneratorStub(name: name, inputs: .none, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapterNoArgs(f: f))])
     }
 
+    public convenience init(_ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript), producesComplex: [GeneratorStub.Constraint], provides: [Context] = [], _ f: @escaping GeneratorFuncNoArgs) {
+        self.init(name, [GeneratorStub(name: name, inputs: .none, produces: producesComplex, context: context, providedContext: provides, adapter: GeneratorAdapterNoArgs(f: f))])
+    }
+
     public convenience init(_ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript), inputs: GeneratorStub.Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc1Arg) {
         assert(inputs.count == 1)
         self.init(name, [GeneratorStub(name: name, inputs: inputs, produces: produces, context: context, providedContext: provides, adapter: GeneratorAdapter1Arg(f: f))])
+    }
+
+    public convenience init(_ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript), inputs: GeneratorStub.Inputs, producesComplex: [GeneratorStub.Constraint], provides: [Context] = [], _ f: @escaping GeneratorFunc1Arg) {
+        assert(inputs.count == 1)
+        self.init(name, [GeneratorStub(name: name, inputs: inputs, produces: producesComplex, context: context, providedContext: provides, adapter: GeneratorAdapter1Arg(f: f))])
     }
 
     public convenience init(_ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript), inputs: GeneratorStub.Inputs, produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFunc2Args) {

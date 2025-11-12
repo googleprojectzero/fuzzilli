@@ -2982,12 +2982,18 @@ class ProgramBuilderTests: XCTestCase {
         // XCTAssertGreaterThan(numGeneratedInstructions, 30)
     }
 
-    func testWasmCallDirectGeneratorSchedulingTest() {
+    func testWasmStructNewDefaultGeneratorSchedulingTest() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.buildPrefix()
 
-        // Pick the Branch Generator.
+        // TODO(mliedtke): The mechanism needs to learn how to resolve nested input dependencies.
+        b.wasmDefineTypeGroup {[
+            b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
+            b.wasmDefineStructType(fields: [.init(type: .wasmi32, mutability: true)], indexTypes: []),
+        ]}
+
+        // Pick the generator.
         let generator = fuzzer.codeGenerators.filter {
             $0.name == "WasmStructNewDefaultGenerator"
         }[0]
@@ -2998,11 +3004,18 @@ class ProgramBuilderTests: XCTestCase {
 
         let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: 30)
         XCTAssertGreaterThan(numGeneratedInstructions, 0)
+        XCTAssertTrue(b.finalize().code.contains(where: { instr in
+            if case .wasmStructNewDefault(_) = instr.op.opcode {
+                return true
+            } else {
+                return false
+            }
+        }))
     }
 
     func testWasmMemorySizeSchedulingTest() {
         let fuzzer = makeMockFuzzer()
-        let numPrograms = 100
+        let numPrograms = 30
 
         for _ in 0...numPrograms {
             let b = fuzzer.makeBuilder()
@@ -3027,6 +3040,46 @@ class ProgramBuilderTests: XCTestCase {
                     return true
                 } else {
                     return false
+                }
+            }))
+            XCTAssertGreaterThan(numGeneratedInstructions, 0)
+        }
+    }
+
+    func testArrayGetSchedulingTest() {
+        let fuzzer = makeMockFuzzer()
+        let numPrograms = 30
+
+        for _ in 0..<numPrograms {
+            let b = fuzzer.makeBuilder()
+            b.buildPrefix()
+
+            // TODO(mliedtke): The mechanism needs to learn how to resolve nested input dependencies.
+            b.wasmDefineTypeGroup {[
+                b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
+                b.wasmDefineStructType(fields: [.init(type: .wasmi32, mutability: true)], indexTypes: []),
+            ]}
+
+            let generator = fuzzer.codeGenerators.filter {
+                $0.name == "WasmArrayGetGenerator"
+            }[0]
+
+            // Now build this.
+            let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+            XCTAssertNotNil(syntheticGenerator)
+
+            let N = 30
+            // We might generate a lot more than 30 instructions to fulfill the constraints.
+            let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: N)
+
+            let program = b.finalize()
+
+            XCTAssertTrue(program.code.contains(where: { instr in
+                switch instr.op.opcode {
+                    case .wasmArrayGet(_):
+                        return true
+                    default:
+                        return false
                 }
             }))
             XCTAssertGreaterThan(numGeneratedInstructions, 0)

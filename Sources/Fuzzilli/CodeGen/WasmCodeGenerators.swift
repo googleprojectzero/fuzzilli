@@ -100,11 +100,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         },
     ]),
 
-    // TODO: refine this `produces` annotation?
     CodeGenerator(
         "WasmArrayTypeGenerator",
         inContext: .single(.wasmTypeGroup),
-        produces: [.wasmTypeDef()]
+        producesComplex: [.init(.wasmTypeDef(), .IsWasmArray)]
     ) { b in
         let mutability = probability(0.75)
         if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
@@ -126,6 +125,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    // TODO(mliedtke): Refine this `produces` annotation.
     CodeGenerator("WasmStructTypeGenerator", inContext: .single(.wasmTypeGroup), produces: [.wasmTypeDef()]) { b in
         var indexTypes: [Variable] = []
         let fields = (0..<Int.random(in: 0...10)).map { _ in
@@ -133,9 +133,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
                 probability(0.25)
             {
-                let nullability =
-                    b.type(of: elementType).wasmTypeDefinition!.description
-                    == .selfReference || probability(0.5)
+                // TODO(mliedtke): Allow non-nullable reference types. Right now we can't do this as
+                // the WasmStructNewGenerator might then fail to generate a struct.
+                let nullability = true
                 indexTypes.append(elementType)
                 type = .wasmRef(.Index(), nullability: nullability)
             } else {
@@ -151,6 +151,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         b.wasmDefineStructType(fields: fields, indexTypes: indexTypes)
     },
 
+    // TODO(mliedtke): Refine this `produces` annotation.
     CodeGenerator(
         "WasmSignatureTypeGenerator",
         inContext: .single(.wasmTypeGroup),
@@ -193,7 +194,8 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "WasmArrayNewGenerator",
         inContext: .single(.wasmFunction),
-        inputs: .required(.wasmTypeDef())
+        inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmArray)),
+        producesComplex: [.init(.anyNonNullableIndexRef, .IsWasmArray)]
     ) { b, arrayType in
         if let typeDesc = b.type(of: arrayType).wasmTypeDefinition?.description
             as? WasmArrayTypeDescription
@@ -208,6 +210,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 function.wasmArrayNewDefault(
                     arrayType: arrayType,
                     size: function.consti32(Int32(b.randomSize(upTo: 0x1000))))
+            } else {
+                // Not defaultable and doesn't have an element available, so construct empty array.
+                function.wasmArrayNewFixed(arrayType: arrayType, elements: [])
             }
         }
     },
@@ -231,13 +236,15 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     // We use false nullability so we do not invoke null traps.
     CodeGenerator(
         "WasmArrayGetGenerator", inContext: .single(.wasmFunction),
-        inputs: .required(.anyNonNullableIndexRef)
+        inputs: .requiredComplex(.init(.anyNonNullableIndexRef, .IsWasmArray))
     ) { b, array in
         guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind
         else {
             fatalError("unreachable: array.get input not an Index")
         }
-        if !(desc.get() is WasmArrayTypeDescription) { return }
+        if !(desc.get() is WasmArrayTypeDescription) {
+            fatalError("unreachable: array.get input not an array")
+        }
         let function = b.currentWasmModule.currentWasmFunction
         // TODO(mliedtke): Track array length and use other indices as well.
         let index = function.consti32(0)
@@ -268,7 +275,8 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     // Right now we cannot do this because we need a typedef that is defaultable.
     CodeGenerator(
         "WasmStructNewDefaultGenerator", inContext: .single(.wasmFunction),
-        inputs: .required(.wasmTypeDef()), produces: []
+        inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmStruct)),
+        producesComplex: [.init(.anyNonNullableIndexRef, .IsWasmStruct)]
     ) { b, structType in
         guard
             let typeDesc = b.type(of: structType).wasmTypeDefinition?

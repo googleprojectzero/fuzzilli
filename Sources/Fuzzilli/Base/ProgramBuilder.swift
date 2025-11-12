@@ -770,8 +770,8 @@ public class ProgramBuilder {
             (.wasmTypeDef(), {
                 // Call into the WasmTypeGroup generator (or other that provide a .wasmTypeDef)
                 let generators = self.fuzzer.codeGenerators.filter { gen in
-                    gen.produces.contains { type in
-                        type.Is(.wasmTypeDef())
+                    gen.produces.contains { produces in
+                        produces.type.Is(.wasmTypeDef())
                     }
                 }
                 let _ = self.complete(generator: generators.randomElement(), withBudget: 5)
@@ -862,8 +862,8 @@ public class ProgramBuilder {
                     // Right now only use generators that require a single context.
                     $0.parts.last!.requiredContext.isSingle &&
                     $0.parts.last!.requiredContext.satisfied(by: self.context) &&
-                    $0.parts.last!.produces.contains(where: { producedType in
-                        producedType.Is(type)
+                    $0.parts.last!.produces.contains(where: { produces in
+                        produces.type.Is(type)
                     })
                 })
                 if generators.count > 0 {
@@ -1798,14 +1798,14 @@ public class ProgramBuilder {
         struct BuildAction {
             var name: String
             var outcome = ActionOutcome.started
-            var produces: [ILType]
+            var produces: [GeneratorStub.Constraint]
         }
 
         var pendingActions: Stack<BuildAction> = Stack()
         var actions = [(BuildAction, Int)]()
         var indent = 0
 
-        mutating func startAction(_ actionName: String, produces: [ILType]) {
+        mutating func startAction(_ actionName: String, produces: [GeneratorStub.Constraint]) {
             let action = BuildAction(name: actionName, produces: produces)
             // Mark this action as `.started`.
             actions.append((action, indent))
@@ -1820,16 +1820,14 @@ public class ProgramBuilder {
             finishedAction.outcome = .success
             actions.append((finishedAction, indent))
             #if DEBUG
-            // Now Check that we've seen these new types.
-            for t in finishedAction.produces {
-                if !newlyCreatedVariableTypes.contains(where: {
-                    $0.Is(t)
-                }) {
+            // Now Check that we have variables that match the the specified productions.
+            for requirement in finishedAction.produces {
+                if !newlyCreatedVariableTypes.contains(where: requirement.fulfilled) {
                     var fatalErrorString = ""
                     fatalErrorString += "Action: \(finishedAction.name)\n"
                     fatalErrorString += "Action guaranteed it would produce: \(finishedAction.produces)\n"
                     fatalErrorString += "\(getLogString())\n"
-                    fatalErrorString += "newlyCreatedVariableTypes: \(newlyCreatedVariableTypes) does not contain expected type \(t)"
+                    fatalErrorString += "newlyCreatedVariableTypes: \(newlyCreatedVariableTypes) does not contain anything matching \(requirement)"
                     fatalError(fatalErrorString)
                 }
             }
@@ -2113,31 +2111,29 @@ public class ProgramBuilder {
         var numberOfGeneratedInstructions = 0
 
         // Calculate all input requirements of this CodeGenerator.
-        let inputTypes = Set(generator.parts.reduce([]) { res, gen in
-            return res + gen.inputs.types
+        let inputRequirements = Set(generator.parts.reduce([]) { res, gen in
+            return res + gen.inputs.constraints
         })
 
-        var availableTypes = inputTypes.filter {
-            randomVariable(ofType: $0) != nil
+        var fulfilledRequirements = inputRequirements.filter { requirement in
+            findVariable {requirement.fulfilled(by: self.type(of: $0))} != nil
         }
 
         // Add the current context to the seen Contexts as well.
         var seenContexts: [Context] = [context]
 
-        let contextsAndTypes = generator.parts.map { ($0.providedContext, $0.inputs.types) }
+        let contextsAndRequirements = generator.parts.map { ($0.providedContext, $0.inputs.constraints) }
 
         // Check if the can be produced along this generator, otherwise we need to bail.
-        for (contexts, types) in contextsAndTypes {
+        for (contexts, requirements) in contextsAndRequirements {
             // We've seen the current context.
             for context in contexts {
                 seenContexts.append(context)
             }
 
-            for type in types {
+            for requirement in requirements {
                 // If we don't have the type available, check if we can produce it in the current context or a seen context.
-                if !availableTypes.contains(where: {
-                    type.Is($0)
-                }) {
+                if !fulfilledRequirements.contains(where: requirement.fulfilled) {
                     // Check if we have generators that can produce the type reachable from this context.
                     let reachableContexts: Context = seenContexts.reduce(Context.empty) { res, ctx in [res, fuzzer.contextGraph.getReachableContexts(from: ctx).reduce(Context.empty) { res, ctx in [res, ctx]}]
                     }
@@ -2151,17 +2147,17 @@ public class ProgramBuilder {
 
                     // Filter to see if they produce this type. Crucially to avoid dependency cycles, these also need to be valuegenerators.
                     let canProduceThisType = callableGenerators.contains(where: { generator in
-                        generator.produces.contains(where: { $0.Is(type) })
+                        generator.produces.contains(where: { requirement.fulfilled(by: $0) })
                     })
 
                     // We cannot run if this is false.
                     if !canProduceThisType {
                         // TODO(cffsmith): track some statistics on how often this happens.
-                        buildLog?.reportFailure(reason: "Cannot produce type \(type) starting in original context \(context).")
+                        buildLog?.reportFailure(reason: "Cannot produce type \(requirement) starting in original context \(context).")
                         return 0
                     } else {
                         // Mark the type as available.
-                        availableTypes.insert(type)
+                        fulfilledRequirements.insert(requirement)
                     }
                 }
             }
@@ -2169,7 +2165,7 @@ public class ProgramBuilder {
 
         // Try to create the types that we need for this generator.
         // At this point we've guaranteed that we can produce the types somewhere along the yield points of this generator.
-        createRequiredInputVariables(forTypes: inputTypes)
+        createRequiredInputVariables(for: inputRequirements)
 
         // Push the remaining stubs, we need to call them to close all Contexts properly.
         for part in generator.tail.reversed() {
@@ -2191,7 +2187,7 @@ public class ProgramBuilder {
         while scheduled.count > depth {
             let codeSizePre = code.count
             // Check if we need to or can create types here.
-            createRequiredInputVariables(forTypes: inputTypes)
+            createRequiredInputVariables(for: inputRequirements)
             // Build into the block.
             buildRecursive(n: budgetPerYieldPoint)
             // Call the next scheduled stub.
@@ -2215,8 +2211,9 @@ public class ProgramBuilder {
     }
 
     // Todo, the context graph could also find ideal paths that allow type creation.
-    private func createRequiredInputVariables(forTypes types: Set<ILType>) {
-        for type in types {
+    private func createRequiredInputVariables(for requirements: Set<GeneratorStub.Constraint>) {
+        for requirement in requirements {
+            let type = requirement.type
             if type.Is(.jsAnything) && context.contains(.javascript) {
                 let _ = findOrGenerateType(type)
             } else {
@@ -2224,13 +2221,12 @@ public class ProgramBuilder {
                     // Check if we can produce it with findOrGenerateWasmVar
                     let _ = currentWasmFunction.generateRandomWasmVar(ofType: type)
                 }
-                if randomVariable(ofType: type) == nil {
+                if (findVariable {requirement.fulfilled(by: self.type(of: $0))} == nil) {
+
                     // Check for other CodeGenerators that can produce the given type in this context.
                     let usableGenerators = fuzzer.codeGenerators.filter {
                         $0.requiredContext.isSubset(of: context) &&
-                        $0.produces.contains {
-                            $0.Is(type)
-                        }
+                        $0.produces.contains(where: requirement.fulfilled)
                     }
 
                     // Cannot build type here.
@@ -2344,18 +2340,18 @@ public class ProgramBuilder {
         switch generator.inputs.mode {
         case .loose:
             // Find inputs that are probably compatible with the desired input types using randomVariable(forUseAs:)
-            inputs = generator.inputs.types.map(randomVariable(forUseAs:))
+            inputs = generator.inputs.constraints.map {randomVariable(forUseAs: $0.type)}
 
         case .strict:
             // Find inputs of the required type using randomVariable(ofType:)
-            for inputType in generator.inputs.types {
-                guard let input = randomVariable(ofType: inputType) else {
+            for requirement in generator.inputs.constraints {
+                guard let input = (findVariable {requirement.fulfilled(by: self.type(of: $0))}) else {
                     // Cannot run this generator
                     if generator.providedContext != [] {
                         fatalError("This generator is supposed to provide a context but cannot as we've failed to find the necessary inputs.")
                     }
                     // This early return also needs to report a failure.
-                    buildLog?.reportFailure(reason: "Cannot find variable that satifies input constraints \(inputType).")
+                    buildLog?.reportFailure(reason: "Cannot find variable that satifies input constraints \(requirement.type).")
                     return 0
                 }
                 inputs.append(input)
