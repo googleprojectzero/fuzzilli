@@ -462,15 +462,16 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = probability(0.5) ? .parameters(n: 0) : b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            b.emit(
-                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil))
+            let f = b.emit(
+                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil)).output
+            b.runtimeData.push("functionArgsAccess", f)
             b.loadArguments()
         },
         GeneratorStub("FunctionWithArgumentsAccessEndGenerator", inContext: .single([.javascript, .subroutine])) { b in
             // Ideally we would like to return the arguments Variable from above here.
             b.doReturn(b.randomJsVariable())
-            let f = b.lastFunctionVariable
             b.emit(EndPlainFunction())
+            let f = b.runtimeData.pop("functionArgsAccess")
             let args = b.randomJsVariables(n: Int.random(in: 0...5))
             b.callFunction(f, withArgs: args)
         },
@@ -1200,13 +1201,14 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            b.emit(
-                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil))
+            let f = b.emit(
+                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil)).output
+            b.runtimeData.push("plainFunction", f)
         },
         GeneratorStub("PlainFunctionEndGenerator", inContext: .single([.javascript, .subroutine])) { b in
             b.doReturn(b.randomJsVariable())
-            let f = b.lastFunctionVariable
             b.emit(EndPlainFunction())
+            let f = b.runtimeData.pop("plainFunction")
             let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
             b.callFunction(f, withArgs: arguments, guard: !matches)
         },
@@ -1219,14 +1221,15 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            b.emit(
-                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil))
+            let f = b.emit(
+                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil)).output
+            b.runtimeData.push("strictFunction", f)
             b.directive("use strict")
         },
         GeneratorStub("StrictModeFunctionEndGenerator", inContext: .single([.javascript, .subroutine])) { b in
             b.doReturn(b.randomJsVariable())
-            let f = b.lastFunctionVariable
             b.emit(EndPlainFunction())
+            let f = b.runtimeData.pop("strictFunction")
             let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
             b.callFunction(f, withArgs: arguments, guard: !matches)
         },
@@ -1259,8 +1262,9 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            b.emit(
-                BeginGeneratorFunction(parameters: randomParameters.parameters, functionName: nil))
+            let f = b.emit(
+                BeginGeneratorFunction(parameters: randomParameters.parameters, functionName: nil)).output
+            b.runtimeData.push("generatorFunction", f)
         },
         GeneratorStub("GeneratorFunctionEndGenerator", inContext: .single([.generatorFunction, .subroutine, .javascript])) { b in
             if probability(0.5) {
@@ -1272,8 +1276,8 @@ public let CodeGenerators: [CodeGenerator] = [
                 b.yieldEach(array)
             }
             b.doReturn(b.randomJsVariable())
-            let f = b.lastFunctionVariable
             b.emit(EndGeneratorFunction())
+            let f = b.runtimeData.pop("generatorFunction")
             let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
             b.callFunction(f, withArgs: arguments, guard: !matches)
         },
@@ -1284,14 +1288,15 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            b.emit(
-                BeginAsyncFunction(parameters: randomParameters.parameters, functionName: nil))
+            let f = b.emit(
+                BeginAsyncFunction(parameters: randomParameters.parameters, functionName: nil)).output
+            b.runtimeData.push("asyncFunction", f)
         },
         GeneratorStub("AsyncFunctionEndGenerator", inContext: .single([.javascript, .subroutine, .asyncFunction])) { b in
             b.await(b.randomJsVariable())
             b.doReturn(b.randomJsVariable())
-            let f = b.lastFunctionVariable
             b.emit(EndAsyncFunction())
+            let f = b.runtimeData.pop("asyncFunction")
             let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
             b.callFunction(f, withArgs: arguments, guard: !matches)
         },
@@ -1335,9 +1340,10 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            b.emit(
+            let f = b.emit(
                 BeginAsyncGeneratorFunction(
-                    parameters: randomParameters.parameters, functionName: nil))
+                    parameters: randomParameters.parameters, functionName: nil)).output
+            b.runtimeData.push("asyncGeneratorFunction", f)
         },
         GeneratorStub("AsyncGeneratorFunctionEndGenerator", inContext: .single([.javascript, .subroutine, .generatorFunction, .asyncFunction])) { b in
             b.await(b.randomJsVariable())
@@ -1350,8 +1356,8 @@ public let CodeGenerators: [CodeGenerator] = [
                 b.yieldEach(array)
             }
             b.doReturn(b.randomJsVariable())
-            let f = b.lastFunctionVariable
             b.emit(EndAsyncGeneratorFunction())
+            let f = b.runtimeData.pop("asyncGeneratorFunction")
             let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
             b.callFunction(f, withArgs: arguments, guard: !matches)
         },
@@ -2519,13 +2525,13 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            b.emit(
-                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil))
-
+            let handler = b.emit(
+                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil)).output
+            b.runtimeData.push("promiseHandler", handler)
         },
         GeneratorStub("PromiseEndGenerator", inContext: .single([.subroutine, .javascript])) { b in
-            let handler = b.lastFunctionVariable
             b.emit(EndPlainFunction())
+            let handler = b.runtimeData.pop("promiseHandler")
             let Promise = b.createNamedVariable(forBuiltin: "Promise")
             b.hide(Promise)  // We want the promise to be used by following code generators, not the Promise constructor
             b.construct(Promise, withArgs: [handler])
@@ -2579,11 +2585,12 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("EvalGenerator", [
         GeneratorStub("EvalBeginGenerator", provides: [.javascript]) { b in
-            b.emit(BeginCodeString())
+            let code = b.emit(BeginCodeString()).output
+            b.runtimeData.push("codeToEval", code)
         },
         GeneratorStub("EvalEndGenerator") { b in
-            let code = b.lastFunctionVariable
             b.emit(EndCodeString())
+            let code = b.runtimeData.pop("codeToEval")
             let eval = b.createNamedVariable(forBuiltin: "eval")
             b.callFunction(eval, withArgs: [code])
         },

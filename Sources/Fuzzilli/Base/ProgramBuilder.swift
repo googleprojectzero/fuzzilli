@@ -134,17 +134,6 @@ public class ProgramBuilder {
     /// literals is created inside a method/getter/setter of another object literals.
     private var activeObjectLiterals = Stack<ObjectLiteral>()
 
-    /// If we open a new function, we save its Variable here.
-    /// This allows CodeGenerators to refer to their Variable after they emit the
-    /// `End*Function` operation. This allows them to call the function after closing it.
-    /// Since they cannot refer to the Variable as it usually is created in the head part of the Generator.
-    private var lastFunctionVariables = Stack<Variable>()
-
-    /// Just a getter to get the top most, i.e. last function Variable.
-    public var lastFunctionVariable: Variable  {
-        return lastFunctionVariables.top
-    }
-
     /// When building object literals, the state for the current literal is exposed through this member and
     /// can be used to add fields to the literal or to determine if some field already exists.
     public var currentObjectLiteral: ObjectLiteral {
@@ -4883,23 +4872,6 @@ public class ProgramBuilder {
              .wasmEndTryTable(_),
              .wasmEndBlock(_):
             activeWasmModule!.blockSignatures.pop()
-        case .beginPlainFunction(_),
-             .beginArrowFunction(_),
-             .beginAsyncArrowFunction(_),
-             .beginAsyncFunction(_),
-             .beginAsyncGeneratorFunction(_),
-             .beginCodeString(_),
-             .beginGeneratorFunction(_):
-            assert(instr.numOutputs == 1)
-            lastFunctionVariables.push(instr.output)
-        case .endPlainFunction(_),
-             .endArrowFunction(_),
-             .endAsyncArrowFunction(_),
-             .endAsyncFunction(_),
-             .endAsyncGeneratorFunction(_),
-             .endCodeString(_),
-             .endGeneratorFunction(_):
-            lastFunctionVariables.pop()
 
         default:
             assert(!instr.op.requiredContext.contains(.objectLiteral))
