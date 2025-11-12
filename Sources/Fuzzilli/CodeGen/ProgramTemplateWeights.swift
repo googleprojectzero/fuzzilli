@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 /// Default weights for the builtin program templates.
 public let programTemplateWeights = [
     "Codegen100":            2,
@@ -26,6 +27,4 @@ public let programTemplateWeights = [
     "JITTrickyFunction":     2,
     "JSONFuzzer":            1,
     "WasmReturnCalls":       2,
-	"MaglevClosureEscapeNumericField": 2,
-	"KeyedStore_ElementsTransition_Stress": 2,
 ]
