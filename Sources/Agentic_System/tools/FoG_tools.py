@@ -1090,51 +1090,147 @@ def write_program_template(program_template: str) -> str:
     except Exception as e:
         return f"Error writing to ProgramTemplateWeights.swift: {e}"
 
+# @tool
+# def edit_template_by_regex( 
+#     search_pattern: str, 
+#     new_content: str, 
+#     start_line: int = None, 
+#     end_line: int = None,
+#     mode: Literal["replace", "insert_after", "insert_before"] = "replace"
+# ) -> str:
+#     """
+#     Performs precise, line-based editing of ProgramTemplates.swift using a regular expression
+#     to locate the target insertion or replacement point, optionally limited by line numbers.
+
+#     Args:
+#         search_pattern (str): The regex pattern to find the target line. The pattern
+#                               must match the ENTIRE line for 'replace' mode, or any part
+#                               of the line for 'insert_after'/'insert_before' modes.
+#         new_content (str): The content to be inserted or replaced.
+#         mode (Literal["replace", "insert_after", "insert_before"]):
+#             - 'replace': Replace the line that matches the search_pattern with 'new_content'.
+#             - 'insert_after': Insert 'new_content' immediately after the matching line.
+#             - 'insert_before': Insert 'new_content' immediately before the matching line.
+#         start_line (int): The 1-based line number to start the search from (inclusive).
+#         end_line (int): The 1-based line number to end the search at (inclusive).
+
+#     Returns:
+#         str: A status message indicating success or failure in editing the ProgramTemplates.swift file.
+#     """
+#     valid, error = is_valid_regex(search_pattern)
+#     if not valid:
+#         return f"Invalid regex passed in as pattern with error: {error}"
+
+#     filepath = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplates.swift")
+#     if not os.path.exists(filepath):
+#         return f"Error: File not found at {filepath}"
+
+#     try:
+#         with open(filepath, 'r') as f:
+#             lines = f.readlines()
+#     except Exception as e:
+#         return f"Error reading file {filepath}: {e}"
+
+#     if not (start_line and end_line):
+#         return "Error: Must pass in a start_line AND end_line to limit the scope of your replacements."
+
+#     total_lines = len(lines)
+#     if start_line < 1 or start_line > total_lines:
+#         return f"Error: Invalid start_line ({start_line}). ProgramTemplates.swift has {total_lines} lines. start_line must be between 1 and {total_lines}"
+
+#     if end_line < 1 or end_line > total_lines:
+#         return f"Error: Invalid end_line ({end_line}). ProgramTemplates.swift has {total_lines} lines. end_line must be between 1 and {total_lines}"
+    
+#     if start_line > end_line:
+#         return f"Error: start_line ({start_line}) cannot be greater than end_line ({end_line})"
+
+#     # Pattern compilation is already checked by is_valid_regex, but kept for strictness
+#     try:
+#         pattern = re.compile(search_pattern)
+#     except re.error as e:
+#         return f"Error: Internal regex compilation failed: {e}"
+
+#     new_lines = []
+#     found_match = False
+#     match_count = 0
+
+#     if new_content and not new_content.endswith('\n'):
+#         new_content += '\n'
+
+#     for i, line in enumerate(lines):
+#         # Line numbers are 1-based for the user/agent
+#         line_number = i + 1 
+#         is_in_range = True
+
+#         if start_line is not None and line_number < start_line:
+#             is_in_range = False
+#         if end_line is not None and line_number > end_line:
+#             is_in_range = False 
+        
+#         if is_in_range and pattern.search(line):
+#             found_match = True
+#             match_count += 1
+#             if mode == "insert_before":
+#                 new_lines.append(new_content)
+#                 new_lines.append(line)
+#             elif mode == "insert_after":
+#                 new_lines.append(line)
+#                 new_lines.append(new_content)
+#             elif mode == "replace":
+#                 # Partial replacement: replace the matched substring with new_content.
+#                 modified_line = pattern.sub(new_content.strip(), line)
+#                 new_lines.append(modified_line)
+#         else:
+#             new_lines.append(line)
+
+#     if match_count == 0:
+#         range_str = f" in line range {start_line}-{end_line}" if start_line or end_line else ""
+#         return f"Error: Search pattern '{search_pattern}' not found{range_str} in {filepath}. No changes made."
+
+#     try:
+#         with open(filepath, 'w') as f:
+#             f.writelines(new_lines)
+#         return f"OK: Successfully updated {filepath} using mode '{mode}' and pattern '{search_pattern}'. {match_count} matches applied."
+#     except Exception as e:
+#         return f"Error writing to file {filepath}: {e}"
+
 @tool
-def edit_template_by_regex( 
-    search_pattern: str, 
-    new_content: str, 
-    start_line: int = None, 
-    end_line: int = None,
-    mode: Literal["replace", "insert_after", "insert_before"] = "replace"
+def edit_template_by_diff(
+    old_text: str,
+    new_text: str,
+    start_line: int = None,
+    end_line: int = None
 ) -> str:
     """
-    Performs precise, line-based editing of ProgramTemplates.swift using a regular expression
-    to locate the target insertion or replacement point, optionally limited by line numbers.
+    Performs precise, line-based editing of ProgramTemplates.swift by finding and replacing
+    exact text matches, optionally limited by line numbers.
 
     Args:
-        search_pattern (str): The regex pattern to find the target line. The pattern
-                              must match the ENTIRE line for 'replace' mode, or any part
-                              of the line for 'insert_after'/'insert_before' modes.
-        new_content (str): The content to be inserted or replaced.
-        mode (Literal["replace", "insert_after", "insert_before"]):
-            - 'replace': Replace the line that matches the search_pattern with 'new_content'.
-            - 'insert_after': Insert 'new_content' immediately after the matching line.
-            - 'insert_before': Insert 'new_content' immediately before the matching line.
+        old_text (str): The exact text to find and replace. Must match exactly including
+                       whitespace and indentation. Can span multiple lines.
+        new_text (str): The text to replace it with. Use empty string to delete.
         start_line (int): The 1-based line number to start the search from (inclusive).
         end_line (int): The 1-based line number to end the search at (inclusive).
 
     Returns:
         str: A status message indicating success or failure in editing the ProgramTemplates.swift file.
     """
-    valid, error = is_valid_regex(search_pattern)
-    if not valid:
-        return f"Invalid regex passed in as pattern with error: {error}"
-
     filepath = os.path.join(SWIFT_PATH, "CodeGen", "ProgramTemplates.swift")
     if not os.path.exists(filepath):
         return f"Error: File not found at {filepath}"
 
     try:
         with open(filepath, 'r') as f:
-            lines = f.readlines()
+            content = f.read()
     except Exception as e:
         return f"Error reading file {filepath}: {e}"
+
+    lines = content.split('\n')
+    total_lines = len(lines)
 
     if not (start_line and end_line):
         return "Error: Must pass in a start_line AND end_line to limit the scope of your replacements."
 
-    total_lines = len(lines)
     if start_line < 1 or start_line > total_lines:
         return f"Error: Invalid start_line ({start_line}). ProgramTemplates.swift has {total_lines} lines. start_line must be between 1 and {total_lines}"
 
@@ -1144,56 +1240,32 @@ def edit_template_by_regex(
     if start_line > end_line:
         return f"Error: start_line ({start_line}) cannot be greater than end_line ({end_line})"
 
-    # Pattern compilation is already checked by is_valid_regex, but kept for strictness
-    try:
-        pattern = re.compile(search_pattern)
-    except re.error as e:
-        return f"Error: Internal regex compilation failed: {e}"
+    # Extract the section to search within (convert to 0-based indexing)
+    section_lines = lines[start_line - 1:end_line]
+    section_content = '\n'.join(section_lines)
 
-    new_lines = []
-    found_match = False
-    match_count = 0
+    # Check if old_text exists in the section
+    if old_text not in section_content:
+        return f"Error: Could not find exact match for old_text in line range {start_line}-{end_line}. No changes made."
 
-    if new_content and not new_content.endswith('\n'):
-        new_content += '\n'
+    # Count occurrences to ensure it's unique
+    occurrence_count = section_content.count(old_text)
+    if occurrence_count > 1:
+        return f"Error: Found {occurrence_count} occurrences of old_text in line range {start_line}-{end_line}. Please make old_text more specific to match exactly once."
 
-    for i, line in enumerate(lines):
-        # Line numbers are 1-based for the user/agent
-        line_number = i + 1 
-        is_in_range = True
-
-        if start_line is not None and line_number < start_line:
-            is_in_range = False
-        if end_line is not None and line_number > end_line:
-            is_in_range = False 
-        
-        if is_in_range and pattern.search(line):
-            found_match = True
-            match_count += 1
-            if mode == "insert_before":
-                new_lines.append(new_content)
-                new_lines.append(line)
-            elif mode == "insert_after":
-                new_lines.append(line)
-                new_lines.append(new_content)
-            elif mode == "replace":
-                # Partial replacement: replace the matched substring with new_content.
-                modified_line = pattern.sub(new_content.strip(), line)
-                new_lines.append(modified_line)
-        else:
-            new_lines.append(line)
-
-    if match_count == 0:
-        range_str = f" in line range {start_line}-{end_line}" if start_line or end_line else ""
-        return f"Error: Search pattern '{search_pattern}' not found{range_str} in {filepath}. No changes made."
+    # Perform the replacement in the section
+    updated_section = section_content.replace(old_text, new_text)
+    
+    # Reconstruct the full file content
+    updated_lines = lines[:start_line - 1] + updated_section.split('\n') + lines[end_line:]
+    updated_content = '\n'.join(updated_lines)
 
     try:
         with open(filepath, 'w') as f:
-            f.writelines(new_lines)
-        return f"OK: Successfully updated {filepath} using mode '{mode}' and pattern '{search_pattern}'. {match_count} matches applied."
+            f.write(updated_content)
+        return f"OK: Successfully updated {filepath}. Replaced text in line range {start_line}-{end_line}."
     except Exception as e:
         return f"Error writing to file {filepath}: {e}"
-
 
 @tool 
 def compile_program_template(template: str) -> str:
