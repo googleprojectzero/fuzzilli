@@ -1225,7 +1225,7 @@ def edit_template_by_diff(
     except Exception as e:
         return f"Error reading file {filepath}: {e}"
 
-    lines = content.split('\n')
+    lines = content.splitlines()
     total_lines = len(lines)
 
     if not (start_line and end_line):
@@ -1240,25 +1240,23 @@ def edit_template_by_diff(
     if start_line > end_line:
         return f"Error: start_line ({start_line}) cannot be greater than end_line ({end_line})"
 
-    # Extract the section to search within (convert to 0-based indexing)
     section_lines = lines[start_line - 1:end_line]
     section_content = '\n'.join(section_lines)
 
-    # Check if old_text exists in the section
     if old_text not in section_content:
         return f"Error: Could not find exact match for old_text in line range {start_line}-{end_line}. No changes made."
 
-    # Count occurrences to ensure it's unique
     occurrence_count = section_content.count(old_text)
     if occurrence_count > 1:
         return f"Error: Found {occurrence_count} occurrences of old_text in line range {start_line}-{end_line}. Please make old_text more specific to match exactly once."
 
-    # Perform the replacement in the section
     updated_section = section_content.replace(old_text, new_text)
     
-    # Reconstruct the full file content
     updated_lines = lines[:start_line - 1] + updated_section.split('\n') + lines[end_line:]
     updated_content = '\n'.join(updated_lines)
+    
+    if content.endswith('\n'):
+        updated_content += '\n'
 
     try:
         with open(filepath, 'w') as f:
