@@ -85,7 +85,7 @@ class Father(Agent):
                 list_program_templates,
                 web_search,
             ],
-            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key, temperature=0.0),
+            model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[],
             max_steps=100,
             planning_interval=25,
@@ -213,7 +213,7 @@ class Father(Agent):
                 get_knowledge_doc,
                 list_program_templates,
             ],
-            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key, temperature=1.0),
+            model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             max_steps=30,
             planning_interval=None,
         )
