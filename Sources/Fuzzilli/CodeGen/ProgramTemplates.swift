@@ -99,13 +99,16 @@ public let ProgramTemplates = [
 
         let signature = b.type(of: f!).signature ?? Signature.forUnknownFunction
         // As we do not yet know what types we have in the Wasm module when we try to call this, let Fuzzilli know that it could potentially use all Wasm types here.
-        let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
+
+])
 
         var wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(signature, availableTypes: allWasmTypes)
         let wrapped = b.wrapSuspending(function: f!)
 
         let m = b.buildWasmModule { mod in
-            mod.addWasmFunction(with: [] => []) { fbuilder, _, _  in
+
+
+]) { fbuilder, _, _  in
                 // This will create a bunch of locals, which should create large (>4KB) frames.
                 if probability(0.02) {
                     for _ in 0..<1000 {
@@ -120,7 +123,8 @@ public let ProgramTemplates = [
                     fbuilder.wasmJsCall(function: wrapped, withArgs: args, withWasmSignature: wasmSignature)
                 }
                 b.build(n: 4)
-                return []
+
+]
             }
             if probability(0.2) {
                 b.build(n: 20)
@@ -148,33 +152,45 @@ public let ProgramTemplates = [
         let wasmTags = (0...Int.random(in: 0..<5)).map { _ in
             b.createWasmTag(parameterTypes: b.randomTagParameters())
         }
-        let tags = [b.createWasmJSTag()] + wasmTags
+
+] + wasmTags
         let tagToThrow = chooseUniform(from: wasmTags)
         let throwParamTypes = b.type(of: tagToThrow).wasmTagType!.parameters
         let tagToCatchForRethrow = chooseUniform(from: tags)
-        let catchBlockOutputTypes = b.type(of: tagToCatchForRethrow).wasmTagType!.parameters + [.wasmExnRef]
+
+]
 
         let module = b.buildWasmModule { wasmModule in
             // Wasm function that throws a tag, catches a tag (the same or a different one) to
             // rethrow it again (or another exnref if present).
-            wasmModule.addWasmFunction(with: [] => []) { function, label, args in
+
+
+]) { function, label, args in
                 b.build(n: 10)
-                let caughtValues = function.wasmBuildBlockWithResults(with: [] => catchBlockOutputTypes, args: []) { catchRefLabel, _ in
+
+
+]) { catchRefLabel, _ in
                     // TODO(mliedtke): We should probably allow mutations of try_tables to make
                     // these cases more generic. This would probably require being able to wrap
                     // things in a new block (so we can insert a target destination for a new catch
                     // with a matching signature) or to at least create a new tag for an existing
                     // block target. Either way, this is non-trivial.
-                    function.wasmBuildTryTable(with: [] => [], args: [tagToCatchForRethrow, catchRefLabel], catches: [.Ref]) { _, _ in
+
+
+
+
+]) { _, _ in
                         b.build(n: 10)
                         function.WasmBuildThrow(tag: tagToThrow, inputs: throwParamTypes.map(function.findOrGenerateWasmVar))
-                        return []
+
+]
                     }
                     return catchBlockOutputTypes.map(function.findOrGenerateWasmVar)
                 }
                 b.build(n: 10)
                 function.wasmBuildThrowRef(exception: b.randomVariable(ofType: .wasmExnRef)!)
-                return []
+
+]
             }
         }
 
@@ -182,7 +198,8 @@ public let ProgramTemplates = [
         b.buildTryCatchFinally {
             b.build(n: 10)
             // Call the exported wasm function.
-            b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(42)])
+
+])
             b.build(n: 5)
         } catchBody: { exception in
             // Do something, potentially using the `exception` thrown by wasm.
@@ -500,4 +517,164 @@ public let ProgramTemplates = [
         // Generate some more random code to (hopefully) use the parsed JSON in some interesting way.
         b.build(n: 25)
     },
+
+
+
+    b.buildPrefix()
+
+    // Load constructors and helpers
+    let Int32Array = b.createNamedVariable(forBuiltin: "Int32Array")
+    let Float64Array = b.createNamedVariable(forBuiltin: "Float64Array")
+    let Uint8Array = b.createNamedVariable(forBuiltin: "Uint8Array")
+    let Uint16Array = b.createNamedVariable(forBuiltin: "Uint16Array")
+    let ArrayBuffer = b.createNamedVariable(forBuiltin: "ArrayBuffer")
+    let ArrayCtor = b.createNamedVariable(forBuiltin: "Array")
+    let ObjectCtor = b.createNamedVariable(forBuiltin: "Object")
+    let print = b.createNamedVariable(forBuiltin: "print")
+
+    // Typed arrays
+    let t1 = b.construct(Int32Array, withArgs: [b.loadInt(64)])
+    let t2 = b.construct(Float64Array, withArgs: [b.loadInt(64)])
+    let t3 = b.construct(Uint8Array, withArgs: [b.loadInt(64)])
+
+    // Optional RAB/GSAB: create resizable ArrayBuffer and a Uint16Array view, tolerate lack of support
+    var t4: Variable? = nil
+    var rab: Variable? = nil
+    b.buildTryCatchFinally {
+        let options = b.createObject(with: [
+            "maxByteLength": b.loadInt(512),
+            "resizable": b.loadBool(true)
+        ])
+        rab = b.construct(ArrayBuffer, withArgs: [b.loadInt(256), options])
+        t4 = b.construct(Uint16Array, withArgs: [rab!, b.loadInt(0), b.loadInt(64)])
+    } catchBody: { _ in }
+
+    // Hot function f(ta, i, v): keyed store, named .length/.byteLength/.byteOffset loads, then keyed read with varied index
+    let f = b.buildPlainFunction(with: .parameters([.jsAnything, .jsAnything, .jsAnything])) { args in
+        let ta = args[0]
+        let i = args[1]
+        let v = args[2]
+
+        // Store ta[i] = v
+        b.setElement(i, of: ta, to: v)
+
+        // Named loads
+        let L = b.getProperty("length", of: ta)
+        let bl = b.getProperty("byteLength", of: ta)
+        let bo = b.getProperty("byteOffset", of: ta)
+
+        // Candidate indices: c = (L % 4) selects among {0, L-1, L, i}
+        let zero = b.loadInt(0)
+        let four = b.loadInt(4)
+        let Lm1 = b.binary(L, b.loadInt(1), with: .Sub)
+        let c = b.binary(L, four, with: .Mod)
+        let is0 = b.compare(c, with: b.loadInt(0), using: .equal)
+        let is1 = b.compare(c, with: b.loadInt(1), using: .equal)
+        let is2 = b.compare(c, with: b.loadInt(2), using: .equal)
+        let is3 = b.compare(c, with: b.loadInt(3), using: .equal)
+        var i2 = zero
+        b.buildIf(is0) { i2 = zero }
+        b.buildIf(is1) { i2 = Lm1 }
+        b.buildIf(is2) { i2 = L }
+        b.buildIf(is3) { i2 = i }
+
+        // Keyed load: ta[i2]
+        let read = b.getElement(i2, of: ta)
+
+        // Consume byteLength/byteOffset to avoid DCE and keep named path alive
+        let sum = b.binary(bl, bo, with: .Add)
+        b.callFunction(print, withArgs: [sum])
+
+        // Coerce to int32 with bitwise OR 0
+        let xi32 = b.binary(read, b.loadInt(0), with: .BitOr)
+
+        // Return array-like via new Array(xi32, L)
+        let ret = b.construct(ArrayCtor, withArgs: [xi32, L])
+        b.doReturn(ret)
+    }
+
+    // Phase 1: Warmup monomorphic on t1
+    let L1 = b.getProperty("length", of: t1)
+    b.buildRepeatLoop(n: 6000) { it in
+        let idx = b.binary(it, L1, with: .Mod)
+        var val = b.binary(it, b.loadInt(3), with: .Mod)
+        val = b.binary(val, b.loadInt(1), with: .Add)
+        b.callFunction(f, withArgs: [t1, idx, val])
+    }
+
+    // Boundary indices to trigger deopts
+    let Lm1_t1 = b.binary(L1, b.loadInt(1), with: .Sub)
+    b.callFunction(f, withArgs: [t1, Lm1_t1, b.loadInt(1)])
+    b.callFunction(f, withArgs: [t1, L1, b.loadInt(1)])
+    b.callFunction(f, withArgs: [t1, b.loadInt(-1), b.loadInt(1)])
+
+    // Phase 2: Morph feedback with Float64Array and Uint8Array
+    let L2 = b.getProperty("length", of: t2)
+    b.buildRepeatLoop(n: 256) { it in
+        let idx = b.binary(it, L2, with: .Mod)
+        let itMod2 = b.binary(it, b.loadInt(2), with: .Mod)
+        let isEven = b.compare(itMod2, with: b.loadInt(0), using: .equal)
+        var val2 = b.loadFloat(Double.nan)
+        b.buildIf(isEven) { val2 = b.loadFloat(Double.infinity) }
+        b.callFunction(f, withArgs: [t2, idx, val2])
+    }
+
+    let L3 = b.getProperty("length", of: t3)
+    b.buildRepeatLoop(n: 256) { it in
+        let idx = b.binary(it, L3, with: .Mod)
+        let m4 = b.binary(it, b.loadInt(4), with: .Mod)
+        let is0 = b.compare(m4, with: b.loadInt(0), using: .equal)
+        let is1 = b.compare(m4, with: b.loadInt(1), using: .equal)
+        let is2 = b.compare(m4, with: b.loadInt(2), using: .equal)
+        var val3 = b.loadFloat(Double.nan)
+        b.buildIf(is0) { val3 = b.loadFloat(1.5) }
+        b.buildIf(is1) { val3 = b.loadFloat(-0.0) }
+        b.buildIf(is2) { val3 = b.loadFloat(1099511627776.0) }
+        b.callFunction(f, withArgs: [t3, idx, val3])
+    }
+
+    // Megamorphic fallback: pass a non-typed receiver a few times, in try/catch to be safe
+    b.buildTryCatchFinally {
+        let o = b.construct(ObjectCtor, withArgs: [])
+        b.callFunction(f, withArgs: [o, b.loadInt(0), b.loadInt(1)])
+        b.callFunction(f, withArgs: [o, b.loadInt(1), b.loadInt(2)])
+        b.callFunction(f, withArgs: [o, b.loadInt(2), b.loadInt(3)])
+    } catchBody: { _ in }
+
+    // Prototype/own-property perturbation; tolerate failure
+    let s = b.construct(Uint8Array, withArgs: [b.loadInt(32)])
+    b.buildTryCatchFinally {
+        let getter = b.buildPlainFunction(with: .parameters([])) { _ in
+            b.doReturn(b.loadInt(7))
+        }
+        let desc = b.createObject(with: ["get": getter])
+        let Obj = b.createNamedVariable(forBuiltin: "Object")
+        b.callMethod("defineProperty", on: Obj, withArgs: [s, b.loadString("length"), desc])
+    } catchBody: { _ in }
+    b.callFunction(f, withArgs: [s, b.loadInt(0), b.loadInt(1)])
+    let sLen = b.getProperty("length", of: s)
+    b.callFunction(print, withArgs: [sLen])
+
+    // Optional RAB/GSAB path usage
+    if let t4var = t4, let rabvar = rab {
+        let L4 = b.getProperty("length", of: t4var)
+        let L4m1 = b.binary(L4, b.loadInt(1), with: .Sub)
+        b.callFunction(f, withArgs: [t4var, L4m1, b.loadInt(1)])
+        b.callFunction(f, withArgs: [t4var, L4, b.loadInt(1)])
+        b.buildTryCatchFinally {
+            b.callMethod("resize", on: rabvar, withArgs: [b.loadInt(512)])
+        } catchBody: { _ in }
+        let L4b = b.getProperty("length", of: t4var)
+        let L4b_m1 = b.binary(L4b, b.loadInt(1), with: .Sub)
+        b.callFunction(f, withArgs: [t4var, L4b_m1, b.loadInt(1)])
+    }
+
+    // Extra store coercion stress on integer typed arrays
+    b.callFunction(f, withArgs: [t1, b.loadInt(1), b.loadFloat(1.5)])
+    b.callFunction(f, withArgs: [t1, b.loadInt(2), b.loadFloat(-0.0)])
+    b.callFunction(f, withArgs: [t1, b.loadInt(3), b.loadFloat(1099511627776.0)])
+    b.callFunction(f, withArgs: [t3, b.loadInt(1), b.loadFloat(1.5)])
+    b.callFunction(f, withArgs: [t3, b.loadInt(2), b.loadFloat(-0.0)])
+    b.callFunction(f, withArgs: [t3, b.loadInt(3), b.loadFloat(Double.nan)])
+},
 ]

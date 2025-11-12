@@ -1230,20 +1230,38 @@ def compile_program_template(template: str) -> str:
 
 
 @tool 
-def execute_program_template(template_js_path: str) -> str:
+def execute_program_template(template_js_path: str, d8_flags: str) -> str:
     """
     Execute a JavaScript program generated from a program template
 
     Args:
         template_js_path (str): The path to the given JavaScript program generated from a program template
+        d8_flags (str): The command line arguments to be passed into d8
 
     Returns:
         str: The result of the excuting the program template's javascript
     """
-    #TODO: update D8_COMMON_FLAGS so compiler can better examine the ouput for success/get more info. Also update the STAGE 7 prompt in compiler.txt if this is done.
-    d8 = run_command(f"{D8_PATH} {D8_COMMON_FLAGS} {template_js_path}")
+    if "--allow-natives-syntax" not in d8_flags:
+        d8_flags += " --allow-natives-syntax"
+    d8 = run_command(f"{D8_PATH} {d8_flags} {template_js_path}")
     return f"Program execution result:\n{d8.stderr}\n{d8.stdout}"
 
+
+@tool
+def list_d8_flags(filter: str) -> str:
+    """
+    List available flags for running with d8.
+
+    Args:
+        filter (str): Filter that gets passed into grep to find specific flags
+    
+    Returns:
+        str: Available flags for running with d8 based on the filter
+    """
+    d8 = run_command(f'{D8_PATH} --help | grep -i "{filter}"')
+    return f"Available flags based on filter {filter}:\n{d8.stdout}"
+
+@tool
 def remove_old_javascript_programs(template_js_path: str) -> str:
     """
     Removes older, duplicated generated JavaScript programs from the directory.

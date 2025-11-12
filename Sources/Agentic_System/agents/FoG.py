@@ -65,8 +65,7 @@ class Father(Agent):
             planning_interval=None
         )
         self.agents['george_foreman'].prompt_templates["system_prompt"] = system_prompt
-
-
+        
         system_prompt=self.get_prompt("compiler.txt")
         self.agents['compiler'] = ToolCallingAgent(
             name="Compiler",
@@ -76,8 +75,8 @@ class Father(Agent):
                 swift_tree,
                 swift_ripgrep,
                 swift_read_file,
-                write_program_template,
-                edit_template_by_regex,
+                write_program_template,edit_template_by_r
+                edit_template_by_diff,
                 remove_program_template,
                 remove_program_template_weight,
                 compile_program_template,
@@ -85,6 +84,7 @@ class Father(Agent):
                 list_program_templates,
                 web_search,
                 remove_old_javascript_programs,
+                list_d8_flags,
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key),
             managed_agents=[],
@@ -212,6 +212,7 @@ class Father(Agent):
                 search_knowledge_base,
                 get_knowledge_doc,
                 list_program_templates,
+                list_d8_flags,
             ],
             model=LiteLLMModel(model_id="gpt-5", api_key=self.api_key),
             max_steps=30,

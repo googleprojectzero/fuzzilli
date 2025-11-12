@@ -47,7 +47,7 @@ if "fuzzillai" not in FUZZILLI_PATH:
     print(f"FUZZILLI_PATH is not a valid Fuzzilli path: {FUZZILLI_PATH}")
     sys.exit(0)
 
-D8_COMMON_FLAGS = "--allow-natives-syntax --experimental --experimental-fuzzing --expose-gc"
+D8_COMMON_FLAGS = "--allow-natives-syntax --experimental-fuzzing --expose-gc"
 
 # Try to import CFG tools, but don't fail if clang is not available
 try:
