@@ -1239,11 +1239,67 @@ def execute_program_template(template_js_path: str) -> str:
 
     Returns:
         str: The result of the excuting the program template's javascript
-
     """
     #TODO: update D8_COMMON_FLAGS so compiler can better examine the ouput for success/get more info. Also update the STAGE 7 prompt in compiler.txt if this is done.
     d8 = run_command(f"{D8_PATH} {D8_COMMON_FLAGS} {template_js_path}")
     return f"Program execution result:\n{d8.stderr}\n{d8.stdout}"
+
+def remove_old_javascript_programs(template_js_path: str) -> str:
+    """
+    Removes older, duplicated generated JavaScript programs from the directory.
+
+    It identifies all .js files that match the template name derived from 
+    template_js_path but have a different hash, leaving only the one specified.
+
+    Args:
+        template_js_path (str): The full path/filename of the JavaScript program 
+                                to KEEP (e.g., 'path/to/TemplateName-1234.js').
+    Returns:
+        str: A message indicating success, how many files were removed, or failure.
+    """
+    
+    dir_path = os.path.dirname(template_js_path)
+    filename = os.path.basename(template_js_path)
+    
+    if not dir_path or dir_path == "":
+        return f"Failed to find dirname from template path {js_template_path}. Maybe try again?"
+
+    base_name = os.path.splitext(filename)[0] # e.g., "KeyedStore_ElementsTransition_Stress-5394557031880459389"
+
+    parts = base_name.rsplit('-', 1)
+
+    if len(parts) != 2:
+        return f"Error: Input file name '{filename}' does not match the expected '{{template}}-{{hash}}.js' format."
+
+    template_name = parts[0]
+    hash_to_keep = parts[1]
+
+    removed_count = 0
+    
+    try:
+        for item in os.listdir(dir_path):
+            if item.endswith(".js"):
+                item_base = os.path.splitext(item)[0]
+                if item_base.startswith(f"{template_name}-"):
+                    current_hash = item_base.rsplit('-', 1)[-1]
+                    if current_hash != hash_to_keep:
+                        file_to_remove = os.path.join(dir_path, item)
+                        try:
+                            os.remove(file_to_remove)
+                            removed_count += 1
+                        except OSError as e:
+                            print(f"Warning: Could not remove file {file_to_remove}. Error: {e}")
+                            # continue trying to remove other files
+        if removed_count > 0:
+            return f"OK: Successfully removed {removed_count} old JavaScript programs matching template '{template_name}'. Kept program with hash '{hash_to_keep}'."
+        else:
+            return f"OK: Found no old JavaScript programs matching template '{template_name}' to remove. Kept program with hash '{hash_to_keep}'."
+
+    except FileNotFoundError:
+        return f"Error: Directory not found at {dir_path}"
+    except Exception as e:
+        return f"Error during program cleanup: {e}"
+
 
 @tool
 def swift_fuzzy_finder(pattern: str, options: str = "") -> str:

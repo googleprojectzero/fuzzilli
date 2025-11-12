@@ -84,6 +84,7 @@ class Father(Agent):
                 execute_program_template,
                 list_program_templates,
                 web_search,
+                remove_old_javascript_programs,
             ],
             model=LiteLLMModel(model_id="gpt-5-mini", api_key=self.api_key, temperature=0.0),
             managed_agents=[],
@@ -96,7 +97,7 @@ class Father(Agent):
         self.agents['reviewer_of_code'] = ToolCallingAgent(
             name="ReviewerOfCode",
             description="L2 Worker responsible for reviewing code from various sources using RAG database",
-            tools=[run_d8,
+            tools=[
                 fuzzy_finder,
                 ripgrep,
                 tree,
@@ -178,7 +179,6 @@ class Father(Agent):
             name="ProgramBuilder",
             description="L1 Manager responsible for building program templates using corpus and context",
             tools=[
-                run_d8,
                 get_all_template_names_from_json,
                 get_template_from_json_by_name,
                 list_program_templates,

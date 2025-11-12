@@ -102,7 +102,7 @@ Once compilation succeeds:
 ## STAGE 7: EXECUTION VALIDATION
 
 Validate the compiled template can execute:
-1. Use `execute_program_template` to run the JavaScript generated from the program template
+1. Use `execute_program_template` to run the JavaScript generated from the program template.
 2. Analyze the execution output to verify the template runs without runtime errors or syntax errors
 In the case of syntax errors, if you want to find the line number for these errors you can run `swift_ripgrep` and/or `swift_read_file` for calling `edit_template_by_regex` later on.
 3. Confirm the template generates valid FuzzIL code
@@ -112,6 +112,9 @@ In the case of syntax errors, if you want to find the line number for these erro
 !IMPORTANT! DO NOT MOVE ONTO STAGE 8 UNTIL YOU'VE SUCCESSFULLY EXECUTED THE PROGRAM TEMPLATE. IF NEED BE, GO BACK TO STAGE 5.
 
 ## STAGE 8: FINAL REPORT AND HANDOFF
+
+Before moving on with this stage, remove the old generated program templates that failed to execute using `remove_old_javascript_programs`.
+The js_template_path you pass in to `remove_old_javascript_programs` needs to be the latest genereated javascript program that executed successfully.
 
 Report compilation results:
 1. Provide a comprehensive compilation report documenting:
