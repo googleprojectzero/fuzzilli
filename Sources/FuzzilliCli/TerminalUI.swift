@@ -148,6 +148,7 @@ class TerminalUI {
         }
         
         print("""
+        \(postgresStats)\
         -----------------
         Fuzzer state:                 \(state)
         Uptime:                       \(formatTimeInterval(fuzzer.uptime()))
