@@ -82,6 +82,7 @@ public class GeneratorStub: Contributor {
         case None
         case IsWasmArray
         case IsWasmStruct
+        case IsWasmFunction // On a type definition this means "signature".
     }
 
     public struct Constraint : Hashable {
@@ -113,6 +114,14 @@ public class GeneratorStub: Contributor {
                         type.wasmTypeDefinition?.description is WasmStructTypeDescription
                     } else if type.Is(.anyNonNullableIndexRef) {
                         type.Is(.wasmStructRef)
+                    } else {
+                        false
+                    }
+                case .IsWasmFunction:
+                    if type.Is(.wasmTypeDef()) {
+                        type.wasmTypeDefinition?.description is WasmSignatureTypeDescription
+                    } else if type.Is(.anyNonNullableIndexRef) {
+                        type.Is(.wasmFuncRef)
                     } else {
                         false
                     }

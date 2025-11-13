@@ -597,7 +597,9 @@ public struct ILType: Hashable {
     }
 
     public var isWasmDefaultable: Bool {
-        return Is(.wasmPrimitive) && (!isWasmReferenceType || wasmReferenceType!.nullability)
+        let isPacked = Is(.wasmPackedI8) || Is(.wasmPackedI16)
+        return isPacked
+            || (Is(.wasmPrimitive) && (!isWasmReferenceType || wasmReferenceType!.nullability))
     }
 
     public var properties: Set<String> {

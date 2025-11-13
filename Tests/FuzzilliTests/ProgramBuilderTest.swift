@@ -2980,37 +2980,6 @@ class ProgramBuilderTests: XCTestCase {
         // XCTAssertGreaterThan(numGeneratedInstructions, 30)
     }
 
-    func testWasmStructNewDefaultGeneratorSchedulingTest() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-        b.buildPrefix()
-
-        // TODO(mliedtke): The mechanism needs to learn how to resolve nested input dependencies.
-        b.wasmDefineTypeGroup {[
-            b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
-            b.wasmDefineStructType(fields: [.init(type: .wasmi32, mutability: true)], indexTypes: []),
-        ]}
-
-        // Pick the generator.
-        let generator = fuzzer.codeGenerators.filter {
-            $0.name == "WasmStructNewDefaultGenerator"
-        }[0]
-
-        // Now build this.
-        let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
-        XCTAssertNotNil(syntheticGenerator)
-
-        let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: 30)
-        XCTAssertGreaterThan(numGeneratedInstructions, 0)
-        XCTAssertTrue(b.finalize().code.contains(where: { instr in
-            if case .wasmStructNewDefault(_) = instr.op.opcode {
-                return true
-            } else {
-                return false
-            }
-        }))
-    }
-
     func testWasmMemorySizeSchedulingTest() {
         let fuzzer = makeMockFuzzer()
         let numPrograms = 30
@@ -3066,9 +3035,7 @@ class ProgramBuilderTests: XCTestCase {
             let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
             XCTAssertNotNil(syntheticGenerator)
 
-            let N = 30
-            // We might generate a lot more than 30 instructions to fulfill the constraints.
-            let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: N)
+            let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: 30)
 
             let program = b.finalize()
 
@@ -3082,6 +3049,50 @@ class ProgramBuilderTests: XCTestCase {
             }))
             XCTAssertGreaterThan(numGeneratedInstructions, 0)
         }
+    }
+
+    func testWasmGCScheduling() {
+        func test<each ExpectedOp>(
+                _ generatorName: String,
+                expectAny: repeat (each ExpectedOp).Type,
+                requiresTypes: Bool = false) {
+            let fuzzer = makeMockFuzzer()
+            let numPrograms = 30
+
+            for _ in 0..<numPrograms {
+                let b = fuzzer.makeBuilder()
+                b.buildPrefix()
+
+                // TODO(mliedtke): The mechanism needs to learn how to resolve nested input +
+                // context dependencies.
+                if requiresTypes {
+                    b.wasmDefineTypeGroup {[
+                        b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
+                        b.wasmDefineStructType(fields: [.init(type: .wasmi32, mutability: true)], indexTypes: []),
+                    ]}
+                }
+
+                let generator = fuzzer.codeGenerators.filter {$0.name == generatorName}[0]
+                let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+                XCTAssertNotNil(syntheticGenerator)
+
+                let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: 30)
+                let program = b.finalize()
+
+                XCTAssertTrue(program.code.contains(where: { instr in
+                    for match in repeat instr.op is (each ExpectedOp) {
+                        if match { return true }
+                    }
+                    return false
+                }), generatorName)
+                XCTAssertGreaterThan(numGeneratedInstructions, 0)
+            }
+        }
+
+        test("WasmArrayNewGenerator", expectAny: WasmArrayNewDefault.self, WasmArrayNewFixed.self)
+        test("WasmStructNewDefaultGenerator", expectAny: WasmStructNewDefault.self)
+        test("WasmArrayGetGenerator", expectAny: WasmArrayGet.self, requiresTypes: true)
+        test("WasmStructGetGenerator", expectAny: WasmStructGet.self, requiresTypes: true)
     }
 
     func testThatGeneratorsExistAndAreBuildableFromJs() {

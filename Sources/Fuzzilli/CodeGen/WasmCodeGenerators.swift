@@ -88,99 +88,36 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             "WasmTypeGroupEndGenerator",
             inContext: .single(.wasmTypeGroup)
         ) { b in
-            // Collect all types that are visible and expose them.
-            let types = b.scopes.top.filter {
-                let t = b.type(of: $0)
-                return t.Is(.wasmTypeDef())
-                    && t.wasmTypeDefinition?.description != .selfReference
-            }
-            b.emit(
-                WasmEndTypeGroup(typesCount: types.count), withInputs: types
-            )
+            b.wasmEndTypeGroup()
         },
     ]),
 
-    CodeGenerator(
-        "WasmArrayTypeGenerator",
-        inContext: .single(.wasmTypeGroup),
-        producesComplex: [.init(.wasmTypeDef(), .IsWasmArray)]
-    ) { b in
-        let mutability = probability(0.75)
-        if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
-            probability(0.25)
-        {
-            // Excluding non-nullable references from referring to a self-reference ensures we do not end up with cycles of non-nullable references.
-            let nullability =
-                b.type(of: elementType).wasmTypeDefinition!.description
-                == .selfReference || probability(0.5)
-            b.wasmDefineArrayType(
-                elementType: .wasmRef(.Index(), nullability: nullability),
-                mutability: mutability, indexType: elementType)
-        } else {
-            // TODO(mliedtke): Extend list with abstract heap types.
-            b.wasmDefineArrayType(
-                elementType: chooseUniform(from: [
-                    .wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
-                ]), mutability: mutability)
-        }
-    },
+    CodeGenerator("WasmTypeGroupWithAllTypesGenerator", [
+        GeneratorStub(
+            "WasmTypeGroupBeginGenerator",
+            provides: [.wasmTypeGroup]
+        ) { b in
+            b.emit(WasmBeginTypeGroup())
+        },
+        wasmArrayTypeGenerator,
+        wasmStructTypeGenerator,
+        wasmSignatureTypeGenerator,
+        GeneratorStub(
+            "WasmTypeGroupEndGenerator",
+            inContext: .single(.wasmTypeGroup),
+            producesComplex: [
+                .init(.wasmTypeDef(), .IsWasmArray),
+                .init(.wasmTypeDef(), .IsWasmStruct),
+                .init(.wasmTypeDef(), .IsWasmFunction)
+            ]
+        ) { b in
+            b.wasmEndTypeGroup()
+        },
+    ]),
 
-    // TODO(mliedtke): Refine this `produces` annotation.
-    CodeGenerator("WasmStructTypeGenerator", inContext: .single(.wasmTypeGroup), produces: [.wasmTypeDef()]) { b in
-        var indexTypes: [Variable] = []
-        let fields = (0..<Int.random(in: 0...10)).map { _ in
-            var type: ILType
-            if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
-                probability(0.25)
-            {
-                // TODO(mliedtke): Allow non-nullable reference types. Right now we can't do this as
-                // the WasmStructNewGenerator might then fail to generate a struct.
-                let nullability = true
-                indexTypes.append(elementType)
-                type = .wasmRef(.Index(), nullability: nullability)
-            } else {
-                // TODO(mliedtke): Extend list with abstract heap types.
-                type = chooseUniform(from: [
-                    .wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
-                ])
-            }
-            return WasmStructTypeDescription.Field(
-                type: type, mutability: probability(0.75))
-        }
-
-        b.wasmDefineStructType(fields: fields, indexTypes: indexTypes)
-    },
-
-    // TODO(mliedtke): Refine this `produces` annotation.
-    CodeGenerator(
-        "WasmSignatureTypeGenerator",
-        inContext: .single(.wasmTypeGroup),
-        produces: [.wasmTypeDef()]
-    ) { b in
-        let typeCount = Int.random(in: 0...10)
-        let returnCount = Int.random(in: 0...typeCount)
-        let parameterCount = typeCount - returnCount
-
-        var indexTypes: [Variable] = []
-        let chooseType = {
-            var type: ILType
-            if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
-                probability(0.25)
-            {
-                let nullability =
-                    b.type(of: elementType).wasmTypeDefinition!.description
-                    == .selfReference || probability(0.5)
-                indexTypes.append(elementType)
-                return ILType.wasmRef(.Index(), nullability: nullability)
-            } else {
-                // TODO(mliedtke): Extend list with abstract heap types.
-                return chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128])
-            }
-        }
-        let signature = (0..<parameterCount).map {_ in chooseType()}
-                        => (0..<returnCount).map {_ in chooseType()}
-        b.wasmDefineSignatureType(signature: signature, indexTypes: indexTypes)
-    },
+    CodeGenerator("WasmArrayTypeGenerator", [wasmArrayTypeGenerator]),
+    CodeGenerator("WasmStructTypeGenerator", [wasmStructTypeGenerator]),
+    CodeGenerator("WasmSignatureTypeGenerator", [wasmSignatureTypeGenerator]),
 
     CodeGenerator("WasmSelfReferenceGenerator", inContext: .single(.wasmTypeGroup), produces: [.wasmSelfReference()]) { b in
         b.wasmDefineForwardOrSelfReference()
@@ -222,7 +159,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     // TODO: make this produce an .wasmi32?
     CodeGenerator(
         "WasmArrayLengthGenerator", inContext: .single(.wasmFunction),
-        inputs: .required(.anyNonNullableIndexRef)
+        inputs: .requiredComplex(.init(.anyNonNullableIndexRef, .IsWasmArray))
     ) { b, array in
         guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind
         else {
@@ -254,14 +191,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     // We use false nullability so we do not invoke null traps.
     CodeGenerator(
         "WasmArraySetGenerator", inContext: .single(.wasmFunction),
-        inputs: .required(.anyNonNullableIndexRef)
+        inputs: .requiredComplex(.init(.anyNonNullableIndexRef, .IsWasmArray))
     ) { b, array in
         guard case .Index(let desc) = b.type(of: array).wasmReferenceType!.kind
         else {
             fatalError("unreachable: array.set input not an Index")
         }
         guard let arrayType = desc.get()! as? WasmArrayTypeDescription else {
-            return
+            fatalError("unreachable: array.set input not an array")
         }
         guard arrayType.mutability else { return }
         guard let element = b.randomVariable(ofType: arrayType.elementType.unpacked()) else { return }
@@ -271,20 +208,18 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmArraySet(array: array, index: index, element: element)
     },
 
-    // TODO: make this actually produce a `anyNonNullableIndexRef`.
-    // Right now we cannot do this because we need a typedef that is defaultable.
     CodeGenerator(
         "WasmStructNewDefaultGenerator", inContext: .single(.wasmFunction),
         inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmStruct)),
         producesComplex: [.init(.anyNonNullableIndexRef, .IsWasmStruct)]
     ) { b, structType in
-        guard
-            let typeDesc = b.type(of: structType).wasmTypeDefinition?
-                .description as? WasmStructTypeDescription
-        else { return }
+        guard let typeDesc = b.type(of: structType).wasmTypeDefinition?.description as? WasmStructTypeDescription
+        else {
+            fatalError("Invalid type description for \(b.type(of: structType))")
+        }
         let function = b.currentWasmModule.currentWasmFunction
         guard (typeDesc.fields.allSatisfy { $0.type.isWasmDefaultable }) else {
-            return
+            fatalError("Non-defaultable type in Wasm struct fields \(typeDesc)")
         }
         function.wasmStructNewDefault(structType: structType)
     },
@@ -292,16 +227,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "WasmStructGetGenerator",
         inContext: .single(.wasmFunction),
-        inputs: .required(.anyNonNullableIndexRef)
+        inputs: .requiredComplex(.init(.anyNonNullableIndexRef, .IsWasmStruct))
     ) { b, theStruct in
-        guard
-            case .Index(let desc) = b.type(of: theStruct).wasmReferenceType!
-                .kind
+        guard case .Index(let desc) = b.type(of: theStruct).wasmReferenceType!.kind
         else {
             fatalError("unreachable: struct.get input not an Index")
         }
         guard let structType = desc.get()! as? WasmStructTypeDescription else {
-            return
+            fatalError("input is not a struct type but \(b.type(of: theStruct))")
         }
         guard let fieldIndex = (0..<structType.fields.count).randomElement()
         else { return }
@@ -311,7 +244,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     CodeGenerator(
         "WasmStructSetGenerator", inContext: .single(.wasmFunction),
-        inputs: .required(.anyNonNullableIndexRef)
+        inputs: .requiredComplex(.init(.anyNonNullableIndexRef, .IsWasmStruct)),
     ) { b, theStruct in
         guard
             case .Index(let desc) = b.type(of: theStruct).wasmReferenceType!
@@ -320,7 +253,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             fatalError("unreachable: struct.set input not an Index")
         }
         guard let structType = desc.get()! as? WasmStructTypeDescription else {
-            return
+            fatalError("Invalid type description for \(b.type(of: theStruct))")
         }
         guard
             let fieldWithIndex = structType.fields.enumerated().filter({
@@ -328,6 +261,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 field.mutability
             }).randomElement()
         else { return }
+        // TODO(mliedtke): Create the input when not available!
         guard
             let newValue = b.randomVariable(ofType: fieldWithIndex.element.type)
         else { return }
@@ -1920,3 +1854,86 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     // Then we also need a WrapPromisingGenerator that requires a WebAssembly module object, gets the exports field and its methods and then wraps one of those.
     // For all of this to work we need to add a WasmTypeExtension and ideally the dynamic object group inference.
 ]
+
+fileprivate let wasmArrayTypeGenerator = GeneratorStub(
+    "WasmArrayTypeGenerator",
+    inContext: .single(.wasmTypeGroup),
+    producesComplex: [.init(.wasmTypeDef(), .IsWasmArray)]
+) { b in
+    let mutability = probability(0.75)
+    if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
+        probability(0.25)
+    {
+        // Excluding non-nullable references from referring to a self-reference ensures we do not end up with cycles of non-nullable references.
+        let nullability =
+            b.type(of: elementType).wasmTypeDefinition!.description
+            == .selfReference || probability(0.5)
+        b.wasmDefineArrayType(
+            elementType: .wasmRef(.Index(), nullability: nullability),
+            mutability: mutability, indexType: elementType)
+    } else {
+        // TODO(mliedtke): Extend list with abstract heap types.
+        b.wasmDefineArrayType(
+            elementType: chooseUniform(from: [
+                .wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
+            ]), mutability: mutability)
+    }
+}
+
+fileprivate let wasmStructTypeGenerator = GeneratorStub(
+    "WasmStructTypeGenerator",
+    inContext: .single(.wasmTypeGroup),
+    producesComplex: [.init(.wasmTypeDef(), .IsWasmStruct)]) { b in
+    var indexTypes: [Variable] = []
+    let fields = (0..<Int.random(in: 0...10)).map { _ in
+        var type: ILType
+        if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
+            probability(0.25)
+        {
+            // TODO(mliedtke): Allow non-nullable reference types. Right now we can't do this as
+            // the WasmStructNewGenerator might then fail to generate a struct.
+            let nullability = true
+            indexTypes.append(elementType)
+            type = .wasmRef(.Index(), nullability: nullability)
+        } else {
+            // TODO(mliedtke): Extend list with abstract heap types.
+            type = chooseUniform(from: [
+                .wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
+            ])
+        }
+        return WasmStructTypeDescription.Field(
+            type: type, mutability: probability(0.75))
+    }
+
+    b.wasmDefineStructType(fields: fields, indexTypes: indexTypes)
+}
+
+fileprivate let wasmSignatureTypeGenerator = GeneratorStub(
+        "WasmSignatureTypeGenerator",
+        inContext: .single(.wasmTypeGroup),
+        producesComplex: [.init(.wasmTypeDef(), .IsWasmFunction)]
+    ) { b in
+        let typeCount = Int.random(in: 0...10)
+        let returnCount = Int.random(in: 0...typeCount)
+        let parameterCount = typeCount - returnCount
+
+        var indexTypes: [Variable] = []
+        let chooseType = {
+            var type: ILType
+            if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
+                probability(0.25)
+            {
+                let nullability =
+                    b.type(of: elementType).wasmTypeDefinition!.description
+                    == .selfReference || probability(0.5)
+                indexTypes.append(elementType)
+                return ILType.wasmRef(.Index(), nullability: nullability)
+            } else {
+                // TODO(mliedtke): Extend list with abstract heap types.
+                return chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128])
+            }
+        }
+        let signature = (0..<parameterCount).map {_ in chooseType()}
+                        => (0..<returnCount).map {_ in chooseType()}
+        b.wasmDefineSignatureType(signature: signature, indexTypes: indexTypes)
+    }

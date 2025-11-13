@@ -4617,6 +4617,11 @@ public class ProgramBuilder {
     public func wasmDefineTypeGroup(recursiveGenerator: () -> ()) -> [Variable] {
         emit(WasmBeginTypeGroup())
         recursiveGenerator()
+        return wasmEndTypeGroup()
+    }
+
+    @discardableResult
+    public func wasmEndTypeGroup() -> [Variable] {
         // Make all type definitions visible.
         let types = scopes.top.filter {
             let t = type(of: $0)
