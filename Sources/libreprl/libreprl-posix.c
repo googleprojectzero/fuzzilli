@@ -35,11 +35,21 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+
 #ifdef __linux__
-#include <sys/utsname.h>
+#  ifdef __has_include
+#    if __has_include(<linux/close_range.h>)
+#      define HAS_CLOSE_RANGE_HEADERS
+#    endif
+#  elif defined(__FreeBSD__)
+#    ifdef CLOSE_RANGE_CLOEXEC
+#      define HAS_CLOSE_RANGE_HEADERS
+#    endif
+#  endif
 #endif
 
 // Well-known file descriptor numbers for reprl <-> child communication, child process side
@@ -60,6 +70,7 @@ static const int reprl_fds[] = {
 #define REPRL_MAX_TIMEOUT_IN_MICROSECONDS ((uint64_t)(INT_MAX) * 1000)
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 static size_t min(size_t x, size_t y) {
   return x < y ? x : y;
 }
@@ -93,29 +104,20 @@ static void free_string_array(char** arr)
     free(arr);
 }
 
-static unsigned int getdtablesize_or_crash() {
+static int getdtablesize_or_crash() {
     const int tablesize = getdtablesize();
     if (tablesize < 0) {
         fprintf(stderr, "getdtablesize() failed: %s. This likely means the system is borked.\n",
                 strerror(errno));
-        exit(-1);
+        abort();
     }
 
-    return (unsigned int)tablesize;
-}
-
-static int fd_cast(unsigned int fd) {
-    if (fd > INT_MAX) {
-        fprintf(stderr, "File descriptor value %u is too large to fit into int. This likely means "
-                "the system is borked.\n", fd);
-        exit(-1);
-    }
-
-    return (int)fd;
+    return tablesize;
 }
 
 static bool system_supports_close_range() {
-#ifdef __linux__
+#ifdef HAS_CLOSE_RANGE_HEADERS
+#  ifdef __linux__
     struct utsname buffer;
     int major, minor, patch;
     (void)uname(&buffer); // Linux uname can only throw EFAULT if buf is invalid.
@@ -125,10 +127,15 @@ static bool system_supports_close_range() {
     }
 
     return major > 5 || (major == 5 && minor >= 9);
-#else
+#  elif defined(__FreeBSD__)
     // TODO: Technically, FreeBSD does support close_range, but I don't need support for it right
-    //                    now, so leaving this unimplemented.
+    //                    now, so leaving this unimplemented. Don't have a platform to test on.
     // https://man.freebsd.org/cgi/man.cgi?close_range(2)
+    return false;
+#  else
+    return false;
+#  endif
+#else
     return false;
 #endif
 }
@@ -141,13 +148,14 @@ static int fd_qsort_compare(const void* a, const void* b) {
 
 /// Fast path which uses close_range() to close ranges of fds.
 static void close_all_non_reprl_fds_fast() {
+#ifdef HAS_CLOSE_RANGE_HEADERS
     // Unfortunately we cannot trust the reprl_fds array to be sorted since an accidental edit to
     // reprl_fds could have broken that assumption. So let's create a new sorted array. It's cheap
     // anyways.
     int sorted_reprl_fds[ARRAY_SIZE(reprl_fds) + 2];
     sorted_reprl_fds[0] = 3; // Skip the well-known stdin, stdout, stderr fds.
     memcpy(sorted_reprl_fds + 1, reprl_fds, sizeof(reprl_fds));
-    sorted_reprl_fds[ARRAY_SIZE(sorted_reprl_fds) - 1] = fd_cast(getdtablesize_or_crash());
+    sorted_reprl_fds[ARRAY_SIZE(sorted_reprl_fds) - 1] = getdtablesize_or_crash();
     qsort(sorted_reprl_fds, ARRAY_SIZE(sorted_reprl_fds), sizeof(int), fd_qsort_compare);
 
     // Cool, now we will iterate the sorted fds in ranges and close everything in between.
@@ -160,11 +168,16 @@ static void close_all_non_reprl_fds_fast() {
         }
         start_fd = end_fd + 1;
     }
+#else
+    fprintf(stderr, "close_all_non_reprl_fds_fast() called on a system which does not support "
+            "close_range(). This is likely a programming bug.\n");
+    abort();
+#endif
 }
 
 /// Fallback path which makes a close() syscall for each non-REPRL fd.
 static void close_all_non_reprl_fds_slow() {
-    const int tablesize = fd_cast(getdtablesize_or_crash());
+    const int tablesize = getdtablesize_or_crash();
 
     for (int i = 3; i < tablesize; i++) {
         bool is_reprl_fd = false;
@@ -183,11 +196,7 @@ static void close_all_non_reprl_fds_slow() {
 
 /// Close all file descriptors except the well-known REPRL and stdio fds.
 static void close_all_non_reprl_fds() {
-    if (system_supports_close_range()) {
-        close_all_non_reprl_fds_fast();
-    } else {
-        close_all_non_reprl_fds_slow();
-    }
+    system_supports_close_range() ? close_all_non_reprl_fds_fast() : close_all_non_reprl_fds_slow();
 }
 
 // A unidirectional communication channel for larger amounts of data, up to a maximum size (REPRL_MAX_DATA_SIZE).
