@@ -632,9 +632,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // For funcref tables, we need to look for functions to populate the entries.
         // These are going to be either wasm function definitions (.wasmFunctionDef()) or JS functions (.function()).
         // TODO(manoskouk): When we have support for constant expressions, consider looking for .wasmFuncRef instead.
-        let expectedEntryType =
-            elementType == .wasmFuncRef
-            ? .wasmFunctionDef() | .function() : .object()
+        let expectedEntryType = module.getEntryTypeForTable(elementType: elementType)
 
         // Currently, only generate entries for funcref tables.
         // TODO(manoskouk): Generalize this.
@@ -667,13 +665,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmDefineElementSegmentGenerator", inContext: .single(.wasm)) { b in
-        let elementsType: ILType = .wasmFunctionDef() | .function()
-        if b.randomVariable(ofType: elementsType) == nil {
+        let expectedEntryType = b.currentWasmModule.getEntryTypeForTable(elementType: ILType.wasmFuncRef)
+        if b.randomVariable(ofType: expectedEntryType) == nil {
             return
         }
 
-        var elements: [Variable] = (0...Int.random(in: 0...8)).map {_ in b.randomVariable(ofType: elementsType)!}
-        b.currentWasmModule.addElementSegment(elementsType: elementsType, elements: elements)
+        var elements: [Variable] = (0...Int.random(in: 0...8)).map {_ in b.randomVariable(ofType: expectedEntryType)!}
+        b.currentWasmModule.addElementSegment(elements: elements)
     },
 
     CodeGenerator("WasmDropElementSegmentGenerator", inContext: .single(.wasmFunction), inputs: .required(.wasmElementSegment())) { b, elementSegment in
@@ -1279,25 +1277,34 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             },
         ]),
 
-    // TODO: think about how we can turn this into a mulit-part Generator
-    CodeGenerator("WasmLoopGenerator", inContext: .single(.wasmFunction)) { b in
-        let function = b.currentWasmModule.currentWasmFunction
-        let loopCtr = function.consti32(10)
-
-        function.wasmBuildLoop(with: [] => []) { label, args in
-            let result = function.wasmi32BinOp(
+    CodeGenerator(
+        "WasmLoopGenerator",
+        [
+            GeneratorStub(
+                "WasmBeginLoopGenerator",
+                inContext: .single(.wasmFunction),
+                provides: [.wasmFunction]
+            ) { b in
+                let function = b.currentWasmModule.currentWasmFunction
+                let loopCtr = function.consti32(10)
+                b.runtimeData.push("loopCounter", loopCtr)
+                b.emit(WasmBeginLoop(with: [] => []))
+                // Increase loop counter.
+                let result = function.wasmi32BinOp(
                 loopCtr, function.consti32(1), binOpKind: .Sub)
-            function.wasmReassign(variable: loopCtr, to: result)
-
-            b.buildRecursive(n: defaultCodeGenerationAmount)
-
-            // Backedge of loop, we continue if it is not equal to zero.
-            let isNotZero = function.wasmi32CompareOp(
-                loopCtr, function.consti32(0), using: .Ne)
-            function.wasmBranchIf(
-                isNotZero, to: label, hint: b.randomWasmBranchHint())
-        }
-    },
+                function.wasmReassign(variable: loopCtr, to: result)
+            },
+            GeneratorStub(
+                "WasmEndLoopGenerator",
+                inContext: .single(.wasmFunction)
+            ) { b in
+                let function = b.currentWasmModule.currentWasmFunction
+                let loopCtr = b.runtimeData.pop("loopCounter")
+                // Backedge of loop, we continue if it is not equal to zero.
+                let isNotZero = function.wasmi32CompareOp(loopCtr, function.consti32(0), using: .Ne)
+                b.emit(WasmEndLoop(outputTypes: []))
+            },
+        ]),
 
     CodeGenerator("WasmLoopWithSignatureGenerator", inContext: .single(.wasmFunction)) {
         b in

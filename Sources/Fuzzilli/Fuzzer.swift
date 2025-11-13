@@ -14,6 +14,23 @@
 
 import Foundation
 
+/// Timeouts are configured either by a single value, then this value will be
+/// used, or by an interval, in which case a value will be determined on
+/// start-up. Timeouts are in milliseconds.
+public enum Timeout {
+    case value(UInt32)
+    case interval(UInt32, UInt32)
+
+    public func maxTimeout() -> UInt32{
+        switch self {
+            case .value(let value):
+                return value
+            case .interval(_, let max):
+                return max
+        }
+    }
+}
+
 public class Fuzzer {
     /// Id of this fuzzer.
     public let id: UUID
@@ -25,7 +42,7 @@ public class Fuzzer {
     public private(set) var isStopped = false
 
     /// The configuration used by this fuzzer.
-    public let config: Configuration
+    public var config: Configuration
 
     /// The list of events that can be dispatched on this fuzzer instance.
     public let events: Events
@@ -944,7 +961,8 @@ public class Fuzzer {
     }
 
     /// Runs a number of startup tests to check whether everything is configured correctly.
-    public func runStartupTests() {
+    /// Returns a recommended timeout.
+    public func runStartupTests(with timeout : Timeout) -> Timeout {
         assert(isInitialized)
 
         // Check if we can execute programs
@@ -1010,7 +1028,22 @@ public class Fuzzer {
 
         // Determine recommended timeout value (rounded up to nearest multiple of 10ms)
         let maxExecutionTimeMs = (Int(maxExecutionTime * 1000 + 9) / 10) * 10
-        let recommendedTimeout = 10 * maxExecutionTimeMs
+        let recommendedTimeout = 2 * maxExecutionTimeMs
+
+        // Specify the actual timeout based on an interval if configured.
+        let actualTimeout : Timeout
+        if case .interval(let lowerLimit, let upperLimit) = timeout {
+            let timeout = max(min(UInt32(recommendedTimeout), upperLimit), lowerLimit)
+            logger.info("Determined a timeout of \(timeout)ms based on the interval [\(lowerLimit), \(upperLimit)]")
+            actualTimeout = Timeout.value(timeout)
+
+            // Update the configuration used by the main thread. Worker threads
+            // will be configured based on the timeout we return here.
+            config.timeout = timeout
+        } else {
+            actualTimeout = timeout
+        }
+
         logger.info("Recommended timeout: at least \(recommendedTimeout)ms. Current timeout: \(config.timeout)ms")
 
         // Check if we can receive program output
@@ -1024,7 +1057,9 @@ public class Fuzzer {
 
         // Wrap the executor in a JavaScriptTestRunner
         // If we can execute it standalone, it could inform us if any flags that were passed are incorrect, stale or conflicting.
-        let executor = JavaScriptExecutor(withExecutablePath: runner.processArguments[0], arguments: Array(runner.processArguments[1...]))
+        let executor = JavaScriptExecutor(
+            withExecutablePath: runner.processArguments[0],
+            arguments: Array(runner.processArguments[1...]), env: runner.env)
         do {
             let output = try executor.executeScript("", withTimeout: 300).output
             if output.lengthOfBytes(using: .utf8) > 0 {
@@ -1036,6 +1071,7 @@ public class Fuzzer {
         }
 
         logger.info("Startup tests finished successfully")
+        return actualTimeout
     }
 
     /// A pending corpus import job together with some statistics.

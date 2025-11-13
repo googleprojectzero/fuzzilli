@@ -53,18 +53,7 @@ fileprivate struct SandboxFuzzingPostProcessor: FuzzingPostProcessor {
 
 let v8SandboxProfile = Profile(
     processArgs: { randomize in
-        var args = [
-            "--expose-gc",
-            "--omit-quit",
-            "--allow-natives-syntax",
-            "--fuzzing",
-            "--jit-fuzzing",
-            "--sandbox-fuzzing",
-            // This is so that we get an ASan splat directly in the reproducer file.
-            "--disable-in-process-stack-traces"
-        ]
-
-        return args
+        v8ProcessArgs(randomize: randomize, forSandbox: true)
     },
 
     // ASan options.
@@ -76,7 +65,7 @@ let v8SandboxProfile = Profile(
     maxExecsBeforeRespawn: 1000,
 
     // ASan builds are slower, so we use a larger timeout.
-    timeout: 500,
+    timeout: Timeout.interval(500, 1200),
 
     codePrefix: """
                 //
@@ -97,7 +86,7 @@ let v8SandboxProfile = Profile(
 
                     function assert(c) {
                         if (!c) {
-                            throw new Error("Assertion failed!");
+                            throw new Error("Assertion in the in-sandbox-corruption API failed!");
                         }
                     }
 
@@ -483,6 +472,10 @@ let v8SandboxProfile = Profile(
         (ForceTurboFanCompilationGenerator,        5),
         (ForceMaglevCompilationGenerator,          5),
         (V8GcGenerator,                           10),
+        (WasmStructGenerator,                      5),
+        (WasmArrayGenerator,                       5),
+        (SharedObjectGenerator,                    5),
+        (PretenureAllocationSiteGenerator,         5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([

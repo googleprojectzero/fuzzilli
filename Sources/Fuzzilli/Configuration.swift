@@ -17,7 +17,7 @@ public struct Configuration {
     public let arguments: [String]
 
     /// Timeout in milliseconds after which child processes will be killed.
-    public let timeout: UInt32
+    public var timeout: UInt32
 
     /// Log level to use.
     public let logLevel: LogLevel

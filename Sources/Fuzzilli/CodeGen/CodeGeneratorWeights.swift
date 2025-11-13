@@ -192,7 +192,6 @@ public let codeGeneratorWeights = [
     "PrototypeOverwriteGenerator":              10,
     "CallbackPropertyGenerator":                10,
     "MethodCallWithDifferentThisGenerator":     5,
-    "WeirdClassGenerator":                      10,
     "ProxyGenerator":                           10,
     "LengthChangeGenerator":                    5,
     "ElementKindChangeGenerator":               5,

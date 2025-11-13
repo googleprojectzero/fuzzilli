@@ -30,7 +30,7 @@ let v8DebugProfile = Profile(
 
     maxExecsBeforeRespawn: 1000,
 
-    timeout: 250,
+    timeout: Timeout.value(250),
 
     codePrefix: """
                 """,

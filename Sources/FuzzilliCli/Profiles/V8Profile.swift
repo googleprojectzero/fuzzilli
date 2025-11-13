@@ -60,6 +60,9 @@ let v8Profile = Profile(
         // Note that this flag only affects WebAssembly.
         if probability(0.5) {
             args.append("--no-liftoff")
+            if probability(0.3) {
+                args.append("--wasm-assert-types")
+            }
         }
 
         // This greatly helps the fuzzer to decide inlining wasm functions into each other when
@@ -125,6 +128,12 @@ let v8Profile = Profile(
         }
 
         if probability(0.1) {
+            args.append("--scavenger-chaos-mode")
+            let threshold = Int.random(in: 0...100)
+            args.append("--scavenger-chaos-mode-threshold=\(threshold)")
+        }
+
+        if probability(0.1) {
             let stackSize = Int.random(in: 54...863)
             args.append("--stack-size=\(stackSize)")
         }
@@ -141,6 +150,10 @@ let v8Profile = Profile(
         }
         if (probability(0.5)) {
             args.append("--stress-wasm-stack-switching")
+        }
+
+        if probability(0.5) {
+            args.append("--proto-assign-seq-opt")
         }
 
         //
@@ -254,7 +267,7 @@ let v8Profile = Profile(
 
     maxExecsBeforeRespawn: 1000,
 
-    timeout: 250,
+    timeout: Timeout.interval(300, 900),
 
     codePrefix: """
                 """,
@@ -294,6 +307,7 @@ let v8Profile = Profile(
 
         (WasmStructGenerator,                     15),
         (WasmArrayGenerator,                      15),
+        (SharedObjectGenerator,                    5),
         (PretenureAllocationSiteGenerator,         5),
     ],
 

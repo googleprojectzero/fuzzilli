@@ -26,6 +26,7 @@ struct MockExecution: Execution {
 
 class MockScriptRunner: ScriptRunner {
     var processArguments: [String] = []
+    var env: [(String, String)] = []
 
     func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
         return MockExecution(outcome: .succeeded,
@@ -81,7 +82,7 @@ class MockEvaluator: ProgramEvaluator {
 }
 
 /// Create a fuzzer instance usable for testing.
-public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: JavaScriptEnvironment? = nil, evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil, codeGenerators additionalCodeGenerators : [(CodeGenerator, Int)] = [], queue: DispatchQueue? = nil) -> Fuzzer {
+public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: JavaScriptEnvironment? = nil, evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil, codeGenerators additionalCodeGenerators : [(CodeGenerator, Int)] = [], queue: DispatchQueue? = nil, overwriteGenerators: WeightedList<CodeGenerator>? = nil) -> Fuzzer {
     // The configuration of this fuzzer.
     let configuration = maybeConfiguration ?? Configuration(logLevel: .warning)
 
@@ -121,7 +122,7 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
     let minimizer = Minimizer()
 
     // Use all builtin CodeGenerators
-    let codeGenerators = WeightedList<CodeGenerator>(
+    let codeGenerators = overwriteGenerators ?? WeightedList<CodeGenerator>(
         (CodeGenerators + WasmCodeGenerators).map {
             guard let weight = codeGeneratorWeights[$0.name] else {
                 fatalError("Missing weight for CodeGenerator \($0.name) in CodeGeneratorWeights.swift")

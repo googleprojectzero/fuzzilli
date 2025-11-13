@@ -1288,7 +1288,7 @@ class TypeSystemTests: XCTestCase {
 
         // Tests on the whole ILType.
         let ref = {t in ILType.wasmRef(.Abstract(t), nullability: false)}
-        let refNull = {t in ILType.wasmRef(.Abstract(t), nullability: false)}
+        let refNull = {t in ILType.wasmRef(.Abstract(t), nullability: true)}
         for type in allTypes {
             let refT = ref(type)
             let refNullT = refNull(type)

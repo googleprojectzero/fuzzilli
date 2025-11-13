@@ -4116,9 +4116,9 @@ class WasmFoundationTests: XCTestCase {
             b.buildWasmModule { wasmModule in
                 let f1 = wasmModule.addWasmFunction(with: [] => []) { _, _, _ in return []}
                 let f2 = wasmModule.addWasmFunction(with: [] => []) { _, _, _ in return []}
-                wasmModule.addElementSegment(elementsType: .wasmFunctionDef(), elements: [])
-                wasmModule.addElementSegment(elementsType: .wasmFunctionDef(), elements: [f1])
-                wasmModule.addElementSegment(elementsType: .wasmFunctionDef(), elements: [f1, f2])
+                wasmModule.addElementSegment(elements: [])
+                wasmModule.addElementSegment(elements: [f1])
+                wasmModule.addElementSegment(elements: [f1, f2])
             }
         }
         testForOutput(program: jsProg, runner: runner, outputString: "")
@@ -4130,7 +4130,7 @@ class WasmFoundationTests: XCTestCase {
         let jsProg = buildAndLiftProgram() { b in
             b.buildWasmModule { wasmModule in
                 let function = wasmModule.addWasmFunction(with: [] => []) { _, _, _ in return []}
-                let segment = wasmModule.addElementSegment(elementsType: .wasmFunctionDef(), elements: [function])
+                let segment = wasmModule.addElementSegment(elements: [function])
                 wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
                     f.wasmDropElementSegment(elementSegment: segment)
                     return []
@@ -4140,7 +4140,97 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "")
     }
 
-    // TODO(427115604): add tests that actually use element segments once table.init operation is supported.
+    func wasmTableInit(isTable64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            let module = b.buildWasmModule { module in
+                let f1 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(1)]}
+                let f2 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(2)]}
+                let f3 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(3)]}
+
+                module.addTable(elementType: .wasmFuncRef,
+                    minSize: 10,
+                    definedEntries: [],
+                    definedEntryValues: [],
+                    isTable64: isTable64)
+                let table2  = module.addTable(elementType: .wasmFuncRef,
+                    minSize: 10,
+                    definedEntries: [],
+                    definedEntryValues: [],
+                    isTable64: isTable64)
+                module.addElementSegment(elements: [])
+                let elemSegment2 = module.addElementSegment(elements: [f3, f3, f1, f2])
+
+                module.addWasmFunction(with: [] => [.wasmi64, .wasmi64]) { f, _, _ in
+                    let tableOffset = { (i: Int) in isTable64 ? f.consti64(Int64(i)) : f.consti32(Int32(i))}
+                    f.wasmTableInit(elementSegment: elemSegment2, table: table2, tableOffset: tableOffset(5), elementSegmentOffset: f.consti32(2), nrOfElementsToUpdate: f.consti32(2))
+                    let callIndirect = { (table: Variable, idx: Int) in 
+                        let idxVar = isTable64 ? f.consti64(Int64(idx)) : f.consti32(Int32(idx))
+                        return f.wasmCallIndirect(signature: [] => [.wasmi64], table: table, functionArgs: [], tableIndex: idxVar)
+                    }
+                    return callIndirect(table2, 5)  + callIndirect(table2, 6)
+                }
+            }
+            let res = b.callMethod(module.getExportedMethod(at: 3), on: module.loadExports())
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.arrayToStringForTesting(res)])
+       }
+
+       testForOutput(program: jsProg, runner: runner, outputString: "1,2\n")
+    }
+
+    func testTableInit32() throws {
+        try wasmTableInit(isTable64: false)
+    }
+
+    func testTableInit64() throws {
+        try wasmTableInit(isTable64: true)
+    }
+
+    func wasmTableCopy(isTable64: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+
+        let jsProg = buildAndLiftProgram() { b in
+            let module = b.buildWasmModule { module in
+                let f1 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(1)]}
+                let f2 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(2)]}
+                let f3 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(3)]}
+
+                let table1 = module.addTable(elementType: .wasmFuncRef,
+                    minSize: 10,
+                    definedEntries: [],
+                    definedEntryValues: [],
+                    isTable64: isTable64)
+                let table2  = module.addTable(elementType: .wasmFuncRef,
+                    minSize: 10,
+                    definedEntries: (0..<4).map { WasmTableType.IndexInTableAndWasmSignature.init(indexInTable: $0, signature: [] => [.wasmi64]) },
+                    definedEntryValues: [f3, f3, f1, f2],
+                    isTable64: isTable64)
+
+                module.addWasmFunction(with: [] => [.wasmi64, .wasmi64]) { f, _, _ in
+                    let const = { (i: Int) in isTable64 ? f.consti64(Int64(i)) : f.consti32(Int32(i))}
+                    f.wasmTableCopy(dstTable: table1, srcTable: table2, dstOffset: const(1), srcOffset: const(2), count: const(2))
+                    let callIndirect = { (table: Variable, idx: Int) in 
+                        let idxVar = isTable64 ? f.consti64(Int64(idx)) : f.consti32(Int32(idx))
+                        return f.wasmCallIndirect(signature: [] => [.wasmi64], table: table, functionArgs: [], tableIndex: idxVar)
+                    }
+                    return callIndirect(table1, 1) + callIndirect(table1, 2)
+                }
+            }
+            let res = b.callMethod(module.getExportedMethod(at: 3), on: module.loadExports())
+            b.callFunction(b.createNamedVariable(forBuiltin: "output"), withArgs: [b.arrayToStringForTesting(res)])
+       }
+
+       testForOutput(program: jsProg, runner: runner, outputString: "1,2\n")
+    }
+
+    func testTableCopy32() throws {
+        try wasmTableCopy(isTable64: false)
+    }
+
+    func testTableCopy64() throws {
+        try wasmTableCopy(isTable64: true)
+    }
 }
 
 class WasmGCTests: XCTestCase {
