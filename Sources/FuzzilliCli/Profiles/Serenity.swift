@@ -21,7 +21,7 @@ let serenityProfile = Profile(
         "ASAN_OPTIONS": "abort_on_error=1",
     ],
     maxExecsBeforeRespawn: 1000,
-    timeout: 250,
+    timeout: Timeout.value(250),
     codePrefix: """
                  function main() {
                  """,

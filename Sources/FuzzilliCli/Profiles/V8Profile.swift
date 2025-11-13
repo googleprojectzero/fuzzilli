@@ -267,7 +267,7 @@ let v8Profile = Profile(
 
     maxExecsBeforeRespawn: 1000,
 
-    timeout: 300,
+    timeout: Timeout.interval(300, 900),
 
     codePrefix: """
                 """,
@@ -307,6 +307,7 @@ let v8Profile = Profile(
 
         (WasmStructGenerator,                     15),
         (WasmArrayGenerator,                      15),
+        (SharedObjectGenerator,                    5),
         (PretenureAllocationSiteGenerator,         5),
     ],
 

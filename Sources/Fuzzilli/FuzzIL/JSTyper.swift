@@ -1118,7 +1118,11 @@ public struct JSTyper: Analyzer {
 
             dynamicObjectGroupManager.createNewClass(withSuperType: superType, propertyMap: propertySuperTypeMap, methodMap: methodSuperTypeMap, superConstructorType: superConstructorType, forOutput: instr.output)
 
-            set(instr.output, .jsAnything)         // Treat the class variable as unknown until we have fully analyzed the class definition
+            // We only know here that this is going to be a constructor() type.
+            // On endClassDefinition below, the exact type is refined. But we
+            // need to already set this broader type here, so that begin-
+            // generator stubs can claim they produce a constructor().
+            set(instr.output, .constructor())
         case .endClassDefinition:
             let (instanceType, classDefinition) = dynamicObjectGroupManager.finalizeClass()
             set(classDefinition.output, classDefinition.objectGroup.instanceType + .constructor(classDefinition.constructorParameters => instanceType))

@@ -19,6 +19,38 @@ import Foundation
 /// This provides methods for constructing and appending random
 /// instances of the different kinds of operations in a program.
 public class ProgramBuilder {
+
+    /// Runtime data used by code generators to share data between different stubs inside the same
+    /// code generator. It is strictly required that all pushed values are also popped again in the
+    /// same code generator.
+    public class GeneratorRuntimeData {
+        private var data = [String : Stack<Variable>]()
+
+        public func push(_ key: String, _ value: Variable) {
+            data[key, default: .init()].push(value)
+        }
+
+        public func pop(_ key: String) -> Variable {
+            assert(data[key] != nil)
+            return data[key]!.pop()
+        }
+
+        // Fetch the most recent value for this key and push it back.
+        public func popAndPush(_ key: String) -> Variable {
+            assert(data[key] != nil)
+            return data[key]!.top
+        }
+
+        func reset() {
+            #if DEBUG
+            for (key, value) in data {
+                assert(value.isEmpty, "Stale entries for runtime data '\(key)'")
+            }
+            #endif
+            data.removeAll(keepingCapacity: false)
+        }
+    }
+
     /// The fuzzer instance for which this builder is active.
     public let fuzzer: Fuzzer
 
@@ -147,6 +179,9 @@ public class ProgramBuilder {
     /// The remaining CodeGenerators to call as part of a building / CodeGen step, these will "clean up" the state and fix the contexts.
     public var scheduled: Stack<GeneratorStub> = Stack()
 
+    // Runtime data that can be shared between different stubs within a CodeGenerator.
+    var runtimeData = GeneratorRuntimeData()
+
     /// Stack of active switch blocks.
     private var activeSwitchBlocks = Stack<SwitchBlock>()
 
@@ -214,6 +249,7 @@ public class ProgramBuilder {
         activeObjectLiterals.removeAll()
         activeClassDefinitions.removeAll()
         buildLog?.reset()
+        runtimeData.reset()
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
@@ -483,6 +519,36 @@ public class ProgramBuilder {
         return probability(0.5) ? randomBuiltinMethodName() : randomCustomMethodName()
     }
 
+    private static func generateConstrained<T: Equatable>(
+            _ generator: () -> T,
+            notIn: any Collection<T>,
+            fallback: () -> T) -> T {
+        var result: T
+        var attempts = 0
+        repeat {
+            if attempts >= 10 {
+                return fallback()
+            }
+            result = generator()
+            attempts += 1
+        } while notIn.contains(result)
+        return result
+    }
+
+    // Generate a string not already contained in `notIn` using the provided `generator`. If it fails
+    // repeatedly, return a random string instead.
+    public func generateString(_ generator: () -> String, notIn: any Collection<String>) -> String {
+        Self.generateConstrained(generator, notIn: notIn,
+            fallback: {String.random(ofLength: Int.random(in: 1...5))})
+    }
+
+    // Find a random variable to use as a string that isn't contained in `notIn`. If it fails
+    // repeatedly, create a random string literal instead.
+    public func findOrGenerateStringLikeVariable(notIn: any Collection<Variable>) -> Variable {
+        return Self.generateConstrained(randomJsVariable, notIn: notIn,
+            fallback: {loadString(String.random(ofLength: Int.random(in: 1...5)))})
+    }
+
     // Settings and constants controlling the behavior of randomParameters() below.
     // This determines how many variables of a given type need to be visible before
     // that type is considered a candidate for a parameter type. For example, if this
@@ -500,7 +566,7 @@ public class ProgramBuilder {
     //
     // This will attempt to find a parameter types for which at least a few variables of a compatible types are
     // currently available to (potentially) later be used as arguments for calling the generated subroutine.
-    public func randomParameters(n wantedNumberOfParameters: Int? = nil) -> SubroutineDescriptor {
+    public func randomParameters(n wantedNumberOfParameters: Int? = nil, withRestParameterProbability restProbability: Double = 0.2) -> SubroutineDescriptor {
         assert(probabilityOfUsingAnythingAsParameterTypeIfAvoidable >= 0 && probabilityOfUsingAnythingAsParameterTypeIfAvoidable <= 1)
 
         // If the caller didn't specify how many parameters to generated, find an appropriate
@@ -508,7 +574,7 @@ public class ProgramBuilder {
         // therefore later be used as arguments for calling the new function).
         let n: Int
         if let requestedN = wantedNumberOfParameters {
-            assert(requestedN > 0)
+            assert(requestedN >= 0)
             n = requestedN
         } else {
             switch numberOfVisibleVariables {
@@ -537,15 +603,27 @@ public class ProgramBuilder {
         }
 
         var params = ParameterList()
-        for _ in 0..<n {
+
+        let generateRestParameter = n > 0 && probability(restProbability)
+        let numPlainParams = generateRestParameter ? n - 1 : n
+
+        func randomParamType() -> ILType {
             if probability(probabilityOfUsingAnythingAsParameterTypeIfAvoidable) {
-                params.append(.jsAnything)
+                return .jsAnything
             } else {
-                params.append(.plain(chooseUniform(from: candidates)))
+                return chooseUniform(from: candidates)
             }
         }
 
-        // TODO: also generate rest parameters and maybe even optional ones sometimes?
+        for _ in 0..<numPlainParams {
+            params.append(.plain(randomParamType()))
+        }
+
+        if generateRestParameter {
+            params.append(.rest(randomParamType()))
+        }
+
+        // TODO: also generate optional parameters sometimes?
 
         return .parameters(params)
     }
@@ -2045,7 +2123,7 @@ public class ProgramBuilder {
 
         var numberOfGeneratedInstructions = 0
 
-        // calculate all input requirements of this CodeGenerator.
+        // Calculate all input requirements of this CodeGenerator.
         let inputTypes = Set(generator.parts.reduce([]) { res, gen in
             return res + gen.inputs.types
         })
