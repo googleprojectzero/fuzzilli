@@ -1,0 +1,9 @@
+{
+  "body": "File: compiler/js-typed-lowering.cc\nSymbol: JSTypedLowering::ReduceJSEqual / ReduceJSStrictEqual\nExcerpt: The code implements folding of JSEqual when one input is NullOrUndefined to ObjectIsUndetectable. Key lines:\n- JSTypedLowering::ReduceJSEqual: if (r.OneInputIs(Type::NullOrUndefined())) { RelaxEffectsAndControls(node); node->RemoveInput(...); NodeProperties::ChangeOp(node, simplified()->ObjectIsUndetectable()); return Changed(node); }\n- Also handles ReceiverOrNullOrUndefined case by emitting JSGraphAssembler code that uses ObjectIsUndetectable and ReferenceEqual.\n- ReduceJSStrictEqual handles ReceiverOrNullOrUndefined, using ReferenceEqual; not folding to undetectable except via typed lowering earlier.\nDependencies: uses dependencies() via broker()->dependencies() and may need protector registration elsewhere (CompilationDependencies::DependOnNoUndetectableObjectsProtector is used in turboshaft machine lowering and JSTypedLowering sometimes uses dependencies()->DependOn... for other protectors.)\nFileLine: compiler/js-typed-lowering.cc:892-980",
+  "context": [
+    "js-typed-lowering",
+    "compilation-dependencies"
+  ],
+  "explanation": "This entry extracts the exact JSTypedLowering reducers that fold abstract equality with null/undefined to ObjectIsUndetectable and the strict-equal handling.",
+  "file_line": "compiler/js-typed-lowering.cc:880-980"
+}

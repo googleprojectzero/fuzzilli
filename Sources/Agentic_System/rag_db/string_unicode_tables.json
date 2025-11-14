@@ -1,0 +1,10 @@
+{
+  "body": "int ToLowercase::Convert(uchar c, uchar n, uchar* result, int result_capacity) { ... }\nint ToUppercase::Convert(uchar c, uchar n, uchar* result, int result_capacity) { ... }\n// Located in src/strings/unicode.cc: contains large case-mapping tables and LookupMapping usage.",
+  "context": [
+    "strings_unicode",
+    "case_conversion",
+    "unibrow"
+  ],
+  "explanation": "Core Unicode case conversion engines (ToLowercase/ToUppercase) and mapping tables used by String case transforms. Important for length computation and multi-character mappings.",
+  "file_line": "strings/unicode.cc: around ToLowercase::Convert and ToUppercase::Convert"
+}

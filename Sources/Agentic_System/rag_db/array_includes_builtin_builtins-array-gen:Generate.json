@@ -1,0 +1,10 @@
+{
+  "body": "ArrayIncludesIndexofAssembler in builtins/builtins-array-gen.cc:Generate/GenerateSmiOrObject/GeneratePackedDoubles/GenerateHoleyDoubles implement the fast-path TF builtins for Array.prototype.includes. Key points:\n- ElementsKind dispatch: LoadElementsKind(array) then branches to SMI, OBJECT, PACKED_DOUBLE, HOLEY_DOUBLE cases. (locations: Generate: lines ~230-340 in the file)\n- fromIndex handling: only Smi or undefined handled; other values go to runtime (Generate: fromIndex init, lines ~80-150)\n- NoElementsProtector checks are used in CSA/TF builtins via IsNoElementsProtectorCellInvalid macro (used across file). \n- SameValueZero behavior: NaN handling labeled nan_loop in packed/holey double paths; holes treated as undefined in holey double path.\n- SIMD fast paths: calls to ExternalReference::array_indexof_includes_* C functions (array_indexof_includes_smi_or_object, array_indexof_includes_double) for large arrays.\n- TypedArray includes logic is in GenerateIteratingTypedArrayBuiltinBody/VisitAllTypedArrayElements and Builtins::kTypedArrayPrototypeIncludes. TypedArray builtin in builtins/builtins-typed-array.cc dispatches to ElementsAccessor::IncludesValue.\n",
+  "context": [
+    "builtins-array-gen:TF_BUILTIN(ArrayIncludes...)",
+    "objects-elements:ElementsAccessor IncludesValueImpl and IncludesValueFastPath",
+    "compiler-js-call-reducer:ReduceArrayPrototypeIndexOfIncludes"
+  ],
+  "explanation": "This entry points to the main builtins and elements implementations covering the fast-paths for Array.prototype.includes across fast JSArrays and TypedArrays, and notes key guards and behaviors (fromIndex Smi/undefined, NoElementsProtector, SameValueZero/NaN, hole-as-undefined).",
+  "file_line": "builtins/builtins-array-gen.cc:Generate/GenerateSmiOrObject/GeneratePackedDoubles/GenerateHoleyDoubles"
+}

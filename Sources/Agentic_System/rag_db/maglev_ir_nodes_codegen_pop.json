@@ -1,0 +1,9 @@
+{
+  "body": "Entries: GenerateCode sites for nodes used by pop fast path:\n- EnsureWritableFastElements::GenerateCode => maglev/maglev-ir.cc:4771-4778\n- LoadFixedArrayElement::GenerateCode => maglev/maglev-ir.cc:3220-3233\n- LoadFixedDoubleArrayElement::GenerateCode => maglev/maglev-ir.cc:3237-3250\n- StoreFixedArrayElementNoWriteBarrier::GenerateCode => maglev/maglev-ir.cc:6397-6410\n- StoreTaggedFieldNoWriteBarrier::GenerateCode => maglev/maglev-ir.cc:5447-5460\n- ConvertHoleToUndefined::GenerateCode => maglev/maglev-ir.cc:4157-4176\n- CheckNotHole::GenerateCode => maglev/maglev-ir.cc:4129-4145\n- CheckMaps/CheckMapsWithMigration::GenerateCode => maglev/maglev-ir.cc:2354-2658\nExplanation: Codegen sites for Maglev IR nodes that implement the runtime checks and memory ops for Array.prototype.pop fast path. These are emitted when TryReduceArrayPrototypePop builds the nodes (Load/Store/EnsureWritable/ConvertHoleToUndefined/CheckNotHole, etc).",
+  "context": [
+    "maglev-ir.cc",
+    "maglev-graph-builder.cc"
+  ],
+  "explanation": "Detailed mapping of IR nodes to GenerateCode implementations relevant to pop fast path: shows exact files and approximate line ranges for codegen generation.",
+  "file_line": "maglev/maglev-ir.cc:3220-3250; maglev/maglev-ir.cc:4771-4778; maglev/maglev-ir.cc:5447-5460; maglev/maglev-ir.cc:4157-4176; maglev/maglev-ir.cc:4129-4145; maglev/maglev-ir.cc:2354-2658"
+}

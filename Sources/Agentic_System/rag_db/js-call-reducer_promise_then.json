@@ -1,0 +1,10 @@
+{
+  "body": "Reduction JSCallReducer::ReducePromisePrototypeThen(Node* node) { ... }  (full function in compiler/js-call-reducer.cc lines 7469-7533)",
+  "context": [
+    "js-call-reducer",
+    "promise",
+    "ReducePromisePrototypeThen"
+  ],
+  "explanation": "Contains turbo fan reduction that inlines PerformPromiseThen, checks promise hooks and species protector, creates resulting promise and replaces call with javascript()->PerformPromiseThen() node.",
+  "file_line": "compiler/js-call-reducer.cc:7469-7533"
+}

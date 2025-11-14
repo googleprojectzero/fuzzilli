@@ -1,0 +1,10 @@
+{
+  "body": "compiler/compilation-dependencies.cc:CompilationDependencies::DependOnNoUndetectableObjectsProtector registers a ProtectorDependency on the factory's no_undetectable_objects_protector property cell. The implementation calls DependOnProtector with MakeRef(broker_, broker_->isolate()->factory()->no_undetectable_objects_protector()) and returns bool. The ProtectorDependency records the PropertyCellRef and checks cell->value() == Protectors::kProtectorValid in IsValid, and Install registers the PropertyCell handle with DependentCode::kPropertyCellChangedGroup. This is the central place where protector-based assumptions are attached to compilation dependencies.",
+  "context": [
+    "compilation_dependencies",
+    "protectors",
+    "factory_property_cells"
+  ],
+  "explanation": "Explains how CompilationDependencies records a dependency on NoUndetectableObjects protector and what that implies for installation and validation.",
+  "file_line": "compiler/compilation-dependencies.cc:DependOnNoUndetectableObjectsProtector()"
+}

@@ -41,7 +41,7 @@ public class WeightedList<Element>: Sequence {
     }
 
     public func filter(_ isIncluded: (Element) -> Bool) -> WeightedList<Element> {
-        var r = WeightedList()
+        let r = WeightedList() // set this to let to avoid warning
         for (e, w, _) in elements where isIncluded(e) {
             r.append(e, withWeight: w)
         }

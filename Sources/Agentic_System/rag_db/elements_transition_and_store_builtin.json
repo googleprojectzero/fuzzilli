@@ -1,0 +1,11 @@
+{
+  "body": "HandlerBuiltinsAssembler::Generate_ElementsTransitionAndStore(KeyedAccessStoreMode store_mode) in builtins/builtins-handler-gen.cc generates the ElementsTransitionAndStore_* builtins. It dispatches on receiver.elements_kind (from_kind) and map.elements_kind (to_kind) via DispatchForElementsKindTransition, calls TransitionElementsKind(receiver, map, from_kind, to_kind, &miss) and then EmitElementStore(receiver, key, value, to_kind, store_mode, &miss, context, nullptr). On failures it TailCallRuntime(Runtime::kElementsTransitionAndStoreIC_Miss,...). This builtin implements the fast-path that performs an elements-kind transition (fast-to-fast transitions only) and then stores the value to the newly converted backing store.",
+  "context": [
+    "builtins_handler_gen",
+    "accessor_assembler",
+    "ic_handler_configuration",
+    "elements_accessor"
+  ],
+  "explanation": "This RAG entry captures the CSA/Torque implementation hotspot that performs elements-kind transitions followed by the element store. It is the builtin installed by KeyedStoreIC when an elements-kind transition is needed. The file and symbol are central to mapping IC\u2192builtin\u2192ElementsAccessor flows.",
+  "file_line": "builtins/builtins-handler-gen.cc:Generate_ElementsTransitionAndStore"
+}

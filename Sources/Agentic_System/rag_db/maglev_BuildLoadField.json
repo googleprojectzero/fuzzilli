@@ -1,0 +1,9 @@
+{
+  "body": "ReduceResult MaglevGraphBuilder::BuildLoadField(\n    compiler::PropertyAccessInfo const& access_info,\n    ValueNode* lookup_start_object, compiler::NameRef name) { ... }\n\nLocated maglev/maglev-graph-builder.cc. Implements loading of data fields: handles double vs tagged fields, constant folding for in-object constant fields; emits LoadTaggedField/LoadFloat64 for double fields and LoadTaggedFieldForProperty for tagged fields. Records known property via RecordKnownProperty.\n",
+  "context": [
+    "maglev_TryBuildPropertyLoad",
+    "maglev_TryBuildLoadNamedProperty"
+  ],
+  "explanation": "Central lowering for field loads in Maglev: differentiates double vs tagged field loads and is the anchor for LoadTaggedField/LoadFloat64 usage.",
+  "file_line": "maglev/maglev-graph-builder.cc:~7200-7250"
+}

@@ -1,0 +1,9 @@
+{
+  "body": "JSTypedLowering::ReduceJSEqual / ReduceJSStrictEqual folding of x == null/undefined to ObjectIsUndetectable\n\nSymbols:\n- JSTypedLowering::ReduceJSEqual\n- JSTypedLowering::ReduceJSStrictEqual\n- simplified()->ObjectIsUndetectable()\n\nFiles/paths:\n- src/compiler/js-typed-lowering.cc (JSTypedLowering::ReduceJSEqual, ReduceJSStrictEqual)\n\nSummary of relevant code behavior:\n- ReduceJSEqual detects the case where one input is NullOrUndefined (OneInputIs(Type::NullOrUndefined())). It relaxes effects/controls, removes the null/undefined input, changes the operator to simplified()->ObjectIsUndetectable() and returns that node. This folds abstract equality `x == null/undefined` into an undetectable check (ObjectIsUndetectable(right) or ObjectIsUndetectable(left)).\n- ReduceJSStrictEqual delegates to ReduceJSEqual for non-strict fallback where applicable.\n\nWhy important: This is the TurboFan-level folding that turns abstract equality against null/undefined into the ObjectIsUndetectable simplified op, which later must be lowered and may attach a protector dependency to ensure validity of assuming undetectable objects don't exist.\n",
+  "context": [
+    "undetectable_b_protector",
+    "undetectable_c_turboshaft"
+  ],
+  "explanation": "Contains the lowering that replaces equality-with-null/undefined with ObjectIsUndetectable (key turbo fan folding).",
+  "file_line": "compiler/js-typed-lowering.cc: ReduceJSEqual / ReduceJSStrictEqual"
+}

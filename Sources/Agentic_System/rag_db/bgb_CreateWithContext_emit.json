@@ -1,0 +1,10 @@
+{
+  "body": "File: src/compiler/bytecode-graph-builder.cc\n\nvoid BytecodeGraphBuilder::VisitCreateWithContext() {\n  Node* object =\n      environment()->LookupRegister(bytecode_iterator().GetRegisterOperand(0));\n  ScopeInfoRef scope_info = MakeRefForConstantForIndexOperand<ScopeInfo>(1);\n\n  const Operator* op = javascript()->CreateWithContext(scope_info);\n  Node* context = NewNode(op, object);\n  environment()->BindAccumulator(context);\n}\n\nIn js-operator.cc/h:\nconst Operator* JSOperatorBuilder::CreateWithContext(ScopeInfoRef scope_info) {\n  return zone()->New<Operator1<ScopeInfoRef>>(\n      IrOpcode::kJSCreateWithContext, Operator::kNoProperties,  // opcode\n      \"JSCreateWithContext\",                                    // name\n      1, 1, 1, 1, 1, 2,                                         // counts\n      ScopeInfoRef{scope_info});                                // parameter\n}\n\nIn js-generic-lowering.cc:\nvoid JSGenericLowering::LowerJSCreateWithContext(Node* node) {\n  ScopeInfoRef scope_info = ScopeInfoOf(node->op());\n  node->InsertInput(zone(), 1, jsgraph()->ConstantNoHole(scope_info, broker()));\n  ReplaceWithRuntimeCall(node, Runtime::kPushWithContext);\n}\n",
+  "context": [
+    "bgb_lookup_paths",
+    "js_operator_core",
+    "js_generic_lowering_core"
+  ],
+  "explanation": "BytecodeGraphBuilder emits JSCreateWithContext for CreateWithContext bytecode taking an object and scope info; generic lowering replaces it with a Runtime::PushWithContext call. This shows how with-statement contexts are created and pushed in TF graph and later lowered.",
+  "file_line": "bytecode-graph-builder.cc:2359-2366; js-operator.cc: CreateWithContext; js-generic-lowering.cc: LowerJSCreateWithContext"
+}

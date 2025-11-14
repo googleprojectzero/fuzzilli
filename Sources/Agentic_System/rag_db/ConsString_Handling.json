@@ -1,0 +1,10 @@
+{
+  "body": "objects/string.cc: uint16_t ConsString::Get(...) implementation and String::SlowFlatten handling of ConsString\nobjects/string-inl.h: inline Tagged<String> ConsString::first(), second(), IsFlat() and helpers\nobjects/string.tq: builtin StringSlowFlatten(cons: ConsString): String { ... uses StringWriteToFlatOneByte/TwoByte }\nobjects/string-inl.h and objects/string.cc contain VisitFlat/ConsStringIterator implementations",
+  "context": [
+    "objects/string.cc",
+    "objects/string-inl.h",
+    "objects/string.tq"
+  ],
+  "explanation": "Anchors for ConsString handling, Get, IsFlat, Flatten/SlowFlatten, WriteToFlat2 used to traverse and copy cons string components.",
+  "file_line": "objects/string.cc: lines around ConsString::Get and String::WriteToFlat2"
+}

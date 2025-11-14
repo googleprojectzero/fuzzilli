@@ -1,0 +1,10 @@
+{
+  "body": "maglev: key nodes and builder\n- MaglevGraphBuilder::VisitCallProperty/VisitCallProperty0/1/2/3: (maglev/maglev-graph-builder.cc) handles CallProperty bytecodes and tries to build fast paths: calls TryBuildCallKnownJSFunction, TryBuildLoadNamedProperty, BuildCheckValue, BuildLoadTaggedField, BuildCheckMaps, BuildCheckValue with feedback_source, and inserts CheckedClosure/CheckInstanceType/CheckValue nodes and deopt info. See functions in maglev-graph-builder.cc around VisitCallProperty and TryBuildCallKnownJSFunction for exact wiring.\n- TryBuildLoadNamedProperty: tries to use feedback to build fast named property loads; returns ValueNode* or deopts; used by GetIterator fast-path and CallProperty flows. Adds LoadTaggedField nodes and CheckMaps/CheckInstanceType.\n- TryBuildCallKnownJSFunction: (maglev-graph-builder.cc) creates CallKnownJSFunction node with fixed inputs: receiver, target (CheckedClosure), context, and preserves feedback_source; it is created with input_count = args.count() + CallKnownJSFunction::kFixedInputCount. Uses AddNewNode<CallKnownJSFunction> and sets eager/lazy deopts accordingly.\n",
+  "context": [
+    "maglev_graph_builder",
+    "maglev_ir",
+    "maglev_codegen"
+  ],
+  "explanation": "Initial RAG entry capturing Graph builder hotspots: CallProperty/GetNamedProperty/CheckedClosure/CheckValue/LoadTaggedField/CallKnownJSFunction wiring.",
+  "file_line": "maglev/maglev-graph-builder.cc: VisitCallProperty / TryBuildCallKnownJSFunction / TryBuildLoadNamedProperty"
+}

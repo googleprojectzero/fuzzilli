@@ -1,0 +1,11 @@
+{
+  "body": "Runtime fallbacks and runtime functions:\n// - src/runtime/runtime-intl.cc: RUNTIME_FUNCTION(Runtime_StringToLowerCaseIntl) and Runtime_StringToUpperCaseIntl: calls into ICU/Intl when needed and flattens inputs\n// - src/runtime/runtime-strings.cc: RUNTIME_FUNCTION(Runtime_StringAdd): handles fallback string addition and returns NewConsString or copies. Contains checks for cons/sliced and flattening\n// - src/builtins/string.tq: builtin StringSlowFlatten corresponds to String::SlowFlatten in C++ runtime\n// - src/runtime/runtime-strings.cc also includes helpers that call isolate->factory()->NewConsString and flattening\n",
+  "context": [
+    "runtime_strings",
+    "runtime_intl",
+    "Runtime_StringAdd",
+    "StringSlowFlatten"
+  ],
+  "explanation": "Runtime entrypoints that handle non-inlined slower paths: Intl-aware case conversions and generic string addition/flattening. Important for JIT deopt and fallback behavior.",
+  "file_line": "runtime/runtime-intl.cc: Runtime_StringToLowerCaseIntl, Runtime_StringToUpperCaseIntl; runtime/runtime-strings.cc: Runtime_StringAdd; objects/string.tq: StringSlowFlatten"
+}

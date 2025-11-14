@@ -1,0 +1,10 @@
+{
+  "body": "BUILTIN(ArrayPop) and GenericArrayPop in builtins/builtins-array.cc \u2014 GenericArrayPop handles ToObject, ToLength, Get, DeletePropertyOrElement, Set length and returns element. Builtin wrapper BUITIN(ArrayPop) checks IsJSArrayWithExtensibleFastElements and either uses ElementsAccessor::ForKind(...)->Pop or falls back to GenericArrayPop. Code lines: builtins/builtins-array.cc (GenericArrayPop and BUILTIN(ArrayPop))",
+  "context": [
+    "Builtin::kArrayPop",
+    "GenericArrayPop",
+    "builtins-array.cc"
+  ],
+  "explanation": "This is the generic/slow path implementation of Array.pop that handles non-fast arrays and proxies; the BUILTIN(ArrayPop) entry is the target for the TF TailCallJSBuiltin fallback.",
+  "file_line": "builtins/builtins-array.cc: function GenericArrayPop and BUILTIN(ArrayPop) (approx lines ~220-420)"
+}

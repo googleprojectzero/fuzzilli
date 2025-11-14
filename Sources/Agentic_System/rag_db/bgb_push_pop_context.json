@@ -1,0 +1,8 @@
+{
+  "body": "File: src/compiler/bytecode-graph-builder.cc (context stack maintenance)\n\nvoid BytecodeGraphBuilder::VisitPushContext() {\n  Node* new_context = environment()->LookupAccumulator();\n  environment()->BindRegister(bytecode_iterator().GetRegisterOperand(0),\n                              environment()->Context());\n  environment()->SetContext(new_context);\n}\n\nvoid BytecodeGraphBuilder::VisitPopContext() {\n  Node* context =\n      environment()->LookupRegister(bytecode_iterator().GetRegisterOperand(0));\n  environment()->SetContext(context);\n}\n",
+  "context": [
+    "bgb_lookup_paths"
+  ],
+  "explanation": "TF graph builder implementations for PushContext and PopContext mirror the interpreter behavior: save current context into a register and update the current context or restore it from a register.",
+  "file_line": "bytecode-graph-builder.cc:2294-2301"
+}

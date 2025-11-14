@@ -1,0 +1,11 @@
+{
+  "body": "maglev/maglev-ir.h and maglev/maglev-ir.cc: nodes: LoadTaggedFieldForContextSlot, LoadTaggedFieldForScriptContextSlot, StoreScriptContextSlotWithWriteBarrier, CheckNotHole, ThrowReferenceErrorIfHole, ThrowSuperNotCalledIfHole, ThrowSuperAlreadyCalledIfNotHole, ConvertHoleToUndefined, HoleyFloat64IsHole. These nodes implement context slot load/store and TDZ (hole) checks; CheckNotHole and ThrowReferenceErrorIfHole generate deopt/throw behavior for TheHole. StoreScriptContextSlotWithWriteBarrier handles script context stores that may invalidate script-context-slot-dependent code via runtime invalidation.",
+  "context": [
+    "maglev_ir",
+    "maglev_graph_builder",
+    "deoptimizer",
+    "interpreter"
+  ],
+  "explanation": "Captures IR nodes and guard nodes associated with context slot access and TDZ handling; points to their definitions in maglev-ir.h/.cc and their codegen which emits deopt or throw behavior.",
+  "file_line": "maglev/maglev-ir.h, maglev/maglev-ir.cc locations for CheckNotHole, ThrowReferenceErrorIfHole, LoadTaggedFieldForContextSlot, StoreScriptContextSlotWithWriteBarrier"
+}

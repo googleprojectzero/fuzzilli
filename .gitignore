@@ -7,6 +7,15 @@ Package.resolved
 .*.sw?
 .swiftpm
 /Corpus
+.venv
+*pycache*
+Sources/Agentic_System/keys.cfg
+regressions*.json
+*.fzil
+generated_templates/
+ProgramTemplates.swift
+ProgramTemplateWeights.swift
+fog_logs/
 
 # custom GCE configuration
 Cloud/GCE/config.sh

@@ -1,0 +1,11 @@
+{
+  "body": "File: compiler/js-generic-lowering.cc\nFunctions:\n- void JSGenericLowering::LowerJSCreateWithContext(Node* node) { ScopeInfoRef scope_info = ScopeInfoOf(node->op()); node->InsertInput(zone(), 1, jsgraph()->ConstantNoHole(scope_info, broker())); ReplaceWithRuntimeCall(node, Runtime::kPushWithContext); }\n- void JSGenericLowering::LowerJSHasContextExtension(Node* node) { UNREACHABLE(); }\n- void JSGenericLowering::LowerJSLoadContext(Node* node) { UNREACHABLE(); }\n- void JSGenericLowering::LowerJSLoadScriptContext(Node* node) { UNREACHABLE(); }\n- void JSGenericLowering::LowerJSStoreContext(Node* node) { UNREACHABLE(); }\n- void JSGenericLowering::LowerJSStoreScriptContext(Node* node) { UNREACHABLE(); }\n- void JSGenericLowering::LowerJSLoadGlobal(Node* node): lowers JSLoadGlobal to IC call via CodeFactory::LoadGlobalICInOptimizedCode/Trampoline as per frame state presence.\n- Unary op lowering includes REPLACE_STUB_CALL(ToObject) mapping JS to Builtin::kToObject.\n- CallRuntime lowering present for general runtime calls.\nNotes:\n- For with-scope creation, TF defers to runtime Runtime::kPushWithContext.\n- Context extension checks (JSHasContextExtension) are eliminated earlier (typed lowering), hence not lowered here.\n- ToObject operator is lowered to Builtin::kToObject.\n",
+  "context": [
+    "bgb_with_lookup_visitors",
+    "js_ops_with_lookup",
+    "ignition_with_lookup",
+    "runtime_scopes_lookup"
+  ],
+  "explanation": "This captures js-generic-lowering behavior for CreateWithContext and related context ops: CreateWithContext becomes a runtime call PushWithContext. It also notes ToObject lowering and that JSHasContextExtension is handled before generic lowering, aligning with the fast/slow gating implemented in the graph builder.",
+  "file_line": "compiler/js-generic-lowering.cc:863,590-606,357, ..."
+}

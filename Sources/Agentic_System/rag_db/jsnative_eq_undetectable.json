@@ -1,0 +1,10 @@
+{
+  "body": "JSNativeContextSpecialization::ReduceJSEqual/ReduceJSStrictEqual: folds JSEqual with null/undefined to ObjectIsUndetectable when one input is null/undefined. Code: JSTypedLowering::ReduceJSEqual (src/compiler/js-typed-lowering.cc) and JSTypedLowering::ReduceJSStrictEqual. In JSNativeContextSpecialization::ReduceJSEqual handles other cases; depends on CompilationDependencies::DependOnNoUndetectableObjectsProtector to guard undetectable checks (see compiler/compilation-dependencies.cc -> DependOnNoUndetectableObjectsProtector).\n",
+  "context": [
+    "compiler/js-typed-lowering.cc",
+    "compiler/compilation-dependencies.cc",
+    "compiler/js-native-context-specialization.cc"
+  ],
+  "explanation": "Records that typed lowering and native-context specialization fold == null/undefined into ObjectIsUndetectable and that dependencies rely on DependOnNoUndetectableObjectsProtector.",
+  "file_line": "compiler/js-typed-lowering.cc:909; compiler/compilation-dependencies.cc:1337; compiler/js-native-context-specialization.cc:..."
+}

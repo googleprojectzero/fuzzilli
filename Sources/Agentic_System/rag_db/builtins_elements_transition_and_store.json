@@ -1,0 +1,9 @@
+{
+  "body": "HandlerBuiltinsAssembler::Generate_ElementsTransitionAndStore and TF_BUILTIN(ElementsTransitionAndStore_*) in src/builtins/builtins-handler-gen.cc. Generate_ElementsTransitionAndStore dispatches over from_kind/to_kind transitions (DispatchForElementsKindTransition) and for each supported transition calls TransitionElementsKind(receiver, map, from_kind, to_kind, &miss) followed by EmitElementStore(receiver, key, value, to_kind, store_mode, &miss, context, nullptr). On miss it TailCallRuntime(Runtime::kElementsTransitionAndStoreIC_Miss, ...). Guard conditions: elements kind and map comparisons, miss if v8_flags.trace_elements_transitions, uses TransitionElementsKind CSA helper which will call JSObject::TransitionElementsKind or runtime path. These builtins handle fast-to-fast transitions (explicit list of ELEMENTS_KIND_TRANSITIONS) and exclude transitions to dictionary (those are handled by runtime). ",
+  "context": [
+    "keyed_store_ic_UpdateStoreElement",
+    "builtins_store_fast_element_ic"
+  ],
+  "explanation": "Builtins that implement element kind transitions plus store in one fast path. They are used when the IC detects a potential elements kind transition on store and provides the target map to the builtin. They use CSA helpers TransitionElementsKind and EmitElementStore.",
+  "file_line": "builtins/builtins-handler-gen.cc : HandlerBuiltinsAssembler::Generate_ElementsTransitionAndStore and TF_BUILTIN(ElementsTransitionAndStore_*)"
+}

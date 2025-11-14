@@ -1,0 +1,10 @@
+{
+  "body": "Torque-level wrapper front-ends that invoke runtime tier-up and assembly stubs for JS\u2194Wasm wrappers.\n- Files: src/builtins/js-to-wasm.tq, src/builtins/wasm-to-js.tq, builtins-definitions.h anchors\n- Key symbols:\n  - js-to-wasm.tq:\n    \u2022 extern runtime TierUpJSToWasmWrapper(NoContext, WasmExportedFunctionData)\n    \u2022 extern builtin JSToWasmWrapperAsm(RawPtr<intptr>, WasmImportData|WasmTrustedInstanceData, JSAny): JSAny\n    \u2022 extern builtin WasmReturnPromiseOnSuspendAsm(...)\n    \u2022 macro JSToWasmWrapperHelper(...): orchestrates calling JSToWasmWrapperAsm vs WasmReturnPromiseOnSuspendAsm based on promising mode; prepares wrapper buffer layout (JSToWasmWrapperFrameConstants offsets) and implicitArg; on entry may call runtime::TierUpJSToWasmWrapper to tier-up optimized wrapper. Anchors: 11-26, 497-772.\n  - wasm-to-js.tq:\n    \u2022 extern runtime TierUpWasmToJSWrapper(NoContext, WasmImportData): JSAny\n    \u2022 transitioning macro WasmToJSWrapper(data: WasmImportData): WasmToJSResult { ... runtime::TierUpWasmToJSWrapper(kNoContext, data); }\n  - builtins-definitions.h:\n    \u2022 ASM/TFC registrations for: JSToWasmWrapperAsm, WasmReturnPromiseOnSuspendAsm, WasmToJsWrapperCSA, WasmToJsWrapperInvalidSig, WasmSuspend, etc., mapping to CodeKind: JS_TO_WASM_FUNCTION / WASM_TO_JS_FUNCTION.\n- Role in pipeline:\n  \u2022 Torque macros are used by generated JS builtins that run before or after TS-generated wrapper or assembly stubs, to trigger tiering and handle promise/suspender flows. The actual TS wrapper codegen is in wasm/wrappers.cc, while these torque files wire into JS-visible builtins and runtime tier-up.\n",
+  "context": [
+    "runtime_tiering_and_upgrade",
+    "wasm_wrappers.entrypoints",
+    "wasm_calling_conventions_and_descriptors"
+  ],
+  "explanation": "Captures the Torque-layer glue for wrapper entry builtins and tier-up triggers, linking runtime functions and assembly stubs to the Turboshaft wrapper codegen path.",
+  "file_line": "builtins/js-to-wasm.tq:11-26,497-772; builtins/wasm-to-js.tq:6,25,51-69; builtins/builtins-definitions.h:1313-1319"
+}

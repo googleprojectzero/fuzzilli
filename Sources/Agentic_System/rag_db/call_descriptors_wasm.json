@@ -1,0 +1,10 @@
+{
+  "body": "Files: src/compiler/wasm-call-descriptors.{h,cc}\n- class v8::internal::compiler::WasmCallDescriptors [header]\n  - WasmCallDescriptors(AccountingAllocator* allocator)\n  - CallDescriptor* GetBigIntToI64Descriptor(bool needs_frame_state)\n  - CallDescriptor* GetLoweredCallDescriptor(const CallDescriptor* original) [32-bit only]\n- Implementation [cc]\n  - Initializes descriptors via compiler::GetBuiltinCallDescriptor for Builtin::kBigIntToI64 and Builtin::kBigIntToI32Pair (32-bit) with StubCallMode::kCallBuiltinPointer; also with_frame_state variants.\n  - GetLoweredCallDescriptor maps BigIntToI64 to BigIntToI32Pair on 32-bit.\nUsage cross refs:\n- wasm/wrappers.cc: WasmWrapperTSGraphBuilder::GetBigIntToI64CallDescriptor() calls GetWasmEngine()->call_descriptors()->GetBigIntToI64Descriptor(...)\n- compiler/wasm-compiler.cc: WasmWrapperGraphBuilder::GetBigIntToI64CallDescriptor(...) similar.\nRelated Linkage helpers:\n- Linkage::GetJSCallDescriptor, Linkage::GetStubCallDescriptor, Linkage::GetSimplifiedCDescriptor used throughout wrappers to form TSCallDescriptor / TF Call nodes, and for JS trampolines.\n",
+  "context": [
+    "wrappers_ts_builders",
+    "tf_wrappers_builders_pipeline",
+    "compiler_pipeline_wasm_wrappers"
+  ],
+  "explanation": "Captures the call-descriptor definitions used by JS\u2194Wasm wrappers, particularly BigInt<i64> conversion paths and their 32-bit lowering; and notes common Linkage entry points used to construct call descriptors for builtins and JS calls.",
+  "file_line": "compiler/wasm-call-descriptors.h: class; .cc: constructor and methods"
+}

@@ -1,0 +1,10 @@
+{
+  "body": "MaglevGraphBuilder::TryReduceArrayPrototypePop in maglev/maglev-graph-builder.cc implements Maglev's lowering/specialization for Array.prototype.pop. Key behaviors:\n- Early bailouts: CanSpeculateCall(), receiver_mode checks, known_node_aspects.TryGetPossibleMaps(receiver) existence and non-empty. (lines ~10238..10276)\n- Records dependency on NoElementsProtector via broker()->dependencies()->DependOnNoElementsProtector(); if false, fail. (line ~10275)\n- Groups possible maps by elements kind (Smi/Object combined) using elements_kind_to_index with mapping for packed/holey/double. (lines ~10286..10320)\n- Calls CanInlineArrayResizingBuiltin to ensure maps support fast resize and not holey-double for loads; returns unique_kind_count. (around 10320..10360)\n- Builds subgraph with variables for value and new length; checks empty array (length Smi==0) -> return undefined. (lines ~10360..10390)\n- For each elements kind: ensure writable elements (EnsureWritableFastElements for smi/object kinds), store new length to JSArray::kLengthOffset, load and replace element with TheHole or hole NaN, convert hole to undefined if holey; push result into subgraph variables. (lines ~10390..10480)\n- RecordKnownProperty for 'length' after lowering. (end ~10490)\nContext IDs: no_elements_protector, elements_kind_grouping, check_maps, ensure_writable_fast_elements\nExplanation: This entry captures the graph-builder's conditions and actions for inlining Array.prototype.pop: the protector dependency, map grouping, elements-kind-specific handling, and guards that could be bypassed incorrectly in presence of proxies.",
+  "context": [
+    "maglev_graph_builder",
+    "no_elements_protector",
+    "elements_kind_checks"
+  ],
+  "explanation": "Details of TryReduceArrayPrototypePop; identifies key guards, dependencies, and per-elements-kind behavior.",
+  "file_line": "maglev/maglev-graph-builder.cc:10267-10495"
+}

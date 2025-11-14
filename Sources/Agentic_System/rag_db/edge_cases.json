@@ -1,0 +1,10 @@
+{
+  "body": "Stage:1 region:KeyedLoadIC_StringIndex_Protector\nTopic: edge-cases \u2014 Edge cases and invariants for string indexed loads.\n\nKeys & conversion:\n- Smi indices and HeapNumber integer indices canonicalize to intptr index.\n- String keys that are array-index forms (\"5\") are converted to indices if within range; > INT_MAX are bailout to runtime.\n- -0 canonicalizes to 0.\n- 2**32-1 and above are not array indices -> named property path.\n- Symbol keys -> named property path. BigInt (e.g., 5n) goes through ToPropertyKey and may produce string \"5\" and still hit fast-path if converted.\n\nString representations:\n- SeqOneByte, SeqTwoByte, ExternalOneByte/TwoByte, Cons, Sliced, Thin. Fast-path attempts to read without flattening when possible; Thin unwraps to actual; Cons/Sliced may be followed through but deep ropes may cause fallback.\n- External strings are supported as read-only; attempts to write are not applicable for loads.\n\nInvariants & seat belts:\n- index < length required for in-bounds; OOB returns undefined if load mode allows.\n- Distinction between indexed element access vs named property: array-index strings only.\n- Read-only semantics: String object elements are read-only view over characters; protector prevents observability if prototype mutated.\n\nHistorical/observability note:\n- Protector invalidation exists to avoid making behavior observable when String.prototype gets numeric accessor properties or proxies; this ensures correctness across optimizations.\n",
+  "context": [
+    "inventory",
+    "handler",
+    "protector"
+  ],
+  "explanation": "Catalog of corner cases and invariants to test/observe for the string-index fast-path (s[i]).",
+  "file_line": "src/ic/ic.cc:TryConvertKey, IntPtrKeyToSize, KeyedLoadIC::Load; src/ic/handler-configuration.h:AllowOutOfBoundsBits; src/objects/string.h (string representations)"
+}

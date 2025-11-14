@@ -1,0 +1,11 @@
+{
+  "2": {
+    "body": "BinaryOpAssembler::Generate_AddWithFeedback(lhs, rhs, slot_id, maybe_feedback_vector, update_feedback_mode)",
+    "context": [
+      1,
+      3
+    ],
+    "explanation": "Implements the fast-path and slow-path logic for the JS + (Add) operation in IC / builtin stubs. Handles Smi+Smi (TrySmiAdd), HeapNumber addition (Float64Add), string concatenation via StringAdd builtin, BigInt fast 64-bit ops and full BigInt fallback via Builtin::kBigIntAddNoThrow. On each path it computes a Smi feedback value (BinaryOperationFeedback::kSignedSmall/kNumber/kString/kBigInt/kAny etc) and calls UpdateFeedback with maybe_feedback_vector and slot_id. Calls Builtin::kAdd for generic cases.",
+    "file_line": "src/ic/binary-op-assembler.cc:1"
+  }
+}

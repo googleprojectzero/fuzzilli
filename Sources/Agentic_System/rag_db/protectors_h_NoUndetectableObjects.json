@@ -1,0 +1,9 @@
+{
+  "body": "// execution/protectors.h (excerpt)\n#define DECLARED_PROTECTORS_ON_ISOLATE(V)                                     \\\n  ...                                                                         \\\n  V(NoUndetectableObjects, NoUndetectableObjectsProtector,                    \\\n    no_undetectable_objects_protector)                                        \\\n  ...\n\n#define DECLARE_PROTECTOR_ON_ISOLATE(name, unused_root_index, unused_cell) \\\n  V8_EXPORT_PRIVATE static inline bool Is##name##Intact(Isolate* isolate); \\\n  V8_EXPORT_PRIVATE static void Invalidate##name(Isolate* isolate);\n  DECLARED_PROTECTORS_ON_ISOLATE(DECLARE_PROTECTOR_ON_ISOLATE)\n\n// This expands to declarations for NoUndetectableObjects:\n// V8_EXPORT_PRIVATE static inline bool IsNoUndetectableObjectsIntact(Isolate* isolate);\n// V8_EXPORT_PRIVATE static void InvalidateNoUndetectableObjects(Isolate* isolate);\n",
+  "context": [
+    "execution_protectors_header",
+    "protectors_helpers"
+  ],
+  "explanation": "Defines protector list and declares helper APIs for each protector. The macro DECLARED_PROTECTORS_ON_ISOLATE includes the NoUndetectableObjects entry and DECLARE_PROTECTOR_ON_ISOLATE expands to two functions: IsNoUndetectableObjectsIntact and InvalidateNoUndetectableObjects. This is the canonical declaration site for the protector-related helper APIs used across the VM.",
+  "file_line": "execution/protectors.h:1-200"
+}

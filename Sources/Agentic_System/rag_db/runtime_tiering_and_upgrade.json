@@ -1,0 +1,11 @@
+{
+  "body": "Tiering and JIT-upgrade control for wrappers is implemented via runtime entry points and builtins in runtime/runtime-wasm.cc and Torque builtins.\n- File: src/runtime/runtime-wasm.cc\n- Key runtime functions:\n  - RUNTIME_FUNCTION(Runtime_TierUpJSToWasmWrapper): locates the CanonicalSig for the exported function that triggered tier-up; looks for cached optimized wrapper in heap root js_to_wasm_wrappers weak array keyed by sig_id; if not present, compiles via wasm::JSToWasmWrapperCompilationUnit::CompileJSToWasmWrapper(isolate, sig, sig_id); replaces wrapper code on the external JSFunction and updates WasmExportedFunctionData::wrapper_code; eagerly replaces wrappers for all exports with the same signature. Anchors: lines ~535-614.\n  - RUNTIME_FUNCTION(Runtime_TierUpWasmToJSWrapper): for an import (WasmImportData), resolves ImportCallKind and expected_arity; then queries WasmImportWrapperCache::MaybeGet, and compiles via cache->CompileWasmImportCallWrapper if missing; installs compiled wrapper into WasmDispatchTable or OffHeapData of WasmJSFunctionData; handles both origin paths: WasmInternalFunction origin (no instance) and WasmDispatchTable origin. Anchors: lines ~626-759.\n  - RUNTIME_FUNCTION(Runtime_WasmAllocateSuspender) and related builtins manage JSPI suspension and stack switching; wrappers in wrappers.cc call suspend path via Builtin::kWasmSuspend.\n- File: src/builtins/js-to-wasm.tq and builtins/wasm-to-js.tq\n  - Torque macros reference Runtime::TierUpJSToWasmWrapper and Runtime::TierUpWasmToJSWrapper to trigger async/sync tier up from low-level JS wrappers.\n- CodeKind identifiers for wrappers appear in logging and tracing (e.g., tracing/perfetto-logger.cc, objects/code-kind.h) for JS_TO_WASM_FUNCTION, WASM_TO_JS_FUNCTION, WASM_TO_CAPI_FUNCTION.\n",
+  "context": [
+    "wasm_wrappers_arch",
+    "wasm_import_wrapper_cache",
+    "wrappers_core",
+    "torque_wrappers"
+  ],
+  "explanation": "Captures runtime tier-up paths for both directions: JS\u2192Wasm (export wrappers) and Wasm\u2192JS (import wrappers), tying together caches and compilation units. Provides file anchors for quick navigation.",
+  "file_line": "runtime/runtime-wasm.cc:534-759; builtins/js-to-wasm.tq:11-26,497-772; builtins/wasm-to-js.tq:6,25,51-69"
+}

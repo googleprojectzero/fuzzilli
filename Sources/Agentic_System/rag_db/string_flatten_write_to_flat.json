@@ -1,0 +1,11 @@
+{
+  "body": "String::Flatten, String::SlowFlatten, String::WriteToFlat, String::WriteToFlat2, ConsStringIterator implementations. \n// Key files:\n// - src/objects/string.h: declarations for WriteToFlat, WriteToFlat2, VisitFlat, SlowFlatten, ConsStringIterator\n// - src/objects/string.cc: implementations for WriteToFlat, WriteToFlat2, ConsStringIterator::Initialize/Next/Continue/Search\n// - src/objects/string-inl.h and objects/string-inl.h: Flatten and SlowFlatten inlined templates and comments\n// - src/objects/string.tq: Torque builtin StringSlowFlatten and Flatten macros\n\n// Important code locations:\n// - objects/string.h: declarations around String::WriteToFlat and V8_EXPORT_PRIVATE SlowFlatten\n// - objects/string.cc: template implementations WriteToFlat and WriteToFlat2Impl plus ConsStringIterator methods\n// - objects/string-inl.h: Flatten() definitions and SlowFlatten wrapper calling String::SlowFlatten\n",
+  "context": [
+    "Flatten",
+    "WriteToFlat",
+    "ConsStringIterator",
+    "SlowFlatten"
+  ],
+  "explanation": "These functions traverse heterogeneous string representations and implement flattening and copying characters into buffers \u2014 crucial for case conversion and concatenation fast paths. Include various overloads for one-byte/two-byte sinks and the iterative stack-based WriteToFlat2.",
+  "file_line": "objects/string.h, objects/string-inl.h, objects/string.cc, objects/string.tq"
+}

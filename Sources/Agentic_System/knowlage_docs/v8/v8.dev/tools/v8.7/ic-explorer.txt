@@ -1,0 +1,1 @@
+V8 IC explorer I C E Your IC-Explorer. 0 uninitialized X no feedback 1 monomorphic ^ recompute handler P polymorphic N megamorphic G generic Usage Run your script with --trace_ic and upload v8.log on this page: /path/to/d8 --trace_ic your_script.js Data trace entries: 0 Result Group-Key:

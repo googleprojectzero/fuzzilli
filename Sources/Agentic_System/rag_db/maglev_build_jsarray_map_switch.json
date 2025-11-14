@@ -1,0 +1,13 @@
+{
+  "body": "MaybeReduceResult MaglevGraphBuilder::BuildJSArrayBuiltinMapSwitchOnElementsKind(...){ ... }",
+  "context": [
+    "maglev-graph-builder.cc",
+    "CanInlineArrayResizingBuiltin",
+    "map_kinds grouping",
+    "index_to_elements_kind",
+    "BuildStoreFixedArrayElement",
+    "BuildStoreFixedDoubleArrayElement"
+  ],
+  "explanation": "Implementation of map-switch helper used by pop/push to emit per-elements-kind codepaths; iterates over grouped map kinds and emits map checks and kind-specific code via callbacks.",
+  "file_line": "maglev/maglev-graph-builder.cc:9971-10183"
+}

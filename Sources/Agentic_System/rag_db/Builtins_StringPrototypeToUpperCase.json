@@ -1,0 +1,11 @@
+{
+  "body": "builtins/builtins-string.cc: BUILTIN(StringPrototypeToUpperCase) { ... }\nbuiltins/builtins-intl.cc: BUILTIN(StringPrototypeToUpperCaseIntl) and builtins/builtins-intl-gen.cc TF_BUILTIN(StringToUpperCaseIntl, IntlBuiltinsAssembler)\ncompiler/js-call-reducer.cc: ReduceStringPrototypeToUpperCaseIntl(Node* node) -> NodeProperties::ChangeOp(node, simplified()->StringToUpperCaseIntl())\nruntime/runtime-intl.cc: RUNTIME_FUNCTION(Runtime_StringToUpperCaseIntl) { ... }",
+  "context": [
+    "builtins/builtins-string.cc",
+    "builtins/builtins-intl.cc",
+    "compiler/js-call-reducer.cc",
+    "runtime/runtime-intl.cc"
+  ],
+  "explanation": "Anchors for ToUpperCase builtins and intl variants across builtins, generated torque csa, compiler reducers and runtime ICU paths.",
+  "file_line": "builtins/builtins-string.cc: lines around BUILTIN(StringPrototypeToUpperCase)"
+}

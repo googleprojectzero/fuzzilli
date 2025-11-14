@@ -1,0 +1,10 @@
+{
+  "body": "objects/string.cc: uint16_t SlicedString::Get(...) implementation\nobjects/string.h: SlicedString class with parent/offset and kMinLength\nobjects/string-inl.h and objects/string.cc handle GetUnderlying and Flatten routing for sliced strings",
+  "context": [
+    "objects/string.h",
+    "objects/string-inl.h",
+    "objects/string.cc"
+  ],
+  "explanation": "Anchors for SlicedString behavior: parent/offset fields, Get implementation, interplay with Flatten and GetUnderlying.",
+  "file_line": "objects/string.cc: SlicedString::Get implementation (search for \"uint16_t SlicedString::Get(\")"
+}

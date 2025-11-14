@@ -1,0 +1,11 @@
+{
+  "body": "maglev/maglev-graph-builder.cc: VisitLdaCurrentContextSlot, VisitLdaImmutableCurrentContextSlot, VisitStaCurrentContextSlot, VisitPushContext, VisitPopContext, VisitCreateBlockContext; functions: MaglevGraphBuilder::BuildLoadContextSlot, LoadAndCacheContextSlot, TrySpecializeLoadContextSlotToFunctionContext, TrySpecializeLoadScriptContextSlot, StoreAndCacheContextSlot, TrySpecializeStoreScriptContextSlot. These implement specialization of loads/stores to function/script contexts, caching loaded context slots via KnownNodeAspects loaded_context_slots. TDZ/hole checks via BuildCheckNotHole and ThrowReferenceErrorIfHole nodes. Interactions: for-in/of TDZ handled at parsing and bytecode generation (parser::CreateForEachStatementTDZ, interpreter bytecode HoleCheckElision logic).",
+  "context": [
+    "maglev_graph_builder",
+    "maglev_interpreter_frame_state",
+    "maglev_ir",
+    "maglev_phi_representation_selector"
+  ],
+  "explanation": "Contains list of maglev graph builder handlers and helper functions related to context slot loads/stores and context push/pop, plus mention of caching via KnownNodeAspects and TDZ nodes. Useful for locating primary implementations.",
+  "file_line": "maglev/maglev-graph-builder.cc: VisitLdaCurrentContextSlot etc."
+}

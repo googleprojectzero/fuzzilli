@@ -1,0 +1,10 @@
+{
+  "body": "Node: StoreFloat64\n\nDefined: src/maglev/maglev-ir.h class StoreFloat64 : public FixedInputNodeT<2, StoreFloat64>\n\nPurpose & Usage:\n- Represents storing a double into a HeapNumber object's value field (HeapNumber::value_).\n- Common use site: when storing a double into an existing double-typed field, the graph builder loads the HeapNumber object and emits StoreFloat64({heap_number, value}, offsetof(HeapNumber, value_)) to perform an in-place update of the boxed double.\n- In maglev-graph-builder.cc this node is created in BuildStoreField for field_representation.IsDouble() & !HasTransitionMap() and also in other places where writing into HeapNumber->value_ is required.\n\nProperties and Codegen:\n- Input types: {HeapNumber object (tagged), float64 value}\n- SetValueLocationConstraints/GenerateCode implemented in maglev-ir.cc. GenerateCode emits __ StoreFloat64(FieldMemOperand(object, offset()), value); where offset() is usually offsetof(HeapNumber, value_).\n- Optimize: MaglevGraphOptimizer has VisitStoreFloat64 to optimize some cases.\n\nWhy it's important: StoreFloat64 is the in-place mutable HeapNumber update path: it avoids allocation when a field already contains a HeapNumber and writes the new double directly into the existing HeapNumber.\n\nFileLine: maglev/maglev-ir.h:9675-9680; maglev/maglev-ir.cc:5421-5427\n",
+  "context": [
+    "heapnumber",
+    "store",
+    "inplace_update"
+  ],
+  "explanation": "StoreFloat64 implements the in-place write to a HeapNumber object's value field. Its use distinguishes between allocating a new boxed HeapNumber (Float64ToHeapNumberForField) and performing an in-place update of an existing mutable HeapNumber.",
+  "file_line": "maglev/maglev-graph-builder.cc:5328; maglev/maglev-ir.cc:5421-5427"
+}

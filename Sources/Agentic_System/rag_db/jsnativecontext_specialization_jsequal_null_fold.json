@@ -1,0 +1,9 @@
+{
+  "body": "File: compiler/js-native-context-specialization.cc\nSymbol: JSNativeContextSpecialization::Reduce (handles various JS ops)\nSnippet: effect = BuildCheckEqualsName(name, key, effect, control);\nNote: JSNativeContextSpecialization references simplified()->ReferenceEqual(), NumberEqual(), and builds checks; possible folding of JSEqual against null/undefined occurs via BuildJumpIfEqual etc; protector dependency registration might be elsewhere (compilation-dependencies).",
+  "context": [
+    "js_typed_lowering_reduce_jsequal",
+    "compilation_dependencies_depend_on_no_undetectable"
+  ],
+  "explanation": "Entry pointing to JSNativeContextSpecialization usage sites that may fold equality to reference checks against null/undefined and rely on protector state indirectly.",
+  "file_line": "compiler/js-native-context-specialization.cc:~~ (multiple occurrences)"
+}

@@ -1,0 +1,9 @@
+{
+  "body": "MaybeReduceResult MaglevGraphBuilder::TryBuildPropertyLoad(\n    ValueNode* receiver, ValueNode* lookup_start_object, compiler::NameRef name,\n    compiler::PropertyAccessInfo const& access_info) { ... }\n\nLocated in maglev/maglev-graph-builder.cc. This handles lowering for a single PropertyAccessInfo, calling BuildLoadField for data fields (including double fields -> LoadTaggedField -> LoadFloat64) or TryBuildPropertyGetterCall for accessor constants. It records known properties and inserts appropriate map checks via BuildCheckMaps.\n",
+  "context": [
+    "maglev_TryBuildNamedAccess",
+    "maglev_BuildLoadField"
+  ],
+  "explanation": "Monomorphic property-load lowering entry. Important for the double-field load path that returns LoadFloat64 on HeapNumber fields or LoadTaggedFieldForProperty for tagged fields.",
+  "file_line": "maglev/maglev-graph-builder.cc:~7200"
+}

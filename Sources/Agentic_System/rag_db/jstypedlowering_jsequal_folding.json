@@ -1,0 +1,10 @@
+{
+  "body": "File: src/compiler/js-typed-lowering.cc\nSymbol: JSTypedLowering::ReduceJSEqual / ReduceJSStrictEqual\nExcerpt: JSTypedLowering::ReduceJSEqual folds many typed cases. Important snippet: if (r.OneInputIs(Type::NullOrUndefined())) { RelaxEffectsAndControls(node); node->RemoveInput(...); node->TrimInputCount(1); NodeProperties::ChangeOp(node, simplified()->ObjectIsUndetectable()); return Changed(node); }\nContext: [JSTypedLowering, JSEqual, ObjectIsUndetectable, folded-to-unary]\nExplanation: This records the TurboFan typed lowering that turns x == null/undefined into ObjectIsUndetectable(x). This is the lowering that preceding passes (like MachineLowering/TurboShaft/Maglev) will see and may attach protector dependencies for.\nFileLine: \"compiler/js-typed-lowering.cc:909-968\"",
+  "context": [
+    "JSTypedLowering",
+    "JSEqual",
+    "ObjectIsUndetectable"
+  ],
+  "explanation": "Shows where JSEqual is converted into ObjectIsUndetectable in JSTypedLowering.",
+  "file_line": "compiler/js-typed-lowering.cc:909-968"
+}

@@ -1,0 +1,9 @@
+{
+  "body": "MaybeReduceResult MaglevGraphBuilder::TryBuildLoadNamedProperty(\n    ValueNode* receiver, ValueNode* lookup_start_object, compiler::NameRef name,\n    compiler::FeedbackSource& feedback_source,\n    GenericAccessFunc&& build_generic_access) { ... }\n\nHandles LoadNamedProperty lowering: requests broker()->GetFeedbackForPropertyAccess(...), checks for NamedAccess feedback, and dispatches to TryBuildNamedAccess or emits generic LoadNamedGeneric. Important anchor for where feedback is read and used to emit BuildCheckMaps and lowering into LoadFloat64+LoadTaggedField or LoadTaggedFieldForProperty.\n",
+  "context": [
+    "maglev_TryBuildNamedAccess",
+    "maglev_BuildLoadField"
+  ],
+  "explanation": "Entry for named property load lowering in maglev-graph-builder.cc. This node path handles the monomorphic/polymorphic/megamorphic cases and is where broker GetFeedbackForPropertyAccess is interrogated before building CheckMaps and field loads.",
+  "file_line": "maglev/maglev-graph-builder.cc:7550-7590"
+}

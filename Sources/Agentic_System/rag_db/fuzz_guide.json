@@ -1,0 +1,10 @@
+{
+  "body": "Stage:1 region:KeyedLoadIC_StringIndex_Protector\nTopic: fuzz-guide \u2014 Fuzz guidance hooks and JS snippets to exercise the fast path and protector flips.\n\nWarm-up and invalidate scenario:\n- Example function that exercises s[i]:\n  function f(s,i){ return s[i]; }\n- Warm-up for feedback collection (Ignition/TurboFan/Baseline):\n  for (let k=0;k<10000;k++) f(\"abcdef\", k & 3);\n- Invalidate protector by installing numeric accessor on String.prototype:\n  Object.defineProperty(String.prototype, \"0\", { get() { return \"X\"; } });\n- Observe behavior change (slow path, changed return), then delete property to see recovery.\n\nIndex canonicalization & boundary tests:\n- f(\"abc\", -0); f(\"abc\", 0.0); f(\"abc\", 3); f(\"abc\", 2**32-1);\n- f(\"abc\", \"1\"); f(\"abc\", 1n);\n\nRepresentation tests:\n- let a = \"A\".repeat(10000); let b = a + a; // cons-ish\n  f(b, 5);\n- let c = b.slice(1, b.length-1); f(c, 10); // sliced\n- Thin strings/internalization cases: f((\"x\"+\"y\").toUpperCase(), 1);\n\nProxy/prototype tests:\n- Install proxy in chain or change prototype to invalidate protector:\n  let P = new Proxy({}, {});\n  Object.setPrototypeOf(String.prototype, P);\n\nNotes:\n- Use %PrepareFunctionForOptimization and similar helpers where available to speed tiering during fuzz harness. Observe feedback vector slot kind kLoadKeyed.\n",
+  "context": [
+    "inventory",
+    "protector",
+    "edge_cases"
+  ],
+  "explanation": "Practical snippets and sequences to warm-up keyed loads, flip protector state, and exercise representation-dependent fast paths for fuzz testing.",
+  "file_line": "(snippets) interpreter/baseline/maglev/tf warm-up; src/objects/string.{cc,h} representations; src/execution/protectors.cc:InvalidateStringWrapperToPrimitive"
+}

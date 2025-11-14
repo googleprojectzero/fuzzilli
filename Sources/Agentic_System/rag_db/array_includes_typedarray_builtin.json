@@ -1,0 +1,9 @@
+{
+  "body": "BUILTIN(TypedArrayPrototypeIncludes) - builtins/builtins-typed-array.cc\nPreconditions/guards snippet:\n- ASSIGN_RETURN_FAILURE_ON_EXCEPTION(array, JSTypedArray::Validate(isolate, args.receiver(), method_name)); // ValidateTypedArray checks receiver is JSTypedArray\n- if (args.length() < 2) return false; // need search element\n- int64_t len = array->GetLength(); if (len == 0) return false;\n- index handling: ToInteger on arg[2], CapRelativeIndex to clamp negatives\n- DirectHandle<Object> search_element = args.atOrUndefined(isolate,1);\n- ElementsAccessor* elements = array->GetElementsAccessor(); Maybe<bool> result = elements->IncludesValue(isolate, array, search_element, index, len);\n- MAYBE_RETURN(result, exception)\n- Returns ToBoolean(result)\nExplanation: TypedArray includes delegates to the ElementsAccessor implementation after Validate/length/index checks. ElementsAccessor implementations perform typed-array-specific checks (detached/RAB/OOB) and SameValueZero semantics. This builtin also handles BigInt typed arrays by converting search element appropriately in other builtins; here it passes through the raw object to the accessor.",
+  "context": [
+    "builtins-typed-array.cc:TypedArrayPrototypeIncludes",
+    "typed-array.tq macros EnsureAttached/LoadJSTypedArrayLengthAndCheckDetached/LoadFixedTypedArrayElementAsTagged"
+  ],
+  "explanation": "Describes the C++ builtin entry for %TypedArray%.prototype.includes; shows validation, argument handling, and delegation to ElementsAccessor->IncludesValue which contains typed-array fast-paths and detached checks.",
+  "file_line": "src/builtins/builtins-typed-array.cc:200-260"
+}

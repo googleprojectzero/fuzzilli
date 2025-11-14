@@ -1,0 +1,13 @@
+{
+  "body": "File: src/wasm/wrappers.cc\n- class WasmWrapperTSGraphBuilder : public WasmGraphBuilderBase { ... }\n  - BuildJSToWasmWrapper(bool do_conversion=true, OptionalOpIndex frame_state=Nullopt, bool set_in_wasm_flag=true)  [line ~414]\n  - BuildWasmToJSWrapper(ImportCallKind kind, int expected_arity, Suspend suspend) [~523]\n  - BuildCapiCallWrapper() [~671]\n  - Support helpers: ToJS, FromJS, BuildCallAndReturn, BuildModifyThreadInWasmFlag, SwitchToTheCentralStack, Suspend handling, AddArgumentNodes, etc.\n- Free function BuildWasmWrapper(PipelineData*, AccountingAllocator*, Graph&, const CanonicalSig*, WrapperCompilationInfo) dispatches by wrapper_info.code_kind to call builder methods [~1372+]\nKey snippets:\n  void BuildJSToWasmWrapper(...) { ... convert JS params (fast/slow paths), call wasm target (WasmInternalFunction), set thread-in-wasm flag around call, convert returns to JS including multi-return arrays, return. }\n  void BuildWasmToJSWrapper(kind, expected_arity, suspend) { ... build args per kind (kJSFunctionArityMatch/ArityMismatch vs kUseCallBuiltin), switch to central stack if needed, clear thread-in-wasm, perform JS call via Linkage::GetJSCallDescriptor or CallTrampoline, optional suspend handling, convert return(s) back to wasm types using FromJS, set thread-in-wasm, switch back, return wasm values. }\n  void BuildCapiCallWrapper() { lay out arg/ret stack buffer, call embedder C function (call_target from WasmFunctionData), handle rethrow via Builtin::kWasmRethrowExplicitContext on error ptr, return values copied back }\nAlso: ModifyThreadInWasmFlag RAII scope modifies Isolate::thread_in_wasm_flag_address when trap handler enabled.\n",
+  "context": [
+    "wasm_ts_build_wrapper_entry",
+    "compiler_pipeline_wasm_wrappers",
+    "wasm_objects_glue",
+    "call_descs_js_wasm",
+    "torque_js_to_wasm",
+    "torque_wasm_to_js"
+  ],
+  "explanation": "This records the Turboshaft (TS) JS\u2194Wasm wrapper builder entry points and dispatcher in src/wasm/wrappers.cc at current HEAD, including function names, roles, and approximate line anchors to map the wrapper region. It highlights BuildJSToWasmWrapper, BuildWasmToJSWrapper, BuildCapiCallWrapper, and the BuildWasmWrapper dispatcher.",
+  "file_line": "wasm/wrappers.cc:63,414,523,671,1372"
+}

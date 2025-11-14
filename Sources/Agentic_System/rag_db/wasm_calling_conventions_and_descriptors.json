@@ -1,0 +1,10 @@
+{
+  "body": "Call descriptors and calling convention sources relevant for wrappers.\n- File: src/wasm/wasm-linkage.h\n  - Defines architecture-specific register assignments for Wasm parameter and return registers: kGpParamRegisters, kGpReturnRegisters, kFpParamRegisters, kFpReturnRegisters for all supported arches.\n  - kWasmInstanceDataParameterIndex and alignment rules.\n  - LinkageAllocator and LinkageLocationAllocator helpers for allocating parameter locations (regs and stack) for call signatures.\n  - kGenericJSToWasmWrapperParamBufferMaxSize constant used by builtins for buffer sizing.\n- File: src/wasm/wrappers.cc\n  - GetBuiltinCallDescriptor(Builtin, Zone*): constructs a CallDescriptor via compiler::Linkage::GetStubCallDescriptor and wraps in TSCallDescriptor.\n  - BuildWasmToJSWrapper: for kind == kJSFunctionArityMatch/ kJSFunctionArityMismatch builds a JS call using compiler::Linkage::GetJSCallDescriptor(pushed_count+1 args); for kUseCallBuiltin uses CallTrampolineDescriptor and StubCallMode::kCallBuiltinPointer.\n  - BuildCallWasmFromWrapper: constructs TSCallDescriptor from compiler::GetWasmCallDescriptor(__graph_zone(), sig, WasmCallKind::kWasmIndirectFunction), with CanThrow::kYes.\n  - FromJS(BigInt to i64): obtains CallDescriptor via GetWasmEngine()->call_descriptors()->GetBigIntToI64Descriptor(needs_frame_state), then TSCallDescriptor::Create and calls Builtin::kBigIntToI64 or Builtin::kBigIntToI32Pair depending on Is32/64.\n- File: src/wasm/wasm-engine.h\n  - class WasmEngine holds compiler::WasmCallDescriptors call_descriptors_ and exposes call_descriptors() for wrapper code to retrieve built BigInt-to-i64 descriptor and others.\n",
+  "context": [
+    "wasm_wrappers.entrypoints",
+    "wasm_import_wrapper_cache",
+    "runtime_tiering_and_upgrade"
+  ],
+  "explanation": "Summarizes where call descriptors come from for JS\u2194Wasm wrappers, including architecture calling convention tables and linkage helpers, and the path to fetch BigInt-to-i64 call descriptor used in JS-to-Wasm conversions.",
+  "file_line": "wasm/wasm-linkage.h:1- end; wasm/wrappers.cc:1- end; wasm/wasm-engine.h:~160,~475"
+}

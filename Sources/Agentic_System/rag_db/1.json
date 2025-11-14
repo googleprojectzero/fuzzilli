@@ -1,0 +1,10 @@
+{
+  "1": {
+    "body": "BinaryOperationFeedback enum and values",
+    "context": [
+      "common/globals.h:~1443"
+    ],
+    "explanation": "Defines BinaryOperationFeedback constants used across feedback collection (kSignedSmall, kNumber, kString, kBigInt etc).",
+    "file_line": "src/common/globals.h:1443"
+  }
+}

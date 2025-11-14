@@ -1,0 +1,10 @@
+{
+  "body": "File: src/compiler/pipeline.cc\n- Turboshaft wrapper compilation job plumbing:\n  - class WasmTurboshaftWrapperCompilationJob: constructs turboshaft::PipelineData with pipeline kind kJSToWasm or kWasm depending on CodeKind (JS_TO_WASM_FUNCTION or WASM_TO_JS_FUNCTION), prepares CallDescriptor via GetCallDescriptor (JS call descriptor for JS->Wasm; GetWasmCallDescriptor for Wasm->JS, lowered on 32-bit), ExecuteJobImpl builds TS graph by calling wasm::BuildWasmWrapper(turboshaft_data_, ... sig, wrapper_info) [see wrappers.cc], runs WasmOptimizePhase/Int64Lowering/WasmDeadCodeElimination/DebugFeatureLowering, then instruction selection staged vs TF fallback, FinalizeJobImpl finalizes and sets wasm_js_tagged_parameter_count metadata.\n  - Pipeline::NewWasmTurboshaftWrapperCompilationJob(...)\n- Turbofan heap stub for C-wasm entry: WasmHeapStubCompilationJob for generating C_WASM_ENTRY.\n- GenerateCodeFromTurboshaftGraph path used by wrapper job.\n- Also shows TF JS-wasm inlining and lowering phases; but wrapper compilation uses TS path through BuildWasmWrapper dispatcher.\n\nCross-link:\n- wasm/wrappers.cc free function BuildWasmWrapper is called from ExecuteJobImpl.\n- Linkage helpers and schedule/assembly invoked in pipeline.\n",
+  "context": [
+    "wrappers_ts_builders",
+    "tf_wrappers_builders_pipeline",
+    "call_descriptors_wasm"
+  ],
+  "explanation": "Captures the wrapper compilation and pipeline integration: job class, where TS graph is built via BuildWasmWrapper, instruction selection, and finalization details, correlating wrapper kinds to pipeline settings.",
+  "file_line": "compiler/pipeline.cc: classes and functions around WasmTurboshaftWrapperCompilationJob (search hits ~ Pipeline::NewWasmTurboshaftWrapperCompilationJob, ExecuteJobImpl)."
+}

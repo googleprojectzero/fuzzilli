@@ -1,0 +1,10 @@
+{
+  "body": "JS\u2192Wasm export wrapper compilation pipeline and caching.\n- File: src/wasm/function-compiler.h/.cc\n- Symbols:\n  - class JSToWasmWrapperCompilationUnit final {\n    \u2022 JSToWasmWrapperCompilationUnit(Isolate* isolate, const CanonicalSig* sig, CanonicalTypeIndex sig_index)\n    \u2022 void Execute(): runs the Turboshaft-based TurboshaftCompilationJob to build wrapper code (unless wasm_jitless, where it does nothing and uses interpreter path)\n    \u2022 Handle<Code> Finalize(): Finalizes job, returns Code object. Installs wrapper in heap weak cache at isolate->heap()->js_to_wasm_wrappers()[sig_index.index] via MakeWeak(code->wrapper()), updates counters.\n    \u2022 static Handle<Code> CompileJSToWasmWrapper(Isolate*, const CanonicalSig*, CanonicalTypeIndex): synchronous entry that constructs unit, Execute(), Finalize().\n  - Integration:\n    \u2022 runtime/runtime-wasm.cc Runtime_TierUpJSToWasmWrapper calls JSToWasmWrapperCompilationUnit::CompileJSToWasmWrapper when cache miss, then ReplaceJSToWasmWrapper updates specific exported external JSFunction and WasmExportedFunctionData::wrapper_code; then eagerly updates all exports sharing same signature.\n  - Tracing/logging: Sets debug name via OptimizedCompilationInfo, increments counters wasm_compiled_export_wrapper, wasm_generated_code_size, wasm_reloc_size.\n  - JITless mode: returns Builtin::kGenericJSToWasmInterpreterWrapper via builtins instead of compiling.\n- Heap cache shape:\n  - Root: Heap::js_to_wasm_wrappers() is a WeakFixedArray keyed by CanonicalTypeIndex.index holding weak handles to Code::wrapper() for the wrapper stub. Runtime_TierUpJSToWasmWrapper consults/installs here.\n",
+  "context": [
+    "wasm_wrappers.entrypoints",
+    "runtime_tiering_and_upgrade",
+    "wasm_calling_conventions_and_descriptors"
+  ],
+  "explanation": "Documents the JS\u2192Wasm wrapper compilation unit, cache population, and runtime tier-up replacement mechanism. Provides concrete class/method entry points and where the weak cache is populated and consulted.",
+  "file_line": "wasm/function-compiler.cc:192-270; runtime/runtime-wasm.cc:534-614"
+}

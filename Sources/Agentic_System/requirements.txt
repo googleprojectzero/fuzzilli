@@ -1,0 +1,27 @@
+# Core agent framework (REQUIRED)
+smolagents
+smolagents[litellm]
+
+# Build tools (REQUIRED)
+wheel
+setuptools
+fuzzywuzzy
+fuzzywuzzy[speedup]
+# LLM and AI dependencies (REQUIRED)
+openai
+anthropic
+
+# Basic data processing (REQUIRED)
+numpy
+requests
+
+# Vector database and embeddings (OPTIONAL - will fallback gracefully if not available)
+# Uncomment these if you need RAG functionality:
+chromadb
+langchain-community
+sentence-transformers
+faiss-cpu
+
+#Utilities
+pytz
+duckduckgo-search

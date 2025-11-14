@@ -1,0 +1,10 @@
+{
+  "body": "File: src/compiler/js-native-context-specialization.cc\nSymbol: JSNativeContextSpecialization::ReduceJSEqual/ReduceJSStrictEqual handling null/undefined folding to ObjectIsUndetectable (JSEqual case)\nExcerpt: In ReduceJSEqual: when OneInputIs(Type::NullOrUndefined()) the code relaxes effects/controls and morphs node to simplified()->ObjectIsUndetectable() with single operand. It builds JSGraphAssembler paths to compare to Undefined/Null and then ObjectIsUndetectable on the counterpart.\nContext: [js_typed_lowering, native_context_specialization, ObjectIsUndetectable, protector-dependency]\nExplanation: This entry records where JSNativeContextSpecialization turns equality against null/undefined into ObjectIsUndetectable checks, which is the origin of protector dependency attachment later in lowering.\nFileLine: \"compiler/js-typed-lowering.cc:932-990\"",
+  "context": [
+    "js_typed_lowering",
+    "native_context_specialization",
+    "ObjectIsUndetectable"
+  ],
+  "explanation": "Records ReduceJSEqual handling null/undefined -> ObjectIsUndetectable; important for tracing dependency attachment.",
+  "file_line": "compiler/js-typed-lowering.cc:932-990"
+}

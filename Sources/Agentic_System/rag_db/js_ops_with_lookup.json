@@ -1,0 +1,11 @@
+{
+  "body": "File: compiler/js-operator.{h,cc}\nDefinitions and relevant operators:\n- const Operator* JSOperatorBuilder::CreateWithContext(ScopeInfoRef scope_info); (js-operator.h ~1115; js-operator.cc ~1505) -> IrOpcode::kJSCreateWithContext, properties Operator::kNoProperties, value inputs: object, outputs: 1; parameter is ScopeInfoRef.\n- const Operator* JSOperatorBuilder::HasContextExtension(size_t depth); (h:1066, cc:1223) -> IrOpcode::kJSHasContextExtension, Operator::kNoWrite|kNoThrow; parameter depth.\n- const Operator* JSOperatorBuilder::LoadContext(size_t depth, size_t index, bool immutable); (h:1067, cc:1232)\n- const Operator* JSOperatorBuilder::LoadScriptContext(size_t depth, size_t index); (h:1068, cc:1243)\n- const Operator* JSOperatorBuilder::StoreContext(size_t depth, size_t index); (h:1069, cc:1254)\n- const Operator* JSOperatorBuilder::StoreScriptContext(size_t depth, size_t index); (h:1070, cc:1264)\n- const Operator* JSOperatorBuilder::LoadGlobal(NameRef name, const FeedbackSource& feedback, TypeofMode typeof_mode); (h:1061, cc:1196)\n- const Operator* JSOperatorBuilder::ToObject(); (h:945, cc CACHED_OP_LIST -> JSOperatorBuilder::ToObject uses Operator::kFoldable)\nAlso helper parameter extractors and printing:\n- ScopeInfoRef ScopeInfoOf(const Operator* op) (h end; cc around 1820+) returns ScopeInfoRef for CreateWith/Catch/Block ops.\n- ContextAccessOf, LoadGlobalParametersOf etc for access to parameters.\n",
+  "context": [
+    "bgb_with_lookup_visitors",
+    "js_generic_lowering_with",
+    "ignition_with_lookup",
+    "runtime_scopes_lookup"
+  ],
+  "explanation": "This entry records the JS operator definitions used by Ignition->TurboFan: CreateWithContext, HasContextExtension, Load/Store Context and ScriptContext, LoadGlobal and ToObject. These are referenced by BytecodeGraphBuilder fast/slow paths and by js-generic-lowering.",
+  "file_line": "compiler/js-operator.h:945,1061-1070,1115; compiler/js-operator.cc:1196,1223-1264,1505"
+}

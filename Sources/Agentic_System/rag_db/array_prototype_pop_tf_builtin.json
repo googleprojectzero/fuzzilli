@@ -1,0 +1,10 @@
+{
+  "body": "TF_BUILTIN(ArrayPrototypePop, CodeStubAssembler) in builtins/builtins-array-gen.cc \u2014 fast-path implementation with checks for BranchIfFastJSArray, EnsureArrayLengthWritable, copy-on-write elements check, backing-store shrink check, element load/store and TailCallJSBuiltin(Builtin::kArrayPop, ...) fallback to runtime. Code lines: builtins/builtins-array-gen.cc (TF_BUILTIN ArrayPrototypePop)",
+  "context": [
+    "ArrayPrototypePop",
+    "TailCallJSBuiltin(ArrayPop)",
+    "builtins-array-gen.cc"
+  ],
+  "explanation": "Contains the CodeStubAssembler TF builtin which implements the fast-path for Array.prototype.pop and performs the TailCallJSBuiltin fallback to Builtin::kArrayPop when checks fail.",
+  "file_line": "builtins/builtins-array-gen.cc: TF_BUILTIN(ArrayPrototypePop, CodeStubAssembler) (approx lines ~160-260)"
+}

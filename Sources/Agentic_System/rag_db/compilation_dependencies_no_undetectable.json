@@ -1,0 +1,10 @@
+{
+  "body": "CompilationDependencies::DependOnNoUndetectableObjectsProtector implementation and ProtectorDependency internals in compiler/compilation-dependencies.cc:\n\nKey points:\n- DependOnNoUndetectableObjectsProtector() calls DependOnProtector(MakeRef(broker_, broker_->isolate()->factory()->no_undetectable_objects_protector()));\n- ProtectorDependency::IsValid checks the PropertyCell value equals Protectors::kProtectorValid; Install registers the property cell with DependentCode::kPropertyCellChangedGroup.\n- CompilationDependencies::DependOnProtector caches property cell as protector and records a ProtectorDependency if the cell value equals kProtectorValid.\n\nWhy interesting: Shows how a protector dependency is recorded and installed so that generated code can be invalidated when the protector is changed.\n\nfile_line: compiler/compilation-dependencies.cc around DependOnNoUndetectableObjectsProtector and ProtectorDependency definition\n",
+  "context": [
+    "compilation_dependencies",
+    "protectors",
+    "dependent_code"
+  ],
+  "explanation": "Records the exact code and mechanisms by which compilation records protector dependencies and installs them into DependentCode so that deopt/invalidation occur when protectors are toggled.",
+  "file_line": "compiler/compilation-dependencies.cc: ~ lines 1200-1370"
+}

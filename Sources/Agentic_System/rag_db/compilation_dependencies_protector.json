@@ -1,0 +1,10 @@
+{
+  "body": "CompilationDependencies::DependOnNoUndetectableObjectsProtector and ProtectorDependency\n\nFile: compiler/compilation-dependencies.cc\nSymbols: CompilationDependencies::DependOnNoUndetectableObjectsProtector, class ProtectorDependency\n\nKey excerpts:\n- DependOnNoUndetectableObjectsProtector() calls DependOnProtector(MakeRef(broker_, broker_->isolate()->factory()->no_undetectable_objects_protector())); (bottom of file)\n- DependOnProtector(PropertyCellRef cell) caches the cell as a protector, checks its value against Protectors::kProtectorValid, and if valid records a ProtectorDependency by creating a new ProtectorDependency(PropertyCellRef) and RecordDependency. ProtectorDependency::IsValid checks cell->value() == Smi::FromInt(Protectors::kProtectorValid). Install registers the property cell for DependentCode::kPropertyCellChangedGroup.\n\nFile/lines: compiler/compilation-dependencies.cc (~ lines where DependOnProtector and DependOnNoUndetectableObjectsProtector are defined)\n\nExplanation: This maps how the compilation/heap-broker tracks protector dependencies: DependOnNoUndetectableObjectsProtector creates a ProtectorDependency for the no_undetectable_objects_protector property cell, which gets installed as a property-cell dependent group, so generated optimized code can be invalidated when the protector is cleared.\n",
+  "context": [
+    "protector_dependency",
+    "no_undetectable",
+    "compilation_dependencies"
+  ],
+  "explanation": "Records where the dependence is recorded and what the ProtectorDependency does during validation and installation.",
+  "file_line": "compiler/compilation-dependencies.cc:DependOnNoUndetectableObjectsProtector"
+}

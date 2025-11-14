@@ -1,0 +1,11 @@
+{
+  "body": "In maglev/maglev-graph-builder.cc, MaybeReduceResult MaglevGraphBuilder::TryBuildStoreField(...) handles storing to data fields. Key excerpt:\n\nif (field_representation.IsDouble()) {\n  if (access_info.HasTransitionMap()) {\n    // Allocate the mutable double box owned by the field.\n    ValueNode* heapnumber_value;\n    GET_VALUE_OR_ABORT(heapnumber_value,\n                       AddNewNode<Float64ToHeapNumberForField>({value}));\n    RETURN_IF_ABORT(BuildStoreTaggedField(store_target, heapnumber_value,\n                                          field_index.offset(),\n                                          StoreTaggedMode::kTransitioning));\n    return BuildStoreMap(receiver, access_info.transition_map().value(),\n                         StoreMap::Kind::kTransitioning);\n  } else {\n    ValueNode* heap_number;\n    GET_VALUE_OR_ABORT(heap_number, AddNewNode<LoadTaggedField>(\n                                        {store_target}, field_index.offset(),\n                                        LoadType::kHeapNumber));\n    return AddNewNode<StoreFloat64>(\n        {heap_number, value}, static_cast<int>(offsetof(HeapNumber, value_)));\n  }\n}\n\nExplanation: This shows the exact choice the Maglev builder makes for double-backed fields: if a transition (map change) is required, allocate a fresh HeapNumber via Float64ToHeapNumberForField and store it as a tagged field, then perform the map StoreMap transition. Otherwise (no transition) it loads the existing HeapNumber object from the field and emits a StoreFloat64 node that writes into the HeapNumber::value_ in-place (mutating the existing HeapNumber). This is the hotspot for potential HeapNumber aliasing problems for ++/+= on named properties: the in-place StoreFloat64 mutates an existing mutable HeapNumber object.",
+  "context": [
+    "maglev_graph_builder",
+    "float64_field_store",
+    "storefloat64",
+    "float64toheapnumberforfield"
+  ],
+  "explanation": "Captures the exact lowering path for double fields (in-place mutation vs allocate new HeapNumber on transition) with file reference.",
+  "file_line": "maglev/maglev-graph-builder.cc:~4700-4740"
+}
