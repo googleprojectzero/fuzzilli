@@ -16,6 +16,8 @@
 #   - POSTGRES_DB: Database name (default: fuzzilli_master)
 #   - POSTGRES_USER: Database user (default: fuzzilli)
 #   - POSTGRES_PASSWORD: PostgreSQL password (default: fuzzilli123)
+#   - POSTGRES_DATA_PATH: Custom path for PostgreSQL data directory on host (e.g., /vdc/postgres-data)
+#                         If set, uses bind mount instead of Docker named volume
 #   - SYNC_INTERVAL: Sync interval in seconds (default: 60)
 #   - TIMEOUT: Execution timeout in ms (default: 2500)
 #   - MIN_MUTATIONS_PER_SAMPLE: Minimum mutations per sample (default: 25)
@@ -48,6 +50,7 @@ if [ $# -eq 0 ]; then
     echo "  POSTGRES_DB - Database name (default: fuzzilli_master)"
     echo "  POSTGRES_USER - Database user (default: fuzzilli)"
     echo "  POSTGRES_PASSWORD - PostgreSQL password (default: fuzzilli123)"
+    echo "  POSTGRES_DATA_PATH - Custom path for PostgreSQL data (e.g., /vdc/postgres-data)"
     exit 1
 fi
 
@@ -98,6 +101,7 @@ POSTGRES_PORT=${POSTGRES_PORT:-5432}
 POSTGRES_DB=${POSTGRES_DB:-fuzzilli_master}
 POSTGRES_USER=${POSTGRES_USER:-fuzzilli}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fuzzilli123}
+POSTGRES_DATA_PATH=${POSTGRES_DATA_PATH:-}
 V8_BUILD_PATH=${V8_BUILD_PATH:-/home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild}
 TIMEOUT=${TIMEOUT:-2500}
 MIN_MUTATIONS_PER_SAMPLE=${MIN_MUTATIONS_PER_SAMPLE:-25}
@@ -108,6 +112,9 @@ USE_REMOTE_DB=false
 if [ -n "$POSTGRES_HOST" ]; then
     USE_REMOTE_DB=true
 fi
+
+# Get hostname for fuzzer instance naming
+HOSTNAME=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
 
 echo "=========================================="
 echo "Starting Distributed Fuzzilli"
@@ -131,6 +138,8 @@ echo "  V8 Build Path: ${V8_BUILD_PATH}"
 echo "  Timeout: ${TIMEOUT}ms"
 if [ "$USE_REMOTE_DB" = true ]; then
     echo "  Database: ${POSTGRES_USER}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+elif [ -n "$POSTGRES_DATA_PATH" ]; then
+    echo "  PostgreSQL Data Path: ${POSTGRES_DATA_PATH}"
 fi
 echo ""
 
@@ -160,7 +169,7 @@ for i in $(seq 1 $NUM_WORKERS); do
     container_name: fuzzer-worker-${i}
     environment:
       - POSTGRES_URL=${POSTGRES_URL}
-      - FUZZER_INSTANCE_NAME=fuzzer-${i}
+      - FUZZER_INSTANCE_NAME=fuzzer-${HOSTNAME}-${i}
       - TIMEOUT=${TIMEOUT}
       - MIN_MUTATIONS_PER_SAMPLE=${MIN_MUTATIONS_PER_SAMPLE}
       - DEBUG_LOGGING=${DEBUG_LOGGING}
@@ -219,9 +228,53 @@ for i in $(seq 1 $NUM_WORKERS); do
 EOF
 done
 
+# Generate master compose file if using custom data path
+if [ "$USE_REMOTE_DB" = false ] && [ -n "$POSTGRES_DATA_PATH" ]; then
+    echo "Generating master compose file with custom data path..."
+    # Create directory if it doesn't exist
+    mkdir -p "${POSTGRES_DATA_PATH}"
+    
+    # Generate master compose file with bind mount
+    cat > "${MASTER_COMPOSE}" <<EOF
+version: '3.8'
+
+services:
+  postgres-master:
+    image: postgres:15-alpine
+    container_name: fuzzilli-postgres-master
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ${POSTGRES_DATA_PATH}:/var/lib/postgresql/data
+      - ${PROJECT_ROOT}/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - fuzzing-network
+
+networks:
+  fuzzing-network:
+    driver: bridge
+
+EOF
+fi
+
 echo "Generated docker-compose files:"
 if [ "$USE_REMOTE_DB" = false ]; then
-    echo "  Master: ${MASTER_COMPOSE}"
+    if [ -n "$POSTGRES_DATA_PATH" ]; then
+        echo "  Master: ${MASTER_COMPOSE} (generated with custom data path: ${POSTGRES_DATA_PATH})"
+    else
+        echo "  Master: ${MASTER_COMPOSE}"
+    fi
 fi
 echo "  Workers: ${WORKER_COMPOSE}"
 echo ""
