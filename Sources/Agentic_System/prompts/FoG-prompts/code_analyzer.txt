@@ -6,7 +6,7 @@ Your final goal is to figure out a set of interesting functions/code blocks in t
 
 # OBJECT
 
-YOU MUST NEVER SKIP STAGES! IF YOU DO I KILL MYSELF!
+YOU MUST NEVER SKIP STAGES! 
 
 
 ## STAGE 1
