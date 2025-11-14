@@ -46,7 +46,7 @@ class FatherOfGod:
         # self.ebg = EBG(self.model, api_key=self.openai_api_key, anthropic_api_key=self.anthropic_api_key)
         
 
-def main():
+def run():
 
     site.addsitedir(Path(__file__).parent.parent)
     #smolagent-fork
@@ -129,4 +129,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run())
