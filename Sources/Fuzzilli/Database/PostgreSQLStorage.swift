@@ -332,7 +332,7 @@ public class PostgreSQLStorage {
                 }
             } catch {
                 // Rollback on error
-                try? await connection.query("ROLLBACK", logger: self.logger)
+                _ = try? await connection.query("ROLLBACK", logger: self.logger)
                 throw error
             }
         }

@@ -1158,7 +1158,7 @@ public class ProgramBuilder {
             return nil
         }
 
-        var weightedTypes = WeightedList<ILType>()
+        let weightedTypes = WeightedList<ILType>() // set this to let to avoid warning 
         for (t, w) in visibleTypes {
             weightedTypes.append(t, withWeight: w)
         }
