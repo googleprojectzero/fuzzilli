@@ -46,15 +46,16 @@ class FatherOfGod:
         # self.ebg = EBG(self.model, api_key=self.openai_api_key, anthropic_api_key=self.anthropic_api_key)
         
 
-def run():
+def run(force_logging: bool = False):
 
     site.addsitedir(Path(__file__).parent.parent)
     #smolagent-fork
 
-    
     parser = argparse.ArgumentParser(description="Rise the FoG agentic system")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging to fog logs")
     args = parser.parse_args()
+    #force logging 
+    args.debug = force_logging
 
     if args.debug:
         log_dir = Path(__file__).parent / 'agents' / 'fog_logs'

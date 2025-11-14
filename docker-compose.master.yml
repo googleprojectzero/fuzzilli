@@ -21,12 +21,12 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - fuzzing-network
+      - fuzzilli-network
 
 volumes:
   postgres_master_data:
 
 networks:
-  fuzzing-network:
+  fuzzilli-network:
     driver: bridge
 
