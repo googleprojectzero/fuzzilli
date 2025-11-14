@@ -2,12 +2,41 @@
 
 # Fuzzilli Fuzzer Statistics Script
 # Shows comprehensive statistics including highest coverage and per-fuzzer information
+# Usage: ./Scripts/fuzzer-stats.sh
+#
+# Environment variables (optional, for remote PostgreSQL):
+#   - POSTGRES_HOST: Remote PostgreSQL host/IP (if set, connects to remote instead of local container)
+#   - POSTGRES_PORT: PostgreSQL port (default: 5432)
+#   - POSTGRES_DB: Database name (default: fuzzilli_master)
+#   - POSTGRES_USER: Database user (default: fuzzilli)
+#   - POSTGRES_PASSWORD: PostgreSQL password (default: fuzzilli123)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Load environment variables
+if [ -f "${PROJECT_ROOT}/.env" ]; then
+    source "${PROJECT_ROOT}/.env"
+elif [ -f "${PROJECT_ROOT}/env.distributed" ]; then
+    source "${PROJECT_ROOT}/env.distributed"
+fi
 
 # Database connection parameters
-DB_CONTAINER="fuzzilli-postgres-master"
-DB_NAME="fuzzilli_master"
-DB_USER="fuzzilli"
-DB_PASSWORD="fuzzilli123"
+# Defaults for local container mode
+DB_CONTAINER=${DB_CONTAINER:-"fuzzilli-postgres-master"}
+DB_NAME=${POSTGRES_DB:-"fuzzilli_master"}
+DB_USER=${POSTGRES_USER:-"fuzzilli"}
+DB_PASSWORD=${POSTGRES_PASSWORD:-"fuzzilli123"}
+
+# Remote database parameters (if POSTGRES_HOST is set, use remote mode)
+POSTGRES_HOST=${POSTGRES_HOST:-}
+POSTGRES_PORT=${POSTGRES_PORT:-5432}
+
+# Determine if we're using remote or local postgres
+USE_REMOTE_DB=false
+if [ -n "$POSTGRES_HOST" ]; then
+    USE_REMOTE_DB=true
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -18,28 +47,59 @@ CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
-# Function to check if Docker is available
+# Function to check if Docker is available (only needed for local mode)
 check_docker() {
-    if ! command -v docker &> /dev/null; then
-        echo -e "${RED}Error: Docker command not found. Please install Docker.${NC}"
-        exit 1
+    if [ "$USE_REMOTE_DB" = false ]; then
+        if ! command -v docker &> /dev/null; then
+            echo -e "${RED}Error: Docker command not found. Please install Docker.${NC}"
+            exit 1
+        fi
     fi
 }
 
-# Function to check if PostgreSQL container is running
-check_container() {
-    if ! docker ps --format "table {{.Names}}" | grep -q "$DB_CONTAINER"; then
-        echo -e "${RED}Error: PostgreSQL container '$DB_CONTAINER' is not running${NC}"
-        echo "Available containers:"
-        docker ps --format "table {{.Names}}\t{{.Status}}"
-        exit 1
+# Function to check if psql is available (only needed for remote mode)
+check_psql() {
+    if [ "$USE_REMOTE_DB" = true ]; then
+        if ! command -v psql &> /dev/null; then
+            echo -e "${RED}Error: psql command not found. Please install PostgreSQL client.${NC}"
+            echo "  On Ubuntu/Debian: sudo apt-get install postgresql-client"
+            echo "  On RHEL/CentOS: sudo yum install postgresql"
+            exit 1
+        fi
+    fi
+}
+
+# Function to check if PostgreSQL is accessible
+check_database() {
+    if [ "$USE_REMOTE_DB" = true ]; then
+        # Check remote postgres connection
+        if ! PGPASSWORD="${DB_PASSWORD}" psql -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -c "SELECT 1" > /dev/null 2>&1; then
+            echo -e "${RED}Error: Cannot connect to remote PostgreSQL at ${POSTGRES_HOST}:${POSTGRES_PORT}${NC}"
+            echo "  Please verify:"
+            echo "    - PostgreSQL is running and accessible"
+            echo "    - Host, port, user, password, and database name are correct"
+            echo "    - Network connectivity and firewall rules allow connection"
+            exit 1
+        fi
+    else
+        # Check local container
+        if ! docker ps --format "table {{.Names}}" | grep -q "$DB_CONTAINER"; then
+            echo -e "${RED}Error: PostgreSQL container '$DB_CONTAINER' is not running${NC}"
+            echo "Available containers:"
+            docker ps --format "table {{.Names}}\t{{.Status}}"
+            exit 1
+        fi
     fi
 }
 
 # Function to run a query and return results
 run_query() {
     local query="$1"
-    docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -t -A -F'|' -c "$query" 2>/dev/null
+    if [ "$USE_REMOTE_DB" = true ]; then
+        PGPASSWORD="${DB_PASSWORD}" psql -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -t -A -F'|' -c "$query" 2>/dev/null
+    else
+        docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -t -A -F'|' -c "$query" 2>/dev/null
+    fi
 }
 
 # Function to format number with commas
@@ -60,7 +120,8 @@ main() {
     echo ""
     
     check_docker
-    check_container
+    check_psql
+    check_database
     
     # Get highest coverage (overall)
     echo -e "${GREEN}=== Highest Coverage (Overall) ===${NC}"
@@ -191,7 +252,17 @@ case "${1:-}" in
         echo "  - Per-fuzzer information (execs/s, programs, executions, crashes, highest coverage %)"
         echo "  - Crash breakdown by signal per fuzzer"
         echo ""
-        echo "Note: Update DB_CONTAINER variable in script if your container has a different name"
+        echo "Database connection:"
+        echo "  By default, connects to local Docker container 'fuzzilli-postgres-master'"
+        echo ""
+        echo "  For remote PostgreSQL, set environment variables:"
+        echo "    POSTGRES_HOST - Remote PostgreSQL host/IP (required for remote mode)"
+        echo "    POSTGRES_PORT - PostgreSQL port (default: 5432)"
+        echo "    POSTGRES_DB - Database name (default: fuzzilli_master)"
+        echo "    POSTGRES_USER - Database user (default: fuzzilli)"
+        echo "    POSTGRES_PASSWORD - PostgreSQL password (default: fuzzilli123)"
+        echo ""
+        echo "  Example: POSTGRES_HOST=192.168.1.100 $0"
         ;;
     "")
         main

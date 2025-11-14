@@ -1,16 +1,20 @@
 #!/bin/bash
 
 # start-distributed.sh - Start distributed fuzzing with X workers
-# Usage: ./Scripts/start-distributed.sh <X>
+# Usage: ./Scripts/start-distributed.sh <X> [--remote-db <host>]
 #   where X is the number of fuzzer workers to create
+#   --remote-db <host> optionally specifies a remote PostgreSQL host (overrides POSTGRES_HOST env var)
 #
 # Creates:
-#   - 1 master postgres database
+#   - 1 master postgres database (local, unless POSTGRES_HOST is set or --remote-db is used)
 #   - X fuzzer worker containers
-#   - X local postgres containers (one per fuzzer)
 #
 # Environment variables:
 #   - V8_BUILD_PATH: Path to V8 build directory on host (default: /home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild)
+#   - POSTGRES_HOST: Remote PostgreSQL host/IP (if set, enables remote mode, skips local postgres)
+#   - POSTGRES_PORT: PostgreSQL port (default: 5432)
+#   - POSTGRES_DB: Database name (default: fuzzilli_master)
+#   - POSTGRES_USER: Database user (default: fuzzilli)
 #   - POSTGRES_PASSWORD: PostgreSQL password (default: fuzzilli123)
 #   - SYNC_INTERVAL: Sync interval in seconds (default: 60)
 #   - TIMEOUT: Execution timeout in ms (default: 2500)
@@ -26,32 +30,55 @@ WORKER_COMPOSE="${PROJECT_ROOT}/docker-compose.workers.yml"
 
 # Check if number of workers is provided
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 <X>"
+    echo "Usage: $0 <X> [--remote-db <host>]"
     echo "  where X is the number of fuzzer workers to create"
+    echo "  --remote-db <host> optionally specifies a remote PostgreSQL host"
     echo ""
-    echo "Example: $0 3"
-    echo "  Creates: 1 master postgres + 3 fuzzer workers + 3 local postgres"
+    echo "Examples:"
+    echo "  $0 3"
+    echo "    Creates: 1 local master postgres + 3 fuzzer workers"
+    echo ""
+    echo "  $0 8 --remote-db 192.168.1.100"
+    echo "    Creates: 8 fuzzer workers connecting to remote postgres at 192.168.1.100"
     echo ""
     echo "Environment variables:"
     echo "  V8_BUILD_PATH - Path to V8 build on host (default: /home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild)"
+    echo "  POSTGRES_HOST - Remote PostgreSQL host/IP (if set, enables remote mode)"
+    echo "  POSTGRES_PORT - PostgreSQL port (default: 5432)"
+    echo "  POSTGRES_DB - Database name (default: fuzzilli_master)"
+    echo "  POSTGRES_USER - Database user (default: fuzzilli)"
     echo "  POSTGRES_PASSWORD - PostgreSQL password (default: fuzzilli123)"
     exit 1
 fi
 
 NUM_WORKERS=$1
+shift  # Remove first argument
+
+# Parse command-line arguments
+REMOTE_DB_HOST=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --remote-db)
+            if [ -z "$2" ]; then
+                echo "Error: --remote-db requires a host argument"
+                exit 1
+            fi
+            REMOTE_DB_HOST="$2"
+            shift 2
+            ;;
+        *)
+            echo "Error: Unknown option: $1"
+            echo "Usage: $0 <X> [--remote-db <host>]"
+            exit 1
+            ;;
+    esac
+done
 
 # Validate number
 if ! [[ "$NUM_WORKERS" =~ ^[0-9]+$ ]] || [ "$NUM_WORKERS" -lt 1 ]; then
     echo "Error: Number of workers must be a positive integer"
     exit 1
 fi
-
-echo "=========================================="
-echo "Starting Distributed Fuzzilli"
-echo "=========================================="
-echo "Workers: $NUM_WORKERS"
-echo "Master Postgres: 1"
-echo ""
 
 # Load environment variables
 if [ -f "${PROJECT_ROOT}/.env" ]; then
@@ -61,11 +88,37 @@ elif [ -f "${PROJECT_ROOT}/env.distributed" ]; then
 fi
 
 # Set defaults
+# Command-line --remote-db overrides POSTGRES_HOST environment variable
+if [ -n "$REMOTE_DB_HOST" ]; then
+    POSTGRES_HOST="$REMOTE_DB_HOST"
+fi
+
+POSTGRES_HOST=${POSTGRES_HOST:-}
+POSTGRES_PORT=${POSTGRES_PORT:-5432}
+POSTGRES_DB=${POSTGRES_DB:-fuzzilli_master}
+POSTGRES_USER=${POSTGRES_USER:-fuzzilli}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fuzzilli123}
 V8_BUILD_PATH=${V8_BUILD_PATH:-/home/tropic/vrig/fuzzilli-vrig-proj/fuzzbuild}
 TIMEOUT=${TIMEOUT:-2500}
 MIN_MUTATIONS_PER_SAMPLE=${MIN_MUTATIONS_PER_SAMPLE:-25}
 DEBUG_LOGGING=${DEBUG_LOGGING:-false}
+
+# Determine if we're using remote or local postgres
+USE_REMOTE_DB=false
+if [ -n "$POSTGRES_HOST" ]; then
+    USE_REMOTE_DB=true
+fi
+
+echo "=========================================="
+echo "Starting Distributed Fuzzilli"
+echo "=========================================="
+echo "Workers: $NUM_WORKERS"
+if [ "$USE_REMOTE_DB" = true ]; then
+    echo "Master Postgres: Remote (${POSTGRES_HOST}:${POSTGRES_PORT})"
+else
+    echo "Master Postgres: Local (will be started)"
+fi
+echo ""
 
 # Validate V8 build path
 if [ ! -d "${V8_BUILD_PATH}" ]; then
@@ -76,6 +129,9 @@ fi
 echo "Configuration:"
 echo "  V8 Build Path: ${V8_BUILD_PATH}"
 echo "  Timeout: ${TIMEOUT}ms"
+if [ "$USE_REMOTE_DB" = true ]; then
+    echo "  Database: ${POSTGRES_USER}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+fi
 echo ""
 
 # Generate docker-compose worker file with all services
@@ -87,6 +143,13 @@ EOF
 
 # Generate worker services (fuzzer only, no local postgres)
 for i in $(seq 1 $NUM_WORKERS); do
+    # Build connection string based on mode
+    if [ "$USE_REMOTE_DB" = true ]; then
+        POSTGRES_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+    else
+        POSTGRES_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-master:5432/${POSTGRES_DB}"
+    fi
+    
     cat >> "${WORKER_COMPOSE}" <<EOF
 
   # Worker $i - Fuzzilli Container
@@ -96,14 +159,23 @@ for i in $(seq 1 $NUM_WORKERS); do
       dockerfile: Cloud/VRIG/Dockerfile.distributed
     container_name: fuzzer-worker-${i}
     environment:
-      - POSTGRES_URL=postgresql://fuzzilli:${POSTGRES_PASSWORD}@postgres-master:5432/fuzzilli_master
+      - POSTGRES_URL=${POSTGRES_URL}
       - FUZZER_INSTANCE_NAME=fuzzer-${i}
       - TIMEOUT=${TIMEOUT}
       - MIN_MUTATIONS_PER_SAMPLE=${MIN_MUTATIONS_PER_SAMPLE}
       - DEBUG_LOGGING=${DEBUG_LOGGING}
+EOF
+
+    # Only add depends_on for local postgres mode
+    if [ "$USE_REMOTE_DB" = false ]; then
+        cat >> "${WORKER_COMPOSE}" <<EOF
     depends_on:
       postgres-master:
         condition: service_healthy
+EOF
+    fi
+
+    cat >> "${WORKER_COMPOSE}" <<EOF
     volumes:
       - fuzzer_data_${i}:/home/app/Corpus
       - ${V8_BUILD_PATH}:/home/app/fuzzbuild:ro
@@ -114,8 +186,17 @@ for i in $(seq 1 $NUM_WORKERS); do
       timeout: 10s
       retries: 3
       start_period: 60s
+EOF
+
+    # Only add network for local mode (remote mode doesn't need docker network)
+    if [ "$USE_REMOTE_DB" = false ]; then
+        cat >> "${WORKER_COMPOSE}" <<EOF
     networks:
       - fuzzing-network
+EOF
+    fi
+
+    cat >> "${WORKER_COMPOSE}" <<EOF
     deploy:
       resources:
         limits:
@@ -139,36 +220,66 @@ EOF
 done
 
 echo "Generated docker-compose files:"
-echo "  Master: ${MASTER_COMPOSE}"
+if [ "$USE_REMOTE_DB" = false ]; then
+    echo "  Master: ${MASTER_COMPOSE}"
+fi
 echo "  Workers: ${WORKER_COMPOSE}"
 echo ""
 echo "Starting services..."
 
-# Start master postgres first
 cd "${PROJECT_ROOT}"
-echo "Starting master postgres..."
-docker compose -f "${MASTER_COMPOSE}" up -d
 
-# Wait for master postgres to be healthy
-echo "Waiting for master postgres to be ready..."
-timeout=60
-while [ $timeout -gt 0 ]; do
-    if docker exec fuzzilli-postgres-master pg_isready -U fuzzilli -d fuzzilli_master > /dev/null 2>&1; then
-        echo "✓ Master postgres is ready"
-        break
+# Start master postgres only if using local mode
+if [ "$USE_REMOTE_DB" = false ]; then
+    echo "Starting master postgres..."
+    docker compose -f "${MASTER_COMPOSE}" up -d
+
+    # Wait for master postgres to be healthy
+    echo "Waiting for master postgres to be ready..."
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+        if docker exec fuzzilli-postgres-master pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} > /dev/null 2>&1; then
+            echo "✓ Master postgres is ready"
+            break
+        fi
+        sleep 1
+        timeout=$((timeout - 1))
+    done
+
+    if [ $timeout -eq 0 ]; then
+        echo "✗ Error: Master postgres failed to start"
+        exit 1
     fi
-    sleep 1
-    timeout=$((timeout - 1))
-done
+else
+    # Check remote postgres connection
+    echo "Checking remote postgres connection..."
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+        if PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "SELECT 1" > /dev/null 2>&1; then
+            echo "✓ Remote postgres is ready"
+            break
+        fi
+        sleep 1
+        timeout=$((timeout - 1))
+    done
 
-if [ $timeout -eq 0 ]; then
-    echo "✗ Error: Master postgres failed to start"
-    exit 1
+    if [ $timeout -eq 0 ]; then
+        echo "✗ Error: Cannot connect to remote postgres at ${POSTGRES_HOST}:${POSTGRES_PORT}"
+        echo "  Please verify:"
+        echo "    - PostgreSQL is running and accessible"
+        echo "    - Host, port, user, password, and database name are correct"
+        echo "    - Network connectivity and firewall rules allow connection"
+        exit 1
+    fi
 fi
 
 # Start worker services
 echo "Starting worker services..."
-docker compose -f "${MASTER_COMPOSE}" -f "${WORKER_COMPOSE}" up -d --build
+if [ "$USE_REMOTE_DB" = false ]; then
+    docker compose -f "${MASTER_COMPOSE}" -f "${WORKER_COMPOSE}" up -d --build
+else
+    docker compose -f "${WORKER_COMPOSE}" up -d --build
+fi
 
 # Wait a bit for fuzzers to start
 echo ""
@@ -181,22 +292,42 @@ echo "Distributed fuzzing setup complete!"
 echo "=========================================="
 echo ""
 echo "Services started:"
-echo "  Master Postgres: fuzzilli-postgres-master"
+if [ "$USE_REMOTE_DB" = false ]; then
+    echo "  Master Postgres: fuzzilli-postgres-master (local)"
+else
+    echo "  Master Postgres: ${POSTGRES_HOST}:${POSTGRES_PORT} (remote)"
+fi
 for i in $(seq 1 $NUM_WORKERS); do
     echo "  Worker $i: fuzzer-worker-${i}"
 done
 echo ""
 echo "To view logs:"
-echo "  docker compose -f ${MASTER_COMPOSE} -f ${WORKER_COMPOSE} logs -f"
+if [ "$USE_REMOTE_DB" = false ]; then
+    echo "  docker compose -f ${MASTER_COMPOSE} -f ${WORKER_COMPOSE} logs -f"
+else
+    echo "  docker compose -f ${WORKER_COMPOSE} logs -f"
+fi
 echo ""
 echo "To view specific worker logs:"
-echo "  docker compose -f ${MASTER_COMPOSE} -f ${WORKER_COMPOSE} logs -f fuzzer-worker-1"
+if [ "$USE_REMOTE_DB" = false ]; then
+    echo "  docker compose -f ${MASTER_COMPOSE} -f ${WORKER_COMPOSE} logs -f fuzzer-worker-1"
+else
+    echo "  docker compose -f ${WORKER_COMPOSE} logs -f fuzzer-worker-1"
+fi
 echo ""
 echo "To check status:"
-echo "  docker compose -f ${MASTER_COMPOSE} -f ${WORKER_COMPOSE} ps"
+if [ "$USE_REMOTE_DB" = false ]; then
+    echo "  docker compose -f ${MASTER_COMPOSE} -f ${WORKER_COMPOSE} ps"
+else
+    echo "  docker compose -f ${WORKER_COMPOSE} ps"
+fi
 echo ""
 echo "To stop all services:"
-echo "  docker compose -f ${MASTER_COMPOSE} -f ${WORKER_COMPOSE} down"
+if [ "$USE_REMOTE_DB" = false ]; then
+    echo "  docker compose -f ${MASTER_COMPOSE} -f ${WORKER_COMPOSE} down"
+else
+    echo "  docker compose -f ${WORKER_COMPOSE} down"
+fi
 echo ""
 echo "To stop a specific worker:"
 echo "  docker stop fuzzer-worker-<N>"
