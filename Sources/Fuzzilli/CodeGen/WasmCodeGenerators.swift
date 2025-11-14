@@ -201,8 +201,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             fatalError("unreachable: array.set input not an array")
         }
         guard arrayType.mutability else { return }
-        guard let element = b.randomVariable(ofType: arrayType.elementType.unpacked()) else { return }
+        let inputType = arrayType.elementType.unpacked()
         let function = b.currentWasmModule.currentWasmFunction
+        guard let element = b.randomVariable(ofType: inputType) ?? function.generateRandomWasmVar(ofType: inputType)
+        else { return }
         // TODO(mliedtke): Track array length and use other indices as well.
         let index = function.consti32(0)
         function.wasmArraySet(array: array, index: index, element: element)
@@ -255,17 +257,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         guard let structType = desc.get()! as? WasmStructTypeDescription else {
             fatalError("Invalid type description for \(b.type(of: theStruct))")
         }
-        guard
-            let fieldWithIndex = structType.fields.enumerated().filter({
-                (offset, field) in
+        guard let fieldWithIndex = structType.fields.enumerated().filter({(offset, field) in
                 field.mutability
             }).randomElement()
         else { return }
-        // TODO(mliedtke): Create the input when not available!
-        guard
-            let newValue = b.randomVariable(ofType: fieldWithIndex.element.type)
-        else { return }
         let function = b.currentWasmModule.currentWasmFunction
+        let inputType = fieldWithIndex.element.type.unpacked()
+        guard let newValue = b.randomVariable(ofType: inputType) ?? function.generateRandomWasmVar(ofType: inputType)
+        else { return }
         function.wasmStructSet(
             theStruct: theStruct, fieldIndex: fieldWithIndex.offset,
             value: newValue)
