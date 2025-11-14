@@ -125,7 +125,30 @@ class TerminalUI {
         } else {
             print("Fuzzer Statistics")
         }
+        
+        // Check if we're using PostgreSQL corpus and get additional stats
+        let isPostgreSQLCorpus = fuzzer.corpus is PostgreSQLCorpus
+        var postgresStats = ""
+        
+        if isPostgreSQLCorpus {
+            if let postgresCorpus = fuzzer.corpus as? PostgreSQLCorpus {
+                let corpusStats = postgresCorpus.getStatistics()
+                
+                postgresStats = """
+        -----------------
+        PostgreSQL Database Stats:
+        Database Programs:            \(corpusStats.totalPrograms)
+        Database Executions:          \(corpusStats.totalExecutions)
+        Avg Coverage (DB):            \(String(format: "%.2f%%", corpusStats.averageCoverage))
+        Current Coverage (Live):      \(String(format: "%.2f%%", corpusStats.currentCoverage * 100))
+        Pending Sync Operations:      \(corpusStats.pendingSyncOperations)
+        Fuzzer Instance ID:           \(corpusStats.fuzzerInstanceId)
+        """
+            }
+        }
+        
         print("""
+        \(postgresStats)\
         -----------------
         Fuzzer state:                 \(state)
         Uptime:                       \(formatTimeInterval(fuzzer.uptime()))
@@ -146,6 +169,7 @@ class TerminalUI {
         Execs / Second:               \(String(format: "%.2f", stats.execsPerSecond))
         Fuzzer Overhead:              \(String(format: "%.2f", stats.fuzzerOverhead * 100))%
         Minimization Overhead:        \(String(format: "%.2f", stats.minimizationOverhead * 100))%
+        Mutation Weights:             \(fuzzer.runtimeWeightedMutators.description)
         Total Execs:                  \(stats.totalExecs)
         """)
     }

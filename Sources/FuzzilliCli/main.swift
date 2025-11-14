@@ -14,21 +14,11 @@
 
 import Foundation
 import Fuzzilli
-// import Agentic_System
 
 //
 // Process commandline arguments.
 //
 let args = Arguments.parse(from: CommandLine.arguments)
-
-// check for agent-testing flag early, before positional args check
-if args["--agent-testing"] != nil { 
-    // We are going to want to be able to pass flags to the agent as 
-    // well so you should also pull the rest of the flags and pass 
-    // them as arguments to the runAgent()
-    runAgent()
-    exit(0) // Just testing.
-}
 
 if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 1 {
     print("""
@@ -41,11 +31,13 @@ Options:
     --jobs=n                     : Total number of fuzzing jobs. This will start a main instance and n-1 worker instances.
     --engine=name                : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                    Only the mutation engine should be regarded stable at this point.
-    --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
+    --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov", "postgresql"
     --logLevel=level             : The log level to use. Valid values: "verbose", "info", "warning", "error", "fatal" (default: "info").
     --maxIterations=n            : Run for the specified number of iterations (default: unlimited).
     --maxRuntimeInHours=n        : Run for the specified number of hours (default: unlimited).
-    --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default depends on the profile).
+    --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default depends
+                                   on the profile). Or provide an interval like --timeout=200,400. The actual
+                                   timeout in this interval will be determined by the start-up tests.
     --minMutationsPerSample=n    : Discard samples from the corpus only after they have been mutated at least this many times (default: 25).
     --minCorpusSize=n            : Keep at least this many samples in the corpus regardless of the number of times
                                    they have been mutated (default: 1000).
@@ -109,7 +101,10 @@ Options:
                                    This can for example be used to remember the target revision that is being fuzzed.
     --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
     --forDifferentialFuzzing     : Enable additional features for better support of external differential fuzzing.
-    --agent-testing              : Used for testing FoG in isolation.
+    --postgres-url=url           : PostgreSQL connection string for PostgreSQL corpus (e.g., postgresql://user:pass@host:port/db).
+    --validate-before-cache      : Enable program validation before caching in PostgreSQL corpus (default: true).
+    --execution-history-size=n   : Number of recent executions to keep in memory for PostgreSQL corpus (default: 10).
+    --postgres-logging           : Enable PostgreSQL database operation logging.
 
 """)
     exit(0)
@@ -119,45 +114,6 @@ Options:
 func configError(_ msg: String) -> Never {
     print(msg)
     exit(-1)
-}
-
-func runAgent() {
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/usr/share/vrigatoni/fuzzillai/.venv/bin/python3")
-    // path = URL(fileURLWithPath: #file)
-    // .deletingLastPathComponent()
-    // .deletingLastPathComponent()
-    // .deletingLastPathComponent()
-    // .appendingPathComponent(".venv")
-    // .appendingPathComponent("bin")
-    // .appendingPathComponent("python3")
-    // proccess.executablePath = path 
-    
-    // get absolute path to agent run script
-    let currentFileURL = URL(fileURLWithPath: #file)
-    let fuzzilliCliURL = currentFileURL.deletingLastPathComponent() // Sources/FuzzilliCli
-    let sourcesURL = fuzzilliCliURL.deletingLastPathComponent() // Sources
-    let scriptURL = sourcesURL
-        .appendingPathComponent("Agentic_System")
-        .appendingPathComponent("rises-the-fog.py")
-    
-    process.arguments = [scriptURL.path]
-    
-    let pipe = Pipe()
-    process.standardOutput = pipe
-    process.standardError = pipe
-    
-    do {
-        try process.run()
-        process.waitUntilExit()
-        
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        if let output = String(data: data, encoding: .utf8) {
-            print(output)
-        }
-    } catch {
-        print("Error running \(scriptURL.path): \(error)")
-    }
 }
 
 let jsShellPath = args[0]
@@ -182,7 +138,6 @@ let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
 let maxIterations = args.int(for: "--maxIterations") ?? -1
 let maxRuntimeInHours = args.int(for: "--maxRuntimeInHours") ?? -1
-let timeout = args.int(for: "--timeout") ?? profile.timeout
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 25
 let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1000
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
@@ -207,6 +162,35 @@ let additionalArguments = args["--additionalArguments"] ?? ""
 let tag = args["--tag"]
 let enableWasm = args.has("--wasm")
 let forDifferentialFuzzing = args.has("--forDifferentialFuzzing")
+let postgresUrl = args["--postgres-url"] ?? ProcessInfo.processInfo.environment["POSTGRES_URL"]
+let postgresLogging = args.has("--postgres-logging")
+
+var timeout : Timeout
+if let raw_timeout = args.string(for: "--timeout") {
+    if raw_timeout.contains(",") {
+        let parts = raw_timeout.split(separator: ",")
+        guard parts.count == 2 else {
+            configError("Timeout intervals must be specified by two boundaries, e.g. --timeout=200,400")
+        }
+        guard let lower = UInt32(parts[0]) else {
+            configError("The lower bound for --timeout must be an integer")
+        }
+        guard let upper = UInt32(parts[1]) else {
+            configError("The upper bound for --timeout must be an integer")
+        }
+        guard lower <= upper else {
+            configError("The --timeout=lower,upper boundaries must adhere to lower <= upper")
+        }
+        timeout = Timeout.interval(lower, upper)
+    } else {
+        guard let int_timeout = UInt32(raw_timeout) else {
+            configError("The value for --timeout must be an integer or interval")
+        }
+        timeout = Timeout.value(int_timeout)
+    }
+} else {
+    timeout = profile.timeout
+}
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -227,12 +211,12 @@ guard let logLevel = logLevelByName[logLevelName] else {
     configError("Invalid log level \(logLevelName)")
 }
 
-let validEngines = ["mutation", "hybrid", "multi", "template"]
+let validEngines = ["mutation", "hybrid", "multi", "runtime-multi"]
 guard validEngines.contains(engineName) else {
     configError("--engine must be one of \(validEngines)")
 }
 
-let validCorpora = ["basic", "markov"]
+let validCorpora = ["basic", "markov", "postgresql"]
 guard validCorpora.contains(corpusName) else {
     configError("--corpus must be one of \(validCorpora)")
 }
@@ -250,12 +234,19 @@ if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.in
     configError("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample are not compatible with the Markov corpus")
 }
 
-if (resume || overwrite) && storagePath == nil {
+if (resume || overwrite) && storagePath == nil && corpusName != "postgresql" {
     configError("--resume and --overwrite require --storagePath")
 }
 
 if corpusName == "markov" && staticCorpus {
     configError("Markov corpus is not compatible with --staticCorpus")
+}
+
+// PostgreSQL corpus validation
+if corpusName == "postgresql" {
+    if postgresUrl == nil {
+        configError("PostgreSQL corpus requires --postgres-url (or POSTGRES_URL environment variable)")
+    }
 }
 
 
@@ -462,6 +453,63 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         configError("List of enabled mutators is empty. There needs to be at least one mutator available.")
     }
 
+    let runtimeMutators = RuntimeWeightedList([
+        (ExplorationMutator(),                 3),
+        (CodeGenMutator(),                     2),
+        (SpliceMutator(),                      2),
+        (ProbingMutator(),                     2),
+        (InputMutator(typeAwareness: .loose),  2),
+        (InputMutator(typeAwareness: .aware),  1),
+        // Can be enabled for experimental use, ConcatMutator is a limited version of CombineMutator
+        // (ConcatMutator(),                   1),
+        (OperationMutator(),                   1),
+        (CombineMutator(),                     1),
+        // Include this once it does more than just remove unneeded try-catch
+        // (FixupMutator()),                   1),
+    ])
+
+    // Engines to execute programs.
+    let engine: FuzzEngine
+    switch engineName {
+    case "hybrid":
+        engine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
+    case "multi":
+        let mutationEngine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
+        let hybridEngine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
+        let engines = WeightedList<FuzzEngine>([
+            (mutationEngine, 1),
+            (hybridEngine, 1),
+        ])
+        // We explicitly want to start with the MutationEngine since we'll probably be finding
+        // lots of new samples during early fuzzing. The samples generated by the HybridEngine tend
+        // to be much larger than those from the MutationEngine and will therefore take much longer
+        // to minimize, making the fuzzer less efficient.
+        // For the same reason, we also use a relatively larger iterationsPerEngine value, so that
+        // the MutationEngine can already find most "low-hanging fruits" in its first run.
+        engine = MultiEngine(engines: engines, initialActive: mutationEngine, iterationsPerEngine: 10000)
+    case "runtime-multi":
+        let runtimeMutationEngine = RuntimeMutationEngine(numConsecutiveMutations: consecutiveMutations)
+        let runtimeHybridEngine = RuntimeHybridEngine(numConsecutiveMutations: consecutiveMutations)
+        let engines = WeightedList<FuzzEngine>([
+            (runtimeMutationEngine, 1),
+            (runtimeHybridEngine, 1),
+        ])
+        // We explicitly want to start with the MutationEngine since we'll probably be finding
+        // lots of new samples during early fuzzing. The samples generated by the HybridEngine tend
+        // to be much larger than those from the MutationEngine and will therefore take much longer
+        // to minimize, making the fuzzer less efficient.
+        // For the same reason, we also use a relatively larger iterationsPerEngine value, so that
+        // the MutationEngine can already find most "low-hanging fruits" in its first run.
+        engine = MultiEngine(engines: engines, initialActive: runtimeMutationEngine, iterationsPerEngine: 10000)
+    default:
+        engine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
+    }
+
+    // Add a post-processor if the profile defines one.
+    if let postProcessor = profile.optionalPostProcessor {
+        engine.registerPostProcessor(postProcessor)
+    }
+
     // Program templates to use.
     var programTemplates = profile.additionalProgramTemplates
 
@@ -500,36 +548,6 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
                                   environment: environment,
                                   alwaysEmitVariables: configuration.forDifferentialFuzzing)
 
-    // Engines to execute programs.
-    let engine: FuzzEngine
-    switch engineName {
-    case "hybrid":
-        engine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
-    case "multi":
-        let mutationEngine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
-        let hybridEngine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
-        let engines = WeightedList<FuzzEngine>([
-            (mutationEngine, 1),
-            (hybridEngine, 1),
-        ])
-        // We explicitly want to start with the MutationEngine since we'll probably be finding
-        // lots of new samples during early fuzzing. The samples generated by the HybridEngine tend
-        // to be much larger than those from the MutationEngine and will therefore take much longer
-        // to minimize, making the fuzzer less efficient.
-        // For the same reason, we also use a relatively larger iterationsPerEngine value, so that
-        // the MutationEngine can already find most "low-hanging fruits" in its first run.
-        engine = MultiEngine(engines: engines, initialActive: mutationEngine, iterationsPerEngine: 10000)
-    case "template":
-        engine = TestTemplateEngine(numConsecutiveMutations: consecutiveMutations, lifter: lifter)
-    default:
-        engine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
-    }
-
-    // Add a post-processor if the profile defines one.
-    if let postProcessor = profile.optionalPostProcessor {
-        engine.registerPostProcessor(postProcessor)
-    }
-
     // The evaluator to score produced samples.
     let evaluator = ProgramCoverageEvaluator(runner: runner)
 
@@ -540,6 +558,43 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     case "markov":
         corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
+    case "postgresql":
+        // Create PostgreSQL corpus with master database connection
+        let fuzzerInstanceId: String
+        
+        // Check for explicit fuzzer instance name from environment or CLI args
+        if let explicitName = args["--fuzzer-instance-name"] ?? ProcessInfo.processInfo.environment["FUZZER_INSTANCE_NAME"], !explicitName.isEmpty {
+            fuzzerInstanceId = explicitName
+            logger.info("Using explicit fuzzer instance ID: \(fuzzerInstanceId)")
+        } else if resume {
+            // Use fixed fuzzer instance ID for resume
+            fuzzerInstanceId = "fuzzer-main"
+        } else {
+            // Generate dynamic fuzzer instance ID with 8-char hash
+            let randomHash = String(UUID().uuidString.prefix(8))
+            fuzzerInstanceId = "fuzzer-\(randomHash)"
+        }
+        
+        guard let url = postgresUrl else {
+            logger.fatal("PostgreSQL URL is required for PostgreSQL corpus")
+        }
+        
+        let databasePool = DatabasePool(connectionString: url, enableLogging: postgresLogging)
+        logger.info("Connecting to master PostgreSQL database")
+        logger.info("PostgreSQL URL: \(url)")
+        
+        corpus = PostgreSQLCorpus(
+            minSize: minCorpusSize,
+            maxSize: maxCorpusSize,
+            minMutationsPerSample: minMutationsPerSample,
+            databasePool: databasePool,
+            fuzzerInstanceId: fuzzerInstanceId,
+            resume: resume,
+            enableLogging: postgresLogging
+        )
+        
+        logger.info("Created PostgreSQL corpus with instance ID: \(fuzzerInstanceId)")
+        logger.info("Resume mode: \(resume)")
     default:
         logger.fatal("Invalid corpus name provided")
     }
@@ -555,6 +610,7 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
                   codeGenerators: codeGenerators,
                   programTemplates: programTemplates,
                   evaluator: evaluator,
+                  runtimeWeightedMutators: runtimeMutators,
                   environment: environment,
                   lifter: lifter,
                   corpus: corpus,
@@ -563,7 +619,7 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
 
 // The configuration of the main fuzzer instance.
 let mainConfig = Configuration(arguments: CommandLine.arguments,
-                               timeout: UInt32(timeout),
+                               timeout: timeout.maxTimeout(),
                                logLevel: logLevel,
                                startupTests: profile.startupTests,
                                minimizationLimit: minimizationLimit,
@@ -610,7 +666,11 @@ fuzzer.sync {
                 logger.info("You can recover the old corpus by moving it to \(path + "/corpus").")
             }
         }
-        exit(reason.toExitCode())
+        let code = reason.toExitCode()
+        if (code != 0) {
+            print("Aborting execution after a fatal error.")
+        }
+        exit(code)
     }
 
     // Store samples to disk if requested.
@@ -689,7 +749,7 @@ fuzzer.sync {
 
     // Initialize the fuzzer, and run startup tests
     fuzzer.initialize()
-    fuzzer.runStartupTests()
+    timeout = fuzzer.runStartupTests(with: timeout)
 
     // Start the main fuzzing job.
     fuzzer.start(runUntil: exitCondition)
@@ -698,7 +758,7 @@ fuzzer.sync {
 // Add thread worker instances if requested
 // Worker instances use a slightly different configuration, mostly just a lower log level.
 let workerConfig = Configuration(arguments: CommandLine.arguments,
-                                 timeout: UInt32(timeout),
+                                 timeout: timeout.maxTimeout(),
                                  logLevel: .warning,
                                  startupTests: profile.startupTests,
                                  minimizationLimit: minimizationLimit,

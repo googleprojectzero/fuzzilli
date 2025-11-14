@@ -25,11 +25,13 @@ let package = Package(
         .library(name: "Fuzzilli",targets: ["Fuzzilli"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.31.0"),
+        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.32.0"),
         .package(
           url: "https://github.com/apple/swift-collections.git",
           .upToNextMinor(from: "1.2.0")
         ),
+        .package(url: "https://github.com/vapor/postgres-nio.git", from: "1.20.0"),
+        .package(url: "https://github.com/vapor/postgres-kit.git", from: "2.9.0"),
     ],
     targets: [
         .target(name: "libsocket",
@@ -47,6 +49,8 @@ let package = Package(
                 dependencies: [
                     .product(name: "SwiftProtobuf", package: "swift-protobuf"),
                     .product(name: "Collections", package: "swift-collections"),
+                    .product(name: "PostgresNIO", package: "postgres-nio"),
+                    .product(name: "PostgresKit", package: "postgres-kit"),
                     "libsocket",
                     "libreprl",
                     "libcoverage"],

@@ -508,7 +508,7 @@ class ProgramBuilderTests: XCTestCase {
         let i = b.loadInt(42)
         b.loadInt(43)
         b.loadInt(44)
-        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .integer)
+        XCTAssertEqual(b.randomParameters(n: 1, withRestParameterProbability: 0).parameterTypes[0], .integer)
 
         // The same is true if we have variables of other types, but not enough to
         // ensure that a function using these types as parameter types can be called
@@ -516,7 +516,7 @@ class ProgramBuilderTests: XCTestCase {
         let s = b.loadString("foo")
         let a = b.createIntArray(with: [1, 2, 3])
         let o = b.createObject(with: [:])
-        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .integer)
+        XCTAssertEqual(b.randomParameters(n: 1, withRestParameterProbability: 0).parameterTypes[0], .integer)
 
         // But as soon as we have a sufficient number of other types as well,
         // we expect those to be used as well.
@@ -530,7 +530,7 @@ class ProgramBuilderTests: XCTestCase {
         let types = [b.type(of: i), b.type(of: s), b.type(of: a), b.type(of: o)]
         var usesOfParameterType = [ILType: Int]()
         for _ in 0..<100 {
-            guard case .plain(let paramType) = b.randomParameters(n: 1).parameterTypes[0] else { return XCTFail("Unexpected parameter" )}
+            guard case .plain(let paramType) = b.randomParameters(n: 1, withRestParameterProbability: 0).parameterTypes[0] else { return XCTFail("Unexpected parameter" )}
             XCTAssert(types.contains(paramType))
             usesOfParameterType[paramType] = (usesOfParameterType[paramType] ?? 0) + 1
         }
@@ -538,8 +538,8 @@ class ProgramBuilderTests: XCTestCase {
 
         // However, if we set the probability of using .jsAnything as parameter to 100%, we expect to only see .jsAnything parameters.
         b.probabilityOfUsingAnythingAsParameterTypeIfAvoidable = 1.0
-        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .jsAnything)
-        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .jsAnything)
+        XCTAssertEqual(b.randomParameters(n: 1, withRestParameterProbability: 0).parameterTypes[0], .jsAnything)
+        XCTAssertEqual(b.randomParameters(n: 1, withRestParameterProbability: 0).parameterTypes[0], .jsAnything)
     }
 
     func testParameterGeneration3() {
@@ -562,7 +562,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(b.type(of: p1), .object(withProperties: ["x", "y"]))
         XCTAssertEqual(b.type(of: p1), b.type(of: p2))
 
-        let f1 = b.buildPlainFunction(with: b.randomParameters(n: 1)) { args in
+        let f1 = b.buildPlainFunction(with: b.randomParameters(n: 1, withRestParameterProbability: 0)) { args in
             let p = args[0]
             XCTAssertEqual(b.type(of: p), b.type(of: p1))
             XCTAssertEqual(b.type(of: p).properties, ["x", "y"])
@@ -582,7 +582,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert(b.type(of: a1).properties.contains("length"))
         XCTAssert(b.type(of: a1).methods.contains("slice"))
 
-        let f2 = b.buildPlainFunction(with: b.randomParameters(n: 1)) { args in
+        let f2 = b.buildPlainFunction(with: b.randomParameters(n: 1, withRestParameterProbability: 0)) { args in
             let a = args[0]
             XCTAssertEqual(b.type(of: a), b.type(of: a1))
         }
@@ -601,7 +601,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(b.type(of: n1), b.type(of: n2))
         XCTAssertEqual(b.type(of: n2), b.type(of: n3))
 
-        let f3 = b.buildPlainFunction(with: b.randomParameters(n: 1)) { args in
+        let f3 = b.buildPlainFunction(with: b.randomParameters(n: 1, withRestParameterProbability: 0)) { args in
             let a = args[0]
             XCTAssertEqual(b.type(of: a), b.type(of: n1))
         }
@@ -609,6 +609,21 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(args.count, 1)
         XCTAssert([n1, n2, n3].contains(args[0]))
     }
+
+    func testRestParameterGeneration() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.loadInt(42)
+        b.loadInt(43)
+
+        // With probability 1.0, we should always generate a rest parameter if possible.
+        let params = b.randomParameters(n: 2, withRestParameterProbability: 1.0)
+        XCTAssertEqual(params.count, 2)
+        XCTAssert(params.parameters.hasRestParameter)
+        guard case .plain(_) = params.parameterTypes[0] else { return XCTFail("Expected a plain parameter") }
+        guard case .rest(_) = params.parameterTypes[1] else { return XCTFail("Expected a rest parameter") }
+    }
+
 
     func testObjectLiteralBuilding() {
         let fuzzer = makeMockFuzzer()
@@ -3047,5 +3062,112 @@ class ProgramBuilderTests: XCTestCase {
                 XCTFail("\(name) always failed to complete.")
             }
         }
+    }
+}
+
+class ProgramBuilderRuntimeDataTests: XCTestCase {
+    func runFuzzerWithGenerator(_ generator: CodeGenerator) -> String {
+        let fuzzer = makeMockFuzzer(overwriteGenerators: WeightedList([(generator, 1)]))
+        let b = fuzzer.makeBuilder()
+
+        let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+        XCTAssertNotNil(syntheticGenerator)
+        let numInstructions = b.complete(generator: syntheticGenerator!, withBudget: 3)
+        XCTAssertGreaterThan(numInstructions, 0)
+
+        let program = b.finalize()
+        return fuzzer.lifter.lift(program)
+    }
+
+    func testNested() {
+        let loopGenerator = CodeGenerator("TestDoWhileLoop", [
+            GeneratorStub("BeginLoop") { b in
+                let loopVar = b.loadInt(0)
+                b.runtimeData.push("loopVar", loopVar)
+                b.emit(BeginDoWhileLoopBody())
+            },
+            GeneratorStub("EndLoop") { b in
+                let loopVar = b.runtimeData.pop("loopVar")
+                b.unary(.PreInc, loopVar)
+                b.emit(BeginDoWhileLoopHeader())
+                let cond = b.compare(loopVar, with: b.loadInt(3), using: .lessThan)
+                b.emit(EndDoWhileLoop(), withInputs: [cond])
+            }
+        ])
+        XCTAssertEqual(
+            runFuzzerWithGenerator(loopGenerator),
+            """
+            let v0 = 0;
+            do {
+                let v1 = 0;
+                do {
+                    ++v1;
+                } while (v1 < 3)
+                ++v0;
+            } while (v0 < 3)
+
+            """)
+    }
+
+    func testMultiLabel() {
+        var counter: Int64 = 0
+        let defineAndAddGenerator = CodeGenerator("TestMultiLabel", [
+            GeneratorStub("Define") { b in
+                b.runtimeData.push("first", b.loadInt(counter))
+                counter += 1
+                b.runtimeData.push("second", b.loadInt(counter))
+                counter += 1
+                b.runtimeData.push("third", b.loadInt(counter))
+                counter += 1
+            },
+            GeneratorStub("Add") { b in
+                // The order in which the different lables are popped doesn't matter.
+                let third = b.runtimeData.pop("third")
+                let first = b.runtimeData.pop("first")
+                let second = b.runtimeData.pop("second")
+                b.binary(b.binary(first, second, with: .Add), third, with: .Add)
+            }
+        ])
+        XCTAssertEqual(
+            runFuzzerWithGenerator(defineAndAddGenerator),
+            """
+            (3 + 4) + 5;
+            (0 + 1) + 2;
+
+            """)
+    }
+
+    func testPassOn() {
+        var counter: Int64 = 10
+        let defineAndAddGenerator = CodeGenerator("TestPassOn", [
+            GeneratorStub("Define") { b in
+                let value = b.loadInt(counter)
+                b.runtimeData.push("value", value)
+                b.binary(value, b.loadInt(0), with: .Add)
+                counter += 1
+            },
+            GeneratorStub("AddOne") { b in
+                let value = b.runtimeData.popAndPush("value")
+                b.binary(value, b.loadInt(1), with: .Add)
+            },
+            GeneratorStub("SubOne") { b in
+                let value = b.runtimeData.pop("value")
+                b.binary(value, b.loadInt(1), with: .Sub)
+            },
+        ])
+        XCTAssertEqual(
+            runFuzzerWithGenerator(defineAndAddGenerator),
+            """
+            10 + 0;
+            11 + 0;
+            11 + 1;
+            11 - 1;
+            10 + 1;
+            12 + 0;
+            12 + 1;
+            12 - 1;
+            10 - 1;
+
+            """)
     }
 }

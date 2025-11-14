@@ -24,8 +24,8 @@ public class REPRL: ComponentBase, ScriptRunner {
     /// Commandline arguments for the executable
     public private(set) var processArguments: [String]
 
-    /// Environment variables for the child process
-    private var env = [String]()
+    /// Environment variables for the child process. Shape: [(key, value)]
+    public private(set) var env = [(String, String)]()
 
     /// Number of script executions since start of child process
     private var execsSinceReset = 0
@@ -53,7 +53,7 @@ public class REPRL: ComponentBase, ScriptRunner {
         super.init(name: "REPRL")
 
         for (key, value) in processEnvironment {
-            env.append(key + "=" + value)
+            env.append((key, value))
         }
     }
 
@@ -64,7 +64,7 @@ public class REPRL: ComponentBase, ScriptRunner {
         }
 
         let argv = convertToCArray(processArguments)
-        let envp = convertToCArray(env)
+        let envp = convertToCArray(env.map({ $0 + "=" + $1 }))
 
         if reprl_initialize_context(reprlContext, argv, envp, /* capture stdout */ 1, /* capture stderr: */ 1) != 0 {
             logger.fatal("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(reprlContext)))")
@@ -84,7 +84,7 @@ public class REPRL: ComponentBase, ScriptRunner {
     }
 
     public func setEnvironmentVariable(_ key: String, to value: String) {
-        env.append(key + "=" + value)
+        env.append((key, value))
     }
 
     public func run(_ script: String, withTimeout timeout: UInt32) -> Execution {

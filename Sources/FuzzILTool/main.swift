@@ -95,7 +95,7 @@ func loadProgramOrExit(from path: String) -> Program {
 
 let args = Arguments.parse(from: CommandLine.arguments)
 
-if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 1 || args.numOptionalArguments > 2 {
+if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 1 {
     print("""
           Usage:
           \(args.programName) options path
@@ -108,9 +108,9 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
               --dumpProgram            : Dumps the internal representation of the program stored in the given protobuf file
               --checkCorpus            : Attempts to load all .fzil files in a directory and checks if they are statically valid
               --compile                : Compile the given JavaScript program to a FuzzIL program. Requires node.js
+              --outputPathJS           : If given, --compile will write the lifted JS file to the given path after compilation.
               --generate               : Generate a random program using Fuzzilli's code generators and save it to the specified path.
               --forDifferentialFuzzing : Enable additional features for better support of external differential fuzzing.
-              --executeTemplate        : Compile a given program template by name to JavaScript
           """)
     exit(0)
 }
@@ -187,17 +187,27 @@ else if args.has("--compile") {
         exit(-1)
     }
 
-    print(fuzzILLifter.lift(program))
-    print()
-    print(jsLifter.lift(program))
+    if let js_path = args["--outputPathJS"] {
+        let content = jsLifter.lift(program)
+        do {
+            try content.write(to: URL(fileURLWithPath: js_path), atomically: false, encoding: String.Encoding.utf8)
+        } catch {
+            print("Failed to write file \(js_path): \(error)")
+            exit(-1)
+        }
+    } else {
+        print(fuzzILLifter.lift(program))
+        print()
+        print(jsLifter.lift(program))
 
-    do {
-        let outputPath = URL(fileURLWithPath: path).deletingPathExtension().appendingPathExtension("fzil")
-        try program.asProtobuf().serializedData().write(to: outputPath)
-        print("FuzzIL program written to \(outputPath.relativePath)")
-    } catch {
-        print("Failed to store output program to disk: \(error)")
-        exit(-1)
+        do {
+            let outputPath = URL(fileURLWithPath: path).deletingPathExtension().appendingPathExtension("fzil")
+            try program.asProtobuf().serializedData().write(to: outputPath)
+            print("FuzzIL program written to \(outputPath.relativePath)")
+        } catch {
+            print("Failed to store output program to disk: \(error)")
+            exit(-1)
+        }
     }
 }
 
@@ -217,30 +227,6 @@ else if args.has("--generate") {
         print("Failed to store output program to disk: \(error)")
         exit(-1)
     }
-}
-
-else if args.has("--compileTemplate") {
-    var programTemplate: ProgramTemplate?
-    for template in ProgramTemplates {
-        if template.name == args["--compileTemplate"] {
-            programTemplate = template
-            break
-        }
-    }
-    guard let template = programTemplate else {
-        print("Unable to find specified program template")
-        exit(-1)
-    }
-
-    let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .warning, enableInspection: true), environment: JavaScriptEnvironment())
-    let b = fuzzer.makeBuilder()
-    b.traceHeader("Generating program based on \(template.name) template")
-    template.generate(in: b)
-    let program = b.finalize()
-
-    // program could potentially be refined before being lifted
-    let script = jsLifter.lift(program)
-    print(script)
 }
 
 else {
