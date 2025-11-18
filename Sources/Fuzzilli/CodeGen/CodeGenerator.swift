@@ -17,16 +17,6 @@ protocol GeneratorAdapter {
     func run(in b: ProgramBuilder, with inputs: [Variable])
 }
 
-public typealias ValueGeneratorFunc = (ProgramBuilder, Int) -> ()
-fileprivate struct ValueGeneratorAdapter: GeneratorAdapter {
-    let expectedNumberOfInputs = 0
-    let f: ValueGeneratorFunc
-    func run(in b: ProgramBuilder, with inputs: [Variable]) {
-        assert(inputs.isEmpty)
-        f(b, GeneratorStub.numberOfValuesToGenerateByValueGenerators)
-    }
-}
-
 public typealias GeneratorFuncNoArgs = (ProgramBuilder) -> ()
 fileprivate struct GeneratorAdapterNoArgs: GeneratorAdapter {
     let expectedNumberOfInputs = 0
