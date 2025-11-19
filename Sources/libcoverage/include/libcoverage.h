@@ -161,6 +161,7 @@ void clear_feedback_nexus(struct cov_context* context);
 
 
 // Turbofan and Maglev optimization bits functions
+int isOpted(struct cov_context* context);
 int cov_evaluate_optimization_bits(struct cov_context* context);
 void cov_update_optimization_bits(struct cov_context* context);
 void clear_optimization_bits(struct cov_context* context);
