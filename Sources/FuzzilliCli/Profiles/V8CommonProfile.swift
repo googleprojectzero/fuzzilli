@@ -878,6 +878,9 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         if probability(0.1) {
             args.append("--turboshaft-verify-reductions")
         }
+        if probability(0.2) {
+            args.append("--turboshaft-verify-load-store-taggedness")
+        }
     }
 
     if probability(0.1) {
