@@ -686,6 +686,52 @@ public let FastApiCallFuzzer = ProgramTemplate("FastApiCallFuzzer") { b in
     b.build(n: 10)
 }
 
+public let ProtoAssignSeqOptFuzzer = ProgramTemplate("ProtoAssignSeqOptFuzzer") { b in
+    b.buildPrefix()
+
+    let containingFct = b.buildPlainFunction(with: b.randomParameters()) { args in
+        // The function to install the prototypes on.
+        let params = b.randomParameters()
+        let body = {(args: [Variable]) in
+            b.build(n: 20)
+            b.doReturn(b.randomVariable(forUseAs: .object()))
+        }
+        let fct = withEqualProbability(
+            {b.buildPlainFunction(with: params, body)},
+            {b.buildArrowFunction(with: params, body)},
+            {b.buildGeneratorFunction(with: params, body)}, // not a valid constructor
+            {b.buildAsyncFunction(with: params, body)},     // not a valid constructor
+            {b.buildConstructor(with: params, body)},
+            {b.buildClassDefinition(withSuperclass: b.randomVariable(forUseAs: .object())) { _ in
+                b.build(n: 30)
+            }}
+        )
+        // Explicitly expose the prototype property to make modifications of it more likely.
+        b.getProperty("prototype", of: fct)
+        // Allow further modifications on the function.
+        b.build(n: 10)
+        // Perform the prototype assignments.
+        for _ in 0..<Int.random(in: 2...10) {
+            let val = b.randomVariable(forUseAs: .primitive)
+            let name = b.randomCustomPropertyName()
+            // TODO(mliedtke): This should be a setProperty(getProperty("prototype")) instead of
+            // treating `prototype.name` as a single property.
+            b.setProperty("prototype.\(name)", of: fct, to: val)
+        }
+        // Allow further modifications after the optimized sequence.
+        b.build(n: 10)
+        // Construct the object with the `new` keyword. Add a guard because not all chosen functions
+        // are valid constructors.
+        b.construct(fct, withArgs: b.randomArguments(forCalling: fct), guard: true)
+        // Generate arbitrary code that could also use the constructed object.
+        b.build(n: 30)
+        b.doReturn(b.randomJsVariable())
+    }
+    let sig = b.type(of: containingFct).signature ?? Signature.forUnknownFunction
+    b.callFunction(containingFct, withArgs: b.randomArguments(forCalling: containingFct))
+    b.build(n: 10)
+}
+
 // Configure V8 invocation arguments. `forSandbox` is used by the V8SandboxProfile. As the sandbox
 // fuzzer does not crash on regular assertions, most validation flags do not make sense in that
 // configuraiton.

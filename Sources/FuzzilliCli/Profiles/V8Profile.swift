@@ -72,14 +72,15 @@ let v8Profile = Profile(
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
-        (MapTransitionFuzzer,    1),
-        (ValueSerializerFuzzer,  1),
-        (V8RegExpFuzzer,         1),
-        (WasmFastCallFuzzer,     1),
-        (FastApiCallFuzzer,      1),
-        (LazyDeoptFuzzer,        1),
-        (WasmDeoptFuzzer,        1),
-        (WasmTurbofanFuzzer,     1),
+        (MapTransitionFuzzer,     1),
+        (ValueSerializerFuzzer,   1),
+        (V8RegExpFuzzer,          1),
+        (WasmFastCallFuzzer,      1),
+        (FastApiCallFuzzer,       1),
+        (LazyDeoptFuzzer,         1),
+        (WasmDeoptFuzzer,         1),
+        (WasmTurbofanFuzzer,      1),
+        (ProtoAssignSeqOptFuzzer, 1),
     ]),
 
     disabledCodeGenerators: [],
@@ -87,9 +88,9 @@ let v8Profile = Profile(
     disabledMutators: [],
 
     additionalBuiltins: [
-        "gc"                                            : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
-        "d8"                                            : .jsD8,
-        "Worker"                                        : .constructor([.jsAnything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
+        "gc"    : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
+        "d8"    : .jsD8,
+        "Worker": .constructor([.jsAnything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
 
     additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],
