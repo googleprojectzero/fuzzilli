@@ -4165,7 +4165,7 @@ class WasmFoundationTests: XCTestCase {
                 module.addWasmFunction(with: [] => [.wasmi64, .wasmi64]) { f, _, _ in
                     let tableOffset = { (i: Int) in isTable64 ? f.consti64(Int64(i)) : f.consti32(Int32(i))}
                     f.wasmTableInit(elementSegment: elemSegment2, table: table2, tableOffset: tableOffset(5), elementSegmentOffset: f.consti32(2), nrOfElementsToUpdate: f.consti32(2))
-                    let callIndirect = { (table: Variable, idx: Int) in 
+                    let callIndirect = { (table: Variable, idx: Int) in
                         let idxVar = isTable64 ? f.consti64(Int64(idx)) : f.consti32(Int32(idx))
                         return f.wasmCallIndirect(signature: [] => [.wasmi64], table: table, functionArgs: [], tableIndex: idxVar)
                     }
@@ -4210,7 +4210,7 @@ class WasmFoundationTests: XCTestCase {
                 module.addWasmFunction(with: [] => [.wasmi64, .wasmi64]) { f, _, _ in
                     let const = { (i: Int) in isTable64 ? f.consti64(Int64(i)) : f.consti32(Int32(i))}
                     f.wasmTableCopy(dstTable: table1, srcTable: table2, dstOffset: const(1), srcOffset: const(2), count: const(2))
-                    let callIndirect = { (table: Variable, idx: Int) in 
+                    let callIndirect = { (table: Variable, idx: Int) in
                         let idxVar = isTable64 ? f.consti64(Int64(idx)) : f.consti32(Int32(idx))
                         return f.wasmCallIndirect(signature: [] => [.wasmi64], table: table, functionArgs: [], tableIndex: idxVar)
                     }
@@ -4477,6 +4477,29 @@ class WasmGCTests: XCTestCase {
                     // parameter and return types as well as type group dependencies once signatures
                     // are usable with more interesting operations.
                     [function.wasmRefNull(typeDef: typeGroup[1])]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [wasmOut])
+        }
+
+        testForOutput(program: jsProg, runner: runner, outputString: "null\n")
+    }
+
+    func testAdHocSignature() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let jsProg = buildAndLiftProgram { b in
+
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmFuncRef]) { function, label, args in
+                    // TODO(mliedtke): Do something more useful with the signature type than
+                    // defining a null value for it and testing that it's implicitly convertible to
+                    // .wasmFuncRef.
+                    let signatureType = b.wasmDefineAdHocSignatureType(signature: [.wasmi32] => [.wasmi32], indexTypes: [])
+                    return [function.wasmRefNull(typeDef: signatureType)]
                 }
             }
 

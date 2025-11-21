@@ -2391,3 +2391,15 @@ final class WasmAtomicCmpxchg: WasmOperation {
         super.init(numInputs: 4, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
+
+final class WasmDefineAdHocSignatureType: WasmOperation {
+    override var opcode: Opcode { .wasmDefineAdHocSignatureType(self) }
+    let signature: WasmSignature
+
+    init(signature: WasmSignature) {
+        self.signature = signature
+        let numInputs = (signature.outputTypes + signature.parameterTypes).map {
+            $0.requiredInputCount() }.reduce(0) { $0 + $1 }
+        super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}

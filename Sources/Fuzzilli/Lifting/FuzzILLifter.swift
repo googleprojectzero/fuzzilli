@@ -1354,6 +1354,10 @@ public class FuzzILLifter: Lifter {
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("\(output()) <- WasmDefineSignatureType(\(op.signature)) [\(inputs)]")
 
+        case .wasmDefineAdHocSignatureType(let op):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- WasmDefineAdHocSignatureType(\(op.signature)) [\(inputs)]")
+
         case .wasmDefineArrayType(let op):
             let typeInput = op.elementType.requiredInputCount() == 1 ? " \(input(0))" : ""
             w.emit("\(output()) <- WasmDefineArrayType \(op.elementType) mutability=\(op.mutability)\(typeInput)")

@@ -1559,6 +1559,11 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmBeginTypeGroup = Fuzzilli_Protobuf_WasmBeginTypeGroup()
             case .wasmEndTypeGroup(_):
                 $0.wasmEndTypeGroup = Fuzzilli_Protobuf_WasmEndTypeGroup()
+            case .wasmDefineAdHocSignatureType(let op):
+                $0.wasmDefineAdHocSignatureType = Fuzzilli_Protobuf_WasmDefineAdHocSignatureType.with {
+                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                }
             case .wasmDefineSignatureType(let op):
                 $0.wasmDefineSignatureType = Fuzzilli_Protobuf_WasmDefineSignatureType.with {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
@@ -2566,6 +2571,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmDefineArrayType(elementType: WasmTypeEnumToILType(p.elementType), mutability: p.mutability)
         case .wasmDefineSignatureType(let p):
             op = WasmDefineSignatureType(signature: p.parameterTypes.map(WasmTypeEnumToILType) => p.outputTypes.map(WasmTypeEnumToILType))
+        case .wasmDefineAdHocSignatureType(let p):
+            op = WasmDefineAdHocSignatureType(signature: p.parameterTypes.map(WasmTypeEnumToILType) => p.outputTypes.map(WasmTypeEnumToILType))
         case .wasmDefineStructType(let p):
             op = WasmDefineStructType(fields: p.fields.map { field in
                 return WasmDefineStructType.Field(type: WasmTypeEnumToILType(field.type), mutability: field.mutability)

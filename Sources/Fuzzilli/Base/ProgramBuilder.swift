@@ -4635,6 +4635,13 @@ public class ProgramBuilder {
         return emit(WasmDefineSignatureType(signature: signature), withInputs: indexTypes).output
     }
 
+    /// Like wasmDefineSignatureType but instead of within a type group this defines a signature
+    /// type directly inside a wasm function.
+    @discardableResult
+    func wasmDefineAdHocSignatureType(signature: WasmSignature, indexTypes: [Variable]) -> Variable {
+        return emit(WasmDefineAdHocSignatureType(signature: signature), withInputs: indexTypes).output
+    }
+
     @discardableResult
     func wasmDefineArrayType(elementType: ILType, mutability: Bool, indexType: Variable? = nil) -> Variable {
         let inputs = indexType != nil ? [indexType!] : []

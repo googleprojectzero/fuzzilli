@@ -359,6 +359,7 @@ message Instruction {
         WasmDefineSignatureType wasmDefineSignatureType = 333;
         CreateNamedDisposableVariable createNamedDisposableVariable = 334;
         CreateNamedAsyncDisposableVariable createNamedAsyncDisposableVariable = 335;
+        WasmDefineAdHocSignatureType wasmDefineAdHocSignatureType = 336;
     }
 }
 

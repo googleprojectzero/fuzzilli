@@ -433,8 +433,9 @@ public struct JSTyper: Analyzer {
     }
 
     mutating func addSignatureType(def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>) {
+        assert(isWithinTypeGroup)
         var inputs = inputs.makeIterator()
-        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+        let tgIndex = typeGroups.count - 1
 
         // Temporary variable to use by the resolveType capture. It would be nicer to use
         // higher-order functions for this but resolveType has to be a mutating func which doesn't
@@ -477,13 +478,12 @@ public struct JSTyper: Analyzer {
         isParameter = false // TODO(mliedtke): Is there a nicer way to capture this?
         let resolvedOutputTypes = signature.outputTypes.enumerated().map(resolveType)
         set(def, .wasmTypeDef(description: WasmSignatureTypeDescription(signature: resolvedParameterTypes => resolvedOutputTypes, typeGroupIndex: tgIndex)))
-        if isWithinTypeGroup {
-            typeGroups[typeGroups.count - 1].append(def)
-        }
+        typeGroups[typeGroups.count - 1].append(def)
     }
 
     mutating func addArrayType(def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil) {
-        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+        assert(isWithinTypeGroup)
+        let tgIndex = typeGroups.count - 1
         let resolvedElementType: ILType
         if let elementRef = elementRef {
             let elementNullability = elementType.wasmReferenceType!.nullability
@@ -519,13 +519,11 @@ public struct JSTyper: Analyzer {
             elementType: resolvedElementType,
             mutability: mutability,
             typeGroupIndex: tgIndex)))
-        if isWithinTypeGroup {
-            typeGroups[typeGroups.count - 1].append(def)
-        }
+        typeGroups[typeGroups.count - 1].append(def)
     }
 
     mutating func addStructType(def: Variable, fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)]) {
-        let tgIndex = isWithinTypeGroup ? typeGroups.count - 1 : -1
+        let tgIndex = typeGroups.count - 1
         let resolvedFields = fieldsWithRefs.enumerated().map { (fieldIndex, fieldWithInput) in
             let (field, fieldTypeRef) = fieldWithInput
             if let fieldTypeRef {
@@ -556,9 +554,7 @@ public struct JSTyper: Analyzer {
 
         set(def, .wasmTypeDef(description: WasmStructTypeDescription(
             fields: resolvedFields, typeGroupIndex: tgIndex)))
-        if (isWithinTypeGroup) {
-            typeGroups[typeGroups.count - 1].append(def)
-        }
+        typeGroups[typeGroups.count - 1].append(def)
     }
 
     func getTypeGroup(_ index: Int) -> [Variable] {
@@ -588,7 +584,6 @@ public struct JSTyper: Analyzer {
             }
         }
         selfReferences.removeAll()
-
         isWithinTypeGroup = false
     }
 
@@ -904,6 +899,10 @@ public struct JSTyper: Analyzer {
                 // extern.convert_any forwards the nullability bit from the input.
                 let null = type(of: instr.input(0)).wasmReferenceType!.nullability
                 setType(of: instr.output, to: .wasmRef(.Abstract(.WasmExtern), nullability: null))
+            case .wasmDefineAdHocSignatureType(let op):
+                startTypeGroup()
+                addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)
+                finishTypeGroup()
             default:
                 if instr.numInnerOutputs + instr.numOutputs != 0 {
                     fatalError("Missing typing of outputs for \(instr.op.opcode)")

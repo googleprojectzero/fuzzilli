@@ -294,7 +294,6 @@ public class WasmLifter {
 //    private var tags: VariableMap<[ILType]> = VariableMap()
 
     private var typeGroups: Set<Int> = []
-    private var freeTypes: Set<Variable> = []
 
     private var typeDescToIndex : [WasmTypeDescription:Int] = [:]
     private var userDefinedTypesCount = 0
@@ -655,7 +654,6 @@ public class WasmLifter {
                 try buildTypeEntry(for: typer.getTypeDescription(of: typeDef), data: &temp)
             }
         }
-        // TODO(mliedtke): Also add "free types" which aren't in any explicit type group.
 
         for signature in self.signatures {
             temp += [0x60]
@@ -1343,8 +1341,10 @@ public class WasmLifter {
 
     // requires that the instr has been analyzed before. Maybe assert that?
     private func emitInputLoadsIfNecessary(forInstruction instr: Instruction) {
-        // Don't emit loads for reassigns. This is specially handled in the `lift` function for reassigns.
-        if instr.op is WasmReassign {
+        // Don't emit loads for reassigns. This is specially handled in the `lift` function for
+        // reassigns. WasmDefineAdHocSignatureType isn't a wasm instruction and therefore also
+        // doesn't have any Wasm stack inputs.
+        if instr.op is WasmReassign || instr.op is WasmDefineAdHocSignatureType {
             return
         }
 
@@ -1376,9 +1376,11 @@ public class WasmLifter {
     }
 
     private func emitStackSpillsIfNecessary(forInstruction instr: Instruction) {
-        // Don't emit spills for reassigns. This is specially handled in the `lift` function for reassigns.
-        // Similarly, the end of a function doesn't spill anything.
-        if instr.op is WasmReassign || instr.op is EndWasmFunction {
+        // Don't emit spills for reassigns. This is specially handled in the `lift` function for
+        // reassigns. Similarly, the end of a function doesn't spill anything.
+        // WasmDefineAdHocSignatureType isn't a wasm instruction and therefore also doesn't have any
+        // Wasm stack inputs.
+        if instr.op is WasmReassign || instr.op is EndWasmFunction || instr.op is WasmDefineAdHocSignatureType {
             return
         }
 
@@ -1455,13 +1457,12 @@ public class WasmLifter {
 
                 if inputType.Is(.wasmTypeDef()) || inputType.Is(.wasmRef(.Index(), nullability: true)) {
                     let typeDesc = typer.getTypeDescription(of: input)
-                    if typeDesc.typeGroupIndex != -1 {
-                        // Add typegroups and their dependencies.
-                        if typeGroups.insert(typeDesc.typeGroupIndex).inserted {
-                            typeGroups.formUnion(typer.getTypeGroupDependencies(typeGroupIndex: typeDesc.typeGroupIndex))
-                        }
-                    } else {
-                        freeTypes.insert(input)
+                    guard typeDesc.typeGroupIndex != -1 else {
+                        throw CompileError.fatalError("Missing type group index for \(input)")
+                    }
+                    // Add typegroups and their dependencies.
+                    if typeGroups.insert(typeDesc.typeGroupIndex).inserted {
+                        typeGroups.formUnion(typer.getTypeGroupDependencies(typeGroupIndex: typeDesc.typeGroupIndex))
                     }
                 }
 
@@ -2196,6 +2197,10 @@ public class WasmLifter {
             return Data([Prefix.GC.rawValue, 0x1A])
         case .wasmExternConvertAny(_):
             return Data([Prefix.GC.rawValue, 0x1B])
+        case .wasmDefineAdHocSignatureType(_):
+            // Nothing to do here, types are defined inside the typegroups, not inside a wasm
+            // function.
+            return Data()
 
         default:
              fatalError("unreachable")
