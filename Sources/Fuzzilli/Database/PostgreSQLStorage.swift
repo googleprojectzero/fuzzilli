@@ -29,6 +29,20 @@ public class PostgreSQLStorage {
     
     // MARK: - Helper Methods
     
+    /// Extract the mutator name from a program's contributors
+    private func extractMutatorName(from program: Program) -> String? {
+        // Find the first Mutator contributor (if any)
+        // Mutators are subclasses of Contributor
+        for contributor in program.contributors {
+            // Check if the contributor name matches known mutator patterns
+            let name = contributor.name
+            if name.contains("Mutator") || name.contains("Generator") || name.contains("Template") {
+                return name
+            }
+        }
+        return nil
+    }
+    
     /// Create a direct connection using the database pool's configuration
     private func createDirectConnection() async throws -> PostgresConnection {
         guard let eventLoopGroup = databasePool.getEventLoopGroup() else {
@@ -275,14 +289,15 @@ public class PostgreSQLStorage {
         defer { Task { _ = try? await connection.close() } }
         
         var programHashes: [String] = []
-        var fuzzerBatchData: [(String, Int, Int, String)] = []
+        var fuzzerBatchData: [(String, Int, Int, String, String?)] = []
         
         // Prepare batch data - store tuples instead of strings to avoid SQL injection
         for (program, _) in programs {
             let programHash = DatabaseUtils.calculateProgramHash(program: program)
             let programBase64 = DatabaseUtils.encodeProgramToBase64(program: program)
+            let sourceMutator = extractMutatorName(from: program)
             programHashes.append(programHash)
-            fuzzerBatchData.append((programHash, fuzzerId, program.size, programBase64))
+            fuzzerBatchData.append((programHash, fuzzerId, program.size, programBase64, sourceMutator))
         }
         
         // Batch insert into fuzzer table (corpus) using parameterized queries
@@ -292,7 +307,7 @@ public class PostgreSQLStorage {
             
             do {
                 // Batch insert into fuzzer table
-                for (programHash, fuzzerId, programSize, programBase64) in fuzzerBatchData {
+                for (programHash, fuzzerId, programSize, programBase64, _) in fuzzerBatchData {
                     // Escape single quotes in base64 string
                     let escapedProgramBase64 = programBase64.replacingOccurrences(of: "'", with: "''")
                     
@@ -308,18 +323,20 @@ public class PostgreSQLStorage {
                 }
                 
                 // Batch insert/update into program table
-                for (programHash, fuzzerId, programSize, programBase64) in fuzzerBatchData {
+                for (programHash, fuzzerId, programSize, programBase64, sourceMutator) in fuzzerBatchData {
                     // Escape single quotes in base64 string
                     let escapedProgramBase64 = programBase64.replacingOccurrences(of: "'", with: "''")
+                    let sourceMutatorValue = sourceMutator != nil ? "'\(sourceMutator!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
                     
                     // Use INSERT ... ON CONFLICT for atomic upsert
                     let programQuery = PostgresQuery(stringLiteral: """
-                        INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64) 
-                        VALUES ('\(programHash)', \(fuzzerId), \(programSize), '\(escapedProgramBase64)') 
+                        INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64, source_mutator) 
+                        VALUES ('\(programHash)', \(fuzzerId), \(programSize), '\(escapedProgramBase64)', \(sourceMutatorValue)) 
                         ON CONFLICT (program_hash) DO UPDATE SET
                             fuzzer_id = EXCLUDED.fuzzer_id,
                             program_size = EXCLUDED.program_size,
-                            program_base64 = EXCLUDED.program_base64
+                            program_base64 = EXCLUDED.program_base64,
+                            source_mutator = EXCLUDED.source_mutator
                     """)
                     try await connection.query(programQuery, logger: self.logger)
                 }
@@ -355,8 +372,9 @@ public class PostgreSQLStorage {
     ) async throws -> (programHash: String, executionId: Int) {
         let programHash = DatabaseUtils.calculateProgramHash(program: program)
         let programBase64 = DatabaseUtils.encodeProgramToBase64(program: program)
+        let sourceMutator = extractMutatorName(from: program)
         if enableLogging {
-            logger.info("Storing program and execution: hash=\(programHash), fuzzerId=\(fuzzerId), executionCount=\(metadata.executionCount)")
+            logger.info("Storing program and execution: hash=\(programHash), fuzzerId=\(fuzzerId), executionCount=\(metadata.executionCount), mutator=\(sourceMutator ?? "none")")
         }
         
         // Use direct connection to avoid connection pool deadlock
@@ -376,11 +394,13 @@ public class PostgreSQLStorage {
             try await connection.query(fuzzerQuery, logger: self.logger)
             
             // Insert into program table (executed programs) - use two-step upsert
+            let sourceMutatorValue = sourceMutator != nil ? "'\(sourceMutator!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
             let updateQuery = PostgresQuery(stringLiteral: """
                 UPDATE program SET 
                     fuzzer_id = \(fuzzerId),
                     program_size = \(program.size),
-                    program_base64 = '\(programBase64)'
+                    program_base64 = '\(programBase64)',
+                    source_mutator = \(sourceMutatorValue)
                 WHERE program_hash = '\(programHash)'
             """)
             let updateResult = try await connection.query(updateQuery, logger: self.logger)
@@ -389,8 +409,8 @@ public class PostgreSQLStorage {
             // If no rows were updated, insert the new program
             if updateRows.isEmpty {
                 let insertQuery = PostgresQuery(stringLiteral: """
-                    INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64) 
-                    VALUES ('\(programHash)', \(fuzzerId), \(program.size), '\(programBase64)') 
+                    INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64, source_mutator) 
+                    VALUES ('\(programHash)', \(fuzzerId), \(program.size), '\(programBase64)', \(sourceMutatorValue)) 
                     ON CONFLICT DO NOTHING
                 """)
                 try await connection.query(insertQuery, logger: self.logger)
@@ -454,8 +474,9 @@ public class PostgreSQLStorage {
     public func storeProgram(program: Program, fuzzerId: Int, metadata: ExecutionMetadata) async throws -> String {
         let programHash = DatabaseUtils.calculateProgramHash(program: program)
         let programBase64 = DatabaseUtils.encodeProgramToBase64(program: program)
+        let sourceMutator = extractMutatorName(from: program)
         if enableLogging {
-            logger.info("Storing program: hash=\(programHash), fuzzerId=\(fuzzerId), executionCount=\(metadata.executionCount)")
+            logger.info("Storing program: hash=\(programHash), fuzzerId=\(fuzzerId), executionCount=\(metadata.executionCount), mutator=\(sourceMutator ?? "none")")
         }
         
         // Use direct connection to avoid connection pool deadlock
@@ -475,11 +496,13 @@ public class PostgreSQLStorage {
         _ = lifter.lift(program, withOptions: [])
         
         // Insert into program table (executed programs) - use two-step upsert
+        let sourceMutatorValue = sourceMutator != nil ? "'\(sourceMutator!.replacingOccurrences(of: "'", with: "''"))'" : "NULL"
         let updateQuery: PostgresQuery = """
             UPDATE program SET 
                 fuzzer_id = \(fuzzerId),
                 program_size = \(program.size),
-                program_base64 = '\(programBase64)'
+                program_base64 = '\(programBase64)',
+                source_mutator = \(sourceMutatorValue)
             WHERE program_hash = '\(programHash)'
         """
         let updateResult = try await connection.query(updateQuery, logger: self.logger)
@@ -488,8 +511,8 @@ public class PostgreSQLStorage {
         // If no rows were updated, insert the new program
         if updateRows.isEmpty {
             let insertQuery: PostgresQuery = """
-                INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64) 
-                VALUES ('\(programHash)', \(fuzzerId), \(program.size), '\(programBase64)') 
+                INSERT INTO program (program_hash, fuzzer_id, program_size, program_base64, source_mutator) 
+                VALUES ('\(programHash)', \(fuzzerId), \(program.size), '\(programBase64)', \(sourceMutatorValue)) 
                 ON CONFLICT DO NOTHING
             """
             try await connection.query(insertQuery, logger: self.logger)
