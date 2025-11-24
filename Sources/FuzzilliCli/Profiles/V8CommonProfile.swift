@@ -897,6 +897,9 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
 
     if probability(0.5) {
         args.append("--proto-assign-seq-opt")
+        if probability(0.5) {
+            args.append("--proto-assign-seq-opt-count=1")
+        }
     }
 
     //
