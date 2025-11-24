@@ -431,8 +431,6 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        XCTAssert(b.enableRecursionGuard)
-
         // The recursion guard feature of the ProgramBuilder is meant to prevent trivial recursion
         // where a newly created function directly calls itself. It's also meant to prevent somewhat
         // odd code from being generated where operation inside a function's body operate on the function

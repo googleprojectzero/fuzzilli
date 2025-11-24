@@ -16,7 +16,7 @@ import Collections
 
 public class ContextGraph {
     // This is an edge, it holds all Generators that provide the `to` context at some point.
-    // Another invariant is that each Generator will keep the original context, i.e. it will return to the `from` conetxt.
+    // Another invariant is that each Generator will keep the original context, i.e. it will return to the `from` context.
     struct EdgeKey: Hashable {
         let from: Context
         let to: Context
@@ -55,19 +55,24 @@ public class ContextGraph {
     var edges: [EdgeKey: GeneratorEdge] = [:]
 
     public init(for generators: WeightedList<CodeGenerator>, withLogger logger: Logger) {
-        // Technically we don't need any generator to emit the .javascript context, as this is provided by the toplevel.
-        var providedContexts = Set<Context>([.javascript])
-        var requiredContexts = Set<Context>()
+        assertBasicConsistency(in: generators)
+        warnOfSuspiciousContexts(in: generators, withLogger: logger)
+
+        // One can still try to build in a context that doesn't have generators, this will be caught in the build function, if we fail to find any suitable generator.
+        // Otherwise we could assert here that the sets are equal.
+        // One example is a GeneratorStub that opens a context, then calls build manually without it being split into two stubs where we have a yield point to assemble a synthetic generator.
+        self.edges = [:]
 
         for generator in generators {
-            generator.providedContexts.forEach { ctx in
-                providedContexts.insert(ctx)
+            for providableContext in generator.providedContexts {
+                let edge = EdgeKey(from: generator.requiredContext, to: providableContext)
+                self.edges[edge, default: GeneratorEdge()].addGenerator(generator)
             }
-
-            requiredContexts.insert(generator.requiredContext)
         }
+    }
 
-        // Check that every part that provides something is used by the next part of the Generator. This is a simple consistency check.
+    // Check that every part that provides something is used by the next part of the Generator. This is a simple consistency check.
+    private func assertBasicConsistency(in generators: WeightedList<CodeGenerator>) {
         for generator in generators where generator.parts.count > 1 {
             var currentContext = Context(generator.parts[0].providedContext)
 
@@ -82,8 +87,21 @@ public class ContextGraph {
                     fatalError("Inconsistent requires/provides Contexts for \(generator.name)")
                 }
 
-                currentContext = Context(stub.providedContext)
+                currentContext = stub.providedContext.isEmpty ? currentContext : Context(stub.providedContext)
             }
+        }
+    }
+
+    private func warnOfSuspiciousContexts(in generators: WeightedList<CodeGenerator>, withLogger logger: Logger) {
+        // Technically we don't need any generator to emit the .javascript context, as this is provided by the toplevel.
+        var providedContexts = Set<Context>([.javascript])
+        var requiredContexts = Set<Context>()
+
+        for generator in generators {
+            generator.providedContexts.forEach { ctx in
+                providedContexts.insert(ctx)
+            }
+            requiredContexts.insert(generator.requiredContext)
         }
 
         for generator in generators {
@@ -98,18 +116,6 @@ public class ContextGraph {
                 requiredContexts.contains($0)
             }) {
                 logger.warning("Generator \(generator.name) provides a context that is never required by another generator \(generator.providedContexts)")
-            }
-        }
-
-        // One can still try to build in a context that doesn't have generators, this will be caught in the build function, if we fail to find any suitable generator.
-        // Otherwise we could assert here that the sets are equal.
-        // One example is a GeneratorStub that opens a context, then calls build manually without it being split into two stubs where we have a yield point to assemble a synthetic generator.
-        self.edges = [:]
-
-        for generator in generators {
-            for providableContext in generator.providedContexts {
-                let edge = EdgeKey(from: generator.requiredContext, to: providableContext)
-                self.edges[edge, default: GeneratorEdge()].addGenerator(generator)
             }
         }
     }

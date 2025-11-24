@@ -1936,7 +1936,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b, arr in
         // Fuzzilli generated arrays can have a length ranging from 0 to 10 elements,
         // We want to ensure that 1) when destructing arrays we are usually within this length range
-        // and 2) The probability with which we select indices allows defining atleast 2-3 variables.
+        // and 2) the probability with which we select indices allows defining at least 2-3 variables.
         var indices: [Int64] = []
         for idx in 0..<Int64.random(in: 0..<5) {
             withProbability(0.7) {
@@ -2055,7 +2055,7 @@ public let CodeGenerators: [CodeGenerator] = [
         "PrivatePropertyAssignmentGenerator", inContext: .single(.classMethod),
         inputs: .preferred(.object(), .jsAnything)
     ) { b, obj, value in
-        // See LoadPrivatePropertyGenerator for an explanation.
+        // See PrivatePropertyRetrievalGenerator for an explanation.
         guard !b.currentClassDefinition.privateProperties.isEmpty else {
             return
         }
@@ -2071,7 +2071,7 @@ public let CodeGenerators: [CodeGenerator] = [
         "PrivatePropertyUpdateGenerator", inContext: .single(.classMethod),
         inputs: .preferred(.object(), .jsAnything)
     ) { b, obj, value in
-        // See LoadPrivatePropertyGenerator for an explanation.
+        // See PrivatePropertyRetrievalGenerator for an explanation.
         guard !b.currentClassDefinition.privateProperties.isEmpty else {
             return
         }
@@ -2089,7 +2089,7 @@ public let CodeGenerators: [CodeGenerator] = [
         "PrivateMethodCallGenerator", inContext: .single(.classMethod),
         inputs: .preferred(.object())
     ) { b, obj in
-        // See LoadPrivatePropertyGenerator for an explanation.
+        // See PrivatePropertyRetrievalGenerator for an explanation.
         guard !b.currentClassDefinition.privateMethods.isEmpty else { return }
         let methodName = chooseUniform(
             from: b.currentClassDefinition.privateMethods)
@@ -2496,7 +2496,7 @@ public let CodeGenerators: [CodeGenerator] = [
         ]),
 
     CodeGenerator(
-        "TryCatchGenerator",
+        "TryFinallyGenerator",
         [
             GeneratorStub(
                 "BeginTryGenerator",
@@ -2979,14 +2979,3 @@ public let CodeGenerators: [CodeGenerator] = [
             }, catchBody: { _ in })
     },
 ]
-
-extension Array where Element == GeneratorStub {
-    public func get(_ name: String) -> GeneratorStub {
-        for generator in self {
-            if generator.name == name {
-                return generator
-            }
-        }
-        fatalError("Unknown code generator \(name)")
-    }
-}

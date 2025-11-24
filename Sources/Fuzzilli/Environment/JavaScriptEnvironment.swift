@@ -912,6 +912,7 @@ public struct ObjectGroup {
     public let name: String
     public var properties: [String: ILType]
     public var methods: [String: [Signature]]
+    // This may be used in custom profiles of Fuzzilli users' (e.g. ChromiumProfile.swift).
     public let parent: String?
     // Path to constructor function from `globalThis` if available (e.g. `["Temporal", "Instant"]`).
     public let constructorPath: [String]?

@@ -72,34 +72,6 @@ public class ProgramBuilder {
         return contextAnalyzer.context
     }
 
-    /// If true, the variables containing a function is hidden inside the function's body.
-    ///
-    /// For example, in
-    ///
-    ///     let f = b.buildPlainFunction(with: .parameters(n: 2) { args in
-    ///         // ...
-    ///     }
-    ///     b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
-    ///
-    /// The variable f would *not* be visible inside the body of the plain function during building
-    /// when this is enabled. However, the variable will be visible during future mutations, it is only
-    /// hidden when the function is initially created.
-    ///
-    /// The same is done for class definitions, which may also cause trivial recursion in the constructor,
-    /// but where usage of the output inside the class definition's body may also cause other problems,
-    /// for example since `class C { [C] = 42; }` is invalid.
-    ///
-    /// This can make sense for a number of reasons. First, it prevents trivial recursion where a
-    /// function directly calls itself. Second, it prevents weird code like for example the following:
-    ///
-    ///     function f1() {
-    ///         let o6 = { x: foo + foo, y() { return foo; } };
-    ///     }
-    ///
-    /// From being generated, which can happen quite frequently during prefix generation as
-    /// the number of visible variables may be quite small.
-    public let enableRecursionGuard = true
-
     /// Counter to quickly determine the next free variable.
     private var numVariables = 0
 
@@ -166,7 +138,7 @@ public class ProgramBuilder {
     }
 
     /// The remaining CodeGenerators to call as part of a building / CodeGen step, these will "clean up" the state and fix the contexts.
-    public var scheduled: Stack<GeneratorStub> = Stack()
+    private var scheduled: Stack<GeneratorStub> = Stack()
 
     // Runtime data that can be shared between different stubs within a CodeGenerator.
     var runtimeData = GeneratorRuntimeData()
@@ -1243,6 +1215,39 @@ public class ProgramBuilder {
 
         hiddenVariables.remove(variable)
         numberOfHiddenVariables -= 1
+    }
+
+
+    /// Hides a variable containing a function from the function's body.
+    ///
+    /// For example, in
+    ///
+    ///     let f = b.buildPlainFunction(with: .parameters(n: 2) { args in
+    ///         // ...
+    ///     }
+    ///     b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+    ///
+    /// The variable f would *not* be visible inside the body of the plain function during building
+    /// when this is enabled. However, the variable will be visible during future mutations, it is only
+    /// hidden when the function is initially created.
+    ///
+    /// The same is done for class definitions, which may also cause trivial recursion in the constructor,
+    /// but where usage of the output inside the class definition's body may also cause other problems,
+    /// for example since `class C { [C] = 42; }` is invalid.
+    ///
+    /// This can make sense for a number of reasons. First, it prevents trivial recursion where a
+    /// function directly calls itself. Second, it prevents weird code like for example the following:
+    ///
+    ///     function f1() {
+    ///         let o6 = { x: foo + foo, y() { return foo; } };
+    ///     }
+    ///
+    /// From being generated, which can happen quite frequently during prefix generation as
+    /// the number of visible variables may be quite small.
+    private func bodyWithRecursionGuard(_ variableToHide: Variable, body: () -> ()) {
+        hide(variableToHide)
+        body()
+        unhide(variableToHide)
     }
 
     private static func matchingWasmTypes(jsType: ILType) -> [ILType] {
@@ -2746,9 +2751,7 @@ public class ProgramBuilder {
     public func buildClassDefinition(withSuperclass superclass: Variable? = nil, isExpression: Bool = false, _ body: (ClassDefinition) -> ()) -> Variable {
         let inputs = superclass != nil ? [superclass!] : []
         let output = emit(BeginClassDefinition(hasSuperclass: superclass != nil, isExpression: isExpression), withInputs: inputs).output
-        if enableRecursionGuard { hide(output) }
-        body(currentClassDefinition)
-        if enableRecursionGuard { unhide(output) }
+        bodyWithRecursionGuard(output) { body(currentClassDefinition) }
         emit(EndClassDefinition())
         return output
     }
@@ -2963,9 +2966,7 @@ public class ProgramBuilder {
     public func buildPlainFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil,_ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginPlainFunction(parameters: descriptor.parameters, functionName: functionName))
-        if enableRecursionGuard { hide(instr.output) }
-        body(Array(instr.innerOutputs))
-        if enableRecursionGuard { unhide(instr.output) }
+        bodyWithRecursionGuard(instr.output) { body(Array(instr.innerOutputs)) }
         emit(EndPlainFunction())
         return instr.output
     }
@@ -2974,9 +2975,7 @@ public class ProgramBuilder {
     public func buildArrowFunction(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginArrowFunction(parameters: descriptor.parameters))
-        if enableRecursionGuard { hide(instr.output) }
-        body(Array(instr.innerOutputs))
-        if enableRecursionGuard { unhide(instr.output) }
+        bodyWithRecursionGuard(instr.output) { body(Array(instr.innerOutputs)) }
         emit(EndArrowFunction())
         return instr.output
     }
@@ -2985,9 +2984,7 @@ public class ProgramBuilder {
     public func buildGeneratorFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginGeneratorFunction(parameters: descriptor.parameters, functionName: functionName))
-        if enableRecursionGuard { hide(instr.output) }
-        body(Array(instr.innerOutputs))
-        if enableRecursionGuard { unhide(instr.output) }
+        bodyWithRecursionGuard(instr.output) { body(Array(instr.innerOutputs)) }
         emit(EndGeneratorFunction())
         return instr.output
     }
@@ -2996,9 +2993,7 @@ public class ProgramBuilder {
     public func buildAsyncFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginAsyncFunction(parameters: descriptor.parameters, functionName: functionName))
-        if enableRecursionGuard { hide(instr.output) }
-        body(Array(instr.innerOutputs))
-        if enableRecursionGuard { unhide(instr.output) }
+        bodyWithRecursionGuard(instr.output) { body(Array(instr.innerOutputs)) }
         emit(EndAsyncFunction())
         return instr.output
     }
@@ -3007,9 +3002,7 @@ public class ProgramBuilder {
     public func buildAsyncArrowFunction(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginAsyncArrowFunction(parameters: descriptor.parameters))
-        if enableRecursionGuard { hide(instr.output) }
-        body(Array(instr.innerOutputs))
-        if enableRecursionGuard { unhide(instr.output) }
+        bodyWithRecursionGuard(instr.output) { body(Array(instr.innerOutputs)) }
         emit(EndAsyncArrowFunction())
         return instr.output
     }
@@ -3018,9 +3011,7 @@ public class ProgramBuilder {
     public func buildAsyncGeneratorFunction(with descriptor: SubroutineDescriptor, named functionName: String? = nil, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginAsyncGeneratorFunction(parameters: descriptor.parameters, functionName: functionName))
-        if enableRecursionGuard { hide(instr.output) }
-        body(Array(instr.innerOutputs))
-        if enableRecursionGuard { unhide(instr.output) }
+        bodyWithRecursionGuard(instr.output) { body(Array(instr.innerOutputs)) }
         emit(EndAsyncGeneratorFunction())
         return instr.output
     }
@@ -3029,9 +3020,7 @@ public class ProgramBuilder {
     public func buildConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginConstructor(parameters: descriptor.parameters))
-        if enableRecursionGuard { hide(instr.output) }
-        body(Array(instr.innerOutputs))
-        if enableRecursionGuard { unhide(instr.output) }
+        bodyWithRecursionGuard(instr.output) { body(Array(instr.innerOutputs)) }
         emit(EndConstructor())
         return instr.output
     }
