@@ -95,9 +95,16 @@ struct BlockReducer: Reducer {
                  .wasmBeginTryTable:
                 reduceGenericBlockGroup(group, with: helper)
 
-            case .wasmBeginBlock,
-                 .wasmBeginLoop:
+            case .wasmBeginBlock:
+                // TODO(mliedtke): Deduplicate with .wasmBeginLoop once blocks also use wasm-gc
+                // signatures.
                 let rewroteProgram = reduceGenericWasmBlockGroup(group, with: helper)
+                if rewroteProgram {
+                    return
+                }
+
+            case .wasmBeginLoop:
+                let rewroteProgram = reduceGenericWasmBlockGroup(group, with: helper, usesSignature: true)
                 if rewroteProgram {
                     return
                 }
@@ -311,7 +318,7 @@ struct BlockReducer: Reducer {
     // Reduce a wasm block. In some cases this reduction fully rewrites the program
     // invalidating pre-computed BlockGroups. If that happens, the function returns true indicating
     // that following reductions need to rerun the Blockgroups analysis.
-    private func reduceGenericWasmBlockGroup(_ group: BlockGroup, with helper: MinimizationHelper) -> Bool {
+    private func reduceGenericWasmBlockGroup(_ group: BlockGroup, with helper: MinimizationHelper, usesSignature: Bool = false) -> Bool {
         // Try to remove just the block.
         var candidates = group.blockInstructionIndices
         if helper.tryNopping(candidates) {
@@ -334,9 +341,11 @@ struct BlockReducer: Reducer {
 
         let beginInstr = helper.code[group.head]
         let endInstr = helper.code[group.tail]
+        let blockInputs = usesSignature ? beginInstr.inputs.dropFirst() : beginInstr.inputs
+        let endInstrInputs = usesSignature ? endInstr.inputs.dropFirst() : endInstr.inputs
         var varReplacements = Dictionary(
-            uniqueKeysWithValues: zip(beginInstr.innerOutputs.dropFirst(), beginInstr.inputs))
-        varReplacements.merge(zip(endInstr.outputs, endInstr.inputs.map {varReplacements[$0] ?? $0}),
+            uniqueKeysWithValues: zip(beginInstr.innerOutputs.dropFirst(), blockInputs))
+        varReplacements.merge(zip(endInstr.outputs, endInstrInputs.map {varReplacements[$0] ?? $0}),
             uniquingKeysWith: {_, _ in fatalError("duplicate variables")})
         var newCode = Code()
         for (i, instr) in helper.code.enumerated() {

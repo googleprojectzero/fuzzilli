@@ -66,7 +66,10 @@ public class InputMutator: BaseInstructionMutator {
             b.context.contains(.wasmFunction) ||
             b.context.contains(.wasmTypeGroup) {
             let type = b.type(of: inouts[selectedInput])
-            replacement = b.randomVariable(ofType: type)
+            // TODO(mliedtke): For type definitions we need a lot of consistency. E.g. the signature
+            // flowing into the block begin operation and the block end operation need to be in
+            // sync.
+            replacement = type.Is(.wasmTypeDef()) ? inouts[selectedInput] : b.randomVariable(ofType: type)
         } else {
             switch self.typeAwareness {
             case .loose:

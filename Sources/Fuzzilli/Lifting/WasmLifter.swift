@@ -1268,8 +1268,7 @@ public class WasmLifter {
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
-        case .wasmBeginLoop(let op):
-            registerSignature(op.signature)
+        case .wasmBeginLoop(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
@@ -1455,7 +1454,7 @@ public class WasmLifter {
             for (idx, input) in instr.inputs.enumerated() {
                 let inputType = typer.type(of: input)
 
-                if inputType.Is(.wasmTypeDef()) || inputType.Is(.wasmRef(.Index(), nullability: true)) {
+                if inputType.Is(.wasmTypeDef()) || inputType.Is(.anyIndexRef) {
                     let typeDesc = typer.getTypeDescription(of: input)
                     guard typeDesc.typeGroupIndex != -1 else {
                         throw CompileError.fatalError("Missing type group index for \(input)")
@@ -1912,8 +1911,9 @@ public class WasmLifter {
             // A Block can "produce" (push) an item on the value stack, just like a function. Similarly, a block can also have parameters.
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
             return Data([0x02] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
-        case .wasmBeginLoop(let op):
-            return Data([0x03] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
+        case .wasmBeginLoop(_):
+            let signatureDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            return Data([0x03] + Leb128.unsignedEncode(typeDescToIndex[signatureDesc]!))
         case .wasmBeginTryTable(let op):
             var inputIndex = op.signature.parameterTypes.count
             let catchTable: Data = try op.catches.map {

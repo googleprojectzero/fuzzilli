@@ -291,6 +291,7 @@ public struct ILType: Hashable {
     public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
 
     public static let anyNonNullableIndexRef = wasmRef(.Index(), nullability: false)
+    public static let anyIndexRef = wasmRef(.Index(), nullability: true)
 
     //
     // Type testing
@@ -594,6 +595,14 @@ public struct ILType: Hashable {
     public var wasmFunctionDefSignature: WasmSignature? {
         assert(self.definiteType == .wasmFunctionDef)
         return (wasmType as! WasmFunctionDefinition).signature
+    }
+
+    public var wasmFunctionSignatureDefSignature: WasmSignature {
+        let desc = (wasmType as? WasmTypeDefinition)?.description
+        guard let desc = desc as? WasmSignatureTypeDescription else {
+            fatalError("\(self) is not a Wasm signature type defintion")
+        }
+        return desc.signature
     }
 
     public var isWasmDefaultable: Bool {

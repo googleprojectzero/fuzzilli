@@ -1345,6 +1345,10 @@ public class ProgramBuilder {
         jsTyper.setType(of: variable, to: variableType)
     }
 
+    public func getWasmTypeDef(for type: ILType) -> Variable {
+        jsTyper.getWasmTypeDef(for: type)
+    }
+
     /// This helper function converts parameter types into argument types, for example by "unrolling" rest parameters and handling optional parameters.
     private static func prepareArgumentTypes(forParameters params: ParameterList) -> [ILType] {
         var argumentTypes = [ILType]()
@@ -3998,18 +4002,25 @@ public class ProgramBuilder {
             return Array(b.emit(WasmEndIf(outputTypes: signature.outputTypes), withInputs: falseResults, types: signature.outputTypes).outputs)
         }
 
-        // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
-        public func wasmBuildLoop(with signature: WasmSignature, body: (Variable, [Variable]) -> Void) {
-            let instr = b.emit(WasmBeginLoop(with: signature))
-            body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            b.emit(WasmEndLoop())
+        @discardableResult
+        public func wasmBuildLoop(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
+            return wasmBuildLoopImpl(signature: signature, signatureDef: signatureDef, args: args, body: body)
         }
 
         @discardableResult
-        public func wasmBuildLoop(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
-            let instr = b.emit(WasmBeginLoop(with: signature), withInputs: args, types: signature.parameterTypes)
+        public func wasmBuildLoop(with signatureDef: Variable, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
+            return wasmBuildLoopImpl(signature: signature, signatureDef: signatureDef, args: args, body: body)
+        }
+
+        private func wasmBuildLoopImpl(signature: WasmSignature, signatureDef: Variable, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            let instr = b.emit(WasmBeginLoop(with: signature), withInputs: [signatureDef] + args,
+                types: [.wasmTypeDef()] + signature.parameterTypes)
             let fallthroughResults = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return Array(b.emit(WasmEndLoop(outputTypes: signature.outputTypes), withInputs: fallthroughResults, types: signature.outputTypes).outputs)
+            return Array(b.emit(WasmEndLoop(outputCount: signature.outputTypes.count),
+                withInputs: [signatureDef] + fallthroughResults,
+                types: [.wasmTypeDef()] + signature.outputTypes).outputs)
         }
 
         @discardableResult
@@ -4637,8 +4648,20 @@ public class ProgramBuilder {
 
     /// Like wasmDefineSignatureType but instead of within a type group this defines a signature
     /// type directly inside a wasm function.
+    /// This takes a signature with resolved index types for ease-of-use (meaning it accepts full
+    /// index reference types directly inside the signature).
     @discardableResult
-    func wasmDefineAdHocSignatureType(signature: WasmSignature, indexTypes: [Variable]) -> Variable {
+    func wasmDefineAdHocSignatureType(signature: WasmSignature) -> Variable {
+        let indexTypes = (signature.parameterTypes + signature.outputTypes)
+                .filter {$0.Is(.anyIndexRef)}
+                .map(getWasmTypeDef)
+        let cleanIndexTypes = {(type: ILType) -> ILType in
+            type.Is(.anyIndexRef)
+                ? .wasmRef(.Index(), nullability: type.wasmReferenceType!.nullability)
+                : type
+        }
+        let signature = signature.parameterTypes.map(cleanIndexTypes)
+            => signature.outputTypes.map(cleanIndexTypes)
         return emit(WasmDefineAdHocSignatureType(signature: signature), withInputs: indexTypes).output
     }
 
@@ -4854,8 +4877,6 @@ public class ProgramBuilder {
             activeWasmModule!.blockSignatures.push(op.signature)
         case .wasmBeginBlock(let op):
             activeWasmModule!.blockSignatures.push(op.signature)
-        case .wasmBeginLoop(let op):
-            activeWasmModule!.blockSignatures.push(op.signature)
         case .wasmBeginTry(let op):
             activeWasmModule!.blockSignatures.push(op.signature)
         case .wasmBeginTryDelegate(let op):
@@ -4863,7 +4884,6 @@ public class ProgramBuilder {
         case .wasmBeginTryTable(let op):
             activeWasmModule!.blockSignatures.push(op.signature)
         case .wasmEndIf(_),
-             .wasmEndLoop(_),
              .wasmEndTry(_),
              .wasmEndTryDelegate(_),
              .wasmEndTryTable(_),

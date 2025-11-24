@@ -1315,21 +1315,26 @@ final class WasmEndIf: WasmOperation {
 
 final class WasmBeginLoop: WasmOperation {
     override var opcode: Opcode { .wasmBeginLoop(self) }
-    let signature: WasmSignature
 
-    init(with signature: WasmSignature) {
-        self.signature = signature
-        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
+    init(parameterCount: Int) {
+        // Inputs: the signature + the inputs to the loop.
+        // inner outputs: The loop label + the arguments of the loop.
+        super.init(numInputs: 1 + parameterCount, numInnerOutputs: 1 + parameterCount, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
+
+    convenience init(with signature: WasmSignature) {
+        self.init(parameterCount: signature.parameterTypes.count)
+    }
+
+    var parameterCount: Int {numInputs - 1}
 }
 
 final class WasmEndLoop: WasmOperation {
     override var opcode: Opcode { .wasmEndLoop(self) }
-    let outputTypes: [ILType]
 
-    init(outputTypes: [ILType] = []) {
-        self.outputTypes = outputTypes
-        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
+    init(outputCount: Int) {
+        // Inputs: the signature + the outputs of the loop.
+        super.init(numInputs: 1 + outputCount, numOutputs: outputCount, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 

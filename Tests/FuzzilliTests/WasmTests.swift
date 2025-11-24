@@ -324,13 +324,14 @@ class WasmFoundationTests: XCTestCase {
 
             wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _, _ in
                 let ctr = function.consti32(10)
-                function.wasmBuildLoop(with: [] => []) { label, args in
+                function.wasmBuildLoop(with: [] => [], args: []) { label, args in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     let result = function.wasmi32BinOp(ctr, function.consti32(1), binOpKind: .Sub)
                     function.wasmReassign(variable: ctr, to: result)
                     // The backedge, loop if we are not at zero yet.
                     let isNotZero = function.wasmi32CompareOp(ctr, function.consti32(0), using: .Ne)
                     function.wasmBranchIf(isNotZero, to: label)
+                    return []
                 }
                 return [ctr]
             }
@@ -2684,7 +2685,7 @@ class WasmFoundationTests: XCTestCase {
                 let max = function.consti32(10)
                 let one = function.consti32(1)
 
-                function.wasmBuildLoop(with: [] => []) { label, args in
+                function.wasmBuildLoop(with: [] => [], args: []) { label, args in
                     XCTAssert(b.type(of: label).Is(.anyLabel))
                     let result = function.wasmi32BinOp(ctr, one, binOpKind: .Add)
                     let varUpdate = function.wasmi64BinOp(variable, function.consti64(2), binOpKind: .Add)
@@ -2692,6 +2693,7 @@ class WasmFoundationTests: XCTestCase {
                     function.wasmReassign(variable: variable, to: varUpdate)
                     let comp = function.wasmi32CompareOp(ctr, max, using: .Lt_s)
                     function.wasmBranchIf(comp, to: label)
+                    return []
                 }
 
                 // Now combine the result of the break and the loop into one and return it.
@@ -4489,17 +4491,35 @@ class WasmGCTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "null\n")
     }
 
-    func testAdHocSignature() throws {
+    func testLoopWithWasmGCSignature() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let jsProg = buildAndLiftProgram { b in
 
+            let typeGroup = b.wasmDefineTypeGroup {
+                let arrayType = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                let signature = b.wasmDefineSignatureType(
+                    signature: [.wasmRef(.Index(), nullability: true)]
+                            => [.wasmRef(.Index(), nullability: true)],
+                    indexTypes: [arrayType, arrayType])
+                return [arrayType, signature]
+            }
+            let arrayType = typeGroup[0]
+            let loopSignature = typeGroup[1]
+
             let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => [.wasmFuncRef]) { function, label, args in
-                    // TODO(mliedtke): Do something more useful with the signature type than
-                    // defining a null value for it and testing that it's implicitly convertible to
-                    // .wasmFuncRef.
-                    let signatureType = b.wasmDefineAdHocSignatureType(signature: [.wasmi32] => [.wasmi32], indexTypes: [])
-                    return [function.wasmRefNull(typeDef: signatureType)]
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let index = function.consti32(0)
+                    let array = function.wasmArrayNewFixed(arrayType: arrayType,
+                        elements: [function.consti32(1)])
+                    let arrayResult = function.wasmBuildLoop(with: loopSignature, args: [array]) { loopLabel, args in
+                        let val = function.wasmArrayGet(array: args[0], index: index)
+                        let newVal = function.wasmi32BinOp(val, val, binOpKind: .Add)
+                        function.wasmArraySet(array: args[0], index: index, element: newVal)
+                        let cond = function.wasmi32CompareOp(newVal, function.consti32(50), using: .Lt_s)
+                        function.wasmBranchIf(cond, to: loopLabel, args: [args[0]])
+                        return args
+                    }[0]
+                    return [function.wasmArrayGet(array: arrayResult, index: index)]
                 }
             }
 
@@ -4509,7 +4529,45 @@ class WasmGCTests: XCTestCase {
             b.callFunction(outputFunc, withArgs: [wasmOut])
         }
 
-        testForOutput(program: jsProg, runner: runner, outputString: "null\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "64\n")
+    }
+
+    func testLoopWithAdHocWasmGCSignature() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let jsProg = buildAndLiftProgram { b in
+
+            let structType = b.wasmDefineTypeGroup {[
+                b.wasmDefineStructType(
+                    fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)],
+                    indexTypes: [])
+            ]}[0]
+
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let structVal = function.wasmStructNewDefault(structType: structType)
+                    function.wasmStructSet(theStruct: structVal, fieldIndex: 0, value: function.consti32(1))
+                    let signature = [b.type(of: structVal)] => [.wasmi32]
+                    // This loop creates a new struct on each iteration just for having different
+                    // values on the loop entry and the loop backedge (`br_if`).
+                    return function.wasmBuildLoop(with: signature, args: [structVal]) { loopLabel, args in
+                        let val = function.wasmStructGet(theStruct: args[0], fieldIndex: 0)
+                        let newVal = function.wasmi32BinOp(val, val, binOpKind: .Add)
+                        let newStruct = function.wasmStructNewDefault(structType: structType)
+                        function.wasmStructSet(theStruct: newStruct, fieldIndex: 0, value: newVal)
+                        let cond = function.wasmi32CompareOp(newVal, function.consti32(50), using: .Lt_s)
+                        function.wasmBranchIf(cond, to: loopLabel, args: [newStruct])
+                        return [newVal]
+                    }
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [wasmOut])
+        }
+
+        testForOutput(program: jsProg, runner: runner, outputString: "64\n")
     }
 
     func testSelfReferenceType() throws {

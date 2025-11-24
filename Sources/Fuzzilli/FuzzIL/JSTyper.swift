@@ -38,6 +38,8 @@ public struct JSTyper: Analyzer {
     private var typeGroupDependencies: [Int:Set<Int>] = [:]
     private var selfReferences: [Variable: [(inout JSTyper, Variable?) -> ()]] = [:]
     private var isWithinTypeGroup = false
+    // Tracks the type definition variable for each Wasm index type.
+    private var wasmTypeDefMap = [WasmTypeDescription:Variable]()
 
     // Tracks the active function definitions and contains the instruction that started the function.
     private var activeFunctionDefinitions = Stack<Instruction>()
@@ -401,6 +403,7 @@ public struct JSTyper: Analyzer {
         state.reset()
         signatures.removeAll()
         typeGroups.removeAll()
+        wasmTypeDefMap.removeAll()
         defUseAnalyzer = DefUseAnalyzer()
         isWithinTypeGroup = false
         dynamicObjectGroupManager = ObjectGroupManager()
@@ -432,6 +435,20 @@ public struct JSTyper: Analyzer {
         }
     }
 
+    mutating func registerWasmTypeDef(_ def: Variable) {
+        let desc = type(of: def).wasmTypeDefinition!.description!
+        assert(wasmTypeDefMap[desc] == nil, "duplicate type description")
+        wasmTypeDefMap[desc] = def
+    }
+
+    func getWasmTypeDef(for type: ILType) -> Variable {
+        assert(type.isWasmReferenceType)
+        guard case .Index(let desc) = type.wasmReferenceType!.kind else {
+            fatalError("\(type) is not an index type")
+        }
+        return wasmTypeDefMap[desc.get()!]!
+    }
+
     mutating func addSignatureType(def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>) {
         assert(isWithinTypeGroup)
         var inputs = inputs.makeIterator()
@@ -445,7 +462,7 @@ public struct JSTyper: Analyzer {
             if paramType.requiredInputCount() == 0 {
                 return paramType
             }
-            assert(paramType.Is(.wasmRef(.Index(), nullability: true)))
+            assert(paramType.Is(.anyIndexRef))
             let typeDef = inputs.next()!
             let elementDesc = type(of: typeDef).wasmTypeDefinition!.description!
             if elementDesc == .selfReference {
@@ -809,16 +826,18 @@ public struct JSTyper: Analyzer {
                 wasmTypeBeginBlock(instr, op.signature)
             case .wasmEndIf(let op):
                 wasmTypeEndBlock(instr, op.outputTypes)
-            case .wasmBeginLoop(let op):
+            case .wasmBeginLoop(_):
                 // Note that different to all other blocks the loop's label parameters are the input types
                 // of the block, not the result types (because a branch to a loop label jumps to the
                 // beginning of the loop block instead of the end.)
-                setType(of: instr.innerOutputs.first!, to: .label(op.signature.parameterTypes))
-                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), op.signature.parameterTypes) {
+                let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+                setType(of: instr.innerOutputs.first!, to: .label(signature.parameterTypes))
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(), signature.parameterTypes) {
                     setType(of: innerOutput, to: paramType)
                 }
-            case .wasmEndLoop(let op):
-                wasmTypeEndBlock(instr, op.outputTypes)
+            case .wasmEndLoop(_):
+                let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+                wasmTypeEndBlock(instr, signature.outputTypes)
             case .wasmBeginTryTable(let op):
                 wasmTypeBeginBlock(instr, op.signature)
                 instr.inputs.forEach { input in
@@ -903,6 +922,7 @@ public struct JSTyper: Analyzer {
                 startTypeGroup()
                 addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)
                 finishTypeGroup()
+                registerWasmTypeDef(instr.output)
             default:
                 if instr.numInnerOutputs + instr.numOutputs != 0 {
                     fatalError("Missing typing of outputs for \(instr.op.opcode)")
@@ -1886,6 +1906,9 @@ public struct JSTyper: Analyzer {
                 set(output, state.type(of: input))
             }
             finishTypeGroup()
+            for output in instr.outputs {
+                registerWasmTypeDef(output)
+            }
 
         case .wasmDefineSignatureType(let op):
             addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)

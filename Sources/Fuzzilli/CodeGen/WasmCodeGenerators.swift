@@ -1261,7 +1261,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 let function = b.currentWasmModule.currentWasmFunction
                 let loopCtr = function.consti32(10)
                 b.runtimeData.push("loopCounter", loopCtr)
-                b.emit(WasmBeginLoop(with: [] => []))
+                let signature = b.wasmDefineAdHocSignatureType(signature: [] => [])
+                b.runtimeData.push("loopSignature", signature)
+                b.emit(WasmBeginLoop(with: [] => []), withInputs: [signature])
                 // Increase loop counter.
                 let result = function.wasmi32BinOp(
                 loopCtr, function.consti32(1), binOpKind: .Sub)
@@ -1275,38 +1277,59 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 let loopCtr = b.runtimeData.pop("loopCounter")
                 // Backedge of loop, we continue if it is not equal to zero.
                 let isNotZero = function.wasmi32CompareOp(loopCtr, function.consti32(0), using: .Ne)
-                b.emit(WasmEndLoop(outputTypes: []))
+                b.emit(WasmEndLoop(outputCount: 0), withInputs: [b.runtimeData.pop("loopSignature")])
             },
         ]),
 
-    CodeGenerator("WasmLoopWithSignatureGenerator", inContext: .single(.wasmFunction)) {
-        b in
-        let function = b.currentWasmModule.currentWasmFunction
-        // Count upwards here to make it slightly more different from the other loop generator.
-        // Also, instead of using reassign, this generator uses the signature to pass and update the loop counter.
-        let randomArgs = b.randomWasmBlockArguments(upTo: 5)
-        let randomArgTypes = randomArgs.map { b.type(of: $0) }
-        let args = [function.consti32(0)] + randomArgs
-        let parameters = args.map(b.type)
-        let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
-        // Note that due to the do-while style implementation, the actual iteration count is at least 1.
-        let iterationCount = Int32.random(in: 0...16)
+    CodeGenerator("WasmLoopWithSignatureGenerator", [
+        GeneratorStub("WasmBeginLoopWithSignatureGenerator", inContext: .single(.wasmFunction),
+                provides: [.wasmFunction]) { b in
+            let function = b.currentWasmModule.currentWasmFunction
+            // Count upwards here to make it slightly more different from the other loop generator.
+            // Also, instead of using reassign, this generator uses the signature to pass and update the loop counter.
+            let randomArgs = b.randomWasmBlockArguments(upTo: 5)
+            let randomArgTypes = randomArgs.map { b.type(of: $0) }
+            let args = [function.consti32(0)] + randomArgs
+            let parameters = args.map(b.type)
+            // TODO(mliedtke): Also allow index types in the output types.
+            let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
+            // Calculate index types for the dynamically created signature.
+            let indexTypes = (parameters + outputTypes)
+                .filter {$0.Is(.anyIndexRef)}
+                .map(b.getWasmTypeDef)
 
-        function.wasmBuildLoop(with: parameters => outputTypes, args: args) {
-            label, loopArgs in
-            b.buildRecursive(n: defaultCodeGenerationAmount)
+            // TODO(mliedtke): We need to cleanup the index types here!
+            let signature = b.wasmDefineAdHocSignatureType(signature: parameters => outputTypes)
+            let loopBegin = b.emit(WasmBeginLoop(parameterCount: parameters.count),
+                withInputs: [signature] + args)
+            let loopCounter = loopBegin.innerOutput(1)
+            assert(b.type(of: loopCounter).Is(.wasmi32))
+            b.runtimeData.push("loopCounter", loopCounter)
+            b.runtimeData.push("loopSignature", signature)
+            b.runtimeData.push("loopLabel", loopBegin.innerOutput(0))
+        },
+        GeneratorStub("WasmEndLoopWithSignatureGenerator", inContext: .single(.wasmFunction),
+                provides: [.wasmFunction]) { b in
+            let signature = b.runtimeData.pop("loopSignature")
+            let function = b.currentWasmModule.currentWasmFunction
+
+            // Note that due to the do-while style implementation, the actual iteration count is at
+            // least 1.
+            let iterationCount = Int32.random(in: 0...16)
             let loopCtr = function.wasmi32BinOp(
-                args[0], function.consti32(1), binOpKind: .Add)
+                b.runtimeData.pop("loopCounter"), function.consti32(1), binOpKind: .Add)
             let condition = function.wasmi32CompareOp(
                 loopCtr, function.consti32(iterationCount), using: .Lt_s)
-            let backedgeArgs =
-                [loopCtr] + randomArgTypes.map { b.randomVariable(ofType: $0)! }
+            let wasmSignature = b.type(of: signature).wasmFunctionSignatureDefSignature
+            let backedgeArgs = [loopCtr] + wasmSignature.parameterTypes.dropFirst()
+                .map {b.randomVariable(ofType: $0)!}
             function.wasmBranchIf(
-                condition, to: label, args: backedgeArgs,
+                condition, to: b.runtimeData.pop("loopLabel"), args: backedgeArgs,
                 hint: b.randomWasmBranchHint())
-            return outputTypes.map(function.findOrGenerateWasmVar)
-        }
-    },
+            let outputs = wasmSignature.outputTypes.map(function.findOrGenerateWasmVar)
+            b.emit(WasmEndLoop(outputCount: outputs.count), withInputs: [signature] + outputs)
+        },
+    ]),
 
     // TODO Turn this into a multi-part Generator
     CodeGenerator("WasmLegacyTryCatchGenerator", inContext: .single(.wasmFunction)) {
