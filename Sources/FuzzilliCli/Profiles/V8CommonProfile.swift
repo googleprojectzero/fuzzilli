@@ -51,6 +51,12 @@ public let V8GcGenerator = CodeGenerator("GcGenerator") { b in
     b.callFunction(gc, withArgs: b.findOrGenerateArguments(forSignature: b.fuzzer.environment.type(ofBuiltin: "gc").signature!))
 }
 
+public let V8MajorGcGenerator = CodeGenerator("MajorGcGenerator") { b in
+    // Differently to `gc()`, this intrinsic is registered with less effects, preventing fewer
+    // optimizations in V8's optimizing compilers.
+    b.eval("%MajorGCForCompilerTesting()")
+}
+
 public let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJITCompilationThroughLoopGenerator", inputs: .required(.function())) { b, f in
     assert(b.type(of: f).Is(.function()))
     let arguments = b.randomArguments(forCalling: f)

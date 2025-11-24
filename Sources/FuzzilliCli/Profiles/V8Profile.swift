@@ -60,7 +60,8 @@ let v8Profile = Profile(
         (TurbofanVerifyTypeGenerator,             10),
 
         (WorkerGenerator,                         10),
-        (V8GcGenerator,                           10),
+        (V8GcGenerator,                            5),
+        (V8MajorGcGenerator,                       5),
 
         (WasmStructGenerator,                     15),
         (WasmArrayGenerator,                      15),
