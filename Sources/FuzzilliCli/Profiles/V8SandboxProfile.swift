@@ -457,6 +457,8 @@ let v8SandboxProfile = Profile(
         ("fuzzilli('FUZZILLI_CRASH', 4)", .shouldCrash),
         // This should crash with an ASan-detectable out-of-bounds write.
         ("fuzzilli('FUZZILLI_CRASH', 6)", .shouldCrash),
+        // This should crash due to calling abort_with_sandbox_violation().
+        ("fuzzilli('FUZZILLI_CRASH', 9)", .shouldCrash),
 
         // Crashes that are not sandbox violations and so should be filtered out by the crash filter.
         // This triggers an IMMEDIATE_CRASH.
