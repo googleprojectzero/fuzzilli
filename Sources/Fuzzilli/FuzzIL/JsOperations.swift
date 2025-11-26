@@ -1748,6 +1748,7 @@ final class DestructArray: JsOperation {
     init(indices: [Int64], lastIsRest: Bool) {
         assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
         assert(indices.count == Set(indices).count, "Indices must not have duplicates")
+        assert(!lastIsRest || !indices.isEmpty, "DestructArray with lastIsRest requires at least one index")
         self.indices = indices
         self.lastIsRest = lastIsRest
         super.init(numInputs: 1, numOutputs: indices.count)
@@ -1764,6 +1765,7 @@ final class DestructArrayAndReassign: JsOperation {
     init(indices: [Int64], lastIsRest:Bool) {
         assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
         assert(indices.count == Set(indices).count, "Indices must not have duplicates")
+        assert(!lastIsRest || !indices.isEmpty, "DestructArray with lastIsRest requires at least one index")
         self.indices = indices
         self.lastIsRest = lastIsRest
         // The first input is the array being destructed

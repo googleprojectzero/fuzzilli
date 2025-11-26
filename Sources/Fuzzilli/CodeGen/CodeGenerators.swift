@@ -795,6 +795,10 @@ public let CodeGenerators: [CodeGenerator] = [
                         parameters: randomParameters.parameters)
                 ).innerOutputs
 
+                if randomParameters.parameters.hasRestParameter && probability(0.2) {
+                    b.getProperty("length", of: args.last!)
+                }
+
                 let this = args[0]
                 // Derived classes must call `super()` before accessing this, but non-derived classes must not call `super()`.
                 if b.currentClassDefinition.isDerivedClass {
@@ -1296,9 +1300,12 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            let f = b.emit(
-                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil)).output
-            b.runtimeData.push("plainFunction", f)
+            let instr = b.emit(
+                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil))
+            if randomParameters.parameters.hasRestParameter && probability(0.2) {
+                b.getProperty("length", of: instr.innerOutputs.last!)
+            }
+            b.runtimeData.push("plainFunction", instr.output)
         },
         GeneratorStub("PlainFunctionEndGenerator", inContext: .single([.javascript, .subroutine])) { b in
             b.doReturn(b.randomJsVariable())
@@ -1316,9 +1323,12 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            let f = b.emit(
-                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil)).output
-            b.runtimeData.push("strictFunction", f)
+            let instr = b.emit(
+                BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil))
+            if randomParameters.parameters.hasRestParameter && probability(0.2) {
+                b.getProperty("length", of: instr.innerOutputs.last!)
+            }
+            b.runtimeData.push("strictFunction", instr.output)
             b.directive("use strict")
         },
         GeneratorStub("StrictModeFunctionEndGenerator", inContext: .single([.javascript, .subroutine])) { b in
@@ -1340,8 +1350,11 @@ public let CodeGenerators: [CodeGenerator] = [
                 let randomParameters = b.randomParameters()
                 b.setParameterTypesForNextSubroutine(
                     randomParameters.parameterTypes)
-                b.emit(
+                let instr = b.emit(
                     BeginArrowFunction(parameters: randomParameters.parameters))
+                if randomParameters.parameters.hasRestParameter && probability(0.2) {
+                    b.getProperty("length", of: instr.innerOutputs.last!)
+                }
             },
             GeneratorStub(
                 "ArrowFunctionEndGenerator",
@@ -1357,9 +1370,12 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            let f = b.emit(
-                BeginGeneratorFunction(parameters: randomParameters.parameters, functionName: nil)).output
-            b.runtimeData.push("generatorFunction", f)
+            let instr = b.emit(
+                BeginGeneratorFunction(parameters: randomParameters.parameters, functionName: nil))
+            if randomParameters.parameters.hasRestParameter && probability(0.2) {
+                b.getProperty("length", of: instr.innerOutputs.last!)
+            }
+            b.runtimeData.push("generatorFunction", instr.output)
         },
         GeneratorStub("GeneratorFunctionEndGenerator", inContext: .single([.generatorFunction, .subroutine, .javascript])) { b in
             if probability(0.5) {
@@ -1383,9 +1399,12 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            let f = b.emit(
-                BeginAsyncFunction(parameters: randomParameters.parameters, functionName: nil)).output
-            b.runtimeData.push("asyncFunction", f)
+            let instr = b.emit(
+                BeginAsyncFunction(parameters: randomParameters.parameters, functionName: nil))
+            if randomParameters.parameters.hasRestParameter && probability(0.2) {
+                b.getProperty("length", of: instr.innerOutputs.last!)
+            }
+            b.runtimeData.push("asyncFunction", instr.output)
         },
         GeneratorStub("AsyncFunctionEndGenerator", inContext: .single([.javascript, .subroutine, .asyncFunction])) { b in
             b.await(b.randomJsVariable())
@@ -1407,9 +1426,12 @@ public let CodeGenerators: [CodeGenerator] = [
                 let randomParameters = b.randomParameters()
                 b.setParameterTypesForNextSubroutine(
                     randomParameters.parameterTypes)
-                b.emit(
+                let instr = b.emit(
                     BeginAsyncArrowFunction(
                         parameters: randomParameters.parameters))
+                if randomParameters.parameters.hasRestParameter && probability(0.2) {
+                    b.getProperty("length", of: instr.innerOutputs.last!)
+                }
             },
             GeneratorStub(
                 "AsyncArrowFunctionAwaitGenerator",
@@ -1435,10 +1457,13 @@ public let CodeGenerators: [CodeGenerator] = [
             let randomParameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(
                 randomParameters.parameterTypes)
-            let f = b.emit(
+            let instr = b.emit(
                 BeginAsyncGeneratorFunction(
-                    parameters: randomParameters.parameters, functionName: nil)).output
-            b.runtimeData.push("asyncGeneratorFunction", f)
+                    parameters: randomParameters.parameters, functionName: nil))
+            if randomParameters.parameters.hasRestParameter && probability(0.2) {
+                b.getProperty("length", of: instr.innerOutputs.last!)
+            }
+            b.runtimeData.push("asyncGeneratorFunction", instr.output)
         },
         GeneratorStub("AsyncGeneratorFunctionEndGenerator", inContext: .single([.javascript, .subroutine, .generatorFunction, .asyncFunction])) { b in
             b.await(b.randomJsVariable())
@@ -1944,7 +1969,12 @@ public let CodeGenerators: [CodeGenerator] = [
             }
         }
 
-        b.destruct(arr, selecting: indices, lastIsRest: probability(0.33))
+        let lastIsRest = !indices.isEmpty && probability(0.33)
+        let vars = b.destruct(arr, selecting: indices, lastIsRest: lastIsRest)
+
+        if lastIsRest && probability(0.2) {
+            b.getProperty("length", of: vars.last!)
+        }
     },
 
     CodeGenerator(
@@ -1958,9 +1988,14 @@ public let CodeGenerators: [CodeGenerator] = [
                 candidates.append(b.randomJsVariable())
             }
         }
+        let lastIsRest = !candidates.isEmpty && probability(0.33)
         b.destruct(
             arr, selecting: indices, into: candidates,
-            lastIsRest: probability(0.33))
+            lastIsRest: lastIsRest)
+
+        if lastIsRest && probability(0.2) {
+            b.getProperty("length", of: candidates.last!)
+        }
     },
 
     CodeGenerator("DestructObjectGenerator", inputs: .preferred(.object())) {
@@ -2398,10 +2433,14 @@ public let CodeGenerators: [CodeGenerator] = [
                     indices = [0]
                 }
 
-                b.emit(
+                let hasRestElement = probability(0.2)
+                let vars = b.emit(
                     BeginForOfLoopWithDestruct(
-                        indices: indices, hasRestElement: probability(0.2)),
-                    withInputs: [obj])
+                        indices: indices, hasRestElement: hasRestElement),
+                    withInputs: [obj]).innerOutputs
+                if hasRestElement && probability(0.2) {
+                    b.getProperty("length", of: vars.last!)
+                }
             },
             GeneratorStub(
                 "ForOfWithDestructLoopEndGenerator",
