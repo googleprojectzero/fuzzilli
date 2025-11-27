@@ -26,21 +26,9 @@ class ContextGraphTests: XCTestCase {
 
         XCTAssertEqual(reachableContexts, reachableContexts2)
 
-        XCTAssertEqual(reachableContexts,
-                       Set([.javascript,
-                            .method,
-                            .classMethod,
-                            .switchCase,
-                            .classDefinition,
-                            .switchBlock,
-                            .asyncFunction,
-                            .wasmFunction,
-                            .wasm,
-                            .loop,
-                            .generatorFunction,
-                            .objectLiteral,
-                            .subroutine,
-                            .wasmTypeGroup]))
+        var expectedReachedContexts = Set(Context.allCases)
+        expectedReachedContexts.remove(.empty)
+        XCTAssertEqual(reachableContexts, expectedReachedContexts)
     }
 
     func testSubsetReachabilityCalculation() {
