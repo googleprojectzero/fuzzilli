@@ -166,6 +166,10 @@ public class JavaScriptExecutor {
             var directories = pathVar.split(separator: ":")
             // Also append the homebrew binary path since it may not be in $PATH, especially inside XCode.
             directories.append("/opt/homebrew/bin")
+            // Append the CWD to enable bundling node.js from where the script
+            // is called.
+            directories.append(
+                String.SubSequence(FileManager.default.currentDirectoryPath))
             for directory in directories {
                 let path = String(directory + "/node")
                 if FileManager.default.isExecutableFile(atPath: path) {
