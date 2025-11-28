@@ -186,6 +186,7 @@ public let codeGeneratorWeights = [
     "TryCatchGenerator":                        5,
     "TryFinallyGenerator":                      5,
     "ThrowGenerator":                           1,
+    "NondeterministiclyThrowGenerator":         1,
     "BlockStatementGenerator":                  1,
 
     // Special generators

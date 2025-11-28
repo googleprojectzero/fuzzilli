@@ -2492,6 +2492,8 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.javascript),
                 provides: [.javascript]
             ) { b in
+                if (probability(0.1)) { throwRandomJSVariable(b) }
+                else if (probability(0.3)) { nondeterministiclyThrowRandomJSVariable(b, withProbability: 0.5)}
                 b.emit(BeginCatch())
             },
             GeneratorStub(
@@ -2524,6 +2526,8 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.javascript),
                 provides: [.javascript]
             ) { b in
+                if (probability(0.1)) { throwRandomJSVariable(b) }
+                else if (probability(0.3)) { nondeterministiclyThrowRandomJSVariable(b, withProbability: 0.5)}
                 b.emit(BeginCatch())
             },
             GeneratorStub(
@@ -2560,8 +2564,11 @@ public let CodeGenerators: [CodeGenerator] = [
         ]),
 
     CodeGenerator("ThrowGenerator") { b in
-        let v = b.randomJsVariable()
-        b.throwException(v)
+        throwRandomJSVariable(b)
+    },
+
+    CodeGenerator("NondeterministiclyThrowGenerator") { b in
+        nondeterministiclyThrowRandomJSVariable(b, withProbability: 0.3)
     },
 
     //
@@ -3018,3 +3025,24 @@ public let CodeGenerators: [CodeGenerator] = [
             }, catchBody: { _ in })
     },
 ]
+
+private func nondeterministiclyThrowRandomJSVariable(_ b: ProgramBuilder, withProbability probability: Double) {
+    assert(probability >= 0 && probability <= 1)
+
+    let threshold = b.loadFloat(probability)
+    let Math = b.createNamedVariable(forBuiltin: "Math")
+    let randomNumber = b.callMethod("random", on: Math, withArgs: [])
+    // Let's not influence other generators with Math & randomly generated number.
+    b.hide(Math)
+    b.hide(randomNumber)
+
+    let condition = b.compare(threshold, with: randomNumber, using: Comparator.greaterThan)
+    b.buildIf(condition) {
+        throwRandomJSVariable(b)
+    }
+}
+
+private func throwRandomJSVariable(_ b: ProgramBuilder) {
+    let v = b.randomJsVariable()
+    b.throwException(v)
+}
