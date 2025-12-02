@@ -4138,8 +4138,6 @@ public struct Fuzzilli_Protobuf_WasmReferenceType: Sendable {
 
   public var nullability: Bool = false
 
-  public var isShared: Bool = false
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -4714,10 +4712,10 @@ public struct Fuzzilli_Protobuf_WasmGlobal: Sendable {
     set {wasmGlobal = .valuef64(newValue)}
   }
 
-  public var nullref: Fuzzilli_Protobuf_WasmReferenceType {
+  public var nullref: Fuzzilli_Protobuf_WasmReferenceTypeKind {
     get {
       if case .nullref(let v)? = wasmGlobal {return v}
-      return Fuzzilli_Protobuf_WasmReferenceType()
+      return .index
     }
     set {wasmGlobal = .nullref(newValue)}
   }
@@ -4745,7 +4743,7 @@ public struct Fuzzilli_Protobuf_WasmGlobal: Sendable {
     case valuei64(Int64)
     case valuef32(Float)
     case valuef64(Double)
-    case nullref(Fuzzilli_Protobuf_WasmReferenceType)
+    case nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind)
     case funcref(Int64)
     case imported(Fuzzilli_Protobuf_WasmILType)
 
@@ -11564,7 +11562,7 @@ extension Fuzzilli_Protobuf_WasmReturn: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Fuzzilli_Protobuf_WasmReferenceType: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmReferenceType"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}nullability\0\u{1}isShared\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}nullability\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11574,7 +11572,6 @@ extension Fuzzilli_Protobuf_WasmReferenceType: SwiftProtobuf.Message, SwiftProto
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.nullability) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.isShared) }()
       default: break
       }
     }
@@ -11587,16 +11584,12 @@ extension Fuzzilli_Protobuf_WasmReferenceType: SwiftProtobuf.Message, SwiftProto
     if self.nullability != false {
       try visitor.visitSingularBoolField(value: self.nullability, fieldNumber: 2)
     }
-    if self.isShared != false {
-      try visitor.visitSingularBoolField(value: self.isShared, fieldNumber: 3)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmReferenceType, rhs: Fuzzilli_Protobuf_WasmReferenceType) -> Bool {
     if lhs.kind != rhs.kind {return false}
     if lhs.nullability != rhs.nullability {return false}
-    if lhs.isShared != rhs.isShared {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12859,15 +12852,10 @@ extension Fuzzilli_Protobuf_WasmGlobal: SwiftProtobuf.Message, SwiftProtobuf._Me
         }
       }()
       case 6: try {
-        var v: Fuzzilli_Protobuf_WasmReferenceType?
-        var hadOneofValue = false
-        if let current = self.wasmGlobal {
-          hadOneofValue = true
-          if case .nullref(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
+        var v: Fuzzilli_Protobuf_WasmReferenceTypeKind?
+        try decoder.decodeSingularEnumField(value: &v)
         if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          if self.wasmGlobal != nil {try decoder.handleConflictingOneOf()}
           self.wasmGlobal = .nullref(v)
         }
       }()
@@ -12924,7 +12912,7 @@ extension Fuzzilli_Protobuf_WasmGlobal: SwiftProtobuf.Message, SwiftProtobuf._Me
     }()
     case .nullref?: try {
       guard case .nullref(let v)? = self.wasmGlobal else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+      try visitor.visitSingularEnumField(value: v, fieldNumber: 6)
     }()
     case .funcref?: try {
       guard case .funcref(let v)? = self.wasmGlobal else { preconditionFailure() }

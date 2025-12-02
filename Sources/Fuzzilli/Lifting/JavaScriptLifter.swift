@@ -1540,12 +1540,11 @@ public class JavaScriptLifter: Lifter {
                 let LET = w.varKeyword
                 let type: String
                 switch op.tableType.elementType {
-                case .wasmExternRef():
+                case .wasmExternRef:
                     type = "externref"
-                case .wasmFuncRef():
+                case .wasmFuncRef:
                     type = "anyfunc"
                 // TODO(mliedtke): add tables for i31ref.
-                // TODO(pawkra): add shared ref variants.
                 default:
                     fatalError("Unknown table type")
                 }
@@ -1580,21 +1579,21 @@ public class JavaScriptLifter: Lifter {
                             return "\"i64\""
                         case .wasmSimd128:
                             return "\"v128\""
-                        case ILType.wasmExternRef():
-                                return "\"externref\""
-                        case ILType.wasmFuncRef():
+                        case .wasmExternRef:
+                            return "\"externref\""
+                        case .wasmFuncRef:
                             return "\"anyfunc\""
-                        case ILType.wasmAnyRef():
+                        case .wasmAnyRef:
                             return "\"anyref\""
-                        case ILType.wasmEqRef():
+                        case .wasmEqRef:
                             return "\"eqref\""
-                        case ILType.wasmI31Ref():
+                        case .wasmI31Ref:
                             return "\"i31ref\""
-                        case ILType.wasmStructRef():
+                        case .wasmStructRef:
                             return "\"structref\""
-                        case ILType.wasmArrayRef():
+                        case .wasmArrayRef:
                             return "\"arrayref\""
-                        case ILType.wasmExnRef():
+                        case .wasmExnRef:
                             return "\"exnref\""
 
                         default:

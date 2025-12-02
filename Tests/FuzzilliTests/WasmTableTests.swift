@@ -22,7 +22,7 @@ class WasmTableTests: XCTestCase {
 
         let js = buildAndLiftProgram { b in
             let module = b.buildWasmModule { wasmModule in
-                let table = wasmModule.addTable(elementType: .wasmFuncRef(), minSize: 10, maxSize: 20, isTable64: false)
+                let table = wasmModule.addTable(elementType: .wasmFuncRef, minSize: 10, maxSize: 20, isTable64: false)
 
                 wasmModule.addWasmFunction(with: [] => [.wasmi32]) { f, _, _ in
                     let size = f.wasmTableSize(table: table)
@@ -31,7 +31,7 @@ class WasmTableTests: XCTestCase {
                 expectedOutput += "10\n"
 
                 wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32]) { f, _, _ in
-                    let initialValue = f.wasmRefNull(type: .wasmFuncRef())
+                    let initialValue = f.wasmRefNull(type: .wasmFuncRef)
                     let growBy = f.consti32(5)
                     let oldSize = f.wasmTableGrow(table: table, with: initialValue, by: growBy)
                     let newSize = f.wasmTableSize(table: table)

@@ -1534,7 +1534,7 @@ class JSTyperTests: XCTestCase {
             }
             b.doReturn(obj)
         }
-        let wasmSignature = [] => [.wasmExternRef()]
+        let wasmSignature = [] => [.wasmExternRef]
 
         let typeDesc = b.type(of: typeGroup[0]).wasmTypeDefinition!.description!
 
@@ -1574,7 +1574,7 @@ class JSTyperTests: XCTestCase {
             }
 
             // Function three
-            wasmModule.addWasmFunction(with: [.wasmExternRef()] => [.wasmi32, .wasmi64]) { function, label, _ in
+            wasmModule.addWasmFunction(with: [.wasmExternRef] => [.wasmi32, .wasmi64]) { function, label, _ in
                 return [function.consti32(1), function.consti64(2)]
             }
 
@@ -1585,7 +1585,7 @@ class JSTyperTests: XCTestCase {
 
 
             // Function five
-            wasmModule.addWasmFunction(with: [] => [.wasmExternRef()]) { function, label, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, label, _ in
                 // This forces an import and we should see a re-exported function on the module.
                 return [function.wasmJsCall(function: plainFunction, withArgs: [], withWasmSignature: wasmSignature)!]
             }
@@ -1795,7 +1795,7 @@ class JSTyperTests: XCTestCase {
         let wasmTableConstructor = b.getProperty("Table", of: wasm)
         let wasmTable = b.construct(wasmTableConstructor) // In theory this needs arguments.
         XCTAssertFalse(b.type(of: wasmTable).Is(.object(ofGroup: "WasmTable")))
-        let realWasmTable = b.createWasmTable(elementType: .wasmAnyRef(), limits: .init(min: 0), isTable64: false)
+        let realWasmTable = b.createWasmTable(elementType: .wasmAnyRef, limits: .init(min: 0), isTable64: false)
         XCTAssert(b.type(of: realWasmTable).Is(.object(ofGroup: "WasmTable")))
         XCTAssert(b.type(of: realWasmTable).Is(ObjectGroup.wasmTable.instanceType))
         let tablePrototype = b.getProperty("prototype", of: wasmTableConstructor)

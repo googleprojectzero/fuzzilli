@@ -369,21 +369,23 @@ public class OperationMutator: BaseInstructionMutator {
 
         case .wasmDefineGlobal(let op):
             // We never change the type of the global, only the value as changing the type will break the following code pretty much instantly.
-            let wasmGlobal:WasmGlobal = 
-                switch op.wasmGlobal.toType() {
-                case .wasmf32:
-                    .wasmf32(Float32(b.randomFloat()))
-                case .wasmf64:
-                    .wasmf64(b.randomFloat())
-                case .wasmi32:
-                    .wasmi32(Int32(truncatingIfNeeded: b.randomInt()))
-                case .wasmi64:
-                    .wasmi64(b.randomInt())
-                case ILType.wasmExternRef(), ILType.wasmExnRef(), ILType.wasmI31Ref():
-                    op.wasmGlobal
-                default:
-                    fatalError("unexpected/unimplemented Value Type!")
-                }
+            let wasmGlobal: WasmGlobal
+            switch op.wasmGlobal.toType() {
+            case .wasmf32:
+                wasmGlobal = .wasmf32(Float32(b.randomFloat()))
+            case .wasmf64:
+                wasmGlobal = .wasmf64(b.randomFloat())
+            case .wasmi32:
+                wasmGlobal = .wasmi32(Int32(truncatingIfNeeded: b.randomInt()))
+            case .wasmi64:
+                wasmGlobal = .wasmi64(b.randomInt())
+            case .wasmExternRef,
+                 .wasmExnRef,
+                 .wasmI31Ref:
+                wasmGlobal = op.wasmGlobal
+            default:
+                fatalError("unexpected/unimplemented Value Type!")
+            }
             newOp = WasmDefineGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
         case .wasmDefineTable(let op):
             // TODO: change table size?

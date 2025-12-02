@@ -14,7 +14,6 @@
 
 public struct Configuration {
     /// The commandline arguments used by this instance.
-    /// TODO(pawkra): use these args or remove them (for now the only usage is printing them).
     public let arguments: [String]
 
     /// Timeout in milliseconds after which child processes will be killed.

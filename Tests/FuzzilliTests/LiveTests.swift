@@ -133,16 +133,15 @@ class LiveTests: XCTestCase {
             b.buildTryCatchFinally {
                 // TODO(manoskouk): Once we support wasm-gc types in signatures, we'll need
                 // something more sophisticated.
-                // TODO(pawkra): support shared refs.
                 let args = wasmSignature.parameterTypes.map {
                     switch $0 {
                         case .wasmi64:
                             return b.loadBigInt(123)
-                        case ILType.wasmFuncRef():
+                        case .wasmFuncRef:
                             return jsFunction
-                        case ILType.wasmNullExternRef(), ILType.wasmNullFuncRef(), ILType.wasmNullRef():
+                        case .wasmNullExternRef, .wasmNullFuncRef, .wasmNullRef:
                             return b.loadNull()
-                        case ILType.wasmExternRef(), ILType.wasmAnyRef():
+                        case .wasmExternRef, .wasmAnyRef:
                             return b.createObject(with: [:])
                         default:
                             return b.loadInt(321)

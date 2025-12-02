@@ -695,9 +695,9 @@ public enum WasmGlobal {
     case wasmf64(Float64)
     // Empty reference
     // TODO(gc): Add support for globals with non-nullable references.
-    case externref(shared: Bool)
-    case exnref(shared: Bool)
-    case i31ref(shared: Bool)
+    case externref
+    case exnref
+    case i31ref
     // function reference
     case refFunc(Int)
 
@@ -715,12 +715,12 @@ public enum WasmGlobal {
             return .wasmf32
         case .wasmf64:
             return .wasmf64
-        case let .externref(shared):
-            return ILType.wasmExternRef(shared: shared)
-        case let .exnref(shared):
-            return ILType.wasmExnRef(shared: shared)
-        case let .i31ref(shared):
-            return ILType.wasmI31Ref(shared: shared)
+        case .externref:
+            return .wasmExternRef
+        case .exnref:
+            return .wasmExnRef
+        case .i31ref:
+            return .wasmI31Ref
         case .imported(let type):
             assert(type.wasmGlobalType != nil)
             return type.wasmGlobalType!.valueType
@@ -729,7 +729,6 @@ public enum WasmGlobal {
         }
     }
 
-    //TODO(pawkra): rename to jsTypeName
     func typeString() -> String {
         switch self {
         case .wasmi64(_):
@@ -740,26 +739,18 @@ public enum WasmGlobal {
             return "f32"
         case .wasmf64(_):
             return "f64"
-        case let .externref(shared):
-            assertNotShared(shared)
+        case .externref:
             return "externref"
-        case let .exnref(shared):
-            assertNotShared(shared)
+        case .exnref:
             return "exnref"
-        case let .i31ref(shared):
-            assertNotShared(shared)
+        case .i31ref:
             return "i31ref"
         default:
             fatalError("Unimplemented / unhandled")
         }
     }
 
-    private func assertNotShared(_ shared: Bool) {
-        assert(!shared, "Shared references not supported in JS > WASM API")
-    }
-
     // Returns a JS string representing the initial value.
-    // TODO(pawkra): rename to valueToJsString
     func valueToString() -> String {
         switch self {
         case .wasmi64(let val):
@@ -770,10 +761,10 @@ public enum WasmGlobal {
             return "\(val)"
         case .wasmf64(let val):
             return "\(val)"
-        case .externref(_):
+        case .externref:
             return ""
-        case .exnref(_),
-             .i31ref(_):
+        case .exnref,
+             .i31ref:
             return "null"
         default:
             fatalError("Unimplemented / unhandled")
@@ -810,11 +801,9 @@ final class WasmDefineTable: WasmOperation {
         self.definedEntries = definedEntries
 
         // TODO(manoskouk): Find a way to define non-function tables with initializers.
-        // TODO(pawkra): support shared refs.
-        let isWasmFuncRef = elementType == .wasmFuncRef()
-        assert(isWasmFuncRef || definedEntries.isEmpty)
+        assert(elementType == .wasmFuncRef || definedEntries.isEmpty)
 
-        super.init(numInputs: isWasmFuncRef ? definedEntries.count : 0,
+        super.init(numInputs: elementType == .wasmFuncRef ? definedEntries.count : 0,
                    numOutputs: 1,
                    attributes: [.isMutable],
                    requiredContext: [.wasm])

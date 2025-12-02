@@ -920,7 +920,6 @@ enum WasmReferenceTypeKind {
 message WasmReferenceType {
   WasmReferenceTypeKind kind = 1;
   bool nullability = 2;
-  bool isShared = 3;
 }
 
 message WasmILType {
@@ -1101,7 +1100,7 @@ message WasmGlobal {
     int64 valuei64 = 3;
     float valuef32 = 4;
     double valuef64 = 5;
-    WasmReferenceType nullref = 6;
+    WasmReferenceTypeKind nullref = 6;
     int64 funcref = 7;
     WasmILType imported = 8;
   }
