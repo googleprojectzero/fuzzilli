@@ -64,6 +64,17 @@ public class JavaScriptLifter: Lifter {
         }
     }
 
+    struct FunctionLiftingState {
+        let outputVariable: Variable
+        // If true, the function refers to itself (e.g. recursion), preventing inlining.
+        let isSelfReferencing: Bool
+        // For inlineable functions:
+        var parameters: String = ""
+        var isAsync: Bool = false
+        let startInstructionIndex: Int
+    }
+    private var functionLiftingStack = Stack<FunctionLiftingState>()
+
     public init(prefix: String = "",
                 suffix: String = "",
                 ecmaVersion: ECMAScriptVersion,
@@ -75,6 +86,13 @@ public class JavaScriptLifter: Lifter {
         self.environment = environment
         self.logger = Logger(withLabel: "JavaScriptLifter")
         self.alwaysEmitVariables = alwaysEmitVariables
+    }
+
+    func isUsedInBlock(variable: Variable, blockStart: Int, blockEnd: Int, analyzer: DefUseAnalyzer) -> Bool {
+        // Check if any use of 'variable' is inside [blockStart, blockEnd]
+        // Note: The variable is defined at blockStart, so we only care about uses strictly after that.
+        // And strictly before or at blockEnd (the EndInstruction itself can use the variable).
+        return analyzer.uses(of: variable).contains { $0.index > blockStart && $0.index <= blockEnd }
     }
 
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
@@ -90,6 +108,18 @@ public class JavaScriptLifter: Lifter {
         var typer: JSTyper? = nil
         // The currently active WasmLifter, we can only have one of them.
         var wasmInstructions = Code()
+
+        // Map block start index to end index.
+        let blockEndIndices = program.code.reduce(into: (indices: [Int: Int](), stack: Stack<Int>())) { context, instr in
+            if instr.isBlockEnd {
+                let start = context.stack.pop()
+                context.indices[start] = instr.index
+            }
+            if instr.isBlockStart {
+                context.stack.push(instr.index)
+            }
+        }.indices
+
         for instr in program.code {
             analyzer.analyze(instr)
             if instr.op is Explore { needToSupportExploration = true }
@@ -820,12 +850,8 @@ public class JavaScriptLifter: Lifter {
                 liftFunctionDefinitionBegin(instr, keyword: "function", using: &w)
 
             case .beginArrowFunction(let op):
-                let LET = w.declarationKeyword(for: instr.output)
-                let V = w.declare(instr.output)
-                let vars = w.declareAll(instr.innerOutputs, usePrefix: "a")
-                let PARAMS = liftParameters(op.parameters, as: vars)
-                w.emit("\(LET) \(V) = (\(PARAMS)) => {")
-                w.enterNewBlock()
+                guard let endIndex = blockEndIndices[instr.index] else { fatalError("Block analysis failed") }
+                liftArrowFunctionDefinitionBegin(instr, parameters: op.parameters, isAsync: false, using: &w, functionEndIndex: endIndex, analyzer: analyzer)
 
             case .beginGeneratorFunction:
                 liftFunctionDefinitionBegin(instr, keyword: "function*", using: &w)
@@ -834,20 +860,43 @@ public class JavaScriptLifter: Lifter {
                 liftFunctionDefinitionBegin(instr, keyword: "async function", using: &w)
 
             case .beginAsyncArrowFunction(let op):
-                let LET = w.declarationKeyword(for: instr.output)
-                let V = w.declare(instr.output)
-                let vars = w.declareAll(instr.innerOutputs, usePrefix: "a")
-                let PARAMS = liftParameters(op.parameters, as: vars)
-                w.emit("\(LET) \(V) = async (\(PARAMS)) => {")
-                w.enterNewBlock()
+                guard let endIndex = blockEndIndices[instr.index] else { fatalError("Block analysis failed") }
+                liftArrowFunctionDefinitionBegin(instr, parameters: op.parameters, isAsync: true, using: &w, functionEndIndex: endIndex, analyzer: analyzer)
 
             case .beginAsyncGeneratorFunction:
                 liftFunctionDefinitionBegin(instr, keyword: "async function*", using: &w)
 
             case .endArrowFunction(_),
                  .endAsyncArrowFunction:
-                w.leaveCurrentBlock()
-                w.emit("};")
+                let state = functionLiftingStack.pop()
+                if state.isSelfReferencing {
+                    w.leaveCurrentBlock()
+                    w.emit("};")
+                } else {
+                    w.emitPendingExpressions()
+                    let body = w.popTemporaryOutputBuffer()
+
+                    let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+                    var conciseBody: String?
+
+                    let lastInstr = program.code[instr.index - 1]
+                    if lastInstr.index > state.startInstructionIndex,
+                       let returnOp = lastInstr.op as? Return,
+                       returnOp.hasReturnValue,
+                       !trimmedBody.contains("\n"),
+                       !trimmedBody.contains("//"),
+                       trimmedBody.hasPrefix("return ") {
+                        let content = trimmedBody.dropFirst("return ".count).trimmingCharacters(in: .whitespaces.union(.init(charactersIn: ";")))
+                        conciseBody = content.hasPrefix("{") ? "(\(content))" : content
+                    }
+
+                    let implementation = conciseBody ?? "{\n\(body)}"
+                    let asyncPrefix = state.isAsync ? "async " : ""
+                    let arrowFuncCode = "\(asyncPrefix)(\(state.parameters)) => \(implementation)"
+
+                    let expr = ArrowFunctionExpression.new(arrowFuncCode)
+                    w.assign(expr, to: state.outputVariable)
+                }
 
             case .endPlainFunction(_),
                  .endGeneratorFunction(_),
@@ -1851,6 +1900,45 @@ public class JavaScriptLifter: Lifter {
         w.enterNewBlock()
     }
 
+    private func liftArrowFunctionDefinitionBegin(
+        _ instr: Instruction,
+        parameters: Parameters,
+        isAsync: Bool,
+        using w: inout JavaScriptWriter,
+        functionEndIndex: Int,
+        analyzer: DefUseAnalyzer
+    ) {
+        let isSelfReferencing = isUsedInBlock(
+            variable: instr.output,
+            blockStart: instr.index,
+            blockEnd: functionEndIndex,
+            analyzer: analyzer
+        )
+
+        let vars = w.declareAll(instr.innerOutputs, usePrefix: "a")
+        let params = liftParameters(parameters, as: vars)
+
+        functionLiftingStack.push(FunctionLiftingState(
+            outputVariable: instr.output,
+            isSelfReferencing: isSelfReferencing,
+            parameters: params,
+            isAsync: isAsync,
+            startInstructionIndex: instr.index
+        ))
+
+        if isSelfReferencing {
+            let keyword = w.declarationKeyword(for: instr.output)
+            let varName = w.declare(instr.output)
+
+            w.emit("\(keyword) \(varName) = \(isAsync ? "async " : "")(\(params)) => {")
+            w.enterNewBlock()
+        } else {
+            w.emitPendingExpressions()
+            w.pushTemporaryOutputBuffer(initialIndentionLevel: 1)
+        }
+    }
+
+
     private func liftCallArguments<Arguments: Sequence>(_ args: Arguments, spreading spreads: [Bool] = []) -> String where Arguments.Element == Expression {
         var arguments = [String]()
         for (i, a) in args.enumerated() {
@@ -1991,6 +2079,7 @@ public class JavaScriptLifter: Lifter {
         // List of effectful expressions that are still waiting to be inlined. In the order that they need to be executed at runtime.
         // The expressions are identified by the FuzzIL output variable that they generate. The actual expression is stored in the expressions dictionary.
         private var pendingExpressions = [Variable]()
+        private var pendingExpressionsStack = Stack<[Variable]>()
 
         // We also try to inline reassignments once, into the next use of the reassigned FuzzIL variable. However, for all subsequent uses we have to use the
         // identifier of the JavaScript variable again (the lhs of the reassignment). This map is used to remember these identifiers.
@@ -2237,7 +2326,7 @@ public class JavaScriptLifter: Lifter {
 
         mutating func emit(_ line: String) {
             emitPendingExpressions()
-            writer.emit(line)
+            writer.emitBlock(line)
         }
 
         /// Emit a (potentially multi-line) comment.
@@ -2262,6 +2351,8 @@ public class JavaScriptLifter: Lifter {
 
         mutating func pushTemporaryOutputBuffer(initialIndentionLevel: Int) {
             temporaryOutputBufferStack.push(writer)
+            pendingExpressionsStack.push(pendingExpressions)
+            pendingExpressions = []
             writer = ScriptWriter(stripComments: writer.stripComments, includeLineNumbers: false, indent: writer.indent.count, initialIndentionLevel: initialIndentionLevel)
         }
 
@@ -2269,6 +2360,7 @@ public class JavaScriptLifter: Lifter {
             assert(pendingExpressions.isEmpty)
             let code = writer.code
             writer = temporaryOutputBufferStack.pop()
+            pendingExpressions = pendingExpressionsStack.pop()
             return code
         }
 
@@ -2314,12 +2406,11 @@ public class JavaScriptLifter: Lifter {
             if EXPR.type === AssignmentExpression {
                 // Reassignments require special handling: there is already a variable declared for the lhs,
                 // so we only need to emit the AssignmentExpression as an expression statement.
-                writer.emit("\(EXPR);")
+                writer.emitBlock("\(EXPR);")
             } else if analyzer.numUses(of: v) > 0 {
                 let LET = declarationKeyword(for: v)
                 let V = declare(v)
-                // Need to use writer.emit instead of emit here as the latter will emit all pending expressions.
-                writer.emit("\(LET) \(V) = \(EXPR);")
+                writer.emitBlock("\(LET) \(V) = \(EXPR);")
             } else {
                 // Pending expressions with no uses are allowed and are for example necessary to be able to
                 // combine multiple expressions into a single comma-expression for e.g. a loop header.
@@ -2329,9 +2420,9 @@ public class JavaScriptLifter: Lifter {
                     // not be distinguishable from block statements. So create a dummy variable.
                     let LET = constKeyword
                     let V = declare(v)
-                    writer.emit("\(LET) \(V) = \(EXPR);")
+                    writer.emitBlock("\(LET) \(V) = \(EXPR);")
                 } else {
-                    writer.emit("\(EXPR);")
+                    writer.emitBlock("\(EXPR);")
                 }
             }
         }

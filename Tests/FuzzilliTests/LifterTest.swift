@@ -1038,10 +1038,7 @@ class LifterTests: XCTestCase {
             return a1;
         }
         f0(13.37);
-        const v4 = () => {
-            return "foobar";
-        };
-        f0 = v4;
+        f0 = () => "foobar";
         f0();
 
         """
@@ -3394,6 +3391,246 @@ class LifterTests: XCTestCase {
             v5 <- WasmDefineForwardOrSelfReference
             v6 <- WasmDefineStructType(.wasmRef(Index) mutability=false, .wasmi32 mutability=true, .wasmRef(null Index) mutability=true) [v3, v5]
         v7 <- WasmEndTypeGroup [v6]
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testArrowFunctionInliningWithSideEffects() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.createNamedVariable(forBuiltin: "sideEffect")
+        b.callFunction(f)
+
+        let arrow = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+            b.doReturn(b.loadInt(42))
+        }
+
+        b.callFunction(arrow)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        // The side-effect must be emitted before the arrow function is defined.
+        // The arrow function is assigned to a temporary because it's used as a callee.
+        let expected = """
+        sideEffect();
+        const t1 = () => 42;
+        t1();
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testArrowFunctionRecursiveLifting() {
+        let fuzzer = makeMockFuzzer()
+        // Manually construct a recursive arrow function, as the helper does not support it.
+        let b2 = fuzzer.makeBuilder()
+        let i = b2.loadInt(10)
+        let params = Parameters(count: 1)
+        let instr = b2.emit(BeginArrowFunction(parameters: params))
+        let fRec = instr.output
+        let arg0 = instr.innerOutput(0)
+
+        let cond = b2.compare(arg0, with: b2.loadInt(0), using: .equal)
+        b2.buildIf(cond) {
+            b2.doReturn(b2.loadInt(0))
+        }
+        let sub = b2.binary(arg0, b2.loadInt(1), with: .Sub)
+        let recCall = b2.callFunction(fRec, withArgs: [sub]) // Recursion!
+        b2.doReturn(recCall)
+        b2.emit(EndArrowFunction())
+
+        b2.callFunction(fRec, withArgs: [i])
+
+        let program2 = b2.finalize()
+        let actual = fuzzer.lifter.lift(program2)
+
+        // Recursive arrow functions are not inlined, so they are assigned to a constant.
+        let expected = """
+        const v1 = (a2) => {
+            if (a2 == 0) {
+                return 0;
+            }
+            return v1(a2 - 1);
+        };
+        v1(10);
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testArrowFunctionAsArgument() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.createNamedVariable(forBuiltin: "f")
+        let arrow = b.buildArrowFunction(with: .parameters(n: 1)) { args in
+            b.doReturn(args[0])
+        }
+        b.callFunction(f, withArgs: [arrow])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        f((a2) => a2);
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testNestedArrowFunctions() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let arrowOuter = b.buildArrowFunction(with: .parameters(n: 1)) { argsOuter in
+            let arrowInner = b.buildArrowFunction(with: .parameters(n: 1)) { argsInner in
+                    b.doReturn(b.binary(argsOuter[0], argsInner[0], with: .Add))
+            }
+            b.doReturn(arrowInner)
+        }
+        b.callFunction(arrowOuter, withArgs: [b.loadInt(1)])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const t0 = (a1) => (a3) => a1 + a3;
+        t0(1);
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testAsyncArrowFunctionInlining() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let arrow = b.buildAsyncArrowFunction(with: .parameters(n: 0)) { _ in
+            b.doReturn(b.loadInt(42))
+        }
+        b.callFunction(arrow)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const t0 = async () => 42;
+        t0();
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testArrowFunctionMultipleUses() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let arrow = b.buildArrowFunction(with: .parameters(n: 0)) { _ in }
+        let f = b.createNamedVariable(forBuiltin: "f")
+        b.callFunction(f, withArgs: [arrow, arrow])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v0 = () => {
+        };
+        f(v0, v0);
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testArrowFunctionPropertyAssignment() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createNamedVariable(forBuiltin: "obj")
+        let arrow = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+            b.doReturn(b.loadInt(42))
+        }
+        b.setProperty("x", of: obj, to: arrow)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        obj.x = () => 42;
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testArrowFunctionObjectLiteral() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let o = b.buildObjectLiteral { _ in }
+        let f = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+            b.doReturn(b.buildObjectLiteral { _ in })
+        }
+        b.setProperty("x", of: o, to: f)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v0 = {};
+        v0.x = () => ({});
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testNestedArrowFunctionIndentation() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildIf(b.loadBool(true)) {
+            let o = b.buildObjectLiteral { _ in }
+            let f = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+                let v = b.createNamedVariable("a", declarationMode: .const, initialValue: b.loadInt(1))
+                b.doReturn(b.binary(v, v, with: .Add))
+            }
+            b.setProperty("x", of: o, to: f)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        if (true) {
+            const v1 = {};
+            v1.x = () => {
+                const a = 1;
+                return a + a;
+            };
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testConciseArrowFunctionStartingWithObjectLiteral() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+            let o = b.buildObjectLiteral { _ in }
+            let i = b.loadInt(1)
+            b.doReturn(b.binary(o, i, with: .Add))
+        }
+        b.callFunction(f)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const t0 = () => ({} + 1);
+        t0();
 
         """
         XCTAssertEqual(actual, expected)
