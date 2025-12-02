@@ -1217,7 +1217,6 @@ public class ProgramBuilder {
         numberOfHiddenVariables -= 1
     }
 
-
     /// Hides a variable containing a function from the function's body.
     ///
     /// For example, in
@@ -1250,19 +1249,20 @@ public class ProgramBuilder {
         unhide(variableToHide)
     }
 
+    // TODO(pawkra): enable shared types.
     private static func matchingWasmTypes(jsType: ILType) -> [ILType] {
         if jsType.Is(.integer) {
             return [.wasmi32, .wasmf64, .wasmf32]
         } else if jsType.Is(.number) {
-            return [.wasmf32, .wasmf64, .wasmi32, .wasmRefI31, .wasmI31Ref]
+            return [.wasmf32, .wasmf64, .wasmi32, .wasmRefI31(), .wasmI31Ref()]
         } else if jsType.Is(.bigint) {
             return [.wasmi64]
         } else if jsType.Is(.function()) {
             // TODO(gc): Add support for specific signatures.
-            return [.wasmFuncRef]
+            return [.wasmFuncRef()]
         } else {
             // TODO(gc): Add support for types of the anyref hierarchy.
-            return [.wasmExternRef]
+            return [.wasmExternRef()]
         }
     }
 
@@ -1272,6 +1272,7 @@ public class ProgramBuilder {
     }
 
     // Helper that converts a Wasm type to its deterministic known JS counterparts.
+    // TODO(pawkra): enable shared types.
     private static func mapWasmToJsType(_ type: ILType) -> ILType {
         if type.Is(.wasmi32) {
             return .integer
@@ -1288,12 +1289,12 @@ public class ProgramBuilder {
             return .jsAnything
         } else if type.Is(.nothing) {
             return .undefined
-        } else if type.Is(.wasmFuncRef) {
+        } else if type.Is(.wasmFuncRef()) {
             // TODO(cffsmith): refine this type with the signature if we can.
             return .function()
-        } else if type.Is(.wasmI31Ref) {
+        } else if type.Is(.wasmI31Ref()) {
             return .integer
-        } else if type.Is(.wasmNullRef) || type.Is(.wasmNullExternRef) || type.Is(.wasmNullFuncRef) {
+        } else if type.Is(.wasmNullRef()) || type.Is(.wasmNullExternRef()) || type.Is(.wasmNullFuncRef()) {
             // This is slightly imprecise: The null types only accept null, not undefined but
             // Fuzzilli doesn't differentiate between null and undefined in its type system.
             return .nullish
@@ -3881,8 +3882,9 @@ public class ProgramBuilder {
             b.emit(WasmDropElementSegment(), withInputs: [elementSegment], types: [.wasmElementSegment()])
         }
 
+        // TODO(pawkra): support shared tables and element segments.
         public func wasmTableInit(elementSegment: Variable, table: Variable, tableOffset: Variable, elementSegmentOffset: Variable, nrOfElementsToUpdate: Variable) {
-            let elementSegmentType = ILType.wasmFuncRef
+            let elementSegmentType = ILType.wasmFuncRef()
             let tableElemType = b.type(of: table).wasmTableType!.elementType
             assert(elementSegmentType.Is(tableElemType))
 
@@ -4012,18 +4014,22 @@ public class ProgramBuilder {
             return Array(b.emit(WasmEndLoop(outputTypes: signature.outputTypes), withInputs: fallthroughResults, types: signature.outputTypes).outputs)
         }
 
+        // TODO(pawkra): enable shared types.
         @discardableResult
         func wasmBuildTryTable(with signature: WasmSignature, args: [Variable], catches: [WasmBeginTryTable.CatchKind], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
             assert(zip(signature.parameterTypes, args).allSatisfy {b.type(of: $1).Is($0)})
             #if DEBUG
                 var argIndex = signature.parameterTypes.count
+                let assertLabelTypeData: (ILType) -> () = { labelType in
+                    assert(labelType.Is(.anyLabel))
+                    assert(labelType.wasmLabelType!.parameters.last!.Is(.wasmExnRef()))
+                }
                 for catchKind in catches {
                     switch catchKind {
                     case .Ref:
                         assert(b.type(of: args[argIndex]).Is(.object(ofGroup: "WasmTag")))
                         let labelType = b.type(of: args[argIndex + 1])
-                        assert(labelType.Is(.anyLabel))
-                        assert(labelType.wasmLabelType!.parameters.last!.Is(.wasmExnRef))
+                        assertLabelTypeData(labelType)
                         argIndex += 2
                     case .NoRef:
                         assert(b.type(of: args[argIndex]).Is(.object(ofGroup: "WasmTag")))
@@ -4031,8 +4037,7 @@ public class ProgramBuilder {
                         argIndex += 2
                     case .AllRef:
                         let labelType = b.type(of: args[argIndex])
-                        assert(labelType.Is(.anyLabel))
-                        assert(labelType.wasmLabelType!.parameters.last!.Is(.wasmExnRef))
+                        assertLabelTypeData(labelType)
                         argIndex += 1
                     case .AllNoRef:
                         assert(b.type(of: args[argIndex]).Is(.anyLabel))
@@ -4095,8 +4100,8 @@ public class ProgramBuilder {
             b.emit(WasmThrow(parameterTypes: tagType.parameters), withInputs: [tag] + inputs, types: [.object(ofGroup: "WasmTag")] + tagType.parameters)
         }
 
-        public func wasmBuildThrowRef(exception: Variable) {
-            b.emit(WasmThrowRef(), withInputs: [exception], types: [.wasmExnRef])
+        public func wasmBuildThrowRef(exception: Variable, sharedRef: Bool) {
+            b.emit(WasmThrowRef(), withInputs: [exception], types: [.wasmExnRef(shared: sharedRef)])
         }
 
         public func wasmBuildLegacyRethrow(_ exceptionLabel: Variable) {
@@ -4137,15 +4142,23 @@ public class ProgramBuilder {
                     // TODO(cffsmith): Can we improve this once we have better support for ad hoc
                     // code generation in other contexts?
                     switch type.wasmReferenceType?.kind {
-                    case .Abstract(let heapType):
-                        if heapType == .WasmI31 {
-                            // Prefer generating a non-null value.
-                            return probability(0.2) && type.wasmReferenceType!.nullability
-                                ? self.wasmRefNull(type: type)
-                                : self.wasmRefI31(self.consti32(Int32(truncatingIfNeeded: b.randomInt())))
+                    case .Abstract(let heapTypeInfo):
+                        // TODO(pawkra): add support for shared refs.
+                        assert(!heapTypeInfo.shared)
+                        if probability(0.2) && type.wasmReferenceType!.nullability {
+                            return self.wasmRefNull(type: type)
                         }
-                        assert(type.wasmReferenceType!.nullability)
-                        return self.wasmRefNull(type: type)
+                        // Prefer generating a non-null value.
+                        if heapTypeInfo.heapType == .WasmI31 {
+                            return self.wasmRefI31(self.consti32(Int32(truncatingIfNeeded: b.randomInt())))
+                        }
+                        // TODO(pawkra): support different types. For now
+                        // fallback to refNull if possible.
+                        if (type.wasmReferenceType!.nullability) {
+                            return self.wasmRefNull(type: type)
+                        } else {
+                            return nil
+                        }
                     case .Index(_),
                          .none:
                         break // Unimplemented
@@ -4343,18 +4356,18 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmI31Get(_ refI31: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmI31Get(isSigned: isSigned), withInputs: [refI31], types: [.wasmI31Ref]).output
+        public func wasmI31Get(_ refI31: Variable, isSigned: Bool, shared: Bool) -> Variable {
+            return b.emit(WasmI31Get(isSigned: isSigned), withInputs: [refI31], types: [.wasmI31Ref(shared: shared)]).output
         }
 
         @discardableResult
-        public func wasmAnyConvertExtern(_ ref: Variable) -> Variable {
-            b.emit(WasmAnyConvertExtern(), withInputs: [ref], types: [.wasmExternRef]).output
+        public func wasmAnyConvertExtern(_ ref: Variable, shared: Bool) -> Variable {
+            b.emit(WasmAnyConvertExtern(), withInputs: [ref], types: [.wasmExternRef(shared: shared)]).output
         }
 
         @discardableResult
-        public func wasmExternConvertAny(_ ref: Variable) -> Variable {
-            b.emit(WasmExternConvertAny(), withInputs: [ref], types: [.wasmAnyRef]).output
+        public func wasmExternConvertAny(_ ref: Variable, shared: Bool) -> Variable {
+            b.emit(WasmExternConvertAny(), withInputs: [ref], types: [.wasmAnyRef(shared: shared)]).output
         }
     }
 
@@ -4423,13 +4436,14 @@ public class ProgramBuilder {
 
         @discardableResult
         public func addElementSegment(elements: [Variable]) -> Variable {
-            let inputTypes = Array(repeating: getEntryTypeForTable(elementType: ILType.wasmFuncRef), count: elements.count)
+            let inputTypes = Array(repeating: getEntryTypeForTable(elementType: ILType.wasmFuncRef()), count: elements.count)
             return b.emit(WasmDefineElementSegment(size: UInt32(elements.count)), withInputs: elements, types: inputTypes).output
         }
 
+        // TODO(pawkra): enable shared tables and element segments (and functions?).
         public func getEntryTypeForTable(elementType: ILType) -> ILType {
             switch elementType {
-                case .wasmFuncRef:
+                case .wasmFuncRef():
                     return .wasmFunctionDef() | .function()
                 default:
                     return .object()
@@ -4505,6 +4519,7 @@ public class ProgramBuilder {
 
     /// Produces a WasmGlobal that is valid to create in the given Context.
     public func randomWasmGlobal(forContext context: Context) -> WasmGlobal {
+        // TODO(pawkra): enable shared types.
         switch context {
         case .javascript:
             // These are valid in JS according to: https://webassembly.github.io/spec/js-api/#globals.
@@ -4514,7 +4529,7 @@ public class ProgramBuilder {
                 {.wasmf64(self.randomFloat())},
                 {.wasmi32(Int32(truncatingIfNeeded: self.randomInt()))},
                 {.wasmi64(self.randomInt())},
-                {.externref})
+                {.externref(shared: false)})
         case .wasm:
             // TODO: Add simd128 and nullrefs.
             return withEqualProbability(
@@ -4522,9 +4537,9 @@ public class ProgramBuilder {
                 {.wasmf64(self.randomFloat())},
                 {.wasmi32(Int32(truncatingIfNeeded: self.randomInt()))},
                 {.wasmi64(self.randomInt())},
-                {.externref},
-                {.exnref},
-                {.i31ref})
+                {.externref(shared: false)},
+                {.exnref(shared: false)},
+                {.i31ref(shared: false)})
         default:
             fatalError("Unsupported context \(context) for a WasmGlobal.")
         }
@@ -4534,21 +4549,23 @@ public class ProgramBuilder {
         // TODO(mliedtke): The list of types should be shared with function signature generation
         // etc. We should also support non-nullable references but that requires being able
         // to generate valid ones which currently isn't the case for most of them.
+        // TODO(pawkra): enable shared types.
         return (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from: [
             // Value types:
             .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
             // Subset of abstract heap types (the null (bottom) types are not allowed in the JS API):
-            .wasmExternRef, .wasmFuncRef, .wasmAnyRef, .wasmEqRef, .wasmI31Ref, .wasmStructRef,
-            .wasmArrayRef, .wasmExnRef
+            .wasmExternRef(), .wasmFuncRef(), .wasmAnyRef(), .wasmEqRef(), .wasmI31Ref(), .wasmStructRef(),
+            .wasmArrayRef(), .wasmExnRef()
         ])}
     }
 
     public func randomWasmSignature() -> WasmSignature {
         // TODO: generalize this to support more types. Also add support for simd128 and
         // (null)exnref, note however that these types raise exceptions when used from JS.
+        // TODO(pawkra): enable shared types.
         let valueTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64]
-        let abstractRefTypes: [ILType] = [.wasmExternRef, .wasmAnyRef, .wasmI31Ref]
-        let nullTypes: [ILType] = [.wasmNullRef, .wasmNullExternRef, .wasmNullFuncRef]
+        let abstractRefTypes: [ILType] = [.wasmExternRef(), .wasmAnyRef(), .wasmI31Ref()]
+        let nullTypes: [ILType] = [.wasmNullRef(), .wasmNullExternRef(), .wasmNullFuncRef()]
         let randomType = {
             chooseUniform(
                 from: chooseBiased(from: [nullTypes, abstractRefTypes, valueTypes], factor: 1.5))
@@ -4563,9 +4580,10 @@ public class ProgramBuilder {
         // abstract heap types. To be able to emit them, generateRandomWasmVar() needs to be able
         // to generate a sequence that produces such a non-nullable value which might be difficult
         // for some types as of now.
+        // TODO(pawkra): enable shared types.
         (0..<Int.random(in: 0...n)).map {_ in chooseUniform(from:
-            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128, .wasmRefI31]
-                + WasmAbstractHeapType.allCases.map {.wasmRef(.Abstract($0), nullability: true)})}
+            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128, .wasmRefI31()]
+                + WasmAbstractHeapType.allCases.map {.wasmRef($0, nullability: true)})}
     }
 
     public func randomWasmBlockArguments(upTo n: Int) -> [Variable] {
@@ -5318,4 +5336,5 @@ public class ProgramBuilder {
         return constructIntlType(type: "Segmenter", optionsBag: .jsIntlSegmenterSettings)
     }
 }
+
 

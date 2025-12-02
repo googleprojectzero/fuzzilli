@@ -3274,7 +3274,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let table = b.createWasmTable(elementType: .wasmFuncRef, limits: Limits(min: 1), isTable64: true)
+        let table = b.createWasmTable(elementType: .wasmFuncRef(), limits: Limits(min: 1), isTable64: true)
         XCTAssertTrue(b.type(of: table).Is(.object(ofGroup: "WasmTable")))
 
         let f = b.buildPlainFunction(with: .parameters(n: 0)) {_ in

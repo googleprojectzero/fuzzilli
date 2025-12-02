@@ -388,8 +388,8 @@ extension Instruction: ProtobufConvertible {
                                     $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
                                 }
                             }
-                        case .Abstract(let heapType):
-                            let kind = switch heapType {
+                        case .Abstract(let heapTypeInfo):
+                            let kind = switch heapTypeInfo.heapType {
                                 case .WasmExn:
                                     Fuzzilli_Protobuf_WasmReferenceTypeKind.exnref
                                 case .WasmI31:
@@ -420,6 +420,7 @@ extension Instruction: ProtobufConvertible {
                                 $0.refType = Fuzzilli_Protobuf_WasmReferenceType.with {
                                     $0.kind = kind
                                     $0.nullability = underlyingWasmType.wasmReferenceType!.nullability
+                                    $0.isShared = heapTypeInfo.shared
                                 }
                             }
                     }
@@ -498,15 +499,24 @@ extension Instruction: ProtobufConvertible {
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.valuef64(val)
             case .refFunc(let val):
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.funcref(Int64(val))
-            case .externref:
-                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.externref)
-            case .exnref:
-                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.exnref)
-            case .i31ref:
-                return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceTypeKind.i31Ref)
+            case .externref(let shared):
+                return nullrefGlobal(.externref, shared: shared)
+            case .exnref(let shared):
+                return nullrefGlobal(.exnref, shared: shared)
+            case .i31ref(let shared):
+                return nullrefGlobal(.i31Ref, shared: shared)
             case .imported(let ilType):
                 return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.imported(ILTypeToWasmTypeEnum(ilType))
             }
+        }
+
+        func nullrefGlobal(_ kind: Fuzzilli_Protobuf_WasmReferenceTypeKind, shared: Bool) -> Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal {
+            return Fuzzilli_Protobuf_WasmGlobal.OneOf_WasmGlobal.nullref(Fuzzilli_Protobuf_WasmReferenceType.with {
+                $0.kind = kind
+                // TODO(gc): set nullability
+                $0.nullability = false
+                $0.isShared = shared
+            })
         }
 
         func convertWasmCatch(catchKind: WasmBeginTryTable.CatchKind) -> Fuzzilli_Protobuf_WasmCatchKind {
@@ -1684,37 +1694,40 @@ extension Instruction: ProtobufConvertible {
                     fatalError("Unrecognized wasm value type \(value)")
                 }
             case .refType(_):
-                let refKind: WasmReferenceType.Kind = switch wasmType.refType.kind {
-                case .index:
-                    .Index()
+                if wasmType.refType.kind == .index {
+                    return .wasmRef(.Index(), nullability: wasmType.refType.nullability)
+                }
+                let heapType: WasmAbstractHeapType = switch wasmType.refType.kind {
                 case .externref:
-                    .Abstract(.WasmExtern)
+                    .WasmExtern
                 case .funcref:
-                    .Abstract(.WasmFunc)
+                    .WasmFunc
                 case .exnref:
-                    .Abstract(.WasmExn)
+                    .WasmExn
                 case .i31Ref:
-                    .Abstract(.WasmI31)
+                    .WasmI31
                 case .anyref:
-                    .Abstract(.WasmAny)
+                    .WasmAny
                 case .eqref:
-                    .Abstract(.WasmEq)
+                    .WasmEq
                 case .structref:
-                    .Abstract(.WasmStruct)
+                    .WasmStruct
                 case .arrayref:
-                    .Abstract(.WasmArray)
+                    .WasmArray
                 case .noneref:
-                    .Abstract(.WasmNone)
+                    .WasmNone
                 case .noexternref:
-                    .Abstract(.WasmNoExtern)
+                    .WasmNoExtern
                 case .nofuncref:
-                    .Abstract(.WasmNoFunc)
+                    .WasmNoFunc
                 case .noexnref:
-                    .Abstract(.WasmNoExn)
+                    .WasmNoExn
+                case .index:
+                    fatalError("Unexpected index type.")
                 case .UNRECOGNIZED(let value):
                     fatalError("Unrecognized wasm reference type \(value)")
                 }
-                return .wasmRef(refKind, nullability: wasmType.refType.nullability)
+                return .wasmRef(heapType, shared: wasmType.refType.isShared, nullability: wasmType.refType.nullability)
             case .none:
                 fatalError("Absent wasm type")
             }
@@ -1785,13 +1798,13 @@ extension Instruction: ProtobufConvertible {
         func convertWasmGlobal(_ proto: Fuzzilli_Protobuf_WasmGlobal) -> WasmGlobal {
             switch proto.wasmGlobal {
             case .nullref(let val):
-                switch val {
+                switch val.kind {
                 case .externref:
-                    return .externref
+                    return .externref(shared: val.isShared)
                 case .exnref:
-                    return .exnref
+                    return .exnref(shared: val.isShared)
                 case .i31Ref:
-                    return .i31ref
+                    return .i31ref(shared: val.isShared)
                 default:
                     fatalError("Unrecognized global wasm reference type \(val)")
                 }

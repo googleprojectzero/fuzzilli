@@ -527,39 +527,33 @@ public class WasmLifter {
         self.bytecode += [0x1, 0x0, 0x0, 0x0]
     }
 
-    private func encodeAbstractHeapType(_ heapType: WasmAbstractHeapType) -> Data {
-        switch (heapType) {
-            case .WasmExtern:
-                return Data([0x6F])
-            case .WasmFunc:
-                return Data([0x70])
-            case .WasmAny:
-                return Data([0x6E])
-            case .WasmEq:
-                return Data([0x6D])
-            case .WasmI31:
-                return Data([0x6C])
-            case .WasmStruct:
-                return Data([0x6B])
-            case .WasmArray:
-                return Data([0x6A])
-            case .WasmExn:
-                return Data([0x69])
-            case .WasmNone:
-                return Data([0x71])
-            case .WasmNoExtern:
-                return Data([0x72])
-            case .WasmNoFunc:
-                return Data([0x73])
-            case .WasmNoExn:
-                return Data([0x74])
-        }
+    private func encodeAbstractHeapType(_ heapTypeInfo: HeapTypeInfo) -> Data {
+        // Base of v8 implementation. See 
+        // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/wasm/wasm-constants.h?q=symbol:ValueTypeCode
+        let sharedFlagPrefix: [UInt8] = heapTypeInfo.shared ? [0x65] : []
+        let opCode: UInt8 = 
+            switch (heapTypeInfo.heapType) {
+                case .WasmExtern:    0x6F
+                case .WasmFunc:      0x70
+                case .WasmAny:       0x6E
+                case .WasmEq:        0x6D
+                case .WasmI31:       0x6C
+                case .WasmStruct:    0x6B
+                case .WasmArray:     0x6A
+                case .WasmExn:       0x69
+                case .WasmNone:      0x71
+                case .WasmNoExtern:  0x72
+                case .WasmNoFunc:    0x73
+                case .WasmNoExn:     0x74
+            }
+        return Data(sharedFlagPrefix + [opCode])
     }
 
     private func encodeWasmGCType(_ description: WasmTypeDescription?) throws -> Data {
         guard let description else {
             throw WasmLifter.CompileError.missingTypeInformation
         }
+        // TODO(pawkra): encode shared bit
         return Leb128.unsignedEncode(typeDescToIndex[description]!)
     }
 
@@ -568,28 +562,22 @@ public class WasmLifter {
             let isNullable = refType.nullability
             let nullabilityByte: UInt8 = isNullable ? 0x63 : 0x64
 
-            switch refType.kind {
-            case .Index(let description):
-                return try Data([nullabilityByte]) + encodeWasmGCType(description.get())
-            case .Abstract(let heapType):
-                return Data([nullabilityByte]) + encodeAbstractHeapType(heapType)
-            }
+            return try Data([nullabilityByte]) + encodeHeapType(type)
         }
         // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
         return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!
     }
 
-    private func encodeHeapType(_ type: ILType, defaultType: ILType? = nil)  throws -> Data {
+    private func encodeHeapType(_ type: ILType) throws -> Data {
         if let refType = type.wasmReferenceType {
             switch refType.kind {
             case .Index(let description):
                 return try encodeWasmGCType(description.get())
-            case .Abstract(let heapType):
-                return encodeAbstractHeapType(heapType)
+            case .Abstract(let heapTypeInfo):
+                return encodeAbstractHeapType(heapTypeInfo)
             }
         }
-        // HINT: If you crash here, you might not have specified an encoding for your new type in `ILTypeMapping`.
-        return ILTypeMapping[type] ?? ILTypeMapping[defaultType!]!
+        fatalError("This function supports only wasmReferenceType.")
     }
 
     private func buildTypeEntry(for desc: WasmTypeDescription, data: inout Data) throws {
@@ -663,7 +651,7 @@ public class WasmLifter {
             }
             temp += Leb128.unsignedEncode(signature.outputTypes.count)
             for outputType in signature.outputTypes {
-                temp += try encodeType(outputType, defaultType: .wasmExternRef)
+                temp += try encodeType(outputType, defaultType: .wasmExternRef())
             }
         }
 
@@ -1076,14 +1064,14 @@ public class WasmLifter {
                 temporaryInstruction = Instruction(Consti32(value: val), output: Variable())
             case .wasmi64(let val):
                 temporaryInstruction = Instruction(Consti64(value: val), output: Variable())
-            case .externref:
-                temp += try! Data([0xD0]) + encodeHeapType(.wasmExternRef) + Data([0x0B])
+            case .externref(let shared):
+                temp += try! Data([0xD0]) + encodeHeapType(.wasmExternRef(shared: shared)) + Data([0x0B])
                 continue
-            case .exnref:
-                temp += try! Data([0xD0]) + encodeHeapType(.wasmExnRef) + Data([0x0B])
+            case .exnref(let shared):
+                temp += try! Data([0xD0]) + encodeHeapType(.wasmExnRef(shared: shared)) + Data([0x0B])
                 continue
-            case .i31ref:
-                temp += try! Data([0xD0]) + encodeHeapType(.wasmI31Ref) + Data([0x0B])
+            case .i31ref(let shared):
+                temp += try! Data([0xD0]) + encodeHeapType(.wasmI31Ref(shared: shared)) + Data([0x0B])
                 continue
             case .refFunc(_),
                  .imported(_):
@@ -1506,7 +1494,8 @@ public class WasmLifter {
                 self.exports.append(.global(instr))
             case .wasmDefineTable(let tableDef):
                 self.exports.append(.table(instr))
-                if tableDef.elementType == .wasmFuncRef {
+                // TODO(pawkra): support shared refs.
+                if tableDef.elementType == .wasmFuncRef() {
                     for (value, definedEntry) in zip(instr.inputs, tableDef.definedEntries) {
                         if !typer.type(of: value).Is(.wasmFunctionDef()) {
                             // Check if we need to import the inputs.
