@@ -190,6 +190,13 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         let hasOptimizationDelta = optimizationDelta == 1
         let hasNewEdges = newEdgeSet.count > 0
 
+        if fuzzer.config.targetJitOnly {
+            // Optionally filter out programs that didn't trigger JIT compilation
+            if libcoverage.isOpted(&context) == 0 {
+                return nil
+            }
+        }
+
         if result == 1 || hasOptimizationDelta || hasFeedbackDelta {
             return hasNewEdges
                 ? CovEdgeSet(edges: newEdgeSet.edge_indices,

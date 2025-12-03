@@ -73,6 +73,11 @@ public struct Configuration {
     // differential fuzzers can inspect (via mutating the JS program to print defined variables).
     public let forDifferentialFuzzing: Bool
 
+    // If true, only programs that trigger JIT compilation will be kept in the corpus.
+    // This is useful for targeting JIT-specific bugs. When enabled, programs that don't
+    // set any TurboFan optimization bits will be discarded immediately during evaluation.
+    public let targetJitOnly: Bool
+
     // The subdirectory in {config.storagePath} at which all programs are stored which could not
     // be imported due to disabled wasm capabilities in the fuzzer.
     public static let excludedWasmDirectory = "excluded_wasm_programs"
@@ -91,7 +96,8 @@ public struct Configuration {
                 tag: String? = nil,
                 isWasmEnabled: Bool = false,
                 storagePath: String? = nil,
-                forDifferentialFuzzing: Bool = false) {
+                forDifferentialFuzzing: Bool = false,
+                targetJitOnly: Bool = true) {
         self.arguments = arguments
         self.timeout = timeout
         self.logLevel = logLevel
@@ -106,6 +112,7 @@ public struct Configuration {
         self.isWasmEnabled = isWasmEnabled
         self.storagePath = storagePath
         self.forDifferentialFuzzing = forDifferentialFuzzing
+        self.targetJitOnly = targetJitOnly
     }
 }
 

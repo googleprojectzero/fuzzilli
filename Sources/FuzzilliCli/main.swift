@@ -101,6 +101,8 @@ Options:
                                    This can for example be used to remember the target revision that is being fuzzed.
     --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
     --forDifferentialFuzzing     : Enable additional features for better support of external differential fuzzing.
+    --targetJitOnly              : Only keep programs that trigger JIT compilation in the corpus. This is enabled by default.
+                                   Use --no-targetJitOnly to disable and keep all programs regardless of JIT status.
     --postgres-url=url           : PostgreSQL connection string for PostgreSQL corpus (e.g., postgresql://user:pass@host:port/db).
     --validate-before-cache      : Enable program validation before caching in PostgreSQL corpus (default: true).
     --execution-history-size=n   : Number of recent executions to keep in memory for PostgreSQL corpus (default: 10).
@@ -162,6 +164,7 @@ let additionalArguments = args["--additionalArguments"] ?? ""
 let tag = args["--tag"]
 let enableWasm = args.has("--wasm")
 let forDifferentialFuzzing = args.has("--forDifferentialFuzzing")
+let targetJitOnly = !args.has("--no-targetJitOnly")  // Default is true (enabled), unless --no-targetJitOnly is specified
 let postgresUrl = args["--postgres-url"] ?? ProcessInfo.processInfo.environment["POSTGRES_URL"]
 let postgresLogging = args.has("--postgres-logging")
 
@@ -628,7 +631,9 @@ let mainConfig = Configuration(arguments: CommandLine.arguments,
                                staticCorpus: staticCorpus,
                                tag: tag,
                                isWasmEnabled: enableWasm,
-                               storagePath: storagePath)
+                               storagePath: storagePath,
+                               forDifferentialFuzzing: forDifferentialFuzzing,
+                               targetJitOnly: targetJitOnly)
 
 let fuzzer = makeFuzzer(with: mainConfig)
 
@@ -767,7 +772,9 @@ let workerConfig = Configuration(arguments: CommandLine.arguments,
                                  staticCorpus: staticCorpus,
                                  tag: tag,
                                  isWasmEnabled: enableWasm,
-                                 storagePath: storagePath)
+                                 storagePath: storagePath,
+                                 forDifferentialFuzzing: forDifferentialFuzzing,
+                                 targetJitOnly: targetJitOnly)
 
 for _ in 1..<numJobs {
     let worker = makeFuzzer(with: workerConfig)

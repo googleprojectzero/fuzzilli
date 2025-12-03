@@ -361,6 +361,10 @@ void clear_feedback_nexus(struct cov_context* context) {
     }
 }   
 
+int isOpted(struct cov_context* context) {
+    return context->turbofan_optimization_bits_current != 0;
+}
+
 int cov_evaluate_optimization_bits(struct cov_context* context) {
     if (!context->shmem) return 0;
     uint8_t delta = 0;
