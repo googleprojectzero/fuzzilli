@@ -1,0 +1,177 @@
+diff --git a/src/fuzzilli/cov.cc b/src/fuzzilli/cov.cc
+index bf8b6925993..c5e049a516f 100644
+--- a/src/fuzzilli/cov.cc
++++ b/src/fuzzilli/cov.cc
+@@ -1,9 +1,16 @@
+ // Copyright 2020 the V8 project authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style license that can be
+-// found in the LICENSE file.
++// Use of this source code is governed by a BSD-style license that can
++// be found in the LICENSE file.
+ 
+ #include "src/fuzzilli/cov.h"
+ 
++// Include V8 headers first to avoid macro conflicts
++#include "src/base/platform/memory.h"
++#include "src/objects/feedback-vector.h"
++#include "src/sandbox/hardware-support.h"
++
++// Include system headers after V8 headers
++#include <cstddef>
+ #include <fcntl.h>
+ #include <inttypes.h>
+ #include <stdio.h>
+@@ -14,14 +21,31 @@
+ #include <sys/wait.h>
+ #include <unistd.h>
+ 
+-#include "src/base/platform/memory.h"
+-#include "src/sandbox/hardware-support.h"
+-
+-#define SHM_SIZE 0x100000
++#define SHM_SIZE 0x202000
+ #define MAX_EDGES ((SHM_SIZE - 4) * 8)
++#define MAX_FEEDBACK_NEXUS 100000
++
++
++struct FeedbackNexusData {
++  uint32_t vector_address;        // Address of FeedbackVector in V8 heap
++  uint32_t ic_state;             // InlineCacheState
++};
++
++struct optimization_turbofan_data {
++    uint32_t flags; // Flags used for optimization passes in PipelineImpl::OptimizeTurbofanGraph
++    //uint32_t address_code;
++    //uint32_t address_shared_info;
++    //uint8_t bailout_reason;
++    //bool is_osr;
++};
+ 
+ struct shmem_data {
+   uint32_t num_edges;
++  uint32_t feedback_nexus_count; 
++  uint32_t max_feedback_nexus;
++  uint32_t turbofan_flags;
++  uint64_t turbofan_optimization_bits;
++  FeedbackNexusData feedback_nexus_data[MAX_FEEDBACK_NEXUS];
+   unsigned char edges[];
+ };
+ 
+@@ -83,6 +107,12 @@ extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t* start,
+ 
+   shmem->num_edges = static_cast<uint32_t>(stop - start);
+   builtins_start = 1 + shmem->num_edges;
++  
++  // Initialize feedback nexus fields
++  shmem->feedback_nexus_count = 0;
++  shmem->max_feedback_nexus = MAX_FEEDBACK_NEXUS;
++  memset(shmem->feedback_nexus_data, 0, sizeof(FeedbackNexusData) * MAX_FEEDBACK_NEXUS);
++  
+   fprintf(stderr,
+           "[COV] edge counters initialized. Shared memory: %s with %u edges\n",
+           shm_key, shmem->num_edges);
+@@ -115,12 +145,15 @@ void sanitizer_cov_prepare_for_hardware_sandbox() {
+ #endif
+ 
+ uint32_t sanitizer_cov_count_discovered_edges() {
++  // Calculate offset to edges array (after feedback nexus data)
++  unsigned char* edges_ptr = (unsigned char*)shmem + offsetof(struct shmem_data, edges);
++  
+   uint32_t on_edges_counter = 0;
+   for (uint32_t i = 1; i < builtins_start; ++i) {
+     const uint32_t byteIndex = i >> 3;  // Divide by 8 using a shift operation
+     const uint32_t bitIndex = i & 7;  // Modulo 8 using a bitwise AND operation
+ 
+-    if (shmem->edges[byteIndex] & (1 << bitIndex)) {
++    if (edges_ptr[byteIndex] & (1 << bitIndex)) {
+       ++on_edges_counter;
+     }
+   }
+@@ -128,14 +161,26 @@ uint32_t sanitizer_cov_count_discovered_edges() {
+ }
+ 
+ extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t* guard) {
+-  // There's a small race condition here: if this function executes in two
+-  // threads for the same edge at the same time, the first thread might disable
+-  // the edge (by setting the guard to zero) before the second thread fetches
+-  // the guard value (and thus the index). However, our instrumentation ignores
+-  // the first edge (see libcoverage.c) and so the race is unproblematic.
++  /*
++  	// There's a small race condition here: if this function executes in two
++  	// threads for the same edge at the same time, the first thread might disable
++  	// the edge (by setting the guard to zero) before the second thread fetches
++  	// the guard value (and thus the index). However, our instrumentation ignores
++  	// the first edge (see libcoverage.c) and so the race is unproblematic.
++  	uint32_t index = *guard;
++  	shmem->edges[index / 8] |= 1 << (index % 8);
++  	*guard = 0;
++  */
++  if (!guard || *guard == 0) return;  // guard already cleared — possible race
+   uint32_t index = *guard;
+-  shmem->edges[index / 8] |= 1 << (index % 8);
+   *guard = 0;
++
++  // Check again in case another thread zeroed it just now (race hit)
++  if (index == 0) return;
++
++  // Calculate offset to edges array (after feedback nexus data)
++  unsigned char* edges_ptr = (unsigned char*)shmem + offsetof(struct shmem_data, edges);
++  edges_ptr[index / 8] |= 1 << (index % 8);
+ }
+ 
+ void cov_init_builtins_edges(uint32_t num_edges) {
+@@ -161,12 +206,53 @@ void cov_update_builtins_basic_block_coverage(
+     fprintf(stderr, "[COV] Error: Size of builtins cov map changed.\n");
+     exit(-1);
+   }
++  
++  // Calculate offset to edges array (after feedback nexus data)
++  unsigned char* edges_ptr = (unsigned char*)shmem + offsetof(struct shmem_data, edges);
++  
+   for (uint32_t i = 0; i < cov_map.size(); ++i) {
+     if (cov_map[i]) {
+       const uint32_t byteIndex = (i + builtins_start) >> 3;
+       const uint32_t bitIndex = (i + builtins_start) & 7;
+ 
+-      shmem->edges[byteIndex] |= (1 << bitIndex);
++      edges_ptr[byteIndex] |= (1 << bitIndex);
+     }
+   }
+ }
++
++
++void cov_serialize_feedback_nexus(v8::internal::FeedbackNexus* nexus, FeedbackNexusData* data) {
++  if (!nexus || !data) return;
++  data->vector_address = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(nexus->vector().ptr()));
++  data->ic_state = static_cast<uint32_t>(nexus->ic_state());
++}
++
++void cov_add_feedback_nexus(v8::internal::FeedbackNexus* nexus) {
++  if (!shmem || !nexus) return;
++  
++  // Check if we have space
++  if (shmem->feedback_nexus_count >= MAX_FEEDBACK_NEXUS) {
++    fprintf(stderr, "[COV] Warning: Feedback nexus buffer full, dropping entry\n");
++    return;
++  }
++  cov_serialize_feedback_nexus(nexus, 
++      &shmem->feedback_nexus_data[shmem->feedback_nexus_count]);
++  shmem->feedback_nexus_count++;
++
++  // printf("[COV] Added feedback nexus: %p\n", nexus);
++  // printf("[COV] Feedback nexus count: %d\n", shmem->feedback_nexus_count);
++  // printf("[COV] Feedback nexus data: %p\n", shmem->feedback_nexus_data);
++  // printf("[COV] Feedback nexus data: %p\n", shmem->feedback_nexus_data[shmem->feedback_nexus_count]);
++  // printf("[COV] Feedback nexus data: %p\n", shmem->feedback_nexus_data[shmem->feedback_nexus_count].vector_address);
++  // printf("[COV] Feedback nexus data: %p\n", shmem->feedback_nexus_data[shmem->feedback_nexus_count].ic_state);
++}
++
++void cov_set_turbofan_optimization_bits(uint64_t bit) {
++  if (!shmem) return;
++  shmem->turbofan_optimization_bits |= bit;
++}
++
++void cov_set_maglev_optimization_bits(uint64_t /*bit*/) {
++  // No-op: maglev bitmap is not exported in shmem layout.
++}
++// }  // namespace v8

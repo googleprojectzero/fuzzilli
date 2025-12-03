@@ -1,0 +1,193 @@
+diff --git a/src/compiler/pipeline.cc b/src/compiler/pipeline.cc
+index 7a6a69eaf3d..ac5ee2a1ce5 100644
+--- a/src/compiler/pipeline.cc
++++ b/src/compiler/pipeline.cc
+@@ -104,6 +104,7 @@
+ #include "src/logging/runtime-call-stats-scope.h"
+ #include "src/logging/runtime-call-stats.h"
+ #include "src/objects/code-kind.h"
++#include "src/fuzzilli/cov.h"
+ #include "src/objects/shared-function-info.h"
+ #include "src/objects/string-inl.h"
+ #include "src/tracing/trace-event.h"
+@@ -491,6 +492,9 @@ TurbofanPipelineStatistics* CreatePipelineStatistics(
+   // Run Turboshaft instruction selection.
+   if (!turboshaft_pipeline.PrepareForInstructionSelection()) return false;
+   if (!turboshaft_pipeline.SelectInstructions(linkage)) return false;
++  // Mark instruction selection complete.
++  turbofan_pipeline->info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kInstructionSelection);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kInstructionSelection));
+   // We can release the graph now.
+   turboshaft_data->ClearGraphComponent();
+ 
+@@ -498,9 +502,13 @@ TurbofanPipelineStatistics* CreatePipelineStatistics(
+           linkage->GetIncomingDescriptor())) {
+     return false;
+   }
++  turbofan_pipeline->info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kRegisterAllocation);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kRegisterAllocation));
+   if (!turboshaft_pipeline.AssembleCode(linkage)) {
+     return false;
+   }
++  turbofan_pipeline->info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kCodeGeneration);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kCodeGeneration));
+   return true;
+ }
+
+@@ -1952,6 +1959,8 @@ bool PipelineImpl::InitializeHeapBroker() {
+   }
+ 
+   RUN_MAYBE_ABORT(HeapBrokerInitializationPhase);
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kBrokerInitAndSerialization);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kBrokerInitAndSerialization));
+   data->broker()->StopSerializing();
+   data->EndPhaseKind();
+   return !info()->was_cancelled();
+@@ -1966,10 +1975,14 @@ bool PipelineImpl::CreateGraph(Linkage* linkage) {
+ 
+   RUN_MAYBE_ABORT(GraphBuilderPhase, linkage);
+   RunPrintAndVerify(GraphBuilderPhase::phase_name(), true);
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kGraphBuilder);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kGraphBuilder));
+ 
+   // Perform function context specialization and inlining (if enabled).
+   RUN_MAYBE_ABORT(InliningPhase);
+   RunPrintAndVerify(InliningPhase::phase_name(), true);
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kInlining);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kInlining));
+ 
+   // Determine the Typer operation flags.
+   {
+@@ -2000,37 +2013,52 @@ bool PipelineImpl::OptimizeTurbofanGraph(Linkage* linkage) {
+   // Trim the graph before typing to ensure all nodes are typed.
+   RUN_MAYBE_ABORT(EarlyGraphTrimmingPhase);
+   RunPrintAndVerify(EarlyGraphTrimmingPhase::phase_name(), true);
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kEarlyGraphTrimming);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kEarlyGraphTrimming));
+ 
+   // Type the graph and keep the Typer running such that new nodes get
+   // automatically typed when they are created.
+   RUN_MAYBE_ABORT(TyperPhase, data->CreateTyper());
+   RunPrintAndVerify(TyperPhase::phase_name());
+-
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kTyper);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kTyper));
+   RUN_MAYBE_ABORT(TypedLoweringPhase);
+   RunPrintAndVerify(TypedLoweringPhase::phase_name());
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kTypedLowering);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kTypedLowering));
+ 
+   if (data->info()->loop_peeling()) {
+     RUN_MAYBE_ABORT(LoopPeelingPhase);
+     RunPrintAndVerify(LoopPeelingPhase::phase_name(), true);
++    info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kLoopPeeling);
++    cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kLoopPeeling));
+   } else {
+     RUN_MAYBE_ABORT(LoopExitEliminationPhase);
+     RunPrintAndVerify(LoopExitEliminationPhase::phase_name(), true);
++    info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kLoopExitElimination);
++    cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kLoopExitElimination));
+   }
+ 
+   if (v8_flags.turbo_load_elimination) {
+     RUN_MAYBE_ABORT(LoadEliminationPhase);
+     RunPrintAndVerify(LoadEliminationPhase::phase_name());
++    info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kLoadElimination);
++    cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kLoadElimination));
+   }
+   data->DeleteTyper();
+ 
+   if (v8_flags.turbo_escape) {
+     RUN_MAYBE_ABORT(EscapeAnalysisPhase);
+     RunPrintAndVerify(EscapeAnalysisPhase::phase_name());
++    info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kEscapeAnalysis);
++    cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kEscapeAnalysis));
+   }
+ 
+   if (v8_flags.assert_types) {
+     RUN_MAYBE_ABORT(TypeAssertionsPhase);
+     RunPrintAndVerify(TypeAssertionsPhase::phase_name());
++    info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kTypeAssertions);
++    cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kTypeAssertions));
+   }
+ 
+   // Perform simplified lowering. This has to run w/o the Typer decorator,
+@@ -2038,30 +2066,39 @@ bool PipelineImpl::OptimizeTurbofanGraph(Linkage* linkage) {
+   // types might even conflict with the representation/truncation logic.
+   RUN_MAYBE_ABORT(SimplifiedLoweringPhase, linkage);
+   RunPrintAndVerify(SimplifiedLoweringPhase::phase_name(), true);
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kSimplifiedLowering);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kSimplifiedLowering));
+ 
+ #if V8_ENABLE_WEBASSEMBLY
+   if (data->has_js_wasm_calls()) {
+     DCHECK(data->info()->inline_js_wasm_calls());
+     RUN_MAYBE_ABORT(JSWasmInliningPhase);
+     RunPrintAndVerify(JSWasmInliningPhase::phase_name(), true);
+-
++    info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kJSWasmInlining);
++    cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kJSWasmInlining));
+     RUN_MAYBE_ABORT(WasmTypingPhase, -1);
+     RunPrintAndVerify(WasmTypingPhase::phase_name(), true);
+-
++    info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kWasmTyping);
++    cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kWasmTyping));
+     if (v8_flags.wasm_opt) {
+       RUN_MAYBE_ABORT(WasmGCOptimizationPhase,
+                       data->wasm_native_module_for_inlining()->module(),
+                       data->jsgraph());
+       RunPrintAndVerify(WasmGCOptimizationPhase::phase_name(), true);
++      info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kWasmGCOptimization);
++      cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kWasmGCOptimization));
+     }
+     RUN_MAYBE_ABORT(JSWasmLoweringPhase);
+     RunPrintAndVerify(JSWasmLoweringPhase::phase_name(), true);
+-
++    info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kJSWasmLowering);
++    cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kJSWasmLowering));
+     if (v8_flags.turbo_optimize_inlined_js_wasm_wrappers && v8_flags.wasm_opt) {
+       wasm::WasmDetectedFeatures detected({wasm::WasmDetectedFeature::gc});
+       RUN_MAYBE_ABORT(WasmOptimizationPhase,
+                       MachineOperatorReducer::kSilenceSignallingNan, detected);
+       RunPrintAndVerify(WasmOptimizationPhase::phase_name(), true);
++      info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kWasmOptimization);
++      cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kWasmOptimization));
+     }
+   }
+ #endif  // V8_ENABLE_WEBASSEMBLY
+@@ -2077,12 +2114,15 @@ bool PipelineImpl::OptimizeTurbofanGraph(Linkage* linkage) {
+ #ifdef DEBUG
+   RUN_MAYBE_ABORT(UntyperPhase);
+   RunPrintAndVerify(UntyperPhase::phase_name(), true);
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kUntyper);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kUntyper));
+ #endif
+ 
+   // Run generic lowering pass.
+   RUN_MAYBE_ABORT(GenericLoweringPhase);
+   RunPrintAndVerify(GenericLoweringPhase::phase_name(), true);
+-
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kGenericLowering);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kGenericLowering));
+   data->BeginPhaseKind("V8.TFBlockBuilding");
+ 
+   data->InitializeFrameData(linkage->GetIncomingDescriptor());
+@@ -2090,14 +2130,16 @@ bool PipelineImpl::OptimizeTurbofanGraph(Linkage* linkage) {
+   // Run early optimization pass.
+   RUN_MAYBE_ABORT(EarlyOptimizationPhase);
+   RunPrintAndVerify(EarlyOptimizationPhase::phase_name(), true);
+-
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kEarlyOptimization);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kEarlyOptimization));
+   data->source_positions()->RemoveDecorator();
+   if (data->info()->trace_turbo_json()) {
+     data->node_origins()->RemoveDecorator();
+   }
+ 
+   if (!ComputeScheduledGraph()) return false;
+-
++  info()->SetOptimizationBit(OptimizedCompilationInfo::OptimizationBit::kScheduledGraph);
++  cov_set_turbofan_optimization_bits(1ull << static_cast<int>(OptimizedCompilationInfo::OptimizationBit::kScheduledGraph));
+   return !info()->was_cancelled();
+ }
+ 

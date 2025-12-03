@@ -1,0 +1,109 @@
+diff --git a/src/codegen/optimized-compilation-info.h b/src/codegen/optimized-compilation-info.h
+index cf7dd4d6365..96b7d312cfb 100644
+--- a/src/codegen/optimized-compilation-info.h
++++ b/src/codegen/optimized-compilation-info.h
+@@ -6,6 +6,7 @@
+ #define V8_CODEGEN_OPTIMIZED_COMPILATION_INFO_H_
+ 
+ #include <memory>
++#include <array>
+ 
+ #include "src/base/vector.h"
+ #include "src/codegen/bailout-reason.h"
+@@ -99,6 +100,87 @@ class V8_EXPORT_PRIVATE OptimizedCompilationInfo final {
+   FLAGS(DEF_SETTER)
+ #undef DEF_SETTER
+ 
++  // Optimization tracing bitmap
++  //
++  // This bitmap tracks which compiler optimizations/passes are ran for a given
++  // optimized compilation. Bits correspond to major TurboFan/TurboShaft
++  // pipeline phases.
++  //
++  // phases (from pipeline passes in src/compiler/pipeline.cc):
++  // - BrokerInitAndSerialization: HeapBrokerInitializationPhase
++  // - GraphCreation:
++  //   - GraphBuilderPhase
++  //   - InliningPhase
++  // - Lowering and typed optimizations:
++  //   - EarlyGraphTrimmingPhase
++  //   - TyperPhase
++  //   - TypedLoweringPhase
++  //   - LoopPeelingPhase or LoopExitEliminationPhase
++  //   - LoadEliminationPhase
++  //   - EscapeAnalysisPhase
++  //   - TypeAssertionsPhase
++  //   - SimplifiedLoweringPhase
++  // - JS <-> Wasm related (conditional):
++  //   - JSWasmInliningPhase
++  //   - WasmTypingPhase
++  //   - WasmGCOptimizationPhase
++  //   - JSWasmLoweringPhase
++  //   - WasmOptimizationPhase
++  // - Post-typing cleanup:
++  //   - UntyperPhase (debug-only)
++  // - Generic lowering and early block optimizations:
++  //   - GenericLoweringPhase
++  //   - EarlyOptimizationPhase
++  // - Backend (scheduling/ISel/RA/codegen):
++  //   - ComputeScheduledGraph/Scheduling
++  //   - InstructionSelection
++  //   - RegisterAllocation
++  //   - CodeGeneration
++  //
++  enum class OptimizationBit : int {
++    kBrokerInitAndSerialization = 0,
++    kGraphBuilder,
++    kInlining,
++    kEarlyGraphTrimming,
++    kTyper,
++    kTypedLowering,
++    kLoopPeeling,
++    kLoopExitElimination,
++    kLoadElimination,
++    kEscapeAnalysis,
++    kTypeAssertions,
++    kSimplifiedLowering,
++    kJSWasmInlining,
++    kWasmTyping,
++    kWasmGCOptimization,
++    kJSWasmLowering,
++    kWasmOptimization,
++    kUntyper,
++    kGenericLowering,
++    kEarlyOptimization,
++    kScheduledGraph,
++    kInstructionSelection,
++    kRegisterAllocation,
++    kCodeGeneration
++  };
++
++  // set a bit indicating an optimization phase ran during this compilation
++  void SetOptimizationBit(OptimizationBit bit) {
++    const int index = static_cast<int>(bit);
++    const int word = index / 64;
++    const int offset = index % 64;
++    optimization_bits_[word] |= (uint64_t{1} << offset);
++  }
++
++  // query whether a given optimization phase bit is set
++  bool HasOptimizationBit(OptimizationBit bit) const {
++    const int index = static_cast<int>(bit);
++    const int word = index / 64;
++    const int offset = index % 64;
++    return (optimization_bits_[word] & (uint64_t{1} << offset)) != 0;
++  }
++
++
+   // Construct a compilation info for optimized compilation.
+   OptimizedCompilationInfo(Zone* zone, Isolate* isolate,
+                            IndirectHandle<SharedFunctionInfo> shared,
+@@ -354,6 +436,8 @@ class V8_EXPORT_PRIVATE OptimizedCompilationInfo final {
+   // handles above. The only difference is that is created in the
+   // CanonicalHandleScope(i.e step 1) is different).
+   std::unique_ptr<CanonicalHandlesMap> canonical_handles_;
++  // Two 64-bit words give space for up to 128 optimization bits.
++  std::array<uint64_t, 2> optimization_bits_ = {0, 0};
+ };
+ 
+ }  // namespace internal

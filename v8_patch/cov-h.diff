@@ -1,0 +1,23 @@
+diff --git a/src/fuzzilli/cov.h b/src/fuzzilli/cov.h
+index b48645576fc..090ac49186c 100644
+--- a/src/fuzzilli/cov.h
++++ b/src/fuzzilli/cov.h
+@@ -19,4 +19,18 @@ void sanitizer_cov_prepare_for_hardware_sandbox();
+ void cov_init_builtins_edges(uint32_t num_edges);
+ void cov_update_builtins_basic_block_coverage(const std::vector<bool>& cov_map);
+ 
++// Forward declaration for FeedbackNexus
++namespace v8 {
++namespace internal {
++class FeedbackNexus;
++}
++}
++
++// Global function declaration
++void cov_add_feedback_nexus(v8::internal::FeedbackNexus* nexus);
++
++// Track optimization passes for maglev and turbofan
++void cov_set_turbofan_optimization_bits(uint64_t bit);
++void cov_set_maglev_optimization_bits(uint64_t bit);
++
+ #endif  // V8_FUZZILLI_COV_H_
