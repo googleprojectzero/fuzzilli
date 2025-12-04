@@ -122,6 +122,17 @@ def verbose_print(options, text):
   if options.verbose:
     print(text)
 
+def supports_index_on_shard(options, index):
+  """If the task is distributed over multiple shards (bots), this returns if
+  a particular deterministic test index is part of the current run.
+
+  The test list must be equal and have a deterministic order across shards.
+
+  With the default options, this function returns always True, e.g.:
+  index % 1 == 0.
+  """
+  return index % options.num_shards == options.shard_index
+
 
 def transpile_suite(options, base_dir, output_dir):
   """Transpile all tests from one suite configuration in parallel."""
@@ -132,9 +143,10 @@ def transpile_suite(options, base_dir, output_dir):
   # Prepare inputs as a generator over tuples of input/output path.
   verbose_print(options, f'Listing tests in {test_input_dir}')
   def test_input_gen():
-    for abspath in list_test_filenames(
-        test_input_dir, metadata_parser.is_supported):
-      yield (abspath, output_dir / abspath.relative_to(base_dir))
+    for index, abspath in enumerate(list_test_filenames(
+        test_input_dir, metadata_parser.is_supported)):
+      if supports_index_on_shard(options, index):
+        yield (abspath, output_dir / abspath.relative_to(base_dir))
 
   # Iterate over all tests in parallel and collect stats.
   num_tests = 0
@@ -186,6 +198,13 @@ def parse_args(args):
     help='Optional absolute path to a json file, '
          'where this script will write its stats to.')
   parser.add_argument(
+    '--num-shards', type=int, default=1, choices=range(1, 9),
+    help='Overall number of shards to split this task into.')
+  parser.add_argument(
+    '--shard-index', type=int, default=0, choices=range(0, 8),
+    help='Index of the current shard for doing a part of the '
+         'overall task.')
+  parser.add_argument(
     '-v', '--verbose', default=False, action='store_true',
     help='Print more verbose output.')
   return parser.parse_args(args)
@@ -193,6 +212,7 @@ def parse_args(args):
 
 def main(args):
   options = parse_args(args)
+  assert options.shard_index < options.num_shards
   base_dir = Path(options.base_dir)
   output_dir = Path(options.output_dir)
   results = transpile_suite(options, base_dir, output_dir)
