@@ -30,6 +30,8 @@ import sys
 
 from pathlib import Path
 
+BASE_DIR = Path(__file__).parent.parent.parent
+
 
 class DefaultMetaDataParser:
   """Class instantiated once per test configuration/suite, providing a
@@ -96,7 +98,7 @@ def list_test_filenames(test_root, is_supported_fun):
 
 def run_transpile_tool(input_file, output_file):
   cmd = [
-      '.build/debug/FuzzILTool',
+      BASE_DIR / '.build/debug/FuzzILTool',
       '--compile',
       input_file,
       f'--outputPathJS={output_file}',
