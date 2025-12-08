@@ -322,6 +322,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsStrings)
         registerObjectGroup(.jsArrays)
         registerObjectGroup(.jsArguments)
+        registerObjectGroup(.jsIterator)
+        registerObjectGroup(.jsIteratorPrototype)
+        registerObjectGroup(.jsIteratorConstructor)
         registerObjectGroup(.jsGenerators)
         registerObjectGroup(.jsPromises)
         registerObjectGroup(.jsRegExps)
@@ -552,6 +555,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("Boolean", ofType: .jsBooleanConstructor)
         registerBuiltin("Number", ofType: .jsNumberConstructor)
         registerBuiltin("Symbol", ofType: .jsSymbolConstructor)
+        registerBuiltin("Iterator", ofType: .jsIteratorConstructor)
         registerBuiltin("BigInt", ofType: .jsBigIntConstructor)
         registerBuiltin("RegExp", ofType: .jsRegExpConstructor)
         for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError", "SuppressedError"] {
@@ -1009,8 +1013,14 @@ public extension ILType {
     /// Type of a JavaScript array.
     static let jsArray = ILType.iterable + ILType.object(ofGroup: "Array", withProperties: ["length"], withMethods: ["at", "concat", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "toReversed", "toSorted", "toSpliced", "with", "join", "lastIndexOf", "values", "flat", "flatMap"])
 
-    /// Type of a function's arguments object.
+    /// Type of a JavaScript function's arguments object.
     static let jsArguments = ILType.iterable + ILType.object(ofGroup: "Arguments", withProperties: ["length", "callee"])
+
+    /// Type of a JavaScript Iterator object.
+    static let jsIterator = ILType.iterable + ILType.object(ofGroup: "Iterator", withProperties: ["value", "done"], withMethods: ["next", "return", "throw", "map", "filter", "take", "drop", "flatMap", "reduce", "toArray", "forEach", "some", "every", "find"])
+
+    /// Type of the JavaScript Iterator constructor builtin.
+    static let jsIteratorConstructor = ILType.object(ofGroup: "IteratorConstructor", withProperties: ["prototype"], withMethods: ["from"])
 
     /// Type of a JavaScript generator object.
     static let jsGenerator = ILType.iterable + ILType.object(ofGroup: "Generator", withMethods: ["next", "return", "throw"])
@@ -1019,10 +1029,10 @@ public extension ILType {
     static let jsPromise = ILType.object(ofGroup: "Promise", withMethods: ["catch", "finally", "then"])
 
     /// Type of a JavaScript Map object.
-    static let jsMap = ILType.iterable + ILType.object(ofGroup: "Map", withProperties: ["size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
+    static let jsMap = ILType.iterable + ILType.object(ofGroup: "Map", withProperties: ["size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values", "getOrInsert", "getOrInsertComputed"])
 
     /// Type of a JavaScript WeakMap object.
-    static let jsWeakMap = ILType.object(ofGroup: "WeakMap", withMethods: ["delete", "get", "has", "set"])
+    static let jsWeakMap = ILType.object(ofGroup: "WeakMap", withMethods: ["delete", "get", "has", "set", "getOrInsert", "getOrInsertComputed"])
 
     /// Type of a JavaScript Set object.
     static let jsSet = ILType.iterable + ILType.object(ofGroup: "Set", withProperties: ["size"], withMethods: ["add", "clear", "delete", "entries", "forEach", "has", "keys", "values"])
@@ -1149,7 +1159,7 @@ public extension ILType {
     static let jsDateConstructor = ILType.functionAndConstructor([.opt(.string | .number)] => .jsDate) + .object(ofGroup: "DateConstructor", withProperties: ["prototype"], withMethods: ["UTC", "now", "parse"])
 
     /// Type of the JavaScript JSON object builtin.
-    static let jsJSONObject = ILType.object(ofGroup: "JSON", withMethods: ["parse", "stringify"])
+    static let jsJSONObject = ILType.object(ofGroup: "JSON", withMethods: ["parse", "stringify", "rawJSON", "isRawJSON"])
 
     /// Type of the JavaScript Reflect object builtin.
     static let jsReflectObject = ILType.object(ofGroup: "Reflect", withMethods: ["apply", "construct", "defineProperty", "deleteProperty", "get", "getOwnPropertyDescriptor", "getPrototypeOf", "has", "isExtensible", "ownKeys", "preventExtensions", "set", "setPrototypeOf"])
@@ -1306,10 +1316,16 @@ public extension ObjectGroup {
         // on the prototype. We hide them from the prototype object to avoid
         // generating `let v0 = Intl.DateTimeFormat.prototype.format`.
         // https://tc39.es/ecma402/#sec-intl.datetimeformat.prototype.format
+        // TODO(mliedtke): Find a nicer interface than manually excluding some
+        //                 magic combinations here.
         if receiver.name == "Intl.DateTimeFormat" || receiver.name == "Intl.NumberFormat" {
             properties.removeValue(forKey: "format")
         } else if receiver.name == "Intl.Collator" {
             properties.removeValue(forKey: "compare")
+        } else if receiver.name == "Iterator" {
+            properties.removeValue(forKey: "next")
+            properties.removeValue(forKey: "return")
+            properties.removeValue(forKey: "throw")
         }
         return ObjectGroup(
             name: name,
@@ -1342,7 +1358,7 @@ public extension ObjectGroup {
             "indexOf"     : [.jsAnything, .opt(.integer)] => .integer,
             "lastIndexOf" : [.jsAnything, .opt(.integer)] => .integer,
             "match"       : [.regexp] => .jsString,
-            "matchAll"    : [.regexp] => .jsString,
+            "matchAll"    : [.regexp] => .jsIterator,
             "normalize"   : [] => .jsString,  // the first parameter must be a specific string value, so we have a CodeGenerator for that instead
             "padEnd"      : [.integer, .opt(.string)] => .jsString,
             "padStart"    : [.integer, .opt(.string)] => .jsString,
@@ -1399,7 +1415,7 @@ public extension ObjectGroup {
         methods: [
             "at"             : [.integer] => .jsAnything,
             "copyWithin"     : [.integer, .integer, .opt(.integer)] => .jsArray,
-            "entries"        : [] => .jsArray,
+            "entries"        : [] => .jsIterator,
             "every"          : [.function(), .opt(.object())] => .boolean,
             "fill"           : [.jsAnything, .opt(.integer), .opt(.integer)] => .undefined,
             "find"           : [.function(), .opt(.object())] => .jsAnything,
@@ -1410,14 +1426,14 @@ public extension ObjectGroup {
             "includes"       : [.jsAnything, .opt(.integer)] => .boolean,
             "indexOf"        : [.jsAnything, .opt(.integer)] => .integer,
             "join"           : [.string] => .jsString,
-            "keys"           : [] => .object(),          // returns an array iterator
+            "keys"           : [] => .jsIterator,
             "lastIndexOf"    : [.jsAnything, .opt(.integer)] => .integer,
             "reduce"         : [.function(), .opt(.jsAnything)] => .jsAnything,
             "reduceRight"    : [.function(), .opt(.jsAnything)] => .jsAnything,
             "reverse"        : [] => .undefined,
             "some"           : [.function(), .opt(.jsAnything)] => .boolean,
             "sort"           : [.function()] => .undefined,
-            "values"         : [] => .object(),
+            "values"         : [] => .jsIterator,
             "pop"            : [] => .jsAnything,
             "push"           : [.jsAnything...] => .integer,
             "shift"          : [] => .jsAnything,
@@ -1477,14 +1493,52 @@ public extension ObjectGroup {
         methods: [:]
     )
 
+    static let jsIterator = ObjectGroup(
+        name: "Iterator",
+        instanceType: .jsIterator,
+        properties: [
+            "done": .boolean,
+            "value": .jsAnything
+        ],
+        methods: [
+            "next"    : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
+            "return"  : [.jsAnything] => .object(withProperties: ["done", "value"]),
+            "throw"   : [.jsAnything] => .object(withProperties: ["done", "value"]),
+            "map"     : [.function()] => .jsIterator,
+            "filter"  : [.function()] => .jsIterator,
+            "take"    : [.integer] => .jsIterator,
+            "drop"    : [.integer] => .jsIterator,
+            "flatMap" : [.function()] => .jsIterator,
+            "reduce"  : [.function(), .opt(.jsAnything)] => .jsAnything,
+            "toArray" : [] => .jsArray,
+            "forEach" : [.function()] => .undefined,
+            "some"    : [.function()] => .boolean,
+            "every"   : [.function()] => .boolean,
+            "find"    : [.function()] => .jsAnything,
+        ]
+    )
+
+    static let jsIteratorPrototype = createPrototypeObjectGroup(jsIterator)
+
+    static let jsIteratorConstructor = ObjectGroup(
+        name: "IteratorConstructor",
+        instanceType: .jsIteratorConstructor,
+        properties: [
+            "prototype" : jsIteratorPrototype.instanceType
+        ],
+        methods: [
+            "from"   : [.jsAnything] => .jsIterator,
+        ]
+    )
+
     static let jsGenerators = ObjectGroup(
         name: "Generator",
         instanceType: .jsGenerator,
         properties: [:],
         methods: [
-            "next"   : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
-            "return" : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
-            "throw"  : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"])
+            "next"    : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
+            "return"  : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
+            "throw"   : [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
         ]
     )
 
@@ -1508,15 +1562,17 @@ public extension ObjectGroup {
             "size"      : .integer
         ],
         methods: [
-            "clear"   : [] => .undefined,
-            "delete"  : [.jsAnything] => .boolean,
-            "entries" : [] => .object(),
-            "forEach" : [.function(), .opt(.object())] => .undefined,
-            "get"     : [.jsAnything] => .jsAnything,
-            "has"     : [.jsAnything] => .boolean,
-            "keys"    : [] => .object(),
-            "set"     : [.jsAnything, .jsAnything] => .jsMap,
-            "values"  : [] => .object(),
+            "clear"              : [] => .undefined,
+            "delete"             : [.jsAnything] => .boolean,
+            "entries"            : [] => .jsIterator,
+            "forEach"            : [.function(), .opt(.object())] => .undefined,
+            "get"                : [.jsAnything] => .jsAnything,
+            "has"                : [.jsAnything] => .boolean,
+            "keys"               : [] => .jsIterator,
+            "set"                : [.jsAnything, .jsAnything] => .jsMap,
+            "values"             : [] => .jsIterator,
+            "getOrInsert"        : [.jsAnything, .jsAnything] => .jsAnything,
+            "getOrInsertComputed": [.jsAnything, .function()] => .jsAnything,
         ]
     )
 
@@ -1526,10 +1582,12 @@ public extension ObjectGroup {
         instanceType: .jsWeakMap,
         properties: [:],
         methods: [
-            "delete" : [.jsAnything] => .boolean,
-            "get"    : [.jsAnything] => .jsAnything,
-            "has"    : [.jsAnything] => .boolean,
-            "set"    : [.jsAnything, .jsAnything] => .jsWeakMap,
+            "delete"             : [.jsAnything] => .boolean,
+            "get"                : [.jsAnything] => .jsAnything,
+            "has"                : [.jsAnything] => .boolean,
+            "set"                : [.jsAnything, .jsAnything] => .jsWeakMap,
+            "getOrInsert"        : [.jsAnything, .jsAnything] => .jsAnything,
+            "getOrInsertComputed": [.jsAnything, .function()] => .jsAnything,
         ]
     )
 
@@ -1544,11 +1602,11 @@ public extension ObjectGroup {
             "add"     : [.jsAnything] => .jsSet,
             "clear"   : [] => .undefined,
             "delete"  : [.jsAnything] => .boolean,
-            "entries" : [] => .object(),
+            "entries" : [] => .jsIterator,
             "forEach" : [.function(), .opt(.object())] => .undefined,
             "has"     : [.jsAnything] => .boolean,
-            "keys"    : [] => .object(),
-            "values"  : [] => .object(),
+            "keys"    : [] => .jsIterator,
+            "values"  : [] => .jsIterator,
         ]
     )
 
@@ -1592,12 +1650,12 @@ public extension ObjectGroup {
         properties: [
             "byteLength"    : .integer,
             "maxByteLength" : .integer,
-            "resizable"     : .boolean
+            "resizable"     : .boolean,
         ],
         methods: [
-            "resize"    : [.integer] => .undefined,
-            "slice"     : [.integer, .opt(.integer)] => .jsArrayBuffer,
-            "transfer"  : [] => .jsArrayBuffer,
+            "resize"              : [.integer] => .undefined,
+            "slice"               : [.integer, .opt(.integer)] => .jsArrayBuffer,
+            "transfer"            : [.opt(.integer)] => .jsArrayBuffer,
         ]
     )
 
@@ -1636,32 +1694,32 @@ public extension ObjectGroup {
                 "length"      : .integer
             ],
             methods: [
-                "at"          : [.integer] => .jsAnything,
-                "copyWithin"  : [.integer, .integer, .opt(.integer)] => .undefined,
-                "entries"     : [] => .jsArray,
-                "every"       : [.function(), .opt(.object())] => .boolean,
-                "fill"        : [.jsAnything, .opt(.integer), .opt(.integer)] => .undefined,
-                "find"        : [.function(), .opt(.object())] => .jsAnything,
-                "findIndex"   : [.function(), .opt(.object())] => .integer,
-                "findLast"    : [.function(), .opt(.object())] => .jsAnything,
+                "at"             : [.integer] => .jsAnything,
+                "copyWithin"     : [.integer, .integer, .opt(.integer)] => .undefined,
+                "entries"        : [] => .jsIterator,
+                "every"          : [.function(), .opt(.object())] => .boolean,
+                "fill"           : [.jsAnything, .opt(.integer), .opt(.integer)] => .undefined,
+                "find"           : [.function(), .opt(.object())] => .jsAnything,
+                "findIndex"      : [.function(), .opt(.object())] => .integer,
+                "findLast"       : [.function(), .opt(.object())] => .jsAnything,
                 "findLastIndex"  : [.function(), .opt(.object())] => .integer,
-                "forEach"     : [.function(), .opt(.object())] => .undefined,
-                "includes"    : [.jsAnything, .opt(.integer)] => .boolean,
-                "indexOf"     : [.jsAnything, .opt(.integer)] => .integer,
-                "join"        : [.string] => .jsString,
-                "keys"        : [] => .object(),          // returns an array iterator
-                "lastIndexOf" : [.jsAnything, .opt(.integer)] => .integer,
-                "reduce"      : [.function(), .opt(.jsAnything)] => .jsAnything,
-                "reduceRight" : [.function(), .opt(.jsAnything)] => .jsAnything,
-                "reverse"     : [] => .undefined,
-                "set"         : [.object(), .opt(.integer)] => .undefined,
-                "some"        : [.function(), .opt(.jsAnything)] => .boolean,
-                "sort"        : [.function()] => .undefined,
-                "values"      : [] => .object(),
-                "filter"      : [.function(), .opt(.object())] => .jsTypedArray(variant),
-                "map"         : [.function(), .opt(.object())] => .jsTypedArray(variant),
-                "slice"       : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
-                "subarray"    : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
+                "forEach"        : [.function(), .opt(.object())] => .undefined,
+                "includes"       : [.jsAnything, .opt(.integer)] => .boolean,
+                "indexOf"        : [.jsAnything, .opt(.integer)] => .integer,
+                "join"           : [.string] => .jsString,
+                "keys"           : [] => .jsIterator,
+                "lastIndexOf"    : [.jsAnything, .opt(.integer)] => .integer,
+                "reduce"         : [.function(), .opt(.jsAnything)] => .jsAnything,
+                "reduceRight"    : [.function(), .opt(.jsAnything)] => .jsAnything,
+                "reverse"        : [] => .undefined,
+                "set"            : [.object(), .opt(.integer)] => .undefined,
+                "some"           : [.function(), .opt(.jsAnything)] => .boolean,
+                "sort"           : [.function()] => .undefined,
+                "values"         : [] => .jsIterator,
+                "filter"         : [.function(), .opt(.object())] => .jsTypedArray(variant),
+                "map"            : [.function(), .opt(.object())] => .jsTypedArray(variant),
+                "slice"          : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
+                "subarray"       : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
                 "toString"       : [] => .jsString,
                 "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
                 "toReversed"     : [] => .jsTypedArray(variant),
@@ -2032,6 +2090,8 @@ public extension ObjectGroup {
         methods: [
             "parse"     : [.string, .opt(.function())] => .jsAnything,
             "stringify" : [.jsAnything, .opt(.function()), .opt(.number | .string)] => .jsString,
+            "rawJSON"   : [.plain(.string | .number | .boolean)] => .jsAnything,
+            "isRawJSON" : [.jsAnything] => .boolean,
         ]
     )
 
