@@ -98,8 +98,6 @@ class TestTranspileTests(fake_filesystem_unittest.TestCase):
 
     expected_results = {
       'num_tests': 4,
-      'num_successes': 3,
-      'percent_successes': 75.0,
       'failures': [
         {
           'output': 'Failed!',
@@ -148,8 +146,6 @@ class TestTranspileTests(fake_filesystem_unittest.TestCase):
 
     expected_results = {
       'num_tests': 2,
-      'num_successes': 1,
-      'percent_successes': 50.0,
       'failures': [
         {
           'output': 'Failed!',

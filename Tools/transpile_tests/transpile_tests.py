@@ -172,15 +172,13 @@ def transpile_suite(options, base_dir, output_dir):
         f'({num_successes} of {num_tests}) test cases.')
   return {
     'num_tests': num_tests,
-    'num_successes': num_successes,
-    'percent_successes': ratio,
     'failures': failures,
   }
 
 
 def write_json_output(path, results):
   with open(path, 'w') as f:
-    json.dump(results, f)
+    json.dump(results, f, sort_keys=True, indent=2)
 
 
 def parse_args(args):
