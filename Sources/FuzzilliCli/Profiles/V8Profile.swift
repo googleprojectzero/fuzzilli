@@ -63,6 +63,7 @@ let v8Profile = Profile(
 
         (WorkerGenerator,                         10),
         (V8GcGenerator,                            5),
+        (V8AllocationTimeoutGenerator,             5),
         (V8MajorGcGenerator,                       5),
 
         (WasmStructGenerator,                     15),

@@ -51,6 +51,13 @@ public let V8GcGenerator = CodeGenerator("GcGenerator") { b in
     b.callFunction(gc, withArgs: b.findOrGenerateArguments(forSignature: b.fuzzer.environment.type(ofBuiltin: "gc").signature!))
 }
 
+public let V8AllocationTimeoutGenerator = CodeGenerator("AllocationTimeoutGenerator") { b in
+    // Repeated GCs are expensive, so only rarely use an interval.
+    let interval = probability(0.1) ? Int64.random(in: 100...10000) : -1
+    let timeout = Int64.random(in: 0...(Bool.random() ? 10 : 100)) // prefer small values
+    b.eval("%SetAllocationTimeout(%@, %@)", with: [b.loadInt(interval), b.loadInt(timeout)]);
+}
+
 public let V8MajorGcGenerator = CodeGenerator("MajorGcGenerator") { b in
     // Differently to `gc()`, this intrinsic is registered with less effects, preventing fewer
     // optimizations in V8's optimizing compilers.
