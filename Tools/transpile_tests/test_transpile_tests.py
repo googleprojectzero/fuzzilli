@@ -97,13 +97,14 @@ class TestTranspileTests(fake_filesystem_unittest.TestCase):
       actual_results = json.load(f)
 
     expected_results = {
-      'num_tests': 4,
-      'failures': [
-        {
-          'output': 'Failed!',
-          'path': 'test/test262/data/test/folder2/Test4_fail.js',
-        },
-      ],
+      'folder1/subfolder1': {
+        'failures': [],
+        'num_tests': 2,
+      },
+      'folder2': {
+        'failures': [{'output': 'Failed!', 'path': 'folder2/Test4_fail.js'}],
+        'num_tests': 2,
+      },
     }
     self.assertEqual(expected_results, actual_results)
 
@@ -145,15 +146,105 @@ class TestTranspileTests(fake_filesystem_unittest.TestCase):
       actual_results = json.load(f)
 
     expected_results = {
-      'num_tests': 2,
-      'failures': [
-        {
-          'output': 'Failed!',
-          'path': 'test/test262/data/test/folder2/Test4_fail.js',
-        },
-      ],
+      'folder1/subfolder1': {
+        'failures': [],
+        'num_tests': 1,
+      },
+      'folder2': {
+        'failures': [{'output': 'Failed!', 'path': 'folder2/Test4_fail.js'}],
+        'num_tests': 1,
+      },
     }
     self.assertEqual(expected_results, actual_results)
+
+
+Options = namedtuple('Options', 'verbose')
+
+class UnitTests(unittest.TestCase):
+  def test_level_key_0(self):
+    counter = transpile_tests.TestCounter(0, Options(False))
+    self.assertEqual('', counter.level_key(Path('test.js')))
+    self.assertEqual('', counter.level_key(Path('level1/test.js')))
+
+  def test_level_key_2(self):
+    counter = transpile_tests.TestCounter(2, Options(False))
+    self.assertEqual(
+        '', counter.level_key(Path('test.js')))
+    self.assertEqual(
+        'level1', counter.level_key(Path('level1/test.js')))
+    self.assertEqual(
+        'level1/level2',
+        counter.level_key(Path('level1/level2/test.js')))
+    self.assertEqual(
+        'level1/level2',
+        counter.level_key(Path('level1/level2/level3/test.js')))
+
+  def test_simple_counts(self):
+    counter = transpile_tests.TestCounter(1, Options(False))
+    self.assertEqual({}, counter.results())
+
+    counter.count(0, Path('pass1.js'), 'good')
+    self.assertEqual(
+        {
+          '': {'failures': [], 'num_tests': 1},
+        },
+        counter.results())
+
+    counter.count(0, Path('a/b/pass1.js'), 'good')
+    self.assertEqual(
+        {
+          '': {'failures': [], 'num_tests': 1},
+          'a': {'failures': [], 'num_tests': 1},
+        },
+        counter.results())
+
+    counter.count(1, Path('a/fail1.js'), 'bad')
+    self.assertEqual(
+        {
+          '': {'failures': [], 'num_tests': 1},
+          'a': {
+            'failures': [{'output': 'bad', 'path': 'a/fail1.js'}],
+            'num_tests': 2,
+          },
+        },
+        counter.results())
+
+  def test_complex_count(self):
+    counter = transpile_tests.TestCounter(2, Options(False))
+    counter.count(0, Path('A1/A2/3/pass1.js'), 'good')
+    counter.count(0, Path('A1/B2/3/pass1.js'), 'good')
+    counter.count(1, Path('A1/B2/3/fail1.js'), 'bad')
+    counter.count(0, Path('A1/A2/3/pass2.js'), 'good')
+    counter.count(0, Path('A1/A2/3/pass3.js'), 'good')
+    counter.count(1, Path('fail4.js'), 'bad')
+    counter.count(0, Path('B1/A2/3/pass1.js'), 'good')
+    counter.count(1, Path('B1/A2/fail2.js'), 'bad')
+    counter.count(1, Path('B1/fail3.js'), 'bad')
+    counter.count(1, Path('fail5.js'), 'bad')
+    counter.count(1, Path('fail6.js'), 'bad')
+    counter.count(0, Path('A1/B2/3/pass4.js'), 'good')
+
+    self.assertEqual(
+        {
+          '': {'num_tests': 3, 'failures':[
+            {'output': 'bad', 'path': 'fail4.js'},
+            {'output': 'bad', 'path': 'fail5.js'},
+            {'output': 'bad', 'path': 'fail6.js'},
+          ]},
+          'B1': {'num_tests': 1, 'failures':[
+            {'output': 'bad', 'path': 'B1/fail3.js'},
+          ]},
+          'A1/A2': {'num_tests': 3, 'failures':[]},
+          'A1/B2': {'num_tests': 3, 'failures':[
+            {'output': 'bad', 'path': 'A1/B2/3/fail1.js'},
+          ]},
+          'B1/A2': {'num_tests': 2, 'failures':[
+            {'output': 'bad', 'path': 'B1/A2/fail2.js'},
+          ]},
+        },
+        counter.results()
+    )
+
 
 if __name__ == '__main__':
   unittest.main()

@@ -28,6 +28,7 @@ import os
 import subprocess
 import sys
 
+from collections import defaultdict, Counter
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent.parent
@@ -49,7 +50,6 @@ class Test262MetaDataParser(DefaultMetaDataParser):
         'parseTestRecord', f'{tools_abs_path}/parseTestRecord.py')
     self.parse = loader.load_module().parseTestRecord
     self.excluded_suffixes = ['_FIXTURE.js']
-    self.excluded_dirs = ['staging']
 
   def is_supported(self, abspath, relpath):
     if not super().is_supported(abspath, relpath):
@@ -57,10 +57,6 @@ class Test262MetaDataParser(DefaultMetaDataParser):
 
     if any(relpath.name.endswith(suffix)
            for suffix in self.excluded_suffixes):
-      return False
-
-    if any(str(relpath).startswith(directory)
-           for directory in self.excluded_dirs):
       return False
 
     with open(abspath, encoding='utf-8') as f:
@@ -74,13 +70,80 @@ TEST_CONFIGS = {
   'test262': {
     'path': 'test/test262/data/test',
     'excluded_suffixes': ['_FIXTURE.js'],
-    # TODO(https://crbug.com/442444727): We might want to track the staging
-    # tests separately. Those typically address in-progress JS features with
-    # a high import-failure rate.
-    'excluded_dirs': ['staging'],
+    'levels': 2,
     'metadata_parser': Test262MetaDataParser,
   }
 }
+
+
+class TestCounter:
+  """Class to count test results, keyed by a number of directories of each
+  test's relative path.
+
+  The number of levels per key is passed to the constructor. Then when
+  counting tests, each tests goes into a results bucket for its key, e.g.:
+  With level 2, test 'a/b/c/d/test1.js' will have key 'a/b'.
+
+  The final results structure is a dict key -> results, where results
+  is a dict:
+  { 'num_tests': <all tests on that level>, 'failures': <list of failures>}
+
+  Example for 2 tests with 1 failure under the a/b directory and 1 tests under
+  a/c:
+  {
+    'a/b': {
+      'num_tests': 2,
+      'failures': [{'path': 'a/b/c/d/test1.js', 'output': 'stdout'}],
+    },
+    'a/c': {
+      'num_tests': 1,
+      'failures': [],
+    },
+  }
+  """
+  def __init__(self, levels, options):
+    self.levels = levels
+    self.options = options
+    self.num_tests = Counter()
+    self.failures = defaultdict(list)
+    self.total_tests = 0
+    self.num_failures = 0
+
+  @property
+  def num_successes(self):
+    return self.total_tests - self.num_failures
+
+  def level_key(self, relpath):
+    parts = list(relpath.parts)
+    assert parts
+    assert parts[0] != '/'
+
+    parts = parts[:-1]
+    parts = parts[:self.levels]
+    return '/'.join(parts)
+
+  def count(self, exit_code, relpath, stdout):
+    self.total_tests += 1
+    key = self.level_key(relpath)
+    self.num_tests[key] += 1
+    if exit_code != 0:
+      self.num_failures += 1
+      verbose_print(self.options, f'Failed to compile {relpath}')
+      self.failures[key].append({'path': str(relpath), 'output': stdout})
+    if (self.total_tests + 1) % 500 == 0:
+      print(f'Processed {self.total_tests + 1} test cases.')
+
+  def results(self):
+    return dict(
+        (
+          key,
+          {
+            'num_tests': self.num_tests[key],
+            'failures': self.failures[key],
+          },
+        )
+        for key in sorted(self.num_tests.keys())
+    )
 
 
 def list_test_filenames(test_root, is_supported_fun):
@@ -151,29 +214,19 @@ def transpile_suite(options, base_dir, output_dir):
         yield (abspath, output_dir / abspath.relative_to(base_dir))
 
   # Iterate over all tests in parallel and collect stats.
-  num_tests = 0
-  failures = []
+  counter = TestCounter(test_config['levels'], options)
   with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
     for exit_code, abspath, stdout in pool.imap_unordered(
         transpile_test, test_input_gen()):
-      num_tests += 1
-      if exit_code != 0:
-        relpath = abspath.relative_to(base_dir)
-        failures.append({'path': str(relpath), 'output': stdout})
-        verbose_print(options, f'Failed to compile {relpath}')
-      if (num_tests + 1) % 500 == 0:
-        print(f'Processed {num_tests + 1} test cases.')
+      relpath = abspath.relative_to(test_input_dir)
+      counter.count(exit_code, relpath, stdout)
 
   # Render and return results.
-  assert num_tests, 'Failed to find any tests.'
-  num_successes = num_tests - len(failures)
-  ratio = float(num_successes) / num_tests * 100
+  assert counter.total_tests, 'Failed to find any tests.'
+  ratio = float(counter.num_successes) / counter.total_tests * 100
   print(f'Successfully compiled {ratio:.2f}% '
-        f'({num_successes} of {num_tests}) test cases.')
-  return {
-    'num_tests': num_tests,
-    'failures': failures,
-  }
+        f'({counter.num_successes} of {counter.total_tests}) test cases.')
+  return counter.results()
 
 
 def write_json_output(path, results):

@@ -20,18 +20,22 @@ import argparse
 import json
 import sys
 
+from collections import defaultdict, Counter
+
 
 def merge_test_results(inputs):
-  num_tests = 0
-  failures = []
-  for result in inputs:
-    num_tests += result["num_tests"]
-    failures += result["failures"]
+  num_tests = Counter()
+  failures = defaultdict(list)
 
-  return {
-    'num_tests': num_tests,
-    'failures': failures,
-  }
+  for result in inputs:
+    for key, value in result.items():
+      num_tests[key] += value["num_tests"]
+      failures[key] += value["failures"]
+
+  return dict(
+      (key, {'num_tests': num_tests[key], 'failures': failures[key]})
+      for key in sorted(num_tests.keys())
+  )
 
 
 def parse_args(args):
@@ -57,8 +61,7 @@ def main(args):
   with open(options.json_output, 'w') as f:
     json.dump(result, f, sort_keys=True, indent=2)
 
-  print(f'Merged results for {result["num_tests"]} tests '
-        f'and {len(result["failures"])} failures.')
+  print(f'Successfully merged results.')
 
 
 if __name__ == '__main__':

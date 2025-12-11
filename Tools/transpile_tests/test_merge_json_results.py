@@ -28,19 +28,37 @@ class TestMergeResults(fake_filesystem_unittest.TestCase):
   def test_full_run(self, fs):
     with open('/in1.json', 'w') as f:
       json.dump({
-        'num_tests': 2,
-        'failures': [
-          {'path': 'path/to/failure1', 'output': 'foo'},
-        ]
+        'a/a': {
+          'num_tests': 2,
+          'failures': [],
+        },
+        'a/b': {
+          'num_tests': 2,
+          'failures': [
+            {'path': 'a/b/c/failure1', 'output': 'foo'},
+          ],
+        },
       }, f)
 
     with open('/in2.json', 'w') as f:
       json.dump({
-        'num_tests': 3,
-        'failures': [
-          {'path': 'path/to/failure2', 'output': 'bar 42\nbar 43'},
-          {'path': 'path/to/failure3', 'output': 'baz'},
-        ]
+        'a': {
+          'num_tests': 1,
+          'failures': [
+            {'path': 'a/failure4', 'output': 'foo'},
+          ],
+        },
+        'a/a': {
+          'num_tests': 1,
+          'failures': [],
+        },
+        'a/b': {
+          'num_tests': 3,
+          'failures': [
+            {'path': 'a/b/c/failure2', 'output': 'bar 42\nbar 43'},
+            {'path': 'a/b/d/failure3', 'output': 'baz'},
+          ]
+        },
       }, f)
 
     f = io.StringIO()
@@ -53,7 +71,7 @@ class TestMergeResults(fake_filesystem_unittest.TestCase):
 
     # Verify the output.
     self.assertEqual(
-        'Merged results for 5 tests and 3 failures.',
+        'Successfully merged results.',
         f.getvalue().strip())
 
     # Verify the results written to the json output file.
@@ -61,13 +79,24 @@ class TestMergeResults(fake_filesystem_unittest.TestCase):
       actual_results = json.load(f)
 
     expected_results = {
-      'num_tests': 5,
-      'failures': [
-        {'path': 'path/to/failure1', 'output': 'foo'},
-        {'path': 'path/to/failure2', 'output': 'bar 42\nbar 43'},
-        {'path': 'path/to/failure3', 'output': 'baz'},
-      ],
+      'a': {
+        'failures': [{'output': 'foo', 'path': 'a/failure4'}],
+        'num_tests': 1,
+      },
+      'a/a': {
+        'failures': [],
+        'num_tests': 3,
+      },
+      'a/b': {
+        'failures': [
+          {'output': 'foo', 'path': 'a/b/c/failure1'},
+          {'output': 'bar 42\nbar 43', 'path': 'a/b/c/failure2'},
+          {'output': 'baz', 'path': 'a/b/d/failure3'},
+        ],
+        'num_tests': 5,
+      },
     }
+
     self.assertEqual(expected_results, actual_results)
 
 
