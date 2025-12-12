@@ -1061,7 +1061,6 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         chooseBooleanFlag("wasm-bulkmem-inlining")
         chooseBooleanFlag("wasm-lazy-compilation")
         chooseBooleanFlag("wasm-lazy-validation")
-        chooseBooleanFlag("wasm-simd-ssse3-codegen")
     }
 
     return args
