@@ -16,7 +16,8 @@ syntax = "proto3";
 package compiler.protobuf;
 
 message AST {
-    repeated Statement statements = 1;
+    string leadingComments = 1;
+    repeated Statement statements = 2;
 }
 
 // A parameter in a function declaration. Not an expression on its own.

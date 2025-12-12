@@ -153,6 +153,8 @@ public struct Compiler_Protobuf_AST: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  public var leadingComments: String = String()
+
   public var statements: [Compiler_Protobuf_Statement] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -2455,7 +2457,7 @@ extension Compiler_Protobuf_FunctionType: SwiftProtobuf._ProtoNameProviding {
 
 extension Compiler_Protobuf_AST: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AST"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}statements\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}leadingComments\0\u{1}statements\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2463,20 +2465,25 @@ extension Compiler_Protobuf_AST: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.statements) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.leadingComments) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.statements) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.leadingComments.isEmpty {
+      try visitor.visitSingularStringField(value: self.leadingComments, fieldNumber: 1)
+    }
     if !self.statements.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.statements, fieldNumber: 1)
+      try visitor.visitRepeatedMessageField(value: self.statements, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Compiler_Protobuf_AST, rhs: Compiler_Protobuf_AST) -> Bool {
+    if lhs.leadingComments != rhs.leadingComments {return false}
     if lhs.statements != rhs.statements {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

@@ -36,6 +36,17 @@ function tryReadFile(path) {
 function parse(script, proto) {
     let ast = Parser.parse(script, { plugins: ["explicitResourceManagement", "v8intrinsic"] });
 
+    // We assume leading comments (and whitespace) until the starting
+    // character of the first node of the program. This way
+    // is easier than rebuilding the comments from Babel's
+    // `leadingComments` AST nodes, which don't include whitespace and
+    // newlines.
+    const firstNode = ast.program.body[0];
+    let leadingComments = '';
+    if (firstNode) {
+        leadingComments = script.substring(0, firstNode.start);
+    }
+
     function assertNoError(err) {
         if (err) throw err;
     }
@@ -46,7 +57,7 @@ function parse(script, proto) {
 
     function visitProgram(node) {
         const AST = proto.lookupType('compiler.protobuf.AST');
-        let program = {statements: []};
+        let program = {leadingComments: leadingComments, statements: []};
         for (let child of node.body) {
             program.statements.push(visitStatement(child));
         }
@@ -667,7 +678,7 @@ protobuf.load(astProtobufDefinitionPath, function(err, root) {
     if (err)
         throw err;
 
-    let ast = parse(script, root);
+    const ast = parse(script, root);
 
     // Uncomment this to print the AST to stdout (will be very verbose).
     //console.log(JSON.stringify(ast, null, 2));
