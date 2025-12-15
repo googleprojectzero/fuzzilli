@@ -162,12 +162,12 @@ Options = namedtuple('Options', 'verbose')
 
 class UnitTests(unittest.TestCase):
   def test_level_key_0(self):
-    counter = transpile_tests.TestCounter(0, Options(False))
+    counter = transpile_tests.TestCounter(0, [], Options(False))
     self.assertEqual('', counter.level_key(Path('test.js')))
     self.assertEqual('', counter.level_key(Path('level1/test.js')))
 
   def test_level_key_2(self):
-    counter = transpile_tests.TestCounter(2, Options(False))
+    counter = transpile_tests.TestCounter(2, [], Options(False))
     self.assertEqual(
         '', counter.level_key(Path('test.js')))
     self.assertEqual(
@@ -179,8 +179,69 @@ class UnitTests(unittest.TestCase):
         'level1/level2',
         counter.level_key(Path('level1/level2/level3/test.js')))
 
+  def test_level_key_expansion(self):
+    expand_level_paths = ['a']
+    counter = transpile_tests.TestCounter(
+        1, expand_level_paths, Options(False))
+    self.assertEqual(
+        '', counter.level_key(Path('test.js')))
+    self.assertEqual(
+        'a', counter.level_key(Path('a/test.js')))
+    self.assertEqual(
+        'a/b',
+        counter.level_key(Path('a/b/test.js')))
+    self.assertEqual(
+        'a/b',
+        counter.level_key(Path('a/b/c/test.js')))
+    self.assertEqual(
+        'b',
+        counter.level_key(Path('b/c/test.js')))
+
+  def test_level_key_deep_expansion(self):
+    expand_level_paths = ['a/b/c', 'c/d/e']
+    counter = transpile_tests.TestCounter(
+        1, expand_level_paths, Options(False))
+    self.assertEqual(
+        'a', counter.level_key(Path('a/c/test.js')))
+    self.assertEqual(
+        'a', counter.level_key(Path('a/b/x/test.js')))
+    self.assertEqual(
+        'c', counter.level_key(Path('c/a/test.js')))
+    self.assertEqual(
+        'a/b/c',
+        counter.level_key(Path('a/b/c/test.js')))
+    self.assertEqual(
+        'a/b/c/d',
+        counter.level_key(Path('a/b/c/d/test.js')))
+    self.assertEqual(
+        'a/b/c/d',
+        counter.level_key(Path('a/b/c/d/e/test.js')))
+    self.assertEqual(
+        'c/d/e/f',
+        counter.level_key(Path('c/d/e/f/g/test.js')))
+
+  def test_level_key_expansion_with_prefix(self):
+    expand_level_paths = ['a/b', 'a/b/c']
+    counter = transpile_tests.TestCounter(
+        0, expand_level_paths, Options(False))
+    self.assertEqual(
+        '',
+        counter.level_key(Path('a/test.js')))
+    self.assertEqual(
+        'a/b',
+        counter.level_key(Path('a/b/test.js')))
+    self.assertEqual(
+        'a/b/c',
+        counter.level_key(Path('a/b/c/test.js')))
+    self.assertEqual(
+        'a/b/c/d',
+        counter.level_key(Path('a/b/c/d/test.js')))
+    self.assertEqual(
+        'a/b/c/d',
+        counter.level_key(Path('a/b/c/d/e/test.js')))
+
   def test_simple_counts(self):
-    counter = transpile_tests.TestCounter(1, Options(False))
+    counter = transpile_tests.TestCounter(1, [], Options(False))
     self.assertEqual({}, counter.results())
 
     counter.count(0, Path('pass1.js'), 'good')
@@ -210,7 +271,10 @@ class UnitTests(unittest.TestCase):
         counter.results())
 
   def test_complex_count(self):
-    counter = transpile_tests.TestCounter(2, Options(False))
+    # Path 'A1/B2/C3' will be expanded beyond the configured level 2.
+    expand_level_paths = ['A1/B2/C3']
+    counter = transpile_tests.TestCounter(
+        2, expand_level_paths, Options(False))
     counter.count(0, Path('A1/A2/3/pass1.js'), 'good')
     counter.count(0, Path('A1/B2/3/pass1.js'), 'good')
     counter.count(1, Path('A1/B2/3/fail1.js'), 'bad')
@@ -223,6 +287,7 @@ class UnitTests(unittest.TestCase):
     counter.count(1, Path('fail5.js'), 'bad')
     counter.count(1, Path('fail6.js'), 'bad')
     counter.count(0, Path('A1/B2/3/pass4.js'), 'good')
+    counter.count(0, Path('A1/B2/C3/D4/pass5.js'), 'good')
 
     self.assertEqual(
         {
@@ -238,6 +303,7 @@ class UnitTests(unittest.TestCase):
           'A1/B2': {'num_tests': 3, 'failures':[
             {'output': 'bad', 'path': 'A1/B2/3/fail1.js'},
           ]},
+          'A1/B2/C3/D4': {'num_tests': 1, 'failures': []},
           'B1/A2': {'num_tests': 2, 'failures':[
             {'output': 'bad', 'path': 'B1/A2/fail2.js'},
           ]},

@@ -71,6 +71,17 @@ TEST_CONFIGS = {
     'path': 'test/test262/data/test',
     'excluded_suffixes': ['_FIXTURE.js'],
     'levels': 2,
+    'expand_level_paths': [
+      'annexB/language',
+      'built-ins/Object',
+      'built-ins/RegExp',
+      'built-ins/Temporal',
+      'intl402/Temporal',
+      'language/expressions',
+      'language/expressions/class',
+      'language/statements',
+      'language/statements/class',
+    ],
     'metadata_parser': Test262MetaDataParser,
   }
 }
@@ -83,6 +94,10 @@ class TestCounter:
   The number of levels per key is passed to the constructor. Then when
   counting tests, each tests goes into a results bucket for its key, e.g.:
   With level 2, test 'a/b/c/d/test1.js' will have key 'a/b'.
+
+  With `expand_level_paths` we can configure those paths under which we
+  should expand results beyond the configured level. Each listed path
+  will create result keys with one level deeper than that path.
 
   The final results structure is a dict key -> results, where results
   is a dict:
@@ -101,8 +116,11 @@ class TestCounter:
     },
   }
   """
-  def __init__(self, levels, options):
+  def __init__(self, levels, expand_level_paths, options):
     self.levels = levels
+    # Cache the depth level of each expansion path
+    self.expand_level_paths = [
+      (p, p.count('/') + 1) for p in expand_level_paths]
     self.options = options
     self.num_tests = Counter()
     self.failures = defaultdict(list)
@@ -113,13 +131,24 @@ class TestCounter:
   def num_successes(self):
     return self.total_tests - self.num_failures
 
+  def largest_expansion_level(self, relpath):
+    """Returns the level until which relpath should be expanded, based on
+    the configured expansion paths.
+    """
+    path_str = str(relpath)
+    candidates = [-1]
+    for path, count in self.expand_level_paths:
+      if path_str.startswith(path):
+        candidates.append(count)
+    return max(candidates) + 1
+
   def level_key(self, relpath):
     parts = list(relpath.parts)
     assert parts
     assert parts[0] != '/'
 
     parts = parts[:-1]
-    parts = parts[:self.levels]
+    parts = parts[:max(self.levels, self.largest_expansion_level(relpath))]
     return '/'.join(parts)
 
   def count(self, exit_code, relpath, stdout):
@@ -214,7 +243,8 @@ def transpile_suite(options, base_dir, output_dir):
         yield (abspath, output_dir / abspath.relative_to(base_dir))
 
   # Iterate over all tests in parallel and collect stats.
-  counter = TestCounter(test_config['levels'], options)
+  counter = TestCounter(
+      test_config['levels'], test_config['expand_level_paths'], options)
   with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
     for exit_code, abspath, stdout in pool.imap_unordered(
         transpile_test, test_input_gen()):
