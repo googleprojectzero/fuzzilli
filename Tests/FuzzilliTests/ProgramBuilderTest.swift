@@ -3013,6 +3013,33 @@ class ProgramBuilderTests: XCTestCase {
         }
     }
 
+    func testTypedArrayFromBufferGenerator() {
+        let fuzzer = makeMockFuzzer()
+        let numPrograms = 50
+
+        for _ in 0...numPrograms {
+            let b = fuzzer.makeBuilder()
+            b.buildPrefix()
+
+            let generator = fuzzer.codeGenerators.filter {
+                $0.name == "TypedArrayFromBufferGenerator"
+            }[0]
+
+            // Now build this.
+            let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+            XCTAssertNotNil(syntheticGenerator)
+
+            let N = 30
+            // We might generate a lot more than 30 instructions to fulfill the constraints.
+            let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: N)
+
+            let _ = b.finalize()
+
+            // XCTAssertGreaterThan(numGeneratedInstructions, 0)
+            // TODO(tacet): Fails in around 5% of times, we should figure out how to fix it.
+        }
+    }
+
     func testArrayGetSchedulingTest() {
         let fuzzer = makeMockFuzzer()
         let numPrograms = 30

@@ -276,6 +276,39 @@ public let CodeGenerators: [CodeGenerator] = [
         b.construct(constructor, withArgs: [size])
     },
 
+    CodeGenerator("TypedArrayFromBufferGenerator",
+        inContext: .single(.javascript),
+        inputs: .required(.jsArrayBuffer | .jsSharedArrayBuffer)
+    ) { b, buffer in
+        let constructor = b.createNamedVariable(
+            forBuiltin: chooseUniform(
+                from: JavaScriptEnvironment.typedArrayConstructors
+            )
+        )
+        b.construct(constructor, withArgs: [buffer])
+        // TODO(tacet): add Fixed length view. withArgs: [buffer, offset, length]
+    },
+
+    CodeGenerator("DataViewFromBufferGenerator",
+        inContext: .single(.javascript),
+        inputs: .required(.jsArrayBuffer | .jsSharedArrayBuffer),
+        produces: [.jsDataView]
+    ) { b, buffer in
+        let constructor = b.createNamedVariable(forBuiltin: "DataView")
+        b.construct(constructor, withArgs: [buffer])
+        // TODO(tacet): add Fixed length view. withArgs: [buffer, offset, length]
+    },
+
+    CodeGenerator("TypedArrayLastIndexGenerator",
+        inContext: .single(.javascript),
+        inputs: .required(.object(withProperties: ["buffer", "length"])),
+        produces: [.integer, .jsAnything]
+    ) { b, view in
+        let len = b.getProperty("length", of: view)
+        let index = b.binary(len, b.loadInt(1), with: .Sub)
+        b.getComputedProperty(index, of: view)
+    },
+
     CodeGenerator("BuiltinIntlGenerator") { b in
         let _ = chooseUniform(from: [b.constructIntlDateTimeFormat, b.constructIntlCollator, b.constructIntlListFormat, b.constructIntlNumberFormat, b.constructIntlPluralRules, b.constructIntlRelativeTimeFormat, b.constructIntlSegmenter])()
     },
@@ -2869,7 +2902,7 @@ public let CodeGenerators: [CodeGenerator] = [
         // assert(b.type(of: imitation) == b.type(of: orig))
     },
 
-    CodeGenerator("ResizableArrayBufferGenerator", inputs: .one) { b, v in
+    CodeGenerator("ResizableArrayBufferGenerator", produces: [.jsArrayBuffer]) { b in
         let size = b.randomSize(upTo: 0x1000)
         var maxSize = b.randomSize()
         if maxSize < size {
@@ -2894,7 +2927,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.construct(View, withArgs: [ab])
     },
 
-    CodeGenerator("GrowableSharedArrayBufferGenerator", inputs: .one) { b, v in
+    CodeGenerator("GrowableSharedArrayBufferGenerator", produces: [.jsSharedArrayBuffer]) { b in
         let size = b.randomSize(upTo: 0x1000)
         var maxSize = b.randomSize()
         if maxSize < size {
@@ -3035,5 +3068,39 @@ public let CodeGenerators: [CodeGenerator] = [
                 let args = b.findOrGenerateArguments(forSignature: signature)
                 b.callFunction(f, withArgs: args)
             }, catchBody: { _ in })
+    },
+
+    CodeGenerator(
+        "ResizableBufferResizeGenerator",
+        inContext: .single(.javascript),
+        inputs: .required(.jsArrayBuffer)
+    ) { b, buffer in
+        let numPages = Int64.random(in: 0...256)
+        let newSize: Variable
+        // WebAssembly memories cannot shrink, and must be a multiple of the page size.
+        if probability(0.5) {
+            newSize = b.loadInt(numPages * Int64(WasmConstants.specWasmMemPageSize))
+        } else {
+            newSize = b.loadInt(Int64.random(in: 0...0x1000000))
+        }
+        b.callMethod("resize", on: buffer, withArgs: [newSize], guard: true)
+    },
+
+    CodeGenerator(
+        "GrowableSharedBufferGrowGenerator",
+        inContext: .single(.javascript),
+        inputs: .required(.jsSharedArrayBuffer)
+    ) { b, buffer in
+        let currentByteLength = b.getProperty("byteLength", of: buffer)
+        let numPages = Int64.random(in: 0...16)
+        // WebAssembly memories must be a multiple of the page size.
+        let delta: Variable
+        if probability(0.5) {
+            delta = b.loadInt(numPages * Int64(WasmConstants.specWasmMemPageSize))
+        } else {
+            delta = b.loadInt(Int64.random(in: 0...0x100000))
+        }
+        let newSize = b.binary(currentByteLength, delta, with: .Add)
+        b.callMethod("grow", on: buffer, withArgs: [newSize], guard: true)
     },
 ]

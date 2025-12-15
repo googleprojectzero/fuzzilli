@@ -1904,4 +1904,25 @@ class JSTyperTests: XCTestCase {
             XCTAssert(b.type(of: result).Is(requestedCtor))
         }
     }
+
+    func testBufferUnionType() {
+        // Explicitly verify the properties of the ArrayBuffer | SharedArrayBuffer union type.
+        let unionType = ILType.jsArrayBuffer | .jsSharedArrayBuffer
+
+        XCTAssert(unionType.Is(.jsArrayBuffer | .jsSharedArrayBuffer))
+        XCTAssert(unionType.MayBe(.jsArrayBuffer))
+        XCTAssert(unionType.MayBe(.jsSharedArrayBuffer))
+        XCTAssertFalse(unionType.Is(.jsArrayBuffer)) // It's not *definitely* an ArrayBuffer
+        XCTAssertFalse(unionType.Is(.jsSharedArrayBuffer))
+
+        // Common properties should be preserved
+        XCTAssert(unionType.properties.contains("byteLength"))
+        XCTAssert(unionType.methods.contains("slice"))
+
+        // Disjoint properties/methods should be removed in the union
+        XCTAssertFalse(unionType.methods.contains("resize")) // Only on ArrayBuffer
+        XCTAssertFalse(unionType.methods.contains("grow"))   // Only on SharedArrayBuffer
+
+        XCTAssertNil(unionType.group)
+    }
 }

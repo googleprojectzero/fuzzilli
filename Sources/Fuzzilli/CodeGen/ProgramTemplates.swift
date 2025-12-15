@@ -500,4 +500,122 @@ public let ProgramTemplates = [
         // Generate some more random code to (hopefully) use the parsed JSON in some interesting way.
         b.build(n: 25)
     },
+
+    WasmProgramTemplate("WasmResizableMemory") { b in
+        b.buildPrefix()
+        b.build(n: 50)
+
+        // 1. Define a Wasm module with a randomly configured memory and a single exported function.
+        let isMemory64 = probability(0.5)
+        let isShared = probability(0.5)
+        let signature = b.randomWasmSignature()
+
+        let jsMemory = b.createWasmMemory(minPages: 1, maxPages: Int.random(in: 50...200), isShared: isShared, isMemory64: isMemory64)
+
+        let module = b.buildWasmModule { m in
+            let internalMem = m.addMemory(minPages: 1, maxPages: Int.random(in: 50...200), isShared: isShared, isMemory64: isMemory64)
+
+            m.addWasmFunction(with: signature) { f, _, args in
+                b.build(n: 30)
+                if probability(0.5), let memory = b.randomVariable(ofType: .object(ofGroup: "WasmMemory")) {
+                    let numPagesToGrow = f.memoryArgument(Int64.random(in: 0..<5), b.type(of: memory).wasmMemoryType!)
+                    f.wasmMemoryGrow(memory: memory, growByPages: numPagesToGrow)
+                    b.build(n: 5)
+                }
+                return signature.outputTypes.map { f.findOrGenerateWasmVar(ofType: $0) }
+            }
+        }
+
+        // 2. In JavaScript, obtain references to the exported Wasm function and memory.
+        let exports = module.loadExports()
+        let wasmFunc = b.getProperty("w0", of: exports)
+        let exportedMem = b.getProperty("wm0", of: exports)
+
+        // 3. Create a ResizableArrayBuffer (RAB) and a random TypedArray view on the Wasm memory.
+        let rab = b.callMethod("toResizableBuffer", on: exportedMem)
+        let randomViewConstructor = b.createNamedVariable(forBuiltin: chooseUniform(from: JavaScriptEnvironment.typedArrayConstructors))
+        let view = b.construct(randomViewConstructor, withArgs: [rab])
+
+        b.build(n: 10)
+
+        // 4. Build a loop of mixed Wasm and JS operations.
+        b.buildRepeatLoop(n: 15) { i in
+            b.build(n: 5)
+
+            // Call the Wasm function, which may modify the memory.
+            b.callFunction(wasmFunc, withArgs: b.randomArguments(forCalling: wasmFunc))
+            b.build(n: 15)
+
+            // Explicitly grow the Wasm memory from the JavaScript side.
+            if probability(0.5), let memory = b.randomVariable(ofType: .object(ofGroup: "WasmMemory")) {
+                b.callMethod("grow", on: memory, withArgs: [b.loadInt(Int64.random(in: 0...5))], guard: true)
+                b.build(n: 5)
+            }
+        }
+    },
+
+    WasmProgramTemplate("WasmMemoryBufferReattachment") { b in
+        b.buildPrefix()
+        b.build(n: 15)
+
+        let jsMemory = b.createWasmMemory(minPages: 1, maxPages: 256, isShared: false, isMemory64: probability(0.5))
+
+        // 1. Setup: Wasm Module with Memory and Grow export
+        let module = b.buildWasmModule { m in
+            let mem = m.addMemory(minPages: 1, maxPages: 256, isShared: false, isMemory64: probability(0.5))
+            m.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { f, _, args in
+                // Interleave random Wasm instructions before growing
+                b.build(n: 15)
+
+                let isMem64 = b.type(of: mem).wasmMemoryType!.isMemory64
+                let pagesToGrow = isMem64 ? f.extendi32Toi64(args[0], isSigned: false) : args[0]
+                let oldSize = f.wasmMemoryGrow(memory: mem, growByPages: pagesToGrow)
+
+                return [isMem64 ? f.wrapi64Toi32(oldSize) : oldSize]
+            }
+        }
+        let exports = module.loadExports()
+        let memory = b.getProperty("wm0", of: exports)
+        let wasmGrow = b.getProperty("w0", of: exports)
+
+        // 2. JS Loop
+        b.buildRepeatLoop(n: 20) { _ in
+
+            // 3. Swift Loop: Unroll a long sequence of mixed operations
+            let steps = Int.random(in: 2...3)
+            for _ in 0..<steps {
+                let previousBuffer = b.getProperty("buffer", of: memory)
+
+                // A. Force (potential) Mode Transition (Fixed <-> Resizable)
+                if probability(0.5) {
+                    b.callMethod("toResizableBuffer", on: memory)
+                } else {
+                    b.callMethod("toFixedLengthBuffer", on: memory)
+                }
+
+                b.build(n: 3)
+
+                // B. Create View (that will likely detach soon)
+                let buffer = b.getProperty("buffer", of: memory)
+                let TypedArray = b.createNamedVariable(forBuiltin: chooseUniform(from: ["Int8Array", "Uint32Array", "Float64Array", "DataView"]))
+                let view = b.construct(TypedArray, withArgs: [buffer])
+                b.build(n: 3)
+
+                // C. Growth/Resize Event (Mix of JS, Wasm, and RAB APIs)
+                withEqualProbability({
+                    _ = b.callMethod("grow", on: memory, withArgs: [b.loadInt(Int64.random(in: 0...4))], guard: true)
+                }, {
+                    _ = b.callFunction(wasmGrow, withArgs: [b.loadInt(Int64.random(in: 0...4))])
+                }, {
+                    let isResizable = b.getProperty("resizable", of: buffer)
+                    b.buildIf(isResizable) {
+                        let currentLen = b.getProperty("byteLength", of: buffer)
+                        let newLen = b.binary(currentLen, b.loadInt(Int64(WasmConstants.specWasmMemPageSize)), with: .Add)
+                        b.callMethod("resize", on: buffer, withArgs: [newLen])
+                    }
+                })
+            }
+            b.build(n: 15)
+        }
+    },
 ]

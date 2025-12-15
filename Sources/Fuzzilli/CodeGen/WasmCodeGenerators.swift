@@ -1875,6 +1875,32 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     // Then we need a WasmJsCallSuspendingFunctionGenerator that takes such a WasmSuspenderObject function, unpacks the signature and emits a WasmJsCall
     // Then we also need a WrapPromisingGenerator that requires a WebAssembly module object, gets the exports field and its methods and then wraps one of those.
     // For all of this to work we need to add a WasmTypeExtension and ideally the dynamic object group inference.
+
+    CodeGenerator(
+        "WasmMemoryToResizableBufferGenerator",
+        inContext: .single(.javascript),
+        inputs: .required(.object(ofGroup: "WasmMemory")),
+        produces: [.jsArrayBuffer | .jsSharedArrayBuffer]
+    ) { b, memory in
+        b.callMethod("toResizableBuffer", on: memory)
+    },
+
+    CodeGenerator(
+        "WasmMemoryToFixedLengthBufferGenerator",
+        inContext: .single(.javascript),
+        inputs: .required(.object(ofGroup: "WasmMemory")),
+        produces: [.jsArrayBuffer | .jsSharedArrayBuffer]
+    ) { b, memory in
+        b.callMethod("toFixedLengthBuffer", on: memory)
+    },
+
+    CodeGenerator(
+        "WasmMemoryJSGrowGenerator",
+        inContext: .single(.javascript),
+        inputs: .required(.object(ofGroup: "WasmMemory"))
+    ) { b, memory in
+        b.callMethod("grow", on: memory, withArgs: [b.loadInt(Int64.random(in: 0...10))])
+    },
 ]
 
 fileprivate let wasmArrayTypeGenerator = GeneratorStub(

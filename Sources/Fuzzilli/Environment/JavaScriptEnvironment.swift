@@ -18,6 +18,13 @@ public class JavaScriptEnvironment: ComponentBase {
     // Possible return values of the 'typeof' operator.
     public static let jsTypeNames = ["undefined", "boolean", "number", "string", "symbol", "function", "object", "bigint"]
 
+    // TODO: use it in all places where it can be used.
+    public static let typedArrayConstructors = [
+        "Uint8Array", "Int8Array", "Uint16Array", "Int16Array",
+        "Uint32Array", "Int32Array", "Float32Array", "Float64Array",
+        "Uint8ClampedArray", "BigInt64Array", "BigUint64Array",
+    ]
+
     // Integer values that are more likely to trigger edge-cases.
     public static let InterestingIntegers: [Int64] = [
         -9223372036854775808, -9223372036854775807,               // Int64 min, mostly for BigInts

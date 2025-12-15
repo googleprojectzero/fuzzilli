@@ -27,4 +27,6 @@ public let programTemplateWeights = [
     "JITTrickyFunction":     2,
     "JSONFuzzer":            1,
     "WasmReturnCalls":       2,
+    "WasmResizableMemory":    2*6, // TODO(tacet): Revert increased fuzzing probability factors by 02/2026 or later.
+    "WasmMemoryBufferReattachment": 2*6,
 ]
