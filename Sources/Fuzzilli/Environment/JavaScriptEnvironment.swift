@@ -2282,7 +2282,7 @@ public extension ObjectGroup {
         name: "WebAssembly",
         instanceType: nil,
         properties: [
-            "JSTag": .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef], isJSTag: true)),
+            "JSTag": .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef()], isJSTag: true)),
             "Module": .jsWebAssemblyModuleConstructor,
             "Global": .jsWebAssemblyGlobalConstructor,
             "Instance": .jsWebAssemblyInstanceConstructor,

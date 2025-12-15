@@ -907,17 +907,20 @@ public struct JSTyper: Analyzer {
             case .wasmRefIsNull(_):
                 setType(of: instr.output, to: .wasmi32)
             case .wasmRefI31(_):
-                setType(of: instr.output, to: .wasmRefI31)
+                // TODO(pawkra): support shared variant.
+                setType(of: instr.output, to: .wasmRefI31())
             case .wasmI31Get(_):
                 setType(of: instr.output, to: .wasmi32)
             case .wasmAnyConvertExtern(_):
+                // TODO(pawkra): forward shared bit & update the comment
                 // any.convert_extern forwards the nullability bit from the input.
                 let null = type(of: instr.input(0)).wasmReferenceType!.nullability
-                setType(of: instr.output, to: .wasmRef(.Abstract(.WasmAny), nullability: null))
+                setType(of: instr.output, to: .wasmRef(.WasmAny, shared: false, nullability: null))
             case .wasmExternConvertAny(_):
-                // extern.convert_any forwards the nullability bit from the input.
+                // TODO(pawkra): forward shared bit & update the comment
+                // extern.convert_any forwards the nullability from the input.
                 let null = type(of: instr.input(0)).wasmReferenceType!.nullability
-                setType(of: instr.output, to: .wasmRef(.Abstract(.WasmExtern), nullability: null))
+                setType(of: instr.output, to: .wasmRef(.WasmExtern, shared: false, nullability: null))
             case .wasmDefineAdHocSignatureType(let op):
                 startTypeGroup()
                 addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)
@@ -1854,7 +1857,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, .wasmTable(wasmTableType: WasmTableType(elementType: op.tableType.elementType, limits: op.tableType.limits, isTable64: op.tableType.isTable64, knownEntries: [])))
 
         case .createWasmJSTag(_):
-            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef], isJSTag: true)))
+            set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmExternRef()], isJSTag: true)))
 
         case .createWasmTag(let op):
             set(instr.output, .object(ofGroup: "WasmTag", withWasmType: WasmTagType(op.parameterTypes)))

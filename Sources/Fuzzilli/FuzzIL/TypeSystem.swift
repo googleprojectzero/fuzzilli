@@ -247,22 +247,32 @@ public struct ILType: Hashable {
     public static let wasmi64 = ILType(definiteType: .wasmi64)
     public static let wasmf32 = ILType(definiteType: .wasmf32)
     public static let wasmf64 = ILType(definiteType: .wasmf64)
-    public static let wasmExternRef = ILType.wasmRef(.Abstract(.WasmExtern), nullability: true)
-    public static let wasmRefExtern = ILType.wasmRef(.Abstract(.WasmExtern), nullability: false)
-    public static let wasmFuncRef = ILType.wasmRef(.Abstract(.WasmFunc), nullability: true)
-    public static let wasmExnRef = ILType.wasmRef(.Abstract(.WasmExn), nullability: true)
-    public static let wasmI31Ref = ILType.wasmRef(.Abstract(.WasmI31), nullability: true)
-    public static let wasmRefI31 = ILType.wasmRef(.Abstract(.WasmI31), nullability: false)
-    public static let wasmAnyRef = ILType.wasmRef(.Abstract(.WasmAny), nullability: true)
-    public static let wasmRefAny = ILType.wasmRef(.Abstract(.WasmAny), nullability: false)
-    public static let wasmNullRef = ILType.wasmRef(.Abstract(.WasmNone), nullability: true)
-    public static let wasmNullExternRef = ILType.wasmRef(.Abstract(.WasmNoExtern), nullability: true)
-    public static let wasmNullFuncRef = ILType.wasmRef(.Abstract(.WasmNoFunc), nullability: true)
-    public static let wasmEqRef = ILType.wasmRef(.Abstract(.WasmEq), nullability: true)
-    public static let wasmStructRef = ILType.wasmRef(.Abstract(.WasmStruct), nullability: true)
-    public static let wasmArrayRef = ILType.wasmRef(.Abstract(.WasmArray), nullability: true)
+    public static func wasmExternRef(shared: Bool = false) -> ILType { wasmRef(.WasmExtern, shared: shared, nullability: true) }
+    public static func wasmRefExtern(shared: Bool = false) -> ILType { wasmRef(.WasmExtern, shared: shared, nullability: false) }
+    public static func wasmFuncRef(shared: Bool = false) -> ILType { wasmRef(.WasmFunc, shared: shared, nullability: true) }
+    public static func wasmExnRef(shared: Bool = false) -> ILType { wasmRef(.WasmExn, shared: shared, nullability: true) }
+    public static func wasmI31Ref(shared: Bool = false) -> ILType { wasmRef(.WasmI31, shared: shared, nullability: true) }
+    public static func wasmRefI31(shared: Bool = false) -> ILType { wasmRef(.WasmI31, shared: shared, nullability: false) }
+    public static func wasmAnyRef(shared: Bool = false) -> ILType { wasmRef(.WasmAny, shared: shared, nullability: true) }
+    public static func wasmRefAny(shared: Bool = false) -> ILType { wasmRef(.WasmAny, shared: shared, nullability: false) }
+    public static func wasmNullRef(shared: Bool = false) -> ILType { wasmRef(.WasmNone, shared: shared, nullability: true) }
+    public static func wasmNullExternRef(shared: Bool = false) -> ILType { wasmRef(.WasmNoExtern, shared: shared, nullability: true) }
+    public static func wasmNullFuncRef(shared: Bool = false) -> ILType { wasmRef(.WasmNoFunc, shared: shared, nullability: true) }
+    public static func wasmEqRef(shared: Bool = false) -> ILType { wasmRef(.WasmEq, shared: shared, nullability: true) }
+    public static func wasmStructRef(shared: Bool = false) -> ILType { wasmRef(.WasmStruct, shared: shared, nullability: true) }
+    public static func wasmArrayRef(shared: Bool = false) -> ILType { wasmRef(.WasmArray, shared: shared, nullability: true) }
     public static let wasmSimd128 = ILType(definiteType: .wasmSimd128)
     public static let wasmGenericRef = ILType(definiteType: .wasmRef)
+
+    public static func allNullableAbstractWasmRefTypes() -> [ILType] {
+        var refTypes: [ILType] = []
+        for sharedRef in [true, false] {
+            for heapType in WasmAbstractHeapType.allCases {
+                refTypes.append(wasmRef(heapType, shared: sharedRef, nullability: true))
+            }
+        }
+        return refTypes
+    }
 
     static func wasmTypeDef(description: WasmTypeDescription? = nil) -> ILType {
         let typeDef = WasmTypeDefinition()
@@ -273,6 +283,10 @@ public struct ILType: Hashable {
 
     static func wasmSelfReference() -> ILType {
         wasmTypeDef(description: .selfReference)
+    }
+
+    static func wasmRef(_ heapType: WasmAbstractHeapType, shared: Bool = false, nullability: Bool = true) -> ILType {
+        .wasmRef(.Abstract(.init(heapType, shared: shared)), nullability: nullability)
     }
 
     static func wasmRef(_ kind: WasmReferenceType.Kind, nullability: Bool) -> ILType {
@@ -286,7 +300,7 @@ public struct ILType: Hashable {
     }
 
     // The union of all primitive wasm types
-    public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef | .wasmI31Ref | .wasmSimd128 | .wasmGenericRef
+    public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmSimd128 | .wasmGenericRef
 
     public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
 
@@ -1098,8 +1112,9 @@ extension ILType: CustomStringConvertible {
             }
             let nullPrefix = refType.nullability ? "null " : ""
             switch refType.kind {
-                case .Abstract(let heapType):
-                    return ".wasmRef(.Abstract(\(nullPrefix)\(heapType)))"
+                case .Abstract(let heapTypeInfo):
+                    let sharedPrefix = heapTypeInfo.shared ? "shared " : ""
+                    return ".wasmRef(.Abstract(\(nullPrefix)\(sharedPrefix)\(heapTypeInfo.heapType)))"
                 case .Index(let indexRef):
                     if let desc = indexRef.get() {
                         return ".wasmRef(\(nullPrefix)Index \(desc.format(abbreviate: abbreviate)))"
@@ -1400,9 +1415,8 @@ public class WasmTypeDefinition: WasmTypeExtension {
 }
 
 // TODO: Add continuation types for core stack switching.
-// TODO: Add shared bit for shared-everything-threads.
 // TODO: Add internal string type for JS string builtins.
-enum WasmAbstractHeapType: CaseIterable, Comparable {
+public enum WasmAbstractHeapType: CaseIterable, Comparable {
     // Note: The union, intersection, ... implementations are inspired by Binaryen's implementation,
     // so when extending the type system, feel free to use that implemenation as an orientation.
     // https://github.com/WebAssembly/binaryen/blob/main/src/wasm/wasm-type.cpp
@@ -1484,8 +1498,8 @@ enum WasmAbstractHeapType: CaseIterable, Comparable {
         if self == other {
             return self
         }
-        if self.getBottom() != other.getBottom() {
-            return nil
+        if !self.inSameHierarchy(other) {
+            return nil  // Incompatible heap types.
         }
         if self.subsumes(other) {
             return other
@@ -1498,6 +1512,57 @@ enum WasmAbstractHeapType: CaseIterable, Comparable {
 
     func subsumes(_ other: Self) -> Bool {
         union(other) == self
+    }
+
+    public static func allNonBottomTypes() -> [WasmAbstractHeapType] {
+        return WasmAbstractHeapType.allCases.filter { !$0.isBottom() }
+    }
+}
+
+public class HeapTypeInfo : Hashable {
+    public let heapType: WasmAbstractHeapType
+    public let shared: Bool
+
+    init(_ heapType: WasmAbstractHeapType, shared: Bool) {
+        self.heapType = heapType
+        self.shared = shared
+    }
+
+    public static func ==(lhs: HeapTypeInfo, rhs: HeapTypeInfo) -> Bool {
+        return lhs.heapType == rhs.heapType && lhs.shared == rhs.shared
+    }
+
+    func union(_ other: HeapTypeInfo) -> HeapTypeInfo? {
+        if (shared != other.shared) {
+            return nil;
+        }
+        if let unionHeapType = heapType.union(other.heapType) {
+            return HeapTypeInfo(unionHeapType, shared: shared)
+        }
+        return nil
+    }
+
+    func intersection(_ other: HeapTypeInfo) -> HeapTypeInfo? {
+        if (shared != other.shared) {
+            return nil;
+        }
+        if let intersectionHeapType = heapType.intersection(other.heapType) {
+            return HeapTypeInfo(intersectionHeapType, shared: shared)
+        }
+        return nil
+    }
+
+    func subsumes(_ other: HeapTypeInfo) -> Bool {
+        if (shared != other.shared) {
+            return false;
+        }
+        return heapType.subsumes(other.heapType)
+    }
+
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(heapType)
+        hasher.combine(shared)
     }
 }
 
@@ -1523,7 +1588,7 @@ public class WasmReferenceType: WasmTypeExtension {
         // corresponding WasmTypeDefinition extension attached to the type of the operation
         // defining the wasm-gc type (and is kept alive by the JSTyper).
         case Index(UnownedWasmTypeDescription = UnownedWasmTypeDescription())
-        case Abstract(WasmAbstractHeapType)
+        case Abstract(HeapTypeInfo)
 
         func union(_ other: Self) -> Self? {
             switch self {
@@ -2077,10 +2142,10 @@ class WasmTypeDescription: Hashable, CustomStringConvertible {
     // The "closest" super type that is an abstract type (.WasmArray for arrays, .WasmStruct for
     // structs). It is nil for unresolved forward/self references for which the concrete abstract
     // super type is still undecided.
-    public let abstractHeapSupertype: WasmAbstractHeapType?
+    public let abstractHeapSupertype: HeapTypeInfo?
 
     // TODO(gc): We will also need to support subtyping of struct and array types at some point.
-    init(typeGroupIndex: Int, superType: WasmAbstractHeapType? = nil) {
+    init(typeGroupIndex: Int, superType: HeapTypeInfo? = nil) {
         self.typeGroupIndex = typeGroupIndex
         self.abstractHeapSupertype = superType
     }
@@ -2110,7 +2175,8 @@ class WasmSignatureTypeDescription: WasmTypeDescription {
 
     init(signature: WasmSignature, typeGroupIndex: Int) {
         self.signature = signature
-        super.init(typeGroupIndex: typeGroupIndex, superType: .WasmFunc)
+        // TODO(pawkra): support shared variant.
+        super.init(typeGroupIndex: typeGroupIndex, superType: HeapTypeInfo.init(.WasmFunc, shared: false))
     }
 
     override func format(abbreviate: Bool) -> String {
@@ -2131,7 +2197,8 @@ class WasmArrayTypeDescription: WasmTypeDescription {
     init(elementType: ILType, mutability: Bool, typeGroupIndex: Int) {
         self.elementType = elementType
         self.mutability = mutability
-        super.init(typeGroupIndex: typeGroupIndex, superType: .WasmArray)
+        // TODO(pawkra): support shared variant.
+        super.init(typeGroupIndex: typeGroupIndex, superType: HeapTypeInfo.init(.WasmArray, shared: false))
     }
 
     override func format(abbreviate: Bool) -> String {
@@ -2162,7 +2229,8 @@ class WasmStructTypeDescription: WasmTypeDescription {
 
     init(fields: [Field], typeGroupIndex: Int) {
         self.fields = fields
-        super.init(typeGroupIndex: typeGroupIndex, superType: .WasmStruct)
+        // TODO(pawkra): support shared variant.
+        super.init(typeGroupIndex: typeGroupIndex, superType: HeapTypeInfo.init(.WasmStruct, shared: false))
     }
 
     override func format(abbreviate: Bool) -> String {

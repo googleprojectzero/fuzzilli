@@ -270,6 +270,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             value: newValue)
     },
 
+    // TODO(pawkra): add shared variant.
     CodeGenerator("WasmRefNullGenerator", inContext: .single(.wasmFunction)) { b in
         let function = b.currentWasmModule.currentWasmFunction
         if let typeDef = (b.findVariable { b.type(of: $0).Is(.wasmTypeDef()) }),
@@ -280,7 +281,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             function.wasmRefNull(
                 type: .wasmRef(
                     .Abstract(
-                        chooseUniform(from: WasmAbstractHeapType.allCases)),
+                        HeapTypeInfo(chooseUniform(from: WasmAbstractHeapType.allCases), shared: false)),
                     nullability: true))
         }
     },
@@ -296,15 +297,18 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         b.currentWasmModule.currentWasmFunction.wasmRefI31(value)
     },
 
-    CodeGenerator("WasmI31GetGenerator", inContext: .single(.wasmFunction), inputs: .required(.wasmI31Ref)) { b, ref in
+    // TODO(pawkra): add shared variant.
+    CodeGenerator("WasmI31GetGenerator", inContext: .single(.wasmFunction), inputs: .required(.wasmI31Ref())) { b, ref in
         b.currentWasmModule.currentWasmFunction.wasmI31Get(ref, isSigned: Bool.random())
     },
 
-    CodeGenerator("WasmAnyConvertExternGenerator", inContext: .single(.wasmFunction), inputs: .required(.wasmExternRef)) { b, ref in
+    // TODO(pawkra): add shared variant.
+    CodeGenerator("WasmAnyConvertExternGenerator", inContext: .single(.wasmFunction), inputs: .required(.wasmExternRef())) { b, ref in
         b.currentWasmModule.currentWasmFunction.wasmAnyConvertExtern(ref)
     },
 
-    CodeGenerator("WasmExternConvertAnyGenerator", inContext: .single(.wasmFunction), inputs: .required(.wasmAnyRef)) { b, ref in
+    // TODO(pawkra): add shared variant.
+    CodeGenerator("WasmExternConvertAnyGenerator", inContext: .single(.wasmFunction), inputs: .required(.wasmAnyRef())) { b, ref in
         b.currentWasmModule.currentWasmFunction.wasmExternConvertAny(ref)
     },
 
@@ -596,7 +600,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // TODO(manoskouk): Generalize these.
         let minSize = 10
         let maxSize: Int? = nil
-        let elementType = ILType.wasmFuncRef
+        let elementType = ILType.wasmFuncRef()
 
         let definedEntryIndices: [Int]
         var definedEntries: [WasmTableType.IndexInTableAndWasmSignature] = []
@@ -609,7 +613,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
         // Currently, only generate entries for funcref tables.
         // TODO(manoskouk): Generalize this.
-        if elementType == .wasmFuncRef {
+        if elementType == .wasmFuncRef() {
             if b.randomVariable(ofType: expectedEntryType) != nil {
                 // There is at least one function in scope. Add some initial entries to the table.
                 // TODO(manoskouk): Generalize this.
@@ -638,7 +642,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmDefineElementSegmentGenerator", inContext: .single(.wasm)) { b in
-        let expectedEntryType = b.currentWasmModule.getEntryTypeForTable(elementType: ILType.wasmFuncRef)
+        let expectedEntryType = b.currentWasmModule.getEntryTypeForTable(elementType: .wasmFuncRef())
         if b.randomVariable(ofType: expectedEntryType) == nil {
             return
         }
@@ -669,7 +673,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         inputs: .required(.object(ofGroup: "WasmTable"))
     ) { b, table in
         let tableType = b.type(of: table).wasmTableType!
-        if !tableType.elementType.Is(.wasmFuncRef) { return }
+        if !tableType.elementType.Is(.wasmFuncRef()) { return }
         guard let indexedSignature = tableType.knownEntries.randomElement()
         else { return }
 
@@ -729,7 +733,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     ) { b, table in
         let function = b.currentWasmModule.currentWasmFunction
         let tableType = b.type(of: table).wasmTableType!
-        if !tableType.elementType.Is(.wasmFuncRef) { return }
+        if !tableType.elementType.Is(.wasmFuncRef()) { return }
         guard
             let indexedSignature =
                 (tableType.knownEntries.filter {
@@ -1551,7 +1555,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     CodeGenerator(
         "WasmThrowRefGenerator", inContext: .single(.wasmFunction),
-        inputs: .required(.wasmExnRef)
+        inputs: .required(.wasmExnRef())
     ) { b, exception in
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmBuildThrowRef(exception: exception)
@@ -1647,7 +1651,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                             []
                         }
                     if withExnRef {
-                        outputTypes.append(.wasmExnRef)
+                        outputTypes.append(.wasmExnRef())
                     }
                     function.wasmBeginBlock(with: [] => outputTypes, args: [])
                     return outputTypes

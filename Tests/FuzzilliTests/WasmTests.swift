@@ -44,16 +44,16 @@ func testForErrorOutput(program: String, runner: JavaScriptExecutor, errorMessag
 
 class WasmSignatureConversionTests: XCTestCase {
     func testJsSignatureConversion() {
-        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmFuncRef, 1), (.wasmExternRef, 1)])), [.wasmi32] => [.wasmi32])
-        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmf32, 1), (.wasmFuncRef, 1), (.wasmExternRef, 1)])), [.wasmf32] => [.wasmi32])
+        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmFuncRef(), 1), (.wasmExternRef(), 1)])), [.wasmi32] => [.wasmi32])
+        XCTAssertEqual(ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmf32, 1), (.wasmFuncRef(), 1), (.wasmExternRef(), 1)])), [.wasmf32] => [.wasmi32])
     }
 
     func testWasmSignatureConversion() {
         XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmi32, .wasmi64] => [.wasmf32]), [.integer, .bigint] => .float)
-        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmi32, .wasmExnRef] => [.wasmf64]), [.integer, .jsAnything] => .float)
-        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmExternRef, .wasmFuncRef] => [.wasmf64, .wasmf64]), [.jsAnything, .function()] => .jsArray)
-        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmRef(.Index(), nullability: false), .wasmFuncRef] => [.wasmf64, .wasmf64]), [.jsAnything, .function()] => .jsArray)
-        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmRef(.Abstract(.WasmExtern), nullability: false), .wasmFuncRef] => [.wasmf64, .wasmf64]), [.jsAnything, .function()] => .jsArray)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmi32, .wasmExnRef()] => [.wasmf64]), [.integer, .jsAnything] => .float)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmExternRef(), .wasmFuncRef()] => [.wasmf64, .wasmf64]), [.jsAnything, .function()] => .jsArray)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmRef(.Index(), nullability: false), .wasmFuncRef()] => [.wasmf64, .wasmf64]), [.jsAnything, .function()] => .jsArray)
+        XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmRef(.WasmExtern, nullability: false), .wasmFuncRef()] => [.wasmf64, .wasmf64]), [.jsAnything, .function()] => .jsArray)
         // TODO(cffsmith): Change this once we know how we want to represent .wasmSimd128 types in JS.
         XCTAssertEqual(ProgramBuilder.convertWasmSignatureToJsSignature([.wasmSimd128] => [.wasmSimd128]), [.jsAnything] => .jsAnything)
     }
@@ -452,7 +452,7 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             // Note that globals of exnref can only be defined in wasm, not in JS.
             let global = wasmModule.addGlobal(wasmGlobal: .exnref, isMutable: true)
-            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmExnRef, isMutable: true)))
+            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: .wasmExnRef(), isMutable: true)))
 
             wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
                 let value = function.wasmLoadGlobal(globalVariable: global)
@@ -461,12 +461,12 @@ class WasmFoundationTests: XCTestCase {
 
             // Throw an exception, catch it and store it in the global.
             wasmModule.addWasmFunction(with: [] => []) { function, label, args in
-                let exnref = function.wasmBuildBlockWithResults(with: [] => [.wasmExnRef], args: []) { catchLabel, _ in
+                let exnref = function.wasmBuildBlockWithResults(with: [] => [.wasmExnRef()], args: []) { catchLabel, _ in
                     function.wasmBuildTryTable(with: [] => [], args: [catchLabel], catches: [.AllRef]) { _, _ in
                         function.WasmBuildThrow(tag: tagi32, inputs: [function.consti32(42)])
                         return []
                     }
-                    return [function.wasmRefNull(type: .wasmExnRef)]
+                    return [function.wasmRefNull(type: .wasmExnRef())]
                 }[0]
                 function.wasmStoreGlobal(globalVariable: global, to: exnref)
                 return []
@@ -474,12 +474,12 @@ class WasmFoundationTests: XCTestCase {
 
             // Rethrow the exception stored in the global, catch it and extract the integer.
             wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
-                let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchLabel, _ in
+                let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef()], args: []) { catchLabel, _ in
                     function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchLabel], catches: [.Ref]) { _, _ in
                         function.wasmBuildThrowRef(exception: function.wasmLoadGlobal(globalVariable: global))
                         return []
                     }
-                    return [function.consti32(-1), function.wasmRefNull(type: .wasmExnRef)]
+                    return [function.consti32(-1), function.wasmRefNull(type: .wasmExnRef())]
                 }
                 return [caughtValues[0]]
             }
@@ -510,12 +510,12 @@ class WasmFoundationTests: XCTestCase {
         let otherModule = b.buildWasmModule { wasmModule in
             // Rethrow the exception stored in the global, catch it and extract the integer.
             wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
-                let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchLabel, _ in
+                let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef()], args: []) { catchLabel, _ in
                     function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchLabel], catches: [.Ref]) { _, _ in
                         function.wasmBuildThrowRef(exception: function.wasmLoadGlobal(globalVariable: global))
                         return []
                     }
-                    return [function.consti32(-1), function.wasmRefNull(type: .wasmExnRef)]
+                    return [function.consti32(-1), function.wasmRefNull(type: .wasmExnRef())]
                 }
                 return [caughtValues[0]]
             }
@@ -539,13 +539,13 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             let global = wasmModule.addGlobal(wasmGlobal: .externref, isMutable: true)
-            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
+            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: .wasmExternRef(), isMutable: true)))
 
-            wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, label, args in
+            wasmModule.addWasmFunction(with: [] => [.wasmExternRef()]) { function, label, args in
                 [function.wasmLoadGlobal(globalVariable: global)]
             }
 
-            wasmModule.addWasmFunction(with: [.wasmExternRef] => []) { function, label, args in
+            wasmModule.addWasmFunction(with: [.wasmExternRef()] => []) { function, label, args in
                 function.wasmStoreGlobal(globalVariable: global, to: args[0])
                 return []
             }
@@ -578,8 +578,9 @@ class WasmFoundationTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
+        // TODO(pawkra): add shared ref variant.
         let global: Variable = b.createWasmGlobal(value: .externref, isMutable: true)
-        XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef, isMutable: true)))
+        XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmExternRef(), isMutable: true)))
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         // The initial value is "undefined" (because we didn't provide an explicit initialization).
@@ -604,13 +605,13 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             let global = wasmModule.addGlobal(wasmGlobal: .i31ref, isMutable: true)
-            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmI31Ref, isMutable: true)))
+            XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: .wasmI31Ref(), isMutable: true)))
 
-            wasmModule.addWasmFunction(with: [] => [.wasmI31Ref]) { function, label, args in
+            wasmModule.addWasmFunction(with: [] => [.wasmI31Ref()]) { function, label, args in
                 [function.wasmLoadGlobal(globalVariable: global)]
             }
 
-            wasmModule.addWasmFunction(with: [.wasmI31Ref] => []) { function, label, args in
+            wasmModule.addWasmFunction(with: [.wasmI31Ref()] => []) { function, label, args in
                 function.wasmStoreGlobal(globalVariable: global, to: args[0])
                 return []
             }
@@ -642,8 +643,9 @@ class WasmFoundationTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
+        // TODO(pawkra): add shared ref variant.
         let global: Variable = b.createWasmGlobal(value: .i31ref, isMutable: true)
-        XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmI31Ref, isMutable: true)))
+        XCTAssertEqual(b.type(of: global), .object(ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"], withWasmType: WasmGlobalType(valueType: ILType.wasmI31Ref(), isMutable: true)))
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
         // The initial value is "null" (because we didn't provide an explicit initialization).
@@ -667,8 +669,8 @@ class WasmFoundationTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
-        let javaScriptTable = b.createWasmTable(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64)
-        XCTAssertEqual(b.type(of: javaScriptTable), .wasmTable(wasmTableType: WasmTableType(elementType: .wasmExternRef, limits: Limits(min: 5, max: 25), isTable64: isTable64, knownEntries: [])))
+        let javaScriptTable = b.createWasmTable(elementType: .wasmExternRef(), limits: Limits(min: 5, max: 25), isTable64: isTable64)
+        XCTAssertEqual(b.type(of: javaScriptTable), .wasmTable(wasmTableType: WasmTableType(elementType: .wasmExternRef(), limits: Limits(min: 5, max: 25), isTable64: isTable64, knownEntries: [])))
 
         let object = b.createObject(with: ["a": b.loadInt(41), "b": b.loadInt(42)])
 
@@ -676,9 +678,9 @@ class WasmFoundationTests: XCTestCase {
         b.callMethod("set", on: javaScriptTable, withArgs: [isTable64 ? b.loadBigInt(1) : b.loadInt(1), object])
 
         let module = b.buildWasmModule { wasmModule in
-            let tableRef = wasmModule.addTable(elementType: .wasmExternRef, minSize: 2, isTable64: isTable64)
+            let tableRef = wasmModule.addTable(elementType: .wasmExternRef(), minSize: 2, isTable64: isTable64)
 
-            wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, _, _ in
+            wasmModule.addWasmFunction(with: [] => [.wasmExternRef()]) { function, _, _ in
                 let offset = isTable64 ? function.consti64(0) : function.consti32(0)
                 var ref = function.wasmTableGet(tableRef: tableRef, idx: offset)
                 let offset1 = isTable64 ? function.consti64(1) : function.consti32(1)
@@ -728,7 +730,7 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, params in
                 [function.wasmi32BinOp(params[0], function.consti32(1), binOpKind: .Add)]
             }
-            wasmModule.addTable(elementType: .wasmFuncRef,
+            wasmModule.addTable(elementType: .wasmFuncRef(),
                                 minSize: 10,
                                 definedEntries: [.init(indexInTable: 0, signature: [.wasmi32] => [.wasmi32]), .init(indexInTable: 1, signature: [] => [.wasmi64])],
                                 definedEntryValues: [wasmFunction, jsFunction],
@@ -746,7 +748,7 @@ class WasmFoundationTests: XCTestCase {
         XCTAssertEqual(b.type(of: importedFunction), .function([] => .bigint))
 
         // This is the table type that we expect to see on the exports based on the dynamic object group typing.
-        let tableType = ILType.wasmTable(wasmTableType: WasmTableType(elementType: .wasmFuncRef, limits: Limits(min: 10), isTable64: isTable64, knownEntries: [
+        let tableType = ILType.wasmTable(wasmTableType: WasmTableType(elementType: .wasmFuncRef(), limits: Limits(min: 10), isTable64: isTable64, knownEntries: [
             .init(indexInTable: 0, signature: [.wasmi32] => [.wasmi32]),
             .init(indexInTable: 1, signature: [] => [.wasmi64])
 
@@ -794,7 +796,7 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64, .wasmi64]) { function, label, params in
                 return [params[0], function.consti64(1)]
             }
-            let table = wasmModule.addTable(elementType: .wasmFuncRef,
+            let table = wasmModule.addTable(elementType: .wasmFuncRef(),
                                             minSize: 10,
                                             definedEntries: [.init(indexInTable: 0, signature: [.wasmi64] => [.wasmi64, .wasmi64]), .init(indexInTable: 1, signature: [.wasmi64] => [.wasmi64])],
                                             definedEntryValues: [wasmFunction, jsFunction],
@@ -844,7 +846,7 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64, .wasmi64]) { function, label, params in
                 return [params[0], function.consti64(1)]
             }
-            wasmModule.addTable(elementType: .wasmFuncRef,
+            wasmModule.addTable(elementType: .wasmFuncRef(),
                 minSize: 10,
                 definedEntries: [.init(indexInTable: 0, signature: [.wasmi64] => [.wasmi64, .wasmi64]), .init(indexInTable: 1, signature: [.wasmi64] => [.wasmi64])],
                 definedEntryValues: [wasmFunction, jsFunction],
@@ -852,7 +854,7 @@ class WasmFoundationTests: XCTestCase {
         }
 
         let table = b.getProperty("wt0", of: module.loadExports())
-        let tableType = ILType.wasmTable(wasmTableType: WasmTableType(elementType: .wasmFuncRef, limits: Limits(min: 10), isTable64: false, knownEntries: [
+        let tableType = ILType.wasmTable(wasmTableType: WasmTableType(elementType: .wasmFuncRef(), limits: Limits(min: 10), isTable64: false, knownEntries: [
             .init(indexInTable: 0, signature: [.wasmi64] => [.wasmi64, .wasmi64]),
             .init(indexInTable: 1, signature: [.wasmi64] => [.wasmi64])
         ]))
@@ -867,7 +869,7 @@ class WasmFoundationTests: XCTestCase {
                 fn.wasmCallIndirect(signature: [.wasmi64] => [.wasmi64], table: table, functionArgs: [params[1]], tableIndex: params[0])
             }
 
-            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmFuncRef]) { function, label, params in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmFuncRef()]) { function, label, params in
                 [function.wasmTableGet(tableRef: table, idx: params[0])]
             }
 
@@ -882,7 +884,7 @@ class WasmFoundationTests: XCTestCase {
         let reexportedTable = b.getProperty("iwt0", of: exports)
 
         // This is the table type that we expect to see on the exports based on the dynamic object group typing.
-        let reexportedTableType = ILType.wasmTable(wasmTableType: WasmTableType(elementType: .wasmFuncRef, limits: Limits(min: 10), isTable64: false, knownEntries: [
+        let reexportedTableType = ILType.wasmTable(wasmTableType: WasmTableType(elementType: .wasmFuncRef(), limits: Limits(min: 10), isTable64: false, knownEntries: [
             .init(indexInTable: 0, signature: [.wasmi64] => [.wasmi64, .wasmi64]),
             .init(indexInTable: 1, signature: [.wasmi64] => [.wasmi64])
 
@@ -998,7 +1000,7 @@ class WasmFoundationTests: XCTestCase {
             let wasmFunction = wasmModule.addWasmFunction(with: [.wasmi64] => [.wasmi64, .wasmi64]) { function, label, params in
                 return [params[0], function.consti64(1)]
             }
-            let table = wasmModule.addTable(elementType: .wasmFuncRef,
+            let table = wasmModule.addTable(elementType: .wasmFuncRef(),
                                             minSize: 10,
                                             definedEntries: [.init(indexInTable: 0, signature: [.wasmi64] => [.wasmi64, .wasmi64]), .init(indexInTable: 1, signature: [.wasmi64] => [.wasmi64])],
                                             definedEntryValues: [wasmFunction, jsFunction],
@@ -3764,8 +3766,8 @@ class WasmFoundationTests: XCTestCase {
         let tagi32 = b.createWasmTag(parameterTypes: [.wasmi32])
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
-                function.wasmBuildBlockWithResults(with: [] => [.wasmExnRef], args: []) { catchAllRefLabel, _ in
-                    let catchRefI32 = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchRefLabel, _ in
+                function.wasmBuildBlockWithResults(with: [] => [.wasmExnRef()], args: []) { catchAllRefLabel, _ in
+                    let catchRefI32 = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef()], args: []) { catchRefLabel, _ in
                         function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchRefLabel, catchAllRefLabel], catches: [.Ref, .AllRef]) { _, _ in
                             function.wasmBuildIfElse(function.wasmi32EqualZero(args[0]), hint: .None) {
                                 function.WasmBuildThrow(tag: tagVoid, inputs: [])
@@ -3774,10 +3776,10 @@ class WasmFoundationTests: XCTestCase {
                             }
                             return []
                         }
-                        return [function.consti32(-1), function.wasmRefNull(type: .wasmExnRef)]
+                        return [function.consti32(-1), function.wasmRefNull(type: .wasmExnRef())]
                     }
                     function.wasmReturn(catchRefI32[0])
-                    return [function.wasmRefNull(type: .wasmExnRef)]
+                    return [function.wasmRefNull(type: .wasmExnRef())]
                 }
                 return [function.consti32(100)]
             }
@@ -3867,10 +3869,8 @@ class WasmFoundationTests: XCTestCase {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
-        // Assumption: All types but the bottom (null) types are supported in the JS API.
-        let supportedTypes = WasmAbstractHeapType.allCases.filter {!$0.isBottom()}.map { heapType in
-            ILType.wasmRef(.Abstract(heapType), nullability:true)
-        }
+        // Assumption: All types apart from bottom (null) & shared types are supported in the JS API.
+        let supportedTypes = WasmAbstractHeapType.allNonBottomTypes().map {ILType.wasmRef($0, nullability: true)}
         b.createWasmTag(parameterTypes: supportedTypes)
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
@@ -3896,12 +3896,12 @@ class WasmFoundationTests: XCTestCase {
         let module = b.buildWasmModule { wasmModule in
             // Inner function that throws, catches and then rethrows the value.
             let callee = wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, label, args in
-                let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef], args: []) { catchRefLabel, _ in
+                let caughtValues = function.wasmBuildBlockWithResults(with: [] => [.wasmi32, .wasmExnRef()], args: []) { catchRefLabel, _ in
                     function.wasmBuildTryTable(with: [] => [], args: [tagi32, catchRefLabel], catches: [.Ref]) { _, _ in
                         function.WasmBuildThrow(tag: tagi32, inputs: [args[0]])
                         return []
                     }
-                    return [function.consti32(0), function.wasmRefNull(type: .wasmExnRef)]
+                    return [function.consti32(0), function.wasmRefNull(type: .wasmExnRef())]
                 }
                 // Print the caught i32 value.
                 function.wasmJsCall(function: printInteger, withArgs: [caughtValues[0]], withWasmSignature: [.wasmi32] => [])
@@ -3974,7 +3974,7 @@ class WasmFoundationTests: XCTestCase {
                     trueValue: function.consti64(123), falseValue: function.consti64(321))]
             }
 
-            wasmModule.addWasmFunction(with: [.wasmi32, .wasmExternRef, .wasmExternRef] => [.wasmExternRef]) { function, label, args in
+            wasmModule.addWasmFunction(with: [.wasmi32, .wasmExternRef(), .wasmExternRef()] => [.wasmExternRef()]) { function, label, args in
                 [function.wasmSelect(on: args[0], trueValue: args[1], falseValue: args[2])]
             }
         }
@@ -4150,13 +4150,13 @@ class WasmFoundationTests: XCTestCase {
                 let f1 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(1)]}
                 let f2 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(2)]}
                 let f3 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(3)]}
-
-                module.addTable(elementType: .wasmFuncRef,
+                // TODO(pawkra): add shared ref variant.
+                module.addTable(elementType: .wasmFuncRef(),
                     minSize: 10,
                     definedEntries: [],
                     definedEntryValues: [],
                     isTable64: isTable64)
-                let table2  = module.addTable(elementType: .wasmFuncRef,
+                let table2  = module.addTable(elementType: .wasmFuncRef(),
                     minSize: 10,
                     definedEntries: [],
                     definedEntryValues: [],
@@ -4198,12 +4198,13 @@ class WasmFoundationTests: XCTestCase {
                 let f2 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(2)]}
                 let f3 = module.addWasmFunction(with: [] => [.wasmi64]) { f, _, _ in return [f.consti64(3)]}
 
-                let table1 = module.addTable(elementType: .wasmFuncRef,
+                // TODO(pawkra): add shared ref variant.
+                let table1 = module.addTable(elementType: .wasmFuncRef(),
                     minSize: 10,
                     definedEntries: [],
                     definedEntryValues: [],
                     isTable64: isTable64)
-                let table2  = module.addTable(elementType: .wasmFuncRef,
+                let table2  = module.addTable(elementType: .wasmFuncRef(),
                     minSize: 10,
                     definedEntries: (0..<4).map { WasmTableType.IndexInTableAndWasmSignature.init(indexInTable: $0, signature: [] => [.wasmi64]) },
                     definedEntryValues: [f3, f3, f1, f2],
@@ -4470,8 +4471,9 @@ class WasmGCTests: XCTestCase {
                 return [arrayi32, signature]
             }
 
+            // TODO(pawkra): add shared ref variant.
             let module = b.buildWasmModule { wasmModule in
-                wasmModule.addWasmFunction(with: [] => [.wasmFuncRef]) { function, label, args in
+                wasmModule.addWasmFunction(with: [] => [.wasmFuncRef()]) { function, label, args in
                     // TODO(mliedtke): Do something more useful with the signature type than
                     // defining a null value for it and testing that it's implicitly convertible to
                     // .wasmFuncRef.
@@ -4766,15 +4768,18 @@ class WasmGCTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1\n0\n")
     }
 
-    func testRefNullAbstractTypes() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref"])
+    func refNullAbstractTypes(sharedRef: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref", "--experimental-wasm-shared"])
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
+        let unsupportedHeapType: Set<WasmAbstractHeapType> = sharedRef ? [.WasmFunc, .WasmNoFunc, .WasmExn, .WasmNoExn] : []
+        let supportedHeapTypes = Array(Set(WasmAbstractHeapType.allCases).subtracting(unsupportedHeapType))
+
         let module = b.buildWasmModule { wasmModule in
-            for heapType in WasmAbstractHeapType.allCases {
-                let valueType = ILType.wasmRef(.Abstract(heapType), nullability: true)
+            for heapType in supportedHeapTypes {
+                let valueType = ILType.wasmRef(heapType, shared: sharedRef, nullability: true)
                 if heapType.isUsableInJS() {
                     // ref.null <heapType>
                     wasmModule.addWasmFunction(with: [] => [valueType]) { function, label, args in
@@ -4790,8 +4795,8 @@ class WasmGCTests: XCTestCase {
 
         let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        let exportedFctCount = WasmAbstractHeapType.allCases.count
-                             + WasmAbstractHeapType.allCases.count {$0.isUsableInJS()}
+        let exportedFctCount = supportedHeapTypes.count
+                             + supportedHeapTypes.count {$0.isUsableInJS()}
         for i in 0..<exportedFctCount {
             let wasmOut = b.callMethod(module.getExportedMethod(at: i), on: exports, withArgs: [])
             b.callFunction(outputFunc, withArgs: [wasmOut])
@@ -4800,21 +4805,29 @@ class WasmGCTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
         // In JS all null values look the same (they are the same).
-        let expected = WasmAbstractHeapType.allCases.map {$0.isUsableInJS() ? "null\n1\n" : "1\n"}.joined()
+        let expected = supportedHeapTypes.map {$0.isUsableInJS() ? "null\n1\n" : "1\n"}.joined()
         testForOutput(program: jsProg, runner: runner, outputString: expected)
     }
 
-    func testI31Ref() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+    func testRefNullAbstractTypesSharedRef() throws {
+        try refNullAbstractTypes(sharedRef: true)
+    }
+
+    func testRefNullAbstractTypesUnsharedRef() throws {
+        try refNullAbstractTypes(sharedRef: false)
+    }
+
+    func testi31Ref() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-shared"])
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmI31Ref]) { function, label, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmI31Ref()]) { function, label, args in
                 [function.wasmRefI31(args[0])]
             }
-            wasmModule.addWasmFunction(with: [.wasmI31Ref] => [.wasmi32, .wasmi32]) { function, label, args in
+            wasmModule.addWasmFunction(with: [.wasmI31Ref()] => [.wasmi32, .wasmi32]) { function, label, args in
                 [function.wasmI31Get(args[0], isSigned: true),
                  function.wasmI31Get(args[0], isSigned: false)]
             }
@@ -4845,29 +4858,29 @@ class WasmGCTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmRefExtern]) { function, label, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmRefExtern()]) { function, label, args in
                 // As ref.i31 produces a non null `ref i31`, the result of extern.convert_any is a
                 // non-nullable `ref extern`.
                 let result = function.wasmExternConvertAny(function.wasmRefI31(args[0]))
-                XCTAssertEqual(b.type(of: result), .wasmRefExtern)
+                XCTAssertEqual(b.type(of: result), .wasmRefExtern())
                 return [result]
             }
 
-            wasmModule.addWasmFunction(with: [.wasmRefExtern] => [.wasmRefAny]) { function, label, args in
+            wasmModule.addWasmFunction(with: [.wasmRefExtern()] => [.wasmRefAny()]) { function, label, args in
                 let result = function.wasmAnyConvertExtern(args[0])
-                XCTAssertEqual(b.type(of: result), .wasmRefAny)
+                XCTAssertEqual(b.type(of: result), .wasmRefAny())
                 return [result]
             }
 
-            wasmModule.addWasmFunction(with: [] => [.wasmExternRef]) { function, label, args in
-                let result = function.wasmExternConvertAny(function.wasmRefNull(type: .wasmNullRef))
-                XCTAssertEqual(b.type(of: result), .wasmExternRef)
+            wasmModule.addWasmFunction(with: [] => [.wasmExternRef()]) { function, label, args in
+                let result = function.wasmExternConvertAny(function.wasmRefNull(type: .wasmNullRef()))
+                XCTAssertEqual(b.type(of: result), .wasmExternRef())
                 return [result]
             }
 
-            wasmModule.addWasmFunction(with: [] => [.wasmAnyRef]) { function, label, args in
-                let result = function.wasmAnyConvertExtern(function.wasmRefNull(type: .wasmNullExternRef))
-                XCTAssertEqual(b.type(of: result), .wasmAnyRef)
+            wasmModule.addWasmFunction(with: [] => [.wasmAnyRef()]) { function, label, args in
+                let result = function.wasmAnyConvertExtern(function.wasmRefNull(type: .wasmNullExternRef()))
+                XCTAssertEqual(b.type(of: result), .wasmAnyRef())
                 return [result]
             }
         }
@@ -6418,8 +6431,8 @@ class WasmJSPITests: XCTestCase {
 
         // Now lets build the module
         let module = b.buildWasmModule { m in
-            m.addWasmFunction(with: [.wasmExternRef] => [.wasmi32]) { f, label, args in
-                [f.wasmJsCall(function: importFunction, withArgs: args, withWasmSignature: [.wasmExternRef] => [.wasmi32])!]
+            m.addWasmFunction(with: [.wasmExternRef()] => [.wasmi32]) { f, label, args in
+                [f.wasmJsCall(function: importFunction, withArgs: args, withWasmSignature: [.wasmExternRef()] => [.wasmi32])!]
             }
         }
 

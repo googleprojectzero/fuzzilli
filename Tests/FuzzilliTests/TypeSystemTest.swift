@@ -1110,11 +1110,12 @@ class TypeSystemTests: XCTestCase {
         let strObjOrFuncObj = (ILType.string + ILType.object(withProperties: ["foo"])) | (ILType.function([.rest(.jsAnything)] => .float) + ILType.object(withProperties: ["foo"]))
         XCTAssertEqual(strObjOrFuncObj.description, ".string + .object(withProperties: [\"foo\"]) | .object(withProperties: [\"foo\"]) + .function()")
 
-        let nullExn = ILType.wasmRef(.Abstract(.WasmExn), nullability: true)
-        let nonNullAny = ILType.wasmRef(.Abstract(.WasmAny), nullability: false)
-        XCTAssertEqual(nullExn.description, ".wasmRef(.Abstract(null WasmExn))")
+        let nullExn = ILType.wasmRef(.WasmExn, shared: true, nullability: true)
+        let nonNullAny = ILType.wasmRef(.WasmAny, shared: false, nullability: false)
+        XCTAssertEqual(nullExn.description, ".wasmRef(.Abstract(null shared WasmExn))")
         XCTAssertEqual(nonNullAny.description, ".wasmRef(.Abstract(WasmAny))")
 
+        // TODO(pawkra): add shared variant.
         let arrayDesc = WasmArrayTypeDescription(elementType: .wasmi32, mutability: false, typeGroupIndex: 0)
         let arrayRef = ILType.wasmIndexRef(arrayDesc, nullability: true)
         XCTAssertEqual(arrayRef.description, ".wasmRef(null Index 0 Array[immutable .wasmi32])")
@@ -1148,11 +1149,11 @@ class TypeSystemTests: XCTestCase {
             ".wasmTypeDef(1 Struct[mutable .wasmf32, " +
             "immutable .wasmRef(null Index 1 Struct), mutable .wasmRef(null Index 0 Array)])")
         let signatureDesc = WasmSignatureTypeDescription(
-            signature: [.wasmi32, arrayRef] => [structRef, .wasmNullRef], typeGroupIndex: 0)
+            signature: [.wasmi32, arrayRef] => [structRef, .wasmNullRef(shared: true)], typeGroupIndex: 0)
         let signatureDef = ILType.wasmTypeDef(description: signatureDesc)
         XCTAssertEqual(signatureDef.description,
             ".wasmTypeDef(0 Func[[.wasmi32, .wasmRef(null Index 0 Array)] => " +
-            "[.wasmRef(Index 1 Struct), .wasmRef(.Abstract(null WasmNone))]])")
+            "[.wasmRef(Index 1 Struct), .wasmRef(.Abstract(null shared WasmNone))]])")
 
         // A generic index type without a type description.
         // These are e.g. used by the element types for arrays and structs inside the operation as
@@ -1163,7 +1164,7 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testWasmSubsumptionRules() {
-        let wasmTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExternRef, .wasmI31Ref, .wasmExnRef]
+        let wasmTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64] + ILType.allNullableAbstractWasmRefTypes()
         // Make sure that no Wasm type is subsumed by (JS-)anything.
         for t in wasmTypes {
             XCTAssertEqual(t <= .jsAnything, false)
@@ -1209,14 +1210,16 @@ class TypeSystemTests: XCTestCase {
 
         // Test nullability rules for abstract Wasm types.
         for heapType: WasmAbstractHeapType in WasmAbstractHeapType.allCases {
-            let nullable = ILType.wasmRef(.Abstract(heapType), nullability: true)
-            let nonNullable = ILType.wasmRef(.Abstract(heapType), nullability: false)
-            XCTAssert(nonNullable.Is(nullable))
-            XCTAssertFalse(nullable.Is(nonNullable))
-            XCTAssertEqual(nullable.union(with: nonNullable), nullable)
-            XCTAssertEqual(nonNullable.union(with: nullable), nullable)
-            XCTAssertEqual(nullable.intersection(with: nonNullable), nonNullable)
-            XCTAssertEqual(nonNullable.intersection(with: nullable), nonNullable)
+            for shared in [true, false] {
+                let nullable = ILType.wasmRef(heapType, shared: shared, nullability: true)
+                let nonNullable = ILType.wasmRef(heapType, shared: shared, nullability: false)
+                XCTAssert(nonNullable.Is(nullable))
+                XCTAssertFalse(nullable.Is(nonNullable))
+                XCTAssertEqual(nullable.union(with: nonNullable), nullable)
+                XCTAssertEqual(nonNullable.union(with: nullable), nullable)
+                XCTAssertEqual(nullable.intersection(with: nonNullable), nonNullable)
+                XCTAssertEqual(nonNullable.intersection(with: nullable), nonNullable)
+            }
         }
     }
 
@@ -1276,7 +1279,6 @@ class TypeSystemTests: XCTestCase {
             XCTAssertEqual(type.intersection(type.getBottom()), type.getBottom())
         }
 
-        // Testing a few combinations.
         XCTAssertEqual(WasmAbstractHeapType.WasmAny.union(.WasmEq), .WasmAny)
         XCTAssertEqual(WasmAbstractHeapType.WasmStruct.union(.WasmArray), .WasmEq)
         XCTAssertEqual(WasmAbstractHeapType.WasmI31.union(.WasmArray), .WasmEq)
@@ -1287,35 +1289,47 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(WasmAbstractHeapType.WasmAny.intersection(.WasmArray), .WasmArray)
 
         // Tests on the whole ILType.
-        let ref = {t in ILType.wasmRef(.Abstract(t), nullability: false)}
-        let refNull = {t in ILType.wasmRef(.Abstract(t), nullability: true)}
-        for type in allTypes {
-            let refT = ref(type)
-            let refNullT = refNull(type)
-            XCTAssertEqual(refT.union(with: refNullT), refNullT)
-            XCTAssertEqual(refNullT.union(with: refT), refNullT)
-            XCTAssertEqual(refT.union(with: refT), refT)
-            XCTAssertEqual(refNullT.union(with: refNullT), refNullT)
-            XCTAssertEqual(refT.intersection(with: refT), refT)
-            XCTAssertEqual(refNullT.intersection(with: refNullT), refNullT)
-            XCTAssertEqual(refT.intersection(with: refNullT), refT)
-            XCTAssertEqual(refNullT.intersection(with: refT), refT)
+        for shared in [true, false] {
+            let ref: (WasmAbstractHeapType) -> ILType = {t in ILType.wasmRef(t, shared: shared, nullability: false,)}
+            let refNull = {t in ILType.wasmRef(t, shared: shared, nullability: true)}
+
+            for type in allTypes {
+                let refT = ref(type)
+                let refNullT = refNull(type)
+                XCTAssertEqual(refT.union(with: refNullT), refNullT)
+                XCTAssertEqual(refNullT.union(with: refT), refNullT)
+                XCTAssertEqual(refT.union(with: refT), refT)
+                XCTAssertEqual(refNullT.union(with: refNullT), refNullT)
+                XCTAssertEqual(refT.intersection(with: refT), refT)
+                XCTAssertEqual(refNullT.intersection(with: refNullT), refNullT)
+                XCTAssertEqual(refT.intersection(with: refNullT), refT)
+                XCTAssertEqual(refNullT.intersection(with: refT), refT)
+            }
+            XCTAssertEqual(ref(.WasmAny).union(with: refNull(.WasmEq)), refNull(.WasmAny))
+            XCTAssertEqual(ref(.WasmStruct).union(with: ref(.WasmArray)), ref(.WasmEq))
+            // We should never do this for the type information of any Variable as .wasmGenericRef
+            // cannot be encoded in the Wasm module and any instruction that leads to such a static type
+            // is "broken". However, we will still need to allow this union type if we want to be able
+            // to request a .required(.wasmGenericRef) for operations like WasmRefIsNull.
+            XCTAssertEqual(ref(.WasmI31).union(with: refNull(.WasmExn)), .wasmGenericRef)
+
+            XCTAssertEqual(ref(.WasmAny).intersection(with: refNull(.WasmEq)), ref(.WasmEq))
+            XCTAssertEqual(refNull(.WasmI31).intersection(with: refNull(.WasmStruct)), refNull(.WasmNone))
+            // Note that `ref none` is a perfectly valid type in Wasm but such a reference can never be
+            // constructed.
+            XCTAssertEqual(ref(.WasmArray).intersection(with: refNull(.WasmStruct)), ref(.WasmNone))
+            XCTAssertEqual(refNull(.WasmArray).intersection(with: ref(.WasmAny)), ref(.WasmArray))
         }
 
-        XCTAssertEqual(ref(.WasmAny).union(with: refNull(.WasmEq)), refNull(.WasmAny))
-        XCTAssertEqual(ref(.WasmStruct).union(with: ref(.WasmArray)), ref(.WasmEq))
-        // We should never do this for the type information of any Variable as .wasmGenericRef
-        // cannot be encoded in the Wasm module and any instruction that leads to such a static type
-        // is "broken". However, we will still need to allow this union type if we want to be able
-        // to request a .required(.wasmGenericRef) for operations like WasmRefIsNull.
-        XCTAssertEqual(ref(.WasmI31).union(with: refNull(.WasmExn)), .wasmGenericRef)
-
-        XCTAssertEqual(ref(.WasmAny).intersection(with: refNull(.WasmEq)), ref(.WasmEq))
-        XCTAssertEqual(refNull(.WasmI31).intersection(with: refNull(.WasmStruct)), refNull(.WasmNone))
-        // Note that `ref none` is a perfectly valid type in Wasm but such a reference can never be
-        // constructed.
-        XCTAssertEqual(ref(.WasmArray).intersection(with: refNull(.WasmStruct)), ref(.WasmNone))
-        XCTAssertEqual(refNull(.WasmArray).intersection(with: ref(.WasmAny)), ref(.WasmArray))
+        let ref = {t, shared in ILType.wasmRef(t, shared: shared, nullability: false,)}
+        let refNull = {t, shared in ILType.wasmRef(t, shared: shared, nullability: true)}
+        // Shared and unshared ref hierarchies are disjoint.
+        for (lhsShared, rhsShared) in [(true, false), (false, true)] {
+            for type in allTypes {
+                XCTAssertEqual(ref(type, lhsShared).union(with: ref(type, rhsShared)), .wasmGenericRef)
+                XCTAssertEqual(refNull(type, lhsShared).union(with: refNull(type, rhsShared)), .wasmGenericRef)
+            }
+        }
     }
 
     func testUnboundFunctionSubsumptionRules() {
@@ -1433,15 +1447,10 @@ class TypeSystemTests: XCTestCase {
                                .wasmf32,
                                .wasmi64,
                                .wasmf64,
-                               .wasmFuncRef,
-                               .wasmExternRef,
-                               .wasmExnRef,
-                               .wasmI31Ref,
-                               .wasmRefI31,
                                .wasmFunctionDef([.wasmi32] => [.wasmi64]),
                                .wasmFunctionDef([.wasmf32] => [.wasmi32]),
-                               .wasmFunctionDef([.wasmExternRef] => [.wasmExternRef]),
+                               .wasmFunctionDef([.wasmExternRef()] => [.wasmExternRef()]),
                                .wasmMemory(limits: Limits(min: 10)),
                                .wasmMemory(limits: Limits(min: 10, max: 20)),
-    ]
+    ] + ILType.allNullableAbstractWasmRefTypes()
 }

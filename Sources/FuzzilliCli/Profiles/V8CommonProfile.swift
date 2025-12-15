@@ -561,7 +561,7 @@ public let WasmDeoptFuzzer = WasmProgramTemplate("WasmDeoptFuzzer") { b in
         }
 
         let table = wasmModule.addTable(
-            elementType: .wasmFuncRef,
+            elementType: .wasmFuncRef(),
             minSize: numCallees,
             definedEntries: (0..<numCallees).map {i in .init(indexInTable: i, signature: calleeSignature)},
             definedEntryValues: callees,
@@ -644,7 +644,7 @@ public let WasmFastCallFuzzer = WasmProgramTemplate("WasmFastCallFuzzer") { b in
     let wrappedSig = [.plain(b.type(of: apiObj))] + functionSig.parameters => functionSig.outputType
 
     let m = b.buildWasmModule { m in
-        let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
+        let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef(), 1), (.wasmFuncRef(), 1)])
         let wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(wrappedSig, availableTypes: allWasmTypes)
         m.addWasmFunction(with: wasmSignature) {fbuilder, _, _  in
             let args = b.randomWasmArguments(forWasmSignature: wasmSignature)

@@ -99,7 +99,7 @@ public let ProgramTemplates = [
 
         let signature = b.type(of: f!).signature ?? Signature.forUnknownFunction
         // As we do not yet know what types we have in the Wasm module when we try to call this, let Fuzzilli know that it could potentially use all Wasm types here.
-        let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef, 1), (.wasmFuncRef, 1)])
+        let allWasmTypes: WeightedList<ILType> = WeightedList([(.wasmi32, 1), (.wasmi64, 1), (.wasmf32, 1), (.wasmf64, 1), (.wasmExternRef(), 1), (.wasmFuncRef(), 1)])
 
         var wasmSignature = ProgramBuilder.convertJsSignatureToWasmSignature(signature, availableTypes: allWasmTypes)
         let wrapped = b.wrapSuspending(function: f!)
@@ -152,7 +152,7 @@ public let ProgramTemplates = [
         let tagToThrow = chooseUniform(from: wasmTags)
         let throwParamTypes = b.type(of: tagToThrow).wasmTagType!.parameters
         let tagToCatchForRethrow = chooseUniform(from: tags)
-        let catchBlockOutputTypes = b.type(of: tagToCatchForRethrow).wasmTagType!.parameters + [.wasmExnRef]
+        let catchBlockOutputTypes = b.type(of: tagToCatchForRethrow).wasmTagType!.parameters + [.wasmExnRef()]
 
         let module = b.buildWasmModule { wasmModule in
             // Wasm function that throws a tag, catches a tag (the same or a different one) to
@@ -173,7 +173,7 @@ public let ProgramTemplates = [
                     return catchBlockOutputTypes.map(function.findOrGenerateWasmVar)
                 }
                 b.build(n: 10)
-                function.wasmBuildThrowRef(exception: b.randomVariable(ofType: .wasmExnRef)!)
+                function.wasmBuildThrowRef(exception: b.randomVariable(ofType: .wasmExnRef())!)
                 return []
             }
         }
@@ -206,7 +206,7 @@ public let ProgramTemplates = [
                 return calleeSig.outputTypes.map(function.findOrGenerateWasmVar)
             }}
 
-            let table = wasmModule.addTable(elementType: .wasmFuncRef,
+            let table = wasmModule.addTable(elementType: .wasmFuncRef(),
                                             minSize: 10,
                                             definedEntries: callees.enumerated().map { (index, callee) in
                                                 .init(indexInTable: index, signature: calleeSig)

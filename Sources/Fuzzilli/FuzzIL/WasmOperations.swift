@@ -695,6 +695,7 @@ public enum WasmGlobal {
     case wasmf64(Float64)
     // Empty reference
     // TODO(gc): Add support for globals with non-nullable references.
+    // TODO(pawkra): add support for shared references.
     case externref
     case exnref
     case i31ref
@@ -716,11 +717,11 @@ public enum WasmGlobal {
         case .wasmf64:
             return .wasmf64
         case .externref:
-            return .wasmExternRef
+            return .wasmExternRef()
         case .exnref:
-            return .wasmExnRef
+            return .wasmExnRef()
         case .i31ref:
-            return .wasmI31Ref
+            return .wasmI31Ref()
         case .imported(let type):
             assert(type.wasmGlobalType != nil)
             return type.wasmGlobalType!.valueType
@@ -729,7 +730,7 @@ public enum WasmGlobal {
         }
     }
 
-    func typeString() -> String {
+func typeString() -> String {
         switch self {
         case .wasmi64(_):
             return "i64"
@@ -750,8 +751,9 @@ public enum WasmGlobal {
         }
     }
 
+
     // Returns a JS string representing the initial value.
-    func valueToString() -> String {
+func valueToString() -> String {
         switch self {
         case .wasmi64(let val):
             return "\(val)n"
@@ -801,9 +803,10 @@ final class WasmDefineTable: WasmOperation {
         self.definedEntries = definedEntries
 
         // TODO(manoskouk): Find a way to define non-function tables with initializers.
-        assert(elementType == .wasmFuncRef || definedEntries.isEmpty)
+        let isWasmFuncRef = elementType == .wasmFuncRef()
+        assert(isWasmFuncRef || definedEntries.isEmpty)
 
-        super.init(numInputs: elementType == .wasmFuncRef ? definedEntries.count : 0,
+        super.init(numInputs: isWasmFuncRef ? definedEntries.count : 0,
                    numOutputs: 1,
                    attributes: [.isMutable],
                    requiredContext: [.wasm])
