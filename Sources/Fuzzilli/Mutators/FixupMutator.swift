@@ -287,9 +287,18 @@ public class FixupMutator: RuntimeAssistedMutator {
                     assert(!op.hasOutput || b.visibleVariables.last == instr.output)
                     assert(op.originalOperation == b.lastInstruction().op.name)         // We expect the old and new operations to be the same (but potentially performed on different inputs)
                 } catch ActionError.actionTranslationError(let msg) {
+                    // In case of an error we won't have emitted an instruction. As such, we need
+                    // to abort the mutation here (unfortunately), as we might now have an
+                    // inconsistent program (we essentially dropped a random instruction that e.g.
+                    // may have produced an output variable used later on).
+                    // This is mostly unexpected (so we log an error), but can legitimately happen
+                    // during V8 sandbox fuzzing as we will randomly corrupt heap memory there.
                     logger.error("Failed to process action: \(msg)")
+                    return (nil, .unexpectedError)
                 } catch {
                     logger.error("Unexpected error during action processing \(error)")
+                    // Same as above, we need to abort the mutation here.
+                    return (nil, .unexpectedError)
                 }
                 b.trace("Fixup done")
                 if verbose && modifiedActions.contains(action.id) {
