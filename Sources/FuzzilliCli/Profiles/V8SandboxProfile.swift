@@ -102,9 +102,10 @@ let v8SandboxProfile = Profile(
 
     // ASan options.
     // - abort_on_error=true: We need asan to exit in a way that's detectable for Fuzzilli as a crash
+    // - handle_sigill=true: It seems by default ASAN doesn't handle SIGILL, but we want that to have stack traces
     // - symbolize=false: Symbolization can tak a _very_ long time (> 1s), which may cause crashing samples to time out before the stack trace has been captured (in which case Fuzzilli will discard the sample)
     // - redzone=128: This value is used by Clusterfuzz for reproducing testcases so we should use the same value
-    processEnv: ["ASAN_OPTIONS" : "abort_on_error=1:symbolize=false:redzone=128", "UBSAN_OPTIONS" : "abort_on_error=1:symbolize=false:redzone=128"],
+    processEnv: ["ASAN_OPTIONS" : "abort_on_error=1:handle_sigill=1:symbolize=false:redzone=128", "UBSAN_OPTIONS" : "abort_on_error=1:symbolize=false:redzone=128"],
 
     maxExecsBeforeRespawn: 1000,
 
@@ -503,6 +504,8 @@ let v8SandboxProfile = Profile(
         ("fuzzilli('FUZZILLI_CRASH', 6)", .shouldCrash),
         // This should crash due to calling abort_with_sandbox_violation().
         ("fuzzilli('FUZZILLI_CRASH', 9)", .shouldCrash),
+        // This should crash due to executing an invalid machine code instruction.
+        ("fuzzilli('FUZZILLI_CRASH', 11)", .shouldCrash),
 
         // Crashes that are not sandbox violations and so should be filtered out by the crash filter.
         // This triggers an IMMEDIATE_CRASH.
@@ -511,6 +514,8 @@ let v8SandboxProfile = Profile(
         ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldNotCrash),
         // This triggers a std::vector OOB access that should be caught by the libc++ hardening.
         ("fuzzilli('FUZZILLI_CRASH', 5)", .shouldNotCrash),
+        // This triggers a `ud 2` which might for example be used for release asserts and so should be ignored.
+        ("fuzzilli('FUZZILLI_CRASH', 10)", .shouldNotCrash),
     ],
 
     additionalCodeGenerators: [
