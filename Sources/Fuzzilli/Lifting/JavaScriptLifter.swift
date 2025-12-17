@@ -302,7 +302,8 @@ public class JavaScriptLifter: Lifter {
                 w.assign(expr, to: instr.output)
 
             case .loadString(let op):
-                w.assign(StringLiteral.new("\"\(op.value)\""), to: instr.output)
+                let escaped = op.value.replacingOccurrences(of: "\"", with:"\\\"")
+                w.assign(StringLiteral.new("\"\(escaped)\""), to: instr.output)
 
             case .loadRegExp(let op):
                 let flags = op.flags.asString()

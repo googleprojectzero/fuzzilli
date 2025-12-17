@@ -3635,4 +3635,21 @@ class LifterTests: XCTestCase {
         """
         XCTAssertEqual(actual, expected)
     }
+
+    func testStringEscape() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        let v1 = b.loadString("Hello \"World\"")
+        let p = b.createNamedVariable(forBuiltin: "print")
+        b.callFunction(p, withArgs: [v1])
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        print("Hello \\"World\\"");
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
 }
