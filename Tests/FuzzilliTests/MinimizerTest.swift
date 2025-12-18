@@ -651,6 +651,79 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    func testInliningWithSemiConditionalReturn() {
+        /*
+          Show that inlining with conditional returns migth not be
+          semantically equivalent.
+
+          Input:
+          function f1() {
+            if (true) {
+              return 1;
+            }
+            return 2;
+          }
+          let v1 = f1();
+          {result: v1}
+
+          Is inlined to:
+          var v1 = undefined;
+          if (true) {
+            v1 = 1;
+          }
+          v1 = 2;
+
+          {result: 2}
+        */
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        var a1 = b.loadBool(true)
+        var a2 = b.loadInt(1)
+        var a3 = b.loadInt(2)
+        b.loadString("unused")
+        let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            b.buildIf(a1, ifBody: {
+                b.doReturn(a2)
+            })
+            b.doReturn(a3)
+        }
+
+        var r = b.callFunction(f, withArgs: [])
+        var o = b.createObject(with: [:])
+        evaluator.nextInstructionIsImportant(in: b)
+        b.setProperty("result", of: o, to: r)
+
+        let originalProgram = b.finalize()
+
+        // Need to keep various things alive, see also the comment in testBasicInlining
+        evaluator.operationIsImportant(LoadInteger.self)
+        evaluator.operationIsImportant(LoadBoolean.self)
+        evaluator.operationIsImportant(BeginIf.self)
+        evaluator.operationIsImportant(Reassign.self)
+        evaluator.keepReturnsInFunctions = true
+
+        // Build expected output program.
+        a1 = b.loadBool(true)
+        a2 = b.loadInt(1)
+        a3 = b.loadInt(2)
+        r = b.loadUndefined()
+        b.buildIf(a1, ifBody: {
+            b.reassign(r, to: a2)
+        })
+        b.reassign(r, to: a3)
+        o = b.createObject(with: [:])
+        b.setProperty("result", of: o, to: a3)
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
     func testMultiInlining() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
