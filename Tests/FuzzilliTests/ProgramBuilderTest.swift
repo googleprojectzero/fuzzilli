@@ -2828,6 +2828,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(typesB.count, 1)
     }
 
+    // TODO(pawkra): check shared subtyping once we support more shared refs.
     func testWasmGCSubtyping() {
         let env = JavaScriptEnvironment()
         let config = Configuration(logLevel: .error)

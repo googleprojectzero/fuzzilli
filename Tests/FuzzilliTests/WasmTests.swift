@@ -4817,7 +4817,7 @@ class WasmGCTests: XCTestCase {
         try refNullAbstractTypes(sharedRef: false)
     }
 
-    func testi31Ref() throws {
+    func testi31RefFromJs() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-shared"])
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
@@ -4849,6 +4849,47 @@ class WasmGCTests: XCTestCase {
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "42\n-42\n42,42\n-42,2147483606\n")
+    }
+
+    func i31Ref(shared: Bool) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments:  shared ? ["--experimental-wasm-shared", "--experimental-wasm-stringref"] : [])
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b: ProgramBuilder = fuzzer.makeBuilder()
+        let i31RefType = ILType.wasmI31Ref(shared: shared)
+
+        let module = b.buildWasmModule { wasmModule in
+            let createReferenceOf = wasmModule.addWasmFunction(with: [.wasmi32] => [i31RefType]) { function, label, args in
+                [function.wasmRefI31(args[0], shared: shared)]
+            }
+            let dereference = wasmModule.addWasmFunction(with: [i31RefType] => [.wasmi32, .wasmi32]) { function, label, args in
+                [function.wasmI31Get(args[0], isSigned: true),
+                 function.wasmI31Get(args[0], isSigned: false)]
+            }
+            wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32]) { function, label, args in
+                let const = function.consti32(-42)
+                let constRef = function.wasmCallDirect(signature: [.wasmi32] => [i31RefType], function: createReferenceOf, functionArgs: [const])
+                let dereferencedConst = function.wasmCallDirect(signature: [i31RefType] => [.wasmi32, .wasmi32], function: dereference, functionArgs: constRef)
+                return dereferencedConst
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let result = b.callMethod(module.getExportedMethod(at: 2), on: exports, withArgs: [b.loadInt(42)])
+        b.callFunction(outputFunc, withArgs: [result])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "-42,2147483606\n")
+    }
+
+    func testi31RefShared() throws {
+        try i31Ref(shared: true)
+    }
+
+    func testi31RefUnshared() throws {
+        try i31Ref(shared: false)
     }
 
     func testExternAnyConversions() throws {

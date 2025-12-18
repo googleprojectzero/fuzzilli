@@ -4361,8 +4361,8 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmRefI31(_ number: Variable) -> Variable {
-            return b.emit(WasmRefI31(), withInputs: [number], types: [.wasmi32]).output
+        public func wasmRefI31(_ number: Variable, shared: Bool = false) -> Variable {
+            return b.emit(WasmRefI31(isShared: shared), withInputs: [number], types: [.wasmi32]).output
         }
 
         @discardableResult

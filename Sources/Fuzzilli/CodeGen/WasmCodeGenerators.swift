@@ -293,8 +293,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         b.currentWasmModule.currentWasmFunction.wasmRefIsNull(ref)
     },
 
+    // TODO(pawkra): add shared variant.
     CodeGenerator("WasmRefI31Generator", inContext: .single(.wasmFunction), inputs: .required(.wasmi32)) { b, value in
-        b.currentWasmModule.currentWasmFunction.wasmRefI31(value)
+        b.currentWasmModule.currentWasmFunction.wasmRefI31(value, shared: false)
     },
 
     // TODO(pawkra): add shared variant.

@@ -2276,8 +2276,10 @@ class WasmRefIsNull: WasmOperation {
 
 class WasmRefI31: WasmOperation {
     override var opcode: Opcode { .wasmRefI31(self) }
+    let isShared: Bool
 
-    init() {
+    init(isShared: Bool) {
+        self.isShared = isShared
         super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }
