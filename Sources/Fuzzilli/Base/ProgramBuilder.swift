@@ -5286,12 +5286,24 @@ public class ProgramBuilder {
 
     @discardableResult
     static func constructIntlLocaleString() -> String {
+        // TODO(Manishearth) Generate more complicated locale strings, not just language strings
+        return constructIntlLanguageString()
+    }
+
+
+    @discardableResult
+    static func constructIntlLanguageString() -> String {
         // TODO(Manishearth) Generate more interesting locales than just the builtins
         return chooseUniform(from: Locale.availableIdentifiers)
     }
 
     // Obtained by calling Intl.supportedValuesOf("unit") in a browser
     fileprivate static let allUnits = ["acre", "bit", "byte", "celsius", "centimeter", "day", "degree", "fahrenheit", "fluid-ounce", "foot", "gallon", "gigabit", "gigabyte", "gram", "hectare", "hour", "inch", "kilobit", "kilobyte", "kilogram", "kilometer", "liter", "megabit", "megabyte", "meter", "microsecond", "mile", "mile-scandinavian", "milliliter", "millimeter", "millisecond", "minute", "month", "nanosecond", "ounce", "percent", "petabyte", "pound", "second", "stone", "terabit", "terabyte", "week", "yard", "year"]
+    // https://en.wikipedia.org/wiki/ISO_15924#List_of_codes
+    // Unfortunately this list grows over time, but constructIntlScript can at least randomly generate other four-char script codes
+    fileprivate static let allScripts = ["Adlm", "Afak", "Aghb", "Ahom", "Arab", "Aran", "Armi", "Armn", "Avst", "Bali", "Bamu", "Bass", "Batk", "Beng", "Berf", "Bhks", "Blis", "Bopo", "Brah", "Brai", "Bugi", "Buhd", "Cakm", "Cans", "Cari", "Cham", "Cher", "Chis", "Chrs", "Cirt", "Copt", "Cpmn", "Cprt", "Cyrl", "Cyrs", "Deva", "Diak", "Dogr", "Dsrt", "Dupl", "Egyd", "Egyh", "Egyp", "Elba", "Elym", "Ethi", "Gara", "Geok", "Geor", "Glag", "Gong", "Gonm", "Goth", "Gran", "Grek", "Gujr", "Gukh", "Guru", "Hanb", "Hang", "Hani", "Hano", "Hans", "Hant", "Hatr", "Hebr", "Hira", "Hluw", "Hmng", "Hmnp", "Hntl", "Hrkt", "Hung", "Inds", "Ital", "Jamo", "Java", "Jpan", "Jurc", "Kali", "Kana", "Kawi", "Khar", "Khmr", "Khoj", "Kitl", "Kits", "Knda", "Kore", "Kpel", "Krai", "Kthi", "Lana", "Laoo", "Latf", "Latg", "Latn", "Leke", "Lepc", "Limb", "Lina", "Linb", "Lisu", "Loma", "Lyci", "Lydi", "Mahj", "Maka", "Mand", "Mani", "Marc", "Maya", "Medf", "Mend", "Merc", "Mero", "Mlym", "Modi", "Mong", "Moon", "Mroo", "Mtei", "Mult", "Mymr", "Nagm", "Nand", "Narb", "Nbat", "Newa", "Nkdb", "Nkgb", "Nkoo", "Nshu", "Ogam", "Olck", "Onao", "Orkh", "Orya", "Osge", "Osma", "Ougr", "Palm", "Pauc", "Pcun", "Pelm", "Perm", "Phag", "Phli", "Phlp", "Phlv", "Phnx", "Piqd", "Plrd", "Prti", "Psin", "Qaaa-Qabx", "Ranj", "Rjng", "Rohg", "Roro", "Runr", "Samr", "Sara", "Sarb", "Saur", "Seal", "Sgnw", "Shaw", "Shrd", "Shui", "Sidd", "Sidt", "Sind", "Sinh", "Sogd", "Sogo", "Sora", "Soyo", "Sund", "Sunu", "Sylo", "Syrc", "Syre", "Syrj", "Syrn", "Tagb", "Takr", "Tale", "Talu", "Taml", "Tang", "Tavt", "Tayo", "Telu", "Teng", "Tfng", "Tglg", "Thaa", "Thai", "Tibt", "Tirh", "Tnsa", "Todr", "Tols", "Toto", "Tutg", "Ugar", "Vaii", "Visp", "Vith", "Wara", "Wcho", "Wole", "Xpeo", "Xsux", "Yezi", "Yiii", "Zanb", "Zinh", "Zmth", "Zsye", "Zsym", "Zxxx", "Zyyy", "Zzzz"]
+    fileprivate static let allAlpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    fileprivate static let allAlphaNum = allAlpha + "0123456789"
 
     @discardableResult
     static func constructIntlUnit() -> String {
@@ -5302,6 +5314,60 @@ public class ProgramBuilder {
         } else {
             return "\(firstUnit)-per-\(chooseUniform(from: allUnits))"
         }
+    }
+
+
+    @discardableResult
+    static func constructIntlScriptString() -> String {
+        if probability(0.7) {
+            return chooseUniform(from: allScripts)
+        } else {
+            return String((0..<4).map { _ in allAlpha.randomElement()! })
+        }
+    }
+
+    @discardableResult
+    static func constructIntlRegionString() -> String {
+        // either two letters or three digits
+        if probability(0.5) {
+            return String((0..<2).map { _ in allAlpha.randomElement()! })
+        } else {
+            return String(format: "%03d", Int.random(in: 0...999))
+        }
+    }
+
+    @discardableResult
+    private static func constructSingleIntlVariantString() -> String {
+        // 5-8 alphanumerics or a digit and 3 alphanumerics
+        if probability(0.5) {
+            let count = Int.random(in: 5...8)
+            return String((0..<count).map { _ in allAlphaNum.randomElement()! })
+        } else {
+            let alpha = String((0..<3).map { _ in allAlphaNum.randomElement()! })
+            return "\(Int.random(in: 0...9))\(alpha)"
+        }
+    }
+
+    @discardableResult
+    static func constructIntlVariantString() -> String {
+        if probability(0.9) {
+            return constructSingleIntlVariantString()
+        } else {
+            return "\(constructSingleIntlVariantString())-\(constructIntlVariantString())"
+        }
+    }
+
+   @discardableResult
+    func constructIntlLocale() -> Variable {
+        let intl = createNamedVariable(forBuiltin: "Intl")
+        let constructor = getProperty("Locale", of: intl)
+
+        var args: [Variable] = []
+        args.append(findOrGenerateType(.jsIntlLocaleString))
+        if probability(0.7) {
+            args.append(createOptionsBag(.jsIntlLocaleSettings))
+        }
+        return construct(constructor, withArgs: args)
     }
 
     // Generic generators for Intl types.

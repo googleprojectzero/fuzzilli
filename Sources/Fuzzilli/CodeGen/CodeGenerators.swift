@@ -309,7 +309,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("BuiltinIntlGenerator") { b in
-        let _ = chooseUniform(from: [b.constructIntlDateTimeFormat, b.constructIntlCollator, b.constructIntlListFormat, b.constructIntlNumberFormat, b.constructIntlPluralRules, b.constructIntlRelativeTimeFormat, b.constructIntlSegmenter])()
+        let _ = chooseUniform(from: [b.constructIntlDateTimeFormat, b.constructIntlCollator, b.constructIntlListFormat, b.constructIntlLocale, b.constructIntlNumberFormat, b.constructIntlPluralRules, b.constructIntlRelativeTimeFormat, b.constructIntlSegmenter])()
     },
 
     CodeGenerator("HexGenerator") { b in
