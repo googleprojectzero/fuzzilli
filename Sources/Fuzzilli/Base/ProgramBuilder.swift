@@ -841,11 +841,11 @@ public class ProgramBuilder {
                 if generators.count > 0 {
                     let generator = generators.randomElement()
                     let _ = self.complete(generator: generator, withBudget: 10)
-                    // The generator we ran above is supposed to generate the
-                    // requested type. If no variable of that type exists
-                    // now, then either the generator or its annotation is
-                    // wrong.
-                    return self.randomVariable(ofTypeOrSubtype: type)!
+                    let variable = self.randomVariable(ofTypeOrSubtype: type)
+                    assert(variable != nil,
+                           "The generator \(generator.name) is supposed to generate type \(type). " +
+                           "Either the generator or its annotation is wrong.")
+                    return variable!
                 }
                 // Otherwise this is one of the following:
                 // 1. an object with more type information, i.e. it has a group, but no associated builtin, e.g. we cannot construct it with new.
