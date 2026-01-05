@@ -25,7 +25,7 @@ class EnvironmentTests: XCTestCase {
     /// Test all the builtin objects that are reachable from the global this.
     /// (This does not include anything that needs a constructor to be called.)
     func testJSEnvironmentLive() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--harmony", "--experimental-wasm-rab-integration", "--wasm-test-streaming"])
+        let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--harmony", "--experimental-wasm-rab-integration", "--wasm-test-streaming", "--js-staging"])
         let jsProg = buildAndLiftProgram(withLiftingOptions: [.includeComments]) { b in
             let jsEnvironment = b.fuzzer.environment
             var seenTypeGroups = Set<String>()
