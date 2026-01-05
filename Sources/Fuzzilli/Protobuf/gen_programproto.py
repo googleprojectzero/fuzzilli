@@ -9,7 +9,7 @@ import datetime
 
 OPCODESSWIFT_FILE = "../FuzzIL/Opcodes.swift"
 
-START = f"// Copyright {datetime.date.today().year} Google LLC"
+START = f"// Copyright 2025 Google LLC"
 START += """
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
