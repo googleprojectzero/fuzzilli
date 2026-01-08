@@ -301,8 +301,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("TypedArrayLastIndexGenerator",
         inContext: .single(.javascript),
-        inputs: .required(.object(withProperties: ["buffer", "length"])),
-        produces: [.integer, .jsAnything]
+        inputs: .required(.object(withProperties: ["buffer", "length"]))
     ) { b, view in
         let len = b.getProperty("length", of: view)
         let index = b.binary(len, b.loadInt(1), with: .Sub)
