@@ -129,7 +129,6 @@ public let codeGeneratorWeights = [
     "ComputedPropertyConfigurationGenerator":   10,
     "FunctionCallGenerator":                    30,
     "FunctionCallWithSpreadGenerator":          3,
-    "ManyArgumentsCall":                        3,
     "ConstructorCallGenerator":                 20,
     "ConstructorCallWithSpreadGenerator":       3,
     "MethodCallGenerator":                      30,

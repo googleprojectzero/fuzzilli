@@ -1879,25 +1879,6 @@ public let CodeGenerators: [CodeGenerator] = [
             f, withArgs: arguments, spreading: spreads, guard: needGuard)
     },
 
-
-    CodeGenerator("ManyArgumentsCall", inputs: .preferred(.function())) { b, f in
-        // These sizes are around the max arguments for maglev (2^16 - 10)
-        // and turboshaft (2^16).
-        let sizes: [Int64] = [65524, 65525, 65526, 65534, 65535, 65536]
-        let size = b.loadInt(chooseUniform(from: sizes))
-        let constructor = b.createNamedVariable(forBuiltin: "Array")
-        let largeArray = b.construct(constructor, withArgs: [size])
-
-        let needGuard = b.type(of: f).MayNotBe(.function())
-
-        if probability(0.5) {
-            let receiver = probability(0.5) ? b.loadNull() : b.randomVariable(forUseAs: .object())
-            b.callMethod("apply", on: f, withArgs: [receiver, largeArray], guard: needGuard)
-        } else {
-            b.callFunction(f, withArgs: [largeArray], spreading: [true], guard: needGuard)
-        }
-    },
-
     CodeGenerator(
         "ConstructorCallWithSpreadGenerator", inputs: .preferred(.constructor())
     ) { b, c in
