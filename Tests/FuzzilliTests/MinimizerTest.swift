@@ -724,6 +724,51 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    // Ensure we don't crash when a candidate function is also used as a
+    // disposable variable.
+    func testInliningWithDisposableVariable() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        let a1 = b.loadBool(true)
+
+        // The function to be inlined.
+        let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            b.doReturn(a1)
+        }
+
+        // The call and result.
+        evaluator.nextInstructionIsImportant(in: b)
+        let r = b.callFunction(f, withArgs: [])
+        let o = b.createObject(with: [:])
+        evaluator.nextInstructionIsImportant(in: b)
+        b.setProperty("result", of: o, to: r)
+
+        // Another function with a disposable variable refering
+        // to the first function.
+        evaluator.nextInstructionIsImportant(in: b)
+        b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            evaluator.nextInstructionIsImportant(in: b)
+            b.loadDisposableVariable(f)
+            b.doReturn(a1)
+        }
+
+        let originalProgram = b.finalize()
+
+        // Need to keep various things alive, see also the comment in testBasicInlining
+        evaluator.operationIsImportant(LoadBoolean.self)
+        evaluator.operationIsImportant(Reassign.self)
+        evaluator.keepReturnsInFunctions = true
+
+        // Perform minimization and check that the two programs are equal.
+        // We expect the no changes as the inlining candidate was used as
+        // a disposable variable.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(originalProgram, actualProgram)
+    }
+
     func testMultiInlining() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
