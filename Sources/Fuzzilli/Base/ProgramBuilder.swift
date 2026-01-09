@@ -3976,19 +3976,7 @@ public class ProgramBuilder {
                 withInputs: labels + args + [on])
         }
 
-        // TODO(mliedtke): It would be nice to remove this overload to simplify the codebase.
-        public func wasmBuildIfElse(_ condition: Variable, hint: WasmBranchHint = .None, ifBody: () -> Void, elseBody: (() -> Void)? = nil) {
-            let signatureDef = b.wasmDefineAdHocSignatureType(signature: [] => [])
-            b.emit(WasmBeginIf(hint: hint), withInputs: [signatureDef, condition])
-            ifBody()
-            if let elseBody {
-                b.emit(WasmBeginElse(), withInputs: [signatureDef])
-                elseBody()
-            }
-            b.emit(WasmEndIf(), withInputs: [signatureDef])
-        }
-
-        public func wasmBuildIfElse(_ condition: Variable, signature: WasmSignature, args: [Variable], inverted: Bool, ifBody: (Variable, [Variable]) -> Void, elseBody: ((Variable, [Variable]) -> Void)? = nil) {
+        public func wasmBuildIfElse(_ condition: Variable, signature: WasmSignature = [] => [], args: [Variable] = [], hint: WasmBranchHint = .None, inverted: Bool = false, ifBody: (Variable, [Variable]) -> Void, elseBody: ((Variable, [Variable]) -> Void)? = nil) {
             assert(signature.outputTypes.count == 0)
             let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
             let beginBlock = b.emit(WasmBeginIf(parameterCount: signature.parameterTypes.count, inverted: inverted),
