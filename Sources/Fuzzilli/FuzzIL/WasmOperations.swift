@@ -1250,22 +1250,20 @@ final class WasmSelect: WasmOperation {
 final class WasmBeginBlock: WasmOperation {
     override var opcode: Opcode { .wasmBeginBlock(self) }
 
-    let signature: WasmSignature
-
-    init(with signature: WasmSignature) {
-        self.signature = signature
-        super.init(numInputs: signature.parameterTypes.count, numInnerOutputs: signature.parameterTypes.count + 1, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
+    init(parameterCount: Int) {
+        // Inputs: The signature plus the arguments.
+        // Inner outputs: The label plus the arguments.
+        super.init(numInputs: 1 + parameterCount, numInnerOutputs: 1 + parameterCount, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
+
+    var parameterCount: Int {numInputs - 1}
 }
 
 final class WasmEndBlock: WasmOperation {
     override var opcode: Opcode { .wasmEndBlock(self) }
 
-    let outputTypes: [ILType]
-
-    init(outputTypes: [ILType]) {
-        self.outputTypes = outputTypes
-        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
+    init(outputCount: Int) {
+        super.init(numInputs: 1 + outputCount, numOutputs: outputCount, attributes: [.isBlockEnd, .resumesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 

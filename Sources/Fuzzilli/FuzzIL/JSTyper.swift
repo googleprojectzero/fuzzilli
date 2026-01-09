@@ -814,10 +814,12 @@ public struct JSTyper: Analyzer {
                 dynamicObjectGroupManager.addWasmFunction(withSignature: ProgramBuilder.convertWasmSignatureToJsSignature(op.signature), forDefinition: instr, forVariable: instr.output)
             case .wasmSelect(_):
                 setType(of: instr.output, to: type(of: instr.input(0)))
-            case .wasmBeginBlock(let op):
-                wasmTypeBeginBlock(instr, op.signature)
-            case .wasmEndBlock(let op):
-                wasmTypeEndBlock(instr, op.outputTypes)
+            case .wasmBeginBlock(_):
+                let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+                wasmTypeBeginBlock(instr, signature)
+            case .wasmEndBlock(_):
+                let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+                wasmTypeEndBlock(instr, signature.outputTypes)
             case .wasmBeginIf(_):
                 let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
                 wasmTypeBeginBlock(instr, signature)

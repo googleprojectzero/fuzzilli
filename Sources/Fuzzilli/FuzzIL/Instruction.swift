@@ -1386,12 +1386,11 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmBeginBlock(let op):
                 $0.wasmBeginBlock = Fuzzilli_Protobuf_WasmBeginBlock.with {
-                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
-                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.parameterCount = Int32(op.parameterCount)
                 }
             case .wasmEndBlock(let op):
                 $0.wasmEndBlock = Fuzzilli_Protobuf_WasmEndBlock.with {
-                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputCount = Int32(op.numOutputs)
                 }
             case .wasmBeginLoop(let op):
                 $0.wasmBeginLoop = Fuzzilli_Protobuf_WasmBeginLoop.with {
@@ -2453,11 +2452,9 @@ extension Instruction: ProtobufConvertible {
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)
             op = EndWasmFunction(signature: parameters => outputs)
         case .wasmBeginBlock(let p):
-            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
-            op = WasmBeginBlock(with: parameters => outputs)
+            op = WasmBeginBlock(parameterCount: Int(p.parameterCount))
         case .wasmEndBlock(let p):
-            op = WasmEndBlock(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
+            op = WasmEndBlock(outputCount: Int(p.outputCount))
         case .wasmBeginLoop(let p):
             op = WasmBeginLoop(parameterCount: Int(p.parameterCount))
         case .wasmEndLoop(let p):

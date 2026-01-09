@@ -1230,8 +1230,7 @@ public class WasmLifter {
         assert(instr.op is WasmOperation)
 
         switch instr.op.opcode {
-        case .wasmBeginBlock(let op):
-            registerSignature(op.signature)
+        case .wasmBeginBlock(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
@@ -1899,10 +1898,11 @@ public class WasmLifter {
             } else {
                 throw WasmLifter.CompileError.failedIndexLookUp
             }
-        case .wasmBeginBlock(let op):
+        case .wasmBeginBlock(_):
             // A Block can "produce" (push) an item on the value stack, just like a function. Similarly, a block can also have parameters.
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
-            return Data([0x02] + Leb128.unsignedEncode(getSignatureIndexStrict(op.signature)))
+            let signatureDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            return Data([0x02] + Leb128.unsignedEncode(typeDescToIndex[signatureDesc]!))
         case .wasmBeginLoop(_):
             let signatureDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             return Data([0x03] + Leb128.unsignedEncode(typeDescToIndex[signatureDesc]!))

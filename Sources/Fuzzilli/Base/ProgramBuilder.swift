@@ -3921,25 +3921,28 @@ public class ProgramBuilder {
         // The first innerOutput of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         public func wasmBuildBlock(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> ()) {
             assert(signature.outputTypes.count == 0)
-            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args, types: signature.parameterTypes)
+            let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
+            let instr = b.emit(
+                WasmBeginBlock(parameterCount: signature.parameterTypes.count),
+                withInputs: [signatureDef] + args,
+                types: [.wasmTypeDef()] + signature.parameterTypes)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            b.emit(WasmEndBlock(outputTypes: []))
+            b.emit(WasmEndBlock(outputCount: 0), withInputs: [signatureDef])
         }
 
         @discardableResult
         public func wasmBuildBlockWithResults(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
-            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args, types: signature.parameterTypes)
+            let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
+            let instr = b.emit(
+                WasmBeginBlock(parameterCount: signature.parameterTypes.count),
+                withInputs: [signatureDef] + args,
+                types: [.wasmTypeDef()] + signature.parameterTypes)
             let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return Array(b.emit(WasmEndBlock(outputTypes: signature.outputTypes), withInputs: results, types: signature.outputTypes).outputs)
-        }
-
-        // Convenience function to begin a wasm block. Note that this does not emit an end block.
-        func wasmBeginBlock(with signature: WasmSignature, args: [Variable]) {
-            b.emit(WasmBeginBlock(with: signature), withInputs: args, types: signature.parameterTypes)
-        }
-        // Convenience function to end a wasm block.
-        func wasmEndBlock(outputTypes: [ILType], args: [Variable]) {
-            b.emit(WasmEndBlock(outputTypes: outputTypes), withInputs: args, types: outputTypes)
+            return Array(b.emit(
+                WasmEndBlock(outputCount: signature.outputTypes.count),
+                withInputs: [signatureDef] + results,
+                types: [.wasmTypeDef()] + signature.outputTypes
+            ).outputs)
         }
 
         private func checkArgumentsMatchLabelType(label: ILType, args: [Variable]) {
@@ -4909,8 +4912,6 @@ public class ProgramBuilder {
             break
         case .beginWasmFunction(let op):
             activeWasmModule!.functions.append(WasmFunction(forBuilder: self, withSignature: op.signature))
-        case .wasmBeginBlock(let op):
-            activeWasmModule!.blockSignatures.push(op.signature)
         case .wasmBeginTry(let op):
             activeWasmModule!.blockSignatures.push(op.signature)
         case .wasmBeginTryDelegate(let op):
@@ -4919,8 +4920,7 @@ public class ProgramBuilder {
             activeWasmModule!.blockSignatures.push(op.signature)
         case .wasmEndTry(_),
              .wasmEndTryDelegate(_),
-             .wasmEndTryTable(_),
-             .wasmEndBlock(_):
+             .wasmEndTryTable(_):
             activeWasmModule!.blockSignatures.pop()
 
         default:

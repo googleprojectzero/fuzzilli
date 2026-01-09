@@ -1947,7 +1947,7 @@ class MinimizerTests: XCTestCase {
         }
     }
 
-    // Don't minimize the block fi the label is used by an important instruction.
+    // Don't minimize the block if the label is used by an important instruction.
     func testWasmBlockMinimizationLabelUsed() throws {
         try runWasmMinimization { evaluator, b in
             b.buildWasmModule { wasmModule in

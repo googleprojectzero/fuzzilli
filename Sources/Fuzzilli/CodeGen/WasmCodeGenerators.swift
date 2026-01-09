@@ -1216,13 +1216,15 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 inContext: .single(.wasmFunction),
                 provides: [.wasmFunction]
             ) { b in
-                b.emit(WasmBeginBlock(with: [] => []))
+                let signature = b.wasmDefineAdHocSignatureType(signature: [] => [])
+                b.runtimeData.push("blockSignature", signature)
+                b.emit(WasmBeginBlock(parameterCount: 0), withInputs: [signature])
             },
             GeneratorStub(
                 "WasmEndBlockGenerator",
                 inContext: .single(.wasmFunction)
             ) { b in
-                b.emit(WasmEndBlock(outputTypes: []))
+                b.emit(WasmEndBlock(outputCount: 0), withInputs: [b.runtimeData.pop("blockSignature")])
             },
         ]),
 
@@ -1234,24 +1236,22 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 inContext: .single(.wasmFunction),
                 provides: [.wasmFunction]
             ) { b in
-                let args = b.randomWasmBlockArguments(upTo: 5)
+                let args = b.randomWasmBlockArguments(upTo: 5, allowingGcTypes: true)
                 let parameters = args.map(b.type)
 
                 let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
-                let signature = parameters => outputTypes
-                b.emit(WasmBeginBlock(with: signature), withInputs: args)
+                let signature = b.wasmDefineAdHocSignatureType(signature: parameters => outputTypes)
+                b.runtimeData.push("blockSignature", signature)
+                b.emit(WasmBeginBlock(parameterCount: parameters.count), withInputs: [signature] + args)
             },
-            GeneratorStub(
-                "WasmEndBlockGenerator",
-                inContext: .single(.wasmFunction)
-            ) { b in
-                let signature = b.currentWasmSignature
+            GeneratorStub("WasmEndBlockGenerator", inContext: .single(.wasmFunction)) { b in
+                let signature = b.runtimeData.pop("blockSignature")
+                let wasmSignature = b.type(of: signature).wasmFunctionSignatureDefSignature
                 let function = b.currentWasmFunction
-                let outputs = signature.outputTypes.map(
-                    function.findOrGenerateWasmVar)
+                let outputs = wasmSignature.outputTypes.map(function.findOrGenerateWasmVar)
                 b.emit(
-                    WasmEndBlock(outputTypes: signature.outputTypes),
-                    withInputs: outputs)
+                    WasmEndBlock(outputCount: wasmSignature.outputTypes.count),
+                    withInputs: [signature] + outputs)
             },
         ]),
 
@@ -1607,8 +1607,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let extraBlockCount = Int.random(in: 1...5)
         let valueCount = Int.random(in: 0...20)
         let signature = [] => parameterTypes
+        let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
         (0..<extraBlockCount).forEach { _ in
-            function.wasmBeginBlock(with: signature, args: [])
+            b.emit(WasmBeginBlock(parameterCount: 0), withInputs: [signatureDef])
         }
         let labels = (0...valueCount).map { _ in
             b.randomVariable(ofType: .label(parameterTypes))!
@@ -1617,8 +1618,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmBranchTable(on: value, labels: labels, args: args)
         (0..<extraBlockCount).forEach { n in
             let results = parameterTypes.map(function.findOrGenerateWasmVar)
-            function.wasmEndBlock(
-                outputTypes: signature.outputTypes, args: results)
+            b.emit(WasmEndBlock(outputCount: parameterTypes.count), withInputs: [signatureDef] + results)
             b.buildRecursive(n: 4)
         }
     },
@@ -1642,7 +1642,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 }
                 let withExnRef = tags.map {_ in Bool.random()}
 
-                let outputTypesList = zip(tags, withExnRef).map {
+                let signatureDefs = zip(tags, withExnRef).map {
                     tag, withExnRef in
                     var outputTypes: [ILType] =
                         if let tag = tag {
@@ -1653,14 +1653,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                     if withExnRef {
                         outputTypes.append(.wasmExnRef())
                     }
-                    function.wasmBeginBlock(with: [] => outputTypes, args: [])
-                    return outputTypes
+                    let signature = [] => outputTypes
+                    let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
+                    b.emit(WasmBeginBlock(parameterCount: 0), withInputs: [signatureDef])
+                    return signatureDef
                 }
                 // Look up the labels. In most cases these will be exactly the ones produced by the blocks
                 // above but also any other matching existing block could be used. (Similar, tags with the
                 // same parameter types could also be mapped to the same block.)
-                let labels = outputTypesList.map { outputTypes in
-                    b.randomVariable(ofType: .label(outputTypes))!
+                let labels = signatureDefs.map { signatureDef in
+                    b.randomVariable(ofType: .label(b.type(of: signatureDef).wasmFunctionSignatureDefSignature.outputTypes))!
                 }
                 let catches = zip(tags, withExnRef).map {
                     tag, withExnRef -> WasmBeginTryTable.CatchKind in
@@ -1682,12 +1684,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                     b.buildRecursive(n: defaultCodeGenerationAmount)
                     return tryOutputTypes.map(function.findOrGenerateWasmVar)
                 }
-                outputTypesList.reversed().enumerated().forEach {
-                    n, outputTypes in
-                    let results = outputTypes.map(
-                        function.findOrGenerateWasmVar)
-                    function.wasmEndBlock(
-                        outputTypes: outputTypes, args: results)
+                signatureDefs.reversed().enumerated().forEach { n, signatureDef in
+                    let wasmSignature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
+                    let results = wasmSignature.outputTypes.map(function.findOrGenerateWasmVar)
+                    b.emit(WasmEndBlock(outputCount: wasmSignature.outputTypes.count),
+                           withInputs: [signatureDef] + results)
                     b.buildRecursive(n: defaultCodeGenerationAmount)
                 }
             }
