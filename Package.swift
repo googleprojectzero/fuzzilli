@@ -70,6 +70,14 @@ let package = Package(
         .executableTarget(name: "FuzzILTool",
                 dependencies: ["Fuzzilli"]),
 
+        // Tool that runs d8 in Dumpling mode. First time it runs with Maglev
+        // and Turbofan. Second time without. In both runs frames are dumped
+        // in certain points to the files. The dumps are later compared for
+        // equality. If they are not equal, it means that there's likely a bug
+        // in V8.
+        .executableTarget(name: "RelateTool",
+                dependencies: ["Fuzzilli"]),
+
         .testTarget(name: "FuzzilliTests",
                     dependencies: ["Fuzzilli"],
                     resources: [.copy("CompilerTests")]),
