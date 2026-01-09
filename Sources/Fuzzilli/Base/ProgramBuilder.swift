@@ -3973,35 +3973,53 @@ public class ProgramBuilder {
                 withInputs: labels + args + [on])
         }
 
+        // TODO(mliedtke): It would be nice to remove this overload to simplify the codebase.
         public func wasmBuildIfElse(_ condition: Variable, hint: WasmBranchHint = .None, ifBody: () -> Void, elseBody: (() -> Void)? = nil) {
-            b.emit(WasmBeginIf(hint: hint), withInputs: [condition])
+            let signatureDef = b.wasmDefineAdHocSignatureType(signature: [] => [])
+            b.emit(WasmBeginIf(hint: hint), withInputs: [signatureDef, condition])
             ifBody()
             if let elseBody {
-                b.emit(WasmBeginElse())
+                b.emit(WasmBeginElse(), withInputs: [signatureDef])
                 elseBody()
             }
-            b.emit(WasmEndIf())
+            b.emit(WasmEndIf(), withInputs: [signatureDef])
         }
 
         public func wasmBuildIfElse(_ condition: Variable, signature: WasmSignature, args: [Variable], inverted: Bool, ifBody: (Variable, [Variable]) -> Void, elseBody: ((Variable, [Variable]) -> Void)? = nil) {
-            let beginBlock = b.emit(WasmBeginIf(with: signature, inverted: inverted),
-                withInputs: args + [condition],
-                types: signature.parameterTypes + [.wasmi32])
+            assert(signature.outputTypes.count == 0)
+            let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
+            let beginBlock = b.emit(WasmBeginIf(parameterCount: signature.parameterTypes.count, inverted: inverted),
+                withInputs: [signatureDef] + args + [condition],
+                types: [.wasmTypeDef()] + signature.parameterTypes + [.wasmi32])
             ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
             if let elseBody {
-                let elseBlock = b.emit(WasmBeginElse(with: signature))
+                let elseBlock = b.emit(WasmBeginElse(parameterCount: signature.parameterTypes.count, outputCount: signature.outputTypes.count),
+                    withInputs: [signatureDef],
+                    types: [.wasmTypeDef()])
                 elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
             }
-            b.emit(WasmEndIf())
+            b.emit(WasmEndIf(), withInputs: [signatureDef], types: [.wasmTypeDef()])
         }
 
+        // TODO(mliedtke): Instead of taking a WasmSignature also allow taking an existing signature
+        // definition (Variable) as input and add a code generator for it.
         @discardableResult
         public func wasmBuildIfElseWithResult(_ condition: Variable, hint: WasmBranchHint = .None, signature: WasmSignature, args: [Variable], ifBody: (Variable, [Variable]) -> [Variable], elseBody: (Variable, [Variable]) -> [Variable]) -> [Variable] {
-            let beginBlock = b.emit(WasmBeginIf(with: signature, hint: hint), withInputs: args + [condition], types: signature.parameterTypes + [.wasmi32])
+            let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
+            let beginBlock = b.emit(
+                WasmBeginIf(parameterCount: signature.parameterTypes.count),
+                withInputs: [signatureDef] + args + [condition],
+                types: [.wasmTypeDef()] + signature.parameterTypes + [.wasmi32])
             let trueResults = ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
-            let elseBlock = b.emit(WasmBeginElse(with: signature), withInputs: trueResults, types: signature.outputTypes)
+            let elseBlock = b.emit(
+                WasmBeginElse(parameterCount: signature.parameterTypes.count, outputCount: signature.outputTypes.count),
+                withInputs: [signatureDef] + trueResults,
+                types: [.wasmTypeDef()] + signature.outputTypes)
             let falseResults = elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
-            return Array(b.emit(WasmEndIf(outputTypes: signature.outputTypes), withInputs: falseResults, types: signature.outputTypes).outputs)
+            return Array(b.emit(
+                WasmEndIf(outputCount: signature.outputTypes.count),
+                withInputs: [signatureDef] + falseResults,
+                types: [.wasmTypeDef()] + signature.outputTypes).outputs)
         }
 
         @discardableResult
@@ -4010,6 +4028,7 @@ public class ProgramBuilder {
             return wasmBuildLoopImpl(signature: signature, signatureDef: signatureDef, args: args, body: body)
         }
 
+        // TODO(mliedtke): Also use this inside the code generator.
         @discardableResult
         public func wasmBuildLoop(with signatureDef: Variable, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
             let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
@@ -4596,11 +4615,11 @@ public class ProgramBuilder {
                 + WasmAbstractHeapType.allCases.map {.wasmRef($0, nullability: true)})}
     }
 
-    public func randomWasmBlockArguments(upTo n: Int) -> [Variable] {
+    public func randomWasmBlockArguments(upTo n: Int, allowingGcTypes: Bool = false) -> [Variable] {
         (0..<Int.random(in: 0...n)).map {_ in findVariable {
             // TODO(mliedtke): Also support wasm-gc types in wasm blocks.
             // This requires updating the inner output types based on the input types.
-            type(of: $0).Is(.wasmPrimitive) && !type(of: $0).Is(.wasmGenericRef)
+            type(of: $0).Is(.wasmPrimitive) && (allowingGcTypes || !type(of: $0).Is(.wasmGenericRef))
         }}.filter {$0 != nil}.map {$0!}
     }
 
@@ -4890,8 +4909,6 @@ public class ProgramBuilder {
             break
         case .beginWasmFunction(let op):
             activeWasmModule!.functions.append(WasmFunction(forBuilder: self, withSignature: op.signature))
-        case .wasmBeginIf(let op):
-            activeWasmModule!.blockSignatures.push(op.signature)
         case .wasmBeginBlock(let op):
             activeWasmModule!.blockSignatures.push(op.signature)
         case .wasmBeginTry(let op):
@@ -4900,8 +4917,7 @@ public class ProgramBuilder {
             activeWasmModule!.blockSignatures.push(op.signature)
         case .wasmBeginTryTable(let op):
             activeWasmModule!.blockSignatures.push(op.signature)
-        case .wasmEndIf(_),
-             .wasmEndTry(_),
+        case .wasmEndTry(_),
              .wasmEndTryDelegate(_),
              .wasmEndTryTable(_),
              .wasmEndBlock(_):

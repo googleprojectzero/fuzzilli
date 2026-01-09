@@ -818,14 +818,17 @@ public struct JSTyper: Analyzer {
                 wasmTypeBeginBlock(instr, op.signature)
             case .wasmEndBlock(let op):
                 wasmTypeEndBlock(instr, op.outputTypes)
-            case .wasmBeginIf(let op):
-                wasmTypeBeginBlock(instr, op.signature)
-            case .wasmBeginElse(let op):
+            case .wasmBeginIf(_):
+                let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+                wasmTypeBeginBlock(instr, signature)
+            case .wasmBeginElse(_):
+                let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
                 // The else block is both end and begin block.
-                wasmTypeEndBlock(instr, op.signature.outputTypes)
-                wasmTypeBeginBlock(instr, op.signature)
-            case .wasmEndIf(let op):
-                wasmTypeEndBlock(instr, op.outputTypes)
+                wasmTypeEndBlock(instr, signature.outputTypes)
+                wasmTypeBeginBlock(instr, signature)
+            case .wasmEndIf(_):
+            let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+                wasmTypeEndBlock(instr, signature.outputTypes)
             case .wasmBeginLoop(_):
                 // Note that different to all other blocks the loop's label parameters are the input types
                 // of the block, not the result types (because a branch to a loop label jumps to the

@@ -1219,14 +1219,12 @@ public class FuzzILLifter: Lifter {
                 case .Likely: "likely "
                 case .Unlikely: "unlikely "
             }
-            w.emit("WasmBeginIf \(op.inverted ? "inverted " : "")\(hint)(\(op.signature)) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
+            w.emit("WasmBeginIf \(op.inverted ? "inverted " : "")\(hint) [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
             w.increaseIndentionLevel()
 
         case .wasmBeginElse(_):
             w.decreaseIndentionLevel()
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            // Note that the signature is printed by the WasmBeginIf, so we skip it here for better
-            // readability.
             w.emit("WasmBeginElse [\(inputs)] -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
             w.increaseIndentionLevel()
 

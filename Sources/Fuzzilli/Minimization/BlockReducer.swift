@@ -479,8 +479,9 @@ struct BlockReducer: Reducer {
 
         let ifBlock = group.block(0)
         let beginIf = helper.code[ifBlock.head].op as! WasmBeginIf
+        let endIf = helper.code[group.tail].op as! WasmEndIf
         // Now try to turn if-else into just if.
-        if group.numBlocks == 2 && beginIf.signature.outputTypes.isEmpty {
+        if group.numBlocks == 2 && endIf.outputCount == 0 {
             // First try to remove the else block.
             let elseBlock = group.block(1)
             let rangeToNop = Array(elseBlock.head ..< elseBlock.tail)
@@ -490,7 +491,7 @@ struct BlockReducer: Reducer {
             }
 
             // Then try to remove the if block. This requires inverting the condition of the if.
-            let invertedIf = WasmBeginIf(with: beginIf.signature, inverted: !beginIf.inverted)
+            let invertedIf = WasmBeginIf(parameterCount: beginIf.parameterCount, inverted: !beginIf.inverted)
             var replacements = [(Int, Instruction)]()
             // The new WasmBeginIf will take the original inputs but produces the inner outputs
             // of the original WasmBeginElse block, so that users of them are rewired correctly.
@@ -509,7 +510,7 @@ struct BlockReducer: Reducer {
         }
         // If we have outputs or the innerOutputs of the WasmBeginIf / WasmBeginElse are used,
         // a more "sophisticated" reduction is needed.
-        if group.numBlocks == 2 && (!beginIf.signature.parameterTypes.isEmpty || !beginIf.signature.outputTypes.isEmpty) {
+        if group.numBlocks == 2 && (beginIf.parameterCount != 0 || endIf.outputCount != 0) {
             let elseBlock = group.block(1)
             let beginIfInstr = helper.code[ifBlock.head]
 
@@ -522,11 +523,11 @@ struct BlockReducer: Reducer {
             do { // First try to replace the if-else with the if body.
                 // "Shortcut" bypassing the WasmBeginIf by directly using its inputs.
                 var varReplacements = Dictionary(
-                    uniqueKeysWithValues: zip(beginIfInstr.innerOutputs.dropFirst(), beginIfInstr.inputs))
+                    uniqueKeysWithValues: zip(beginIfInstr.innerOutputs.dropFirst(), beginIfInstr.inputs.dropFirst()))
                 // Replace all usages of the WasmEndIf outputs with the results of the if true
                 // block which are the inputs into the WasmBeginElse block.
                 varReplacements.merge(
-                    zip(helper.code[elseBlock.tail].outputs, helper.code[elseBlock.head].inputs.map {varReplacements[$0] ?? $0}),
+                    zip(helper.code[elseBlock.tail].outputs, helper.code[elseBlock.head].inputs.dropFirst().map {varReplacements[$0] ?? $0}),
                     uniquingKeysWith: {_, _ in fatalError("duplicate variables")})
                 var newCode = Code()
                 for (i, instr) in helper.code.enumerated() {
@@ -547,10 +548,13 @@ struct BlockReducer: Reducer {
                 // "Shortcut" bypassing the WasmBeginElse by directly using the inputs into the
                 // WasmBeginIf.
                 var varReplacements = Dictionary(
-                    uniqueKeysWithValues: zip(beginElseInstr.innerOutputs.dropFirst(), beginIfInstr.inputs))
+                    uniqueKeysWithValues: zip(beginElseInstr.innerOutputs.dropFirst(), beginIfInstr.inputs.dropFirst()))
                 // Replace all usages of the WasmEndIf outputs with the results of the else block
                 // which are the inputs into the WasmEndIf block.
-                varReplacements.merge(zip(helper.code[elseBlock.tail].outputs, helper.code[elseBlock.tail].inputs.map {varReplacements[$0] ?? $0}), uniquingKeysWith: {_, _ in fatalError("duplicate variables")})
+                varReplacements.merge(
+                    zip(helper.code[elseBlock.tail].outputs,
+                        helper.code[elseBlock.tail].inputs.dropFirst().map {varReplacements[$0] ?? $0}),
+                    uniquingKeysWith: {_, _ in fatalError("duplicate variables")})
                 var newCode = Code()
                 for (i, instr) in helper.code.enumerated() {
                     if i == elseBlock.tail || (i >= ifBlock.head && i <= ifBlock.tail) {

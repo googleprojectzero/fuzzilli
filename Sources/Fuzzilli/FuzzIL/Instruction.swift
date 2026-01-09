@@ -1466,19 +1466,18 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmBeginIf(let op):
                 $0.wasmBeginIf = Fuzzilli_Protobuf_WasmBeginIf.with {
-                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
-                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.parameterCount = Int32(op.parameterCount)
                     $0.inverted = op.inverted
                     $0.hint = convertEnum(op.hint, WasmBranchHint.allCases)
                 }
             case .wasmBeginElse(let op):
                 $0.wasmBeginElse = Fuzzilli_Protobuf_WasmBeginElse.with {
-                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
-                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.parameterCount = Int32(op.parameterCount)
+                    $0.outputCount = Int32(op.outputCount)
                 }
             case .wasmEndIf(let op):
                 $0.wasmEndIf = Fuzzilli_Protobuf_WasmEndIf.with {
-                    $0.outputTypes = op.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.outputCount = Int32(op.outputCount)
                 }
             case .wasmNop(_):
                 fatalError("Should never be serialized")
@@ -2503,15 +2502,11 @@ extension Instruction: ProtobufConvertible {
         case .wasmBranchTable(let p):
             op = WasmBranchTable(labelTypes: p.parameters.map(WasmTypeEnumToILType), valueCount: Int(p.valueCount))
         case .wasmBeginIf(let p):
-            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
-            op = WasmBeginIf(with: parameters => outputs, hint: try convertEnum(p.hint, WasmBranchHint.allCases), inverted: p.inverted)
+            op = WasmBeginIf(parameterCount: Int(p.parameterCount), hint: try convertEnum(p.hint, WasmBranchHint.allCases), inverted: p.inverted)
         case .wasmBeginElse(let p):
-            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
-            op = WasmBeginElse(with: parameters => outputs)
+            op = WasmBeginElse(parameterCount: Int(p.parameterCount), outputCount: Int(p.outputCount))
         case .wasmEndIf(let p):
-            op = WasmEndIf(outputTypes: p.outputTypes.map(WasmTypeEnumToILType))
+            op = WasmEndIf(outputCount: Int(p.outputCount))
         case .wasmNop(_):
             fatalError("Should never be deserialized!")
         case .wasmUnreachable(_):

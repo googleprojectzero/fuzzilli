@@ -1292,18 +1292,12 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             let function = b.currentWasmModule.currentWasmFunction
             // Count upwards here to make it slightly more different from the other loop generator.
             // Also, instead of using reassign, this generator uses the signature to pass and update the loop counter.
-            let randomArgs = b.randomWasmBlockArguments(upTo: 5)
+            let randomArgs = b.randomWasmBlockArguments(upTo: 5, allowingGcTypes: true)
             let randomArgTypes = randomArgs.map { b.type(of: $0) }
             let args = [function.consti32(0)] + randomArgs
             let parameters = args.map(b.type)
             // TODO(mliedtke): Also allow index types in the output types.
             let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
-            // Calculate index types for the dynamically created signature.
-            let indexTypes = (parameters + outputTypes)
-                .filter {$0.Is(.anyIndexRef)}
-                .map(b.getWasmTypeDef)
-
-            // TODO(mliedtke): We need to cleanup the index types here!
             let signature = b.wasmDefineAdHocSignatureType(signature: parameters => outputTypes)
             let loopBegin = b.emit(WasmBeginLoop(parameterCount: parameters.count),
                 withInputs: [signature] + args)
@@ -1455,22 +1449,24 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 inputs: .required(.wasmi32),
                 provides: [.wasmFunction]
             ) { b, condition in
+                let signature = b.wasmDefineAdHocSignatureType(signature: [] => [])
+                b.runtimeData.push("ifSignature", signature)
                 b.emit(
                     WasmBeginIf(hint: b.randomWasmBranchHint()),
-                    withInputs: [condition])
+                    withInputs: [signature, condition])
             },
             GeneratorStub(
                 "WasmBeginElseGenerator",
                 inContext: .single(.wasmFunction),
                 provides: [.wasmFunction]
             ) { b in
-                b.emit(WasmBeginElse())
+                b.emit(WasmBeginElse(), withInputs: [b.runtimeData.popAndPush("ifSignature")])
             },
             GeneratorStub(
                 "WasmEndIfElseGenerator",
                 inContext: .single(.wasmFunction)
             ) { b in
-                b.emit(WasmEndIf())
+                b.emit(WasmEndIf(), withInputs: [b.runtimeData.pop("ifSignature")])
             },
         ]),
 
@@ -1483,14 +1479,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 inputs: .required(.wasmi32),
                 provides: [.wasmFunction]
             ) { b, condition in
-                let args = b.randomWasmBlockArguments(upTo: 5)
+                let args = b.randomWasmBlockArguments(upTo: 5, allowingGcTypes: true)
                 let parameters = args.map(b.type)
                 let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
+                let signature = b.wasmDefineAdHocSignatureType(signature: parameters => outputTypes)
+                b.runtimeData.push("ifSignature", signature)
                 b.emit(
                     WasmBeginIf(
-                        with: parameters => outputTypes,
+                        parameterCount: parameters.count,
                         hint: b.randomWasmBranchHint()),
-                    withInputs: args + [condition])
+                    withInputs: [signature] + args + [condition])
             },
             GeneratorStub(
                 "WasmBeginElseGenerator",
@@ -1498,22 +1496,23 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 provides: [.wasmFunction]
             ) { b in
                 let function = b.currentWasmFunction
-                let signature = b.currentWasmSignature
-                let trueResults = signature.outputTypes.map(
-                    function.findOrGenerateWasmVar)
-                b.emit(WasmBeginElse(with: signature), withInputs: trueResults)
+                let signature = b.runtimeData.popAndPush("ifSignature")
+                let wasmSignature = b.type(of: signature).wasmFunctionSignatureDefSignature
+                let trueResults = wasmSignature.outputTypes.map(function.findOrGenerateWasmVar)
+                b.emit(WasmBeginElse(parameterCount: wasmSignature.parameterTypes.count,
+                    outputCount: wasmSignature.outputTypes.count),
+                    withInputs: [signature] + trueResults)
             },
             GeneratorStub(
                 "WasmEndIfGenerator",
                 inContext: .single(.wasmFunction)
             ) { b in
                 let function = b.currentWasmFunction
-                let signature = b.currentWasmSignature
-                let falseResults = signature.outputTypes.map(
-                    function.findOrGenerateWasmVar)
-                b.emit(
-                    WasmEndIf(outputTypes: signature.outputTypes),
-                    withInputs: falseResults)
+                let signature = b.runtimeData.pop("ifSignature")
+                let wasmSignature = b.type(of: signature).wasmFunctionSignatureDefSignature
+                let falseResults = wasmSignature.outputTypes.map(function.findOrGenerateWasmVar)
+                b.emit(WasmEndIf(outputCount: wasmSignature.outputTypes.count),
+                    withInputs: [signature] + falseResults)
             },
         ]),
 

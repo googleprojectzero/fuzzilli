@@ -1277,43 +1277,46 @@ public enum WasmBranchHint: CaseIterable  {
 
 final class WasmBeginIf: WasmOperation {
     override var opcode: Opcode { .wasmBeginIf(self) }
-    let signature: WasmSignature
     let inverted: Bool
     let hint: WasmBranchHint
 
-    init(with signature: WasmSignature = [] => [], hint: WasmBranchHint = .None, inverted: Bool = false) {
-        self.signature = signature
+    init(parameterCount: Int = 0, hint: WasmBranchHint = .None, inverted: Bool = false) {
         self.inverted = inverted
         self.hint = hint
         // Note that the condition is the last input! This is due to how lifting works for the wasm
         // value stack and that the condition is the first value to be removed from the stack, so
         // it needs to be the last one pushed to it.
+        // Inputs: The signature, the arguments and the condition.
         // Inner outputs: 1 label (used for branch instructions) plus all the parameters.
-        super.init(numInputs: signature.parameterTypes.count + 1, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .propagatesSurroundingContext, .isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 2 + parameterCount, numInnerOutputs: 1 + parameterCount, attributes: [.isBlockStart, .propagatesSurroundingContext, .isMutable], requiredContext: [.wasmFunction])
     }
+
+    var parameterCount: Int {numInputs - 2}
 }
 
 final class WasmBeginElse: WasmOperation {
     override var opcode: Opcode { .wasmBeginElse(self) }
-    let signature: WasmSignature
 
-    init(with signature: WasmSignature = [] => []) {
-        self.signature = signature
+    // The parameterCount and outputCount of the wasm signature.
+    init(parameterCount: Int = 0, outputCount: Int = 0) {
         // The WasmBeginElse acts both as a block end for the true case and as a block start for the
         // false case. As such, its input types are the results from the true block and its inner
         // output types are the same as for the corresponding WasmBeginIf.
-        super.init(numInputs: signature.outputTypes.count, numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1 + outputCount, numInnerOutputs: 1 + parameterCount, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
+
+    var parameterCount: Int {numInnerOutputs - 1}
+    var outputCount: Int {numInputs - 1}
 }
 
 final class WasmEndIf: WasmOperation {
     override var opcode: Opcode { .wasmEndIf(self) }
-    let outputTypes: [ILType]
 
-    init(outputTypes: [ILType] = []) {
-        self.outputTypes = outputTypes
-        super.init(numInputs: outputTypes.count, numOutputs: outputTypes.count, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
+    init(outputCount: Int = 0) {
+        super.init(numInputs: 1 + outputCount, numOutputs: outputCount, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
     }
+
+    var outputCount: Int {numInputs - 1}
 }
 
 final class WasmBeginLoop: WasmOperation {

@@ -369,7 +369,7 @@ public class OperationMutator: BaseInstructionMutator {
 
         case .wasmDefineGlobal(let op):
             // We never change the type of the global, only the value as changing the type will break the following code pretty much instantly.
-            let wasmGlobal:WasmGlobal = 
+            let wasmGlobal:WasmGlobal =
                 switch op.wasmGlobal.toType() {
                 case .wasmf32:
                     .wasmf32(Float32(b.randomFloat()))
@@ -499,7 +499,7 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmBranchIf(let op):
             newOp = WasmBranchIf(labelTypes: op.labelTypes, hint: chooseUniform(from: WasmBranchHint.allCases))
         case .wasmBeginIf(let op):
-            newOp = WasmBeginIf(with: op.signature, hint: chooseUniform(from: WasmBranchHint.allCases), inverted: Bool.random())
+            newOp = WasmBeginIf(parameterCount: op.parameterCount, hint: chooseUniform(from: WasmBranchHint.allCases), inverted: Bool.random())
         case .wasmArrayGet(let op):
             // Switch signedness. (This only matters for packed types i8 and i16.)
             newOp = WasmArrayGet(isSigned: !op.isSigned)

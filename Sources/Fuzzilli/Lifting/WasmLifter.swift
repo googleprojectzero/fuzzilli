@@ -1235,8 +1235,7 @@ public class WasmLifter {
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
-        case .wasmBeginIf(let op):
-            registerSignature(op.signature)
+        case .wasmBeginIf(_):
             self.currentFunction!.labelBranchDepthMapping[instr.innerOutput(0)] = self.currentFunction!.variableAnalyzer.wasmBranchDepth
             // Needs typer analysis
             return true
@@ -1970,7 +1969,8 @@ public class WasmLifter {
             return Data([0x0E]) + Leb128.unsignedEncode(op.valueCount) + depths.map(Leb128.unsignedEncode).joined()
         case .wasmBeginIf(let op):
             currentFunction!.addBranchHint(op.hint)
-            let beginIf = Data([0x04] + Leb128.unsignedEncode(try getSignatureIndex(op.signature)))
+            let signatureDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let beginIf = Data([0x04] + Leb128.unsignedEncode(typeDescToIndex[signatureDesc]!))
             // Invert the condition with an `i32.eqz` (resulting in 0 becoming 1 and everything else becoming 0).
             return op.inverted ? Data([0x45]) + beginIf : beginIf
         case .wasmBeginElse(_):

@@ -5408,9 +5408,7 @@ public struct Fuzzilli_Protobuf_WasmBeginIf: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameterTypes: [Fuzzilli_Protobuf_WasmILType] = []
-
-  public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
+  public var parameterCount: Int32 = 0
 
   public var inverted: Bool = false
 
@@ -5426,9 +5424,9 @@ public struct Fuzzilli_Protobuf_WasmBeginElse: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameterTypes: [Fuzzilli_Protobuf_WasmILType] = []
+  public var parameterCount: Int32 = 0
 
-  public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
+  public var outputCount: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5440,7 +5438,7 @@ public struct Fuzzilli_Protobuf_WasmEndIf: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
+  public var outputCount: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -14275,7 +14273,7 @@ extension Fuzzilli_Protobuf_WasmReassign: SwiftProtobuf.Message, SwiftProtobuf._
 
 extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmBeginIf"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}parameterTypes\0\u{1}outputTypes\0\u{1}inverted\0\u{1}hint\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}parameterCount\0\u{2}\u{2}inverted\0\u{1}hint\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -14283,8 +14281,7 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.outputTypes) }()
+      case 1: try { try decoder.decodeSingularInt32Field(value: &self.parameterCount) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.inverted) }()
       case 4: try { try decoder.decodeSingularEnumField(value: &self.hint) }()
       default: break
@@ -14293,11 +14290,8 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.parameterTypes.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.parameterTypes, fieldNumber: 1)
-    }
-    if !self.outputTypes.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.outputTypes, fieldNumber: 2)
+    if self.parameterCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.parameterCount, fieldNumber: 1)
     }
     if self.inverted != false {
       try visitor.visitSingularBoolField(value: self.inverted, fieldNumber: 3)
@@ -14309,8 +14303,7 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmBeginIf, rhs: Fuzzilli_Protobuf_WasmBeginIf) -> Bool {
-    if lhs.parameterTypes != rhs.parameterTypes {return false}
-    if lhs.outputTypes != rhs.outputTypes {return false}
+    if lhs.parameterCount != rhs.parameterCount {return false}
     if lhs.inverted != rhs.inverted {return false}
     if lhs.hint != rhs.hint {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -14320,7 +14313,7 @@ extension Fuzzilli_Protobuf_WasmBeginIf: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Fuzzilli_Protobuf_WasmBeginElse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmBeginElse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}parameterTypes\0\u{1}outputTypes\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}parameterCount\0\u{1}outputCount\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -14328,26 +14321,26 @@ extension Fuzzilli_Protobuf_WasmBeginElse: SwiftProtobuf.Message, SwiftProtobuf.
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.outputTypes) }()
+      case 1: try { try decoder.decodeSingularInt32Field(value: &self.parameterCount) }()
+      case 2: try { try decoder.decodeSingularInt32Field(value: &self.outputCount) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.parameterTypes.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.parameterTypes, fieldNumber: 1)
+    if self.parameterCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.parameterCount, fieldNumber: 1)
     }
-    if !self.outputTypes.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.outputTypes, fieldNumber: 2)
+    if self.outputCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.outputCount, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmBeginElse, rhs: Fuzzilli_Protobuf_WasmBeginElse) -> Bool {
-    if lhs.parameterTypes != rhs.parameterTypes {return false}
-    if lhs.outputTypes != rhs.outputTypes {return false}
+    if lhs.parameterCount != rhs.parameterCount {return false}
+    if lhs.outputCount != rhs.outputCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -14355,7 +14348,7 @@ extension Fuzzilli_Protobuf_WasmBeginElse: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Fuzzilli_Protobuf_WasmEndIf: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmEndIf"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}outputTypes\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}outputCount\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -14363,21 +14356,21 @@ extension Fuzzilli_Protobuf_WasmEndIf: SwiftProtobuf.Message, SwiftProtobuf._Mes
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.outputTypes) }()
+      case 1: try { try decoder.decodeSingularInt32Field(value: &self.outputCount) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.outputTypes.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.outputTypes, fieldNumber: 1)
+    if self.outputCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.outputCount, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmEndIf, rhs: Fuzzilli_Protobuf_WasmEndIf) -> Bool {
-    if lhs.outputTypes != rhs.outputTypes {return false}
+    if lhs.outputCount != rhs.outputCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
