@@ -1036,7 +1036,7 @@ public extension ILType {
     static let jsIterator = ILType.iterable + ILType.object(ofGroup: "Iterator", withProperties: ["value", "done"], withMethods: ["next", "return", "throw", "map", "filter", "take", "drop", "flatMap", "reduce", "toArray", "forEach", "some", "every", "find"])
 
     /// Type of the JavaScript Iterator constructor builtin.
-    static let jsIteratorConstructor = ILType.object(ofGroup: "IteratorConstructor", withProperties: ["prototype"], withMethods: ["from"])
+    static let jsIteratorConstructor = ILType.object(ofGroup: "IteratorConstructor", withProperties: ["prototype"], withMethods: ["from", "concat"])
 
     /// Type of a JavaScript generator object.
     static let jsGenerator = ILType.iterable + ILType.object(ofGroup: "Generator", withMethods: ["next", "return", "throw"])
@@ -1544,6 +1544,7 @@ public extension ObjectGroup {
         ],
         methods: [
             "from"   : [.jsAnything] => .jsIterator,
+            "concat" : [.jsAnything...] => .jsIterator,
         ]
     )
 
