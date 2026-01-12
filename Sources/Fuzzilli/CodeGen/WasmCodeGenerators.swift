@@ -1460,7 +1460,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 inContext: .single(.wasmFunction),
                 provides: [.wasmFunction]
             ) { b in
-                b.emit(WasmBeginElse(), withInputs: [b.runtimeData.popAndPush("ifSignature")])
+                b.emit(WasmBeginElse(), withInputs: [b.runtimeData.peek("ifSignature")])
             },
             GeneratorStub(
                 "WasmEndIfElseGenerator",
@@ -1496,7 +1496,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 provides: [.wasmFunction]
             ) { b in
                 let function = b.currentWasmFunction
-                let signature = b.runtimeData.popAndPush("ifSignature")
+                let signature = b.runtimeData.peek("ifSignature")
                 let wasmSignature = b.type(of: signature).wasmFunctionSignatureDefSignature
                 let trueResults = wasmSignature.outputTypes.map(function.findOrGenerateWasmVar)
                 b.emit(WasmBeginElse(parameterCount: wasmSignature.parameterTypes.count,

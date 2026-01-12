@@ -3237,7 +3237,7 @@ class ProgramBuilderRuntimeDataTests: XCTestCase {
                 counter += 1
             },
             GeneratorStub("AddOne") { b in
-                let value = b.runtimeData.popAndPush("value")
+                let value = b.runtimeData.peek("value")
                 b.binary(value, b.loadInt(1), with: .Add)
             },
             GeneratorStub("SubOne") { b in

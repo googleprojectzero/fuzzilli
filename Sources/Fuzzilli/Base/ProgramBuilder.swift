@@ -35,8 +35,9 @@ public class ProgramBuilder {
             return data[key]!.pop()
         }
 
-        // Fetch the most recent value for this key and push it back.
-        public func popAndPush(_ key: String) -> Variable {
+        // Fetch the most recent value for this key but keep it. (As the entries act as a stack,
+        // another CodeGeneratorStub will still need to pop the entry later on.)
+        public func peek(_ key: String) -> Variable {
             assert(data[key] != nil)
             return data[key]!.top
         }
