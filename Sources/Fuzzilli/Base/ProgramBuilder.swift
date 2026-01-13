@@ -3967,11 +3967,8 @@ public class ProgramBuilder {
         }
 
         public func wasmBranchTable(on: Variable, labels: [Variable], args: [Variable]) {
-            let argumentTypes = args.map({b.type(of: $0)})
-            labels.forEach {
-                checkArgumentsMatchLabelType(label: b.type(of: $0), args: args)
-            }
-            b.emit(WasmBranchTable(labelTypes: argumentTypes, valueCount: labels.count - 1),
+            labels.forEach { checkArgumentsMatchLabelType(label: b.type(of: $0), args: args) }
+            b.emit(WasmBranchTable(parameterCount: args.count, valueCount: labels.count - 1),
                 withInputs: labels + args + [on])
         }
 

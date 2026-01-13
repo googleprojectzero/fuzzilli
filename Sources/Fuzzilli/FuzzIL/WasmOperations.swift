@@ -1517,16 +1517,17 @@ final class WasmBranchIf: WasmOperation {
 
 final class WasmBranchTable: WasmOperation {
     override var opcode: Opcode { .wasmBranchTable(self) }
-    let labelTypes: [ILType]
     // The number of cases in the br_table. Note that the number of labels is one higher as each
     // br_table has a default label.
     let valueCount: Int
 
-    init(labelTypes: [ILType], valueCount: Int) {
-        self.labelTypes = labelTypes
+    init(parameterCount: Int, valueCount: Int) {
         self.valueCount = valueCount
-        super.init(numInputs: valueCount + 1 + labelTypes.count + 1, requiredContext: [.wasmFunction])
+        // Inputs: the case labels, the default label, the arguments and the condition.
+        super.init(numInputs: valueCount + 1 + parameterCount + 1, requiredContext: [.wasmFunction])
     }
+
+    var parameterCount: Int {numInputs - valueCount - 2}
 }
 
 // TODO: make this comprehensive, currently only works for locals, or assumes every thing it reassigns to is a local.

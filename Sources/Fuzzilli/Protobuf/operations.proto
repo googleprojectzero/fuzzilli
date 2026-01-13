@@ -1324,7 +1324,6 @@ message WasmBranchIf {
 }
 
 message WasmBranchTable {
-  repeated WasmILType parameters = 1;
   uint32 valueCount = 2;
 }
 

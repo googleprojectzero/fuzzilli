@@ -1455,7 +1455,6 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmBranchTable(let op):
                 $0.wasmBranchTable = Fuzzilli_Protobuf_WasmBranchTable.with {
-                    $0.parameters = op.labelTypes.map(ILTypeToWasmTypeEnum)
                     $0.valueCount = UInt32(op.valueCount)
                 }
             case .wasmBeginIf(let op):
@@ -2496,7 +2495,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmBranchIf(let p):
             op = WasmBranchIf(parameterCount: inouts.count - 2, hint: try convertEnum(p.hint, WasmBranchHint.allCases))
         case .wasmBranchTable(let p):
-            op = WasmBranchTable(labelTypes: p.parameters.map(WasmTypeEnumToILType), valueCount: Int(p.valueCount))
+            op = WasmBranchTable(parameterCount: inouts.count - Int(p.valueCount) - 2, valueCount: Int(p.valueCount))
         case .wasmBeginIf(let p):
             op = WasmBeginIf(parameterCount: Int(p.parameterCount), hint: try convertEnum(p.hint, WasmBranchHint.allCases), inverted: p.inverted)
         case .wasmBeginElse(let p):
