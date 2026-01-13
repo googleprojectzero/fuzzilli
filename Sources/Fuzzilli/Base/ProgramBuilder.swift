@@ -4177,20 +4177,14 @@ public class ProgramBuilder {
                         // TODO(pawkra): support other non-nullable types.
                         if (type.wasmReferenceType!.nullability) {
                             return self.wasmRefNull(type: type)
-                        } else {
-                            return nil
                         }
                     case .Index(_):
                         if (type.wasmReferenceType!.nullability) {
                             return self.wasmRefNull(typeDef: b.jsTyper.getWasmTypeDef(for: type))
-                        } else {
-                            break
                         }
                     case .none:
                         break
                     }
-                } else {
-                    return nil
                 }
                 return nil
             }
