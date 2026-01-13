@@ -1311,7 +1311,6 @@ message WasmDefineTag {
 }
 
 message WasmBranch {
-  repeated WasmILType parameters = 1;
 }
 
 enum WasmBranchHint {

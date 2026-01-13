@@ -3954,7 +3954,7 @@ public class ProgramBuilder {
         public func wasmBranch(to label: Variable, args: [Variable] = []) {
             let labelType = b.type(of: label)
             checkArgumentsMatchLabelType(label: labelType, args: args)
-            b.emit(WasmBranch(labelTypes: labelType.wasmLabelType!.parameters), withInputs: [label] + args)
+            b.emit(WasmBranch(parameterCount: labelType.wasmLabelType!.parameters.count), withInputs: [label] + args)
         }
 
         public func wasmBranchIf(_ condition: Variable, to label: Variable, args: [Variable] = [], hint: WasmBranchHint = .None) {

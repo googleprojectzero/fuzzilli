@@ -1494,13 +1494,12 @@ final class WasmRethrow: WasmOperation {
 
 final class WasmBranch: WasmOperation {
     override var opcode: Opcode { .wasmBranch(self) }
-    let labelTypes: [ILType]
 
-    init(labelTypes: [ILType]) {
-        self.labelTypes = labelTypes
-        super.init(numInputs: 1 + labelTypes.count, requiredContext: [.wasmFunction])
-
+    init(parameterCount: Int) {
+        super.init(numInputs: 1 + parameterCount, requiredContext: [.wasmFunction])
     }
+
+    var parameterCount: Int {numInputs - 1}
 }
 
 final class WasmBranchIf: WasmOperation {
