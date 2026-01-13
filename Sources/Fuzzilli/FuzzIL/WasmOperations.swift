@@ -1467,12 +1467,10 @@ final class WasmEndTryDelegate: WasmOperation {
 
 final class WasmThrow: WasmOperation {
     override var opcode: Opcode { .wasmThrow(self) }
-    public let parameterTypes: [ILType]
 
-    init(parameterTypes: [ILType]) {
-        self.parameterTypes = parameterTypes
+    init(parameterCount: Int) {
         // Inputs: the tag to be thrown plus the arguments for each parameter type of the tag.
-        super.init(numInputs: 1 + parameterTypes.count, attributes: [.isJump], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1 + parameterCount, attributes: [.isJump], requiredContext: [.wasmFunction])
     }
 }
 

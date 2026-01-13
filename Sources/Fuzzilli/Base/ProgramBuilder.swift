@@ -4115,7 +4115,7 @@ public class ProgramBuilder {
 
         public func WasmBuildThrow(tag: Variable, inputs: [Variable]) {
             let tagType = b.type(of: tag).wasmType as! WasmTagType
-            b.emit(WasmThrow(parameterTypes: tagType.parameters), withInputs: [tag] + inputs, types: [.object(ofGroup: "WasmTag")] + tagType.parameters)
+            b.emit(WasmThrow(parameterCount: tagType.parameters.count), withInputs: [tag] + inputs, types: [.object(ofGroup: "WasmTag")] + tagType.parameters)
         }
 
         public func wasmBuildThrowRef(exception: Variable) {

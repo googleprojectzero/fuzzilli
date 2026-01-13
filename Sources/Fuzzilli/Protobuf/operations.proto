@@ -1298,7 +1298,6 @@ message WasmEndTryDelegate {
 }
 
 message WasmThrow {
-  repeated WasmILType parameterTypes = 1;
 }
 
 message WasmThrowRef {
