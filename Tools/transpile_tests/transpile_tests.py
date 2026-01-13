@@ -38,6 +38,9 @@ class DefaultMetaDataParser:
   """Class instantiated once per test configuration/suite, providing a
   method to check for supported tests based on their metadata.
   """
+  def __init__(self, _):
+    pass
+
   def is_supported(self, abspath, relpath):
     return any(relpath.name.endswith(ext) for ext in ['.js', '.mjs'])
 
@@ -67,6 +70,13 @@ class Test262MetaDataParser(DefaultMetaDataParser):
 
 
 TEST_CONFIGS = {
+  'mjsunit': {
+    'path': 'test/mjsunit',
+    'excluded_suffixes': [],
+    'levels': 2,
+    'expand_level_paths': [],
+    'metadata_parser': DefaultMetaDataParser,
+  },
   'test262': {
     'path': 'test/test262/data/test',
     'excluded_suffixes': ['_FIXTURE.js'],
@@ -83,7 +93,7 @@ TEST_CONFIGS = {
       'language/statements/class',
     ],
     'metadata_parser': Test262MetaDataParser,
-  }
+  },
 }
 
 
