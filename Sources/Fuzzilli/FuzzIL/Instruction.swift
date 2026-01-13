@@ -1234,8 +1234,8 @@ extension Instruction: ProtobufConvertible {
             case .wasmTruncateSatf64Toi64(let op):
                 $0.wasmTruncateSatf64Toi64 = Fuzzilli_Protobuf_WasmTruncateSatf64Toi64.with { $0.isSigned = op.isSigned }
 
-           case .wasmReassign(let op):
-                $0.wasmReassign = Fuzzilli_Protobuf_WasmReassign.with { $0.variableType = ILTypeToWasmTypeEnum(op.variableType) }
+           case .wasmReassign(_):
+                $0.wasmReassign = Fuzzilli_Protobuf_WasmReassign()
             case .wasmDefineGlobal(let op):
                 $0.wasmDefineGlobal = Fuzzilli_Protobuf_WasmDefineGlobal.with {
                     $0.wasmGlobal.isMutable = op.isMutable
@@ -2369,8 +2369,8 @@ extension Instruction: ProtobufConvertible {
         case .wasmTruncateSatf64Toi64(let p):
             op = WasmTruncateSatf64Toi64(isSigned: p.isSigned)
 
-        case .wasmReassign(let p):
-            op = WasmReassign(variableType: WasmTypeEnumToILType(p.variableType))
+        case .wasmReassign(_):
+            op = WasmReassign()
         case .wasmDefineGlobal(let p):
             op = WasmDefineGlobal(wasmGlobal: convertWasmGlobal(p.wasmGlobal), isMutable: p.wasmGlobal.isMutable)
         case .wasmDefineTable(let p):

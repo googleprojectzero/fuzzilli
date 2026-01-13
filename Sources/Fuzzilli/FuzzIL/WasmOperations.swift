@@ -1535,10 +1535,7 @@ final class WasmBranchTable: WasmOperation {
 final class WasmReassign: WasmOperation {
     override var opcode: Opcode { .wasmReassign(self) }
 
-    let variableType: ILType
-
-    init(variableType: ILType) {
-        self.variableType = variableType
+    init() {
         super.init(numInputs: 2, attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
     }
 }

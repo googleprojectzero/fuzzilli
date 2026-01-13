@@ -3906,8 +3906,8 @@ public class ProgramBuilder {
         }
 
         public func wasmReassign(variable: Variable, to: Variable) {
-            assert(b.type(of: variable) == b.type(of: to))
-            b.emit(WasmReassign(variableType: b.type(of: variable)), withInputs: [variable, to])
+            assert(b.type(of: to).Is(b.type(of: variable)))
+            b.emit(WasmReassign(), withInputs: [variable, to])
         }
 
         public enum wasmBlockType {

@@ -1328,7 +1328,6 @@ message WasmBranchTable {
 }
 
 message WasmReassign {
-  WasmILType variableType = 1;
 }
 
 message WasmBeginIf {

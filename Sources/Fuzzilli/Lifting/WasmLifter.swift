@@ -1980,7 +1980,7 @@ public class WasmLifter {
             // wasmReassign is quite special, it needs to work for variables stored in various places, e.g. local slots or even globals. As such the lifting here first needs to locate the destination variable.
             var out = Data()
 
-            var storeInstruction = Data()
+            let storeInstruction: Data
             // If the variable is a local, we load the stack slot.
             // Check for the stack location of the `to` variable.
             if let stackSlot = currentFunction!.getStackSlot(for: wasmInstruction.input(0)) {
