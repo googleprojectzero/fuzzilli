@@ -1324,24 +1324,17 @@ public extension ObjectGroup {
     // them. Instead Fuzzilli generates GetProperty operations for them which will then be typed as
     // an `ILType.unboundFunction` which knows the required receiver type (in the example `Date`),
     // so Fuzzilli can generate sequences like `Date.prototype.getTime.call(new Date())`.
-    static func createPrototypeObjectGroup(_ receiver: ObjectGroup) -> ObjectGroup {
+    static func createPrototypeObjectGroup(_ receiver: ObjectGroup, excludeProperties: [String] = []) -> ObjectGroup {
         let name = receiver.name + ".prototype"
         var properties = Dictionary(uniqueKeysWithValues: receiver.methods.map {
             ($0.0, ILType.unboundFunction($0.1.first, receiver: receiver.instanceType)) })
-        // These functions are getters instead of regular functions, and error when called
-        // on the prototype. We hide them from the prototype object to avoid
-        // generating `let v0 = Intl.DateTimeFormat.prototype.format`.
-        // https://tc39.es/ecma402/#sec-intl.datetimeformat.prototype.format
-        // TODO(mliedtke): Find a nicer interface than manually excluding some
-        //                 magic combinations here.
-        if receiver.name == "Intl.DateTimeFormat" || receiver.name == "Intl.NumberFormat" {
-            properties.removeValue(forKey: "format")
-        } else if receiver.name == "Intl.Collator" {
-            properties.removeValue(forKey: "compare")
-        } else if receiver.name == "Iterator" {
-            properties.removeValue(forKey: "next")
-            properties.removeValue(forKey: "return")
-            properties.removeValue(forKey: "throw")
+        // Some properties of the instance type do not come from the prototype, e.g. Iterator.next
+        // which comes from the Iterator protocol.
+        // Other properties are get accessors instead of regular functions, and error when accessed
+        // on the prototype. We hide them from the prototype object to avoid generating patterns
+        // like `let v0 = Intl.DateTimeFormat.prototype.format`.
+        for property in excludeProperties {
+            properties.removeValue(forKey: property)
         }
         return ObjectGroup(
             name: name,
@@ -1534,7 +1527,9 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsIteratorPrototype = createPrototypeObjectGroup(jsIterator)
+    // next, return and throw are part of the Iterator protocol, not Iterator.prototype.
+    static let jsIteratorPrototype = createPrototypeObjectGroup(jsIterator,
+        excludeProperties: ["next", "return", "throw"])
 
     static let jsIteratorConstructor = ObjectGroup(
         name: "IteratorConstructor",
@@ -3092,7 +3087,10 @@ extension ObjectGroup {
         ]
     )
 
-    static let jsIntlCollatorPrototype = createPrototypeObjectGroup(jsIntlCollator)
+    // Exclude compare as it is a get accessor, not a property, meaning that
+    // Intl.Collator.prototype.compare throws unconditionally (even without calling it).
+    static let jsIntlCollatorPrototype = createPrototypeObjectGroup(jsIntlCollator,
+        excludeProperties: ["compare"])
 
     static let jsIntlCollatorConstructor = ObjectGroup(
         name: "IntlCollatorConstructor",
@@ -3136,7 +3134,10 @@ extension ObjectGroup {
         ]
     )
 
-    static let jsIntlDateTimeFormatPrototype = createPrototypeObjectGroup(jsIntlDateTimeFormat)
+    // Exclude format as it is a get accessor, not a property, meaning that
+    // Intl.DateTimeFormat.prototype.format throws unconditionally (even without calling it).
+    static let jsIntlDateTimeFormatPrototype = createPrototypeObjectGroup(jsIntlDateTimeFormat,
+        excludeProperties: ["format"])
 
     static let jsIntlDateTimeFormatConstructor = ObjectGroup(
         name: "IntlDateTimeFormatConstructor",
@@ -3246,7 +3247,10 @@ extension ObjectGroup {
         ]
     )
 
-    static let jsIntlNumberFormatPrototype = createPrototypeObjectGroup(jsIntlNumberFormat)
+    // Exclude format as it is a get accessor, not a property, meaning that
+    // Intl.NumberFormat.prototype.format throws unconditionally (even without calling it).
+    static let jsIntlNumberFormatPrototype = createPrototypeObjectGroup(jsIntlNumberFormat,
+        excludeProperties: ["format"])
 
     static let jsIntlNumberFormatConstructor = ObjectGroup(
         name: "IntlNumberFormatConstructor",
