@@ -884,7 +884,6 @@ message Constf64 {
 }
 
 message WasmReturn {
-  repeated WasmILType returnTypes = 1;
 }
 
 // We only serialize the wasm types as the rest would be overkill and are not needed.

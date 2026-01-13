@@ -74,11 +74,9 @@ final class Constf64: WasmOperation {
 
 final class WasmReturn: WasmOperation {
     override var opcode: Opcode { .wasmReturn(self) }
-    let returnTypes: [ILType]
 
-    init(returnTypes: [ILType]) {
-        self.returnTypes = returnTypes
-        super.init(numInputs: returnTypes.count, attributes: [.isJump], requiredContext: [.wasmFunction])
+    init(returnCount: Int) {
+        super.init(numInputs: returnCount, attributes: [.isJump], requiredContext: [.wasmFunction])
     }
 }
 

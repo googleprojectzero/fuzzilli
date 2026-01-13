@@ -1127,10 +1127,8 @@ extension Instruction: ProtobufConvertible {
                 $0.constf64 = Fuzzilli_Protobuf_Constf64.with { $0.value = op.value }
             case .constf32(let op):
                 $0.constf32 = Fuzzilli_Protobuf_Constf32.with { $0.value = op.value }
-            case .wasmReturn(let op):
-                $0.wasmReturn = Fuzzilli_Protobuf_WasmReturn.with {
-                    $0.returnTypes = op.returnTypes.map(ILTypeToWasmTypeEnum)
-                }
+            case .wasmReturn(_):
+                $0.wasmReturn = Fuzzilli_Protobuf_WasmReturn()
             case .wasmJsCall(let op):
                 $0.wasmJsCall = Fuzzilli_Protobuf_WasmJsCall.with {
                     $0.parameterTypes = op.functionSignature.parameterTypes.map(ILTypeToWasmTypeEnum)
@@ -2279,8 +2277,8 @@ extension Instruction: ProtobufConvertible {
             op = Constf32(value: p.value)
         case .constf64(let p):
             op = Constf64(value: Float64(p.value))
-        case .wasmReturn(let p):
-            op = WasmReturn(returnTypes: p.returnTypes.map(WasmTypeEnumToILType))
+        case .wasmReturn(_):
+            op = WasmReturn(returnCount: inouts.count)
         case .wasmJsCall(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)

@@ -4203,17 +4203,16 @@ public class ProgramBuilder {
         }
 
         public func wasmReturn(_ values: [Variable]) {
-            b.emit(WasmReturn(returnTypes: values.map(b.type)), withInputs: values, types: signature.outputTypes)
+            b.emit(WasmReturn(returnCount: values.count), withInputs: values, types: signature.outputTypes)
         }
 
         public func wasmReturn(_ returnVariable: Variable) {
-            let returnType = b.type(of: returnVariable)
-            b.emit(WasmReturn(returnTypes: [returnType]), withInputs: [returnVariable], types: signature.outputTypes)
+            b.emit(WasmReturn(returnCount: 1), withInputs: [returnVariable], types: signature.outputTypes)
         }
 
         public func wasmReturn() {
             assert(signature.outputTypes.isEmpty)
-            b.emit(WasmReturn(returnTypes: []), withInputs: [])
+            b.emit(WasmReturn(returnCount: 0), withInputs: [])
         }
 
         @discardableResult
