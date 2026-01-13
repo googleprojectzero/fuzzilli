@@ -2224,6 +2224,14 @@ class WasmArraySet: WasmOperation {
     }
 }
 
+class WasmStructNew: WasmOperation {
+    override var opcode: Opcode { .wasmStructNew(self) }
+
+    init(fieldCount: Int) {
+        super.init(numInputs: fieldCount + 1, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
 class WasmStructNewDefault: WasmOperation {
     override var opcode: Opcode { .wasmStructNewDefault(self) }
 

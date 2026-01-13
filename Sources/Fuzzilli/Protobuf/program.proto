@@ -360,6 +360,7 @@ message Instruction {
         CreateNamedDisposableVariable createNamedDisposableVariable = 334;
         CreateNamedAsyncDisposableVariable createNamedAsyncDisposableVariable = 335;
         WasmDefineAdHocSignatureType wasmDefineAdHocSignatureType = 336;
+        WasmStructNew wasmStructNew = 337;
     }
 }
 

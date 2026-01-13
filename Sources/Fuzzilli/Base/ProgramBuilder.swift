@@ -4180,9 +4180,14 @@ public class ProgramBuilder {
                         } else {
                             return nil
                         }
-                    case .Index(_),
-                         .none:
-                        break // Unimplemented
+                    case .Index(_):
+                        if (type.wasmReferenceType!.nullability) {
+                            return self.wasmRefNull(typeDef: b.jsTyper.getWasmTypeDef(for: type))
+                        } else {
+                            break
+                        }
+                    case .none:
+                        break
                     }
                 } else {
                     return nil
@@ -4336,6 +4341,11 @@ public class ProgramBuilder {
             assert(arrayDesc.mutability)
             b.emit(WasmArraySet(), withInputs: [array, index, element],
                    types: [.wasmGenericRef, .wasmi32, arrayDesc.elementType.unpacked()])
+        }
+
+        @discardableResult
+        public func wasmStructNew(structType: Variable, fields: [Variable]) -> Variable {
+            return b.emit(WasmStructNew(fieldCount: fields.count), withInputs: [structType] + fields).output
         }
 
         @discardableResult

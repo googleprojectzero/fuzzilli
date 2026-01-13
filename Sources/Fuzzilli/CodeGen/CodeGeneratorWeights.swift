@@ -365,6 +365,7 @@ public let codeGeneratorWeights = [
     "WasmArrayLengthGenerator":                 5,
     "WasmArrayGetGenerator":                    5,
     "WasmArraySetGenerator":                    5,
+    "WasmStructNewGenerator":                   5,
     "WasmStructNewDefaultGenerator":            5,
     "WasmStructGetGenerator":                   5,
     "WasmStructSetGenerator":                   5,

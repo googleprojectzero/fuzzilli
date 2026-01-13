@@ -1544,6 +1544,9 @@ message WasmArraySet {
 message WasmStructNewDefault {
 }
 
+message WasmStructNew {
+}
+
 message WasmStructGet {
     int32 fieldIndex = 1;
     bool isSigned = 2;

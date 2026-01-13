@@ -211,6 +211,25 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator(
+        "WasmStructNewGenerator", inContext: .single(.wasmFunction),
+        inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmStruct)),
+        producesComplex: [.init(.anyNonNullableIndexRef, .IsWasmStruct)]
+    ) { b, structType in
+        guard let typeDesc = b.type(of: structType).wasmTypeDefinition?.description as? WasmStructTypeDescription
+        else {
+            fatalError("Invalid type description for \(b.type(of: structType))")
+        }
+        let function = b.currentWasmModule.currentWasmFunction
+        var initial_fields: [Variable] = []
+        for field in typeDesc.fields {
+            let fieldType = field.type.unpacked()
+            let fieldValue = function.findOrGenerateWasmVar(ofType: fieldType)
+            initial_fields.append(fieldValue)
+        }
+        function.wasmStructNew(structType: structType, fields: initial_fields)
+    },
+
+    CodeGenerator(
         "WasmStructNewDefaultGenerator", inContext: .single(.wasmFunction),
         inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmStruct)),
         producesComplex: [.init(.anyNonNullableIndexRef, .IsWasmStruct)]

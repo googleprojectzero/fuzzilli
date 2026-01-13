@@ -4417,6 +4417,40 @@ class WasmGCTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 
+    func testStructNew() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let types = b.wasmDefineTypeGroup {
+            let structOfi32 = b.wasmDefineStructType(fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)], indexTypes: [])
+            let structOfStruct = b.wasmDefineStructType(fields: [WasmStructTypeDescription.Field(type: .wasmRef(.Index(), nullability: true), mutability: true)], indexTypes: [structOfi32])
+            return [structOfi32, structOfStruct]
+        }
+        let structOfi32 = types[0]
+        let structOfStruct = types[1]
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
+                let innerStruct = function.wasmStructNew(structType: structOfi32, fields: [args[0]])
+                let outerStruct = function.wasmStructNew(structType: structOfStruct, fields: [innerStruct])
+                let retrievedInnerStruct = function.wasmStructGet(theStruct: outerStruct, fieldIndex: 0)
+                let retrievedValue = function.wasmStructGet(theStruct: retrievedInnerStruct, fieldIndex: 0)
+                return [retrievedValue]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+        let program = b.finalize()
+        let jsProgram = fuzzer.lifter.lift(program)
+        testForOutput(program: jsProgram, runner: runner, outputString: "42\n")
+    }
+
     func testStructPacked() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

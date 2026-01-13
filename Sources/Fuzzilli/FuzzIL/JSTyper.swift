@@ -896,7 +896,8 @@ public struct JSTyper: Analyzer {
                 setType(of: instr.output, to: typeDesc.elementType.unpacked())
             case .wasmArraySet(_):
                 break
-            case .wasmStructNewDefault(_):
+            case .wasmStructNew(_),
+                 .wasmStructNewDefault(_):
                 setReferenceType(of: instr.output, typeDef: instr.input(0), nullability: false)
             case .wasmStructGet(let op):
                 let typeDesc = getTypeDescription(of: instr.input(0)) as! WasmStructTypeDescription

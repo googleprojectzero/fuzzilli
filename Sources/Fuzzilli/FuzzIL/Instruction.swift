@@ -1598,6 +1598,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmArraySet = Fuzzilli_Protobuf_WasmArraySet()
             case .wasmStructNewDefault(_):
                 $0.wasmStructNewDefault = Fuzzilli_Protobuf_WasmStructNewDefault()
+            case .wasmStructNew(_):
+                $0.wasmStructNew = Fuzzilli_Protobuf_WasmStructNew()
             case .wasmStructGet(let op):
                 $0.wasmStructGet = Fuzzilli_Protobuf_WasmStructGet.with {
                     $0.fieldIndex = Int32(op.fieldIndex)
@@ -2585,6 +2587,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmArrayGet(isSigned: p.isSigned)
         case .wasmArraySet(_):
             op = WasmArraySet()
+        case .wasmStructNew(_):
+            op = WasmStructNew(fieldCount: inouts.count - 2)
         case .wasmStructNewDefault(_):
             op = WasmStructNewDefault()
         case .wasmStructGet(let p):

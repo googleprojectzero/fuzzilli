@@ -1310,6 +1310,10 @@ public class FuzzILLifter: Lifter {
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("WasmArraySet [\(inputs)]")
 
+        case .wasmStructNew(_):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- WasmStructNew [\(inputs)]")
+
         case .wasmStructNewDefault(_):
             w.emit("\(output()) <- WasmStructNewDefault [\(input(0))]")
 

@@ -727,7 +727,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmDefineElementSegment(_),
              .wasmDropElementSegment(_),
              .wasmTableInit(_),
-             .wasmTableCopy(_):
+             .wasmTableCopy(_),
+             .wasmStructNew(_):
              let mutability = instr.isOperationMutable ? "mutable" : "immutable"
              fatalError("Unexpected operation \(instr.op.opcode), marked as \(mutability)")
         }
