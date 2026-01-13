@@ -497,7 +497,7 @@ public class OperationMutator: BaseInstructionMutator {
                 : Int64.random(in: Int64.min...Int64.max) // most likely out of bounds
             newOp = WasmSimdLoad(kind: kind, staticOffset: staticOffset)
         case .wasmBranchIf(let op):
-            newOp = WasmBranchIf(labelTypes: op.labelTypes, hint: chooseUniform(from: WasmBranchHint.allCases))
+            newOp = WasmBranchIf(parameterCount: op.parameterCount, hint: chooseUniform(from: WasmBranchHint.allCases))
         case .wasmBeginIf(let op):
             newOp = WasmBeginIf(parameterCount: op.parameterCount, hint: chooseUniform(from: WasmBranchHint.allCases), inverted: Bool.random())
         case .wasmArrayGet(let op):

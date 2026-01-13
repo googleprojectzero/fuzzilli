@@ -1320,7 +1320,6 @@ enum WasmBranchHint {
 }
 
 message WasmBranchIf {
-  repeated WasmILType parameters = 1;
   WasmBranchHint hint = 2;
 }
 

@@ -3961,7 +3961,9 @@ public class ProgramBuilder {
             let labelType = b.type(of: label)
             checkArgumentsMatchLabelType(label: labelType, args: args)
             assert(b.type(of: condition).Is(.wasmi32))
-            b.emit(WasmBranchIf(labelTypes: labelType.wasmLabelType!.parameters, hint: hint), withInputs: [label] + args + [condition])
+            b.emit(
+                WasmBranchIf(parameterCount: labelType.wasmLabelType!.parameters.count, hint: hint),
+                withInputs: [label] + args + [condition])
         }
 
         public func wasmBranchTable(on: Variable, labels: [Variable], args: [Variable]) {

@@ -1961,7 +1961,7 @@ public class WasmLifter {
         case .wasmBranchIf(let op):
             currentFunction!.addBranchHint(op.hint)
             let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
-            return Data([0x0D]) + Leb128.unsignedEncode(branchDepth) + Data(op.labelTypes.map {_ in 0x1A})
+            return Data([0x0D]) + Leb128.unsignedEncode(branchDepth) + Array(repeating: 0x1a, count: op.parameterCount)
         case .wasmBranchTable(let op):
             let depths = try (0...op.valueCount).map {
                 try branchDepthFor(label: wasmInstruction.input($0))

@@ -1504,15 +1504,15 @@ final class WasmBranch: WasmOperation {
 
 final class WasmBranchIf: WasmOperation {
     override var opcode: Opcode { .wasmBranchIf(self) }
-    let labelTypes: [ILType]
     let hint: WasmBranchHint
 
-    init(labelTypes: [ILType], hint: WasmBranchHint) {
-        self.labelTypes = labelTypes
+    init(parameterCount: Int, hint: WasmBranchHint) {
         self.hint = hint
         // The inputs are the label, the arguments and the condition.
-        super.init(numInputs: 1 + labelTypes.count + 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(numInputs: 1 + parameterCount + 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
+
+    var parameterCount: Int {numInputs - 2}
 }
 
 final class WasmBranchTable: WasmOperation {
