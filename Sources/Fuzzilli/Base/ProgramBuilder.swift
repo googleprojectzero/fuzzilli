@@ -3766,7 +3766,7 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmCallDirect(signature: WasmSignature, function: Variable, functionArgs: [Variable]) -> [Variable] {
-            return Array(b.emit(WasmCallDirect(signature: signature),
+            return Array(b.emit(WasmCallDirect(parameterCount: signature.parameterTypes.count, outputCount: signature.outputTypes.count),
                 withInputs: [function] + functionArgs,
                 types: [.wasmFunctionDef(signature)] + signature.parameterTypes
             ).outputs)

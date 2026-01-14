@@ -878,8 +878,9 @@ public struct JSTyper: Analyzer {
                 wasmTypeBeginBlock(instr, op.signature)
             case .wasmEndTryDelegate(let op):
                 wasmTypeEndBlock(instr, op.outputTypes)
-            case .wasmCallDirect(let op):
-                for (output, outputType) in zip(instr.outputs, op.signature.outputTypes) {
+            case .wasmCallDirect(_):
+                let signature = type(of: instr.input(0)).wasmFunctionDefSignature!
+                for (output, outputType) in zip(instr.outputs, signature.outputTypes) {
                     setType(of: output, to: outputType)
                 }
                 // We don't need to update the DynamicObjectGroupManager, as all functions that can be called here are .wasmFunctionDef types, this means we have already added them when we saw the EndWasmFunction instruction.

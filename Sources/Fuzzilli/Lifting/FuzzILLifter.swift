@@ -1064,13 +1064,13 @@ public class FuzzILLifter: Lifter {
                 w.emit("\(outputs) <- WasmCallIndirect(\(op.signature)) \(inputs)")
             }
 
-        case .wasmCallDirect(let op):
+        case .wasmCallDirect(_):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            if op.signature.outputTypes.isEmpty {
-                w.emit("WasmCallDirect(\(op.signature)) \(inputs)")
+            if instr.outputs.isEmpty {
+                w.emit("WasmCallDirect \(inputs)")
             } else {
                 let outputs = instr.outputs.map(lift).joined(separator: ", ")
-                w.emit("\(outputs) <- WasmCallDirect(\(op.signature)) \(inputs)")
+                w.emit("\(outputs) <- WasmCallDirect \(inputs)")
             }
 
         case .wasmReturnCallDirect(let op):
