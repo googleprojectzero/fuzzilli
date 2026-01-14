@@ -2225,31 +2225,27 @@ public class ProgramBuilder {
     private func createRequiredInputVariables(for requirements: Set<GeneratorStub.Constraint>) {
         for requirement in requirements {
             let type = requirement.type
-            if type.Is(.jsAnything) && context.contains(.javascript) {
-                let _ = findOrGenerateType(type)
-            } else {
-                if type.Is(.wasmAnything) && context.contains(.wasmFunction) {
-                    // Check if we can produce it with findOrGenerateWasmVar
-                    let _ = currentWasmFunction.generateRandomWasmVar(ofType: type)
+
+            if type.Is(.wasmAnything) && context.contains(.wasmFunction) {
+                // Check if we can produce it with findOrGenerateWasmVar
+                let _ = currentWasmFunction.generateRandomWasmVar(ofType: type)
+            }
+            if (findVariable {requirement.fulfilled(by: self.type(of: $0))} == nil) {
+
+                // Check for other CodeGenerators that can produce the given type in this context.
+                let usableGenerators = fuzzer.codeGenerators.filter {
+                    $0.requiredContext.isSubset(of: context) &&
+                    $0.produces.contains(where: requirement.fulfilled)
                 }
-                if (findVariable {requirement.fulfilled(by: self.type(of: $0))} == nil) {
 
-                    // Check for other CodeGenerators that can produce the given type in this context.
-                    let usableGenerators = fuzzer.codeGenerators.filter {
-                        $0.requiredContext.isSubset(of: context) &&
-                        $0.produces.contains(where: requirement.fulfilled)
-                    }
-
-                    // Cannot build type here.
-                    if usableGenerators.isEmpty {
-                        // Continue here though, as we might be able to create Variables for other types.
-                        continue
-                    }
-
-                    let generator = usableGenerators.randomElement()
-
-                    let _ = complete(generator: generator, withBudget: 5)
+                // Cannot build type here.
+                if usableGenerators.isEmpty {
+                    // Continue here though, as we might be able to create Variables for other types.
+                    continue
                 }
+
+                let generator = usableGenerators.randomElement()
+                let _ = complete(generator: generator, withBudget: 5)
             }
         }
     }

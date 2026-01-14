@@ -3016,11 +3016,13 @@ class ProgramBuilderTests: XCTestCase {
 
     func testTypedArrayFromBufferGenerator() {
         let fuzzer = makeMockFuzzer()
-        let numPrograms = 50
+        let numPrograms = 30
 
         for _ in 0...numPrograms {
             let b = fuzzer.makeBuilder()
-            b.buildPrefix()
+            // Instead of loading a prefix, emit a single integer, so that we have a "prefix" but
+            // the prefix does not fulfill the requirements for the generator, yet.
+            b.loadInt(123)
 
             let generator = fuzzer.codeGenerators.filter {
                 $0.name == "TypedArrayFromBufferGenerator"
@@ -3033,11 +3035,13 @@ class ProgramBuilderTests: XCTestCase {
             let N = 30
             // We might generate a lot more than 30 instructions to fulfill the constraints.
             let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: N)
-
+            XCTAssertGreaterThan(numGeneratedInstructions, 0)
+            // All generator input requirements are fulfilled.
+            XCTAssert(generator.parts.allSatisfy {
+                $0.inputs.constraints.allSatisfy { b.randomVariable(ofType: $0.type) != nil }})
+            // All generator `produces` guarantees are fulfilled.
+            XCTAssert(generator.produces.allSatisfy { b.randomVariable(ofType: $0.type) != nil })
             let _ = b.finalize()
-
-            // XCTAssertGreaterThan(numGeneratedInstructions, 0)
-            // TODO(tacet): Fails in around 5% of times, we should figure out how to fix it.
         }
     }
 
