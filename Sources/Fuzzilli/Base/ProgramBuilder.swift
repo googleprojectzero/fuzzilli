@@ -4175,7 +4175,7 @@ public class ProgramBuilder {
                             return self.wasmRefNull(type: type)
                         }
                     case .Index(_):
-                        if (type.wasmReferenceType!.nullability) {
+                        if (type.wasmReferenceType?.nullability ?? false) {
                             return self.wasmRefNull(typeDef: b.jsTyper.getWasmTypeDef(for: type))
                         }
                     case .none:
