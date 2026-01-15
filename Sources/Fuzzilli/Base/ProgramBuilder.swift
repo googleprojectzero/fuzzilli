@@ -4191,7 +4191,10 @@ public class ProgramBuilder {
         }
 
         public func findOrGenerateWasmVar(ofType type: ILType) -> Variable {
-            b.randomVariable(ofType: type) ?? generateRandomWasmVar(ofType: type)!
+            if let result = b.randomVariable(ofType: type) ?? generateRandomWasmVar(ofType: type) {
+                return result
+            }
+            fatalError("Could not find or generate wasm variable of type \(type)")
         }
 
         public func wasmUnreachable() {
