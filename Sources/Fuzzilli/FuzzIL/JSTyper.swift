@@ -446,7 +446,10 @@ public struct JSTyper: Analyzer {
         guard case .Index(let desc) = type.wasmReferenceType!.kind else {
             fatalError("\(type) is not an index type")
         }
-        return wasmTypeDefMap[desc.get()!]!
+        guard let desc = desc.get(), let typeDef = wasmTypeDefMap[desc] else {
+            fatalError("missing type definition link for type \(type), desc \(desc)")
+        }
+        return typeDef
     }
 
     mutating func addSignatureType(def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>) {
