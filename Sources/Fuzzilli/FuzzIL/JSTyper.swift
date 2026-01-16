@@ -915,6 +915,8 @@ public struct JSTyper: Analyzer {
                 }
             case .wasmRefIsNull(_):
                 setType(of: instr.output, to: .wasmi32)
+            case .wasmRefEq(_):
+                setType(of: instr.output, to: .wasmi32)
             case .wasmRefI31(let op):
                 setType(of: instr.output, to: .wasmRefI31(shared: op.isShared))
             case .wasmI31Get(_):

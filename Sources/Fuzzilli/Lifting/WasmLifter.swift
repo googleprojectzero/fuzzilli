@@ -2185,6 +2185,8 @@ public class WasmLifter {
             return try Data([0xD0]) + encodeHeapType(typer.type(of: wasmInstruction.output))
         case .wasmRefIsNull(_):
             return Data([0xD1])
+        case .wasmRefEq(_):
+            return Data([0xD3])
         case .wasmRefI31(let op):
             return Data([Prefix.GC.rawValue, op.isShared ? 0x1F : 0x1C])
         case .wasmI31Get(let op):

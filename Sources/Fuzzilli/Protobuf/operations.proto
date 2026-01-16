@@ -1563,6 +1563,9 @@ message WasmRefNull {
 message WasmRefIsNull {
 }
 
+message WasmRefEq {
+}
+
 message WasmRefI31 {
     bool isShared = 1;
 }

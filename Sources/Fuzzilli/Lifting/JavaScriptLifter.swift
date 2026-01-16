@@ -1789,6 +1789,7 @@ public class JavaScriptLifter: Lifter {
                  .wasmStructSet(_),
                  .wasmRefNull(_),
                  .wasmRefIsNull(_),
+                 .wasmRefEq(_),
                  .wasmRefI31(_),
                  .wasmI31Get(_),
                  .wasmAnyConvertExtern(_),

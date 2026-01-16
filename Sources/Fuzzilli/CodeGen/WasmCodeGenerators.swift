@@ -312,6 +312,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         b.currentWasmModule.currentWasmFunction.wasmRefIsNull(ref)
     },
 
+    CodeGenerator(
+        "WasmRefEqGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.wasmEqRef(), .wasmEqRef()),
+        produces: [.wasmi32]
+    ) { b, lhs, rhs in
+        b.currentWasmModule.currentWasmFunction.wasmRefEq(lhs, rhs)
+    },
+
     // TODO(pawkra): add shared variant.
     CodeGenerator("WasmRefI31Generator", inContext: .single(.wasmFunction), inputs: .required(.wasmi32)) { b, value in
         b.currentWasmModule.currentWasmFunction.wasmRefI31(value, shared: false)

@@ -4375,6 +4375,12 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        // TODO(pawkra): Support shared references.
+        public func wasmRefEq(_ lhs: Variable, _ rhs: Variable) -> Variable {
+            return b.emit(WasmRefEq(), withInputs: [lhs, rhs], types: [.wasmEqRef(), .wasmEqRef()]).output
+        }
+
+        @discardableResult
         public func wasmRefI31(_ number: Variable, shared: Bool = false) -> Variable {
             return b.emit(WasmRefI31(isShared: shared), withInputs: [number], types: [.wasmi32]).output
         }

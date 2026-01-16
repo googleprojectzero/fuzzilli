@@ -4851,6 +4851,44 @@ class WasmGCTests: XCTestCase {
         try refNullAbstractTypes(sharedRef: false)
     }
 
+    func testRefEq() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let arrayType = b.wasmDefineTypeGroup {b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)}[0]
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmEqRef(), .wasmEqRef()] => [.wasmi32]) { function, label, args in
+                return [function.wasmRefEq(args[0], args[1])]
+            }
+            wasmModule.addWasmFunction(with: [] => [.wasmEqRef()]) { function, label, args in
+                return [function.wasmArrayNewFixed(arrayType: arrayType, elements: [])]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+        let array = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [])
+        let otherArray = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [])
+
+        let wasmRefEq = module.getExportedMethod(at: 0)
+        let cases = [
+            b.callMethod(wasmRefEq, on: exports, withArgs: [b.loadInt(1), b.loadInt(1)]),
+            b.callMethod(wasmRefEq, on: exports, withArgs: [b.loadInt(0), b.loadInt(1)]),
+            b.callMethod(wasmRefEq, on: exports, withArgs: [array, array]),
+            b.callMethod(wasmRefEq, on: exports, withArgs: [array, otherArray])
+        ]
+
+        for input in cases { b.callFunction(outputFunc, withArgs: [input]) }
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "1\n0\n1\n0\n")
+    }
+
     func i31Ref(shared: Bool) throws {
         let runner = try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-shared"])
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
