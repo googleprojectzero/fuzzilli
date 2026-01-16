@@ -641,6 +641,7 @@ fuzzer.sync {
 
     // Resume a previous fuzzing session ...
     if resume, let path = storagePath {
+        let start = Date()
         var corpus = loadCorpus(from: path + "/old_corpus")
         logger.info("Scheduling import of \(corpus.count) programs from previous fuzzing run.")
 
@@ -650,6 +651,10 @@ fuzzer.sync {
         fuzzer.registerEventListener(for: fuzzer.events.CorpusImportComplete) {
             // Delete the old corpus directory as soon as the corpus import is complete.
             try? FileManager.default.removeItem(atPath: path + "/old_corpus")
+
+            let duration = Date().timeIntervalSince(start)
+            let humanReadableDuration = Duration.seconds(duration).formatted(.time(pattern: .hourMinuteSecond))
+            logger.info("Corpus import after resume took \((String(format: "%.0f", duration)))s (\(humanReadableDuration)).")
         }
 
         fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: false))  // We assume that the programs are already minimized
@@ -658,11 +663,19 @@ fuzzer.sync {
     // ... or import an existing corpus.
     if let path = corpusImportPath {
         assert(!resume)
+        let start = Date()
         let corpus = loadCorpus(from: path)
         guard !corpus.isEmpty else {
             logger.fatal("Cannot import an empty corpus.")
         }
         logger.info("Scheduling corpus import of \(corpus.count) programs with mode \(corpusImportModeName).")
+
+        fuzzer.registerEventListener(for: fuzzer.events.CorpusImportComplete) {
+            let duration = Date().timeIntervalSince(start)
+            let humanReadableDuration = Duration.seconds(duration).formatted(.time(pattern: .hourMinuteSecond))
+            logger.info("Existing corpus import took \((String(format: "%.0f", duration)))s (\(humanReadableDuration)).")
+        }
+
         fuzzer.scheduleCorpusImport(corpus, importMode: corpusImportMode)
     }
 
