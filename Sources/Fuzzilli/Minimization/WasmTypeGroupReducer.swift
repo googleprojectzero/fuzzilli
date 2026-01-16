@@ -22,12 +22,24 @@ struct WasmTypeGroupReducer: Reducer {
                 uses[input]? += 1
             }
 
+
+            guard instr.op is WasmTypeOperation else { continue }
+            // Define the usages for all WasmTypeOperation so that we also count usages of a type
+            // inside a type group (i.e. by other type operations).
+            for output in instr.outputs {
+                uses[output] = 0
+            }
+
             // For now, we only consider EndTypeGroup instructions.
             guard case .wasmEndTypeGroup = instr.op.opcode else  { continue }
 
             candidates.append(instr.index)
-            for output in instr.outputs {
-                uses[output] = 0
+            for (input, output) in zip(instr.inputs, instr.outputs) {
+                // Subtract 1 as the input in the WasmEndTypeGroup itself is not a reason to keep
+                // the type. However, if the type is used inside the type group, it also needs to be
+                // exposed by the type group. Right now the JSTyper requires that all types defined
+                // in a type group are exposed by their WasmEndTypeGroup instruction.
+                uses[output]! += uses[input]! - 1
             }
         }
 

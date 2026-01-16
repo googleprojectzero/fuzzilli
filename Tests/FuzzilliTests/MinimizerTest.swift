@@ -2126,6 +2126,55 @@ class MinimizerTests: XCTestCase {
 
     }
 
+    func testWasmTypeGroupTypeOnlyUsedInDependency() throws {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        do {
+            let typeGroup = b.wasmDefineTypeGroup {
+                // This signature is only used by the structType which is exposed from this type
+                // group and then used in the struct.new_default inside the wasm function. Still,
+                // due to this indirect usage it must still be kept alive.
+                let signature = b.wasmDefineSignatureType(signature: [.wasmi32] => [.wasmi32], indexTypes: [])
+                let structType = b.wasmDefineStructType(fields: [.init(type: .wasmRef(.Index(), nullability: true), mutability: true)], indexTypes: [signature])
+                return [signature, structType]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmAnyRef()]) { function, label, args in
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [function.wasmStructNewDefault(structType: typeGroup[1])]
+                }
+            }
+        }
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        do {
+            let typeGroup = b.wasmDefineTypeGroup {
+                let signature = b.wasmDefineSignatureType(signature: [.wasmi32] => [.wasmi32], indexTypes: [])
+                let structType = b.wasmDefineStructType(fields: [.init(type: .wasmRef(.Index(), nullability: true), mutability: true)], indexTypes: [signature])
+                return [signature, structType]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmAnyRef()]) { function, label, args in
+                    return [function.wasmStructNewDefault(structType: typeGroup[1])]
+                }
+            }
+        }
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram,
+            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n" +
+            "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+    }
+
+
     func testWasmTypeGroupNestedTypesAndTypeGroupDependencies() throws {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
