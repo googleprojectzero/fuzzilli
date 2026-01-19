@@ -547,7 +547,8 @@ let mainConfig = Configuration(arguments: CommandLine.arguments,
                                staticCorpus: staticCorpus,
                                tag: tag,
                                isWasmEnabled: enableWasm,
-                               storagePath: storagePath)
+                               storagePath: storagePath,
+                               forDifferentialFuzzing: forDifferentialFuzzing)
 
 let fuzzer = makeFuzzer(with: mainConfig)
 
@@ -699,7 +700,8 @@ let workerConfig = Configuration(arguments: CommandLine.arguments,
                                  staticCorpus: staticCorpus,
                                  tag: tag,
                                  isWasmEnabled: enableWasm,
-                                 storagePath: storagePath)
+                                 storagePath: storagePath,
+                                 forDifferentialFuzzing: forDifferentialFuzzing)
 
 for _ in 1..<numJobs {
     let worker = makeFuzzer(with: workerConfig)
