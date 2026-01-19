@@ -192,8 +192,8 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             return false
         }
 
-        if execution.outcome.isCrash() {
-            // For crashes, we don't care about the edges that were triggered, just about the outcome itself.
+        if execution.outcome.isCrash() || execution.outcome.isDifferential() {
+            // For crashes and differentials, we don't care about the edges that were triggered, just about the outcome itself.
             return true
         }
 

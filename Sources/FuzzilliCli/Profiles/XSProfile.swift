@@ -290,6 +290,8 @@ let xsProfile = Profile(
         ["-f"]
     },
 
+    processArgsReference: nil,
+
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0:symbolize=1:print_stacktrace=1:silence_unsigned_overflow=1",
                  "ASAN_OPTIONS": "handle_segv=0:abort_on_error=1:symbolize=1",
                  "MSAN_OPTIONS": "handle_segv=0:abort_on_error=1:symbolize=1",

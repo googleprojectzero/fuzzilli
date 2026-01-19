@@ -16,6 +16,8 @@ import Fuzzilli
 
 struct Profile {
     let processArgs: (_ randomize: Bool) -> [String]
+    // if not nil, then this is profile for differential fuzzing
+    let processArgsReference: [String]?
     let processEnv: [String : String]
     let maxExecsBeforeRespawn: Int
     // Timeout either by value or interval in milliseconds.
@@ -39,6 +41,10 @@ struct Profile {
 
     // An optional post-processor that is executed for every sample generated for fuzzing and can modify it.
     let optionalPostProcessor: FuzzingPostProcessor?
+
+    var isDifferential: Bool {
+        return processArgsReference != nil
+    }
 }
 
 let profiles = [
@@ -48,6 +54,7 @@ let profiles = [
     "spidermonkey": spidermonkeyProfile,
     "v8": v8Profile,
     "v8Sandbox": v8SandboxProfile,
+    "v8Dumpling": v8DumplingProfile,
     "duktape": duktapeProfile,
     "jerryscript": jerryscriptProfile,
     "xs": xsProfile,

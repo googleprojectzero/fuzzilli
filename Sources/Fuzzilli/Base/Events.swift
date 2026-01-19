@@ -55,6 +55,9 @@ public class Events {
     /// Signals that a crashing program has been found. Dispatched after the crashing program has been minimized.
     public let CrashFound = Event<(program: Program, behaviour: CrashBehaviour, isUnique: Bool, origin: ProgramOrigin)>()
 
+    /// Signals that a differential program was found. Dispatched after the differential program has been minimized.
+    public let DifferentialFound = Event<(program: Program, behaviour: CrashBehaviour, isUnique: Bool, origin: ProgramOrigin)>()
+
     /// Signals that a program causing a timeout has been found.
     public let TimeOutFound = Event<Program>()
 
@@ -140,4 +143,15 @@ public enum ExecutionPurpose {
     case runtimeAssistedMutation
     /// Any other reason.
     case other
+
+    // This variable is added because we currently don't want to differentially execute
+    // a sample if the purpose is unknown (`.other`), `.startup` or `.runtimeAssistedMutation`.
+    public var supportsDifferentialRun: Bool {
+        switch self {
+        case .fuzzing, .checkForDeterministicBehavior, .programImport, .minimization:
+            return true
+        case .startup, .runtimeAssistedMutation, .other:
+            return false
+        }
+    }
 }

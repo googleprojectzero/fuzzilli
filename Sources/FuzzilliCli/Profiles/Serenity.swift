@@ -16,6 +16,7 @@ import Fuzzilli
 
 let serenityProfile = Profile(
     processArgs: { randomize in return [""] },
+    processArgsReference: nil,
     processEnv: [
         "UBSAN_OPTIONS": "handle_segv=0 handle_abrt=0",
         "ASAN_OPTIONS": "abort_on_error=1",

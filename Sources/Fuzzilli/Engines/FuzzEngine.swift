@@ -44,6 +44,10 @@ public class FuzzEngine: ComponentBase {
                 fuzzer.processCrash(program, withSignal: termsig, withStderr: execution.stderr, withStdout: execution.stdout, origin: .local, withExectime: execution.execTime)
                 program.contributors.generatedCrashingSample()
 
+            case .differential:
+                fuzzer.processDifferential(program, withStderr: execution.stderr, withStdout: execution.stdout, origin: .local)
+                program.contributors.generatedDifferentialSample()
+
             case .succeeded:
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
                 var isInteresting = false

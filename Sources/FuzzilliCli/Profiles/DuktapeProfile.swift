@@ -19,6 +19,8 @@ let duktapeProfile = Profile(
         ["--reprl"]
     },
 
+    processArgsReference: nil,
+
     processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 
     maxExecsBeforeRespawn: 1000,

@@ -328,6 +328,10 @@ if args.unusedOptionals.count > 0 {
     configError("Invalid arguments: \(args.unusedOptionals)")
 }
 
+if profile.isDifferential && storagePath == nil {
+    configError("Differential fuzzing mode requires storage path")
+}
+
 // Initialize the logger such that we can print to the screen.
 let logger = Logger(withLabel: "Cli")
 
@@ -408,8 +412,26 @@ let jsShellArguments = profile.processArgs(argumentRandomization) + additionalAr
 logger.info("Using the following arguments for the target engine: \(jsShellArguments)")
 
 func makeFuzzer(with configuration: Configuration) -> Fuzzer {
+    let createRunner = { (baseArgs: [String], forReferenceRunner: Bool) -> REPRL in
+        let finalArgs = baseArgs + configuration.getInstanceSpecificArguments(forReferenceRunner: forReferenceRunner)
+        return REPRL(
+            executable: jsShellPath,
+            processArguments: finalArgs,
+            processEnvironment: profile.processEnv,
+            maxExecsBeforeRespawn: profile.maxExecsBeforeRespawn
+        )
+    }
+
     // A script runner to execute JavaScript code in an instrumented JS engine.
-    let runner = REPRL(executable: jsShellPath, processArguments: jsShellArguments, processEnvironment: profile.processEnv, maxExecsBeforeRespawn: profile.maxExecsBeforeRespawn)
+    let runner = createRunner(jsShellArguments, false)
+
+    // A script runner used to verify that the samples are indeed differential samples.
+    let referenceRunner: REPRL? = {
+        guard profile.isDifferential, let refArgs = profile.processArgsReference else {
+            return nil
+        }
+        return createRunner(refArgs, true)
+    }()
 
     /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
     let disabledMutators = Set(profile.disabledMutators)
@@ -525,6 +547,7 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     // Construct the fuzzer instance.
     return Fuzzer(configuration: configuration,
                   scriptRunner: runner,
+                  referenceScriptRunner: referenceRunner,
                   engine: engine,
                   mutators: mutators,
                   codeGenerators: codeGenerators,
@@ -548,7 +571,9 @@ let mainConfig = Configuration(arguments: CommandLine.arguments,
                                tag: tag,
                                isWasmEnabled: enableWasm,
                                storagePath: storagePath,
-                               forDifferentialFuzzing: forDifferentialFuzzing)
+                               forDifferentialFuzzing: forDifferentialFuzzing,
+                               instanceId: 0,
+                               dumplingEnabled: profile.isDifferential)
 
 let fuzzer = makeFuzzer(with: mainConfig)
 
@@ -688,9 +713,10 @@ fuzzer.sync {
     fuzzer.start(runUntil: exitCondition)
 }
 
-// Add thread worker instances if requested
-// Worker instances use a slightly different configuration, mostly just a lower log level.
-let workerConfig = Configuration(arguments: CommandLine.arguments,
+for i in 1..<numJobs {
+    // Add thread worker instances if requested
+    // Worker instances use a slightly different configuration, mostly just a lower log level.
+    let workerConfig = Configuration(arguments: CommandLine.arguments,
                                  timeout: timeout.maxTimeout(),
                                  logLevel: .warning,
                                  startupTests: profile.startupTests,
@@ -701,9 +727,10 @@ let workerConfig = Configuration(arguments: CommandLine.arguments,
                                  tag: tag,
                                  isWasmEnabled: enableWasm,
                                  storagePath: storagePath,
-                                 forDifferentialFuzzing: forDifferentialFuzzing)
+                                 forDifferentialFuzzing: forDifferentialFuzzing,
+                                 instanceId: i,
+                                 dumplingEnabled: profile.isDifferential)
 
-for _ in 1..<numJobs {
     let worker = makeFuzzer(with: workerConfig)
     worker.async {
         // Wait some time between starting workers to reduce the load on the main instance.

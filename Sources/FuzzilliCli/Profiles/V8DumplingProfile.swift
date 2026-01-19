@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,29 +14,51 @@
 
 import Fuzzilli
 
-// This value generator inserts Hole leaks into the program.  Use this if you
-// want to fuzz for Memory Corruption using holes, this should be used in
-// conjunction with the --hole-fuzzing runtime flag.
-fileprivate let HoleLeakGenerator = CodeGenerator("HoleLeakGenerator", produces: [.jsAnything]) { b in
-    b.eval("%LeakHole()", hasOutput: true)
-}
-
-let v8HoleFuzzingProfile = Profile(
+let v8DumplingProfile = Profile(
     processArgs: { randomize in
         var args = [
             "--expose-gc",
+            "--expose-externalize-string",
             "--omit-quit",
             "--allow-natives-syntax",
             "--fuzzing",
-            "--hole-fuzzing",
             "--jit-fuzzing",
             "--future",
             "--harmony",
+            "--experimental-fuzzing",
+            "--js-staging",
+            "--expose-fast-api",
+            "--predictable",
+            "--no-sparkplug",
+            "--maglev-dumping",
+            "--turbofan-dumping",
+            "--turbofan-dumping-print-deopt-frames"
         ]
+
         return args
     },
 
-    processArgsReference: nil,
+    // TODO(mdanylo): currently we run Fuzzilli in differential fuzzing
+    // mode if processArgsReference is not nil. We should reconsider
+    // this decision in the future in favour of something nicer.
+    processArgsReference: [
+        "--sparkplug-dumping",
+        "--interpreter-dumping",
+        "--no-maglev",
+        "--no-turbofan",
+        "--expose-gc",
+        "--expose-externalize-string",
+        "--omit-quit",
+        "--allow-natives-syntax",
+        "--fuzzing",
+        "--jit-fuzzing",
+        "--future",
+        "--harmony",
+        "--experimental-fuzzing",
+        "--js-staging",
+        "--expose-fast-api",
+        "--predictable"
+    ],
 
     processEnv: [:],
 
@@ -53,30 +75,24 @@ let v8HoleFuzzingProfile = Profile(
     ecmaVersion: ECMAScriptVersion.es6,
 
     startupTests: [
-        // Check that the fuzzilli integration is available.
-        ("fuzzilli('FUZZILLI_PRINT', 'test')", .shouldSucceed),
 
-        // Check that "hard" crashes are detected.
-        ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
-        ("fuzzilli('FUZZILLI_CRASH', 7)", .shouldCrash),
-
-        // Check that DEBUG is not defined.
-        ("fuzzilli('FUZZILLI_CRASH', 8)", .shouldNotCrash),
-
-        // DCHECK and CHECK failures should be ignored.
-        ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldNotCrash),
-        ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldNotCrash),
     ],
 
     additionalCodeGenerators: [
         (ForceJITCompilationThroughLoopGenerator,  5),
         (ForceTurboFanCompilationGenerator,        5),
         (ForceMaglevCompilationGenerator,          5),
+        (TurbofanVerifyTypeGenerator,             10),
+
         (V8GcGenerator,                           10),
-        (HoleLeakGenerator,                       25),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
+        (MapTransitionFuzzer,    1),
+        (ValueSerializerFuzzer,  1),
+        (V8RegExpFuzzer,         1),
+        (FastApiCallFuzzer,      1),
+        (LazyDeoptFuzzer,        1),
     ]),
 
     disabledCodeGenerators: [],
@@ -84,9 +100,9 @@ let v8HoleFuzzingProfile = Profile(
     disabledMutators: [],
 
     additionalBuiltins: [
-        "gc"                                            : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
-        "d8"                                            : .object(),
-        "Worker"                                        : .constructor([.jsAnything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
+        "gc"      : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
+        "d8"      : .jsD8,
+        "Worker"  : .constructor([.jsAnything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
 
     additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],

@@ -53,6 +53,9 @@ public class Fuzzer {
     /// The script runner used to execute generated scripts.
     public let runner: ScriptRunner
 
+    /// The script runners used to compare against in differential executions.
+    public let referenceRunner: ScriptRunner?
+
     /// The fuzzer engine producing new programs from existing ones and executing them.
     public let engine: FuzzEngine
 
@@ -126,6 +129,10 @@ public class Fuzzer {
     /// Start time of this fuzzing session
     private let startTime = Date()
 
+    public var isDifferentialFuzzing: Bool {
+        return referenceRunner != nil
+    }
+
     /// Returns the uptime of this fuzzer as TimeInterval.
     public func uptime() -> TimeInterval {
         return -startTime.timeIntervalSinceNow
@@ -175,7 +182,7 @@ public class Fuzzer {
 
     /// Constructs a new fuzzer instance with the provided components.
     public init(
-        configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
+        configuration: Configuration, scriptRunner: ScriptRunner, referenceScriptRunner: ScriptRunner?, engine: FuzzEngine, mutators: WeightedList<Mutator>,
         codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator,
         environment: JavaScriptEnvironment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
@@ -196,6 +203,7 @@ public class Fuzzer {
         self.lifter = lifter
         self.corpus = corpus
         self.runner = scriptRunner
+        self.referenceRunner = referenceScriptRunner
         self.minimizer = minimizer
         self.logger = Logger(withLabel: "Fuzzer")
         self.contextGraph = ContextGraph(for: codeGenerators, withLogger: self.logger)
@@ -265,6 +273,9 @@ public class Fuzzer {
 
         // Initialize the script runner first so we are able to execute programs.
         runner.initialize(with: self)
+        if let referenceRunner {
+            referenceRunner.initialize(with: self)
+        }
 
         // Then initialize all components.
         engine.initialize(with: self)
@@ -465,6 +476,8 @@ public class Fuzzer {
             // from another instance triggers a crash in this instance.
             processCrash(program, withSignal: termsig, withStderr: execution.stderr, withStdout: execution.stdout, origin: origin, withExectime: execution.execTime)
 
+        case .differential:
+            processDifferential(program, withStderr: execution.stderr, withStdout: execution.stdout, origin: origin)
 
         case .succeeded:
             if let aspects = evaluator.evaluate(execution) {
@@ -700,6 +713,10 @@ public class Fuzzer {
         let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
         dispatchEvent(events.PostExecute, data: execution)
 
+        if (isDifferentialFuzzing && purpose.supportsDifferentialRun && execution.outcome == .succeeded) {
+            return executeDifferentialIfNeeded(execution, program, script, withTimeout: timeout ?? config.timeout)
+        }
+
         return execution
     }
 
@@ -810,6 +827,42 @@ public class Fuzzer {
 
         fuzzGroup.enter()
         minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .crashed(termsig))) { minimizedProgram in
+            self.fuzzGroup.leave()
+            processCommon(minimizedProgram)
+        }
+    }
+
+    /// Process a program that causes difference between optimized and unoptimized executions
+    func processDifferential(_ program: Program, withStderr stderr: String, withStdout stdout: String, origin: ProgramOrigin) {
+        func processCommon(_ program: Program) {
+            let hasDiffInfo = program.comments.at(.footer)?.contains("DIFFERENTIAL INFO") ?? false
+            if !hasDiffInfo {
+                let footerMessage = """
+                    DIFFERENTIAL INFO
+                    ==========
+                    STDERR:
+                    \(stderr)
+                    ARGS: \(runner.processArguments.joined(separator: " "))
+                    REFERENCE ARGS: \(referenceRunner!.processArguments.joined(separator: " "))
+                    """
+
+                program.comments.add(footerMessage, at: .footer)
+            }
+
+            let execution = execute(program, withTimeout: self.config.timeout * 2, purpose: .checkForDeterministicBehavior)
+            if case .differential = execution.outcome {
+                dispatchEvent(events.DifferentialFound, data: (program, .deterministic, true, origin))
+            } else {
+                dispatchEvent(events.DifferentialFound, data: (program, .flaky, true, origin))
+            }
+        }
+
+        if !origin.requiresMinimization() {
+            return processCommon(program)
+        }
+
+        fuzzGroup.enter()
+        minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .differential)) { minimizedProgram in
             self.fuzzGroup.leave()
             processCommon(minimizedProgram)
         }
@@ -1063,6 +1116,35 @@ public class Fuzzer {
         return actualTimeout
     }
 
+    private func executeDifferentialIfNeeded(_ execution: Execution, _ program: Program, _ script: String, withTimeout timeout: UInt32) -> Execution {
+        do {
+            let optPath = config.diffConfig!.getDumpFilename(isOptimized: true)
+            let unoptPath = config.diffConfig!.getDumpFilename(isOptimized: false)
+
+            let optimizedDump = try String(contentsOfFile: optPath, encoding: .utf8)
+
+            if optimizedDump.isEmpty {
+                return execution
+            }
+
+            // If we dumped at least one optimized frame, there is a point in unoptimized run.
+            let unoptExecution = referenceRunner!.run(script, withTimeout: timeout)
+
+            // If unoptExecution didn't succeed just return the outcome, so that we can debug it.
+            // Comparison with relate tool is meaningless in such a case.
+            if unoptExecution.outcome != .succeeded {
+                return unoptExecution
+            }
+
+            let unoptimizedDump = try String(contentsOfFile: unoptPath, encoding: .utf8)
+
+            return DiffExecution.diff(optExec: execution, unoptExec: unoptExecution, optDumpOut: optimizedDump, unoptDumpOut: unoptimizedDump)
+
+        } catch {
+            fatalError("Critical failure: Unable to read dump files. Error: \(error)")
+        }
+    }
+
     /// A pending corpus import job together with some statistics.
     private struct CorpusImportJob {
         private var corpusToImport: [Program]
@@ -1124,7 +1206,7 @@ public class Fuzzer {
                 numberOfProgramsRequiringWasmButDisabled += 1
             case .failed(let outcome):
                 switch outcome {
-                case .crashed, .succeeded:
+                case .crashed, .succeeded, .differential:
                     // This is unexpected so we don't track these.
                     break
                 case .failed:

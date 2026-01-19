@@ -70,6 +70,8 @@ let spidermonkeyProfile = Profile(
         return args
     },
 
+    processArgsReference: nil,
+
     processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 
     maxExecsBeforeRespawn: 1000,

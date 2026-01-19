@@ -12,7 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO(mdanylo): this should be part of the protocol between Fuzzilli and V8.
+public struct DifferentialConfig {
+    public let dumpFilenamePattern: String
+
+    public init(dumpFilenamePattern: String) {
+        self.dumpFilenamePattern = dumpFilenamePattern
+    }
+
+    public func getDumpFilename(isOptimized: Bool) -> String {
+        let subDirectory = isOptimized ? "optimizedDump" : "unoptimizedDump"
+        return String(format: dumpFilenamePattern, subDirectory)
+    }
+
+    public func getDumpFilenameParameter(isOptimized: Bool) -> String {
+        return "--dump-out-filename=\(getDumpFilename(isOptimized: isOptimized))"
+    }
+
+    public static func create(for instanceId: Int, storagePath: String) -> DifferentialConfig {
+        // TODO(mdanylo): it would be cool to add random hash to the filename if we store dumps
+        // in the filesystem for debugging.
+        let fileName = "output_dump_\(instanceId).txt"
+        let pattern = "\(storagePath)/%@/\(fileName)"
+        return DifferentialConfig(dumpFilenamePattern: pattern)
+    }
+}
+
 public struct Configuration {
+    /// The config specific to differential fuzzing
+    public let diffConfig: DifferentialConfig?
+
     /// The commandline arguments used by this instance.
     public let arguments: [String]
 
@@ -91,7 +120,9 @@ public struct Configuration {
                 tag: String? = nil,
                 isWasmEnabled: Bool = false,
                 storagePath: String? = nil,
-                forDifferentialFuzzing: Bool = false) {
+                forDifferentialFuzzing: Bool = false,
+                instanceId: Int = -1,
+                dumplingEnabled: Bool = false) {
         self.arguments = arguments
         self.timeout = timeout
         self.logLevel = logLevel
@@ -106,6 +137,11 @@ public struct Configuration {
         self.isWasmEnabled = isWasmEnabled
         self.storagePath = storagePath
         self.forDifferentialFuzzing = forDifferentialFuzzing
+        self.diffConfig = dumplingEnabled ? DifferentialConfig.create(for: instanceId, storagePath: storagePath!) : nil
+    }
+
+    public func getInstanceSpecificArguments(forReferenceRunner: Bool) -> [String] {
+        return diffConfig.map { [$0.getDumpFilenameParameter(isOptimized: !forReferenceRunner)] } ?? []
     }
 }
 

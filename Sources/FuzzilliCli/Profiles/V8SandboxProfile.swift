@@ -100,6 +100,8 @@ let v8SandboxProfile = Profile(
         v8ProcessArgs(randomize: randomize, forSandbox: true)
     },
 
+    processArgsReference: nil,
+
     // ASan options.
     // - abort_on_error=true: We need asan to exit in a way that's detectable for Fuzzilli as a crash
     // - handle_sigill=true: It seems by default ASAN doesn't handle SIGILL, but we want that to have stack traces

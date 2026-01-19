@@ -19,12 +19,15 @@ public class Storage: Module {
     private let storageDir: String
     private let crashesDir: String
     private let duplicateCrashesDir: String
+    private let differentialsDir: String
     private let corpusDir: String
     private let statisticsDir: String
     private let stateFile: String
     private let failedDir: String
     private let timeOutDir: String
     private let diagnosticsDir: String
+    private let optimizedDumpDir: String
+    private let unoptimizedDumpDir: String
 
     private let statisticsExportInterval: Double?
 
@@ -35,12 +38,15 @@ public class Storage: Module {
         self.storageDir = storageDir
         self.crashesDir = storageDir + "/crashes"
         self.duplicateCrashesDir = storageDir + "/crashes/duplicates"
+        self.differentialsDir = storageDir + "/differentials"
         self.corpusDir = storageDir + "/corpus"
         self.failedDir = storageDir + "/failed"
         self.timeOutDir = storageDir + "/timeouts"
         self.statisticsDir = storageDir + "/stats"
         self.stateFile = storageDir + "/state.bin"
         self.diagnosticsDir = storageDir + "/diagnostics"
+        self.optimizedDumpDir = storageDir + "/optimizedDump"
+        self.unoptimizedDumpDir = storageDir + "/unoptimizedDump"
 
         self.statisticsExportInterval = statisticsExportInterval
 
@@ -52,12 +58,17 @@ public class Storage: Module {
         do {
             try FileManager.default.createDirectory(atPath: crashesDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: duplicateCrashesDir, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(atPath: differentialsDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: corpusDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: statisticsDir, withIntermediateDirectories: true)
             if fuzzer.config.enableDiagnostics {
                 try FileManager.default.createDirectory(atPath: failedDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: timeOutDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: diagnosticsDir, withIntermediateDirectories: true)
+            }
+            if fuzzer.isDifferentialFuzzing {
+                try FileManager.default.createDirectory(atPath: optimizedDumpDir, withIntermediateDirectories: true)
+                try FileManager.default.createDirectory(atPath: unoptimizedDumpDir, withIntermediateDirectories: true)
             }
         } catch {
             logger.fatal("Failed to create storage directories. Is \(storageDir) writable by the current user?")
@@ -93,6 +104,11 @@ public class Storage: Module {
             } else {
                 self.storeProgram(ev.program, as: filename, in: self.duplicateCrashesDir)
             }
+        }
+
+        fuzzer.registerEventListener(for: fuzzer.events.DifferentialFound) { ev in
+            let filename = "program_\(self.formatDate())_\(ev.program.id)_\(ev.behaviour.rawValue)"
+            self.storeProgram(ev.program, as: filename, in: self.differentialsDir)
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in

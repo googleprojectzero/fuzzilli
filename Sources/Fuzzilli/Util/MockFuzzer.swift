@@ -129,6 +129,7 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
     // Construct the fuzzer instance.
     let fuzzer = Fuzzer(configuration: configuration,
                         scriptRunner: runner,
+                        referenceScriptRunner: nil,
                         engine: engine,
                         mutators: mutators,
                         codeGenerators: codeGenerators,

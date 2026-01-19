@@ -114,6 +114,8 @@ public class RuntimeAssistedMutator: Mutator {
         case .succeeded:
             // The expected case.
             break
+        case .differential:
+            fatalError("Differential result impossible")
         }
 
         // Process the output to build the mutated program.
@@ -386,7 +388,7 @@ extension RuntimeAssistedMutator.Action {
         case .BitwiseXor:
             try translateBinaryOperation(.Xor)
         case .NullCoalesce:
-            try translateBinaryOperation(.NullCoalesce)    
+            try translateBinaryOperation(.NullCoalesce)
         case .LeftShift:
             try translateBinaryOperation(.LShift)
         case .SignedRightShift:

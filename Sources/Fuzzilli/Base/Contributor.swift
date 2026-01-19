@@ -28,6 +28,8 @@ public class Contributor: Hashable {
     private var timedOutSamples = 0
     // Number of crashing programs produced.
     private var crashingSamples = 0
+    // The number of programs resulting in valid differential produced.
+    private var differentialSamples = 0
     // The number of times this contributor has been invoked
     private(set) var invocationCount = 0
     // The number of times this contributor has actually emitted more than 0 instructions
@@ -44,6 +46,10 @@ public class Contributor: Hashable {
 
     func generatedValidSample() {
         validSamples += 1
+    }
+
+    func generatedDifferentialSample() {
+        differentialSamples += 1
     }
 
     func generatedInterestingSample() {
@@ -82,8 +88,12 @@ public class Contributor: Hashable {
         return crashingSamples
     }
 
+    public var differentialsFound: Int {
+        return differentialSamples
+    }
+
     public var totalSamples: Int {
-        return validSamples + interestingSamples + invalidSamples + timedOutSamples + crashingSamples
+        return validSamples + interestingSamples + invalidSamples + timedOutSamples + crashingSamples + differentialSamples
     }
 
     // If this is low, that means the CodeGenerator has dynamic requirements that are not met most of the time.
@@ -150,5 +160,9 @@ extension Contributors {
 
     public func generatedTimeOutSample() {
         forEach { $0.generatedTimeOutSample() }
+    }
+
+    public func generatedDifferentialSample() {
+        forEach { $0.generatedDifferentialSample() }
     }
 }
