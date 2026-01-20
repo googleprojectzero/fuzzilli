@@ -1381,40 +1381,6 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator(
-        "WasmLegacyTryCatchWithResultGenerator", inContext: .single(.wasmFunction)
-    ) { b in
-        let function = b.currentWasmModule.currentWasmFunction
-        // Choose a few random wasm values as arguments if available.
-        let args = b.randomWasmBlockArguments(upTo: 5)
-        let parameters = args.map(b.type)
-        let tags = (0..<Int.random(in: 0...5)).map { _ in
-            b.findVariable { b.type(of: $0).isWasmTagType }
-        }.filter { $0 != nil }.map { $0! }
-        let outputTypes = b.randomWasmBlockOutputTypes(upTo: 3)
-        let signature = parameters => outputTypes
-        let recursiveCallCount = 2 + tags.count
-        function.wasmBuildLegacyTryWithResult(
-            with: signature, args: args,
-            body: { label, args in
-                b.buildRecursive(n: 4)
-                return outputTypes.map(function.findOrGenerateWasmVar)
-            },
-            catchClauses: tags.enumerated().map { i, tag in
-                (
-                    tag,
-                    { _, _, _ in
-                        b.buildRecursive(n: 4)
-                        return outputTypes.map(function.findOrGenerateWasmVar)
-                    }
-                )
-            },
-            catchAllBody: { label in
-                b.buildRecursive(n: 4)
-                return outputTypes.map(function.findOrGenerateWasmVar)
-            })
-    },
-
     // TODO split this into a multi-part Generator.
     CodeGenerator(
         "WasmLegacyTryCatchWithResultGenerator", inContext: .single(.wasmFunction)
