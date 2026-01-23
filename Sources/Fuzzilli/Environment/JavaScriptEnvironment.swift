@@ -21,7 +21,7 @@ public class JavaScriptEnvironment: ComponentBase {
     // TODO: use it in all places where it can be used.
     public static let typedArrayConstructors = [
         "Uint8Array", "Int8Array", "Uint16Array", "Int16Array",
-        "Uint32Array", "Int32Array", "Float32Array", "Float64Array",
+        "Uint32Array", "Int32Array", "Float16Array", "Float32Array", "Float64Array",
         "Uint8ClampedArray", "BigInt64Array", "BigUint64Array",
     ]
 
@@ -345,7 +345,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsFinalizationRegistrys)
         registerObjectGroup(.jsArrayBuffers)
         registerObjectGroup(.jsSharedArrayBuffers)
-        for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
+        for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float16Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
             registerObjectGroup(.jsTypedArrays(variant))
         }
         registerObjectGroup(.jsUint8ArrayConstructor)
@@ -360,6 +360,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsStringPrototype)
         registerObjectGroup(.jsSymbolConstructor)
         registerObjectGroup(.jsBigIntConstructor)
+        registerObjectGroup(.jsRegExpConstructor)
         registerObjectGroup(.jsBooleanConstructor)
         registerObjectGroup(.jsNumberConstructor)
         registerObjectGroup(.jsMathObject)
@@ -581,7 +582,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
         registerBuiltin("SharedArrayBuffer", ofType: .jsSharedArrayBufferConstructor)
         // Uint8Array handled below.
-        for variant in ["Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
+        for variant in ["Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float16Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
             registerBuiltin(variant, ofType: .jsTypedArrayConstructor(variant))
         }
         registerBuiltin("Uint8Array", ofType: .jsUint8ArrayConstructor)
@@ -1069,7 +1070,7 @@ public extension ILType {
     static let jsSharedArrayBuffer = ILType.object(ofGroup: "SharedArrayBuffer", withProperties: ["byteLength", "maxByteLength", "growable"], withMethods: ["grow", "slice"])
 
     /// Type of a JavaScript DataView object.
-    static let jsDataView = ILType.object(ofGroup: "DataView", withProperties: ["buffer", "byteLength", "byteOffset"], withMethods: ["getInt8", "getUint8", "getInt16", "getUint16", "getInt32", "getUint32", "getFloat32", "getFloat64", "getBigInt64", "setInt8", "setUint8", "setInt16", "setUint16", "setInt32", "setUint32", "setFloat32", "setFloat64", "setBigInt64"])
+    static let jsDataView = ILType.object(ofGroup: "DataView", withProperties: ["buffer", "byteLength", "byteOffset"], withMethods: ["getInt8", "getUint8", "getInt16", "getUint16", "getInt32", "getUint32", "getFloat16", "getFloat32", "getFloat64", "getBigInt64", "setInt8", "setUint8", "setInt16", "setUint16", "setInt32", "setUint32", "setFloat16", "setFloat32", "setFloat64", "setBigInt64"])
 
     /// Type of a JavaScript TypedArray object of the given variant.
     static func jsTypedArray(_ variant: String) -> ILType {
@@ -1090,7 +1091,7 @@ public extension ILType {
     static let jsObjectConstructor = .functionAndConstructor([.jsAnything...] => .object()) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
 
     /// Type of the JavaScript Array constructor builtin.
-    static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "of", "isArray"])
+    static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "fromAsync", "of", "isArray"])
 
     /// Type of the JavaScript Function constructor builtin.
     static let jsFunctionConstructor = ILType.constructor([.string] => .jsFunction(Signature.forUnknownFunction))
@@ -1111,7 +1112,7 @@ public extension ILType {
     static let jsBigIntConstructor = ILType.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
 
     /// Type of the JavaScript RegExp constructor builtin.
-    static let jsRegExpConstructor = ILType.jsFunction([.string] => .jsRegExp)
+    static let jsRegExpConstructor = ILType.functionAndConstructor([.string] => .jsRegExp) + .object(ofGroup: "RegExpConstructor", withProperties: ["prototype"], withMethods: ["escape"])
 
     /// Type of a JavaScript Error object of the given variant.
     static func jsError(_ variant: String) -> ILType {
@@ -1120,6 +1121,7 @@ public extension ILType {
 
     /// Type of the JavaScript Error constructor builtin
     static func jsErrorConstructor(_ variant: String) -> ILType {
+        // TODO: Add `Error.isError()`
         return .functionAndConstructor([.opt(.string)] => .jsError(variant))
     }
 
@@ -1142,7 +1144,7 @@ public extension ILType {
     static let jsDataViewConstructor = ILType.constructor([.plain(.jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsDataView)
 
     /// Type of the JavaScript Promise constructor builtin.
-    static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled"])
+    static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled", "try"])
 
     /// Type of the JavaScript Proxy constructor builtin.
     static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .jsAnything)
@@ -1166,7 +1168,7 @@ public extension ILType {
     static let jsFinalizationRegistryConstructor = ILType.constructor([.function()] => .jsFinalizationRegistry)
 
     /// Type of the JavaScript Math constructor builtin.
-    static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
+    static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "f16round", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "sumPrecise", "tan", "tanh", "trunc"])
 
     /// Type of the JavaScript Date object
     static let jsDate = ILType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString", "toTemporalInstant"])
@@ -1773,6 +1775,7 @@ public extension ObjectGroup {
             "getUint16"  : [.integer] => .integer,
             "getInt32"   : [.integer] => .integer,
             "getUint32"  : [.integer] => .integer,
+            "getFloat16" : [.integer] => .float,
             "getFloat32" : [.integer] => .float,
             "getFloat64" : [.integer] => .float,
             "getBigInt64": [.integer] => .bigint,
@@ -1782,6 +1785,7 @@ public extension ObjectGroup {
             "setUint16"  : [.integer, .integer] => .undefined,
             "setInt32"   : [.integer, .integer] => .undefined,
             "setUint32"  : [.integer, .integer] => .undefined,
+            "setFloat16" : [.integer, .float] => .undefined,
             "setFloat32" : [.integer, .float] => .undefined,
             "setFloat64" : [.integer, .float] => .undefined,
             "setBigInt64": [.integer, .bigint] => .undefined,
@@ -1805,6 +1809,7 @@ public extension ObjectGroup {
             "any"        : [.jsPromise...] => .jsPromise,
             "race"       : [.jsPromise...] => .jsPromise,
             "allSettled" : [.jsPromise...] => .jsPromise,
+            "try"        : [.function(), .jsAnything...] => .jsPromise,
         ]
     )
 
@@ -1922,9 +1927,10 @@ public extension ObjectGroup {
             "prototype" : .jsArray,
         ],
         methods: [
-            "from"    : [.jsAnything, .opt(.function()), .opt(.object())] => .jsArray,
-            "isArray" : [.jsAnything] => .boolean,
-            "of"      : [.jsAnything...] => .jsArray,
+            "from"      : [.jsAnything, .opt(.function()), .opt(.object())] => .jsArray,
+            "fromAsync" : [.jsAnything, .opt(.function()), .opt(.object())] => .jsPromise,
+            "isArray"   : [.jsAnything] => .boolean,
+            "of"        : [.jsAnything...] => .jsArray,
         ]
     )
 
@@ -2013,6 +2019,19 @@ public extension ObjectGroup {
         ]
     )
 
+    /// Object group modelling the JavaScript RegExp constructor builtin
+    static let jsRegExpConstructor = ObjectGroup(
+        name: "RegExpConstructor",
+        constructorPath: "RegExp",
+        instanceType: .jsRegExpConstructor,
+        properties: [
+            "prototype" : .object()
+        ],
+        methods: [
+            "escape" : [.string] => .jsString,
+        ]
+    )
+
     /// Object group modelling the JavaScript Boolean constructor builtin
     static let jsBooleanConstructor = ObjectGroup(
         name: "BooleanConstructor",
@@ -2058,41 +2077,43 @@ public extension ObjectGroup {
             "PI" : .number
         ],
         methods: [
-            "abs"    : [.jsAnything] => .number,
-            "acos"   : [.jsAnything] => .number,
-            "acosh"  : [.jsAnything] => .number,
-            "asin"   : [.jsAnything] => .number,
-            "asinh"  : [.jsAnything] => .number,
-            "atan"   : [.jsAnything] => .number,
-            "atanh"  : [.jsAnything] => .number,
-            "atan2"  : [.jsAnything, .jsAnything] => .number,
-            "cbrt"   : [.jsAnything] => .number,
-            "ceil"   : [.jsAnything] => .number,
-            "clz32"  : [.jsAnything] => .number,
-            "cos"    : [.jsAnything] => .number,
-            "cosh"   : [.jsAnything] => .number,
-            "exp"    : [.jsAnything] => .number,
-            "expm1"  : [.jsAnything] => .number,
-            "floor"  : [.jsAnything] => .number,
-            "fround" : [.jsAnything] => .number,
-            "hypot"  : [.jsAnything...] => .number,
-            "imul"   : [.jsAnything, .jsAnything] => .integer,
-            "log"    : [.jsAnything] => .number,
-            "log1p"  : [.jsAnything] => .number,
-            "log10"  : [.jsAnything] => .number,
-            "log2"   : [.jsAnything] => .number,
-            "max"    : [.jsAnything...] => .jsAnything,
-            "min"    : [.jsAnything...] => .jsAnything,
-            "pow"    : [.jsAnything, .jsAnything] => .number,
-            "random" : [] => .number,
-            "round"  : [.jsAnything] => .number,
-            "sign"   : [.jsAnything] => .number,
-            "sin"    : [.jsAnything] => .number,
-            "sinh"   : [.jsAnything] => .number,
-            "sqrt"   : [.jsAnything] => .number,
-            "tan"    : [.jsAnything] => .number,
-            "tanh"   : [.jsAnything] => .number,
-            "trunc"  : [.jsAnything] => .number,
+            "abs"        : [.jsAnything] => .number,
+            "acos"       : [.jsAnything] => .number,
+            "acosh"      : [.jsAnything] => .number,
+            "asin"       : [.jsAnything] => .number,
+            "asinh"      : [.jsAnything] => .number,
+            "atan"       : [.jsAnything] => .number,
+            "atanh"      : [.jsAnything] => .number,
+            "atan2"      : [.jsAnything, .jsAnything] => .number,
+            "cbrt"       : [.jsAnything] => .number,
+            "ceil"       : [.jsAnything] => .number,
+            "clz32"      : [.jsAnything] => .number,
+            "cos"        : [.jsAnything] => .number,
+            "cosh"       : [.jsAnything] => .number,
+            "exp"        : [.jsAnything] => .number,
+            "expm1"      : [.jsAnything] => .number,
+            "floor"      : [.jsAnything] => .number,
+            "fround"     : [.jsAnything] => .number,
+            "f16round"   : [.jsAnything] => .number,
+            "hypot"      : [.jsAnything...] => .number,
+            "imul"       : [.jsAnything, .jsAnything] => .integer,
+            "log"        : [.jsAnything] => .number,
+            "log1p"      : [.jsAnything] => .number,
+            "log10"      : [.jsAnything] => .number,
+            "log2"       : [.jsAnything] => .number,
+            "max"        : [.jsAnything...] => .jsAnything,
+            "min"        : [.jsAnything...] => .jsAnything,
+            "pow"        : [.jsAnything, .jsAnything] => .number,
+            "random"     : [] => .number,
+            "round"      : [.jsAnything] => .number,
+            "sign"       : [.jsAnything] => .number,
+            "sin"        : [.jsAnything] => .number,
+            "sinh"       : [.jsAnything] => .number,
+            "sqrt"       : [.jsAnything] => .number,
+            "sumPrecise" : [.jsAnything] => .number,
+            "tan"        : [.jsAnything] => .number,
+            "tanh"       : [.jsAnything] => .number,
+            "trunc"      : [.jsAnything] => .number,
         ]
     )
 
