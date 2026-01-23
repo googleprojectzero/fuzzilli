@@ -376,6 +376,7 @@ message Instruction {
         ImportNamespace importNamespace = 350;
         WasmBranchOnCastFail wasmBranchOnCastFail = 351;
         WasmRefFunc wasmRefFunc = 352;
+        WasmRefAsNonNull wasmRefAsNonNull = 353;
     }
 }
 

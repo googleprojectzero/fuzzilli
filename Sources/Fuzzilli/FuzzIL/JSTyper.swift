@@ -1098,6 +1098,12 @@ public struct JSTyper: Analyzer {
                 }
             case .wasmRefIsNull(_):
                 setType(of: instr.output, to: .wasmi32)
+            case .wasmRefAsNonNull(_):
+                // The result type is the non-nullable variant of the input type. (If the input type
+                // is already non-nullable, the instruction doesn't do anything and the type does
+                // not change.)
+                let inputRefType = type(of: instr.input(0)).wasmReferenceType!
+                setType(of: instr.output, to: .wasmRef(inputRefType.kind, nullability: false))
             case .wasmRefFunc(_):
                 if let signatureType = type(of: instr.input(0)).wasmFunctionDef?.signatureType,
                     let refType = signatureType.wasmTypeDefinition?.getReferenceTypeTo(

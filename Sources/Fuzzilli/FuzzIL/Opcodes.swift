@@ -380,4 +380,5 @@ enum Opcode {
     case importNamespace(ImportNamespace)
     case wasmBranchOnCastFail(WasmBranchOnCastFail)
     case wasmRefFunc(WasmRefFunc)
+    case wasmRefAsNonNull(WasmRefAsNonNull)
 }

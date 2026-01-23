@@ -1572,6 +1572,9 @@ public class FuzzILLifter: Lifter {
         case .wasmRefIsNull(_):
             w.emit("\(output()) <- WasmRefIsNull \(input(0))")
 
+        case .wasmRefAsNonNull(_):
+            w.emit("\(output()) <- WasmRefAsNonNull \(input(0))")
+
         case .wasmRefFunc(_):
             w.emit("\(output()) <- WasmRefFunc \(input(0))")
 

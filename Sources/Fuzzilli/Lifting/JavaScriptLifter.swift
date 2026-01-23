@@ -1990,6 +1990,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmStructSet(_),
                 .wasmRefNull(_),
                 .wasmRefIsNull(_),
+                .wasmRefAsNonNull(_),
                 .wasmRefFunc(_),
                 .wasmRefEq(_),
                 .wasmRefI31(_),

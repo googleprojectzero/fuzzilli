@@ -354,6 +354,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator(
+        "WasmRefAsNonNullGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.wasmGenericRef)
+    ) { b, ref in
+        b.currentWasmModule.currentWasmFunction.wasmRefAsNonNull(ref)
+    },
+
+    CodeGenerator(
         "WasmRefFuncGenerator", inContext: .single(.wasmFunction),
         inputs: .required(.wasmFunctionDef())
     ) { b, function in

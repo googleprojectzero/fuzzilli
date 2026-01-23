@@ -2454,6 +2454,8 @@ public class WasmLifter {
             return try Data([0xD0]) + encodeHeapType(typer.type(of: wasmInstruction.output))
         case .wasmRefIsNull(_):
             return Data([0xD1])
+        case .wasmRefAsNonNull(_):
+            return Data([0xD4])
         case .wasmRefFunc(_):
             let functionRef = wasmInstruction.input(0)
             return Data([0xD2])
