@@ -118,7 +118,10 @@ struct InliningReducer: Reducer {
 
                 // Can't inline functions that are passed as arguments to other functions.
                 deleteCandidates(instr.inputs.dropFirst())
-            case .loadDisposableVariable:
+            case .loadDisposableVariable,
+                 .createNamedDisposableVariable,
+                 .loadAsyncDisposableVariable,
+                 .createNamedAsyncDisposableVariable:
                 // Can't inline functions that are also used as a disposable variable.
                 deleteCandidates(instr.inputs)
                 fallthrough
