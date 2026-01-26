@@ -1063,7 +1063,7 @@ public extension ILType {
     static let jsFinalizationRegistry = ILType.object(ofGroup: "FinalizationRegistry", withMethods: ["register", "unregister"])
 
     /// Type of a JavaScript ArrayBuffer object.
-    static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["resize", "slice", "transfer"])
+    static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["resize", "slice", "transfer", "transferToFixedLength", "transferToImmutable"])
 
     /// Type of a JavaScript SharedArrayBuffer object.
     static let jsSharedArrayBuffer = ILType.object(ofGroup: "SharedArrayBuffer", withProperties: ["byteLength", "maxByteLength", "growable"], withMethods: ["grow", "slice"])
@@ -1665,9 +1665,11 @@ public extension ObjectGroup {
             "resizable"     : .boolean,
         ],
         methods: [
-            "resize"              : [.integer] => .undefined,
-            "slice"               : [.integer, .opt(.integer)] => .jsArrayBuffer,
-            "transfer"            : [.opt(.integer)] => .jsArrayBuffer,
+            "resize"                 : [.integer] => .undefined,
+            "slice"                  : [.integer, .opt(.integer)] => .jsArrayBuffer,
+            "transfer"               : [.opt(.integer)] => .jsArrayBuffer,
+            "transferToFixedLength"  : [.opt(.integer)] => .jsArrayBuffer,
+            "transferToImmutable"    : [] => .jsArrayBuffer,
         ]
     )
 
