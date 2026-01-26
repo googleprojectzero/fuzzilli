@@ -238,7 +238,8 @@ public class JavaScriptCompiler {
                 try enterNewScope {
                     var parameters = head.innerOutputs
                     map("this", to: parameters.removeFirst())
-                    mapParameters([setter.parameter], to: parameters)
+                    map(setter.parameter.name, to: parameters.removeFirst())
+                    assert(parameters.isEmpty)
                     for statement in setter.body {
                         try compileStatement(statement)
                     }
@@ -511,7 +512,7 @@ public class JavaScriptCompiler {
             emit(EndForOfLoop())
 
         case .breakStatement:
-            // If we're in both .loop and .switch context, then the loop must be the most recent context 
+            // If we're in both .loop and .switch context, then the loop must be the most recent context
             // (switch blocks don't propagate an outer .loop context) so we just need to check for .loop here
             if contextAnalyzer.context.contains(.loop){
                 emit(LoopBreak())
@@ -565,14 +566,14 @@ public class JavaScriptCompiler {
             emit(EndWith())
         case .switchStatement(let switchStatement):
             // TODO Replace the precomputation of tests with compilation of the test expressions in the cases.
-            // To do this, we would need to redesign Switch statements in FuzzIL to (for example) have a BeginSwitchCaseHead, BeginSwitchCaseBody, and EndSwitchCase. 
+            // To do this, we would need to redesign Switch statements in FuzzIL to (for example) have a BeginSwitchCaseHead, BeginSwitchCaseBody, and EndSwitchCase.
             // Then the expression would go inside the header.
             var precomputedTests = [Variable]()
             for caseStatement in switchStatement.cases {
                 if caseStatement.hasTest {
                     let test = try compileExpression(caseStatement.test)
                     precomputedTests.append(test)
-                } 
+                }
             }
             let discriminant = try compileExpression(switchStatement.discriminant)
             emit(BeginSwitch(), withInputs: [discriminant])
@@ -589,7 +590,7 @@ public class JavaScriptCompiler {
                 }
                 // We could also do an optimization here where we check if the last statement in the case is a break, and if so, we drop the last instruction
                 // and set the fallsThrough flag to false.
-                emit(EndSwitchCase(fallsThrough: true)) 
+                emit(EndSwitchCase(fallsThrough: true))
             }
             emit(EndSwitch())
         }
@@ -896,7 +897,8 @@ public class JavaScriptCompiler {
                     try enterNewScope {
                         var parameters = instr.innerOutputs
                         map("this", to: parameters.removeFirst())
-                        mapParameters([setter.parameter], to: parameters)
+                        map(setter.parameter.name, to: parameters.removeFirst())
+                        assert(parameters.isEmpty)
                         for statement in setter.body {
                             try compileStatement(statement)
                         }
@@ -1251,15 +1253,15 @@ public class JavaScriptCompiler {
         scopes.top[identifier] = v
     }
 
-    private func mapParameters(_ parameters: [Compiler_Protobuf_Parameter], to variables: ArraySlice<Variable>) {
-        assert(parameters.count == variables.count)
-        for (param, v) in zip(parameters, variables) {
+    private func mapParameters(_ parameters: Compiler_Protobuf_Parameters, to variables: ArraySlice<Variable>) {
+        assert(parameters.parameters.count == variables.count)
+        for (param, v) in zip(parameters.parameters, variables) {
             map(param.name, to: v)
         }
     }
 
-    private func convertParameters(_ parameters: [Compiler_Protobuf_Parameter]) -> Parameters {
-        return Parameters(count: parameters.count)
+    private func convertParameters(_ parameters: Compiler_Protobuf_Parameters) -> Parameters {
+        return Parameters(count: parameters.parameters.count, hasRestParameter: parameters.hasRestElement_p)
     }
 
     /// Convenience accessor for the currently active scope.

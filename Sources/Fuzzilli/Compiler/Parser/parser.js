@@ -84,13 +84,22 @@ function parse(script, proto) {
     }
 
     function visitParameter(param) {
-        assert(param.type == 'Identifier', "Expected parameter type to have type 'Identifier', found " + param.type);
-        return make('Parameter', { name: param.name });
+        switch (param.type) {
+            case 'Identifier':
+                return make('Parameter', { name: param.name });
+            case 'RestElement':
+                return make('Parameter', { name: param.argument.name });
+            default:
+                assert(false, "Unknown parameter type: " + param.type);
+        }
     }
 
     function visitParameters(params) {
-        return params.map(visitParameter)
-    }
+        return make('Parameters', {
+            parameters: params.map(visitParameter),
+            hasRestElement: params.some(param => param.type === 'RestElement'),
+        });
+    };
 
     // Processes the body of a block statement node and returns a list of statements.
     function visitBody(node) {

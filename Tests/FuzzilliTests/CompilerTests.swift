@@ -47,7 +47,7 @@ class CompilerTests: XCTestCase {
             // Execute the original code and record the output.
             let result1 = try nodejs.executeScript(at: URL(fileURLWithPath: testcasePath))
             guard result1.isSuccess else {
-                XCTFail("Tescase \(testName) failed to execute. Output:\n\(result1.output)")
+                XCTFail("TestCase \(testName) failed to execute. Output:\n\(result1.output)")
                 continue
             }
 
@@ -65,7 +65,7 @@ class CompilerTests: XCTestCase {
             let script = lifter.lift(program)
             let result2 = try nodejs.executeScript(script)
             guard result2.isSuccess else {
-                XCTFail("Tescase \(testName) failed to execute after compiling and lifting. Output:\n\(result2.output)")
+                XCTFail("TestCase \(testName) failed to execute after compiling and lifting. Output:\n\(result2.output)\nScript:\n\(script)")
                 continue
             }
 

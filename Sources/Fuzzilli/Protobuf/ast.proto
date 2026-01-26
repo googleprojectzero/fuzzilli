@@ -66,10 +66,15 @@ enum FunctionType {
     ASYNC_GENERATOR = 3;
 }
 
+message Parameters {
+    repeated Parameter parameters = 1;
+    bool hasRestElement = 2;
+}
+
 message FunctionDeclaration {
     string name = 1;
     FunctionType type = 2;
-    repeated Parameter parameters = 3;
+    Parameters parameters = 3;
     repeated Statement body = 4;
 }
 
@@ -92,14 +97,14 @@ message ClassProperty {
 }
 
 message ClassConstructor {
-    repeated Parameter parameters = 1;
+    Parameters parameters = 1;
     repeated Statement body = 2;
 }
 
 message ClassMethod {
     PropertyKey key = 1;
     bool isStatic = 2;
-    repeated Parameter parameters = 3;
+    Parameters parameters = 3;
     repeated Statement body = 4;
 }
 
@@ -330,7 +335,7 @@ message ObjectMethod {
         Expression expression = 2;
     }
     FunctionType type = 3;
-    repeated Parameter parameters = 4;
+    Parameters parameters = 4;
     repeated Statement body = 5;
 }
 
@@ -373,13 +378,13 @@ message FunctionExpression {
     // The name is optional for function expressions
     string name = 1;
     FunctionType type = 2;
-    repeated Parameter parameters = 3;
+    Parameters parameters = 3;
     repeated Statement body = 4;
 }
 
 message ArrowFunctionExpression {
     FunctionType type = 1;
-    repeated Parameter parameters = 2;
+    Parameters parameters = 2;
     // The body can either be an expression or a block statement.
     oneof body {
         Statement block = 3;
