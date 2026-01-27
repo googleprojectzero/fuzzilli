@@ -931,6 +931,10 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         if probability(0.1) {
             args.append("--assert-types")
         }
+        if (!args.contains("--no-maglev") || args.contains("--turbolev")) && probability(0.1) {
+	    // TODO(tacet): update the Turbolev conditions to !args.contains("--no-turbolev") after Turbolev trial
+            args.append("--maglev-assert-types")
+        }
         if probability(0.1) {
             args.append("--turboshaft-assert-types")
         }
