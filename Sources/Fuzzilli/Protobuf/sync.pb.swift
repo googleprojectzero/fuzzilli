@@ -177,6 +177,12 @@ public struct Fuzzilli_Protobuf_Statistics: @unchecked Sendable {
     set {_uniqueStorage()._timeoutRate = newValue}
   }
 
+  //// The number of programs resulting in valid differential produced.
+  public var differentialSamples: UInt64 {
+    get {return _storage._differentialSamples}
+    set {_uniqueStorage()._differentialSamples = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -275,7 +281,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Statistics"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}totalSamples\0\u{1}validSamples\0\u{1}interestingSamples\0\u{1}timedOutSamples\0\u{1}crashingSamples\0\u{1}totalExecs\0\u{1}avgCorpusSize\0\u{1}avgProgramSize\0\u{1}avgCorpusProgramSize\0\u{1}avgExecutionTime\0\u{1}execsPerSecond\0\u{1}fuzzerOverhead\0\u{1}minimizationOverhead\0\u{1}numChildNodes\0\u{1}coverage\0\u{1}correctnessRate\0\u{1}timeoutRate\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}totalSamples\0\u{1}validSamples\0\u{1}interestingSamples\0\u{1}timedOutSamples\0\u{1}crashingSamples\0\u{1}totalExecs\0\u{1}avgCorpusSize\0\u{1}avgProgramSize\0\u{1}avgCorpusProgramSize\0\u{1}avgExecutionTime\0\u{1}execsPerSecond\0\u{1}fuzzerOverhead\0\u{1}minimizationOverhead\0\u{1}numChildNodes\0\u{1}coverage\0\u{1}correctnessRate\0\u{1}timeoutRate\0\u{1}differentialSamples\0")
 
   fileprivate class _StorageClass {
     var _totalSamples: UInt64 = 0
@@ -295,6 +301,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     var _coverage: Double = 0
     var _correctnessRate: Double = 0
     var _timeoutRate: Double = 0
+    var _differentialSamples: UInt64 = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -322,6 +329,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       _coverage = source._coverage
       _correctnessRate = source._correctnessRate
       _timeoutRate = source._timeoutRate
+      _differentialSamples = source._differentialSamples
     }
   }
 
@@ -357,6 +365,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
         case 15: try { try decoder.decodeSingularDoubleField(value: &_storage._coverage) }()
         case 16: try { try decoder.decodeSingularDoubleField(value: &_storage._correctnessRate) }()
         case 17: try { try decoder.decodeSingularDoubleField(value: &_storage._timeoutRate) }()
+        case 18: try { try decoder.decodeSingularUInt64Field(value: &_storage._differentialSamples) }()
         default: break
         }
       }
@@ -416,6 +425,9 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       if _storage._timeoutRate.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._timeoutRate, fieldNumber: 17)
       }
+      if _storage._differentialSamples != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._differentialSamples, fieldNumber: 18)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -442,6 +454,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
         if _storage._coverage != rhs_storage._coverage {return false}
         if _storage._correctnessRate != rhs_storage._correctnessRate {return false}
         if _storage._timeoutRate != rhs_storage._timeoutRate {return false}
+        if _storage._differentialSamples != rhs_storage._differentialSamples {return false}
         return true
       }
       if !storagesAreEqual {return false}

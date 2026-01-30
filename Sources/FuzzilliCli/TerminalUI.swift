@@ -125,6 +125,10 @@ class TerminalUI {
         } else {
             print("Fuzzer Statistics")
         }
+        let differentialsLine = fuzzer.isDifferentialFuzzing
+            ? "\nDifferentials Found:          \(stats.differentialSamples)"
+            : ""
+
         print("""
         -----------------
         Fuzzer state:                 \(state)
@@ -136,7 +140,7 @@ class TerminalUI {
         Corpus Size:                  \(fuzzer.corpus.size)\(maybeAvgCorpusSize)
         Correctness Rate:             \(String(format: "%.2f%%", stats.correctnessRate * 100)) (overall: \(String(format: "%.2f%%", stats.overallCorrectnessRate * 100)))
         Timeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100)) (overall: \(String(format: "%.2f%%", stats.overallTimeoutRate * 100)))
-        Crashes Found:                \(stats.crashingSamples)
+        Crashes Found:                \(stats.crashingSamples)\(differentialsLine)
         Timeouts Hit:                 \(stats.timedOutSamples)
         Coverage:                     \(String(format: "%.2f%%", stats.coverage * 100))
         Avg. program size:            \(String(format: "%.2f", stats.avgProgramSize))
