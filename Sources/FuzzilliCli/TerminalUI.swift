@@ -52,6 +52,13 @@ class TerminalUI {
             }
         }
 
+        fuzzer.registerEventListener(for: fuzzer.events.DifferentialFound) { differential in
+            if differential.isUnique {
+                print("########## Unique Differential Found ##########")
+                print(fuzzer.lifter.lift(differential.program, withOptions: .includeComments))
+            }
+        }
+
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { crash in
             if crash.isUnique {
                 print("########## Unique Crash Found ##########")
