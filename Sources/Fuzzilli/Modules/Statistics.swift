@@ -136,6 +136,9 @@ public class Statistics: Module {
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { _ in
             self.ownData.crashingSamples += 1
         }
+        fuzzer.registerEventListener(for: fuzzer.events.DifferentialFound) { _ in
+            self.ownData.differentialSamples += 1
+        }
         fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { _ in
             self.ownData.timedOutSamples += 1
             self.correctnessRate.add(0.0)
