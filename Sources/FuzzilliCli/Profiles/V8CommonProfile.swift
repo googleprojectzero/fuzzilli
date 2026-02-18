@@ -760,6 +760,37 @@ public let ProtoAssignSeqOptFuzzer = ProgramTemplate("ProtoAssignSeqOptFuzzer") 
     b.build(n: 10)
 }
 
+public let TurbofanTierUpNonInlinedCallFuzzer =
+    ProgramTemplate("TurbofanTierUpNonInlinedCallFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 50)
+    // Find a function (or generate a new one) to be marked as "never optimize".
+    let unoptimizedFunction = b.randomVariable(ofType: .function())
+        ?? b.buildPlainFunction(with: .parameters(n: 2)) { _ in
+            b.build(n: 20)
+            b.doReturn(b.randomJsVariable())
+        }
+    b.eval("%NeverOptimizeFunction(%@)", with: [unoptimizedFunction])
+    // Create another function that calls the unoptimized function. This will always create a real
+    // call instead of inlining it.
+    let optimizedFunction = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+        // This should be able to generate interesting things including calls to the unoptimized
+        // function in all kinds of control flow.
+        b.build(n: 30)
+        // Also explicitly emit a call to the unoptimized function.
+        b.callFunction(unoptimizedFunction, withArgs: b.randomArguments(forCalling: unoptimizedFunction))
+        b.build(n: 10)
+    }
+    // Collect feedback and optimize the function.
+    // Guard all calls. The path where they throw is still interesting as there are
+    // optimizations that affect the unwinding logic which we'd like to get coverage for as well.
+    b.eval("%PrepareFunctionForOptimization(%@)", with: [optimizedFunction]);
+    b.callFunction(optimizedFunction, guard: true)
+    b.callFunction(optimizedFunction, guard: true)
+    b.eval("%OptimizeFunctionOnNextCall(%@)", with: [optimizedFunction]);
+    b.callFunction(optimizedFunction, guard: true)
+}
+
 // Configure V8 invocation arguments. `forSandbox` is used by the V8SandboxProfile. As the sandbox
 // fuzzer does not crash on regular assertions, most validation flags do not make sense in that
 // configuraiton.
