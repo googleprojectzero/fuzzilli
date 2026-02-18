@@ -143,7 +143,7 @@ struct InstructionSimplifier: Reducer {
 
                 let outputs = Array(instr.outputs)
                 for (i, idx) in op.indices.enumerated() {
-                    if i == op.indices.last! && op.lastIsRest {
+                    if i == op.indices.count - 1 && op.lastIsRest {
                         newCode.append(Instruction(DestructArray(indices: [idx], lastIsRest: true), output: outputs.last!, inputs: [instr.input(0)]))
                     } else {
                         newCode.append(Instruction(GetElement(index: idx, isGuarded: false), output: outputs[i], inputs: [instr.input(0)]))

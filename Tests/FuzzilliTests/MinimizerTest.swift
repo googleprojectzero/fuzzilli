@@ -1434,6 +1434,39 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    func testDestructuringSimplificationWithRest() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        var o = b.createNamedVariable(forBuiltin: "TheArray")
+        let vars = b.destruct(o, selecting: [0, 2], lastIsRest: true)
+
+        var print = b.createNamedVariable(forBuiltin: "print")
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(print, withArgs: [vars[0], vars[1]])
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        o = b.createNamedVariable(forBuiltin: "TheArray")
+        let e0 = b.getElement(0, of: o)
+        let restVars = b.destruct(o, selecting: [2], lastIsRest: true)
+
+        print = b.createNamedVariable(forBuiltin: "print")
+        b.callFunction(print, withArgs: [e0, restVars[0]])
+
+        let expectedProgram = b.finalize()
+
+        // See testDestructuringSimplification2 for why these are marked important.
+        evaluator.operationIsImportant(DestructArray.self)
+        evaluator.operationIsImportant(GetElement.self)
+
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(actualProgram, expectedProgram)
+    }
+
     func testVariableDeduplication() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
