@@ -795,6 +795,10 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         if probability(0.5) {
             args.append("--maglev-as-top-tier")
         }
+    } else if probability(0.1) {
+        args.append(probability(0.5)
+            ? "--turbo-instruction-scheduling"
+            : "--turbo-stress-instruction-scheduling")
     }
 
     if probability(0.1) {
