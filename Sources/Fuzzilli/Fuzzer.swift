@@ -167,14 +167,14 @@ public class Fuzzer {
 
     /// State management.
     private var iterations = 0
-    private var iterationOfLastInteratingSample = 0
+    private var iterationOfLastInterestingSample = 0
 
     /// Currently active corpus import job, if any.
     private var currentCorpusImportJob = CorpusImportJob(corpus: [], mode: .full)
 
     private var iterationsSinceLastInterestingProgram: Int {
-        assert(iterations >= iterationOfLastInteratingSample)
-        return iterations - iterationOfLastInteratingSample
+        assert(iterations >= iterationOfLastInterestingSample)
+        return iterations - iterationOfLastInterestingSample
     }
 
     /// Fuzzer instances can be looked up from a dispatch queue through this key. See below.
@@ -753,7 +753,7 @@ public class Fuzzer {
         } while !didConverge || attempt < minAttempts
 
         if origin == .local {
-            iterationOfLastInteratingSample = iterations
+            iterationOfLastInterestingSample = iterations
         }
 
         // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
