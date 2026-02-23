@@ -1,0 +1,178 @@
+import Foundation
+import Fuzzilli
+
+// Disable most logging. The JavaScriptEnvironment prints warning when trying to fetch types for
+// builtins it doesn't know about. This is what this script wants to do, so printing warningis for
+// it isn't helpful.
+Logger.defaultLogLevelWithoutFuzzer = .error
+
+// Helper function that prints out an error message, then exits the process.
+func configError(_ msg: String) -> Never {
+    print(msg)
+    exit(-1)
+}
+
+let args = Arguments.parse(from: CommandLine.arguments)
+
+let helpRequested = args["-h"] != nil || args["--help"] != nil
+if helpRequested || args.numPositionalArguments != 1 {
+    print("""
+    Usage:
+    \(args.programName) [options] --profile=<profile> /path/to/jsshell
+
+    Options:
+        --profile=name               : Select one of several preconfigured profiles.
+                                       Available profiles: \(profiles.keys).
+        --no-args                    : Invoke the shell without any additional arguments from the profile.
+    """)
+    exit(helpRequested ? 0 : -1)
+}
+
+guard let profileName = args["--profile"], let profile = profiles[profileName] else {
+    configError("Please provide a valid profile with --profile=profile_name. Available profiles: \(profiles.keys)")
+}
+
+let jsshellArguments = args.has("--no-args") ? [] : profile.processArgs(false)
+let runner = JavaScriptExecutor(withExecutablePath: args[0], arguments: jsshellArguments, env: [])
+let jsProg = """
+(function() {
+  const maxDepth = 10; // Limit the maximum recursion depth.
+  const seenObjects = new Map();
+  let idCounter = 0;
+  const flatGraph = {};
+
+  function walk(currentObj, currentDepth) {
+    const isObjectOrFunction = currentObj !== null
+        && (typeof currentObj === 'object' || typeof currentObj === 'function');
+
+    // Deduplicate objects that appear multiple times in the graph.
+    if (seenObjects.has(currentObj)) {
+      return seenObjects.get(currentObj);
+    }
+
+    // Store current object for deduplication.
+    const currentId = idCounter++;
+    seenObjects.set(currentObj, currentId);
+    let typeLabel = typeof currentObj;
+    if (currentObj === null) typeLabel = "null";
+    else if (Array.isArray(currentObj)) typeLabel = "array";
+
+    const node = {
+      type: typeLabel,
+      properties: {}
+    };
+
+    flatGraph[currentId] = node;
+
+    if (!isObjectOrFunction) return currentId;
+    if (currentDepth >= maxDepth) return currentId;
+
+    let properties = [];
+    try {
+      properties = Object.getOwnPropertyNames(currentObj);
+    } catch (e) {
+      return currentId;
+    }
+
+    for (const prop of properties) {
+      let isGetter = typeof(Object.getOwnPropertyDescriptor(currentObj, prop).get) === 'function';
+      let value;
+      try {
+        value = currentObj[prop];
+      } catch (e) {
+        const errorId = idCounter++;
+        flatGraph[errorId] = { type: "error", properties: {} };
+        node.properties[prop] = { id: errorId, isGetter };
+        continue;
+      }
+
+      node.properties[prop] = {
+        id: walk(value, currentDepth + 1),
+        isGetter: isGetter
+      };
+    }
+    return currentId;
+  }
+
+  walk(globalThis, 0); // Start traversal.
+  const flatJSONData = JSON.stringify(flatGraph, null, 2);
+  console.log(flatJSONData);
+})();
+"""
+
+let result = try runner.executeScript(jsProg, withTimeout: 10)
+guard result.isSuccess else {
+    fatalError("Execution failed: \(result.error)\n\(result.output)")
+}
+
+let jsEnvironment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: profile.additionalObjectGroups, additionalEnumerations: profile.additionalEnumerations)
+let jsonString = result.output
+
+struct PropertyReference: Codable {
+    let id: Int
+    let isGetter: Bool
+}
+
+struct JSPropertyNode: Decodable {
+    let type: String
+    let properties: [String: PropertyReference]
+}
+
+let data = jsonString.data(using: .utf8)!
+let graph: [Int: JSPropertyNode]
+do {
+    graph = try JSONDecoder().decode([Int: JSPropertyNode].self, from: data)
+} catch {
+    fatalError("DECODE ERROR: \(error)")
+}
+
+var visited = Set<Int>()
+var missingBuiltins = [String]()
+
+func checkNode(_ nodeId: Int, path: [String]) {
+    if visited.contains(nodeId) { return }
+    visited.insert(nodeId)
+
+    guard let node = graph[nodeId] else { return }
+    // Calculate the IL type for the current object.
+    var type = path.first.map(jsEnvironment.type(ofBuiltin:))
+    if type != nil {
+        for propertyName in path.dropFirst() {
+            type = jsEnvironment.type(ofProperty: propertyName, on: type!)
+        }
+    }
+
+    // Each function has a name and a length property. We don't really care about them, so filter
+    // them out.
+    let propertyData = node.properties.filter {($0.key != "name" && $0.key != "length") || node.type != "function"}
+    for (prop, propertyRef) in propertyData {
+        let (childId, isGetter) = (propertyRef.id, propertyRef.isGetter)
+
+        // Skip any `*.prototype.<property>` if <property> is a getter. These getters are meant to
+        // be used on an instance of the given object, registering them on the original prototype
+        // object doesn't help Fuzzilli in generating interesting programs.
+        if path.last == "prototype" && isGetter {
+            continue
+        }
+
+        var newPath = path
+        newPath.append(prop)
+
+        let isRegistered: Bool
+        if let type {
+            isRegistered = jsEnvironment.type(ofProperty: prop, on: type) != .jsAnything
+        } else {
+            assert(path.isEmpty)
+            isRegistered = jsEnvironment.hasBuiltin(prop)
+        }
+
+        if !isRegistered {
+            missingBuiltins.append(newPath.joined(separator: "."))
+        }
+
+        checkNode(childId, path: newPath)
+    }
+}
+
+checkNode(0, path: [])
+print(missingBuiltins.sorted().joined(separator: "\n"))

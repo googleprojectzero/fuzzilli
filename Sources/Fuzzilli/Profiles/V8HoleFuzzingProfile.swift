@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Fuzzilli
 
 // This value generator inserts Hole leaks into the program.  Use this if you
 // want to fuzz for Memory Corruption using holes, this should be used in

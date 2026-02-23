@@ -28,6 +28,7 @@ public enum LogLevel: Int {
 
 /// Logs messages to the active fuzzer instance or prints them to stdout if no fuzzer is active.
 public class Logger {
+    public static var defaultLogLevelWithoutFuzzer = LogLevel.verbose
     private let label: String
 
     public init(withLabel label: String) {
@@ -39,7 +40,7 @@ public class Logger {
             if fuzzer.config.logLevel.isAtLeast(level) {
                 fuzzer.dispatchEvent(fuzzer.events.Log, data: (fuzzer.id, level, label, message))
             }
-        } else {
+        } else if Logger.defaultLogLevelWithoutFuzzer.isAtLeast(level) {
             print("[\(label)] \(message)")
         }
     }

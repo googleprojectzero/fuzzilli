@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Fuzzilli
 
 public extension ILType {
     static let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
@@ -675,7 +674,7 @@ public let WasmFastCallFuzzer = WasmProgramTemplate("WasmFastCallFuzzer") { b in
                   return [ret]
                 }
             } else {
-                logger.error("Arguments should have been generated")
+                Logger(withLabel: "V8CommonProfile").error("Arguments should have been generated")
             }
             return wasmSignature.outputTypes.map(fbuilder.findOrGenerateWasmVar)
         }

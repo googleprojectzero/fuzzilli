@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Fuzzilli
 
 fileprivate let ForceSpidermonkeyIonGenerator = CodeGenerator("ForceSpidermonkeyIonGenerator", inputs: .required(.function())) { b, f in
     assert(b.type(of: f).Is(.function()))

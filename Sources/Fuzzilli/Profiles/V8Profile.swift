@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Fuzzilli
 
-let v8Profile = Profile(
+public let v8Profile = Profile(
     processArgs: {randomize in
       v8ProcessArgs(randomize: randomize, forSandbox: false)
     },

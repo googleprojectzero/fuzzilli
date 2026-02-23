@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,36 +11,24 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import Fuzzilli
 
-// QV4 is the Execution Engine behind QTJS
-fileprivate let ForceQV4JITGenerator = CodeGenerator("ForceQV4JITGenerator", inputs: .required(.function())) { b, f in
-    assert(b.type(of: f).Is(.function()))
-    let arguments = b.randomArguments(forCalling: f)
-    b.buildRepeatLoop(n: 100){ _ in
-        b.callFunction(f, withArgs: arguments)
-    }
-}
 
-let qtjsProfile = Profile(
-    processArgs: { randomize in
-        ["-reprl"]
-    },
-
+let serenityProfile = Profile(
+    processArgs: { randomize in return [""] },
     processArgsReference: nil,
-
-    processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
-
+    processEnv: [
+        "UBSAN_OPTIONS": "handle_segv=0 handle_abrt=0",
+        "ASAN_OPTIONS": "abort_on_error=1",
+    ],
     maxExecsBeforeRespawn: 1000,
-
     timeout: Timeout.value(250),
-
     codePrefix: """
-                """,
-
-    codeSuffix: """
-                """,
-
+                 function main() {
+                 """,
+     codeSuffix: """
+                 }
+                 main();
+                 """,
     ecmaVersion: ECMAScriptVersion.es6,
 
     startupTests: [
@@ -49,20 +37,17 @@ let qtjsProfile = Profile(
 
         // Check that common crash types are detected.
         ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldCrash),
     ],
 
-    additionalCodeGenerators: [
-        (ForceQV4JITGenerator,    20),
-    ],
-
+    additionalCodeGenerators: [],
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
     disabledCodeGenerators: [],
-
     disabledMutators: [],
 
     additionalBuiltins: [
-        "gc"                : .function([] => .undefined),
+        "gc": .function([] => .undefined)
     ],
 
     additionalObjectGroups: [],

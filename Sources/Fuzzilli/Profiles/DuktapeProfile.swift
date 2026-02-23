@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Fuzzilli
 
-let jerryscriptProfile = Profile(
+let duktapeProfile = Profile(
     processArgs: { randomize in
-        ["--reprl-fuzzilli"]
+        ["--reprl"]
     },
 
     processArgsReference: nil,
 
-    processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
+    processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 
     maxExecsBeforeRespawn: 1000,
 
@@ -53,10 +52,14 @@ let jerryscriptProfile = Profile(
     disabledMutators: [],
 
     additionalBuiltins: [
-        "gc"                : .function([] => .undefined),
-        "print"             : .function([] => .undefined),
-        "resourceName"      : .function([] => .undefined),
-        "placeholder"       : .function([] => .undefined),
+        "CBOR.encode"               :  .function([.jsAnything] => .object()),
+        "CBOR.decode"               :  .function([.object()] => .object()),
+        "Duktape.fin"               :  .function([.object(), .opt(.function())] => .undefined),
+        "Duktape.act"               :  .function([.number] => .object()),
+        "Duktape.gc"                :  .function([] => .undefined),
+        "Duktape.compact"           :  .function([.object()] => .undefined),
+        "placeholder"               :  .function([] => .undefined),
+
     ],
 
     additionalObjectGroups: [],

@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Fuzzilli
 
-let duktapeProfile = Profile(
+let njsProfile = Profile(
     processArgs: { randomize in
-        ["--reprl"]
+        ["fuzz"]
     },
 
     processArgsReference: nil,
@@ -33,7 +32,7 @@ let duktapeProfile = Profile(
     codeSuffix: """
                 """,
 
-    ecmaVersion: ECMAScriptVersion.es5,
+    ecmaVersion: ECMAScriptVersion.es6,
 
     startupTests: [
         // Check that the fuzzilli integration is available.
@@ -42,6 +41,7 @@ let duktapeProfile = Profile(
         // Check that common crash types are detected.
         ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
         ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldCrash),
     ],
 
     additionalCodeGenerators: [],
@@ -52,16 +52,7 @@ let duktapeProfile = Profile(
 
     disabledMutators: [],
 
-    additionalBuiltins: [
-        "CBOR.encode"               :  .function([.jsAnything] => .object()),
-        "CBOR.decode"               :  .function([.object()] => .object()),
-        "Duktape.fin"               :  .function([.object(), .opt(.function())] => .undefined),
-        "Duktape.act"               :  .function([.number] => .object()),
-        "Duktape.gc"                :  .function([] => .undefined),
-        "Duktape.compact"           :  .function([.object()] => .undefined),
-        "placeholder"               :  .function([] => .undefined),
-
-    ],
+    additionalBuiltins: [:],
 
     additionalObjectGroups: [],
 

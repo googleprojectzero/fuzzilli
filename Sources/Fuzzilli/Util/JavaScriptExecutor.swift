@@ -208,22 +208,22 @@ public class JavaScriptExecutor {
 
     /// The Result of a JavaScript Execution, the exit code and any associated output.
     public struct Result {
-        enum Outcome: Equatable {
+        public enum Outcome: Equatable {
             case terminated(status: Int32)
             case timedOut
         }
 
-        let outcome: Outcome
-        let output: String
-        let error: String
+        public let outcome: Outcome
+        public let output: String
+        public let error: String
 
-        var isSuccess: Bool {
+        public var isSuccess: Bool {
             return outcome == .terminated(status: 0)
         }
-        var isFailure: Bool {
+        public var isFailure: Bool {
             return !isSuccess
         }
-        var isTimeOut: Bool {
+        public var isTimeOut: Bool {
             return outcome == .timedOut
         }
     }

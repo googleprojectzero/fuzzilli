@@ -12,42 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Fuzzilli
 
-struct Profile {
-    let processArgs: (_ randomize: Bool) -> [String]
+public struct Profile {
+    public let processArgs: (_ randomize: Bool) -> [String]
     // if not nil, then this is profile for differential fuzzing
-    let processArgsReference: [String]?
-    let processEnv: [String : String]
-    let maxExecsBeforeRespawn: Int
+    public let processArgsReference: [String]?
+    public let processEnv: [String : String]
+    public let maxExecsBeforeRespawn: Int
     // Timeout either by value or interval in milliseconds.
-    let timeout: Timeout
-    let codePrefix: String
-    let codeSuffix: String
-    let ecmaVersion: ECMAScriptVersion
+    public let timeout: Timeout
+    public let codePrefix: String
+    public let codeSuffix: String
+    public let ecmaVersion: ECMAScriptVersion
 
     // JavaScript code snippets that are executed at startup time to ensure that Fuzzilli and the target engine are configured correctly.
-    let startupTests: [(String, ExpectedStartupTestResult)]
+    public let startupTests: [(String, ExpectedStartupTestResult)]
 
-    let additionalCodeGenerators: [(CodeGenerator, Int)]
-    let additionalProgramTemplates: WeightedList<ProgramTemplate>
+    public let additionalCodeGenerators: [(CodeGenerator, Int)]
+    public let additionalProgramTemplates: WeightedList<ProgramTemplate>
 
-    let disabledCodeGenerators: [String]
-    let disabledMutators: [String]
+    public let disabledCodeGenerators: [String]
+    public let disabledMutators: [String]
 
-    let additionalBuiltins: [String: ILType]
-    let additionalObjectGroups: [ObjectGroup]
-    let additionalEnumerations: [ILType]
+    public let additionalBuiltins: [String: ILType]
+    public let additionalObjectGroups: [ObjectGroup]
+    public let additionalEnumerations: [ILType]
 
     // An optional post-processor that is executed for every sample generated for fuzzing and can modify it.
-    let optionalPostProcessor: FuzzingPostProcessor?
+    public let optionalPostProcessor: FuzzingPostProcessor?
 
-    var isDifferential: Bool {
+    public var isDifferential: Bool {
         return processArgsReference != nil
     }
 }
 
-let profiles = [
+public let profiles = [
     "qtjs": qtjsProfile,
     "qjs": qjsProfile,
     "jsc": jscProfile,

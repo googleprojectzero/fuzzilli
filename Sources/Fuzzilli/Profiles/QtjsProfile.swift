@@ -1,4 +1,4 @@
-// Copyright 2024 Google LLC
+// Copyright 2019 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Fuzzilli
+// QV4 is the Execution Engine behind QTJS
+fileprivate let ForceQV4JITGenerator = CodeGenerator("ForceQV4JITGenerator", inputs: .required(.function())) { b, f in
+    assert(b.type(of: f).Is(.function()))
+    let arguments = b.randomArguments(forCalling: f)
+    b.buildRepeatLoop(n: 100){ _ in
+        b.callFunction(f, withArgs: arguments)
+    }
+}
 
-let njsProfile = Profile(
+let qtjsProfile = Profile(
     processArgs: { randomize in
-        ["fuzz"]
+        ["-reprl"]
     },
 
     processArgsReference: nil,
 
-    processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
+    processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
 
     maxExecsBeforeRespawn: 1000,
 
@@ -41,11 +48,11 @@ let njsProfile = Profile(
 
         // Check that common crash types are detected.
         ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
-        ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldCrash),
-        ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldCrash),
     ],
 
-    additionalCodeGenerators: [],
+    additionalCodeGenerators: [
+        (ForceQV4JITGenerator,    20),
+    ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
@@ -53,7 +60,9 @@ let njsProfile = Profile(
 
     disabledMutators: [],
 
-    additionalBuiltins: [:],
+    additionalBuiltins: [
+        "gc"                : .function([] => .undefined),
+    ],
 
     additionalObjectGroups: [],
 

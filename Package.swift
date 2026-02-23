@@ -82,6 +82,8 @@ let package = Package(
         .executableTarget(name: "RelateTool",
                 dependencies: ["Fuzzilli"]),
 
+        .executableTarget(name: "FuzzilliDetectMissingBuiltins", dependencies: ["Fuzzilli"]),
+
         .testTarget(name: "FuzzilliTests",
                     dependencies: ["Fuzzilli"],
                     resources: [.copy("CompilerTests")]),
