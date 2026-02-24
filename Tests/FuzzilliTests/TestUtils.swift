@@ -85,3 +85,17 @@ func buildAndLiftProgram(buildFunc: (ProgramBuilder) -> ()) -> String {
     return buildAndLiftProgram(withLiftingOptions: [], buildFunc: buildFunc)
 }
 
+class TestUtilsTests: XCTestCase {
+
+    // Test that running a program via the JavaScriptExecutor that produces a large output succeeds.
+    // (This test case exists because when using a raw Pipe() as stdout without any further
+    // handling, the child process will be interrupted once the buffer size (64KB on Linux
+    // apparently) is filled.)
+    func testJavaScriptExecutorLargeOutput() throws {
+        let jsProg = "console.log(JSON.stringify(Array(50000).fill(1)))"
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let result = try runner.executeScript(jsProg, withTimeout: 10)
+        XCTAssert(result.isSuccess, "\(result.output)\n\(result.error)")
+        XCTAssertGreaterThan(result.output.count, 100_000)
+    }
+}
