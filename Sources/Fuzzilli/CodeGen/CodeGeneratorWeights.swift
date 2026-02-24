@@ -381,4 +381,6 @@ public let codeGeneratorWeights = [
     "WasmExternConvertAnyGenerator":            5,
     "WasmRefTestGenerator":                     5,
     "WasmRefTestAbstractGenerator":             5,
+    "WasmRefCastGenerator":                     5,
+    "WasmRefCastAbstractGenerator":             5,
 ]

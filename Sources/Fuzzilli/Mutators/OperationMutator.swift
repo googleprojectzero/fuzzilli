@@ -745,7 +745,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmTableInit(_),
              .wasmTableCopy(_),
              .wasmStructNew(_),
-             .wasmRefEq(_):
+             .wasmRefEq(_),
+             .wasmRefCast(_):
              let mutability = instr.isOperationMutable ? "mutable" : "immutable"
              fatalError("Unexpected operation \(instr.op.opcode), marked as \(mutability)")
         }

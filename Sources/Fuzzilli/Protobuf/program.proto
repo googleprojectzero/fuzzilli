@@ -364,6 +364,7 @@ message Instruction {
         WasmRefEq wasmRefEq = 338;
         WasmRefTest wasmRefTest = 339;
         WasmDefineAdHocModuleSignatureType wasmDefineAdHocModuleSignatureType = 340;
+        WasmRefCast wasmRefCast = 341;
     }
 }
 

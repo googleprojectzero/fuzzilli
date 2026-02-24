@@ -949,6 +949,13 @@ public struct JSTyper: Analyzer {
                 setType(of: instr.output, to: .wasmi32)
             case .wasmRefTest(_):
                 setType(of: instr.output, to: .wasmi32)
+            case .wasmRefCast(let op):
+                if op.type.requiredInputCount() == 1 {
+                    let nullable = op.type.wasmReferenceType!.nullability
+                    setReferenceType(of: instr.output, typeDef: instr.input(1), nullability: nullable)
+                } else {
+                    setType(of: instr.output, to: op.type)
+                }
             case .wasmAnyConvertExtern(_):
                 // TODO(pawkra): forward shared bit & update the comment
                 // any.convert_extern forwards the nullability bit from the input.

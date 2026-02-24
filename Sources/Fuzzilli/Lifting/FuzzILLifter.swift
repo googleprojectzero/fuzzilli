@@ -1349,6 +1349,10 @@ public class FuzzILLifter: Lifter {
             let typeInput = op.type.requiredInputCount() > 0 ? " (IndexType: \(input(1)))" : ""
             w.emit("\(output()) <- WasmRefTest \(op.type) \(input(0))\(typeInput)")
 
+        case .wasmRefCast(let op):
+            let typeInput = op.type.requiredInputCount() > 0 ? " (IndexType: \(input(1)))" : ""
+            w.emit("\(output()) <- WasmRefCast \(op.type) \(input(0))\(typeInput)")
+
         case .wasmBeginTypeGroup(_):
             w.emit("WasmBeginTypeGroup")
             w.increaseIndentionLevel()

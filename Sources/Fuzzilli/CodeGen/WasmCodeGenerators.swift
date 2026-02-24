@@ -387,6 +387,56 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         )
     },
 
+    CodeGenerator(
+        "WasmRefCastGenerator", inContext: .single(.wasmFunction),
+        inputs: .requiredComplex(.init(.wasmTypeDef())),
+        produces: [.wasmGenericRef]
+    ) { b, typeDef in
+        guard let abstractType =
+            b.type(of: typeDef).wasmTypeDefinition?.description?.abstractHeapSupertype?.heapType
+            as? WasmAbstractHeapType
+        else { fatalError("Invalid type description for \(b.type(of: typeDef))") }
+        let function = b.currentWasmModule.currentWasmFunction
+        let variable = switch abstractType {
+        case .WasmFunc, .WasmNoFunc:
+            function.findOrGenerateWasmVar(ofType: .wasmFuncRef())
+        case .WasmArray, .WasmStruct:
+            function.findOrGenerateWasmVar(ofType: .wasmAnyRef())
+        default:
+            fatalError("The type \(abstractType) shouldn't have a definition")
+        }
+        let refType = ILType.wasmRef(.Index(), nullability: Bool.random())
+        function.wasmRefCast(variable, refType: refType, typeDef: typeDef)
+    },
+
+    CodeGenerator(
+        "WasmRefCastAbstractGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.wasmGenericRef),
+        produces: [.wasmGenericRef]
+    ) { b, ref in
+        let function = b.currentWasmModule.currentWasmFunction
+        let heapType = switch b.type(of: ref).wasmReferenceType!.kind {
+            case .Abstract(let heapTypeInfo):
+                heapTypeInfo.heapType
+            case .Index(let desc):
+                desc.get()!.abstractHeapSupertype!.heapType
+        }
+        let incompatible: [WasmAbstractHeapType] = [.WasmStruct, .WasmArray, .WasmI31]
+        let chosenType = chooseUniform(
+            from: WasmAbstractHeapType.allCases.filter {
+                $0 != heapType &&
+                $0.inSameHierarchy(heapType) &&
+                (   // 90% of the time it won't contain two incompatible types
+                    probability(0.1) ||
+                    !(incompatible.contains($0) && incompatible.contains(heapType))
+                )
+            }
+        )
+        // TODO(pawkra): add shared variant.
+        let newType = ILType.wasmRef(.Abstract(HeapTypeInfo(chosenType, shared: false)), nullability: Bool.random())
+        function.wasmRefCast(ref, refType: newType)
+    },
+
     // Primitive Value Generators
 
     CodeGenerator(

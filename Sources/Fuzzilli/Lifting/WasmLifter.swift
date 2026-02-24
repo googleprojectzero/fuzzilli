@@ -584,6 +584,16 @@ public class WasmLifter {
         fatalError("This function supports only wasmReferenceType.")
     }
 
+    // Helper method in cases we have either abstract type represented by ILType or an index type Variable
+    private func encodeReferenceType(_ refType: WasmReferenceType, instr: Instruction, typeInput: Int) throws -> Data {
+        switch refType.kind {
+        case .Abstract(let heapTypeInfo):
+            return encodeAbstractHeapType(heapTypeInfo)
+        case .Index(_):
+            return try encodeWasmGCType(typer.getTypeDescription(of: instr.input(typeInput)))
+        }
+    }
+
     private func buildTypeEntry(for desc: WasmTypeDescription, data: inout Data) throws {
         if let arrayDesc = desc as? WasmArrayTypeDescription {
             data += [0x5E]
@@ -2200,13 +2210,13 @@ public class WasmLifter {
         case .wasmRefTest(let op):
             let refType = op.type.wasmReferenceType!
             let opCode: UInt8 = refType.nullability ? 0x15 : 0x14
-            let typeData = if refType.isAbstract() {
-                try encodeHeapType(op.type)
-            } else {
-                try encodeWasmGCType(typer.getTypeDescription(of: wasmInstruction.input(1)))
-            }
+            let typeData = try encodeReferenceType(refType, instr: wasmInstruction, typeInput: 1)
             return Data([Prefix.GC.rawValue, opCode]) + typeData
-
+        case .wasmRefCast(let op):
+            let refType = op.type.wasmReferenceType!
+            let opCode: UInt8 = refType.nullability ? 0x17 : 0x16
+            let typeData = try encodeReferenceType(refType, instr: wasmInstruction, typeInput: 1)
+            return Data([Prefix.GC.rawValue, opCode]) + typeData
         case .wasmDefineAdHocSignatureType(_):
             // Nothing to do here, types are defined inside the typegroups, not inside a wasm
             // function.

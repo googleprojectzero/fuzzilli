@@ -1565,6 +1565,10 @@ message WasmRefTest {
     WasmILType type = 1;
 }
 
+message WasmRefCast {
+    WasmILType type = 1;
+}
+
 message WasmRefI31 {
     bool isShared = 1;
 }

@@ -4436,10 +4436,18 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmRefTest(_ ref: Variable, refType: ILType, typeDef: Variable? = nil) -> Variable {
-            typeDef == nil
-                ? b.emit(WasmRefTest(refType: refType), withInputs: [ref]).output
-                : b.emit(WasmRefTest(refType: refType), withInputs: [ref, typeDef!]).output
+            let inputs = typeDef == nil ? [ref] : [ref, typeDef!]
+            let types: [ILType] = typeDef == nil ? [.wasmGenericRef] : [.wasmGenericRef, .wasmTypeDef()]
+            return b.emit(WasmRefTest(refType: refType), withInputs: inputs, types: types).output
         }
+
+        @discardableResult
+        public func wasmRefCast(_ ref: Variable, refType: ILType, typeDef: Variable? = nil) -> Variable {
+            let inputs = typeDef == nil ? [ref] : [ref, typeDef!]
+            let types: [ILType] = typeDef == nil ? [.wasmGenericRef] : [.wasmGenericRef, .wasmTypeDef()]
+            return b.emit(WasmRefCast(refType: refType), withInputs: inputs, types: types).output
+        }
+
     }
 
     public class WasmModule {

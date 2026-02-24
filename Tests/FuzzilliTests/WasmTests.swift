@@ -5044,6 +5044,77 @@ class WasmGCTests: XCTestCase {
         let jsProg = fuzzer.lifter.lift(prog)
         testForOutput(program: jsProg, runner: runner, outputString: "1011\n1\n0\n0\n1\n")
     }
+
+    func testRefCast() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let arrayType = b.wasmDefineTypeGroup {b.wasmDefineArrayType(elementType: .wasmi32, mutability: false)}[0]
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmArrayRef()]) { function, label, args in
+                let array = function.wasmArrayNewFixed(arrayType: arrayType, elements: [args[0]])
+                return [array]
+            }
+            wasmModule.addWasmFunction(with: [.wasmEqRef()] => [.wasmi32]) { function, label, args in
+                let (refType, nonNullRefType, abstractRefType) = (
+                    ILType.wasmRef(.Index(), nullability: true),
+                    ILType.wasmRef(.Index(), nullability: false),
+                    ILType.wasmRef(.Abstract(HeapTypeInfo(.WasmArray, shared: false)), nullability: true),
+                )
+                let arrays = [
+                    function.wasmRefCast(args[0], refType: refType, typeDef: arrayType),
+                    function.wasmRefCast(args[0], refType: nonNullRefType, typeDef: arrayType),
+                    function.wasmRefCast(args[0], refType: abstractRefType),
+                ]
+                let value1 = function.wasmArrayGet(array: arrays[0], index: function.consti32(0))
+                let value2 = function.wasmArrayGet(array: arrays[1], index: function.consti32(0))
+                return [function.wasmi32BinOp(value1, value2, binOpKind: WasmIntegerBinaryOpKind.Add)]
+            }
+            wasmModule.addWasmFunction(with: [.wasmExternRef()] => [.wasmRefExtern()]) { function, label, args in
+                let cast = function.wasmRefCast(args[0], refType: .wasmRefExtern())
+                return [cast]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let arrayRef = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(21)])
+        let result = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [arrayRef])
+        b.callFunction(outputFunc, withArgs: [result])
+        let ext = b.callMethod(module.getExportedMethod(at: 2), on: exports, withArgs: [b.loadInt(5)])
+        b.callFunction(outputFunc, withArgs: [ext])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n5\n")
+    }
+
+    func testRefCastError() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let jsProg = buildAndLiftProgram{ b in
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmFuncRef()]) { function, label, args in
+                    let funcref = function.wasmRefNull(type: ILType.wasmFuncRef())
+                    let nullFuncType = ILType.wasmRef(.Abstract(HeapTypeInfo.init(.WasmFunc, shared: false)), nullability: false)
+                    let cast = function.wasmRefCast(funcref, refType: nullFuncType)
+                    return [cast]
+                }
+            }
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            b.buildTryCatchFinally {
+                let _ = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+                b.callFunction(outputFunc, withArgs: [b.loadString("Not reached")])
+            } catchBody: { e in
+                b.callFunction(outputFunc, withArgs: [b.loadString("exception")])
+            }
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "exception\n")
+    }
 }
 
 class WasmNumericalTests: XCTestCase {
