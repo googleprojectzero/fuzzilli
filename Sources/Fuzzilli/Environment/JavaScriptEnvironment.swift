@@ -374,6 +374,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWeakMapPrototype)
         registerObjectGroup(.jsWeakMapConstructor)
         registerObjectGroup(.jsSets)
+        registerObjectGroup(.jsSetPrototype)
+        registerObjectGroup(.jsSetConstructor)
         registerObjectGroup(.jsWeakSets)
         registerObjectGroup(.jsWeakSetPrototype)
         registerObjectGroup(.jsWeakSetConstructor)
@@ -1114,7 +1116,7 @@ public extension ILType {
     static let jsWeakMap = ILType.object(ofGroup: "WeakMap", withMethods: ["delete", "get", "has", "set", "getOrInsert", "getOrInsertComputed"])
 
     /// Type of a JavaScript Set object.
-    static let jsSet = ILType.iterable + ILType.object(ofGroup: "Set", withProperties: ["size"], withMethods: ["add", "clear", "delete", "entries", "forEach", "has", "keys", "values"])
+    static let jsSet = ILType.iterable + ILType.object(ofGroup: "Set", withProperties: ["size"], withMethods: ["add", "clear", "delete", "entries", "forEach", "has", "keys", "values", "difference", "intersection", "isDisjointFrom", "isSubsetOf", "isSupersetOf", "symmetricDifference", "union"])
 
     /// Type of a JavaScript WeakSet object.
     static let jsWeakSet = ILType.object(ofGroup: "WeakSet", withMethods: ["add", "delete", "has"])
@@ -1226,7 +1228,7 @@ public extension ILType {
     static let jsWeakMapConstructor = ILType.constructor([.object()] => .jsWeakMap) + .object(ofGroup: "WeakMapConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript Set constructor builtin.
-    static let jsSetConstructor = ILType.constructor([.object()] => .jsSet)
+    static let jsSetConstructor = ILType.constructor([.object()] => .jsSet) + .object(ofGroup: "SetConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript WeakSet constructor builtin.
     static let jsWeakSetConstructor = ILType.constructor([.object()] => .jsWeakSet) + .object(ofGroup: "WeakSetConstructor", withProperties: ["prototype"])
@@ -1731,15 +1733,35 @@ public extension ObjectGroup {
             "size"      : .integer
         ],
         methods: [
-            "add"     : [.jsAnything] => .jsSet,
-            "clear"   : [] => .undefined,
-            "delete"  : [.jsAnything] => .boolean,
-            "entries" : [] => .jsIterator,
-            "forEach" : [.function(), .opt(.object())] => .undefined,
-            "has"     : [.jsAnything] => .boolean,
-            "keys"    : [] => .jsIterator,
-            "values"  : [] => .jsIterator,
+            "add"                 : [.jsAnything] => .jsSet,
+            "clear"               : [] => .undefined,
+            "delete"              : [.jsAnything] => .boolean,
+            "difference"          : [.plain(.jsSet)] => .jsSet,
+            "entries"             : [] => .jsIterator,
+            "forEach"             : [.function(), .opt(.object())] => .undefined,
+            "has"                 : [.jsAnything] => .boolean,
+            "intersection"        : [.plain(.jsSet)] => .jsSet,
+            "isDisjointFrom"      : [.plain(.jsSet)] => .boolean,
+            "isSubsetOf"          : [.plain(.jsSet)] => .boolean,
+            "isSupersetOf"        : [.plain(.jsSet)] => .boolean,
+            "keys"                : [] => .jsIterator,
+            "symmetricDifference" : [.plain(.jsSet)] => .jsSet,
+            "union"               : [.plain(.jsSet)] => .jsSet,
+            "values"              : [] => .jsIterator,
         ]
+    )
+
+    static let jsSetPrototype = createPrototypeObjectGroup(jsSets,
+        constructor: .jsSetConstructor)
+
+    static let jsSetConstructor = ObjectGroup(
+        name: "SetConstructor",
+        constructorPath: "Set",
+        instanceType: .jsSetConstructor,
+        properties: [
+            "prototype" : jsSetPrototype.instanceType
+        ],
+        methods: [:]
     )
 
     /// ObjectGroup modelling JavaScript WeakSet objects
