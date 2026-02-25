@@ -357,6 +357,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsUint8ArrayConstructor)
         registerObjectGroup(.jsUint8ArrayPrototype)
         registerObjectGroup(.jsDataViews)
+        registerObjectGroup(.jsDataViewPrototype)
+        registerObjectGroup(.jsDataViewConstructor)
 
         registerObjectGroup(.jsObjectConstructor)
         registerObjectGroup(.jsPromiseConstructor)
@@ -1084,7 +1086,7 @@ public extension ILType {
     static let jsSharedArrayBuffer = ILType.object(ofGroup: "SharedArrayBuffer", withProperties: ["byteLength", "maxByteLength", "growable"], withMethods: ["grow", "slice"])
 
     /// Type of a JavaScript DataView object.
-    static let jsDataView = ILType.object(ofGroup: "DataView", withProperties: ["buffer", "byteLength", "byteOffset"], withMethods: ["getInt8", "getUint8", "getInt16", "getUint16", "getInt32", "getUint32", "getFloat16", "getFloat32", "getFloat64", "getBigInt64", "setInt8", "setUint8", "setInt16", "setUint16", "setInt32", "setUint32", "setFloat16", "setFloat32", "setFloat64", "setBigInt64"])
+    static let jsDataView = ILType.object(ofGroup: "DataView", withProperties: ["buffer", "byteLength", "byteOffset"], withMethods: ["getInt8", "getUint8", "getInt16", "getUint16", "getInt32", "getUint32", "getFloat16", "getFloat32", "getFloat64", "getBigInt64", "getBigUint64", "setInt8", "setUint8", "setInt16", "setUint16", "setInt32", "setUint32", "setFloat16", "setFloat32", "setFloat64", "setBigInt64"])
 
     /// Type of a JavaScript TypedArray object of the given variant.
     static func jsTypedArray(_ variant: String) -> ILType {
@@ -1155,7 +1157,7 @@ public extension ILType {
         + .object(ofGroup: "Uint8ArrayConstructor", withProperties: ["prototype"], withMethods: ["fromBase64", "fromHex"])
 
     /// Type of the JavaScript DataView constructor builtin. (TODO Also allow SharedArrayBuffers for first argument)
-    static let jsDataViewConstructor = ILType.constructor([.plain(.jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsDataView)
+    static let jsDataViewConstructor = ILType.constructor([.plain(.jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsDataView) + .object(ofGroup: "DataViewConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript Promise constructor builtin.
     static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled", "try"])
@@ -1856,27 +1858,41 @@ public extension ObjectGroup {
             "byteOffset" : .integer
         ],
         methods: [
-            "getInt8"    : [.integer] => .integer,
-            "getUint8"   : [.integer] => .integer,
-            "getInt16"   : [.integer] => .integer,
-            "getUint16"  : [.integer] => .integer,
-            "getInt32"   : [.integer] => .integer,
-            "getUint32"  : [.integer] => .integer,
-            "getFloat16" : [.integer] => .float,
-            "getFloat32" : [.integer] => .float,
-            "getFloat64" : [.integer] => .float,
-            "getBigInt64": [.integer] => .bigint,
-            "setInt8"    : [.integer, .integer] => .undefined,
-            "setUint8"   : [.integer, .integer] => .undefined,
-            "setInt16"   : [.integer, .integer] => .undefined,
-            "setUint16"  : [.integer, .integer] => .undefined,
-            "setInt32"   : [.integer, .integer] => .undefined,
-            "setUint32"  : [.integer, .integer] => .undefined,
-            "setFloat16" : [.integer, .float] => .undefined,
-            "setFloat32" : [.integer, .float] => .undefined,
-            "setFloat64" : [.integer, .float] => .undefined,
-            "setBigInt64": [.integer, .bigint] => .undefined,
+            "getInt8"     : [.integer] => .integer,
+            "getUint8"    : [.integer] => .integer,
+            "getInt16"    : [.integer] => .integer,
+            "getUint16"   : [.integer] => .integer,
+            "getInt32"    : [.integer] => .integer,
+            "getUint32"   : [.integer] => .integer,
+            "getFloat16"  : [.integer] => .float,
+            "getFloat32"  : [.integer] => .float,
+            "getFloat64"  : [.integer] => .float,
+            "getBigInt64" : [.integer, .opt(.boolean)] => .bigint,
+            "getBigUint64": [.integer, .opt(.boolean)] => .bigint,
+            "setInt8"     : [.integer, .integer] => .undefined,
+            "setUint8"    : [.integer, .integer] => .undefined,
+            "setInt16"    : [.integer, .integer] => .undefined,
+            "setUint16"   : [.integer, .integer] => .undefined,
+            "setInt32"    : [.integer, .integer] => .undefined,
+            "setUint32"   : [.integer, .integer] => .undefined,
+            "setFloat16"  : [.integer, .float] => .undefined,
+            "setFloat32"  : [.integer, .float] => .undefined,
+            "setFloat64"  : [.integer, .float] => .undefined,
+            "setBigInt64" : [.integer, .bigint] => .undefined,
         ]
+    )
+
+    static let jsDataViewPrototype = createPrototypeObjectGroup(jsDataViews,
+        constructor: .jsDataViewConstructor)
+
+    static let jsDataViewConstructor = ObjectGroup(
+        name: "DataViewConstructor",
+        constructorPath: "DataView",
+        instanceType: .jsDataViewConstructor,
+        properties: [
+            "prototype": jsDataViewPrototype.instanceType,
+        ],
+        methods: [:]
     )
 
     static let jsPromisePrototype =
