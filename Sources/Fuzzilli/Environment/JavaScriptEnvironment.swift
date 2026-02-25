@@ -368,6 +368,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsFunctions)
         registerObjectGroup(.jsSymbols)
         registerObjectGroup(.jsMaps)
+        registerObjectGroup(.jsMapPrototype)
+        registerObjectGroup(.jsMapConstructor)
         registerObjectGroup(.jsWeakMaps)
         registerObjectGroup(.jsSets)
         registerObjectGroup(.jsWeakSets)
@@ -1211,7 +1213,7 @@ public extension ILType {
     static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .jsAnything)
 
     /// Type of the JavaScript Map constructor builtin.
-    static let jsMapConstructor = ILType.constructor([.object()] => .jsMap)
+    static let jsMapConstructor = ILType.constructor([.object()] => .jsMap) + .object(ofGroup: "MapConstructor", withProperties: ["prototype"], withMethods: ["groupBy"])
 
     /// Type of the JavaScript WeakMap constructor builtin.
     static let jsWeakMapConstructor = ILType.constructor([.object()] => .jsWeakMap)
@@ -1668,6 +1670,21 @@ public extension ObjectGroup {
             "values"             : [] => .jsIterator,
             "getOrInsert"        : [.jsAnything, .jsAnything] => .jsAnything,
             "getOrInsertComputed": [.jsAnything, .function()] => .jsAnything,
+        ]
+    )
+
+    static let jsMapPrototype = createPrototypeObjectGroup(jsMaps,
+        constructor: .jsMapConstructor)
+
+    static let jsMapConstructor = ObjectGroup(
+        name: "MapConstructor",
+        constructorPath: "Map",
+        instanceType: .jsMapConstructor,
+        properties: [
+            "prototype" : jsMapPrototype.instanceType
+        ],
+        methods: [
+            "groupBy": [.iterable, .function()] => .jsMap
         ]
     )
 
