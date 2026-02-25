@@ -1237,7 +1237,7 @@ public extension ILType {
     static let jsAsyncDisposableStackConstructor = ILType.constructor([] => .jsAsyncDisposableStack) + .object(ofGroup: "AsyncDisposableStackConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript Math constructor builtin.
-    static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "f16round", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "sumPrecise", "tan", "tanh", "trunc"])
+    static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI", "LN10", "LN2", "LOG10E", "LOG2E", "SQRT1_2", "SQRT2"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "f16round", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "sumPrecise", "tan", "tanh", "trunc"])
 
     /// Type of the JavaScript Date object
     static let jsDate = ILType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString", "toTemporalInstant"])
@@ -2275,8 +2275,14 @@ public extension ObjectGroup {
         name: "Math",
         instanceType: .jsMathObject,
         properties: [
-            "E"  : .number,
-            "PI" : .number
+            "E"       : .number,
+            "PI"      : .number,
+            "LN10"    : .number,
+            "LN2"     : .number,
+            "LOG10E"  : .number,
+            "LOG2E"   : .number,
+            "SQRT1_2" : .number,
+            "SQRT2"   : .number,
         ],
         methods: [
             "abs"        : [.jsAnything] => .number,
