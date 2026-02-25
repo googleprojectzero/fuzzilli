@@ -355,9 +355,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsSharedArrayBuffers)
         for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float16Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
             registerObjectGroup(.jsTypedArrays(variant))
+            registerObjectGroup(.jsTypedArrayPrototype(variant))
+            registerObjectGroup(.jsTypedArrayConstructor(variant))
         }
-        registerObjectGroup(.jsUint8ArrayConstructor)
-        registerObjectGroup(.jsUint8ArrayPrototype)
         registerObjectGroup(.jsDataViews)
         registerObjectGroup(.jsDataViewPrototype)
         registerObjectGroup(.jsDataViewConstructor)
@@ -591,11 +591,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("AggregateError", ofType: .functionAndConstructor([.plain(.iterable), .opt(.string), .opt(.object())] => .jsError("AggregateError")))
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
         registerBuiltin("SharedArrayBuffer", ofType: .jsSharedArrayBufferConstructor)
-        // Uint8Array handled below.
-        for variant in ["Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float16Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
+        for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float16Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
             registerBuiltin(variant, ofType: .jsTypedArrayConstructor(variant))
         }
-        registerBuiltin("Uint8Array", ofType: .jsUint8ArrayConstructor)
         registerBuiltin("DataView", ofType: .jsDataViewConstructor)
         registerBuiltin("Date", ofType: .jsDateConstructor)
         registerBuiltin("Promise", ofType: .jsPromiseConstructor)
@@ -1093,7 +1091,7 @@ public extension ILType {
     /// Type of a JavaScript TypedArray object of the given variant.
     static func jsTypedArray(_ variant: String) -> ILType {
         let extraMethods = variant == "Uint8Array" ? ["setFromBase64", "setFromHex", "toBase64", "toHex"] : []
-        return .iterable + .object(ofGroup: variant, withProperties: ["buffer", "byteOffset", "byteLength", "length"], withMethods: ["at", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "toLocaleString", "toString", "toReversed", "toSorted", "with"]
+        return .iterable + .object(ofGroup: variant, withProperties: ["BYTES_PER_ELEMENT", "buffer", "byteOffset", "byteLength", "length"], withMethods: ["at", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "toLocaleString", "toString", "toReversed", "toSorted", "with"]
             + extraMethods)
     }
 
@@ -1151,12 +1149,14 @@ public extension ILType {
 
     /// Type of a JavaScript TypedArray constructor builtin.
     static func jsTypedArrayConstructor(_ variant: String) -> ILType {
+        let methods = variant == "Uint8Array" ? ["fromBase64", "fromHex"] : []
         // TODO Also allow SharedArrayBuffers for first argument
         return .constructor([.opt(.integer | .jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsTypedArray(variant))
+            + .object(
+                ofGroup: "\(variant)Constructor",
+                withProperties: ["prototype", "BYTES_PER_ELEMENT"],
+                withMethods: methods)
     }
-
-    static let jsUint8ArrayConstructor = jsTypedArrayConstructor("Uint8Array")
-        + .object(ofGroup: "Uint8ArrayConstructor", withProperties: ["prototype"], withMethods: ["fromBase64", "fromHex"])
 
     /// Type of the JavaScript DataView constructor builtin. (TODO Also allow SharedArrayBuffers for first argument)
     static let jsDataViewConstructor = ILType.constructor([.plain(.jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsDataView) + .object(ofGroup: "DataViewConstructor", withProperties: ["prototype"])
@@ -1353,10 +1353,15 @@ public extension ObjectGroup {
     static func createPrototypeObjectGroup(
             _ receiver: ObjectGroup,
             constructor: ILType = .object(),
-            excludeProperties: [String] = []) -> ObjectGroup {
+            excludeProperties: [String] = [],
+            additionalProperties: [String: ILType] = [:]) -> ObjectGroup {
         let name = receiver.name + ".prototype"
         var properties = Dictionary(uniqueKeysWithValues: receiver.methods.map {
             ($0.0, ILType.unboundFunction($0.1.first, receiver: receiver.instanceType)) })
+
+        properties.merge(additionalProperties) { _, _ in
+            fatalError("duplicate property")
+        }
 
         // Each <Builtin>.prototype has a constructor property.
         // In general, the following should hold true:
@@ -1808,6 +1813,7 @@ public extension ObjectGroup {
             name: variant,
             instanceType: .jsTypedArray(variant),
             properties: [
+                "BYTES_PER_ELEMENT": .integer,
                 "buffer"      : .jsArrayBuffer,
                 "byteLength"  : .integer,
                 "byteOffset"  : .integer,
@@ -1849,19 +1855,33 @@ public extension ObjectGroup {
         )
     }
 
-    static let jsUint8ArrayPrototype = createPrototypeObjectGroup(jsTypedArrays("Uint8Array"))
+    static func jsTypedArrayPrototype(_ variant: String) -> ObjectGroup {
+        return createPrototypeObjectGroup(
+            jsTypedArrays(variant),
+            constructor: .jsTypedArrayConstructor(variant),
+            additionalProperties: [
+                "BYTES_PER_ELEMENT": .integer,
+            ])
+    }
 
-    static let jsUint8ArrayConstructor = ObjectGroup(
-        name: "Uint8ArrayConstructor",
-        instanceType: .jsUint8ArrayConstructor,
-        properties: [
-            "prototype": jsUint8ArrayPrototype.instanceType,
-        ],
-        methods: [
-            "fromBase64": [.plain(.string), .opt(OptionsBag.fromBase64Settings.group.instanceType)] => .jsUint8Array,
-            "fromHex": [.plain(.string)] => .jsUint8Array,
-        ]
-    )
+    static func jsTypedArrayConstructor(_ variant: String) -> ObjectGroup {
+        let methods : [String : Signature] = variant == "Uint8Array"
+            ? [
+                "fromBase64": [.plain(.string), .opt(OptionsBag.fromBase64Settings.group.instanceType)] => .jsUint8Array,
+                "fromHex": [.plain(.string)] => .jsUint8Array,
+            ]
+            : [:]
+        return ObjectGroup(
+            name: "\(variant)Constructor",
+            constructorPath: variant,
+            instanceType: .jsTypedArrayConstructor(variant),
+            properties: [
+                "prototype": jsTypedArrayPrototype(variant).instanceType,
+                "BYTES_PER_ELEMENT": .integer,
+            ],
+            methods: methods
+        )
+    }
 
     /// ObjectGroup modelling JavaScript DataView objects
     static let jsDataViews = ObjectGroup(
