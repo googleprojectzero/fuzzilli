@@ -343,6 +343,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWeakSets)
         registerObjectGroup(.jsWeakRefs)
         registerObjectGroup(.jsFinalizationRegistrys)
+        registerObjectGroup(.jsDisposableStacks)
+        registerObjectGroup(.jsDisposableStackPrototype)
+        registerObjectGroup(.jsDisposableStackConstructor)
         registerObjectGroup(.jsArrayBuffers)
         registerObjectGroup(.jsSharedArrayBuffers)
         for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float16Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
@@ -596,6 +599,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("WeakSet", ofType: .jsWeakSetConstructor)
         registerBuiltin("WeakRef", ofType: .jsWeakRefConstructor)
         registerBuiltin("FinalizationRegistry", ofType: .jsFinalizationRegistryConstructor)
+        registerBuiltin("DisposableStack", ofType: .jsDisposableStackConstructor)
         registerBuiltin("Math", ofType: .jsMathObject)
         registerBuiltin("JSON", ofType: .jsJSONObject)
         registerBuiltin("Reflect", ofType: .jsReflectObject)
@@ -1063,6 +1067,9 @@ public extension ILType {
     /// Type of a JavaScript FinalizationRegistry object.
     static let jsFinalizationRegistry = ILType.object(ofGroup: "FinalizationRegistry", withMethods: ["register", "unregister"])
 
+    /// Type of a JavaScript DisposableStack object.
+    static let jsDisposableStack = ILType.object(ofGroup: "DisposableStack", withProperties: ["disposed"], withMethods: ["dispose", "use", "adopt", "defer", "move"])
+
     /// Type of a JavaScript ArrayBuffer object.
     static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["resize", "slice", "transfer", "transferToFixedLength", "transferToImmutable"])
 
@@ -1166,6 +1173,9 @@ public extension ILType {
 
     /// Type of the JavaScript FinalizationRegistry constructor builtin.
     static let jsFinalizationRegistryConstructor = ILType.constructor([.function()] => .jsFinalizationRegistry)
+
+    /// Type of the JavaScript DisposableStack constructor builtin.
+    static let jsDisposableStackConstructor = ILType.constructor([] => .jsDisposableStack) + .object(ofGroup: "DisposableStackConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript Math constructor builtin.
     static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "f16round", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "sumPrecise", "tan", "tanh", "trunc"])
@@ -1664,6 +1674,35 @@ public extension ObjectGroup {
             "register"   : [.object(), .jsAnything, .opt(.object())] => .object(),
             "unregister" : [.jsAnything] => .undefined,
         ]
+    )
+
+    /// ObjectGroup modelling JavaScript DisposableStack objects
+    static let jsDisposableStacks = ObjectGroup(
+        name: "DisposableStack",
+        instanceType: .jsDisposableStack,
+        properties: [
+            "disposed" : .boolean
+        ],
+        methods: [
+            "dispose" : [] => .undefined,
+            "use"     : [.jsAnything] => .jsAnything,
+            "adopt"   : [.jsAnything, .function()] => .jsAnything,
+            "defer"   : [.function()] => .undefined,
+            "move"    : [] => .jsDisposableStack,
+        ]
+    )
+
+    static let jsDisposableStackPrototype = createPrototypeObjectGroup(jsDisposableStacks,
+        constructor: .jsDisposableStackConstructor)
+
+    static let jsDisposableStackConstructor = ObjectGroup(
+        name: "DisposableStackConstructor",
+        constructorPath: "DisposableStack",
+        instanceType: .jsDisposableStackConstructor,
+        properties: [
+            "prototype" : jsDisposableStackPrototype.instanceType
+        ],
+        methods: [:]
     )
 
     /// ObjectGroup modelling JavaScript ArrayBuffer objects
