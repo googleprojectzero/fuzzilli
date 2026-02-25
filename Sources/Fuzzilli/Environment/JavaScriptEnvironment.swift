@@ -402,6 +402,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsStringPrototype)
         registerObjectGroup(.jsSymbolConstructor)
         registerObjectGroup(.jsBigIntConstructor)
+        registerObjectGroup(.jsRegExpPrototype)
         registerObjectGroup(.jsRegExpConstructor)
         registerObjectGroup(.jsBooleanConstructor)
         registerObjectGroup(.jsNumberConstructor)
@@ -1173,7 +1174,7 @@ public extension ILType {
     static let jsBigIntConstructor = ILType.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
 
     /// Type of the JavaScript RegExp constructor builtin.
-    static let jsRegExpConstructor = ILType.functionAndConstructor([.string] => .jsRegExp) + .object(ofGroup: "RegExpConstructor", withProperties: ["prototype"], withMethods: ["escape"])
+    static let jsRegExpConstructor = ILType.functionAndConstructor([.string] => .jsRegExp) + .object(ofGroup: "RegExpConstructor", withProperties: ["prototype", "$1", "$2", "$3", "$4", "$5", "$6", "$7", "$8", "$9", "$_", "input", "lastMatch", "lastParen", "leftContext"], withMethods: ["escape"])
 
     /// Type of a JavaScript Error object of the given variant.
     static func jsError(_ variant: String) -> ILType {
@@ -2221,13 +2222,29 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsRegExpPrototype = createPrototypeObjectGroup(jsRegExps, constructor: .jsRegExpConstructor)
+
     /// Object group modelling the JavaScript RegExp constructor builtin
     static let jsRegExpConstructor = ObjectGroup(
         name: "RegExpConstructor",
         constructorPath: "RegExp",
         instanceType: .jsRegExpConstructor,
         properties: [
-            "prototype" : .object()
+            "prototype" : jsRegExpPrototype.instanceType,
+            "$1": .jsString,
+            "$2": .jsString,
+            "$3": .jsString,
+            "$4": .jsString,
+            "$5": .jsString,
+            "$6": .jsString,
+            "$7": .jsString,
+            "$8": .jsString,
+            "$9": .jsString,
+            "$_": .jsString,
+            "input": .jsString,
+            "lastMatch": .jsString,
+            "lastParen": .jsString,
+            "leftContext": .jsString,
         ],
         methods: [
             "escape" : [.string] => .jsString,
