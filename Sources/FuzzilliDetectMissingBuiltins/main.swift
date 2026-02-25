@@ -1,6 +1,27 @@
 import Foundation
 import Fuzzilli
 
+// Static list of excluded paths.
+// If any other engines / profiles are interested in using this executable, this should probably be
+// incorporated into the Profile, for now it's just being maintained locally here.
+let exclusionList : [String: [String]] = [
+  "v8": [
+    // The shell arguments are stored in a global `arguments` if not called with --no-arguments.
+    // Note: This is completely unrelated to JS's Function.prototype.arguments or the arguments
+    // variable inside a function!
+    "arguments",
+    // Helper for tests, not exposed in production and should not be fuzzed.
+    "d8",
+    // Things to make d8 a more useful repl, not exposed in production and not fuzzable.
+    "print", "printErr", "read", "readbuffer", "readline", "version", "write",
+    // Things that exist in Chrome but have separate implementations in d8 and are therefore
+    // probably not very interesting for fuzzing.
+    "console", "performance",
+    // TODO(mliedtke): https://crbug.com/488072252.
+    "Realm",
+  ]
+]
+
 // Disable most logging. The JavaScriptEnvironment prints warning when trying to fetch types for
 // builtins it doesn't know about. This is what this script wants to do, so printing warningis for
 // it isn't helpful.
@@ -157,6 +178,14 @@ func checkNode(_ nodeId: Int, path: [String]) {
 
         var newPath = path
         newPath.append(prop)
+        // Skip paths that are considered uninteresting (e.g. test-only builtins).
+        let pathString = newPath.joined(separator: ".")
+        let isExcluded = exclusionList[profileName]?.contains {
+          pathString == $0 || pathString.starts(with: "\($0).")
+        } ?? false
+        if isExcluded {
+            continue
+        }
 
         let isRegistered: Bool
         if let type {
@@ -167,7 +196,7 @@ func checkNode(_ nodeId: Int, path: [String]) {
         }
 
         if !isRegistered {
-            missingBuiltins.append(newPath.joined(separator: "."))
+            missingBuiltins.append(pathString)
         }
 
         checkNode(childId, path: newPath)
