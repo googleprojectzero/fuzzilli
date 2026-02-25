@@ -343,6 +343,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWeakSets)
         registerObjectGroup(.jsWeakRefs)
         registerObjectGroup(.jsFinalizationRegistrys)
+        registerObjectGroup(.jsFinalizationRegistryPrototype)
+        registerObjectGroup(.jsFinalizationRegistryConstructor)
         registerObjectGroup(.jsDisposableStacks)
         registerObjectGroup(.jsDisposableStackPrototype)
         registerObjectGroup(.jsDisposableStackConstructor)
@@ -1181,7 +1183,7 @@ public extension ILType {
     static let jsWeakRefConstructor = ILType.constructor([.object()] => .jsWeakRef)
 
     /// Type of the JavaScript FinalizationRegistry constructor builtin.
-    static let jsFinalizationRegistryConstructor = ILType.constructor([.function()] => .jsFinalizationRegistry)
+    static let jsFinalizationRegistryConstructor = ILType.constructor([.function()] => .jsFinalizationRegistry) + .object(ofGroup: "FinalizationRegistryConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript DisposableStack constructor builtin.
     static let jsDisposableStackConstructor = ILType.constructor([] => .jsDisposableStack) + .object(ofGroup: "DisposableStackConstructor", withProperties: ["prototype"])
@@ -1686,6 +1688,19 @@ public extension ObjectGroup {
             "register"   : [.object(), .jsAnything, .opt(.object())] => .object(),
             "unregister" : [.jsAnything] => .undefined,
         ]
+    )
+
+    static let jsFinalizationRegistryPrototype = createPrototypeObjectGroup(jsFinalizationRegistrys,
+        constructor: .jsFinalizationRegistryConstructor)
+
+    static let jsFinalizationRegistryConstructor = ObjectGroup(
+        name: "FinalizationRegistryConstructor",
+        constructorPath: "FinalizationRegistry",
+        instanceType: .jsFinalizationRegistryConstructor,
+        properties: [
+            "prototype" : jsFinalizationRegistryPrototype.instanceType
+        ],
+        methods: [:]
     )
 
     /// ObjectGroup modelling JavaScript DisposableStack objects
