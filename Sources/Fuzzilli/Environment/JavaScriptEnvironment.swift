@@ -371,9 +371,15 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsMapPrototype)
         registerObjectGroup(.jsMapConstructor)
         registerObjectGroup(.jsWeakMaps)
+        registerObjectGroup(.jsWeakMapPrototype)
+        registerObjectGroup(.jsWeakMapConstructor)
         registerObjectGroup(.jsSets)
         registerObjectGroup(.jsWeakSets)
+        registerObjectGroup(.jsWeakSetPrototype)
+        registerObjectGroup(.jsWeakSetConstructor)
         registerObjectGroup(.jsWeakRefs)
+        registerObjectGroup(.jsWeakRefPrototype)
+        registerObjectGroup(.jsWeakRefConstructor)
         registerObjectGroup(.jsFinalizationRegistrys)
         registerObjectGroup(.jsFinalizationRegistryPrototype)
         registerObjectGroup(.jsFinalizationRegistryConstructor)
@@ -1217,16 +1223,16 @@ public extension ILType {
     static let jsMapConstructor = ILType.constructor([.object()] => .jsMap) + .object(ofGroup: "MapConstructor", withProperties: ["prototype"], withMethods: ["groupBy"])
 
     /// Type of the JavaScript WeakMap constructor builtin.
-    static let jsWeakMapConstructor = ILType.constructor([.object()] => .jsWeakMap)
+    static let jsWeakMapConstructor = ILType.constructor([.object()] => .jsWeakMap) + .object(ofGroup: "WeakMapConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript Set constructor builtin.
     static let jsSetConstructor = ILType.constructor([.object()] => .jsSet)
 
     /// Type of the JavaScript WeakSet constructor builtin.
-    static let jsWeakSetConstructor = ILType.constructor([.object()] => .jsWeakSet)
+    static let jsWeakSetConstructor = ILType.constructor([.object()] => .jsWeakSet) + .object(ofGroup: "WeakSetConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript WeakRef constructor builtin.
-    static let jsWeakRefConstructor = ILType.constructor([.object()] => .jsWeakRef)
+    static let jsWeakRefConstructor = ILType.constructor([.object()] => .jsWeakRef) + .object(ofGroup: "WeakRefConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript FinalizationRegistry constructor builtin.
     static let jsFinalizationRegistryConstructor = ILType.constructor([.function()] => .jsFinalizationRegistry) + .object(ofGroup: "FinalizationRegistryConstructor", withProperties: ["prototype"])
@@ -1704,6 +1710,19 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsWeakMapPrototype = createPrototypeObjectGroup(jsWeakMaps,
+        constructor: .jsWeakMapConstructor)
+
+    static let jsWeakMapConstructor = ObjectGroup(
+        name: "WeakMapConstructor",
+        constructorPath: "WeakMap",
+        instanceType: .jsWeakMapConstructor,
+        properties: [
+            "prototype" : jsWeakMapPrototype.instanceType
+        ],
+        methods: [:]
+    )
+
     /// ObjectGroup modelling JavaScript Set objects
     static let jsSets = ObjectGroup(
         name: "Set",
@@ -1735,6 +1754,19 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsWeakSetPrototype = createPrototypeObjectGroup(jsWeakSets,
+        constructor: .jsWeakSetConstructor)
+
+    static let jsWeakSetConstructor = ObjectGroup(
+        name: "WeakSetConstructor",
+        constructorPath: "WeakSet",
+        instanceType: .jsWeakSetConstructor,
+        properties: [
+            "prototype" : jsWeakSetPrototype.instanceType
+        ],
+        methods: [:]
+    )
+
     /// ObjectGroup modelling JavaScript WeakRef objects
     static let jsWeakRefs = ObjectGroup(
         name: "WeakRef",
@@ -1743,6 +1775,19 @@ public extension ObjectGroup {
         methods: [
             "deref"   : [] => .object(),
         ]
+    )
+
+    static let jsWeakRefPrototype = createPrototypeObjectGroup(jsWeakRefs,
+        constructor: .jsWeakRefConstructor)
+
+    static let jsWeakRefConstructor = ObjectGroup(
+        name: "WeakRefConstructor",
+        constructorPath: "WeakRef",
+        instanceType: .jsWeakRefConstructor,
+        properties: [
+            "prototype" : jsWeakRefPrototype.instanceType
+        ],
+        methods: [:]
     )
 
     /// ObjectGroup modelling JavaScript FinalizationRegistry objects
