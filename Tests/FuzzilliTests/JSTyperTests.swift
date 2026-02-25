@@ -1805,8 +1805,8 @@ class JSTyperTests: XCTestCase {
         let realWasmTag = b.createWasmTag(parameterTypes: [.wasmi32])
         XCTAssert(b.type(of: realWasmTag).Is(.object(ofGroup: "WasmTag")))
         let tagPrototype = b.getProperty("prototype", of: wasmTagConstructor)
-        // WebAssembly.Tag.prototype doesn't have any properties or methods.
-        XCTAssertEqual(b.type(of: tagPrototype), .object(ofGroup: "WasmTag.prototype"))
+        XCTAssertEqual(b.type(of: tagPrototype),
+                       .object(ofGroup: "WasmTag.prototype", withProperties: ["constructor"]))
 
         let wasmExceptionConstructor = b.getProperty("Exception", of: wasm)
         let wasmException = b.construct(wasmExceptionConstructor) // In theory this needs arguments.

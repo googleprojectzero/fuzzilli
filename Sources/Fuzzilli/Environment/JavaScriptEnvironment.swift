@@ -1326,10 +1326,18 @@ public extension ObjectGroup {
     // them. Instead Fuzzilli generates GetProperty operations for them which will then be typed as
     // an `ILType.unboundFunction` which knows the required receiver type (in the example `Date`),
     // so Fuzzilli can generate sequences like `Date.prototype.getTime.call(new Date())`.
-    static func createPrototypeObjectGroup(_ receiver: ObjectGroup, excludeProperties: [String] = []) -> ObjectGroup {
+    static func createPrototypeObjectGroup(
+            _ receiver: ObjectGroup,
+            constructor: ILType = .object(),
+            excludeProperties: [String] = []) -> ObjectGroup {
         let name = receiver.name + ".prototype"
         var properties = Dictionary(uniqueKeysWithValues: receiver.methods.map {
             ($0.0, ILType.unboundFunction($0.1.first, receiver: receiver.instanceType)) })
+
+        // Each <Builtin>.prototype has a constructor property.
+        // In general, the following should hold true:
+        //   <Builtin>.prototype.constructor === <Builtin>;
+        properties["constructor"] = constructor
         // Some properties of the instance type do not come from the prototype, e.g. Iterator.next
         // which comes from the Iterator protocol.
         // Other properties are get accessors instead of regular functions, and error when accessed
@@ -1531,6 +1539,7 @@ public extension ObjectGroup {
 
     // next, return and throw are part of the Iterator protocol, not Iterator.prototype.
     static let jsIteratorPrototype = createPrototypeObjectGroup(jsIterator,
+        constructor: .jsIteratorConstructor,
         excludeProperties: ["next", "return", "throw"])
 
     static let jsIteratorConstructor = ObjectGroup(
@@ -1792,7 +1801,8 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsPromisePrototype = createPrototypeObjectGroup(jsPromises)
+    static let jsPromisePrototype =
+        createPrototypeObjectGroup(jsPromises, constructor: .jsPromiseConstructor)
 
     /// ObjectGroup modelling the JavaScript Promise constructor builtin
     static let jsPromiseConstructor = ObjectGroup(
@@ -1867,7 +1877,7 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsDatePrototype = createPrototypeObjectGroup(jsDate)
+    static let jsDatePrototype = createPrototypeObjectGroup(jsDate, constructor: .jsDateConstructor)
 
     /// ObjectGroup modelling the JavaScript Date constructor
     static let jsDateConstructor = ObjectGroup(
@@ -1934,7 +1944,8 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsArrayBufferPrototype = createPrototypeObjectGroup(jsArrayBuffers)
+    static let jsArrayBufferPrototype =
+        createPrototypeObjectGroup(jsArrayBuffers, constructor: .jsArrayBufferConstructor)
 
     static let jsArrayBufferConstructor = ObjectGroup(
         name: "ArrayBufferConstructor",
@@ -1948,7 +1959,8 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsSharedArrayBufferPrototype = createPrototypeObjectGroup(jsSharedArrayBuffers)
+    static let jsSharedArrayBufferPrototype =
+        createPrototypeObjectGroup(jsSharedArrayBuffers, constructor: .jsSharedArrayBufferConstructor)
 
     static let jsSharedArrayBufferConstructor = ObjectGroup(
         name: "SharedArrayBufferConstructor",
@@ -1960,7 +1972,8 @@ public extension ObjectGroup {
         methods: [:]
     )
 
-    static let jsStringPrototype = createPrototypeObjectGroup(jsStrings)
+    static let jsStringPrototype =
+        createPrototypeObjectGroup(jsStrings, constructor: .jsStringConstructor)
 
     /// Object group modelling the JavaScript String constructor builtin
     static let jsStringConstructor = ObjectGroup(
@@ -2208,7 +2221,8 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsWebAssemblyGlobalPrototype = createPrototypeObjectGroup(jsWasmGlobal)
+    static let jsWebAssemblyGlobalPrototype =
+        createPrototypeObjectGroup(jsWasmGlobal, constructor: .jsWebAssemblyGlobalConstructor)
 
     static let jsWebAssemblyGlobalConstructor = ObjectGroup(
         name: "WebAssemblyGlobalConstructor",
@@ -2239,7 +2253,8 @@ public extension ObjectGroup {
         methods: [:]
     )
 
-    static let jsWebAssemblyMemoryPrototype = createPrototypeObjectGroup(jsWasmMemory)
+    static let jsWebAssemblyMemoryPrototype =
+        createPrototypeObjectGroup(jsWasmMemory, constructor: .jsWebAssemblyMemoryConstructor)
 
     static let jsWebAssemblyMemoryConstructor = ObjectGroup(
         name: "WebAssemblyMemoryConstructor",
@@ -2251,7 +2266,8 @@ public extension ObjectGroup {
         methods: [:]
     )
 
-    static let jsWebAssemblyTablePrototype = createPrototypeObjectGroup(wasmTable)
+    static let jsWebAssemblyTablePrototype =
+        createPrototypeObjectGroup(wasmTable, constructor: .jsWebAssemblyTableConstructor)
 
     static let jsWebAssemblyTableConstructor = ObjectGroup(
         name: "WebAssemblyTableConstructor",
@@ -2263,7 +2279,8 @@ public extension ObjectGroup {
         methods: [:]
     )
 
-    static let jsWebAssemblyTagPrototype = createPrototypeObjectGroup(jsWasmTag)
+    static let jsWebAssemblyTagPrototype =
+        createPrototypeObjectGroup(jsWasmTag, constructor: .jsWebAssemblyTagConstructor)
 
     static let jsWebAssemblyTagConstructor = ObjectGroup(
         name: "WebAssemblyTagConstructor",
@@ -2287,7 +2304,9 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsWebAssemblyExceptionPrototype = createPrototypeObjectGroup(jsWebAssemblyException)
+    static let jsWebAssemblyExceptionPrototype = createPrototypeObjectGroup(
+        jsWebAssemblyException,
+        constructor: .jsWebAssemblyExceptionConstructor)
 
     static let jsWebAssemblyExceptionConstructor = ObjectGroup(
         name: "WebAssemblyExceptionConstructor",
@@ -2498,7 +2517,8 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsTemporalInstantPrototype = createPrototypeObjectGroup(jsTemporalInstant)
+    static let jsTemporalInstantPrototype =
+        createPrototypeObjectGroup(jsTemporalInstant, constructor: .jsTemporalInstantConstructor)
 
     /// ObjectGroup modelling the JavaScript Temporal.Instant constructor
     static let jsTemporalInstantConstructor = ObjectGroup(
@@ -2547,7 +2567,8 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsTemporalDurationPrototype = createPrototypeObjectGroup(jsTemporalDuration)
+    static let jsTemporalDurationPrototype =
+        createPrototypeObjectGroup(jsTemporalDuration, constructor: .jsTemporalDurationConstructor)
 
     /// ObjectGroup modelling the JavaScript Temporal.Duration constructor
     static let jsTemporalDurationConstructor = ObjectGroup(
@@ -2588,7 +2609,8 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsTemporalPlainTimePrototype = createPrototypeObjectGroup(jsTemporalPlainTime)
+    static let jsTemporalPlainTimePrototype =
+        createPrototypeObjectGroup(jsTemporalPlainTime, constructor: .jsTemporalPlainTimeConstructor)
 
     /// ObjectGroup modelling the JavaScript Temporal.PlainTime constructor
     static let jsTemporalPlainTimeConstructor = ObjectGroup(
@@ -2635,7 +2657,9 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsTemporalPlainYearMonthPrototype = createPrototypeObjectGroup(jsTemporalPlainYearMonth)
+    static let jsTemporalPlainYearMonthPrototype = createPrototypeObjectGroup(
+        jsTemporalPlainYearMonth,
+        constructor: .jsTemporalPlainYearMonthConstructor)
 
     /// ObjectGroup modelling the JavaScript Temporal.PlainYearMonth constructor
     static let jsTemporalPlainYearMonthConstructor = ObjectGroup(
@@ -2669,7 +2693,9 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsTemporalPlainMonthDayPrototype = createPrototypeObjectGroup(jsTemporalPlainMonthDay)
+    static let jsTemporalPlainMonthDayPrototype = createPrototypeObjectGroup(
+        jsTemporalPlainMonthDay,
+        constructor: .jsTemporalPlainMonthDayConstructor)
 
     /// ObjectGroup modelling the JavaScript Temporal.PlainMonthDay constructor.
     static let jsTemporalPlainMonthDayConstructor = ObjectGroup(
@@ -2715,7 +2741,9 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsTemporalPlainDatePrototype = createPrototypeObjectGroup(jsTemporalPlainDate)
+    static let jsTemporalPlainDatePrototype = createPrototypeObjectGroup(
+        jsTemporalPlainDate,
+        constructor: .jsTemporalPlainDateConstructor)
 
     /// ObjectGroup modelling the JavaScript Temporal.PlainDate constructor
     static let jsTemporalPlainDateConstructor = ObjectGroup(
@@ -2754,7 +2782,9 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsTemporalPlainDateTimePrototype = createPrototypeObjectGroup(jsTemporalPlainDateTime)
+    static let jsTemporalPlainDateTimePrototype = createPrototypeObjectGroup(
+        jsTemporalPlainDateTime,
+        constructor: .jsTemporalPlainDateTimeConstructor)
 
     /// ObjectGroup modelling the JavaScript Temporal.PlainDateTime constructor
     static let jsTemporalPlainDateTimeConstructor = ObjectGroup(
@@ -2804,7 +2834,9 @@ public extension ObjectGroup {
         ]
     )
 
-    static let jsTemporalZonedDateTimePrototype = createPrototypeObjectGroup(jsTemporalZonedDateTime)
+    static let jsTemporalZonedDateTimePrototype = createPrototypeObjectGroup(
+        jsTemporalZonedDateTime,
+        constructor: .jsTemporalZonedDateTimeConstructor)
 
     /// ObjectGroup modelling the JavaScript Temporal.ZonedDateTime constructor
     static let jsTemporalZonedDateTimeConstructor = ObjectGroup(
@@ -3112,7 +3144,9 @@ extension ObjectGroup {
 
     // Exclude compare as it is a get accessor, not a property, meaning that
     // Intl.Collator.prototype.compare throws unconditionally (even without calling it).
-    static let jsIntlCollatorPrototype = createPrototypeObjectGroup(jsIntlCollator,
+    static let jsIntlCollatorPrototype = createPrototypeObjectGroup(
+        jsIntlCollator,
+        constructor: .jsIntlCollatorConstructor,
         excludeProperties: ["compare"])
 
     static let jsIntlCollatorConstructor = ObjectGroup(
@@ -3159,7 +3193,9 @@ extension ObjectGroup {
 
     // Exclude format as it is a get accessor, not a property, meaning that
     // Intl.DateTimeFormat.prototype.format throws unconditionally (even without calling it).
-    static let jsIntlDateTimeFormatPrototype = createPrototypeObjectGroup(jsIntlDateTimeFormat,
+    static let jsIntlDateTimeFormatPrototype = createPrototypeObjectGroup(
+        jsIntlDateTimeFormat,
+        constructor: .jsIntlDateTimeFormatConstructor,
         excludeProperties: ["format"])
 
     static let jsIntlDateTimeFormatConstructor = ObjectGroup(
@@ -3186,7 +3222,9 @@ extension ObjectGroup {
         ]
     )
 
-    static let jsIntlListFormatPrototype = createPrototypeObjectGroup(jsIntlListFormat)
+    static let jsIntlListFormatPrototype = createPrototypeObjectGroup(
+        jsIntlListFormat,
+        constructor: .jsIntlListFormatConstructor)
 
     static let jsIntlListFormatConstructor = ObjectGroup(
         name: "IntlListFormatConstructor",
@@ -3231,7 +3269,8 @@ extension ObjectGroup {
         ]
     )
 
-    static let jsIntlLocalePrototype = createPrototypeObjectGroup(jsIntlLocale)
+    static let jsIntlLocalePrototype =
+        createPrototypeObjectGroup(jsIntlLocale, constructor: .jsIntlLocaleConstructor)
 
     static let jsIntlLocaleConstructor = ObjectGroup(
         name: "IntlLocaleConstructor",
@@ -3272,7 +3311,9 @@ extension ObjectGroup {
 
     // Exclude format as it is a get accessor, not a property, meaning that
     // Intl.NumberFormat.prototype.format throws unconditionally (even without calling it).
-    static let jsIntlNumberFormatPrototype = createPrototypeObjectGroup(jsIntlNumberFormat,
+    static let jsIntlNumberFormatPrototype = createPrototypeObjectGroup(
+        jsIntlNumberFormat,
+        constructor: .jsIntlNumberFormatConstructor,
         excludeProperties: ["format"])
 
     static let jsIntlNumberFormatConstructor = ObjectGroup(
@@ -3299,7 +3340,8 @@ extension ObjectGroup {
         ]
     )
 
-    static let jsIntlPluralRulesPrototype = createPrototypeObjectGroup(jsIntlPluralRules)
+    static let jsIntlPluralRulesPrototype =
+        createPrototypeObjectGroup(jsIntlPluralRules, constructor: .jsIntlPluralRulesConstructor)
 
     static let jsIntlPluralRulesConstructor = ObjectGroup(
         name: "IntlPluralRulesConstructor",
@@ -3327,7 +3369,9 @@ extension ObjectGroup {
         ]
     )
 
-    static let jsIntlRelativeTimeFormatPrototype = createPrototypeObjectGroup(jsIntlRelativeTimeFormat)
+    static let jsIntlRelativeTimeFormatPrototype = createPrototypeObjectGroup(
+        jsIntlRelativeTimeFormat,
+        constructor: .jsIntlRelativeTimeFormatConstructor)
 
     static let jsIntlRelativeTimeFormatConstructor = ObjectGroup(
         name: "IntlRelativeTimeFormatConstructor",
@@ -3352,7 +3396,8 @@ extension ObjectGroup {
         ]
     )
 
-    static let jsIntlSegmenterPrototype = createPrototypeObjectGroup(jsIntlSegmenter)
+    static let jsIntlSegmenterPrototype =
+        createPrototypeObjectGroup(jsIntlSegmenter, constructor: .jsIntlSegmenterConstructor)
 
     static let jsIntlSegmenterConstructor = ObjectGroup(
         name: "IntlSegmenterConstructor",
