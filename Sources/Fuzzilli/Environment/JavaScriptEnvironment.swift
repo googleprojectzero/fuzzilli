@@ -2110,7 +2110,7 @@ public extension ObjectGroup {
             "sin"        : [.jsAnything] => .number,
             "sinh"       : [.jsAnything] => .number,
             "sqrt"       : [.jsAnything] => .number,
-            "sumPrecise" : [.jsAnything] => .number,
+            "sumPrecise" : [.iterable] => .number,
             "tan"        : [.jsAnything] => .number,
             "tanh"       : [.jsAnything] => .number,
             "trunc"      : [.jsAnything] => .number,
