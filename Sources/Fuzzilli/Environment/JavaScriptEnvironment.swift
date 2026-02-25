@@ -346,6 +346,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsDisposableStacks)
         registerObjectGroup(.jsDisposableStackPrototype)
         registerObjectGroup(.jsDisposableStackConstructor)
+        registerObjectGroup(.jsAsyncDisposableStacks)
+        registerObjectGroup(.jsAsyncDisposableStackPrototype)
+        registerObjectGroup(.jsAsyncDisposableStackConstructor)
         registerObjectGroup(.jsArrayBuffers)
         registerObjectGroup(.jsSharedArrayBuffers)
         for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float16Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
@@ -600,6 +603,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("WeakRef", ofType: .jsWeakRefConstructor)
         registerBuiltin("FinalizationRegistry", ofType: .jsFinalizationRegistryConstructor)
         registerBuiltin("DisposableStack", ofType: .jsDisposableStackConstructor)
+        registerBuiltin("AsyncDisposableStack", ofType: .jsAsyncDisposableStackConstructor)
         registerBuiltin("Math", ofType: .jsMathObject)
         registerBuiltin("JSON", ofType: .jsJSONObject)
         registerBuiltin("Reflect", ofType: .jsReflectObject)
@@ -1070,6 +1074,9 @@ public extension ILType {
     /// Type of a JavaScript DisposableStack object.
     static let jsDisposableStack = ILType.object(ofGroup: "DisposableStack", withProperties: ["disposed"], withMethods: ["dispose", "use", "adopt", "defer", "move"])
 
+    /// Type of a JavaScript AsyncDisposableStack object.
+    static let jsAsyncDisposableStack = ILType.object(ofGroup: "AsyncDisposableStack", withProperties: ["disposed"], withMethods: ["disposeAsync", "use", "adopt", "defer", "move"])
+
     /// Type of a JavaScript ArrayBuffer object.
     static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["resize", "slice", "transfer", "transferToFixedLength", "transferToImmutable"])
 
@@ -1176,6 +1183,9 @@ public extension ILType {
 
     /// Type of the JavaScript DisposableStack constructor builtin.
     static let jsDisposableStackConstructor = ILType.constructor([] => .jsDisposableStack) + .object(ofGroup: "DisposableStackConstructor", withProperties: ["prototype"])
+
+    /// Type of the JavaScript AsyncDisposableStack constructor builtin.
+    static let jsAsyncDisposableStackConstructor = ILType.constructor([] => .jsAsyncDisposableStack) + .object(ofGroup: "AsyncDisposableStackConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript Math constructor builtin.
     static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "f16round", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "sumPrecise", "tan", "tanh", "trunc"])
@@ -1701,6 +1711,35 @@ public extension ObjectGroup {
         instanceType: .jsDisposableStackConstructor,
         properties: [
             "prototype" : jsDisposableStackPrototype.instanceType
+        ],
+        methods: [:]
+    )
+
+    /// ObjectGroup modelling JavaScript AsyncDisposableStack objects
+    static let jsAsyncDisposableStacks = ObjectGroup(
+        name: "AsyncDisposableStack",
+        instanceType: .jsAsyncDisposableStack,
+        properties: [
+            "disposed" : .boolean
+        ],
+        methods: [
+            "disposeAsync" : [] => .jsPromise,
+            "use"          : [.jsAnything] => .jsAnything,
+            "adopt"        : [.jsAnything, .function()] => .jsAnything,
+            "defer"        : [.function()] => .undefined,
+            "move"         : [] => .jsAsyncDisposableStack,
+        ]
+    )
+
+    static let jsAsyncDisposableStackPrototype = createPrototypeObjectGroup(jsAsyncDisposableStacks,
+        constructor: .jsAsyncDisposableStackConstructor)
+
+    static let jsAsyncDisposableStackConstructor = ObjectGroup(
+        name: "AsyncDisposableStackConstructor",
+        constructorPath: "AsyncDisposableStack",
+        instanceType: .jsAsyncDisposableStackConstructor,
+        properties: [
+            "prototype" : jsAsyncDisposableStackPrototype.instanceType
         ],
         methods: [:]
     )
