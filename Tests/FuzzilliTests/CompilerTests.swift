@@ -39,7 +39,7 @@ class CompilerTests: XCTestCase {
 
         let compiler = JavaScriptCompiler()
 
-        let lifter = JavaScriptLifter(ecmaVersion: .es6)
+        let lifter = JavaScriptLifter(ecmaVersion: .es6, environment: JavaScriptEnvironment())
 
         for testcasePath in enumerateAllTestcases() {
             let testName = URL(fileURLWithPath: testcasePath).lastPathComponent

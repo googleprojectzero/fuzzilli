@@ -15,6 +15,18 @@ console.log("Computed object method");
   console.log(obj.theAnswerIs());
 })();
 
+console.log("Indexed object method");
+(() => {
+  const obj = { 67() { return 42; } };
+  console.log(obj[67]());
+})();
+
+console.log("String literal object method");
+(() => {
+  const obj = { "?"() { return 42; } };
+  console.log(obj["?"]());
+})();
+
 console.log("Computed class property (field)");
 (() => {
   function classify (name) {
@@ -136,7 +148,6 @@ console.log("Indexed static class property (field)");
   console.log(C[42]);
 })();
 
-/*
 console.log("Indexed class property (method)");
 (() => {
   class C {
@@ -148,9 +159,7 @@ console.log("Indexed class property (method)");
   const c = new C();
   console.log(c[42]());
 })();
-*/
 
-/*
 console.log("Indexed static class property (method)");
 (() => {
   class C {
@@ -161,7 +170,6 @@ console.log("Indexed static class property (method)");
   }
   console.log(C[42]());
 })();
-*/
 
 /*
 console.log("Indexed class property (getter/setter)");
@@ -319,24 +327,24 @@ console.log("String-literal static class property (field)");
 console.log("String-literal class property (method)");
 (() => {
   class C {
-    "theAnswerIs"() {
+    "theAnswerIs?"() {
       console.log("Heavy calculations");
       return 42;
     }
   }
   const c = new C();
-  console.log(c.theAnswerIs());
+  console.log(c["theAnswerIs?"]());
 })();
 
 console.log("String-literal static class property (method)");
 (() => {
   class C {
-    static "theAnswerIs"() {
+    static "theAnswerIs?"() {
       console.log("Heavy calculations");
       return 42;
     }
   }
-  console.log(C.theAnswerIs());
+  console.log(C["theAnswerIs?"]());
 })();
 
 /*

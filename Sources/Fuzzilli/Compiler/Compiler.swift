@@ -170,8 +170,12 @@ public class JavaScriptCompiler {
                     } else {
                         head = emit(BeginClassInstanceMethod(methodName: name, parameters: parameters))
                     }
-                case .index:
-                    throw CompilerError.invalidNodeError("Not supported")
+                case .index(let index):
+                    if method.isStatic {
+                        head = emit(BeginClassStaticMethod(methodName: String(index), parameters: parameters))
+                    } else {
+                        head = emit(BeginClassInstanceMethod(methodName: String(index), parameters: parameters))
+                    }
                 case .expression:
                     if method.isStatic {
                         head = emit(BeginClassStaticComputedMethod(parameters: parameters), withInputs: [computedKeys.removeLast()])
@@ -197,7 +201,11 @@ public class JavaScriptCompiler {
                         emit(EndClassInstanceMethod())
                     }
                 case .index:
-                    throw CompilerError.invalidNodeError("Not supported")
+                    if method.isStatic {
+                        emit(EndClassStaticMethod())
+                    } else {
+                        emit(EndClassInstanceMethod())
+                    }
                 case .expression:
                     if method.isStatic {
                         emit(EndClassStaticComputedMethod())

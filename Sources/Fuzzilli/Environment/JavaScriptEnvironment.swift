@@ -290,11 +290,13 @@ public class JavaScriptEnvironment: ComponentBase {
 
     /// Identifiers that should be used for custom properties and methods.
     public static let CustomPropertyNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
-    public static let CustomMethodNames = ["m", "n", "o", "p", "valueOf", "toString"]
+    public static let CustomMethodNames = ["m", "n", "o", "?", "67", "valueOf", "toString"]
+    public static let CustomPrivateMethodNames = ["m", "n", "o", "p"]
 
     public private(set) var builtins = Set<String>()
     public let customProperties = Set<String>(CustomPropertyNames)
     public let customMethods = Set<String>(CustomMethodNames)
+    public let customPrivateMethods = Set<String>(CustomPrivateMethodNames)
     public private(set) var builtinProperties = Set<String>()
     public private(set) var builtinMethods = Set<String>()
 
@@ -314,7 +316,35 @@ public class JavaScriptEnvironment: ComponentBase {
     private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
     private var subtypes: [ILType: [ILType]] = [:]
 
+    private let validMethodDefinitionName: Regex<AnyRegexOutput>?
+    private let validDotNotationName: Regex<AnyRegexOutput>?
+    private let validPropertyIndex: Regex<AnyRegexOutput>?
+
     public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = [], additionalEnumerations: [ILType] = []) {
+        // A simple approximation of a valid JS identifier (used in dot
+        // notation and for method definitions).
+        let simpleId = "[_$a-zA-Z][_$a-zA-Z0-9]*"
+
+        // A non-negative integer (with no leading zero) for index access
+        // without quotes.
+        let index = "[1-9]\\d*|0"
+
+        // Initialize regular expressions to determine valid property
+        // identifiers:
+
+        // At method definition site, we support simple identifiers and
+        // non-negative numbers. Other names will be quoted.
+        // We don't support unquoted doubles.
+        self.validMethodDefinitionName = try! Regex("^(\(index)|\(simpleId))$")
+
+        // For dot notation we only support simple identifiers. We don't
+        // support all possible names according to JS spec.
+        // Unsupported names will be accessed with bracket notation.
+        self.validDotNotationName = try! Regex("^(\(simpleId))$")
+
+        // Valid indexes to use in bracket notation without quotes.
+        self.validPropertyIndex = try! Regex("^(\(index))$")
+
         super.init(name: "JavaScriptEnvironment")
 
         // Build model of the JavaScript environment
@@ -655,6 +685,7 @@ public class JavaScriptEnvironment: ComponentBase {
         logger.info("Have \(builtinMethods.count) builtin method names: \(builtinMethods.sorted())")
         logger.info("Have \(customProperties.count) custom property names: \(customProperties.sorted())")
         logger.info("Have \(customMethods.count) custom method names: \(customMethods.sorted())")
+        logger.info("Have \(customPrivateMethods.count) custom private method names: \(customPrivateMethods.sorted())")
     }
 
     func checkConstructorAvailability() {
@@ -935,6 +966,18 @@ public class JavaScriptEnvironment: ComponentBase {
         return getSubtypes(ofType: parent).reduce(false) {
             $0 || type.Is($1)
         }
+    }
+
+    func isValidNameForMethodDefinition(_ name: String) -> Bool {
+        return (try? validMethodDefinitionName?.wholeMatch(in: name)) != nil
+    }
+
+    func isValidDotNotationName(_ name: String) -> Bool {
+        return (try? validDotNotationName?.wholeMatch(in: name)) != nil
+    }
+
+    func isValidPropertyIndex(_ name: String) -> Bool {
+        return (try? validPropertyIndex?.wholeMatch(in: name)) != nil
     }
 }
 

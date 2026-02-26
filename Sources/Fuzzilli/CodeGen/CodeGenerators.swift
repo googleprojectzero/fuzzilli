@@ -1236,8 +1236,8 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                // Try to find a private field that hasn't already been added to this class.
-                let methodName = b.generateString(b.randomCustomMethodName,
+                // Try to find a private method that hasn't already been added to this class.
+                let methodName = b.generateString(b.randomCustomPrivateMethodName,
                     notIn: b.currentClassDefinition.privateFields)
                 let parameters = b.randomParameters()
                 b.emit(
@@ -1273,8 +1273,8 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.classDefinition),
                 provides: [.javascript, .subroutine, .method, .classMethod]
             ) { b in
-                // Try to find a private field that hasn't already been added to this class.
-                let methodName = b.generateString(b.randomCustomMethodName,
+                // Try to find a private method that hasn't already been added to this class.
+                let methodName = b.generateString(b.randomCustomPrivateMethodName,
                     notIn: b.currentClassDefinition.privateFields)
                 let parameters = b.randomParameters()
                 b.emit(

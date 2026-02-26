@@ -34,7 +34,7 @@ public class JavaScriptLifter: Lifter {
     let version: ECMAScriptVersion
 
     /// This environment is used if we need to re-type a program before we compile Wasm code.
-    private var environment: JavaScriptEnvironment?
+    private var environment: JavaScriptEnvironment
 
     /// Counter to assist the lifter in detecting nested CodeStrings
     private var codeStringNestingLevel = 0
@@ -78,7 +78,7 @@ public class JavaScriptLifter: Lifter {
     public init(prefix: String = "",
                 suffix: String = "",
                 ecmaVersion: ECMAScriptVersion,
-                environment: JavaScriptEnvironment? = nil,
+                environment: JavaScriptEnvironment,
                 alwaysEmitVariables: Bool = false) {
         self.prefix = prefix
         self.suffix = suffix
@@ -131,7 +131,7 @@ public class JavaScriptLifter: Lifter {
 
         if needToSupportWasm {
             // If we need to support Wasm we need to type all instructions outside of Wasm such that the WasmLifter can access extra type information during lifting.
-            typer = JSTyper(for: environment!)
+            typer = JSTyper(for: environment)
         }
 
         var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers), alwaysEmitVariables: alwaysEmitVariables)
@@ -409,7 +409,7 @@ public class JavaScriptLifter: Lifter {
             case .beginObjectLiteralMethod(let op):
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
-                let METHOD = op.methodName
+                let METHOD = quoteMethodDefinitionIfNeeded(op.methodName)
                 currentObjectLiteral.beginMethod("\(METHOD)(\(PARAMS)) {", &w)
                 bindVariableToThis(instr.innerOutput(0))
 
@@ -526,7 +526,7 @@ public class JavaScriptLifter: Lifter {
             case .beginClassInstanceMethod(let op):
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
-                let METHOD = op.methodName
+                let METHOD = quoteMethodDefinitionIfNeeded(op.methodName)
                 w.emit("\(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
@@ -596,7 +596,7 @@ public class JavaScriptLifter: Lifter {
             case .beginClassStaticMethod(let op):
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
-                let METHOD = op.methodName
+                let METHOD = quoteMethodDefinitionIfNeeded(op.methodName)
                 w.emit("static \(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
@@ -981,14 +981,14 @@ public class JavaScriptLifter: Lifter {
 
             case .callMethod(let op):
                 let obj = input(0)
-                let method = MemberExpression.new() + obj + "." + op.methodName
+                let method = MemberExpression.new() + obj + (liftMemberAccess(op.methodName))
                 let args = inputs.dropFirst()
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callMethodWithSpread(let op):
                 let obj = input(0)
-                let method = MemberExpression.new() + obj + "." + op.methodName
+                let method = MemberExpression.new() + obj + (liftMemberAccess(op.methodName))
                 let args = inputs.dropFirst()
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
@@ -1152,7 +1152,8 @@ public class JavaScriptLifter: Lifter {
                 w.emit("\(EXPR);")
 
             case .callSuperMethod(let op):
-                let expr = CallExpression.new() + "super.\(op.methodName)(" + liftCallArguments(inputs)  + ")"
+                let method = MemberExpression.new() + "super" + liftMemberAccess(op.methodName)
+                let expr = CallExpression.new() + method + "(" + liftCallArguments(inputs)  + ")"
                 w.assign(expr, to: instr.output)
 
             case .getPrivateProperty(let op):
@@ -1511,9 +1512,9 @@ public class JavaScriptLifter: Lifter {
 
             case .bindMethod(let op):
                 let V = w.declare(instr.output)
-                let OBJECT = input(0)
                 let LET = w.varKeyword
-                w.emit("\(LET) \(V) = Function.prototype.call.bind(\(OBJECT).\(op.methodName));")
+                let method = MemberExpression.new() + input(0) + liftMemberAccess(op.methodName)
+                w.emit("\(LET) \(V) = Function.prototype.call.bind(\(method));")
 
             case .bindFunction(_):
                 let V = w.declare(instr.output)
@@ -1873,6 +1874,21 @@ public class JavaScriptLifter: Lifter {
             assert(CODE.hasSuffix("\n"))
             return "(() => {\n\(CODE)    })()"
         }
+    }
+
+    func quoteMethodDefinitionIfNeeded(_ name: String) -> String {
+        if environment.isValidNameForMethodDefinition(name) {
+            return name
+        }
+        return "\"\(name)\""
+    }
+
+    private func liftMemberAccess(_ name: String) -> String {
+        if environment.isValidDotNotationName(name){
+            return "." + name
+        }
+        let safeName = environment.isValidPropertyIndex(name) ? name : "\"\(name)\""
+        return "[" + safeName + "]"
     }
 
     private func liftParameters(_ parameters: Parameters, as variables: [String]) -> String {

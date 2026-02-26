@@ -487,6 +487,13 @@ public class ProgramBuilder {
         return chooseUniform(from: fuzzer.environment.customMethods)
     }
 
+    /// Returns a random custom private method name.
+    ///
+    /// As above but for private methods, where a # symbol will be prepended.
+    public func randomCustomPrivateMethodName() -> String {
+        return chooseUniform(from: fuzzer.environment.customPrivateMethods)
+    }
+
     /// Returns either a builtin or a custom method name, with equal probability.
     public func randomMethodName() -> String {
         return probability(0.5) ? randomBuiltinMethodName() : randomCustomMethodName()

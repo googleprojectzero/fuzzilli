@@ -579,6 +579,44 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testObjectLiteralLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildObjectLiteral { obj in
+            for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                obj.addMethod(name, with: .parameters(n: 0)) { args in
+                }
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v8 = {
+            "???"() {
+            },
+            0() {
+            },
+            "01"() {
+            },
+            1() {
+            },
+            "0.1"() {
+            },
+            "-1"() {
+            },
+            $valid_id_42() {
+            },
+            "42_invalid_id"() {
+            },
+        };
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
     func testObjectLiteralIsDistinguishableFromBlockStatement() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -813,6 +851,63 @@ class LifterTests: XCTestCase {
         }
         new C7(42);
         C7 = Uint8Array;
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testClassDefinitionLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildClassDefinition() { cls in
+            for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                cls.addInstanceMethod(name, with: .parameters(n: 0)) { params in
+                }
+                cls.addStaticMethod(name, with: .parameters(n: 0)) { params in
+                }
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        class C0 {
+            "???"() {
+            }
+            static "???"() {
+            }
+            0() {
+            }
+            static 0() {
+            }
+            "01"() {
+            }
+            static "01"() {
+            }
+            1() {
+            }
+            static 1() {
+            }
+            "0.1"() {
+            }
+            static "0.1"() {
+            }
+            "-1"() {
+            }
+            static "-1"() {
+            }
+            $valid_id_42() {
+            }
+            static $valid_id_42() {
+            }
+            "42_invalid_id"() {
+            }
+            static "42_invalid_id"() {
+            }
+        }
 
         """
 
@@ -1855,6 +1950,132 @@ class LifterTests: XCTestCase {
 
         let expected = """
         ("Hello World")[Symbol.iterator]().next();
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testMethodCallLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createNamedVariable(forBuiltin: "Funky")
+        for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+            b.callMethod(name, on: obj)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        Funky["???"]();
+        Funky[0]();
+        Funky["01"]();
+        Funky[1]();
+        Funky["0.1"]();
+        Funky["-1"]();
+        Funky.$valid_id_42();
+        Funky["42_invalid_id"]();
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testMethodCallWithSpreadLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createNamedVariable(forBuiltin: "Funky")
+        let values = b.createArray(with: [])
+        for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+            b.callMethod(name, on: obj, withArgs: [values], spreading: [true])
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v1 = [];
+        Funky["???"](...v1);
+        Funky[0](...v1);
+        Funky["01"](...v1);
+        Funky[1](...v1);
+        Funky["0.1"](...v1);
+        Funky["-1"](...v1);
+        Funky.$valid_id_42(...v1);
+        Funky["42_invalid_id"](...v1);
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testMethodBindLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createNamedVariable(forBuiltin: "Funky")
+        for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+            let bound = b.bindMethod(name, on: obj)
+            b.callFunction(bound, withArgs: [obj])
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        let v1 = Function.prototype.call.bind(Funky["???"]);
+        v1(Funky);
+        let v3 = Function.prototype.call.bind(Funky[0]);
+        v3(Funky);
+        let v5 = Function.prototype.call.bind(Funky["01"]);
+        v5(Funky);
+        let v7 = Function.prototype.call.bind(Funky[1]);
+        v7(Funky);
+        let v9 = Function.prototype.call.bind(Funky["0.1"]);
+        v9(Funky);
+        let v11 = Function.prototype.call.bind(Funky["-1"]);
+        v11(Funky);
+        let v13 = Function.prototype.call.bind(Funky.$valid_id_42);
+        v13(Funky);
+        let v15 = Function.prototype.call.bind(Funky["42_invalid_id"]);
+        v15(Funky);
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testSuperMethodCallLiftingWeirdNames() {
+        let fuzzer: Fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildClassDefinition() { cls in
+            cls.addInstanceMethod("sub", with: .parameters(n: 0)) { params in
+                for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                    b.callSuperMethod(name)
+                }
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        class C0 {
+            sub() {
+                super["???"]();
+                super[0]();
+                super["01"]();
+                super[1]();
+                super["0.1"]();
+                super["-1"]();
+                super.$valid_id_42();
+                super["42_invalid_id"]();
+            }
+        }
 
         """
 

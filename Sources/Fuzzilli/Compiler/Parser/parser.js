@@ -492,8 +492,15 @@ function parse(script, proto) {
                         if (method.computed) {
                             out.expression = visitExpression(method.key);
                         } else {
-                            assert(method.key.type === 'Identifier', "Expected method.key.type to be exactly 'Identifier'")
-                            out.name = method.key.name;
+                            if (method.key.type === 'Identifier') {
+                                out.name = method.key.name;
+                            } else if (method.key.type === 'NumericLiteral') {
+                                out.name = String(method.key.value);
+                            } else if (method.key.type === 'StringLiteral') {
+                                out.name = method.key.value;
+                            } else {
+                                throw "Unknown method key type: " + method.key.type;
+                            }
                         }
 
                         field = {};
