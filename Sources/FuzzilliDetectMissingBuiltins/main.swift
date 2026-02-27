@@ -149,6 +149,7 @@ do {
 
 var visited = Set<Int>()
 var missingBuiltins = [String]()
+var potentiallyBroken = [String]()
 
 func checkNode(_ nodeId: Int, path: [String]) {
     if visited.contains(nodeId) { return }
@@ -195,8 +196,15 @@ func checkNode(_ nodeId: Int, path: [String]) {
             isRegistered = jsEnvironment.hasBuiltin(prop)
         }
 
-        if !isRegistered {
+        // Some properties exist but aren't "accessible", e.g. a lot of getters exist on the
+        // prototype but they can only be called on a receiver, e.g.
+        // DisposableStack.prototype.disposed.
+        let isAccessible = graph[childId]?.type != "error"
+
+        if !isRegistered && isAccessible {
             missingBuiltins.append(pathString)
+        } else if isRegistered && !isAccessible {
+            potentiallyBroken.append(pathString)
         }
 
         checkNode(childId, path: newPath)
@@ -205,3 +213,7 @@ func checkNode(_ nodeId: Int, path: [String]) {
 
 checkNode(0, path: [])
 print(missingBuiltins.sorted().joined(separator: "\n"))
+if !potentiallyBroken.isEmpty {
+    print("\nPotentially inaccessible but registered builtins: ")
+    print(potentiallyBroken.sorted().joined(separator: "\n"))
+}
