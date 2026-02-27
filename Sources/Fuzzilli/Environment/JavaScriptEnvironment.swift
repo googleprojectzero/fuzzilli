@@ -405,6 +405,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsObjectConstructor)
         registerObjectGroup(.jsPromiseConstructor)
         registerObjectGroup(.jsPromisePrototype)
+        registerObjectGroup(.jsProxyConstructor)
         registerObjectGroup(.jsArrayConstructor)
         registerObjectGroup(.jsStringConstructor)
         registerObjectGroup(.jsStringPrototype)
@@ -1165,7 +1166,7 @@ public extension ILType {
     }
 
     /// Type of the JavaScript Object constructor builtin.
-    static let jsObjectConstructor = .functionAndConstructor([.jsAnything...] => .object()) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
+    static let jsObjectConstructor = .functionAndConstructor([.jsAnything...] => .object()) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values", "groupBy", "hasOwn"])
 
     /// Type of the JavaScript Array constructor builtin.
     static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "fromAsync", "of", "isArray"])
@@ -1180,7 +1181,7 @@ public extension ILType {
     static let jsBooleanConstructor = ILType.functionAndConstructor([.jsAnything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
 
     /// Type of the JavaScript Number constructor builtin.
-    static let jsNumberConstructor = ILType.functionAndConstructor([.jsAnything] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
+    static let jsNumberConstructor = ILType.functionAndConstructor([.jsAnything] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger", "parseFloat", "parseInt"])
 
     /// Type of the JavaScript Symbol constructor builtin.
     static let jsSymbolConstructor = ILType.function([.string] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: JavaScriptEnvironment.wellKnownSymbols, withMethods: ["for", "keyFor"])
@@ -1231,10 +1232,10 @@ public extension ILType {
     static let jsDataViewConstructor = ILType.constructor([.plain(.jsArrayBuffer), .opt(.integer), .opt(.integer)] => .jsDataView) + .object(ofGroup: "DataViewConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript Promise constructor builtin.
-    static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled", "try"])
+    static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled", "try", "withResolvers"])
 
     /// Type of the JavaScript Proxy constructor builtin.
-    static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .jsAnything)
+    static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .jsAnything) + .object(ofGroup: "ProxyConstructor", withProperties: [], withMethods: ["revocable"])
 
     /// Type of the JavaScript Map constructor builtin.
     static let jsMapConstructor = ILType.constructor([.object()] => .jsMap) + .object(ofGroup: "MapConstructor", withProperties: ["prototype"], withMethods: ["groupBy"])
@@ -1700,6 +1701,16 @@ public extension ObjectGroup {
         ]
     )
 
+    static let jsProxyConstructor = ObjectGroup(
+        name: "ProxyConstructor",
+        constructorPath: "Proxy",
+        instanceType: .jsProxyConstructor,
+        properties: [:],
+        methods: [
+            "revocable": [.object(), .object()] => .object(withProperties: ["proxy", "revoke"])
+        ]
+    )
+
     static let jsMapPrototype = createPrototypeObjectGroup(jsMaps,
         constructor: .jsMapConstructor)
 
@@ -2095,6 +2106,7 @@ public extension ObjectGroup {
             "race"       : [.jsPromise...] => .jsPromise,
             "allSettled" : [.jsPromise...] => .jsPromise,
             "try"        : [.function(), .jsAnything...] => .jsPromise,
+            "withResolvers": [] => .object(withProperties: ["promise", "resolve", "reject"]),
         ]
     )
 
@@ -2199,6 +2211,8 @@ public extension ObjectGroup {
             "seal"                      : [.object()] => .object(),
             "setPrototypeOf"            : [.object(), .object()] => .object(),
             "values"                    : [.object()] => .jsArray,
+            "groupBy"                   : [.iterable, .function()] => .object(),
+            "hasOwn"                    : [.object(), .oneof(.jsString, .jsSymbol)] => .boolean,
         ]
     )
 
@@ -2369,6 +2383,8 @@ public extension ObjectGroup {
             "isFinite"      : [.jsAnything] => .boolean,
             "isInteger"     : [.jsAnything] => .boolean,
             "isSafeInteger" : [.jsAnything] => .boolean,
+            "parseFloat"    : [.string] => .float,
+            "parseInt"      : [.string] => .integer,
         ]
     )
 
