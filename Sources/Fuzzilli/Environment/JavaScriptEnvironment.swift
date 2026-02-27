@@ -427,6 +427,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsSharedArrayBufferPrototype)
         for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError", "SuppressedError"] {
             registerObjectGroup(.jsError(variant))
+            registerObjectGroup(.jsErrorPrototype(variant))
+            registerObjectGroup(.jsErrorConstructor(variant))
         }
         registerObjectGroup(.jsWebAssemblyCompileOptions)
         registerObjectGroup(.jsWebAssemblyModuleConstructor)
@@ -627,10 +629,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("Iterator", ofType: .jsIteratorConstructor)
         registerBuiltin("BigInt", ofType: .jsBigIntConstructor)
         registerBuiltin("RegExp", ofType: .jsRegExpConstructor)
-        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError", "SuppressedError"] {
+        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError", "SuppressedError", "AggregateError"] {
             registerBuiltin(variant, ofType: .jsErrorConstructor(variant))
         }
-        registerBuiltin("AggregateError", ofType: .functionAndConstructor([.plain(.iterable), .opt(.string), .opt(.object())] => .jsError("AggregateError")))
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
         registerBuiltin("SharedArrayBuffer", ofType: .jsSharedArrayBufferConstructor)
         for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float16Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"] {
@@ -1197,8 +1198,16 @@ public extension ILType {
 
     /// Type of the JavaScript Error constructor builtin
     static func jsErrorConstructor(_ variant: String) -> ILType {
-        // TODO: Add `Error.isError()`
-        return .functionAndConstructor([.opt(.string)] => .jsError(variant))
+        let signature = if variant == "AggregateError" {
+            [.plain(.iterable), .opt(.string), .opt(.object())] => .jsError("AggregateError")
+        } else {
+            [.opt(.string)] => .jsError(variant)
+        }
+        return .functionAndConstructor(signature)
+            + .object(
+                ofGroup: "\(variant)Constructor",
+                withProperties: ["prototype", "stackTraceLimit"],
+                withMethods: ["isError", "captureStackTrace"])
     }
 
     /// Type of the JavaScript ArrayBuffer constructor builtin.
@@ -2494,6 +2503,26 @@ public extension ObjectGroup {
             ],
             methods: [
                 "toString" : [] => .jsString,
+            ]
+        )
+    }
+
+    static func jsErrorPrototype(_ variant: String) -> ObjectGroup {
+        return createPrototypeObjectGroup(jsError(variant), constructor: .jsErrorConstructor(variant))
+    }
+
+    static func jsErrorConstructor(_ variant: String) -> ObjectGroup {
+        return ObjectGroup(
+            name: "\(variant)Constructor",
+            constructorPath: variant,
+            instanceType: .jsErrorConstructor(variant),
+            properties: [
+                "prototype": jsErrorPrototype(variant).instanceType,
+                "stackTraceLimit": .integer,
+            ],
+            methods: [
+                "isError": [.jsAnything] => .boolean,
+                "captureStackTrace": [.object(), .opt(.function())] => .undefined,
             ]
         )
     }
