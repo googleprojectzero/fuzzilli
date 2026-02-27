@@ -5946,11 +5946,11 @@ public struct Fuzzilli_Protobuf_WasmRefCast: Sendable {
   // methods supported on all messages.
 
   public var type: Fuzzilli_Protobuf_WasmILType {
-    get {return _type ?? Fuzzilli_Protobuf_WasmILType()}
+    get {_type ?? Fuzzilli_Protobuf_WasmILType()}
     set {_type = newValue}
   }
   /// Returns true if `type` has been explicitly set.
-  public var hasType: Bool {return self._type != nil}
+  public var hasType: Bool {self._type != nil}
   /// Clears the value of `type`. Subsequent reads from it will return its default value.
   public mutating func clearType() {self._type = nil}
 
