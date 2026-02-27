@@ -415,6 +415,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsBooleanConstructor)
         registerObjectGroup(.jsNumberConstructor)
         registerObjectGroup(.jsMathObject)
+        registerObjectGroup(.jsAtomicsObject)
         registerObjectGroup(.jsDate)
         registerObjectGroup(.jsDateConstructor)
         registerObjectGroup(.jsDatePrototype)
@@ -648,6 +649,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("DisposableStack", ofType: .jsDisposableStackConstructor)
         registerBuiltin("AsyncDisposableStack", ofType: .jsAsyncDisposableStackConstructor)
         registerBuiltin("Math", ofType: .jsMathObject)
+        registerBuiltin("Atomics", ofType: .jsAtomicsObject)
         registerBuiltin("JSON", ofType: .jsJSONObject)
         registerBuiltin("Reflect", ofType: .jsReflectObject)
         registerBuiltin("isNaN", ofType: .jsIsNaNFunction)
@@ -1151,6 +1153,10 @@ public extension ILType {
 
     static let jsUint8Array = jsTypedArray("Uint8Array")
 
+    // TODO(mliedtke): Saying "any typed array" isn't really easily possible right now, so we type
+    // the expected parameter type as any object.
+    fileprivate static let someTypedArray = ILType.object()
+
     /// Type of a JavaScript function.
     /// A JavaScript function is also constructors. Moreover, it is also an object as it has a number of properties and methods.
     static func jsFunction(_ signature: Signature = Signature.forUnknownFunction) -> ILType {
@@ -1247,6 +1253,9 @@ public extension ILType {
 
     /// Type of the JavaScript Math constructor builtin.
     static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI", "LN10", "LN2", "LOG10E", "LOG2E", "SQRT1_2", "SQRT2"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "f16round", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "sumPrecise", "tan", "tanh", "trunc"])
+
+    /// Type of the JavaScript Atomics builtin.
+    static let jsAtomicsObject = ILType.object(ofGroup: "Atomics", withProperties: [], withMethods: ["add", "and", "compareExchange", "exchange", "isLockFree", "load", "notify", "or", "pause", "store", "sub", "wait", "waitAsync", "xor"])
 
     /// Type of the JavaScript Date object
     static let jsDate = ILType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString", "toTemporalInstant"])
@@ -2406,6 +2415,34 @@ public extension ObjectGroup {
             "tan"        : [.jsAnything] => .number,
             "tanh"       : [.jsAnything] => .number,
             "trunc"      : [.jsAnything] => .number,
+        ]
+    )
+
+    /// Object group modelling the JavaScript Atomics builtin
+    /// Note that the typing here is not perfect: .someTypedArray doesn't have precise type
+    /// information. The parameters and results typed as .jsAnything are either .number or .bigint
+    /// depending on the type of the TypedArray that is passed as the first argument.
+    static let jsAtomicsObject = ObjectGroup(
+        name: "Atomics",
+        instanceType: .jsAtomicsObject,
+        properties: [:],
+        methods: [
+            "add"             : [.plain(.someTypedArray), .integer, .jsAnything] => .jsAnything,
+            "and"             : [.plain(.someTypedArray), .integer, .jsAnything] => .jsAnything,
+            "compareExchange" : [.plain(.someTypedArray), .integer, .jsAnything, .jsAnything] => .jsAnything,
+            "exchange"        : [.plain(.someTypedArray), .integer, .jsAnything] => .jsAnything,
+            "isLockFree"      : [.integer] => .boolean,
+            "load"            : [.plain(.someTypedArray), .integer] => .jsAnything,
+            "notify"          : [.oneof(.jsTypedArray("Int32Array"), .jsTypedArray("BigInt64Array")), .integer, .opt(.integer)] => .integer,
+            "or"              : [.plain(.someTypedArray), .integer, .jsAnything] => .jsAnything,
+            "pause"           : [.opt(.integer)] => .undefined,
+            "store"           : [.plain(.someTypedArray), .integer, .jsAnything] => .jsAnything,
+            "sub"             : [.plain(.someTypedArray), .integer, .jsAnything] => .jsAnything,
+            "wait"            : [.oneof(.jsTypedArray("Int32Array"), .jsTypedArray("BigInt64Array")),
+                                 .integer, .jsAnything, .opt(.number)] => .string,
+            "waitAsync"       : [.oneof(.jsTypedArray("Int32Array"), .jsTypedArray("BigInt64Array")),
+                                 .integer, .jsAnything, .opt(.number)] => .object(withProperties: ["async", "value"]),
+            "xor"             : [.plain(.someTypedArray), .integer, .jsAnything] => .jsAnything,
         ]
     )
 
