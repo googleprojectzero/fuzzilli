@@ -366,6 +366,8 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsPromises)
         registerObjectGroup(.jsRegExps)
         registerObjectGroup(.jsFunctions)
+        registerObjectGroup(.jsFunctionPrototype)
+        registerObjectGroup(.jsFunctionConstructor)
         registerObjectGroup(.jsSymbols)
         registerObjectGroup(.jsMaps)
         registerObjectGroup(.jsMapPrototype)
@@ -1184,7 +1186,7 @@ public extension ILType {
     static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "fromAsync", "of", "isArray"])
 
     /// Type of the JavaScript Function constructor builtin.
-    static let jsFunctionConstructor = ILType.constructor([.string] => .jsFunction(Signature.forUnknownFunction))
+    static let jsFunctionConstructor = ILType.constructor([.string] => .jsFunction(Signature.forUnknownFunction)) + .object(ofGroup: "FunctionConstructor", withProperties: ["prototype"])
 
     /// Type of the JavaScript String constructor builtin.
     static let jsStringConstructor = ILType.functionAndConstructor([.jsAnything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
@@ -1603,6 +1605,19 @@ public extension ObjectGroup {
             "call"  : [.object(), .jsAnything...] => .jsAnything,
             "bind"  : [.object(), .jsAnything...] => .jsAnything,
         ]
+    )
+
+    static let jsFunctionPrototype = createPrototypeObjectGroup(jsFunctions,
+        constructor: .jsFunctionConstructor)
+
+    static let jsFunctionConstructor = ObjectGroup(
+        name: "FunctionConstructor",
+        constructorPath: "Function",
+        instanceType: .jsFunctionConstructor,
+        properties: [
+            "prototype"   : jsFunctionPrototype.instanceType,
+        ],
+        methods: [:]
     )
 
     /// ObjectGroup modelling JavaScript Symbols
