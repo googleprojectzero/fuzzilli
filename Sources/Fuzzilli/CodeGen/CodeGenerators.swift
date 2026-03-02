@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 // Generator stubs for disposable and async-disposable object variables.
 func disposableObjVariableGeneratorStubs(
         inContext contextRequirement : Context,
@@ -351,7 +353,47 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("BuiltinIntlGenerator") { b in
-        let _ = chooseUniform(from: [b.constructIntlDateTimeFormat, b.constructIntlCollator, b.constructIntlListFormat, b.constructIntlLocale, b.constructIntlNumberFormat, b.constructIntlPluralRules, b.constructIntlRelativeTimeFormat, b.constructIntlSegmenter])()
+        let _ = chooseUniform(from: [
+            b.constructIntlDateTimeFormat,
+            b.constructIntlCollator,
+            b.constructIntlListFormat,
+            b.constructIntlLocale,
+            b.constructIntlNumberFormat,
+            b.constructIntlPluralRules,
+            b.constructIntlRelativeTimeFormat,
+            b.constructIntlSegmenter,
+            b.constructIntlDisplayNames,
+            { // Fuzz Intl.DisplayNames.prototype.of()
+                let intl = b.createNamedVariable(forBuiltin: "Intl")
+                let ctor = b.getProperty("DisplayNames", of: intl)
+                let types =
+                    b.fuzzer.environment.getEnum(ofName: "IntlDisplayNamesTypeEnum")!.enumValues
+                let type = types.randomElement()!
+                let locale = b.loadString(ProgramBuilder.constructIntlLocaleString())
+                let options = b.createOptionsBag(.jsIntlDisplayNamesSettings,
+                    predefined: ["type": b.loadString(type)])
+                b.construct(ctor, withArgs: [locale, options])
+                let code = switch type {
+                    case "language":
+                        ProgramBuilder.constructIntlLanguageString()
+                    case "region":
+                        ProgramBuilder.constructIntlRegionString()
+                    case "script":
+                        ProgramBuilder.constructIntlScriptString()
+                    case "currency":
+                        Locale.commonISOCurrencyCodes.randomElement()!
+                    case "calendar":
+                        b.fuzzer.environment.getEnum(ofName: "temporalCalendar")!.enumValues
+                            .randomElement()!
+                    case "dateTimeField":
+                        ["era", "year", "quarter", "month", "weekOfYear", "weekday", "day",
+                         "dayPeriod", "hour", "minute", "second", "timeZoneName"].randomElement()!
+                    default:
+                        String.random(ofLength: 4)
+                }
+                return b.callMethod("of", on: ctor, withArgs: [b.loadString(code)])
+            }
+        ])()
     },
 
     CodeGenerator("HexGenerator") { b in

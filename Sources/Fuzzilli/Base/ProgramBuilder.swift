@@ -5019,22 +5019,28 @@ public class ProgramBuilder {
     // so we instead register a generator that allows the fuzzer a greater chance of generating
     // one when needed.
     //
-    // These can be registered on the JavaScriptEnvironment with addProducingGenerator()
+    // These can be registered on the JavaScriptEnvironment with addProducingGenerator().
+    // argument `predefined`: Provide values that should be used for the given properties of the
+    //   options bag (if present) instead of finding or generating random values for them. The
+    //   property might still be filtered out.
     @discardableResult
-    func createOptionsBag(_ bag: OptionsBag) -> Variable {
+    func createOptionsBag(_ bag: OptionsBag, predefined: [String: Variable] = [:]) -> Variable {
         // We run .filter() to pick a subset of fields, but we generally want to set as many as possible
         // and let the mutator prune things
-        let dict: [String : Variable] = bag.properties.filter {_ in probability(0.8)}.mapValues {
-            if $0.isEnumeration {
-                return loadEnum($0)
+        let dict = [String : Variable](uniqueKeysWithValues: bag.properties.filter {_ in probability(0.8)}.map {
+            let (propertyName, type) = $0
+            if let predefinedVar = predefined[propertyName] {
+                return (propertyName, predefinedVar)
+            } else if type.isEnumeration {
+                return (propertyName, loadEnum(type))
             // relativeTo doesn't have an ObjectGroup so we cannot just register a producingGenerator for it
-            } else if $0.Is(OptionsBag.jsTemporalRelativeTo) {
-                return findOrGenerateType(chooseUniform(from: [.jsTemporalZonedDateTime, .jsTemporalPlainDateTime,
-                                          .jsTemporalPlainDate, .string]))
+            } else if type.Is(OptionsBag.jsTemporalRelativeTo) {
+                return (propertyName, findOrGenerateType(chooseUniform(from: [.jsTemporalZonedDateTime, .jsTemporalPlainDateTime,
+                                          .jsTemporalPlainDate, .string])))
             } else {
-                return findOrGenerateType($0)
+                return (propertyName, findOrGenerateType(type))
             }
-        }
+        })
         return createObject(with: dict)
     }
 
@@ -5403,6 +5409,29 @@ public class ProgramBuilder {
     fileprivate static let allScripts = ["Adlm", "Afak", "Aghb", "Ahom", "Arab", "Aran", "Armi", "Armn", "Avst", "Bali", "Bamu", "Bass", "Batk", "Beng", "Berf", "Bhks", "Blis", "Bopo", "Brah", "Brai", "Bugi", "Buhd", "Cakm", "Cans", "Cari", "Cham", "Cher", "Chis", "Chrs", "Cirt", "Copt", "Cpmn", "Cprt", "Cyrl", "Cyrs", "Deva", "Diak", "Dogr", "Dsrt", "Dupl", "Egyd", "Egyh", "Egyp", "Elba", "Elym", "Ethi", "Gara", "Geok", "Geor", "Glag", "Gong", "Gonm", "Goth", "Gran", "Grek", "Gujr", "Gukh", "Guru", "Hanb", "Hang", "Hani", "Hano", "Hans", "Hant", "Hatr", "Hebr", "Hira", "Hluw", "Hmng", "Hmnp", "Hntl", "Hrkt", "Hung", "Inds", "Ital", "Jamo", "Java", "Jpan", "Jurc", "Kali", "Kana", "Kawi", "Khar", "Khmr", "Khoj", "Kitl", "Kits", "Knda", "Kore", "Kpel", "Krai", "Kthi", "Lana", "Laoo", "Latf", "Latg", "Latn", "Leke", "Lepc", "Limb", "Lina", "Linb", "Lisu", "Loma", "Lyci", "Lydi", "Mahj", "Maka", "Mand", "Mani", "Marc", "Maya", "Medf", "Mend", "Merc", "Mero", "Mlym", "Modi", "Mong", "Moon", "Mroo", "Mtei", "Mult", "Mymr", "Nagm", "Nand", "Narb", "Nbat", "Newa", "Nkdb", "Nkgb", "Nkoo", "Nshu", "Ogam", "Olck", "Onao", "Orkh", "Orya", "Osge", "Osma", "Ougr", "Palm", "Pauc", "Pcun", "Pelm", "Perm", "Phag", "Phli", "Phlp", "Phlv", "Phnx", "Piqd", "Plrd", "Prti", "Psin", "Qaaa-Qabx", "Ranj", "Rjng", "Rohg", "Roro", "Runr", "Samr", "Sara", "Sarb", "Saur", "Seal", "Sgnw", "Shaw", "Shrd", "Shui", "Sidd", "Sidt", "Sind", "Sinh", "Sogd", "Sogo", "Sora", "Soyo", "Sund", "Sunu", "Sylo", "Syrc", "Syre", "Syrj", "Syrn", "Tagb", "Takr", "Tale", "Talu", "Taml", "Tang", "Tavt", "Tayo", "Telu", "Teng", "Tfng", "Tglg", "Thaa", "Thai", "Tibt", "Tirh", "Tnsa", "Todr", "Tols", "Toto", "Tutg", "Ugar", "Vaii", "Visp", "Vith", "Wara", "Wcho", "Wole", "Xpeo", "Xsux", "Yezi", "Yiii", "Zanb", "Zinh", "Zmth", "Zsye", "Zsym", "Zxxx", "Zyyy", "Zzzz"]
     fileprivate static let allAlpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     fileprivate static let allAlphaNum = allAlpha + "0123456789"
+    fileprivate static let allRegionsTwoDigit = [
+        "AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "AT",
+        "AU", "AW", "AX", "AZ", "BA", "BB", "BD", "BE", "BF", "BG", "BH", "BI",
+        "BJ", "BL", "BM", "BN", "BO", "BQ", "BR", "BS", "BT", "BV", "BW", "BY",
+        "BZ", "CA", "CC", "CD", "CF", "CG", "CH", "CI", "CK", "CL", "CM", "CN",
+        "CO", "CR", "CU", "CV", "CW", "CX", "CY", "CZ", "DE", "DJ", "DK", "DM",
+        "DO", "DZ", "EC", "EE", "EG", "EH", "ER", "ES", "ET", "FI", "FJ", "FK",
+        "FM", "FO", "FR", "GA", "GB", "GD", "GE", "GF", "GG", "GH", "GI", "GL",
+        "GM", "GN", "GP", "GQ", "GR", "GS", "GT", "GU", "GW", "GY", "HK", "HM",
+        "HN", "HR", "HT", "HU", "ID", "IE", "IL", "IM", "IN", "IO", "IQ", "IR",
+        "IS", "IT", "JE", "JM", "JO", "JP", "KE", "KG", "KH", "KI", "KM", "KN",
+        "KP", "KR", "KW", "KY", "KZ", "LA", "LB", "LC", "LI", "LK", "LR", "LS",
+        "LT", "LU", "LV", "LY", "MA", "MC", "MD", "ME", "MF", "MG", "MH", "MK",
+        "ML", "MM", "MN", "MO", "MP", "MQ", "MR", "MS", "MT", "MU", "MV", "MW",
+        "MX", "MY", "MZ", "NA", "NC", "NE", "NF", "NG", "NI", "NL", "NO", "NP",
+        "NR", "NU", "NZ", "OM", "PA", "PE", "PF", "PG", "PH", "PK", "PL", "PM",
+        "PN", "PR", "PS", "PT", "PW", "PY", "QA", "RE", "RO", "RS", "RU", "RW",
+        "SA", "SB", "SC", "SD", "SE", "SG", "SH", "SI", "SJ", "SK", "SL", "SM",
+        "SN", "SO", "SR", "SS", "ST", "SV", "SX", "SY", "SZ", "TC", "TD", "TF",
+        "TG", "TH", "TJ", "TK", "TL", "TM", "TN", "TO", "TR", "TT", "TV", "TW",
+        "TZ", "UA", "UG", "UM", "US", "UY", "UZ", "VA", "VC", "VE", "VG", "VI",
+        "VN", "VU", "WF", "WS", "YE", "YT", "ZA", "ZM", "ZW",
+    ]
 
     @discardableResult
     static func constructIntlUnit() -> String {
@@ -5429,7 +5458,7 @@ public class ProgramBuilder {
     static func constructIntlRegionString() -> String {
         // either two letters or three digits
         if probability(0.5) {
-            return String((0..<2).map { _ in allAlpha.randomElement()! })
+            return allRegionsTwoDigit.randomElement()!
         } else {
             return String(format: "%03d", Int.random(in: 0...999))
         }
@@ -5493,6 +5522,11 @@ public class ProgramBuilder {
     @discardableResult
     func constructIntlCollator() -> Variable {
         return constructIntlType(type: "Collator", optionsBag: .jsIntlCollatorSettings)
+    }
+
+    @discardableResult
+    func constructIntlDisplayNames() -> Variable {
+        return constructIntlType(type: "DisplayNames", optionsBag: .jsIntlDisplayNamesSettings)
     }
 
     @discardableResult

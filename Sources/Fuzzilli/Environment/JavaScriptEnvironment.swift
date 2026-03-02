@@ -483,6 +483,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsIntlCollator)
         registerObjectGroup(.jsIntlCollatorConstructor)
         registerObjectGroup(.jsIntlCollatorPrototype)
+        registerObjectGroup(.jsIntlDisplayNames)
+        registerObjectGroup(.jsIntlDisplayNamesConstructor)
+        registerObjectGroup(.jsIntlDisplayNamesPrototype)
         registerObjectGroup(.jsIntlDateTimeFormat)
         registerObjectGroup(.jsIntlDateTimeFormatConstructor)
         registerObjectGroup(.jsIntlDateTimeFormatPrototype)
@@ -538,6 +541,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsIntlCollationTypeEnum)
         registerEnumeration(OptionsBag.jsIntlCaseFirstEnum)
         registerEnumeration(OptionsBag.jsIntlCollatorSensitivityEnum)
+        registerEnumeration(OptionsBag.jsIntlDisplayNamesTypeEnum)
+        registerEnumeration(OptionsBag.jsIntlDisplayNamesFallbackEnum)
+        registerEnumeration(OptionsBag.jsIntlDisplayNamesLanguageDisplayEnum)
         registerEnumeration(OptionsBag.jsIntlListFormatTypeEnum)
         registerEnumeration(OptionsBag.jsIntlNumberFormatStyleEnum)
         registerEnumeration(OptionsBag.jsIntlCurrencySystemEnum)
@@ -570,6 +576,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsTemporalPlainDateToZDTSettings)
         registerOptionsBag(.jsIntlDateTimeFormatSettings)
         registerOptionsBag(.jsIntlCollatorSettings)
+        registerOptionsBag(.jsIntlDisplayNamesSettings)
         registerOptionsBag(.jsIntlListFormatSettings)
         registerOptionsBag(.jsIntlLocaleSettings)
         registerOptionsBag(.jsIntlNumberFormatSettings)
@@ -3433,13 +3440,16 @@ extension OptionsBag {
 // Intl
 extension ILType {
     // Intl types
-    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "ListFormat", "Locale", "NumberFormat", "PluralRules", "RelativeTimeFormat", "Segmenter"], withMethods: ["getCanonicalLocales", "supportedValuesOf"])
+    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "DisplayNames", "ListFormat", "Locale", "NumberFormat", "PluralRules", "RelativeTimeFormat", "Segmenter"], withMethods: ["getCanonicalLocales", "supportedValuesOf"])
 
     static let jsIntlLocale = ILType.object(ofGroup: "Intl.Locale", withProperties: ["baseName", "calendar", "caseFirst", "collation", "hourCycle", "language", "numberingSystem", "numeric", "region", "script", "variants"], withMethods: ["getCalendars", "getCollations", "getHourCycles", "getNumberingSystems", "getTextInfo", "getTimeZones", "getWeekInfo", "maximize", "minimize", "toString"])
     static let jsIntlLocaleConstructor = ILType.functionAndConstructor([.plain(.jsIntlLocaleString), .opt(OptionsBag.jsIntlLocaleSettings.group.instanceType)] => .jsIntlLocale) + .object(ofGroup: "IntlLocaleConstructor", withProperties: ["prototype"], withMethods: [])
 
     static let jsIntlCollator = ILType.object(ofGroup: "Intl.Collator", withProperties: [], withMethods: ["compare", "resolvedOptions"])
     static let jsIntlCollatorConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlCollatorSettings.group.instanceType)] => .jsIntlCollator) + .object(ofGroup: "IntlCollatorConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlDisplayNames = ILType.object(ofGroup: "Intl.DisplayNames", withProperties: [], withMethods: ["of", "resolvedOptions"])
+    static let jsIntlDisplayNamesConstructor = ILType.functionAndConstructor([.plain(.jsIntlLocaleLike), .plain(OptionsBag.jsIntlDisplayNamesSettings.group.instanceType)] => .jsIntlDisplayNames) + .object(ofGroup: "IntlDisplayNamesConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
 
     static let jsIntlDateTimeFormat = ILType.object(ofGroup: "Intl.DateTimeFormat", withProperties: [], withMethods: ["format", "formatRange", "formatRangeToParts", "formatToParts", "resolvedOptions"])
     static let jsIntlDateTimeFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlDateTimeFormatSettings.group.instanceType)] => .jsIntlDateTimeFormat) + .object(ofGroup: "IntlDateTimeFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
@@ -3480,6 +3490,7 @@ extension ObjectGroup {
         properties: [
             "Collator"  : .jsIntlCollatorConstructor,
             "DateTimeFormat"  : .jsIntlDateTimeFormatConstructor,
+            "DisplayNames"  : .jsIntlDisplayNamesConstructor,
             "ListFormat"  : .jsIntlListFormatConstructor,
             "Locale"  : .jsIntlLocaleConstructor,
             "NumberFormat"  : .jsIntlNumberFormatConstructor,
@@ -3516,6 +3527,33 @@ extension ObjectGroup {
         instanceType: .jsIntlCollatorConstructor,
         properties: [
             "prototype" : jsIntlCollatorPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+
+    static let jsIntlDisplayNames = ObjectGroup(
+        name: "Intl.DisplayNames",
+        instanceType: .jsIntlDisplayNames,
+        properties: [:],
+        methods: [
+            "of": [.string] => .string,  // TODO(mliedtke): The parameter should be typed more precise than string.
+            "resolvedOptions": [] => .object(withProperties: ["locale", "style", "type", "fallback", "languageDisplay"]),
+        ]
+    )
+
+    static let jsIntlDisplayNamesPrototype = createPrototypeObjectGroup(
+        jsIntlDisplayNames,
+        constructor: .jsIntlDisplayNamesConstructor)
+
+    static let jsIntlDisplayNamesConstructor = ObjectGroup(
+        name: "IntlDisplayNamesConstructor",
+        constructorPath: "Intl.DisplayNames",
+        instanceType: .jsIntlDisplayNamesConstructor,
+        properties: [
+            "prototype" : jsIntlDisplayNamesPrototype.instanceType
         ],
         methods: [
             // TODO(manishearth) this also accepts arrays of locale-likes
@@ -3799,6 +3837,9 @@ extension OptionsBag {
     fileprivate static let jsIntlCollationTypeEnum = ILType.enumeration(ofName: "IntlCollationType", withValues: ["compat", "emoji", "eor", "phonebk", "pinyin", "searchjl", "stroke", "trad", "unihan", "zhuyin"])
     fileprivate static let jsIntlCaseFirstEnum = ILType.enumeration(ofName: "IntlCaseFirst", withValues: ["upper", "lower", "false"])
     fileprivate static let jsIntlCollatorSensitivityEnum = ILType.enumeration(ofName: "IntlCollatorSensitivity", withValues: ["base", "accent", "case", "variant"])
+    fileprivate static let jsIntlDisplayNamesTypeEnum = ILType.enumeration(ofName: "IntlDisplayNamesTypeEnum", withValues: ["language", "region", "script", "currency", "calendar", "dateTimeField"])
+    fileprivate static let jsIntlDisplayNamesFallbackEnum = ILType.enumeration(ofName: "IntlDisplayNamesFallbackEnum", withValues: ["code", "none"])
+    fileprivate static let jsIntlDisplayNamesLanguageDisplayEnum = ILType.enumeration(ofName: "IntlDisplayNamesLanguageDisplayEnum", withValues: ["dialect", "standard"])
     fileprivate static let jsIntlListFormatTypeEnum = ILType.enumeration(ofName: "IntlListFormatTypeEnum", withValues: ["conjunction", "disjunction", "unit"])
     fileprivate static let jsIntlNumberFormatStyleEnum = ILType.enumeration(ofName: "IntlNumberFormatStyleEnum", withValues: ["decimal", "currency", "percent", "unit"])
     fileprivate static let jsIntlCurrencySystemEnum = ILType.enumeration(ofName: "IntlCurrency", withValues: Locale.Currency.isoCurrencies.map { $0.identifier })
@@ -3854,6 +3895,18 @@ extension OptionsBag {
             "caseFirst": jsIntlCaseFirstEnum,
             "sensitivity": jsIntlCollatorSensitivityEnum,
             "ignorePunctuation": .boolean,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DisplayNames/DisplayNames#options
+    static let jsIntlDisplayNamesSettings = OptionsBag(
+        name: "IntlDisplayNamesSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "style": jsIntlLongShortNarrowEnum,
+            "type": jsIntlDisplayNamesTypeEnum,
+            "fallback": jsIntlDisplayNamesFallbackEnum,
+            "languageDisplay": jsIntlDisplayNamesLanguageDisplayEnum,
         ]
     )
 
