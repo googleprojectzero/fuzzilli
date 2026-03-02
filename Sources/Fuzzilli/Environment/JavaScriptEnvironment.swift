@@ -486,6 +486,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsIntlDisplayNames)
         registerObjectGroup(.jsIntlDisplayNamesConstructor)
         registerObjectGroup(.jsIntlDisplayNamesPrototype)
+        registerObjectGroup(.jsIntlDurationFormat)
+        registerObjectGroup(.jsIntlDurationFormatConstructor)
+        registerObjectGroup(.jsIntlDurationFormatPrototype)
         registerObjectGroup(.jsIntlDateTimeFormat)
         registerObjectGroup(.jsIntlDateTimeFormatConstructor)
         registerObjectGroup(.jsIntlDateTimeFormatPrototype)
@@ -544,6 +547,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsIntlDisplayNamesTypeEnum)
         registerEnumeration(OptionsBag.jsIntlDisplayNamesFallbackEnum)
         registerEnumeration(OptionsBag.jsIntlDisplayNamesLanguageDisplayEnum)
+        registerEnumeration(OptionsBag.jsIntlDurationFormatStyleEnum)
         registerEnumeration(OptionsBag.jsIntlListFormatTypeEnum)
         registerEnumeration(OptionsBag.jsIntlNumberFormatStyleEnum)
         registerEnumeration(OptionsBag.jsIntlCurrencySystemEnum)
@@ -577,6 +581,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsIntlDateTimeFormatSettings)
         registerOptionsBag(.jsIntlCollatorSettings)
         registerOptionsBag(.jsIntlDisplayNamesSettings)
+        registerOptionsBag(.jsIntlDurationFormatSettings)
         registerOptionsBag(.jsIntlListFormatSettings)
         registerOptionsBag(.jsIntlLocaleSettings)
         registerOptionsBag(.jsIntlNumberFormatSettings)
@@ -3440,7 +3445,7 @@ extension OptionsBag {
 // Intl
 extension ILType {
     // Intl types
-    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "DisplayNames", "ListFormat", "Locale", "NumberFormat", "PluralRules", "RelativeTimeFormat", "Segmenter"], withMethods: ["getCanonicalLocales", "supportedValuesOf"])
+    static let jsIntlObject = ILType.object(ofGroup: "Intl", withProperties: ["DateTimeFormat", "Collator", "DisplayNames", "DurationFormat", "ListFormat", "Locale", "NumberFormat", "PluralRules", "RelativeTimeFormat", "Segmenter"], withMethods: ["getCanonicalLocales", "supportedValuesOf"])
 
     static let jsIntlLocale = ILType.object(ofGroup: "Intl.Locale", withProperties: ["baseName", "calendar", "caseFirst", "collation", "hourCycle", "language", "numberingSystem", "numeric", "region", "script", "variants"], withMethods: ["getCalendars", "getCollations", "getHourCycles", "getNumberingSystems", "getTextInfo", "getTimeZones", "getWeekInfo", "maximize", "minimize", "toString"])
     static let jsIntlLocaleConstructor = ILType.functionAndConstructor([.plain(.jsIntlLocaleString), .opt(OptionsBag.jsIntlLocaleSettings.group.instanceType)] => .jsIntlLocale) + .object(ofGroup: "IntlLocaleConstructor", withProperties: ["prototype"], withMethods: [])
@@ -3450,6 +3455,9 @@ extension ILType {
 
     static let jsIntlDisplayNames = ILType.object(ofGroup: "Intl.DisplayNames", withProperties: [], withMethods: ["of", "resolvedOptions"])
     static let jsIntlDisplayNamesConstructor = ILType.functionAndConstructor([.plain(.jsIntlLocaleLike), .plain(OptionsBag.jsIntlDisplayNamesSettings.group.instanceType)] => .jsIntlDisplayNames) + .object(ofGroup: "IntlDisplayNamesConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
+
+    static let jsIntlDurationFormat = ILType.object(ofGroup: "Intl.DurationFormat", withProperties: [], withMethods: ["format", "formatToParts", "resolvedOptions"])
+    static let jsIntlDurationFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlDurationFormatSettings.group.instanceType)] => .jsIntlDurationFormat) + .object(ofGroup: "IntlDurationFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
 
     static let jsIntlDateTimeFormat = ILType.object(ofGroup: "Intl.DateTimeFormat", withProperties: [], withMethods: ["format", "formatRange", "formatRangeToParts", "formatToParts", "resolvedOptions"])
     static let jsIntlDateTimeFormatConstructor = ILType.functionAndConstructor([.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlDateTimeFormatSettings.group.instanceType)] => .jsIntlDateTimeFormat) + .object(ofGroup: "IntlDateTimeFormatConstructor", withProperties: ["prototype"], withMethods: ["supportedLocalesOf"])
@@ -3491,6 +3499,7 @@ extension ObjectGroup {
             "Collator"  : .jsIntlCollatorConstructor,
             "DateTimeFormat"  : .jsIntlDateTimeFormatConstructor,
             "DisplayNames"  : .jsIntlDisplayNamesConstructor,
+            "DurationFormat"  : .jsIntlDurationFormatConstructor,
             "ListFormat"  : .jsIntlListFormatConstructor,
             "Locale"  : .jsIntlLocaleConstructor,
             "NumberFormat"  : .jsIntlNumberFormatConstructor,
@@ -3554,6 +3563,34 @@ extension ObjectGroup {
         instanceType: .jsIntlDisplayNamesConstructor,
         properties: [
             "prototype" : jsIntlDisplayNamesPrototype.instanceType
+        ],
+        methods: [
+            // TODO(manishearth) this also accepts arrays of locale-likes
+            "supportedLocalesOf": [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlLocaleMatcherSettings.group.instanceType)] => .jsArray,
+        ]
+    )
+
+    static let jsIntlDurationFormat = ObjectGroup(
+        name: "Intl.DurationFormat",
+        instanceType: .jsIntlDurationFormat,
+        properties: [:],
+        methods: [
+            "format": [.plain(ObjectGroup.jsTemporalDurationLikeObject.instanceType)] => .string,
+            "formatToParts": [.plain(ObjectGroup.jsTemporalDurationLikeObject.instanceType)] => .jsArray,
+            "resolvedOptions": [] => .object(withProperties: ["locale", "numberingSystem", "style", "fractionalDigits"]),
+        ]
+    )
+
+    static let jsIntlDurationFormatPrototype = createPrototypeObjectGroup(
+        jsIntlDurationFormat,
+        constructor: .jsIntlDurationFormatConstructor)
+
+    static let jsIntlDurationFormatConstructor = ObjectGroup(
+        name: "IntlDurationFormatConstructor",
+        constructorPath: "Intl.DurationFormat",
+        instanceType: .jsIntlDurationFormatConstructor,
+        properties: [
+            "prototype" : jsIntlDurationFormatPrototype.instanceType
         ],
         methods: [
             // TODO(manishearth) this also accepts arrays of locale-likes
@@ -3840,6 +3877,7 @@ extension OptionsBag {
     fileprivate static let jsIntlDisplayNamesTypeEnum = ILType.enumeration(ofName: "IntlDisplayNamesTypeEnum", withValues: ["language", "region", "script", "currency", "calendar", "dateTimeField"])
     fileprivate static let jsIntlDisplayNamesFallbackEnum = ILType.enumeration(ofName: "IntlDisplayNamesFallbackEnum", withValues: ["code", "none"])
     fileprivate static let jsIntlDisplayNamesLanguageDisplayEnum = ILType.enumeration(ofName: "IntlDisplayNamesLanguageDisplayEnum", withValues: ["dialect", "standard"])
+    fileprivate static let jsIntlDurationFormatStyleEnum = ILType.enumeration(ofName: "IntlDurationFormatStyleEnum", withValues: ["long", "short", "narrow", "digital"])
     fileprivate static let jsIntlListFormatTypeEnum = ILType.enumeration(ofName: "IntlListFormatTypeEnum", withValues: ["conjunction", "disjunction", "unit"])
     fileprivate static let jsIntlNumberFormatStyleEnum = ILType.enumeration(ofName: "IntlNumberFormatStyleEnum", withValues: ["decimal", "currency", "percent", "unit"])
     fileprivate static let jsIntlCurrencySystemEnum = ILType.enumeration(ofName: "IntlCurrency", withValues: Locale.Currency.isoCurrencies.map { $0.identifier })
@@ -3907,6 +3945,37 @@ extension OptionsBag {
             "type": jsIntlDisplayNamesTypeEnum,
             "fallback": jsIntlDisplayNamesFallbackEnum,
             "languageDisplay": jsIntlDisplayNamesLanguageDisplayEnum,
+        ]
+    )
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DurationFormat/DurationFormat#options
+    static let jsIntlDurationFormatSettings = OptionsBag(
+        name: "IntlDurationFormatSettings",
+        properties: [
+            "localeMatcher": jsIntlLocaleMatcherEnum,
+            "numberingSystem": jsIntlNumberingSystemEnum,
+            "style": jsIntlDurationFormatStyleEnum,
+            "years": jsIntlLongShortNarrowEnum,
+            "yearsDisplay": jsIntlAutoAlwaysEnum,
+            "months": jsIntlLongShortNarrowEnum,
+            "monthsDisplay": jsIntlAutoAlwaysEnum,
+            "weeks": jsIntlLongShortNarrowEnum,
+            "weeksDisplay": jsIntlAutoAlwaysEnum,
+            "days": jsIntlLongShortNarrowEnum,
+            "daysDisplay": jsIntlAutoAlwaysEnum,
+            "hours": jsIntlLongShortNarrowEnum,
+            "hoursDisplay": jsIntlAutoAlwaysEnum,
+            "minutes": jsIntlLongShortNarrowEnum,
+            "minutesDisplay": jsIntlAutoAlwaysEnum,
+            "seconds": jsIntlLongShortNarrowEnum,
+            "secondsDisplay": jsIntlAutoAlwaysEnum,
+            "milliseconds": jsIntlLongShortNarrowEnum,
+            "millisecondsDisplay": jsIntlAutoAlwaysEnum,
+            "microseconds": jsIntlLongShortNarrowEnum,
+            "microsecondsDisplay": jsIntlAutoAlwaysEnum,
+            "nanoseconds": jsIntlLongShortNarrowEnum,
+            "nanosecondsDisplay": jsIntlAutoAlwaysEnum,
+            "fractionalDigits": .integer,
         ]
     )
 
