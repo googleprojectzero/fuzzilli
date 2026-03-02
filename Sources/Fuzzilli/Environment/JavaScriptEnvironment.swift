@@ -1100,7 +1100,7 @@ public struct OptionsBag {
 public extension ILType {
     /// Type of a string in JavaScript.
     /// A JS string is both a string and an object on which methods can be called.
-    static let jsString = ILType.string + ILType.iterable + ILType.object(ofGroup: "String", withProperties: ["length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "normalize", "repeat", "replace", "replaceAll", "search", "slice", "split", "startsWith", "substring", "trim", "trimStart", "trimLeft", "trimEnd", "trimRight" ,"toUpperCase", "toLowerCase", "localeCompare"])
+    static let jsString = ILType.string + ILType.iterable + ILType.object(ofGroup: "String", withProperties: ["length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "normalize", "repeat", "replace", "replaceAll", "search", "slice", "split", "startsWith", "substring", "trim", "trimStart", "trimLeft", "trimEnd", "trimRight" ,"toUpperCase", "toLowerCase", "localeCompare", "anchor", "at", "big", "blink", "bold", "fixed", "fontcolor", "fontsize", "isWellFormed", "italics", "link", "small", "strike", "sub", "substr", "sup", "toLocaleLowerCase", "toLocaleUpperCase", "toWellFormed"])
 
     /// Type of a regular expression in JavaScript.
     /// A JS RegExp is both a RegExp and an object on which methods can be called.
@@ -1513,9 +1513,25 @@ public extension ObjectGroup {
             "toLowerCase" : [] => .jsString,
             "toUpperCase" : [] => .jsString,
             "localeCompare" : [.string, .opt(.string), .opt(.object())] => .jsString,
-            //"toLocaleLowerCase" : [.opt(.string...] => .jsString,
-            //"toLocaleUpperCase" : [.opt(.string...] => .jsString,
-            // ...
+            "anchor"      : [.string] => .jsString,
+            "at"          : [.integer] => .jsString,
+            "big"         : [] => .jsString,
+            "blink"       : [] => .jsString,
+            "bold"        : [] => .jsString,
+            "fixed"       : [] => .jsString,
+            "fontcolor"   : [.string] => .jsString,
+            "fontsize"    : [.integer] => .jsString,
+            "isWellFormed": [] => .boolean,
+            "italics"     : [] => .jsString,
+            "link"        : [.string] => .jsString,
+            "small"       : [] => .jsString,
+            "strike"      : [] => .jsString,
+            "sub"         : [] => .jsString,
+            "substr"      : [.integer, .opt(.integer)] => .jsString,
+            "sup"         : [] => .jsString,
+            "toLocaleLowerCase" : [.opt(.jsIntlLocaleLike)] => .jsString,
+            "toLocaleUpperCase" : [.opt(.jsIntlLocaleLike)] => .jsString,
+            "toWellFormed": [] => .jsString,
         ]
     )
 
