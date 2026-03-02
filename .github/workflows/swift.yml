@@ -30,11 +30,11 @@ jobs:
         run: swift --version
       - uses: actions/checkout@v2
       - name: Build
-        run: swift build -c ${{ matrix.kind }} -v
+        run: swift build -c ${{ matrix.kind }}
       - name: Install protobuf
         # Install protoc so the presubmit can also validate the generated *.pb.swift files.
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.kind == 'debug' }}
-        run: sudo apt install -y protobuf-compiler
+        run: sudo apt update && sudo apt install -y protobuf-compiler
       - name: Install Node.js dependencies for Compiler/Parser tests
         working-directory: ./Sources/Fuzzilli/Compiler/Parser
         run: npm install
@@ -42,7 +42,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.kind == 'debug' }}
         run: python3 Tools/presubmit.py
       - name: Run tests with Node.js
-        run: swift test -c ${{ matrix.kind }} -v
+        run: swift test -c ${{ matrix.kind }}
       - name: Install jsvu
         run: npm install jsvu -g
       - name: Install d8
