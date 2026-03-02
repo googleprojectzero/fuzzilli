@@ -3922,11 +3922,6 @@ public class ProgramBuilder {
             b.emit(WasmReassign(), withInputs: [variable, to])
         }
 
-        public enum wasmBlockType {
-            case typeIdx(Int)
-            case valueType(ILType)
-        }
-
         // The first innerOutput of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         public func wasmBuildBlock(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> ()) {
             assert(signature.outputTypes.count == 0)
