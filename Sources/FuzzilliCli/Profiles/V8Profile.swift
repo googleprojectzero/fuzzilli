@@ -75,6 +75,7 @@ let v8Profile = Profile(
         (HoleNanGenerator,                         5),
         (UndefinedNanGenerator,                    5),
         (StringShapeGenerator,                     5),
+        (HeapNumberGenerator,                      5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([

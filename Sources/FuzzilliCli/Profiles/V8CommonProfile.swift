@@ -177,6 +177,13 @@ public let UndefinedNanGenerator = CodeGenerator("UndefinedNanGenerator") { b in
     b.eval("%GetUndefinedNaN()", hasOutput: true);
 }
 
+public let HeapNumberGenerator = CodeGenerator("HeapNumberGenerator", inputs: .preferred(.integer))
+{ b, value in
+    // This generator prefers an integer input as these have a high chance of being representable as
+    // a Smi, meaning that we often end up with a HeapNumber that didn't have to be materialized.
+    b.eval("%AllocateHeapNumberWithValue(%@)", with: [value], hasOutput: true);
+}
+
 public let StringShapeGenerator = CodeGenerator("StringShapeGenerator") { b in
     withEqualProbability(
         {
