@@ -1150,7 +1150,7 @@ public extension ILType {
     static let jsAsyncDisposableStack = ILType.object(ofGroup: "AsyncDisposableStack", withProperties: ["disposed"], withMethods: ["disposeAsync", "use", "adopt", "defer", "move"])
 
     /// Type of a JavaScript ArrayBuffer object.
-    static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["resize", "slice", "transfer", "transferToFixedLength", "transferToImmutable"])
+    static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["resize", "slice", "sliceToImmutable", "transfer", "transferToFixedLength", "transferToImmutable"])
 
     /// Type of a JavaScript SharedArrayBuffer object.
     static let jsSharedArrayBuffer = ILType.object(ofGroup: "SharedArrayBuffer", withProperties: ["byteLength", "maxByteLength", "growable"], withMethods: ["grow", "slice"])
@@ -1219,7 +1219,7 @@ public extension ILType {
         return .functionAndConstructor(signature)
             + .object(
                 ofGroup: "\(variant)Constructor",
-                withProperties: ["prototype", "stackTraceLimit"],
+                withProperties: ["name", "prototype", "stackTraceLimit"],
                 withMethods: ["isError", "captureStackTrace"])
     }
 
@@ -1280,7 +1280,7 @@ public extension ILType {
     static let jsAtomicsObject = ILType.object(ofGroup: "Atomics", withProperties: [], withMethods: ["add", "and", "compareExchange", "exchange", "isLockFree", "load", "notify", "or", "pause", "store", "sub", "wait", "waitAsync", "xor"])
 
     /// Type of the JavaScript Date object
-    static let jsDate = ILType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString", "toTemporalInstant"])
+    static let jsDate = ILType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "toLocaleDateString", "toLocaleTimeString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString", "toTemporalInstant"])
 
     /// Type of the JavaScript Date constructor builtin
     static let jsDateConstructor = ILType.functionAndConstructor([.opt(.string | .number)] => .jsDate) + .object(ofGroup: "DateConstructor", withProperties: ["prototype"], withMethods: ["UTC", "now", "parse"])
@@ -1946,10 +1946,11 @@ public extension ObjectGroup {
         ],
         methods: [
             "resize"                 : [.integer] => .undefined,
-            "slice"                  : [.integer, .opt(.integer)] => .jsArrayBuffer,
+            "slice"                  : [.opt(.integer), .opt(.integer)] => .jsArrayBuffer,
+            "sliceToImmutable"       : [.opt(.integer), .opt(.integer)] => .jsArrayBuffer,
             "transfer"               : [.opt(.integer)] => .jsArrayBuffer,
             "transferToFixedLength"  : [.opt(.integer)] => .jsArrayBuffer,
-            "transferToImmutable"    : [] => .jsArrayBuffer,
+            "transferToImmutable"    : [.opt(.integer)] => .jsArrayBuffer,
         ]
     )
 
@@ -2131,9 +2132,9 @@ public extension ObjectGroup {
             "toISOString"           : [] => .jsString,
             "toDateString"          : [] => .jsString,
             "toTimeString"          : [] => .jsString,
-            "toLocaleString"        : [] => .jsString,
-            //"toLocaleDateString"    : [.localeObject] => .jsString,
-            //"toLocaleTimeString"    : [.localeObject] => .jsString,
+            "toLocaleString"        : [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlDateTimeFormatSettings.group.instanceType)] => .jsString,
+            "toLocaleDateString"    : [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlDateTimeFormatSettings.group.instanceType)] => .jsString,
+            "toLocaleTimeString"    : [.opt(.jsIntlLocaleLike), .opt(OptionsBag.jsIntlDateTimeFormatSettings.group.instanceType)] => .jsString,
             "getTime"               : [] => .number,
             "getFullYear"           : [] => .number,
             "getUTCFullYear"        : [] => .number,
@@ -2536,7 +2537,13 @@ public extension ObjectGroup {
     }
 
     static func jsErrorPrototype(_ variant: String) -> ObjectGroup {
-        return createPrototypeObjectGroup(jsError(variant), constructor: .jsErrorConstructor(variant))
+        return createPrototypeObjectGroup(
+            jsError(variant),
+            constructor: .jsErrorConstructor(variant),
+            additionalProperties: [
+                "message": .jsString,
+                "name": .jsString,
+            ])
     }
 
     static func jsErrorConstructor(_ variant: String) -> ObjectGroup {
@@ -2545,6 +2552,7 @@ public extension ObjectGroup {
             constructorPath: variant,
             instanceType: .jsErrorConstructor(variant),
             properties: [
+                "name": .jsString,
                 "prototype": jsErrorPrototype(variant).instanceType,
                 "stackTraceLimit": .integer,
             ],
