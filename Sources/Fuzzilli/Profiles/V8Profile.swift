@@ -98,6 +98,11 @@ public let v8Profile = Profile(
         "gc"    : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
         "d8"    : .jsD8,
         "Worker": .constructor([.jsAnything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
+        // via --expose-externalize-string:
+        "externalizeString": .function([.plain(.jsString)] => .jsString),
+        "isOneByteString": .function([.plain(.jsString)] => .boolean),
+        "createExternalizableString": .function([.plain(.jsString)] => .jsString),
+        "createExternalizableTwoByteString": .function([.plain(.jsString)] => .jsString),
     ],
 
     additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],
