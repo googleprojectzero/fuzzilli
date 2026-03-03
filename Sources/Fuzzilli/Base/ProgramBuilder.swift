@@ -4605,6 +4605,32 @@ public class ProgramBuilder {
         return (dynamicOffset, alignedStaticOffset)
     }
 
+    func generateRandomWasmStructFields() -> (fields: [WasmStructTypeDescription.Field], indexTypes: [Variable]) {
+        var indexTypes: [Variable] = []
+
+        let fields = (0..<Int.random(in: 0...10)).map { _ in
+            var type: ILType
+            if let elementType = randomVariable(ofType: .wasmTypeDef()),
+                probability(0.25)
+            {
+                // TODO(mliedtke): Allow non-nullable reference types. Right now we can't do this as
+                // the WasmStructNewGenerator might then fail to generate a struct.
+                let nullability = true
+                indexTypes.append(elementType)
+                type = .wasmRef(.Index(), nullability: nullability)
+            } else {
+                // TODO(mliedtke): Extend list with abstract heap types.
+                type = chooseUniform(from: [
+                    .wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
+                ])
+            }
+            return WasmStructTypeDescription.Field(
+                type: type, mutability: probability(0.75))
+        }
+
+        return (fields, indexTypes)
+    }
+
     /// Produces a WasmGlobal that is valid to create in the given Context.
     public func randomWasmGlobal(forContext context: Context) -> WasmGlobal {
         // TODO(pawkra): enable shared element types.

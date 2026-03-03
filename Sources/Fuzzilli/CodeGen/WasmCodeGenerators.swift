@@ -2017,26 +2017,8 @@ fileprivate let wasmStructTypeGenerator = GeneratorStub(
     "WasmStructTypeGenerator",
     inContext: .single(.wasmTypeGroup),
     producesComplex: [.init(.wasmTypeDef(), .IsWasmStruct)]) { b in
-    var indexTypes: [Variable] = []
-    let fields = (0..<Int.random(in: 0...10)).map { _ in
-        var type: ILType
-        if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
-            probability(0.25)
-        {
-            // TODO(mliedtke): Allow non-nullable reference types. Right now we can't do this as
-            // the WasmStructNewGenerator might then fail to generate a struct.
-            let nullability = true
-            indexTypes.append(elementType)
-            type = .wasmRef(.Index(), nullability: nullability)
-        } else {
-            // TODO(mliedtke): Extend list with abstract heap types.
-            type = chooseUniform(from: [
-                .wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
-            ])
-        }
-        return WasmStructTypeDescription.Field(
-            type: type, mutability: probability(0.75))
-    }
+
+    let (fields, indexTypes) = b.generateRandomWasmStructFields()
 
     b.wasmDefineStructType(fields: fields, indexTypes: indexTypes)
 }
