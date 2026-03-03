@@ -5579,6 +5579,37 @@ public class ProgramBuilder {
     func constructIntlSegmenter() -> Variable {
         return constructIntlType(type: "Segmenter", optionsBag: .jsIntlSegmenterSettings)
     }
+
+    // Fuzz calls with the pattern new Intl.DisplayNames(locale, settings).of(code).
+    // These need to be generated together as there is a tight coupling between the `type` property
+    // in the settings optionsbag and the valid code values passed to the `of` method.
+    @discardableResult
+    func fuzzIntlDisplayNamesOf() -> Variable {
+        let intl = createNamedVariable(forBuiltin: "Intl")
+        let ctor = getProperty("DisplayNames", of: intl)
+        let types = fuzzer.environment.getEnum(ofName: "IntlDisplayNamesTypeEnum")!.enumValues
+        let type = types.randomElement()!
+        let locale = loadString(ProgramBuilder.constructIntlLocaleString())
+        let options = createOptionsBag(.jsIntlDisplayNamesSettings,
+            predefined: ["type": loadString(type)])
+        construct(ctor, withArgs: [locale, options])
+        let code = switch type {
+            case "language":
+                ProgramBuilder.constructIntlLanguageString()
+            case "region":
+                ProgramBuilder.constructIntlRegionString()
+            case "script":
+                ProgramBuilder.constructIntlScriptString()
+            case "currency":
+                Locale.commonISOCurrencyCodes.randomElement()!
+            case "calendar":
+                fuzzer.environment.getEnum(ofName: "temporalCalendar")!.enumValues.randomElement()!
+            case "dateTimeField":
+                ["era", "year", "quarter", "month", "weekOfYear", "weekday", "day",
+                 "dayPeriod", "hour", "minute", "second", "timeZoneName"].randomElement()!
+            default:
+                String.random(ofLength: 4)
+        }
+        return callMethod("of", on: ctor, withArgs: [loadString(code)])
+    }
 }
-
-

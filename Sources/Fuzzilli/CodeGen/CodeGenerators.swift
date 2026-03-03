@@ -363,36 +363,7 @@ public let CodeGenerators: [CodeGenerator] = [
             b.constructIntlRelativeTimeFormat,
             b.constructIntlSegmenter,
             b.constructIntlDisplayNames,
-            { // Fuzz Intl.DisplayNames.prototype.of()
-                let intl = b.createNamedVariable(forBuiltin: "Intl")
-                let ctor = b.getProperty("DisplayNames", of: intl)
-                let types =
-                    b.fuzzer.environment.getEnum(ofName: "IntlDisplayNamesTypeEnum")!.enumValues
-                let type = types.randomElement()!
-                let locale = b.loadString(ProgramBuilder.constructIntlLocaleString())
-                let options = b.createOptionsBag(.jsIntlDisplayNamesSettings,
-                    predefined: ["type": b.loadString(type)])
-                b.construct(ctor, withArgs: [locale, options])
-                let code = switch type {
-                    case "language":
-                        ProgramBuilder.constructIntlLanguageString()
-                    case "region":
-                        ProgramBuilder.constructIntlRegionString()
-                    case "script":
-                        ProgramBuilder.constructIntlScriptString()
-                    case "currency":
-                        Locale.commonISOCurrencyCodes.randomElement()!
-                    case "calendar":
-                        b.fuzzer.environment.getEnum(ofName: "temporalCalendar")!.enumValues
-                            .randomElement()!
-                    case "dateTimeField":
-                        ["era", "year", "quarter", "month", "weekOfYear", "weekday", "day",
-                         "dayPeriod", "hour", "minute", "second", "timeZoneName"].randomElement()!
-                    default:
-                        String.random(ofLength: 4)
-                }
-                return b.callMethod("of", on: ctor, withArgs: [b.loadString(code)])
-            }
+            b.fuzzIntlDisplayNamesOf,
         ])()
     },
 
