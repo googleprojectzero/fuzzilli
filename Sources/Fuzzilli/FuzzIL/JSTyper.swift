@@ -880,14 +880,11 @@ public struct JSTyper: Analyzer {
                 // exnref in the standard exception handling spec.)
                 setType(of: instr.innerOutput(1), to: .exceptionLabel)
                 // Type the tag parameters.
-                guard let labelParameters = type(of: instr.input(1)).wasmTagType?.parameters else {
-                    // TODO(mliedtke): I believe that sooner or later we will run into this fatal
-                    // error. A tag can be defined in JavaScript and then be used in Wasm. Later on
-                    // the varaible defining the tag can be reassigned to with a different type,
-                    // loosening the inferred type information suddenly not being a tag any more.
-                    fatalError("Input into WasmBeginCatch not a tag type, actual "
-                        + "\(type(of: instr.input(1))), defined in \(definingInstruction)")
-                }
+                // If the input isn't typed as a Wasm tag any more (this can happen as tags can be
+                // defined in JS and there a reassign as part of a CodeGenMutator run can loosen the
+                // inferred type), just act as if there weren't any label parameters. In that case
+                // the lifter will fail and the test case will be discarded.
+                let labelParameters = type(of: instr.input(1)).wasmTagType?.parameters ?? []
                 for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(2), labelParameters) {
                     setType(of: innerOutput, to: paramType)
                 }
