@@ -2005,11 +2005,11 @@ fileprivate let wasmArrayTypeGenerator = GeneratorStub(
             elementType: .wasmRef(.Index(), nullability: nullability),
             mutability: mutability, indexType: elementType)
     } else {
-        // TODO(mliedtke): Extend list with abstract heap types.
         b.wasmDefineArrayType(
             elementType: chooseUniform(from: [
                 .wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
-            ]), mutability: mutability)
+            ] + WasmAbstractHeapType.allCases.map {ILType.wasmRef($0, nullability: Bool.random())}),
+            mutability: mutability)
     }
 }
 

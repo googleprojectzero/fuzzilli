@@ -4610,19 +4610,16 @@ public class ProgramBuilder {
 
         let fields = (0..<Int.random(in: 0...10)).map { _ in
             var type: ILType
-            if let elementType = randomVariable(ofType: .wasmTypeDef()),
-                probability(0.25)
-            {
-                // TODO(mliedtke): Allow non-nullable reference types. Right now we can't do this as
-                // the WasmStructNewGenerator might then fail to generate a struct.
-                let nullability = true
+            // TODO(mliedtke): Allow non-nullable reference types. Right now we can't do this as
+            // the WasmStructNewGenerator might then fail to generate a struct.
+            let nullability = true
+            if let elementType = randomVariable(ofType: .wasmTypeDef()), probability(0.25) {
                 indexTypes.append(elementType)
                 type = .wasmRef(.Index(), nullability: nullability)
             } else {
-                // TODO(mliedtke): Extend list with abstract heap types.
                 type = chooseUniform(from: [
                     .wasmPackedI8, .wasmPackedI16, .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
-                ])
+                ] + WasmAbstractHeapType.allCases.map {ILType.wasmRef($0, nullability: nullability)})
             }
             return WasmStructTypeDescription.Field(
                 type: type, mutability: probability(0.75))
@@ -4705,8 +4702,9 @@ public class ProgramBuilder {
                 indexTypes.append(elementType)
                 return ILType.wasmRef(.Index(), nullability: nullability)
             } else {
-                // TODO(mliedtke): Extend list with abstract heap types.
-                return chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128])
+                let nullability = !allowNonNullable || probability(0.5)
+                return chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128]
+                    + WasmAbstractHeapType.allCases.map {ILType.wasmRef($0, nullability: nullability)})
             }
         }
         let signature = (0..<parameterCount).map {_ in chooseType()}
