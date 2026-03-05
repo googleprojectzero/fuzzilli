@@ -168,9 +168,14 @@ func checkNode(_ nodeId: Int, path: [String]) {
         }
     }
 
-    // Each function has a name and a length property. We don't really care about them, so filter
-    // them out.
-    let propertyData = node.properties.filter {($0.key != "name" && $0.key != "length") || node.type != "function"}
+    let propertyData = node.properties.filter {
+      // Each function has a name and a length property. We don't really care about them, so filter
+      // them out.
+      (($0.key != "name" && $0.key != "length") || node.type != "function")
+      // These conversion functions exist on a large amount of objects. The interesting part is
+      // calling them during type coercion which will happen automatically.
+      && $0.key != "valueOf" && $0.key != "toString"
+    }
     for (prop, propertyRef) in propertyData {
         let (childId, isGetter) = (propertyRef.id, propertyRef.isGetter)
 
