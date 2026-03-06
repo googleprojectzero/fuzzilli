@@ -673,12 +673,12 @@ public class JavaScriptEnvironment: ComponentBase {
         registerBuiltin("Reflect", ofType: .jsReflectObject)
         registerBuiltin("isNaN", ofType: .jsIsNaNFunction)
         registerBuiltin("isFinite", ofType: .jsIsFiniteFunction)
-        //registerBuiltin("escape:", ofType: .jsEscapeFunction)
-        //registerBuiltin("unescape:", ofType: .jsUnescapeFunction)
-        //registerBuiltin("decodeURI:", ofType: .jsDecodeURIFunction)
-        //registerBuiltin("decodeURIComponent:", ofType: .jsDecodeURIComponentFunction)
-        //registerBuiltin("encodeURI:", ofType: .jsEncodeURIFunction)
-        //registerBuiltin("encodeURIComponent:", ofType: .jsEncodeURIComponentFunction)
+        registerBuiltin("escape", ofType: .jsEscapeFunction)
+        registerBuiltin("unescape", ofType: .jsUnescapeFunction)
+        registerBuiltin("decodeURI", ofType: .jsDecodeURIFunction)
+        registerBuiltin("decodeURIComponent", ofType: .jsDecodeURIComponentFunction)
+        registerBuiltin("encodeURI", ofType: .jsEncodeURIFunction)
+        registerBuiltin("encodeURIComponent", ofType: .jsEncodeURIComponentFunction)
         registerBuiltin("eval", ofType: .jsEvalFunction)
         registerBuiltin("parseInt", ofType: .jsParseIntFunction)
         registerBuiltin("parseFloat", ofType: .jsParseFloatFunction)
@@ -1161,7 +1161,7 @@ public extension ILType {
     static let jsSharedArrayBuffer = ILType.object(ofGroup: "SharedArrayBuffer", withProperties: ["byteLength", "maxByteLength", "growable"], withMethods: ["grow", "slice"])
 
     /// Type of a JavaScript DataView object.
-    static let jsDataView = ILType.object(ofGroup: "DataView", withProperties: ["buffer", "byteLength", "byteOffset"], withMethods: ["getInt8", "getUint8", "getInt16", "getUint16", "getInt32", "getUint32", "getFloat16", "getFloat32", "getFloat64", "getBigInt64", "getBigUint64", "setInt8", "setUint8", "setInt16", "setUint16", "setInt32", "setUint32", "setFloat16", "setFloat32", "setFloat64", "setBigInt64"])
+    static let jsDataView = ILType.object(ofGroup: "DataView", withProperties: ["buffer", "byteLength", "byteOffset"], withMethods: ["getInt8", "getUint8", "getInt16", "getUint16", "getInt32", "getUint32", "getFloat16", "getFloat32", "getFloat64", "getBigInt64", "getBigUint64", "setInt8", "setUint8", "setInt16", "setUint16", "setInt32", "setUint32", "setFloat16", "setFloat32", "setFloat64", "setBigInt64", "setBigUint64"])
 
     /// Type of a JavaScript TypedArray object of the given variant.
     static func jsTypedArray(_ variant: String) -> ILType {
@@ -2117,7 +2117,8 @@ public extension ObjectGroup {
             "setFloat16"  : [.integer, .float] => .undefined,
             "setFloat32"  : [.integer, .float] => .undefined,
             "setFloat64"  : [.integer, .float] => .undefined,
-            "setBigInt64" : [.integer, .bigint] => .undefined,
+            "setBigInt64" : [.integer, .bigint, .opt(.boolean)] => .undefined,
+            "setBigUint64" : [.integer, .bigint, .opt(.boolean)] => .undefined,
         ]
     )
 
