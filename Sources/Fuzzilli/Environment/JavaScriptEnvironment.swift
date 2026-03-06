@@ -449,6 +449,9 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsWebAssemblyException)
         registerObjectGroup(.jsWebAssemblyExceptionPrototype)
         registerObjectGroup(.jsWebAssemblyExceptionConstructor)
+        registerObjectGroup(.jsWebAssemblyError)
+        registerObjectGroup(.jsWebAssemblyErrorPrototype)
+        registerObjectGroup(.jsWebAssemblyErrorConstructor)
         registerObjectGroup(.jsWebAssembly)
         registerObjectGroup(.jsWasmGlobal)
         registerObjectGroup(.jsWasmMemory)
@@ -2732,9 +2735,38 @@ public extension ObjectGroup {
 
     // WebAssembly.CompileError, .LinkError, .RuntimeError don't offer anything interesting but a
     // constructor.
+    fileprivate static let jsWebAssemblyError = ObjectGroup(
+        name: "WebAssemblyError",
+        instanceType: nil,
+        properties: [
+            "message": .jsString,
+            "name": .jsString,
+        ],
+        methods: [:]
+    )
+
     fileprivate static let webAssemblyErrorConstructorType =
-        ILType.constructor([.opt(.string), .opt(.object() | .string), .opt(.string)] => .object())
-        + .object(withProperties: ["prototype"])
+        ILType.constructor([.opt(.string), .opt(.object() | .string), .opt(.string)] => jsWebAssemblyError.instanceType)
+        + .object(ofGroup: "WebAssemblyErrorConstructor", withProperties: ["prototype"])
+
+    fileprivate static let jsWebAssemblyErrorPrototype = createPrototypeObjectGroup(
+        jsWebAssemblyError,
+        constructor: webAssemblyErrorConstructorType,
+        additionalProperties: [
+            "message": .jsString,
+            "name": .jsString,
+        ]
+    )
+
+    fileprivate static let jsWebAssemblyErrorConstructor = ObjectGroup(
+        name: "WebAssemblyErrorConstructor",
+        instanceType: webAssemblyErrorConstructorType,
+        properties: [
+            "prototype": jsWebAssemblyErrorPrototype.instanceType,
+        ],
+        methods: [:]
+    )
+
     fileprivate static let webAssemblySuspendingConstructorType = ILType.constructor([.plain(.function())] => .object())
 
     static let jsWebAssembly = ObjectGroup(
