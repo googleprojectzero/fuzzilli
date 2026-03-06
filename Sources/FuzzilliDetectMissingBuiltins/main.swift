@@ -20,10 +20,6 @@ let exclusionList : [String: [String]] = [
     // TODO(mliedtke): https://crbug.com/488072252.
     "Realm",
   ]
-  // These functions are exposed via --expose-externalize-string for testing purposes. The functions
-  // should be registered but their prototype objects do not matter.
-  + ["externalizeString", "isOneByteString", "createExternalizableString",
-     "createExternalizableTwoByteString"].map {"\($0).prototype"}
 ]
 
 // Disable most logging. The JavaScriptEnvironment prints warning when trying to fetch types for
