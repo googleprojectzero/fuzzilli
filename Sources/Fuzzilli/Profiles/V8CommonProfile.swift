@@ -24,6 +24,10 @@ public extension ILType {
 
     static let gcTypeEnum = ILType.enumeration(ofName: "gcType", withValues: ["minor", "major"])
     static let gcExecutionEnum = ILType.enumeration(ofName: "gcExecution", withValues: ["async", "sync"])
+
+    static let jsWorker = object(ofGroup: "Worker", withMethods: ["postMessage","getMessage", "terminate", "terminateAndWait"])
+    static let jsWorkerConstructor = constructor([.jsAnything, .object()] => jsWorker)
+        + object(ofGroup: "WorkerConstructor", withProperties: ["prototype"])
 }
 
 public let gcOptions = ObjectGroup(
@@ -32,6 +36,33 @@ public let gcOptions = ObjectGroup(
     properties: ["type": .gcTypeEnum,
                  "execution": .gcExecutionEnum],
     methods: [:])
+
+public extension ObjectGroup {
+    static let jsWorkers = ObjectGroup(
+        name: "Worker",
+        instanceType: .jsWorker,
+        properties: [:],
+        methods: [
+            "postMessage": [.jsAnything] => .undefined,
+            "getMessage": [] => .jsAnything,
+            "terminate": [] => .undefined,
+            "terminateAndWait": [] => .undefined
+        ]
+    )
+
+    static let jsWorkerPrototype =
+        ObjectGroup.createPrototypeObjectGroup(jsWorkers, constructor: .jsWorkerConstructor)
+
+    static let jsWorkerConstructors = ObjectGroup(
+            name: "WorkerConstructor",
+            constructorPath: "Worker",
+            instanceType: .jsWorkerConstructor,
+            properties: [
+                "prototype" : jsWorkerPrototype.instanceType,
+            ],
+            methods: [:]
+        )
+}
 
 public let fastCallables : [(group: ILType, method: String)] = [
     (group: .jsD8FastCAPI, method: "throw_no_fallback"),

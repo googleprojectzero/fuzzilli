@@ -97,7 +97,7 @@ public let v8Profile = Profile(
     additionalBuiltins: [
         "gc"    : .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise)),
         "d8"    : .jsD8,
-        "Worker": .constructor([.jsAnything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
+        "Worker": .jsWorkerConstructor,
         // via --expose-externalize-string:
         "externalizeString": .function([.plain(.jsString)] => .jsString),
         "isOneByteString": .function([.plain(.jsString)] => .boolean),
@@ -105,7 +105,7 @@ public let v8Profile = Profile(
         "createExternalizableTwoByteString": .function([.plain(.jsString)] => .jsString),
     ],
 
-    additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions],
+    additionalObjectGroups: [jsD8, jsD8Test, jsD8FastCAPI, gcOptions, .jsWorkers, .jsWorkerPrototype, .jsWorkerConstructors],
 
     additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
 
