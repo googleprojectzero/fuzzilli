@@ -60,6 +60,7 @@ public let v8Profile = Profile(
         (ForceJITCompilationThroughLoopGenerator,  5),
         (ForceTurboFanCompilationGenerator,        5),
         (ForceMaglevCompilationGenerator,          5),
+        (ForceOsrGenerator,                        5),
         (TurbofanVerifyTypeGenerator,             10),
 
         (WorkerGenerator,                         10),

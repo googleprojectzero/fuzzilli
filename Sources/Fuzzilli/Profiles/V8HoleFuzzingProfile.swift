@@ -71,6 +71,7 @@ let v8HoleFuzzingProfile = Profile(
         (ForceJITCompilationThroughLoopGenerator,  5),
         (ForceTurboFanCompilationGenerator,        5),
         (ForceMaglevCompilationGenerator,          5),
+        (ForceOsrGenerator,                        5),
         (V8GcGenerator,                           10),
         (HoleLeakGenerator,                       25),
     ],

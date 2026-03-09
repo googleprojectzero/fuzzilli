@@ -148,6 +148,34 @@ public let ForceTurboFanCompilationGenerator = forceCompilationGenerator(
 public let ForceMaglevCompilationGenerator = forceCompilationGenerator(
     "ForceMaglevCompilationGenerator", optimizeName: "OptimizeMaglevOnNextCall")
 
+// Create a loop and force OSR in one of the iterations.
+public let ForceOsrGenerator = CodeGenerator("ForceOsrGenerator", [
+    GeneratorStub(
+        "ForceOsrBeginGenerator",
+        inContext: .single(.javascript),
+        provides: [.javascript]
+    ) { b in
+        let numIterations = Int.random(in: 2...50)
+        let loopVar = b.emit(BeginRepeatLoop(iterations: numIterations)).innerOutput
+        let condition = b.compare(
+            loopVar, with: b.loadInt(Int64.random(in: 0..<Int64(numIterations))),
+            using: .equal)
+        b.buildIf(condition) {
+            if probability(0.8) {
+                b.eval("%OptimizeOsr()");
+            } else {
+                b.eval("%OptimizeOsr(%@)", with: [b.loadInt(1)]);
+            }
+        }
+    },
+    GeneratorStub(
+        "ForceOsrEndGenerator",
+        inContext: .single([.javascript])
+    ) { b in
+        b.emit(EndRepeatLoop())
+    },
+])
+
 public let TurbofanVerifyTypeGenerator = CodeGenerator("TurbofanVerifyTypeGenerator", inputs: .one) { b, v in
     b.eval("%VerifyType(%@)", with: [v])
 }

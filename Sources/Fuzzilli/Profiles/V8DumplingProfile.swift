@@ -126,6 +126,7 @@ let v8DumplingProfile = Profile(
         (ForceJITCompilationThroughLoopGenerator,  5),
         (ForceTurboFanCompilationGenerator,        5),
         (ForceMaglevCompilationGenerator,          5),
+        (ForceOsrGenerator,                        5),
         (TurbofanVerifyTypeGenerator,             10),
 
         (V8GcGenerator,                           10),
