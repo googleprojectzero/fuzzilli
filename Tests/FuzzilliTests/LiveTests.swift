@@ -158,8 +158,9 @@ class LiveTests: XCTestCase {
             }
         }
 
-        // We expect a maximum of 25% of Wasm execution attempts to fail.
-        checkFailureRate(testResults: results, maxFailureRate: 0.25)
+        // TODO(mliedtke): Figure out how to handle ref.cast and lower it.
+        // We expect a maximum of 35% of Wasm execution attempts to fail.
+        checkFailureRate(testResults: results, maxFailureRate: 0.35)
     }
 
     // The closure can use the ProgramBuilder to emit a program of a specific
