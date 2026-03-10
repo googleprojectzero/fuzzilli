@@ -967,7 +967,7 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         args.append("--turboshaft-typed-optimizations")
     }
 
-    if probability(0.5) {
+    if probability(0.7) {
         args.append("--turbolev")
         if probability(0.82) {
             args.append("--turbolev-future")
