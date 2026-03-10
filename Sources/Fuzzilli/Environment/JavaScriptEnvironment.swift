@@ -566,6 +566,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(OptionsBag.jsIntlSignDisplayEnum)
         registerEnumeration(OptionsBag.jsIntlPluralRulesTypeEnum)
         registerEnumeration(OptionsBag.jsIntlSegmenterGranularityEnum)
+        registerEnumeration(OptionsBag.jsIteratorZipModeEnum)
         registerEnumeration(OptionsBag.base64Alphabet)
         registerEnumeration(OptionsBag.base64LastChunkHandling)
 
@@ -594,6 +595,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsIntlRelativeTimeFormatSettings)
         registerOptionsBag(.jsIntlSegmenterSettings)
         registerOptionsBag(.jsIntlLocaleMatcherSettings)
+        registerOptionsBag(.jsIteratorZipSettings)
 
         registerTemporalFieldsObject(.jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true, zonedFields: false)
         registerTemporalFieldsObject(.jsTemporalPlainDateLikeObject, forWith: false, dateFields: true, timeFields: false, zonedFields: false)
@@ -1072,7 +1074,7 @@ public struct OptionsBag {
         self.properties = properties
         let properties = properties.mapValues {
             // This list can be expanded over time as long as createOptionsBag() supports this
-            assert($0.isEnumeration || $0.Is(.number | .integer | .boolean) ||
+            assert($0.isEnumeration || $0.Is(.number | .integer | .boolean | .iterable) ||
                     // Has a producing generator registered
                     $0.Is(.jsTemporalPlainTime) ||
                     // Has explicit support in createOptionsBag
@@ -1122,7 +1124,7 @@ public extension ILType {
     static let jsIterator = ILType.iterable + ILType.object(ofGroup: "Iterator", withProperties: ["value", "done"], withMethods: ["next", "return", "throw", "map", "filter", "take", "drop", "flatMap", "reduce", "toArray", "forEach", "some", "every", "find"])
 
     /// Type of the JavaScript Iterator constructor builtin.
-    static let jsIteratorConstructor = ILType.object(ofGroup: "IteratorConstructor", withProperties: ["prototype"], withMethods: ["from", "concat"])
+    static let jsIteratorConstructor = ILType.object(ofGroup: "IteratorConstructor", withProperties: ["prototype"], withMethods: ["from", "concat", "zip"])
 
     /// Type of a JavaScript generator object.
     static let jsGenerator = ILType.iterable + ILType.object(ofGroup: "Generator", withMethods: ["next", "return", "throw"])
@@ -1699,6 +1701,7 @@ public extension ObjectGroup {
         methods: [
             "from"   : [.jsAnything] => .jsIterator,
             "concat" : [.jsAnything...] => .jsIterator,
+            "zip"    : [.iterable, .opt(OptionsBag.jsIteratorZipSettings.group.instanceType)] => .jsIterator,
         ]
     )
 
@@ -4154,6 +4157,19 @@ extension OptionsBag {
         name: "IntlLocaleMatcherSettings",
         properties: [
             "localeMatcher": jsIntlLocaleMatcherEnum,
+        ]
+    )
+}
+
+// Iterator
+extension OptionsBag {
+    fileprivate static let jsIteratorZipModeEnum = ILType.enumeration(ofName: "IteratorZipMode", withValues: ["strict", "longest", "shortest"])
+
+    static let jsIteratorZipSettings = OptionsBag(
+        name: "IteratorZipSettings",
+        properties: [
+            "mode": jsIteratorZipModeEnum,
+            "padding": .iterable,
         ]
     )
 }
