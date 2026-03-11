@@ -1027,10 +1027,14 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
     }
 
     if probability(0.5) {
-        args.append("--proto-assign-seq-opt")
+        args.append("--proto-assign-seq-lazy-func-opt")
         if probability(0.5) {
             args.append("--proto-assign-seq-opt-count=1")
         }
+    }
+
+    if probability(0.5) {
+        args.append("--private-field-bytecodes")
     }
 
     //
