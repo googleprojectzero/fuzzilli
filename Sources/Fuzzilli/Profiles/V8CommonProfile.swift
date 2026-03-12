@@ -946,6 +946,9 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
     }
 
     if !args.contains("--no-maglev") {
+        if probability(0.5) {
+            args.append("--maglev-untagged-phis")
+        }
         if probability(0.25) {
             args.append("--maglev-future")
         }
@@ -1152,7 +1155,6 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         chooseBooleanFlag("maglev-range-analysis")
         chooseBooleanFlag("maglev-escape-analysis")
         chooseBooleanFlag("maglev-licm")
-        chooseBooleanFlag("maglev-untagged-phis")
 
         // Compiler related flags
         chooseBooleanFlag("turbo-move-optimization")
