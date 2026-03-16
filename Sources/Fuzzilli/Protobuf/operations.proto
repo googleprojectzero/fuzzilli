@@ -1178,8 +1178,7 @@ message WasmCallDirect {
 }
 
 message WasmReturnCallDirect {
-  repeated WasmILType parameterTypes = 1;
-  repeated WasmILType outputTypes = 2;
+  int32 parameterCount = 1;
 }
 
 message WasmReturnCallIndirect {

@@ -972,12 +972,12 @@ final class WasmCallDirect: WasmOperation {
 
 final class WasmReturnCallDirect: WasmOperation {
     override var opcode: Opcode { .wasmReturnCallDirect(self) }
-    let signature: WasmSignature
 
-    init(signature: WasmSignature) {
-        self.signature = signature
-        super.init(numInputs: 1 + signature.parameterTypes.count, numOutputs: 0, attributes: [.isJump], requiredContext: [.wasmFunction])
+    init(parameterCount: Int) {
+        super.init(numInputs: 1 + parameterCount, numOutputs: 0, attributes: [.isJump], requiredContext: [.wasmFunction])
     }
+
+    var parameterCount: Int {numInputs - 1}
 }
 
 final class WasmReturnCallIndirect: WasmOperation {

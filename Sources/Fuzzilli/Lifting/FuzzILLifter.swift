@@ -1073,9 +1073,9 @@ public class FuzzILLifter: Lifter {
                 w.emit("\(outputs) <- WasmCallDirect \(inputs)")
             }
 
-        case .wasmReturnCallDirect(let op):
+        case .wasmReturnCallDirect(_):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            w.emit("WasmReturnCallDirect(\(op.signature)) \(inputs)")
+            w.emit("WasmReturnCallDirect \(inputs)")
 
         case .wasmReturnCallIndirect(let op):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")

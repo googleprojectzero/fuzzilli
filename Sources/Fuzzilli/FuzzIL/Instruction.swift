@@ -1318,8 +1318,7 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmReturnCallDirect(let op):
                 $0.wasmReturnCallDirect = Fuzzilli_Protobuf_WasmReturnCallDirect.with {
-                    $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
-                    $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.parameterCount = Int32(op.parameterCount)
                 }
             case .wasmReturnCallIndirect(let op):
                 $0.wasmReturnCallIndirect = Fuzzilli_Protobuf_WasmReturnCallIndirect.with {
@@ -2418,9 +2417,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmCallDirect(let p):
             op = WasmCallDirect(parameterCount: Int(p.parameterCount), outputCount: Int(p.outputCount))
         case .wasmReturnCallDirect(let p):
-            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
-            op = WasmReturnCallDirect(signature: parameters => outputs)
+            op = WasmReturnCallDirect(parameterCount: Int(p.parameterCount))
         case .wasmReturnCallIndirect(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)

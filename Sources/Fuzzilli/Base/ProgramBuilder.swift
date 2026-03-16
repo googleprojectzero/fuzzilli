@@ -3787,7 +3787,7 @@ public class ProgramBuilder {
 
         public func wasmReturnCallDirect(signature: WasmSignature, function: Variable, functionArgs: [Variable]) {
             assert(self.signature.outputTypes == signature.outputTypes)
-            b.emit(WasmReturnCallDirect(signature: signature),
+            b.emit(WasmReturnCallDirect(parameterCount: signature.parameterTypes.count),
                 withInputs: [function] + functionArgs,
                 types: [.wasmFunctionDef(signature)] + signature.parameterTypes)
         }
