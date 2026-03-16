@@ -113,7 +113,8 @@ public class REPRL: ComponentBase, ScriptRunner {
             // If we fail, we retry after a short timeout and with a fresh instance. If we still fail, we give up trying
             // to execute this program. If we repeatedly fail to execute any program, we abort.
             if status < 0 {
-                logger.warning("Script execution failed: \(String(cString: reprl_get_last_error(reprlContext))). Retrying in 1 second...")
+                let errorMsg = String(cString: reprl_get_last_error(reprlContext))
+                logger.warning("Script execution failed: \(errorMsg). Retrying in 1 second...")
                 if fuzzer.config.enableDiagnostics {
                     fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "REPRLFail", content: scriptBuffer.data(using: .utf8)!))
                 }
@@ -123,7 +124,16 @@ public class REPRL: ComponentBase, ScriptRunner {
         }
 
         if status < 0 {
-            logger.error("Script execution failed again: \(String(cString: reprl_get_last_error(reprlContext))). Giving up")
+            let errorMsg = String(cString: reprl_get_last_error(reprlContext))
+            let stderr = String(cString: reprl_fetch_stderr(reprlContext)).trimmingCharacters(in: .whitespacesAndNewlines)
+            let stdout = String(cString: reprl_fetch_stdout(reprlContext)).trimmingCharacters(in: .whitespacesAndNewlines)
+            let childOutput = """
+                stderr:
+                \(stderr.isEmpty ? "<no output>" : stderr)
+                stdout:
+                \(stdout.isEmpty ? "<no output>" : stdout)
+                """
+            logger.error("Script execution failed again: \(errorMsg). Giving up\n\(childOutput)")
             // If we weren't able to successfully execute a script in the last N attempts, abort now...
             recentlyFailedExecutions += 1
             if recentlyFailedExecutions >= 10 {
