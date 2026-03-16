@@ -1225,12 +1225,12 @@ final class WasmDropDataSegment: WasmOperation {
 final class WasmJsCall: WasmOperation {
     override var opcode: Opcode { .wasmJsCall(self) }
 
-    let functionSignature: WasmSignature
-
-    init(signature: WasmSignature) {
-        self.functionSignature = signature
-        super.init(numInputs: 1 + signature.parameterTypes.count, numOutputs: signature.outputTypes.count, requiredContext: [.wasmFunction])
+    init(parameterCount: Int, outputCount: Int) {
+        super.init(numInputs: 2 + parameterCount, numOutputs: outputCount, requiredContext: [.wasmFunction])
     }
+
+    var parameterCount: Int { numInputs - 2 }
+    var outputCount: Int { numOutputs }
 }
 
 final class WasmSelect: WasmOperation {

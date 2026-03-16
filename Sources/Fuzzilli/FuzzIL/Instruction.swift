@@ -1131,8 +1131,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmReturn = Fuzzilli_Protobuf_WasmReturn()
             case .wasmJsCall(let op):
                 $0.wasmJsCall = Fuzzilli_Protobuf_WasmJsCall.with {
-                    $0.parameterTypes = op.functionSignature.parameterTypes.map(ILTypeToWasmTypeEnum)
-                    $0.outputTypes = op.functionSignature.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.parameterCount = Int32(op.parameterCount)
+                    $0.outputCount = Int32(op.outputCount)
                 }
             case .wasmi32CompareOp(let op):
                 $0.wasmi32CompareOp = Fuzzilli_Protobuf_Wasmi32CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.rawValue) }
@@ -2287,9 +2287,7 @@ extension Instruction: ProtobufConvertible {
         case .wasmReturn(_):
             op = WasmReturn(returnCount: inouts.count)
         case .wasmJsCall(let p):
-            let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
-            let outputs = p.outputTypes.map(WasmTypeEnumToILType)
-            op = WasmJsCall(signature: parameters => outputs)
+            op = WasmJsCall(parameterCount: Int(p.parameterCount), outputCount: Int(p.outputCount))
 
         // Wasm Numerical Operations
         case .wasmi32CompareOp(let p):

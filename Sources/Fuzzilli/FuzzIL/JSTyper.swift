@@ -803,14 +803,15 @@ public struct JSTyper: Analyzer {
                 registerWasmMemoryUse(for: instr.input(0))
                 setType(of: instr.output, to: isMemory64 ? .wasmi64 : .wasmi32)
             case .wasmJsCall(let op):
-                let sigOutputTypes = op.functionSignature.outputTypes
+                let wasmSignature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+                let sigOutputTypes = wasmSignature.outputTypes
                 assert(sigOutputTypes.count < 2, "multi-return js calls are not supported")
                 if !sigOutputTypes.isEmpty {
                     setType(of: instr.output, to: sigOutputTypes[0])
                 }
-                let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
+                let definingInstruction = defUseAnalyzer.definition(of: instr.input(1))
                 // Here we query the typer for the signature of the instruction as that is the correct "JS" Signature instead of taking the call-site specific converted wasm signature.
-                dynamicObjectGroupManager.addWasmFunction(withSignature: type(of: instr.input(0)).signature ?? Signature.forUnknownFunction, forDefinition: definingInstruction, forVariable: instr.input(0))
+                dynamicObjectGroupManager.addWasmFunction(withSignature: type(of: instr.input(1)).signature ?? Signature.forUnknownFunction, forDefinition: definingInstruction, forVariable: instr.input(1))
             case .beginWasmFunction(let op):
                 wasmTypeBeginBlock(instr, op.signature)
             case .endWasmFunction(let op):

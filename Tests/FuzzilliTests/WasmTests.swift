@@ -6539,7 +6539,8 @@ class WasmSpliceTests: XCTestCase {
             module.addWasmFunction(with: [] => []) { function, label, args in
                 let argument = function.consti32(1337)
                 let signature = ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
-                splicePoint = b.indexOfNextInstruction()
+                // +1 for the wasm-gc signature type that is created implicitly.
+                splicePoint = b.indexOfNextInstruction() + 1
                 function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
                 return []
             }
@@ -6583,7 +6584,8 @@ class WasmSpliceTests: XCTestCase {
             module.addWasmFunction(with: [] => []) { function, label, args in
                 let argument = function.consti32(1337)
                 let signature = ProgramBuilder.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1)]))
-                splicePoint = b.indexOfNextInstruction()
+                // +1 for the wasm-gc signature type that is created implicitly.
+                splicePoint = b.indexOfNextInstruction() + 1
                 function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
                 return []
             }

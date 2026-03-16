@@ -1483,8 +1483,9 @@ public class WasmLifter {
                 // Special handling for functions, we only expect them in WasmJSCalls, and WasmDefineTable instructions right now.
                 // We can treat the suspendingObjects as function imports.
                 if inputType.Is(.function()) || inputType.Is(.object(ofGroup: "WasmSuspendingObject")) {
-                    if case .wasmJsCall(let op) = instr.op.opcode {
-                        importIfNeeded(.import(type: .function(nil), variable: input, signature: op.functionSignature))
+                    if case .wasmJsCall(_) = instr.op.opcode {
+                        let wasmSignature = typer.type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+                        importIfNeeded(.import(type: .function(nil), variable: input, signature: wasmSignature))
                     } else if case .wasmDefineTable(let op) = instr.op.opcode {
                         // Find the signature in the defined entries
                         let sig = op.definedEntries[idx].signature
@@ -1887,9 +1888,9 @@ public class WasmLifter {
             let dstTableIdx = try resolveIdx(ofType: .table, for: wasmInstruction.input(0))
             let srcTableIdx = try resolveIdx(ofType: .table, for: wasmInstruction.input(1))
             return Data([0xFC, 0x0e]) + Leb128.unsignedEncode(dstTableIdx) + Leb128.unsignedEncode(srcTableIdx)
-        case .wasmJsCall(let op):
+        case .wasmJsCall(_):
             // We filter first, such that we get the index of functions only.
-            let wasmSignature = op.functionSignature
+            let wasmSignature = typer.type(of: wasmInstruction.input(0)).wasmFunctionSignatureDefSignature
 
             // This has somewhat special handling as we might have multiple imports for this variable, we also need to get the right index that matches that signature that we expect here.
             // TODO(cffsmith): consider adding that signature matching feature to resolveIdx.
@@ -1900,7 +1901,7 @@ public class WasmLifter {
                     return false
                 }
             }).firstIndex(where: {
-                wasmInstruction.input(0) == $0.getImport()!.variable && wasmSignature == $0.getImport()!.signature
+                wasmInstruction.input(1) == $0.getImport()!.variable && wasmSignature == $0.getImport()!.signature
             }) {
                 return Data([0x10]) + Leb128.unsignedEncode(index)
             } else {
