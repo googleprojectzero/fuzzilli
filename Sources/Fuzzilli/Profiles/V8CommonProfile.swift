@@ -949,6 +949,9 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         if probability(0.5) {
             args.append("--maglev-untagged-phis")
         }
+        if probability(0.1) {
+            args.append("--no-maglev-loop-peeling")
+        }
         if probability(0.25) {
             args.append("--maglev-future")
         }
@@ -1146,7 +1149,6 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         // Maglev related flags
         chooseBooleanFlag("maglev-inline-api-calls")
         chooseBooleanFlag("maglev-inlining")
-        chooseBooleanFlag("maglev-loop-peeling")
         chooseBooleanFlag("maglev-optimistic-peeled-loops")
         chooseBooleanFlag("maglev-pretenure-store-values")
         chooseBooleanFlag("maglev-poly-calls")
