@@ -154,5 +154,34 @@ let v8DumplingProfile = Profile(
 
     additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
 
-    optionalPostProcessor: nil
+    optionalPostProcessor: DumplingFuzzingPostProcessor()
 )
+
+/// A post-processor for the Dumpling profile.
+///
+/// Work-around for differential fuzzing to avoid f.arguments.
+/// Or any access to "arguments" with a computed property. We just
+/// overapproximate this by checking for any string occurence of
+/// "arguments" and reject the sample.
+public struct DumplingFuzzingPostProcessor: FuzzingPostProcessor {
+    public func process(_ program: Program, for fuzzer: Fuzzer) throws -> Program {
+        for instr in program.code {
+            switch instr.op.opcode {
+            case .loadString(let op) where op.value == "arguments":
+                throw InternalError.postProcessRejection("\"arguments\" string")
+            case .getProperty(let op) where op.propertyName == "arguments":
+                throw InternalError.postProcessRejection("f.arguments access")
+            case .setProperty(let op) where op.propertyName == "arguments":
+                throw InternalError.postProcessRejection("f.arguments assignment")
+            case .updateProperty(let op) where op.propertyName == "arguments":
+                throw InternalError.postProcessRejection("f.arguments update")
+            case .deleteProperty(let op) where op.propertyName == "arguments":
+                throw InternalError.postProcessRejection("f.arguments deletion")
+            default:
+                break
+            }
+        }
+
+        return program
+    }
+}

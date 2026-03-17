@@ -23,3 +23,8 @@ public enum FuzzilliError: Error {
     case evaluatorStateImportError(String)
     case codeVerificationError(String)
 }
+
+// Simple error enum for internally handled errors, not displayed to the user.
+public enum InternalError: Error {
+    case postProcessRejection(String)
+}

@@ -15,7 +15,7 @@
 
 // A post-processor that inserts calls to the sandbox corruption functions (defined in the codeSuffix below) into the generated samples.
 fileprivate struct SandboxFuzzingPostProcessor: FuzzingPostProcessor {
-    func process(_ program: Fuzzilli.Program, for fuzzer: Fuzzer) -> Fuzzilli.Program {
+    func process(_ program: Program, for fuzzer: Fuzzer) throws -> Program {
         // We don't instrument every generated program since we still want the fuzzer to make progress towards
         // discovering more interestesting programs and adding them to the corpus. Corrupting objects in every
         // generated program might hamper that.

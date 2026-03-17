@@ -16,5 +16,5 @@ import Foundation
 
 // A post-processor can be used to modify samples generated during fuzzing before executing them.
 public protocol FuzzingPostProcessor {
-    func process(_ program: Program, for fuzzer: Fuzzer) -> Program
+    func process(_ program: Program, for fuzzer: Fuzzer) throws -> Program
 }

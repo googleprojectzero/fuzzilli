@@ -32,8 +32,17 @@ public class FuzzEngine: ComponentBase {
         fatalError("Must be implemented by child classes")
     }
 
-    final func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> ExecutionOutcome {
-        let program = postProcessor?.process(program, for: fuzzer) ?? program
+    final func execute(_ rawProgram: Program, withTimeout timeout: UInt32? = nil) -> ExecutionOutcome {
+        let program : Program
+        do {
+            // An optional post processor can reject a sample right away with
+            // the postProcessRejectionError.
+            program = try postProcessor?.process(rawProgram, for: fuzzer) ?? rawProgram
+        } catch InternalError.postProcessRejection {
+            return ExecutionOutcome.failed(1)
+        } catch {
+            fatalError("Unexpected error in post processor.")
+        }
 
         fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
 

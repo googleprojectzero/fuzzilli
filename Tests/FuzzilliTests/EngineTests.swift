@@ -48,4 +48,62 @@ class EngineTests: XCTestCase {
         XCTAssertEqual(mockPostProcessor.callCount, 3)
         XCTAssert(fuzzer.isStopped)
     }
+
+    // Test that certain usages of "arguments" are rejected by the Dumpling
+    // post processor.
+    func testDumplingPostProcessor() {
+        let fuzzer = makeMockFuzzer()
+        let processor = DumplingFuzzingPostProcessor()
+
+        let rejectedCases: [(ProgramBuilder) -> ()] = [
+            { b in
+                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                b.getProperty("arguments", of: f)
+            },
+            { b in
+                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                let i = b.loadInt(0)
+                b.setProperty("arguments", of: f, to: i)
+            },
+            { b in
+                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                let i = b.loadInt(0)
+                b.updateProperty("arguments", of: f, with: i, using: BinaryOperator.Add)
+            },
+            { b in
+                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                b.deleteProperty("arguments", of: f)
+            },
+            { b in
+                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                let a = b.loadString("arguments")
+                b.getComputedProperty(a, of: f)
+            },
+        ]
+
+        for (i, rejectedCase) in rejectedCases.enumerated() {
+            let b = fuzzer.makeBuilder()
+            rejectedCase(b)
+            let program = b.finalize()
+            XCTAssertThrowsError(try processor.process(program, for: fuzzer), "test case \(i)")
+        }
+
+        for acceptedCase: (ProgramBuilder) -> () in [
+            { b in
+                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                b.getProperty("not_arguments", of: f)
+            },
+            { b in
+                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                let a = b.loadString("not_arguments")
+                b.getComputedProperty(a, of: f)
+            },
+        ] {
+
+            let b = fuzzer.makeBuilder()
+            acceptedCase(b)
+            let program = b.finalize()
+            _ = try! processor.process(program, for: fuzzer)
+        }
+    }
 }
