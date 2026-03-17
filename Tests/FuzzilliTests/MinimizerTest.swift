@@ -1592,7 +1592,7 @@ class MinimizerTests: XCTestCase {
                     } catchAllBody: { label in
                         function.wasmReturn(function.consti64(-1))
                     }
-                    return [function.consti32(-1)]
+                    return [function.consti64(-1)]
                 }
             }
 
@@ -1602,7 +1602,7 @@ class MinimizerTests: XCTestCase {
                     function.wasmBuildLegacyTryVoid { label in
                         function.wasmReturn(function.consti64(42))
                     }
-                    return [function.consti32(-1)]
+                    return [function.consti64(-1)]
                 }
             }
         }
@@ -1628,7 +1628,7 @@ class MinimizerTests: XCTestCase {
                                 function.wasmReturn(val)
                             }),
                             (tag: irrelevantTag, body: { _, _, _ in })])
-                    return [function.consti32(-1)]
+                    return [function.consti64(-1)]
                 }
             }
 
@@ -1642,7 +1642,7 @@ class MinimizerTests: XCTestCase {
                         }, catchClauses: [(tag: tag, body: { _, _, _ in
                             function.wasmReturn(function.consti64(42))
                         })])
-                    return [function.consti32(-1)]
+                    return [function.consti64(-1)]
                 }
             }
         }
@@ -1659,7 +1659,7 @@ class MinimizerTests: XCTestCase {
                                 evaluator.nextInstructionIsImportant(in: b)
                                 function.wasmReturn(val)
                         }, catchClauses: [(tag: tag, body: { _, _, _ in function.wasmUnreachable() })])
-                    return [function.consti32(-1)]
+                    return [function.consti64(-1)]
                 }
             }
 
@@ -1667,7 +1667,7 @@ class MinimizerTests: XCTestCase {
             return b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _, _ in
                         function.wasmReturn(function.consti64(42))
-                        return [function.consti32(-1)]
+                        return [function.consti64(-1)]
                 }
             }
         }

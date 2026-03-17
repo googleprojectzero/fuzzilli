@@ -1287,8 +1287,9 @@ public class WasmLifter {
             // Just analyze the instruction but do nothing else here.
             // This lets the typer know that we can skip this instruction without breaking any analysis.
             break
-        case .beginWasmFunction(let op):
-            let functionInfo = FunctionInfo(op.signature, Data(), for: self, withArguments: Array(instr.innerOutputs))
+        case .beginWasmFunction(_):
+            let signature = typer.type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+            let functionInfo = FunctionInfo(signature, Data(), for: self, withArguments: Array(instr.innerOutputs))
             self.exports.append(.function(functionInfo))
             // Set the current active function as we are *actively* in it.
             currentFunction = functionInfo

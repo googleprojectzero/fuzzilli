@@ -812,11 +812,13 @@ public struct JSTyper: Analyzer {
                 let definingInstruction = defUseAnalyzer.definition(of: instr.input(1))
                 // Here we query the typer for the signature of the instruction as that is the correct "JS" Signature instead of taking the call-site specific converted wasm signature.
                 dynamicObjectGroupManager.addWasmFunction(withSignature: type(of: instr.input(1)).signature ?? Signature.forUnknownFunction, forDefinition: definingInstruction, forVariable: instr.input(1))
-            case .beginWasmFunction(let op):
-                wasmTypeBeginBlock(instr, op.signature)
-            case .endWasmFunction(let op):
-                setType(of: instr.output, to: .wasmFunctionDef(op.signature))
-                dynamicObjectGroupManager.addWasmFunction(withSignature: ProgramBuilder.convertWasmSignatureToJsSignature(op.signature), forDefinition: instr, forVariable: instr.output)
+            case .beginWasmFunction(_):
+                let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+                wasmTypeBeginBlock(instr, signature)
+            case .endWasmFunction(_):
+                let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
+                setType(of: instr.output, to: .wasmFunctionDef(signature))
+                dynamicObjectGroupManager.addWasmFunction(withSignature: ProgramBuilder.convertWasmSignatureToJsSignature(signature), forDefinition: instr, forVariable: instr.output)
             case .wasmSelect(_):
                 setType(of: instr.output, to: type(of: instr.input(0)))
             case .wasmBeginBlock(_):

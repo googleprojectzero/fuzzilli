@@ -1552,22 +1552,22 @@ final class WasmReassign: WasmOperation {
 
 final class BeginWasmFunction: WasmOperation {
     override var opcode: Opcode { .beginWasmFunction(self) }
-    public let signature: WasmSignature
 
-    init(signature: WasmSignature) {
-        self.signature = signature
-        super.init(numInnerOutputs: 1 + signature.parameterTypes.count, attributes: [.isBlockStart], requiredContext: [.wasm], contextOpened: [.wasmFunction])
+    init(parameterCount: Int) {
+        super.init(numInputs: 1, numInnerOutputs: 1 + parameterCount, attributes: [.isBlockStart], requiredContext: [.wasm], contextOpened: [.wasmFunction])
     }
+
+    var parameterCount: Int { numInnerOutputs - 1 }
 }
 
 final class EndWasmFunction: WasmOperation {
     override var opcode: Opcode { .endWasmFunction(self) }
-    let signature: WasmSignature
 
-    init(signature: WasmSignature) {
-        self.signature = signature
-        super.init(numInputs: signature.outputTypes.count, numOutputs: 1, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
+    init(outputCount: Int) {
+        super.init(numInputs: 1 + outputCount, numOutputs: 1, attributes: [.isBlockEnd], requiredContext: [.wasmFunction])
     }
+
+    var outputCount: Int { numInputs - 1 }
 }
 
 /// This class is used to indicate nops in the wasm world, this makes handling of minimization much easier.

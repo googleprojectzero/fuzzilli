@@ -1276,8 +1276,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 provides: [.wasmFunction]
             ) { b in
                 let module = b.currentWasmModule
+                // TODO(mliedtke): Support index wasm-gc types in the signature. This requires the
+                // WasmDefineTable operation to track their types in a way that is compatible with
+                // wasm-gc types. Similarly, WasmCallIndirect and WasmReturnCallIndirect need to be
+                // adapted to use wasm-gc signatures.
                 let functionSignature = b.randomWasmSignature()
-                b.emit(BeginWasmFunction(signature: functionSignature))
+                let signatureDef = b.wasmDefineAdHocSignatureType(signature: functionSignature)
+                b.emit(BeginWasmFunction(parameterCount: functionSignature.parameterTypes.count), withInputs: [signatureDef])
             },
             GeneratorStub(
                 "WasmFunctionEndGenerator",
@@ -1285,14 +1290,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 produces: [.wasmFunctionDef()]
             ) { b in
                 let function = b.currentWasmFunction
-                let results = function.signature.outputTypes.map {
-                    b.randomVariable(ofType: $0) ?? b.currentWasmFunction
-                        .generateRandomWasmVar(ofType: $0)!
-                }
+                let results = function.signature.outputTypes.map(function.findOrGenerateWasmVar)
 
                 b.emit(
-                    EndWasmFunction(signature: function.signature),
-                    withInputs: results)
+                    EndWasmFunction(outputCount: results.count),
+                    withInputs: [function.signatureDef] + results)
             },
         ]),
 

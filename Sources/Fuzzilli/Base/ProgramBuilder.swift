@@ -3495,11 +3495,14 @@ public class ProgramBuilder {
         private let b: ProgramBuilder
         let signature: WasmSignature
         let jsSignature: Signature
+        let signatureDef: Variable
 
-        public init(forBuilder b: ProgramBuilder, withSignature signature: WasmSignature) {
+        public init(forBuilder b: ProgramBuilder, signatureDef: Variable) {
+            assert(b.type(of: signatureDef).Is(.wasmTypeDef()))
             self.b = b
-            self.signature = signature
+            self.signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
             self.jsSignature = convertWasmSignatureToJsSignature(signature)
+            self.signatureDef = signatureDef
         }
 
         // Wasm Instructions
@@ -4500,9 +4503,16 @@ public class ProgramBuilder {
         // TODO: distinguish between exported and non-exported functions
         @discardableResult
         public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, Variable, [Variable]) -> [Variable]) -> Variable {
-            let instr = b.emit(BeginWasmFunction(signature: signature))
+            let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
+            return addWasmFunction(signature: signatureDef, body)
+        }
+
+        @discardableResult
+        public func addWasmFunction(signature: Variable, _ body: (WasmFunction, Variable, [Variable]) -> [Variable]) -> Variable {
+            let signatureType = b.type(of: signature).wasmFunctionSignatureDefSignature
+            let instr = b.emit(BeginWasmFunction(parameterCount: signatureType.parameterTypes.count), withInputs: [signature])
             let results = body(currentWasmFunction, instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return b.emit(EndWasmFunction(signature: signature), withInputs: results).output
+            return b.emit(EndWasmFunction(outputCount: signatureType.outputTypes.count), withInputs: [signature] + results, types: [.wasmTypeDef()] + signatureType.outputTypes).output
         }
 
         @discardableResult
@@ -5022,8 +5032,8 @@ public class ProgramBuilder {
             break
         case .wasmDefineTag(_):
             break
-        case .beginWasmFunction(let op):
-            activeWasmModule!.functions.append(WasmFunction(forBuilder: self, withSignature: op.signature))
+        case .beginWasmFunction(_):
+            activeWasmModule!.functions.append(WasmFunction(forBuilder: self, signatureDef: instr.input(0)))
         case .wasmBeginTry(_),
              .wasmEndTryDelegate(_),
              .wasmBeginTryDelegate(_),

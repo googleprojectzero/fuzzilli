@@ -830,9 +830,9 @@ public class FuzzILLifter: Lifter {
 
         // Wasm Instructions
 
-        case .beginWasmFunction(let op):
+        case .beginWasmFunction(_):
             // TODO(cffsmith): do this properly?
-            w.emit("BeginWasmFunction (\(op.signature)) -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
+            w.emit("BeginWasmFunction \(input(0)) -> L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs(1...)))]")
             w.increaseIndentionLevel()
 
         case .endWasmFunction:
