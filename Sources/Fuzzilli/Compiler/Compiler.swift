@@ -117,24 +117,12 @@ public class JavaScriptCompiler {
                 var inputs = [Variable]()
                 switch key {
                 case .name(let name):
-                    if property.isStatic {
-                        op = ClassAddStaticProperty(propertyName: name, hasValue: property.hasValue)
-                    } else {
-                        op = ClassAddInstanceProperty(propertyName: name, hasValue: property.hasValue)
-                    }
+                    op = ClassAddProperty(propertyName: name, hasValue: property.hasValue, isStatic: property.isStatic)
                 case .index(let index):
-                    if property.isStatic {
-                        op = ClassAddStaticElement(index: index, hasValue: property.hasValue)
-                    } else {
-                        op = ClassAddInstanceElement(index: index, hasValue: property.hasValue)
-                    }
+                    op = ClassAddElement(index: index, hasValue: property.hasValue, isStatic: property.isStatic)
                 case .expression:
                     inputs.append(computedKeys.removeLast())
-                    if property.isStatic {
-                        op = ClassAddStaticComputedProperty(hasValue: property.hasValue)
-                    } else {
-                        op = ClassAddInstanceComputedProperty(hasValue: property.hasValue)
-                    }
+                    op = ClassAddComputedProperty(hasValue: property.hasValue, isStatic: property.isStatic)
                 }
                 if property.hasValue {
                     inputs.append(propertyValues.removeLast())
@@ -165,23 +153,11 @@ public class JavaScriptCompiler {
                 }
                 switch key {
                 case .name(let name):
-                    if method.isStatic {
-                        head = emit(BeginClassStaticMethod(methodName: name, parameters: parameters))
-                    } else {
-                        head = emit(BeginClassInstanceMethod(methodName: name, parameters: parameters))
-                    }
+                    head = emit(BeginClassMethod(methodName: name, parameters: parameters, isStatic: method.isStatic))
                 case .index(let index):
-                    if method.isStatic {
-                        head = emit(BeginClassStaticMethod(methodName: String(index), parameters: parameters))
-                    } else {
-                        head = emit(BeginClassInstanceMethod(methodName: String(index), parameters: parameters))
-                    }
+                    head = emit(BeginClassMethod(methodName: String(index), parameters: parameters, isStatic: method.isStatic))
                 case .expression:
-                    if method.isStatic {
-                        head = emit(BeginClassStaticComputedMethod(parameters: parameters), withInputs: [computedKeys.removeLast()])
-                    } else {
-                        head = emit(BeginClassInstanceComputedMethod(parameters: parameters), withInputs: [computedKeys.removeLast()])
-                    }
+                    head = emit(BeginClassComputedMethod(parameters: parameters, isStatic: method.isStatic), withInputs: [computedKeys.removeLast()])
                 }
 
                 try enterNewScope {
@@ -195,32 +171,15 @@ public class JavaScriptCompiler {
 
                 switch key {
                 case .name:
-                    if method.isStatic {
-                        emit(EndClassStaticMethod())
-                    } else {
-                        emit(EndClassInstanceMethod())
-                    }
+                    emit(EndClassMethod())
                 case .index:
-                    if method.isStatic {
-                        emit(EndClassStaticMethod())
-                    } else {
-                        emit(EndClassInstanceMethod())
-                    }
+                    emit(EndClassMethod())
                 case .expression:
-                    if method.isStatic {
-                        emit(EndClassStaticComputedMethod())
-                    } else {
-                        emit(EndClassInstanceComputedMethod())
-                    }
+                    emit(EndClassComputedMethod())
                 }
 
             case .getter(let getter):
-                let head: Instruction
-                if getter.isStatic {
-                    head = emit(BeginClassStaticGetter(propertyName: getter.name))
-                } else {
-                    head = emit(BeginClassInstanceGetter(propertyName: getter.name))
-                }
+                let head = emit(BeginClassGetter(propertyName: getter.name, isStatic: getter.isStatic))
 
                 try enterNewScope {
                     map("this", to: head.innerOutput)
@@ -229,19 +188,10 @@ public class JavaScriptCompiler {
                     }
                 }
 
-                if getter.isStatic {
-                    emit(EndClassStaticGetter())
-                } else {
-                    emit(EndClassInstanceGetter())
-                }
+                emit(EndClassGetter())
 
             case .setter(let setter):
-                let head: Instruction
-                if setter.isStatic {
-                    head = emit(BeginClassStaticSetter(propertyName: setter.name))
-                } else {
-                    head = emit(BeginClassInstanceSetter(propertyName: setter.name))
-                }
+                let head = emit(BeginClassSetter(propertyName: setter.name, isStatic: setter.isStatic))
 
                 try enterNewScope {
                     var parameters = head.innerOutputs
@@ -253,11 +203,7 @@ public class JavaScriptCompiler {
                     }
                 }
 
-                if setter.isStatic {
-                    emit(EndClassStaticSetter())
-                } else {
-                    emit(EndClassInstanceSetter())
-                }
+                emit(EndClassSetter())
 
             case .staticInitializer(let staticInitializer):
                 let head = emit(BeginClassStaticInitializer())

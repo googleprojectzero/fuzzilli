@@ -61,17 +61,12 @@ struct InliningReducer: Reducer {
                  .beginObjectLiteralGetter,
                  .beginObjectLiteralSetter,
                  .beginClassConstructor,
-                 .beginClassInstanceMethod,
-                 .beginClassInstanceComputedMethod,
-                 .beginClassInstanceGetter,
-                 .beginClassInstanceSetter,
+                 .beginClassMethod,
+                 .beginClassComputedMethod,
+                 .beginClassGetter,
+                 .beginClassSetter,
                  .beginClassStaticInitializer,
-                 .beginClassStaticMethod,
-                 .beginClassStaticComputedMethod,
-                 .beginClassStaticGetter,
-                 .beginClassStaticSetter,
-                 .beginClassPrivateInstanceMethod,
-                 .beginClassPrivateStaticMethod:
+                 .beginClassPrivateMethod:
                 activeSubroutineDefinitions.append(instr.hasOneOutput ? instr.output : nil)
             case .endPlainFunction,
                  .endArrowFunction,
@@ -85,17 +80,12 @@ struct InliningReducer: Reducer {
                  .endObjectLiteralGetter,
                  .endObjectLiteralSetter,
                  .endClassConstructor,
-                 .endClassInstanceMethod,
-                 .endClassInstanceComputedMethod,
-                 .endClassInstanceGetter,
-                 .endClassInstanceSetter,
+                 .endClassMethod,
+                 .endClassComputedMethod,
+                 .endClassGetter,
+                 .endClassSetter,
                  .endClassStaticInitializer,
-                 .endClassStaticMethod,
-                 .endClassStaticComputedMethod,
-                 .endClassStaticGetter,
-                 .endClassStaticSetter,
-                 .endClassPrivateInstanceMethod,
-                 .endClassPrivateStaticMethod:
+                 .endClassPrivateMethod:
                 activeSubroutineDefinitions.removeLast()
             default:
                 assert(!instr.op.contextOpened.contains(.subroutine))

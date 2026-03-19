@@ -496,96 +496,34 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .classAddInstanceProperty(let op):
+            case .classAddProperty(let op):
                 let PROPERTY = op.propertyName
+                let staticStr = op.isStatic ? "static " : ""
                 if op.hasValue {
                     let VALUE = input(0)
-                    w.emit("\(PROPERTY) = \(VALUE);")
+                    w.emit("\(staticStr)\(PROPERTY) = \(VALUE);")
                 } else {
-                    w.emit("\(PROPERTY);")
+                    w.emit("\(staticStr)\(PROPERTY);")
                 }
 
-            case .classAddInstanceElement(let op):
+            case .classAddElement(let op):
                 let INDEX = op.index < 0 ? "[\(op.index)]" : String(op.index)
+                let staticStr = op.isStatic ? "static " : ""
                 if op.hasValue {
                     let VALUE = input(0)
-                    w.emit("\(INDEX) = \(VALUE);")
+                    w.emit("\(staticStr)\(INDEX) = \(VALUE);")
                 } else {
-                    w.emit("\(INDEX);")
+                    w.emit("\(staticStr)\(INDEX);")
                 }
 
-            case .classAddInstanceComputedProperty(let op):
+            case .classAddComputedProperty(let op):
                 let PROPERTY = input(0)
+                let staticStr = op.isStatic ? "static " : ""
                 if op.hasValue {
                     let VALUE = input(1)
-                    w.emit("[\(PROPERTY)] = \(VALUE);")
+                    w.emit("\(staticStr)[\(PROPERTY)] = \(VALUE);")
                 } else {
-                    w.emit("[\(PROPERTY)];")
-                }
-
-            case .beginClassInstanceMethod(let op):
-                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
-                let PARAMS = liftParameters(op.parameters, as: vars)
-                let METHOD = quoteMethodDefinitionIfNeeded(op.methodName)
-                w.emit("\(METHOD)(\(PARAMS)) {")
-                w.enterNewBlock()
-                bindVariableToThis(instr.innerOutput(0))
-
-            case .beginClassInstanceComputedMethod(let op):
-                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
-                let PARAMS = liftParameters(op.parameters, as: vars)
-                let METHOD = input(0)
-                w.emit("[\(METHOD)](\(PARAMS)) {")
-                w.enterNewBlock()
-                bindVariableToThis(instr.innerOutput(0))
-
-            case .beginClassInstanceGetter(let op):
-                let PROPERTY = op.propertyName
-                w.emit("get \(PROPERTY)() {")
-                w.enterNewBlock()
-                bindVariableToThis(instr.innerOutput(0))
-
-            case .beginClassInstanceSetter(let op):
-                assert(instr.numInnerOutputs == 2)
-                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
-                let PARAMS = liftParameters(op.parameters, as: vars)
-                let PROPERTY = op.propertyName
-                w.emit("set \(PROPERTY)(\(PARAMS)) {")
-                w.enterNewBlock()
-                bindVariableToThis(instr.innerOutput(0))
-
-            case .endClassInstanceMethod,
-                 .endClassInstanceComputedMethod,
-                 .endClassInstanceGetter,
-                 .endClassInstanceSetter:
-                w.leaveCurrentBlock()
-                w.emit("}")
-
-            case .classAddStaticProperty(let op):
-                let PROPERTY = op.propertyName
-                if op.hasValue {
-                    let VALUE = input(0)
-                    w.emit("static \(PROPERTY) = \(VALUE);")
-                } else {
-                    w.emit("static \(PROPERTY);")
-                }
-
-            case .classAddStaticElement(let op):
-                let INDEX = op.index < 0 ? "[\(op.index)]" : String(op.index)
-                if op.hasValue {
-                    let VALUE = input(0)
-                    w.emit("static \(INDEX) = \(VALUE);")
-                } else {
-                    w.emit("static \(INDEX);")
-                }
-
-            case .classAddStaticComputedProperty(let op):
-                let PROPERTY = input(0)
-                if op.hasValue {
-                    let VALUE = input(1)
-                    w.emit("static [\(PROPERTY)] = \(VALUE);")
-                } else {
-                    w.emit("static [\(PROPERTY)];")
+                    w.emit("\(staticStr)[\(PROPERTY)];")
                 }
 
             case .beginClassStaticInitializer:
@@ -593,82 +531,72 @@ public class JavaScriptLifter: Lifter {
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
 
-            case .beginClassStaticMethod(let op):
+            case .endClassStaticInitializer:
+                w.leaveCurrentBlock()
+                w.emit("}")
+
+            case .beginClassMethod(let op):
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = quoteMethodDefinitionIfNeeded(op.methodName)
-                w.emit("static \(METHOD)(\(PARAMS)) {")
+                let staticStr = op.isStatic ? "static " : ""
+                w.emit("\(staticStr)\(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
 
-            case .beginClassStaticComputedMethod(let op):
+            case .beginClassComputedMethod(let op):
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = input(0)
-                w.emit("static [\(METHOD)](\(PARAMS)) {")
+                let staticStr = op.isStatic ? "static " : ""
+                w.emit("\(staticStr)[\(METHOD)](\(PARAMS)) {")
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
 
-            case .beginClassStaticGetter(let op):
-                assert(instr.numInnerOutputs == 1)
+            case .beginClassGetter(let op):
                 let PROPERTY = op.propertyName
-                w.emit("static get \(PROPERTY)() {")
+                let staticStr = op.isStatic ? "static " : ""
+                w.emit("\(staticStr)get \(PROPERTY)() {")
                 w.enterNewBlock()
-                bindVariableToThis(instr.innerOutput)
+                bindVariableToThis(instr.innerOutput(0))
 
-            case .beginClassStaticSetter(let op):
+            case .beginClassSetter(let op):
                 assert(instr.numInnerOutputs == 2)
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let PROPERTY = op.propertyName
-                w.emit("static set \(PROPERTY)(\(PARAMS)) {")
+                let staticStr = op.isStatic ? "static " : ""
+                w.emit("\(staticStr)set \(PROPERTY)(\(PARAMS)) {")
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
 
-            case .endClassStaticInitializer,
-                 .endClassStaticMethod,
-                 .endClassStaticComputedMethod,
-                 .endClassStaticGetter,
-                 .endClassStaticSetter:
+            case .endClassMethod,
+                 .endClassComputedMethod,
+                 .endClassGetter,
+                 .endClassSetter:
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .classAddPrivateInstanceProperty(let op):
+            case .classAddPrivateProperty(let op):
                 let PROPERTY = op.propertyName
+                let staticStr = op.isStatic ? "static " : ""
                 if op.hasValue {
                     let VALUE = input(0)
-                    w.emit("#\(PROPERTY) = \(VALUE);")
+                    w.emit("\(staticStr)#\(PROPERTY) = \(VALUE);")
                 } else {
-                    w.emit("#\(PROPERTY);")
+                    w.emit("\(staticStr)#\(PROPERTY);")
                 }
 
-            case .beginClassPrivateInstanceMethod(let op):
+            case .beginClassPrivateMethod(let op):
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = op.methodName
-                w.emit("#\(METHOD)(\(PARAMS)) {")
+                let staticStr = op.isStatic ? "static " : ""
+                w.emit("\(staticStr)#\(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
                 bindVariableToThis(instr.innerOutput(0))
 
-            case .classAddPrivateStaticProperty(let op):
-                let PROPERTY = op.propertyName
-                if op.hasValue {
-                    let VALUE = input(0)
-                    w.emit("static #\(PROPERTY) = \(VALUE);")
-                } else {
-                    w.emit("static #\(PROPERTY);")
-                }
-
-            case .beginClassPrivateStaticMethod(let op):
-                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
-                let PARAMS = liftParameters(op.parameters, as: vars)
-                let METHOD = op.methodName
-                w.emit("static #\(METHOD)(\(PARAMS)) {")
-                w.enterNewBlock()
-                bindVariableToThis(instr.innerOutput(0))
-
-            case .endClassPrivateInstanceMethod,
-                 .endClassPrivateStaticMethod:
+            case .endClassPrivateMethod:
                 w.leaveCurrentBlock()
                 w.emit("}")
 

@@ -696,145 +696,119 @@ final class EndClassConstructor: EndAnySubroutine {
     override var opcode: Opcode { .endClassConstructor(self) }
 }
 
-final class ClassAddInstanceProperty: JsOperation {
-    override var opcode: Opcode { .classAddInstanceProperty(self) }
+final class ClassAddProperty: JsOperation {
+    override var opcode: Opcode { .classAddProperty(self) }
 
     let propertyName: String
     var hasValue: Bool {
         return numInputs == 1
     }
+    let isStatic: Bool
 
-    init(propertyName: String, hasValue: Bool) {
+    init(propertyName: String, hasValue: Bool, isStatic: Bool) {
         self.propertyName = propertyName
+        self.isStatic = isStatic
         super.init(numInputs: hasValue ? 1 : 0, attributes: .isMutable, requiredContext: .classDefinition)
     }
 }
 
-final class ClassAddInstanceElement: JsOperation {
-    override var opcode: Opcode { .classAddInstanceElement(self) }
+final class ClassAddElement: JsOperation {
+    override var opcode: Opcode { .classAddElement(self) }
 
     let index: Int64
     var hasValue: Bool {
         return numInputs == 1
     }
+    let isStatic: Bool
 
-    init(index: Int64, hasValue: Bool) {
+    init(index: Int64, hasValue: Bool, isStatic: Bool) {
         self.index = index
+        self.isStatic = isStatic
         super.init(numInputs: hasValue ? 1 : 0, attributes: .isMutable, requiredContext: .classDefinition)
     }
 }
 
-final class ClassAddInstanceComputedProperty: JsOperation {
-    override var opcode: Opcode { .classAddInstanceComputedProperty(self) }
+final class ClassAddComputedProperty: JsOperation {
+    override var opcode: Opcode { .classAddComputedProperty(self) }
 
     var hasValue: Bool {
         return numInputs == 2
     }
+    let isStatic: Bool
 
-    init(hasValue: Bool) {
+    init(hasValue: Bool, isStatic: Bool) {
+        self.isStatic = isStatic
         super.init(numInputs: hasValue ? 2 : 1, requiredContext: .classDefinition)
     }
 }
 
-final class BeginClassInstanceMethod: BeginAnySubroutine {
-    override var opcode: Opcode { .beginClassInstanceMethod(self) }
+final class BeginClassMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassMethod(self) }
 
     let methodName: String
+    let isStatic: Bool
 
-    init(methodName: String, parameters: Parameters) {
+    init(methodName: String, parameters: Parameters, isStatic: Bool) {
         self.methodName = methodName
+        self.isStatic = isStatic
         // First inner output is the explicit |this| parameter
         super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
-final class EndClassInstanceMethod: EndAnySubroutine {
-    override var opcode: Opcode { .endClassInstanceMethod(self) }
+final class EndClassMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassMethod(self) }
 }
 
-final class BeginClassInstanceComputedMethod: BeginAnySubroutine {
-    override var opcode: Opcode { .beginClassInstanceComputedMethod(self) }
+final class BeginClassComputedMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassComputedMethod(self) }
+    let isStatic: Bool
 
-    init(parameters: Parameters) {
+    init(parameters: Parameters, isStatic: Bool) {
+        self.isStatic = isStatic
         // First inner output is the explicit |this| parameter
         super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
-final class EndClassInstanceComputedMethod: EndAnySubroutine {
-    override var opcode: Opcode { .endClassInstanceComputedMethod(self) }
+final class EndClassComputedMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassComputedMethod(self) }
 }
 
-final class BeginClassInstanceGetter: BeginAnySubroutine {
-    override var opcode: Opcode { .beginClassInstanceGetter(self) }
+final class BeginClassGetter: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassGetter(self) }
 
     let propertyName: String
+    let isStatic: Bool
 
-    init(propertyName: String) {
+    init(propertyName: String, isStatic: Bool) {
         self.propertyName = propertyName
+        self.isStatic = isStatic
         // First inner output is the explicit |this| parameter
         super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
-final class EndClassInstanceGetter: EndAnySubroutine {
-    override var opcode: Opcode { .endClassInstanceGetter(self) }
+final class EndClassGetter: EndAnySubroutine {
+    override var opcode: Opcode { .endClassGetter(self) }
 }
 
-final class BeginClassInstanceSetter: BeginAnySubroutine {
-    override var opcode: Opcode { .beginClassInstanceSetter(self) }
+final class BeginClassSetter: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassSetter(self) }
 
     let propertyName: String
+    let isStatic: Bool
 
-    init(propertyName: String) {
+    init(propertyName: String, isStatic: Bool) {
         self.propertyName = propertyName
+        self.isStatic = isStatic
         // First inner output is the explicit |this| parameter
         super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
-final class EndClassInstanceSetter: EndAnySubroutine {
-    override var opcode: Opcode { .endClassInstanceSetter(self) }
-}
-
-final class ClassAddStaticProperty: JsOperation {
-    override var opcode: Opcode { .classAddStaticProperty(self) }
-
-    let propertyName: String
-    var hasValue: Bool {
-        return numInputs == 1
-    }
-
-    init(propertyName: String, hasValue: Bool) {
-        self.propertyName = propertyName
-        super.init(numInputs: hasValue ? 1 : 0, attributes: .isMutable, requiredContext: .classDefinition)
-    }
-}
-
-final class ClassAddStaticElement: JsOperation {
-    override var opcode: Opcode { .classAddStaticElement(self) }
-
-    let index: Int64
-    var hasValue: Bool {
-        return numInputs == 1
-    }
-
-    init(index: Int64, hasValue: Bool) {
-        self.index = index
-        super.init(numInputs: hasValue ? 1 : 0, attributes: .isMutable, requiredContext: .classDefinition)
-    }
-}
-
-final class ClassAddStaticComputedProperty: JsOperation {
-    override var opcode: Opcode { .classAddStaticComputedProperty(self) }
-
-    var hasValue: Bool {
-        return numInputs == 2
-    }
-
-    init(hasValue: Bool) {
-        super.init(numInputs: hasValue ? 2 : 1, requiredContext: .classDefinition)
-    }
+final class EndClassSetter: EndAnySubroutine {
+    override var opcode: Opcode { .endClassSetter(self) }
 }
 
 final class BeginClassStaticInitializer: JsOperation {
@@ -855,130 +829,41 @@ final class EndClassStaticInitializer: JsOperation {
     }
 }
 
-final class BeginClassStaticMethod: BeginAnySubroutine {
-    override var opcode: Opcode { .beginClassStaticMethod(self) }
-
-    let methodName: String
-
-    init(methodName: String, parameters: Parameters) {
-        self.methodName = methodName
-        // First inner output is the explicit |this| parameter
-        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
-    }
-}
-
-final class EndClassStaticMethod: EndAnySubroutine {
-    override var opcode: Opcode { .endClassStaticMethod(self) }
-}
-
-final class BeginClassStaticComputedMethod: BeginAnySubroutine {
-    override var opcode: Opcode { .beginClassStaticComputedMethod(self) }
-
-    init(parameters: Parameters) {
-        // First inner output is the explicit |this| parameter
-        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
-    }
-}
-
-final class EndClassStaticComputedMethod: EndAnySubroutine {
-    override var opcode: Opcode { .endClassStaticComputedMethod(self) }
-}
-
-final class BeginClassStaticGetter: BeginAnySubroutine {
-    override var opcode: Opcode { .beginClassStaticGetter(self) }
-
-    let propertyName: String
-
-    init(propertyName: String) {
-        self.propertyName = propertyName
-        // First inner output is the explicit |this| parameter
-        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
-    }
-}
-
-final class EndClassStaticGetter: EndAnySubroutine {
-    override var opcode: Opcode { .endClassStaticGetter(self) }
-}
-
-final class BeginClassStaticSetter: BeginAnySubroutine {
-    override var opcode: Opcode { .beginClassStaticSetter(self) }
-
-    let propertyName: String
-
-    init(propertyName: String) {
-        self.propertyName = propertyName
-        // First inner output is the explicit |this| parameter
-        super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
-    }
-}
-
-final class EndClassStaticSetter: EndAnySubroutine {
-    override var opcode: Opcode { .endClassStaticSetter(self) }
-}
-
-final class ClassAddPrivateInstanceProperty: JsOperation {
-    override var opcode: Opcode { .classAddPrivateInstanceProperty(self) }
+final class ClassAddPrivateProperty: JsOperation {
+    override var opcode: Opcode { .classAddPrivateProperty(self) }
 
     let propertyName: String
     var hasValue: Bool {
         return numInputs == 1
     }
+    let isStatic: Bool
 
-    init(propertyName: String, hasValue: Bool) {
+    init(propertyName: String, hasValue: Bool, isStatic: Bool) {
         self.propertyName = propertyName
+        self.isStatic = isStatic
         // We currently don't want to change the names of private properties since that has a good chance of making
         // following code _syntactically_ incorrect (if it uses them) because an undeclared private field is accessed.
         super.init(numInputs: hasValue ? 1 : 0, requiredContext: .classDefinition)
     }
 }
 
-final class BeginClassPrivateInstanceMethod: BeginAnySubroutine {
-    override var opcode: Opcode { .beginClassPrivateInstanceMethod(self) }
+final class BeginClassPrivateMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassPrivateMethod(self) }
 
     let methodName: String
+    let isStatic: Bool
 
-    init(methodName: String, parameters: Parameters) {
+    init(methodName: String, parameters: Parameters, isStatic: Bool) {
         self.methodName = methodName
+        self.isStatic = isStatic
         // First inner output is the explicit |this| parameter.
-        // See comment in ClassAddPrivateInstanceProperty for why this operation isn't mutable.
+        // See comment in ClassAddPrivateProperty for why this operation isn't mutable.
         super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
-final class EndClassPrivateInstanceMethod: EndAnySubroutine {
-    override var opcode: Opcode { .endClassPrivateInstanceMethod(self) }
-}
-
-final class ClassAddPrivateStaticProperty: JsOperation {
-    override var opcode: Opcode { .classAddPrivateStaticProperty(self) }
-
-    let propertyName: String
-    var hasValue: Bool {
-        return numInputs == 1
-    }
-
-    init(propertyName: String, hasValue: Bool) {
-        self.propertyName = propertyName
-        // See comment in ClassAddPrivateInstanceProperty for why this operation isn't mutable.
-        super.init(numInputs: hasValue ? 1 : 0, requiredContext: .classDefinition)
-    }
-}
-
-final class BeginClassPrivateStaticMethod: BeginAnySubroutine {
-    override var opcode: Opcode { .beginClassPrivateStaticMethod(self) }
-
-    let methodName: String
-
-    init(methodName: String, parameters: Parameters) {
-        self.methodName = methodName
-        // First inner output is the explicit |this| parameter.
-        // See comment in ClassAddPrivateInstanceProperty for why this operation isn't mutable.
-        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
-    }
-}
-
-final class EndClassPrivateStaticMethod: EndAnySubroutine {
-    override var opcode: Opcode { .endClassPrivateStaticMethod(self) }
+final class EndClassPrivateMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassPrivateMethod(self) }
 }
 
 final class EndClassDefinition: JsOperation {

@@ -100,8 +100,9 @@ func disposableClassVariableGeneratorStubs(
             let parameters = b.randomParameters()
             b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
             b.emit(
-                BeginClassInstanceComputedMethod(
-                    parameters: parameters.parameters),
+                BeginClassComputedMethod(
+                    parameters: parameters.parameters,
+                    isStatic: false),
                 withInputs: [symbol])
         },
         GeneratorStub(
@@ -110,7 +111,7 @@ func disposableClassVariableGeneratorStubs(
             provides: [.classDefinition]
         ) { b in
             b.maybeReturnRandomJsVariable(0.9)
-            b.emit(EndClassInstanceComputedMethod())
+            b.emit(EndClassComputedMethod())
         },
         GeneratorStub(
             "DisposableClassDefinitionEndGenerator",
@@ -967,16 +968,17 @@ public let CodeGenerators: [CodeGenerator] = [
                 let parameters = b.randomParameters()
                 b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
                 b.emit(
-                    BeginClassInstanceMethod(
+                    BeginClassMethod(
                         methodName: methodName,
-                        parameters: parameters.parameters))
+                        parameters: parameters.parameters,
+                        isStatic: false))
             },
             GeneratorStub(
                 "ClassInstanceMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
                 b.maybeReturnRandomJsVariable(0.9)
-                b.emit(EndClassInstanceMethod())
+                b.emit(EndClassMethod())
             },
         ]),
 
@@ -1001,8 +1003,9 @@ public let CodeGenerators: [CodeGenerator] = [
                 let parameters = b.randomParameters()
                 b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
                 b.emit(
-                    BeginClassInstanceComputedMethod(
-                        parameters: parameters.parameters),
+                    BeginClassComputedMethod(
+                        parameters: parameters.parameters,
+                        isStatic: false),
                     withInputs: [methodName])
             },
             GeneratorStub(
@@ -1010,7 +1013,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
                 b.maybeReturnRandomJsVariable(0.9)
-                b.emit(EndClassInstanceComputedMethod())
+                b.emit(EndClassComputedMethod())
             },
         ]),
 
@@ -1026,13 +1029,13 @@ public let CodeGenerators: [CodeGenerator] = [
                 let propertyName = b.generateString(b.randomCustomPropertyName,
                     notIn: b.currentClassDefinition.instanceProperties
                          + b.currentClassDefinition.instanceGetters)
-                b.emit(BeginClassInstanceGetter(propertyName: propertyName))
+                b.emit(BeginClassGetter(propertyName: propertyName, isStatic: false))
             },
             GeneratorStub(
                 "ClassInstanceGetterEndGenerator", inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
                 b.doReturn(b.randomJsVariable())
-                b.emit(EndClassInstanceGetter())
+                b.emit(EndClassGetter())
             },
         ]),
 
@@ -1048,13 +1051,13 @@ public let CodeGenerators: [CodeGenerator] = [
                 let propertyName = b.generateString(b.randomCustomPropertyName,
                     notIn: b.currentClassDefinition.instanceProperties
                          + b.currentClassDefinition.instanceSetters)
-                b.emit(BeginClassInstanceSetter(propertyName: propertyName))
+                b.emit(BeginClassSetter(propertyName: propertyName, isStatic: false))
             },
             GeneratorStub(
                 "ClassInstanceSetterEndGenerator",
                 inContext: .single([.javascript, .method, .subroutine, .classMethod])
             ) { b in
-                b.emit(EndClassInstanceSetter())
+                b.emit(EndClassSetter())
             },
 
         ]),
@@ -1136,9 +1139,10 @@ public let CodeGenerators: [CodeGenerator] = [
 
                 b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
                 b.emit(
-                    BeginClassStaticMethod(
+                    BeginClassMethod(
                         methodName: methodName,
-                        parameters: parameters.parameters))
+                        parameters: parameters.parameters,
+                        isStatic: true))
 
             },
             GeneratorStub(
@@ -1146,7 +1150,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single([.javascript, .classMethod, .subroutine, .method])
             ) { b in
                 b.maybeReturnRandomJsVariable(0.9)
-                b.emit(EndClassStaticMethod())
+                b.emit(EndClassMethod())
             },
         ]),
 
@@ -1171,8 +1175,9 @@ public let CodeGenerators: [CodeGenerator] = [
                 let parameters = b.randomParameters()
                 b.setParameterTypesForNextSubroutine(parameters.parameterTypes)
                 b.emit(
-                    BeginClassStaticComputedMethod(
-                        parameters: parameters.parameters),
+                    BeginClassComputedMethod(
+                        parameters: parameters.parameters,
+                        isStatic: true),
                     withInputs: [methodName])
             },
             GeneratorStub(
@@ -1180,7 +1185,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
                 b.maybeReturnRandomJsVariable(0.9)
-                b.emit(EndClassStaticComputedMethod())
+                b.emit(EndClassComputedMethod())
             },
         ]),
 
@@ -1196,14 +1201,14 @@ public let CodeGenerators: [CodeGenerator] = [
                 let propertyName = b.generateString(b.randomCustomPropertyName,
                     notIn: b.currentClassDefinition.staticProperties
                          + b.currentClassDefinition.staticGetters)
-                b.emit(BeginClassStaticGetter(propertyName: propertyName))
+                b.emit(BeginClassGetter(propertyName: propertyName, isStatic: true))
             },
             GeneratorStub(
                 "ClassStaticGetterEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
                 b.doReturn(b.randomJsVariable())
-                b.emit(EndClassStaticGetter())
+                b.emit(EndClassGetter())
             },
         ]),
 
@@ -1219,13 +1224,13 @@ public let CodeGenerators: [CodeGenerator] = [
                 let propertyName = b.generateString(b.randomCustomPropertyName,
                     notIn: b.currentClassDefinition.staticProperties
                          + b.currentClassDefinition.staticSetters)
-                b.emit(BeginClassStaticSetter(propertyName: propertyName))
+                b.emit(BeginClassSetter(propertyName: propertyName, isStatic: true))
             },
             GeneratorStub(
                 "ClassStaticSetterEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
-                b.emit(EndClassStaticSetter())
+                b.emit(EndClassSetter())
             },
         ]),
 
@@ -1254,16 +1259,17 @@ public let CodeGenerators: [CodeGenerator] = [
                     notIn: b.currentClassDefinition.privateFields)
                 let parameters = b.randomParameters()
                 b.emit(
-                    BeginClassPrivateInstanceMethod(
+                    BeginClassPrivateMethod(
                         methodName: methodName,
-                        parameters: parameters.parameters))
+                        parameters: parameters.parameters,
+                        isStatic: false))
             },
             GeneratorStub(
                 "ClassPrivateInstanceMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
                 b.maybeReturnRandomJsVariable(0.9)
-                b.emit(EndClassPrivateInstanceMethod())
+                b.emit(EndClassPrivateMethod())
             },
         ]),
 
@@ -1291,16 +1297,17 @@ public let CodeGenerators: [CodeGenerator] = [
                     notIn: b.currentClassDefinition.privateFields)
                 let parameters = b.randomParameters()
                 b.emit(
-                    BeginClassPrivateStaticMethod(
+                    BeginClassPrivateMethod(
                         methodName: methodName,
-                        parameters: parameters.parameters))
+                        parameters: parameters.parameters,
+                        isStatic: true))
             },
             GeneratorStub(
                 "ClassPrivateStaticMethodEndGenerator",
                 inContext: .single([.javascript, .subroutine, .method, .classMethod])
             ) { b in
                 b.maybeReturnRandomJsVariable(0.9)
-                b.emit(EndClassPrivateStaticMethod())
+                b.emit(EndClassPrivateMethod())
             },
 
         ]),

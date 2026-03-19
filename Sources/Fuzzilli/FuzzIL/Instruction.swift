@@ -613,100 +613,70 @@ extension Instruction: ProtobufConvertible {
                 $0.beginClassConstructor = Fuzzilli_Protobuf_BeginClassConstructor.with { $0.parameters = convertParameters(op.parameters) }
             case .endClassConstructor:
                 $0.endClassConstructor = Fuzzilli_Protobuf_EndClassConstructor()
-            case .classAddInstanceProperty(let op):
-                $0.classAddInstanceProperty = Fuzzilli_Protobuf_ClassAddInstanceProperty.with {
+            case .classAddProperty(let op):
+                $0.classAddProperty = Fuzzilli_Protobuf_ClassAddProperty.with {
                     $0.propertyName = op.propertyName
                     $0.hasValue_p = op.hasValue
+                    $0.isStatic = op.isStatic
                 }
-            case .classAddInstanceElement(let op):
-                $0.classAddInstanceElement = Fuzzilli_Protobuf_ClassAddInstanceElement.with {
+            case .classAddElement(let op):
+                $0.classAddElement = Fuzzilli_Protobuf_ClassAddElement.with {
                     $0.index = op.index
                     $0.hasValue_p = op.hasValue
+                    $0.isStatic = op.isStatic
                 }
-            case .classAddInstanceComputedProperty(let op):
-                $0.classAddInstanceComputedProperty = Fuzzilli_Protobuf_ClassAddInstanceComputedProperty.with { $0.hasValue_p = op.hasValue }
-            case .beginClassInstanceMethod(let op):
-                $0.beginClassInstanceMethod = Fuzzilli_Protobuf_BeginClassInstanceMethod.with {
+            case .classAddComputedProperty(let op):
+                $0.classAddComputedProperty = Fuzzilli_Protobuf_ClassAddComputedProperty.with {
+                    $0.hasValue_p = op.hasValue
+                    $0.isStatic = op.isStatic
+                }
+            case .endClassMethod:
+                $0.endClassMethod = Fuzzilli_Protobuf_EndClassMethod()
+            case .beginClassComputedMethod(let op):
+                $0.beginClassComputedMethod = Fuzzilli_Protobuf_BeginClassComputedMethod.with {
+                    $0.parameters = convertParameters(op.parameters)
+                    $0.isStatic = op.isStatic
+                }
+            case .endClassComputedMethod:
+                $0.endClassComputedMethod = Fuzzilli_Protobuf_EndClassComputedMethod()
+            case .beginClassGetter(let op):
+                $0.beginClassGetter = Fuzzilli_Protobuf_BeginClassGetter.with {
+                    $0.propertyName = op.propertyName
+                    $0.isStatic = op.isStatic
+                }
+            case .beginClassPrivateMethod(let op):
+                $0.beginClassPrivateMethod = Fuzzilli_Protobuf_BeginClassPrivateMethod.with {
                     $0.methodName = op.methodName
                     $0.parameters = convertParameters(op.parameters)
+                    $0.isStatic = op.isStatic
                 }
-            case .endClassInstanceMethod:
-                $0.endClassInstanceMethod = Fuzzilli_Protobuf_EndClassInstanceMethod()
-            case .beginClassInstanceComputedMethod(let op):
-                $0.beginClassInstanceComputedMethod = Fuzzilli_Protobuf_BeginClassInstanceComputedMethod.with {
+            case .endClassPrivateMethod:
+                $0.endClassPrivateMethod = Fuzzilli_Protobuf_EndClassPrivateMethod()
+            case .beginClassMethod(let op):
+                $0.beginClassMethod = Fuzzilli_Protobuf_BeginClassMethod.with {
+                    $0.methodName = op.methodName
                     $0.parameters = convertParameters(op.parameters)
+                    $0.isStatic = op.isStatic
                 }
-            case .endClassInstanceComputedMethod:
-                $0.endClassInstanceComputedMethod = Fuzzilli_Protobuf_EndClassInstanceComputedMethod()
-            case .beginClassInstanceGetter(let op):
-                $0.beginClassInstanceGetter = Fuzzilli_Protobuf_BeginClassInstanceGetter.with { $0.propertyName = op.propertyName }
-            case .endClassInstanceGetter:
-                $0.endClassInstanceGetter = Fuzzilli_Protobuf_EndClassInstanceGetter()
-            case .beginClassInstanceSetter(let op):
-                $0.beginClassInstanceSetter = Fuzzilli_Protobuf_BeginClassInstanceSetter.with { $0.propertyName = op.propertyName }
-            case .endClassInstanceSetter:
-                $0.endClassInstanceSetter = Fuzzilli_Protobuf_EndClassInstanceSetter()
-            case .classAddStaticProperty(let op):
-                $0.classAddStaticProperty = Fuzzilli_Protobuf_ClassAddStaticProperty.with {
+            case .endClassGetter:
+                $0.endClassGetter = Fuzzilli_Protobuf_EndClassGetter()
+            case .beginClassSetter(let op):
+                $0.beginClassSetter = Fuzzilli_Protobuf_BeginClassSetter.with {
                     $0.propertyName = op.propertyName
-                    $0.hasValue_p = op.hasValue
+                    $0.isStatic = op.isStatic
                 }
-            case .classAddStaticElement(let op):
-                $0.classAddStaticElement = Fuzzilli_Protobuf_ClassAddStaticElement.with {
-                    $0.index = op.index
-                    $0.hasValue_p = op.hasValue
-                }
-            case .classAddStaticComputedProperty(let op):
-                $0.classAddStaticComputedProperty = Fuzzilli_Protobuf_ClassAddStaticComputedProperty.with { $0.hasValue_p = op.hasValue }
+            case .endClassSetter:
+                $0.endClassSetter = Fuzzilli_Protobuf_EndClassSetter()
             case .beginClassStaticInitializer:
                 $0.beginClassStaticInitializer = Fuzzilli_Protobuf_BeginClassStaticInitializer()
             case .endClassStaticInitializer:
                 $0.endClassStaticInitializer = Fuzzilli_Protobuf_EndClassStaticInitializer()
-            case .beginClassStaticMethod(let op):
-                $0.beginClassStaticMethod = Fuzzilli_Protobuf_BeginClassStaticMethod.with {
-                    $0.methodName = op.methodName
-                    $0.parameters = convertParameters(op.parameters)
-                }
-            case .endClassStaticMethod:
-                $0.endClassStaticMethod = Fuzzilli_Protobuf_EndClassStaticMethod()
-            case .beginClassStaticComputedMethod(let op):
-                $0.beginClassStaticComputedMethod = Fuzzilli_Protobuf_BeginClassStaticComputedMethod.with {
-                    $0.parameters = convertParameters(op.parameters)
-                }
-            case .endClassStaticComputedMethod:
-                $0.endClassStaticComputedMethod = Fuzzilli_Protobuf_EndClassStaticComputedMethod()
-            case .beginClassStaticGetter(let op):
-                $0.beginClassStaticGetter = Fuzzilli_Protobuf_BeginClassStaticGetter.with { $0.propertyName = op.propertyName }
-            case .endClassStaticGetter:
-                $0.endClassStaticGetter = Fuzzilli_Protobuf_EndClassStaticGetter()
-            case .beginClassStaticSetter(let op):
-                $0.beginClassStaticSetter = Fuzzilli_Protobuf_BeginClassStaticSetter.with { $0.propertyName = op.propertyName }
-            case .endClassStaticSetter:
-                $0.endClassStaticSetter = Fuzzilli_Protobuf_EndClassStaticSetter()
-            case .classAddPrivateInstanceProperty(let op):
-                $0.classAddPrivateInstanceProperty = Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty.with {
+            case .classAddPrivateProperty(let op):
+                $0.classAddPrivateProperty = Fuzzilli_Protobuf_ClassAddPrivateProperty.with {
                     $0.propertyName = op.propertyName
                     $0.hasValue_p = op.hasValue
+                    $0.isStatic = op.isStatic
                 }
-            case .beginClassPrivateInstanceMethod(let op):
-                $0.beginClassPrivateInstanceMethod = Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod.with {
-                    $0.methodName = op.methodName
-                    $0.parameters = convertParameters(op.parameters)
-                }
-            case .endClassPrivateInstanceMethod:
-                $0.endClassPrivateInstanceMethod = Fuzzilli_Protobuf_EndClassPrivateInstanceMethod()
-            case .classAddPrivateStaticProperty(let op):
-                $0.classAddPrivateStaticProperty = Fuzzilli_Protobuf_ClassAddPrivateStaticProperty.with {
-                    $0.propertyName = op.propertyName
-                    $0.hasValue_p = op.hasValue
-                }
-            case .beginClassPrivateStaticMethod(let op):
-                $0.beginClassPrivateStaticMethod = Fuzzilli_Protobuf_BeginClassPrivateStaticMethod.with {
-                    $0.methodName = op.methodName
-                    $0.parameters = convertParameters(op.parameters)
-                }
-            case .endClassPrivateStaticMethod:
-                $0.endClassPrivateStaticMethod = Fuzzilli_Protobuf_EndClassPrivateStaticMethod()
             case .endClassDefinition:
                 $0.endClassDefinition = Fuzzilli_Protobuf_EndClassDefinition()
             case .createArray:
@@ -1907,66 +1877,38 @@ extension Instruction: ProtobufConvertible {
             op = BeginClassConstructor(parameters: convertParameters(p.parameters))
         case .endClassConstructor:
             op = EndClassConstructor()
-        case .classAddInstanceProperty(let p):
-            op = ClassAddInstanceProperty(propertyName: p.propertyName, hasValue: p.hasValue_p)
-        case .classAddInstanceElement(let p):
-            op = ClassAddInstanceElement(index: p.index, hasValue: p.hasValue_p)
-        case .classAddInstanceComputedProperty(let p):
-            op = ClassAddInstanceComputedProperty(hasValue: p.hasValue_p)
-        case .beginClassInstanceMethod(let p):
-            op = BeginClassInstanceMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
-        case .endClassInstanceMethod:
-            op = EndClassInstanceMethod()
-        case .beginClassInstanceComputedMethod(let p):
-            op = BeginClassInstanceComputedMethod(parameters: convertParameters(p.parameters))
-        case .endClassInstanceComputedMethod:
-            op = EndClassInstanceComputedMethod()
-        case .beginClassInstanceGetter(let p):
-            op = BeginClassInstanceGetter(propertyName: p.propertyName)
-        case .endClassInstanceGetter:
-            op = EndClassInstanceGetter()
-        case .beginClassInstanceSetter(let p):
-            op = BeginClassInstanceSetter(propertyName: p.propertyName)
-        case .endClassInstanceSetter:
-            op = EndClassInstanceSetter()
-        case .classAddStaticProperty(let p):
-            op = ClassAddStaticProperty(propertyName: p.propertyName, hasValue: p.hasValue_p)
-        case .classAddStaticElement(let p):
-            op = ClassAddStaticElement(index: p.index, hasValue: p.hasValue_p)
-        case .classAddStaticComputedProperty(let p):
-            op = ClassAddStaticComputedProperty(hasValue: p.hasValue_p)
+        case .classAddProperty(let p):
+            op = ClassAddProperty(propertyName: p.propertyName, hasValue: p.hasValue_p, isStatic: p.isStatic)
+        case .classAddElement(let p):
+            op = ClassAddElement(index: p.index, hasValue: p.hasValue_p, isStatic: p.isStatic)
+        case .classAddComputedProperty(let p):
+            op = ClassAddComputedProperty(hasValue: p.hasValue_p, isStatic: p.isStatic)
+        case .beginClassMethod(let p):
+            op = BeginClassMethod(methodName: p.methodName, parameters: convertParameters(p.parameters), isStatic: p.isStatic)
+        case .endClassMethod:
+            op = EndClassMethod()
+        case .beginClassComputedMethod(let p):
+            op = BeginClassComputedMethod(parameters: convertParameters(p.parameters), isStatic: p.isStatic)
+        case .endClassComputedMethod:
+            op = EndClassComputedMethod()
+        case .beginClassGetter(let p):
+            op = BeginClassGetter(propertyName: p.propertyName, isStatic: p.isStatic)
+        case .endClassGetter:
+            op = EndClassGetter()
+        case .beginClassSetter(let p):
+            op = BeginClassSetter(propertyName: p.propertyName, isStatic: p.isStatic)
+        case .endClassSetter:
+            op = EndClassSetter()
         case .beginClassStaticInitializer:
             op = BeginClassStaticInitializer()
         case .endClassStaticInitializer:
             op = EndClassStaticInitializer()
-        case .beginClassStaticMethod(let p):
-            op = BeginClassStaticMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
-        case .endClassStaticMethod:
-            op = EndClassStaticMethod()
-        case .beginClassStaticComputedMethod(let p):
-            op = BeginClassStaticComputedMethod(parameters: convertParameters(p.parameters))
-        case .endClassStaticComputedMethod:
-            op = EndClassStaticComputedMethod()
-        case .beginClassStaticGetter(let p):
-            op = BeginClassStaticGetter(propertyName: p.propertyName)
-        case .endClassStaticGetter:
-            op = EndClassStaticGetter()
-        case .beginClassStaticSetter(let p):
-            op = BeginClassStaticSetter(propertyName: p.propertyName)
-        case .endClassStaticSetter:
-            op = EndClassStaticSetter()
-        case .classAddPrivateInstanceProperty(let p):
-            op = ClassAddPrivateInstanceProperty(propertyName: p.propertyName, hasValue: p.hasValue_p)
-        case .beginClassPrivateInstanceMethod(let p):
-            op = BeginClassPrivateInstanceMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
-        case .endClassPrivateInstanceMethod:
-            op = EndClassPrivateInstanceMethod()
-        case .classAddPrivateStaticProperty(let p):
-            op = ClassAddPrivateStaticProperty(propertyName: p.propertyName, hasValue: p.hasValue_p)
-        case .beginClassPrivateStaticMethod(let p):
-            op = BeginClassPrivateStaticMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
-        case .endClassPrivateStaticMethod:
-            op = EndClassPrivateStaticMethod()
+        case .classAddPrivateProperty(let p):
+            op = ClassAddPrivateProperty(propertyName: p.propertyName, hasValue: p.hasValue_p, isStatic: p.isStatic)
+        case .beginClassPrivateMethod(let p):
+            op = BeginClassPrivateMethod(methodName: p.methodName, parameters: convertParameters(p.parameters), isStatic: p.isStatic)
+        case .endClassPrivateMethod:
+            op = EndClassPrivateMethod()
         case .endClassDefinition:
             op = EndClassDefinition()
         case .createArray:

@@ -167,83 +167,69 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndClassConstructor")
 
-        case .classAddInstanceProperty(let op):
+        case .classAddProperty(let op):
+            let maybeStatic = op.isStatic ? "static " : ""
             if op.hasValue {
-                w.emit("ClassAddInstanceProperty '\(op.propertyName)' \(input(0))")
+                w.emit("ClassAddProperty '\(maybeStatic)\(op.propertyName)' \(input(0))")
             } else {
-                w.emit("ClassAddInstanceProperty '\(op.propertyName)'")
+                w.emit("ClassAddProperty '\(maybeStatic)\(op.propertyName)'")
             }
 
-        case .classAddInstanceElement(let op):
+        case .classAddElement(let op):
+            let maybeStatic = op.isStatic ? "static " : ""
             if op.hasValue {
-                w.emit("ClassAddInstanceElement '\(op.index)' \(input(0))")
+                w.emit("ClassAddElement '\(maybeStatic)\(op.index)' \(input(0))")
             } else {
-                w.emit("ClassAddInstanceElement '\(op.index)'")
+                w.emit("ClassAddElement '\(maybeStatic)\(op.index)'")
             }
 
-        case .classAddInstanceComputedProperty(let op):
+        case .classAddComputedProperty(let op):
+            let maybeStatic = op.isStatic ? "static " : ""
             if op.hasValue {
-                w.emit("ClassAddInstanceComputedProperty \(input(0)) \(input(1))")
+                w.emit("ClassAddComputedProperty \(maybeStatic)\(input(0)) \(input(1))")
             } else {
-                w.emit("ClassAddInstanceComputedProperty \(input(0))")
+                w.emit("ClassAddComputedProperty \(maybeStatic)\(input(0))")
             }
 
-        case .beginClassInstanceMethod(let op):
+        case .beginClassMethod(let op):
+            let maybeStatic = op.isStatic ? "static " : ""
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassInstanceMethod '\(op.methodName)' -> \(params)")
+            w.emit("BeginClassMethod '\(maybeStatic)\(op.methodName)' -> \(params)")
             w.increaseIndentionLevel()
 
-        case .endClassInstanceMethod:
+        case .endClassMethod:
             w.decreaseIndentionLevel()
-            w.emit("EndClassInstanceMethod")
+            w.emit("EndClassMethod")
 
-        case .beginClassInstanceComputedMethod:
+        case .beginClassComputedMethod(let op):
+            let maybeStatic = op.isStatic ? "static " : ""
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassInstanceComputedMethod \(input(0)) -> \(params)")
+            w.emit("BeginClassComputedMethod \(maybeStatic)\(input(0)) -> \(params)")
             w.increaseIndentionLevel()
 
-        case .endClassInstanceComputedMethod:
+        case .endClassComputedMethod:
             w.decreaseIndentionLevel()
-            w.emit("EndClassInstanceComputedMethod")
+            w.emit("EndClassComputedMethod")
 
-        case .beginClassInstanceGetter(let op):
+        case .beginClassGetter(let op):
+            let maybeStatic = op.isStatic ? "static " : ""
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassInstanceGetter `\(op.propertyName)` -> \(params)")
+            w.emit("BeginClassGetter '\(maybeStatic)\(op.propertyName)' -> \(params)")
             w.increaseIndentionLevel()
 
-        case .endClassInstanceGetter:
+        case .endClassGetter:
             w.decreaseIndentionLevel()
-            w.emit("EndClassInstanceGetter")
+            w.emit("EndClassGetter")
 
-        case .beginClassInstanceSetter(let op):
+        case .beginClassSetter(let op):
+            let maybeStatic = op.isStatic ? "static " : ""
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassInstanceSetter `\(op.propertyName)` -> \(params)")
+            w.emit("BeginClassSetter '\(maybeStatic)\(op.propertyName)' -> \(params)")
             w.increaseIndentionLevel()
 
-        case .endClassInstanceSetter:
+        case .endClassSetter:
             w.decreaseIndentionLevel()
-            w.emit("EndClassInstanceSetter")
-
-        case .classAddStaticProperty(let op):
-            if op.hasValue {
-                w.emit("ClassAddStaticProperty '\(op.propertyName)' \(input(0))")
-            } else {
-                w.emit("ClassAddStaticProperty '\(op.propertyName)'")
-            }
-
-        case .classAddStaticElement(let op):
-            if op.hasValue {
-                w.emit("ClassAddStaticElement '\(op.index)' \(input(0))")
-            } else {
-                w.emit("ClassAddStaticElement '\(op.index)'")
-            }
-
-        case .classAddStaticComputedProperty(let op):
-            if op.hasValue {
-                w.emit("ClassAddStaticComputedProperty \(input(0)) \(input(1))")
-            } else {
-                w.emit("ClassAddStaticComputedProperty \(input(0))")
-            }
+            w.emit("EndClassSetter")
 
         case .beginClassStaticInitializer:
             w.emit("BeginClassStaticInitializer -> \(lift(instr.innerOutput))")
@@ -253,74 +239,23 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndClassStaticInitializer")
 
-        case .beginClassStaticMethod(let op):
-            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassStaticMethod '\(op.methodName)' -> \(params)")
-            w.increaseIndentionLevel()
-
-        case .endClassStaticMethod:
-            w.decreaseIndentionLevel()
-            w.emit("EndClassStaticMethod")
-
-        case .beginClassStaticComputedMethod:
-            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassStaticComputedMethod \(input(0)) -> \(params)")
-            w.increaseIndentionLevel()
-
-        case .endClassStaticComputedMethod:
-            w.decreaseIndentionLevel()
-            w.emit("EndClassStaticComputedMethod")
-
-        case .beginClassStaticGetter(let op):
-            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassStaticGetter `\(op.propertyName)` -> \(params)")
-            w.increaseIndentionLevel()
-
-        case .endClassStaticGetter:
-            w.decreaseIndentionLevel()
-            w.emit("EndClassStaticGetter")
-
-        case .beginClassStaticSetter(let op):
-            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassStaticSetter `\(op.propertyName)` -> \(params)")
-            w.increaseIndentionLevel()
-
-        case .endClassStaticSetter:
-            w.decreaseIndentionLevel()
-            w.emit("EndClassStaticSetter")
-
-        case .classAddPrivateInstanceProperty(let op):
+        case .classAddPrivateProperty(let op):
+            let maybeStatic = op.isStatic ? "static " : ""
             if op.hasValue {
-                w.emit("ClassAddPrivateInstanceProperty '\(op.propertyName)' \(input(0))")
+                w.emit("ClassAddPrivateProperty '\(maybeStatic)\(op.propertyName)' \(input(0))")
             } else {
-                w.emit("ClassAddPrivateInstanceProperty '\(op.propertyName)'")
+                w.emit("ClassAddPrivateProperty '\(maybeStatic)\(op.propertyName)'")
             }
 
-        case .beginClassPrivateInstanceMethod(let op):
+        case .beginClassPrivateMethod(let op):
+            let maybeStatic = op.isStatic ? "static " : ""
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassPrivateInstanceMethod '\(op.methodName)' -> \(params)")
+            w.emit("BeginClassPrivateMethod '\(maybeStatic)\(op.methodName)' -> \(params)")
             w.increaseIndentionLevel()
 
-        case .endClassPrivateInstanceMethod:
+        case .endClassPrivateMethod:
             w.decreaseIndentionLevel()
-            w.emit("EndClassPrivateInstanceMethod")
-
-        case .classAddPrivateStaticProperty(let op):
-            if op.hasValue {
-                w.emit("ClassAddPrivateStaticProperty '\(op.propertyName)' \(input(0))")
-            } else {
-                w.emit("ClassAddPrivateStaticProperty '\(op.propertyName)'")
-            }
-
-        case .beginClassPrivateStaticMethod(let op):
-            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassPrivateStaticMethod '\(op.methodName)' -> \(params)")
-            w.increaseIndentionLevel()
-
-        case .endClassPrivateStaticMethod:
-            w.decreaseIndentionLevel()
-            w.emit("EndClassPrivateStaticMethod")
-
+            w.emit("EndClassPrivateMethod")
         case .endClassDefinition:
            w.decreaseIndentionLevel()
            w.emit("EndClassDefinition")

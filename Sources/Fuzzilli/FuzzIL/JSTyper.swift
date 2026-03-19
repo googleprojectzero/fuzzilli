@@ -1295,16 +1295,11 @@ public struct JSTyper: Analyzer {
              .beginAsyncGeneratorFunction,
              .beginConstructor,
              .beginClassConstructor,
-             .beginClassInstanceMethod,
-             .beginClassInstanceComputedMethod,
-             .beginClassInstanceGetter,
-             .beginClassInstanceSetter,
-             .beginClassStaticMethod,
-             .beginClassStaticComputedMethod,
-             .beginClassStaticGetter,
-             .beginClassStaticSetter,
-             .beginClassPrivateInstanceMethod,
-             .beginClassPrivateStaticMethod:
+             .beginClassMethod,
+             .beginClassComputedMethod,
+             .beginClassGetter,
+             .beginClassSetter,
+             .beginClassPrivateMethod:
             activeFunctionDefinitions.push(instr)
             state.startSubroutine()
         case .endObjectLiteralMethod,
@@ -1319,16 +1314,11 @@ public struct JSTyper: Analyzer {
              .endAsyncGeneratorFunction,
              .endConstructor,
              .endClassConstructor,
-             .endClassInstanceMethod,
-             .endClassInstanceComputedMethod,
-             .endClassInstanceGetter,
-             .endClassInstanceSetter,
-             .endClassStaticMethod,
-             .endClassStaticComputedMethod,
-             .endClassStaticGetter,
-             .endClassStaticSetter,
-             .endClassPrivateInstanceMethod,
-             .endClassPrivateStaticMethod:
+             .endClassMethod,
+             .endClassComputedMethod,
+             .endClassGetter,
+             .endClassSetter,
+             .endClassPrivateMethod:
             //
             // Infer the return type of the subroutine (if necessary for the signature).
             //
@@ -1363,30 +1353,30 @@ public struct JSTyper: Analyzer {
             // TODO(cffsmith): this is probably the wrong place to do this.
             // Update the dynamic object group to correctly reflect the signature of objects of this type.
             switch instr.op.opcode {
-            case .endClassInstanceMethod(_):
-                assert(begin.op is BeginClassInstanceMethod)
-                let beginOp = begin.op as! BeginClassInstanceMethod
-                dynamicObjectGroupManager.updateMethodSignature(methodName: beginOp.methodName, signature: inferSubroutineParameterList(of: beginOp, at: begin.index) => returnValueType)
-            case .endClassInstanceGetter(_):
-                assert(begin.op is BeginClassInstanceGetter)
-                let beginOp = begin.op as! BeginClassInstanceGetter
-                dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
-            case .endClassInstanceSetter(_):
-                assert(begin.op is BeginClassInstanceSetter)
-                let beginOp = begin.op as! BeginClassInstanceSetter
-                dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
-            case .endClassStaticGetter(_):
-                assert(begin.op is BeginClassStaticGetter)
-                let beginOp = begin.op as! BeginClassStaticGetter
-                dynamicObjectGroupManager.updateClassStaticPropertyType(propertyName: beginOp.propertyName, type: returnValueType)
-            case .endClassStaticMethod(_):
-                assert(begin.op is BeginClassStaticMethod)
-                let beginOp = begin.op as! BeginClassStaticMethod
-                dynamicObjectGroupManager.updateClassStaticMethodSignature(methodName: beginOp.methodName, signature: inferSubroutineParameterList(of: beginOp, at: begin.index) => returnValueType)
-            case .endClassStaticSetter(_):
-                assert(begin.op is BeginClassStaticSetter)
-                let beginOp = begin.op as! BeginClassStaticSetter
-                dynamicObjectGroupManager.updateClassStaticPropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+            case .endClassMethod(_):
+                assert(begin.op is BeginClassMethod)
+                let beginOp = begin.op as! BeginClassMethod
+                if beginOp.isStatic {
+                    dynamicObjectGroupManager.updateClassStaticMethodSignature(methodName: beginOp.methodName, signature: inferSubroutineParameterList(of: beginOp, at: begin.index) => returnValueType)
+                } else {
+                    dynamicObjectGroupManager.updateMethodSignature(methodName: beginOp.methodName, signature: inferSubroutineParameterList(of: beginOp, at: begin.index) => returnValueType)
+                }
+            case .endClassGetter(_):
+                assert(begin.op is BeginClassGetter)
+                let beginOp = begin.op as! BeginClassGetter
+                if beginOp.isStatic {
+                    dynamicObjectGroupManager.updateClassStaticPropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+                } else {
+                    dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+                }
+            case .endClassSetter(_):
+                assert(begin.op is BeginClassSetter)
+                let beginOp = begin.op as! BeginClassSetter
+                if beginOp.isStatic {
+                    dynamicObjectGroupManager.updateClassStaticPropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+                } else {
+                    dynamicObjectGroupManager.updatePropertyType(propertyName: beginOp.propertyName, type: returnValueType)
+                }
             case .endObjectLiteralMethod(_):
                 assert(begin.op is BeginObjectLiteralMethod)
                 let beginOp = begin.op as! BeginObjectLiteralMethod
@@ -1600,74 +1590,71 @@ public struct JSTyper: Analyzer {
             processParameterDeclarations(instr.innerOutputs(1...), parameters: parameters)
             dynamicObjectGroupManager.setConstructorParameters(parameters: parameters)
 
-        case .classAddInstanceProperty(let op):
-            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
-            dynamicObjectGroupManager.updatePropertyType(propertyName: op.propertyName, type: op.hasValue ? type(ofInput: 0) : .jsAnything)
-
-        case .beginClassInstanceMethod(let op):
-            // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            dynamicObjectGroupManager.addMethod(methodName: op.methodName, of: .jsClass)
-
-        case .beginClassInstanceComputedMethod(let op):
-            // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-
-        case .beginClassInstanceGetter(let op):
-            // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
-            assert(instr.numInnerOutputs == 1)
-            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
-
-        case .beginClassInstanceSetter(let op):
-            // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
-            assert(instr.numInnerOutputs == 2)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
-
-        case .classAddStaticProperty(let op):
-            dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
+        case .classAddProperty(let op):
+            if op.isStatic {
+                dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
+                dynamicObjectGroupManager.updateClassStaticPropertyType(propertyName: op.propertyName, type: op.hasValue ? type(ofInput: 0) : .jsAnything)
+            } else {
+                dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
+                dynamicObjectGroupManager.updatePropertyType(propertyName: op.propertyName, type: op.hasValue ? type(ofInput: 0) : .jsAnything)
+            }
 
         case .beginClassStaticInitializer:
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
             assert(instr.numInnerOutputs == 1)
 
-        case .beginClassStaticMethod(let op):
+        case .beginClassMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+            if op.isStatic {
+                set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+                dynamicObjectGroupManager.addClassStaticMethod(methodName: op.methodName)
+            } else {
+                set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
+                dynamicObjectGroupManager.addMethod(methodName: op.methodName, of: .jsClass)
+            }
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            dynamicObjectGroupManager.addClassStaticMethod(methodName: op.methodName)
 
-        case .beginClassStaticComputedMethod(let op):
+        case .beginClassComputedMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+            if op.isStatic {
+                set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+            } else {
+                set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
+            }
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
-        case .beginClassStaticGetter(let op):
+        case .beginClassGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
-            assert(instr.numInnerOutputs == 1)
-            dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
+            if op.isStatic {
+                set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+                assert(instr.numInnerOutputs == 1)
+                dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
+            } else {
+                set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
+                assert(instr.numInnerOutputs == 1)
+                dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
+            }
 
-        case .beginClassStaticSetter(let op):
+        case .beginClassSetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+            if op.isStatic {
+                set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+                dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
+            } else {
+                set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
+                dynamicObjectGroupManager.addProperty(propertyName: op.propertyName)
+            }
             assert(instr.numInnerOutputs == 2)
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-            dynamicObjectGroupManager.addClassStaticProperty(propertyName: op.propertyName)
 
-        case .beginClassPrivateInstanceMethod(let op):
+        case .beginClassPrivateMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
-
-        case .beginClassPrivateStaticMethod(let op):
-            // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+            if op.isStatic {
+                set(instr.innerOutput(0), dynamicObjectGroupManager.activeClasses.top.objectGroup.instanceType)
+            } else {
+                set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
+            }
             processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .createArray,

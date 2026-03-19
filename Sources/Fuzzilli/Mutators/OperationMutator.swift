@@ -124,26 +124,16 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = BeginObjectLiteralGetter(propertyName: b.randomPropertyName())
         case .beginObjectLiteralSetter:
             newOp = BeginObjectLiteralSetter(propertyName: b.randomPropertyName())
-        case .classAddInstanceProperty(let op):
-            newOp = ClassAddInstanceProperty(propertyName: b.randomPropertyName(), hasValue: op.hasValue)
-        case .classAddInstanceElement(let op):
-            newOp = ClassAddInstanceElement(index: b.randomIndex(), hasValue: op.hasValue)
-        case .beginClassInstanceMethod(let op):
-            newOp = BeginClassInstanceMethod(methodName: b.randomMethodName(), parameters: op.parameters)
-        case .beginClassInstanceGetter:
-            newOp = BeginClassInstanceGetter(propertyName: b.randomPropertyName())
-        case .beginClassInstanceSetter:
-            newOp = BeginClassInstanceSetter(propertyName: b.randomPropertyName())
-        case .classAddStaticProperty(let op):
-            newOp = ClassAddStaticProperty(propertyName: b.randomPropertyName(), hasValue: op.hasValue)
-        case .classAddStaticElement(let op):
-            newOp = ClassAddStaticElement(index: b.randomIndex(), hasValue: op.hasValue)
-        case .beginClassStaticMethod(let op):
-            newOp = BeginClassStaticMethod(methodName: b.randomMethodName(), parameters: op.parameters)
-        case .beginClassStaticGetter:
-            newOp = BeginClassStaticGetter(propertyName: b.randomPropertyName())
-        case .beginClassStaticSetter:
-            newOp = BeginClassStaticSetter(propertyName: b.randomPropertyName())
+        case .classAddProperty(let op):
+            newOp = ClassAddProperty(propertyName: b.randomPropertyName(), hasValue: op.hasValue, isStatic: op.isStatic)
+        case .classAddElement(let op):
+            newOp = ClassAddElement(index: b.randomIndex(), hasValue: op.hasValue, isStatic: op.isStatic)
+        case .beginClassMethod(let op):
+            newOp = BeginClassMethod(methodName: b.randomMethodName(), parameters: op.parameters, isStatic: op.isStatic)
+        case .beginClassGetter(let op):
+            newOp = BeginClassGetter(propertyName: b.randomPropertyName(), isStatic: op.isStatic)
+        case .beginClassSetter(let op):
+            newOp = BeginClassSetter(propertyName: b.randomPropertyName(), isStatic: op.isStatic)
         case .createIntArray:
             var values = [Int64]()
             for _ in 0..<Int.random(in: 1...10) {
@@ -542,26 +532,17 @@ public class OperationMutator: BaseInstructionMutator {
              .beginClassDefinition(_),
              .beginClassConstructor(_),
              .endClassConstructor(_),
-             .classAddInstanceComputedProperty(_),
-             .beginClassInstanceComputedMethod(_),
-             .endClassInstanceComputedMethod(_),
-             .beginClassStaticComputedMethod(_),
-             .endClassStaticComputedMethod(_),
-             .endClassInstanceMethod(_),
-             .endClassInstanceGetter(_),
-             .endClassInstanceSetter(_),
-             .classAddStaticComputedProperty(_),
+             .beginClassComputedMethod(_),
+             .endClassComputedMethod(_),
+             .endClassMethod(_),
+             .endClassGetter(_),
+             .endClassSetter(_),
+             .classAddComputedProperty(_),
              .beginClassStaticInitializer(_),
              .endClassStaticInitializer(_),
-             .endClassStaticMethod(_),
-             .endClassStaticGetter(_),
-             .endClassStaticSetter(_),
-             .classAddPrivateInstanceProperty(_),
-             .beginClassPrivateInstanceMethod(_),
-             .endClassPrivateInstanceMethod(_),
-             .classAddPrivateStaticProperty(_),
-             .beginClassPrivateStaticMethod(_),
-             .endClassPrivateStaticMethod(_),
+             .classAddPrivateProperty(_),
+             .beginClassPrivateMethod(_),
+             .endClassPrivateMethod(_),
              .endClassDefinition(_),
              .createArray(_),
              .getComputedProperty(_),

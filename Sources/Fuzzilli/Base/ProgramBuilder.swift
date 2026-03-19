@@ -2649,60 +2649,61 @@ public class ProgramBuilder {
             b.emit(EndClassConstructor())
         }
 
+
         public func addInstanceProperty(_ name: String, value: Variable? = nil) {
             let inputs = value != nil ? [value!] : []
-            b.emit(ClassAddInstanceProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+            b.emit(ClassAddProperty(propertyName: name, hasValue: value != nil, isStatic: false), withInputs: inputs)
         }
 
         public func addInstanceElement(_ index: Int64, value: Variable? = nil) {
             let inputs = value != nil ? [value!] : []
-            b.emit(ClassAddInstanceElement(index: index, hasValue: value != nil), withInputs: inputs)
+            b.emit(ClassAddElement(index: index, hasValue: value != nil, isStatic: false), withInputs: inputs)
         }
 
         public func addInstanceComputedProperty(_ name: Variable, value: Variable? = nil) {
             let inputs = value != nil ? [name, value!] : [name]
-            b.emit(ClassAddInstanceComputedProperty(hasValue: value != nil), withInputs: inputs)
+            b.emit(ClassAddComputedProperty(hasValue: value != nil, isStatic: false), withInputs: inputs)
         }
 
         public func addInstanceMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
             b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-            let instr = b.emit(BeginClassInstanceMethod(methodName: name, parameters: descriptor.parameters))
+            let instr = b.emit(BeginClassMethod(methodName: name, parameters: descriptor.parameters, isStatic: false))
             body(Array(instr.innerOutputs))
-            b.emit(EndClassInstanceMethod())
+            b.emit(EndClassMethod())
         }
 
         public func addInstanceComputedMethod(_ name: Variable, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
             b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-            let instr = b.emit(BeginClassInstanceComputedMethod(parameters: descriptor.parameters), withInputs: [name])
+            let instr = b.emit(BeginClassComputedMethod(parameters: descriptor.parameters, isStatic: false), withInputs: [name])
             body(Array(instr.innerOutputs))
-            b.emit(EndClassInstanceComputedMethod())
+            b.emit(EndClassComputedMethod())
         }
 
         public func addInstanceGetter(for name: String, _ body: (_ this: Variable) -> ()) {
-            let instr = b.emit(BeginClassInstanceGetter(propertyName: name))
+            let instr = b.emit(BeginClassGetter(propertyName: name, isStatic: false))
             body(instr.innerOutput)
-            b.emit(EndClassInstanceGetter())
+            b.emit(EndClassGetter())
         }
 
         public func addInstanceSetter(for name: String, _ body: (_ this: Variable, _ val: Variable) -> ()) {
-            let instr = b.emit(BeginClassInstanceSetter(propertyName: name))
+            let instr = b.emit(BeginClassSetter(propertyName: name, isStatic: false))
             body(instr.innerOutput(0), instr.innerOutput(1))
-            b.emit(EndClassInstanceSetter())
+            b.emit(EndClassSetter())
         }
 
         public func addStaticProperty(_ name: String, value: Variable? = nil) {
             let inputs = value != nil ? [value!] : []
-            b.emit(ClassAddStaticProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+            b.emit(ClassAddProperty(propertyName: name, hasValue: value != nil, isStatic: true), withInputs: inputs)
         }
 
         public func addStaticElement(_ index: Int64, value: Variable? = nil) {
             let inputs = value != nil ? [value!] : []
-            b.emit(ClassAddStaticElement(index: index, hasValue: value != nil), withInputs: inputs)
+            b.emit(ClassAddElement(index: index, hasValue: value != nil, isStatic: true), withInputs: inputs)
         }
 
         public func addStaticComputedProperty(_ name: Variable, value: Variable? = nil) {
             let inputs = value != nil ? [name, value!] : [name]
-            b.emit(ClassAddStaticComputedProperty(hasValue: value != nil), withInputs: inputs)
+            b.emit(ClassAddComputedProperty(hasValue: value != nil, isStatic: true), withInputs: inputs)
         }
 
         public func addStaticInitializer(_ body: (Variable) -> ()) {
@@ -2713,52 +2714,52 @@ public class ProgramBuilder {
 
         public func addStaticMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
             b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-            let instr = b.emit(BeginClassStaticMethod(methodName: name, parameters: descriptor.parameters))
+            let instr = b.emit(BeginClassMethod(methodName: name, parameters: descriptor.parameters, isStatic: true))
             body(Array(instr.innerOutputs))
-            b.emit(EndClassStaticMethod())
+            b.emit(EndClassMethod())
         }
 
         public func addStaticComputedMethod(_ name: Variable, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
             b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-            let instr = b.emit(BeginClassStaticComputedMethod(parameters: descriptor.parameters), withInputs: [name])
+            let instr = b.emit(BeginClassComputedMethod(parameters: descriptor.parameters, isStatic: true), withInputs: [name])
             body(Array(instr.innerOutputs))
-            b.emit(EndClassStaticComputedMethod())
+            b.emit(EndClassComputedMethod())
         }
 
         public func addStaticGetter(for name: String, _ body: (_ this: Variable) -> ()) {
-            let instr = b.emit(BeginClassStaticGetter(propertyName: name))
+            let instr = b.emit(BeginClassGetter(propertyName: name, isStatic: true))
             body(instr.innerOutput)
-            b.emit(EndClassStaticGetter())
+            b.emit(EndClassGetter())
         }
 
         public func addStaticSetter(for name: String, _ body: (_ this: Variable, _ val: Variable) -> ()) {
-            let instr = b.emit(BeginClassStaticSetter(propertyName: name))
+            let instr = b.emit(BeginClassSetter(propertyName: name, isStatic: true))
             body(instr.innerOutput(0), instr.innerOutput(1))
-            b.emit(EndClassStaticSetter())
+            b.emit(EndClassSetter())
         }
 
         public func addPrivateInstanceProperty(_ name: String, value: Variable? = nil) {
             let inputs = value != nil ? [value!] : []
-            b.emit(ClassAddPrivateInstanceProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+            b.emit(ClassAddPrivateProperty(propertyName: name, hasValue: value != nil, isStatic: false), withInputs: inputs)
         }
 
         public func addPrivateInstanceMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
             b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-            let instr = b.emit(BeginClassPrivateInstanceMethod(methodName: name, parameters: descriptor.parameters))
+            let instr = b.emit(BeginClassPrivateMethod(methodName: name, parameters: descriptor.parameters, isStatic: false))
             body(Array(instr.innerOutputs))
-            b.emit(EndClassPrivateInstanceMethod())
+            b.emit(EndClassPrivateMethod())
         }
 
         public func addPrivateStaticProperty(_ name: String, value: Variable? = nil) {
             let inputs = value != nil ? [value!] : []
-            b.emit(ClassAddPrivateStaticProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+            b.emit(ClassAddPrivateProperty(propertyName: name, hasValue: value != nil, isStatic: true), withInputs: inputs)
         }
 
         public func addPrivateStaticMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
             b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
-            let instr = b.emit(BeginClassPrivateStaticMethod(methodName: name, parameters: descriptor.parameters))
+            let instr = b.emit(BeginClassPrivateMethod(methodName: name, parameters: descriptor.parameters, isStatic: true))
             body(Array(instr.innerOutputs))
-            b.emit(EndClassPrivateStaticMethod())
+            b.emit(EndClassPrivateMethod())
         }
     }
 
@@ -4963,41 +4964,51 @@ public class ProgramBuilder {
             activeClassDefinitions.push(ClassDefinition(in: self, isDerived: op.hasSuperclass))
         case .beginClassConstructor:
             activeClassDefinitions.top.hasConstructor = true
-        case .classAddInstanceProperty(let op):
-            activeClassDefinitions.top.instanceProperties.append(op.propertyName)
-        case .classAddInstanceElement(let op):
-            activeClassDefinitions.top.instanceElements.append(op.index)
-        case .classAddInstanceComputedProperty:
-            activeClassDefinitions.top.instanceComputedProperties.append(instr.input(0))
-        case .beginClassInstanceMethod(let op):
-            activeClassDefinitions.top.instanceMethods.append(op.methodName)
-        case .beginClassInstanceComputedMethod:
-            activeClassDefinitions.top.instanceComputedMethods.append(instr.input(0))
-        case .beginClassInstanceGetter(let op):
-            activeClassDefinitions.top.instanceGetters.append(op.propertyName)
-        case .beginClassInstanceSetter(let op):
-            activeClassDefinitions.top.instanceSetters.append(op.propertyName)
-        case .classAddStaticProperty(let op):
-            activeClassDefinitions.top.staticProperties.append(op.propertyName)
-        case .classAddStaticElement(let op):
-            activeClassDefinitions.top.staticElements.append(op.index)
-        case .classAddStaticComputedProperty:
-            activeClassDefinitions.top.staticComputedProperties.append(instr.input(0))
-        case .beginClassStaticMethod(let op):
-            activeClassDefinitions.top.staticMethods.append(op.methodName)
-        case .beginClassStaticComputedMethod:
-            activeClassDefinitions.top.staticComputedMethods.append(instr.input(0))
-        case .beginClassStaticGetter(let op):
-            activeClassDefinitions.top.staticGetters.append(op.propertyName)
-        case .beginClassStaticSetter(let op):
-            activeClassDefinitions.top.staticSetters.append(op.propertyName)
-        case .classAddPrivateInstanceProperty(let op):
+        case .classAddProperty(let op):
+            if op.isStatic {
+                activeClassDefinitions.top.staticProperties.append(op.propertyName)
+            } else {
+                activeClassDefinitions.top.instanceProperties.append(op.propertyName)
+            }
+        case .classAddElement(let op):
+            if op.isStatic {
+                activeClassDefinitions.top.staticElements.append(op.index)
+            } else {
+                activeClassDefinitions.top.instanceElements.append(op.index)
+            }
+        case .classAddComputedProperty(let op):
+            if op.isStatic {
+                activeClassDefinitions.top.staticComputedProperties.append(instr.input(0))
+            } else {
+                activeClassDefinitions.top.instanceComputedProperties.append(instr.input(0))
+            }
+        case .beginClassMethod(let op):
+            if op.isStatic {
+                activeClassDefinitions.top.staticMethods.append(op.methodName)
+            } else {
+                activeClassDefinitions.top.instanceMethods.append(op.methodName)
+            }
+        case .beginClassComputedMethod(let op):
+            if op.isStatic {
+                activeClassDefinitions.top.staticComputedMethods.append(instr.input(0))
+            } else {
+                activeClassDefinitions.top.instanceComputedMethods.append(instr.input(0))
+            }
+        case .beginClassGetter(let op):
+            if op.isStatic {
+                activeClassDefinitions.top.staticGetters.append(op.propertyName)
+            } else {
+                activeClassDefinitions.top.instanceGetters.append(op.propertyName)
+            }
+        case .beginClassSetter(let op):
+            if op.isStatic {
+                activeClassDefinitions.top.staticSetters.append(op.propertyName)
+            } else {
+                activeClassDefinitions.top.instanceSetters.append(op.propertyName)
+            }
+        case .classAddPrivateProperty(let op):
             activeClassDefinitions.top.privateProperties.append(op.propertyName)
-        case .beginClassPrivateInstanceMethod(let op):
-            activeClassDefinitions.top.privateMethods.append(op.methodName)
-        case .classAddPrivateStaticProperty(let op):
-            activeClassDefinitions.top.privateProperties.append(op.propertyName)
-        case .beginClassPrivateStaticMethod(let op):
+        case .beginClassPrivateMethod(let op):
             activeClassDefinitions.top.privateMethods.append(op.methodName)
         case .beginClassStaticInitializer:
             break

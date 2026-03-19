@@ -129,61 +129,54 @@ message BeginClassConstructor {
 message EndClassConstructor {
 }
 
-message ClassAddInstanceProperty {
+message ClassAddProperty {
     string propertyName = 1;
     bool hasValue = 2;
+    bool is_static = 3;
 }
 
-message ClassAddInstanceElement {
+message ClassAddElement {
     int64 index = 1;
     bool hasValue = 2;
+    bool is_static = 3;
 }
 
-message ClassAddInstanceComputedProperty {
+message ClassAddComputedProperty {
     bool hasValue = 1;
+    bool is_static = 2;
 }
 
-message BeginClassInstanceMethod {
+message BeginClassMethod {
     string methodName = 1;
     Parameters parameters = 2;
+    bool is_static = 3;
 }
 
-message EndClassInstanceMethod {
+message EndClassMethod {
 }
 
-message BeginClassInstanceComputedMethod {
+message BeginClassComputedMethod {
     Parameters parameters = 1;
+    bool is_static = 2;
 }
 
-message EndClassInstanceComputedMethod {
+message EndClassComputedMethod {
 }
 
-message BeginClassInstanceGetter {
+message BeginClassGetter {
     string propertyName = 1;
+    bool is_static = 2;
 }
 
-message EndClassInstanceGetter {
+message EndClassGetter {
 }
 
-message BeginClassInstanceSetter {
+message BeginClassSetter {
     string propertyName = 1;
+    bool is_static = 2;
 }
 
-message EndClassInstanceSetter {
-}
-
-message ClassAddStaticProperty {
-    string propertyName = 1;
-    bool hasValue = 2;
-}
-
-message ClassAddStaticElement {
-    int64 index = 1;
-    bool hasValue = 2;
-}
-
-message ClassAddStaticComputedProperty {
-    bool hasValue = 1;
+message EndClassSetter {
 }
 
 message BeginClassStaticInitializer {
@@ -192,59 +185,19 @@ message BeginClassStaticInitializer {
 message EndClassStaticInitializer {
 }
 
-message BeginClassStaticMethod {
-    string methodName = 1;
-    Parameters parameters = 2;
-}
-
-message EndClassStaticMethod {
-}
-
-message BeginClassStaticComputedMethod {
-    Parameters parameters = 1;
-}
-
-message EndClassStaticComputedMethod {
-}
-
-message BeginClassStaticGetter {
-    string propertyName = 1;
-}
-
-message EndClassStaticGetter {
-}
-
-message BeginClassStaticSetter {
-    string propertyName = 1;
-}
-
-message EndClassStaticSetter {
-}
-
-message ClassAddPrivateInstanceProperty {
+message ClassAddPrivateProperty {
     string propertyName = 1;
     bool hasValue = 2;
+    bool is_static = 3;
 }
 
-message BeginClassPrivateInstanceMethod {
+message BeginClassPrivateMethod {
     string methodName = 1;
     Parameters parameters = 2;
+    bool is_static = 3;
 }
 
-message EndClassPrivateInstanceMethod {
-}
-
-message ClassAddPrivateStaticProperty {
-    string propertyName = 1;
-    bool hasValue = 2;
-}
-
-message BeginClassPrivateStaticMethod {
-    string methodName = 1;
-    Parameters parameters = 2;
-}
-
-message EndClassPrivateStaticMethod {
+message EndClassPrivateMethod {
 }
 
 message EndClassDefinition {
