@@ -802,7 +802,7 @@ public struct JSTyper: Analyzer {
                 let isMemory64 = type(of: instr.input(0)).wasmMemoryType?.isMemory64 ?? false
                 registerWasmMemoryUse(for: instr.input(0))
                 setType(of: instr.output, to: isMemory64 ? .wasmi64 : .wasmi32)
-            case .wasmJsCall(let op):
+            case .wasmJsCall(_):
                 let wasmSignature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
                 let sigOutputTypes = wasmSignature.outputTypes
                 assert(sigOutputTypes.count < 2, "multi-return js calls are not supported")
