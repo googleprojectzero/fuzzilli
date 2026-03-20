@@ -3897,4 +3897,22 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(actual, expected)
     }
+
+    func testEmptyWasmModule() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.buildWasmModule {_ in}
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        // An empty Wasm module should only contain the needed prefix but no empty sections.
+        let expected = """
+        const v0 = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([
+            0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00,
+        ])));
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
 }

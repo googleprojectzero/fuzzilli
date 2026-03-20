@@ -622,10 +622,6 @@ public class WasmLifter {
     }
 
     private func buildTypeSection() throws {
-        self.bytecode += [WasmSection.type.rawValue]
-
-        var temp = Data()
-
         // Collect all signatures of imported functions, suspendable objects or tags.
         // See importAnalysis for more details.
         for signature in self.exports.compactMap({ $0.getImport()?.signature }) {
@@ -638,7 +634,12 @@ public class WasmLifter {
         }
 
         let typeCount = self.signatures.count + typeGroups.count
-        temp += Leb128.unsignedEncode(typeCount)
+        if typeCount == 0 {
+            return
+        }
+
+        self.bytecode += [WasmSection.type.rawValue]
+        var temp = Leb128.unsignedEncode(typeCount)
 
         // TODO(mliedtke): Integrate this with the whole signature mechanism as
         // these signatures could contain wasm-gc types.
@@ -791,11 +792,16 @@ public class WasmLifter {
     }
 
     private func buildFunctionSection() throws {
+        let functionCount = self.exports.count { $0.isFunction }
+        if functionCount == 0 {
+            return
+        }
+
         self.bytecode += [WasmSection.function.rawValue]
 
         // The number of functions we have, as this is a vector of type idxs.
         // TODO(cffsmith): functions can share type indices. This could be an optimization later on.
-        var temp = Leb128.unsignedEncode(self.exports.count { $0.isFunction })
+        var temp = Leb128.unsignedEncode(functionCount)
 
         for case let .function(functionInfo) in self.exports {
             temp.append(Leb128.unsignedEncode(try getSignatureIndex(functionInfo!.signature)))
@@ -814,9 +820,14 @@ public class WasmLifter {
     }
 
     private func buildTableSection() throws {
+        let tableCount = self.exports.count { $0.isTable }
+        if tableCount == 0 {
+            return
+        }
+
         self.bytecode += [WasmSection.table.rawValue]
 
-        var temp = Leb128.unsignedEncode(self.exports.count { $0.isTable })
+        var temp = Leb128.unsignedEncode(tableCount)
 
         for case let .table(instruction) in self.exports {
             let op = instruction!.op as! WasmDefineTable
@@ -922,9 +933,13 @@ public class WasmLifter {
     }
 
     private func buildCodeSection(_ instructions: Code) throws {
+        let functionCount = self.exports.count { $0.isFunction }
+        if functionCount == 0 {
+            return
+        }
+
         // Build the contents of the section
-        var temp = Data()
-        temp += Leb128.unsignedEncode(self.exports.count { $0.isFunction })
+        var temp = Leb128.unsignedEncode(functionCount)
 
         var functionBranchHints = [Data]()
 
@@ -1006,6 +1021,10 @@ public class WasmLifter {
     }
 
     private func buildDataSection() throws {
+        if self.dataSegments.isEmpty {
+            return
+        }
+
         self.bytecode += [WasmSection.data.rawValue]
 
         var temp = Data()
@@ -1030,11 +1049,12 @@ public class WasmLifter {
     }
 
     private func buildDataCountSection() throws {
+        if self.dataSegments.isEmpty {
+            return
+        }
+
         self.bytecode += [WasmSection.datacount.rawValue]
-
-        var temp = Data()
-        temp += Leb128.unsignedEncode(self.dataSegments.count)
-
+        let temp = Leb128.unsignedEncode(self.dataSegments.count)
         self.bytecode.append(Leb128.unsignedEncode(temp.count))
         self.bytecode.append(temp)
 
@@ -1047,11 +1067,13 @@ public class WasmLifter {
     }
 
     private func buildGlobalSection() throws {
+        let globalCount = self.exports.count { $0.isGlobal }
+        if globalCount == 0 {
+            return
+        }
+
         self.bytecode += [WasmSection.global.rawValue]
-
-        var temp = Data()
-
-        temp += Leb128.unsignedEncode(self.exports.count { $0.isGlobal })
+        var temp = Leb128.unsignedEncode(globalCount)
 
         // TODO: in the future this should maybe be a context that allows instructions? Such that we can fuzz this expression as well?
         for case let .global(instruction) in self.exports {
@@ -1102,13 +1124,13 @@ public class WasmLifter {
     }
 
     private func buildMemorySection() {
+        let memoryCount = self.exports.count { $0.isMemory }
+        if memoryCount == 0 {
+            return
+        }
+
         self.bytecode += [WasmSection.memory.rawValue]
-
-        var temp = Data()
-
-        // The amount of memories we have, per standard this can currently only be one, either defined or imported
-        // https://webassembly.github.io/spec/core/syntax/modules.html#memories
-        temp += Leb128.unsignedEncode(self.exports.count { $0.isMemory })
+        var temp = Leb128.unsignedEncode(memoryCount)
 
         for case let .memory(instruction) in self.exports {
             let type = typer.type(of: instruction!.output)
@@ -1164,6 +1186,10 @@ public class WasmLifter {
 
     // Export all imports and defined things by default.
     private func buildExportedSection() throws {
+        if self.exports.isEmpty {
+            return
+        }
+
         self.bytecode += [WasmSection.export.rawValue]
 
         var temp = Data()
