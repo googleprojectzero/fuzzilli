@@ -1621,6 +1621,30 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator(
+        "WasmCreateExnRefGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.object(ofGroup: "WasmTag")),
+        produces: [.wasmExnRef()]
+    ) { b, tag in
+        let function = b.currentWasmModule.currentWasmFunction
+        let tagType = b.type(of: tag).wasmTagType!
+        guard !tagType.isJSTag else {
+            // We can't throw a JSTag, so simply create a null value.
+            function.wasmRefNull(type: .wasmExnRef())
+            return
+        }
+        // Create a try-catch throwing and catching a tag producing an exnref as
+        // a result.
+        function.wasmBuildBlockWithResults(with: [] => (tagType.parameters + [.wasmExnRef()]), args: []) { label, _ in
+            let args = tagType.parameters.map(function.findOrGenerateWasmVar)
+            function.wasmBuildTryTable(with: [] => [], args: [tag, label], catches: [.Ref]) { _, _ in
+                function.WasmBuildThrow(tag: tag, inputs: args)
+                return []
+            }
+            return args + [function.wasmRefNull(type: .wasmExnRef())]
+        }
+    },
+
+    CodeGenerator(
         "WasmThrowRefGenerator", inContext: .single(.wasmFunction),
         inputs: .required(.wasmExnRef())
     ) { b, exception in

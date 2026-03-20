@@ -3125,6 +3125,7 @@ class ProgramBuilderTests: XCTestCase {
         test("WasmStructNewDefaultGenerator", expectAny: WasmStructNewDefault.self)
         test("WasmArrayGetGenerator", expectAny: WasmArrayGet.self, requiresTypes: true)
         test("WasmStructGetGenerator", expectAny: WasmStructGet.self, requiresTypes: true)
+        test("WasmThrowRefGenerator", expectAny: WasmThrowRef.self)
     }
 
     func testThatGeneratorsExistAndAreBuildableFromJs() {

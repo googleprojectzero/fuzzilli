@@ -324,6 +324,9 @@ public let codeGeneratorWeights = [
     "WasmLegacyTryDelegateGenerator":           8,
     "WasmThrowGenerator":                       2,
     "WasmLegacyRethrowGenerator":               10,
+    // This generator is mostly just there, so that the WasmThrowRefGenerator
+    // can create an exnref on demand (if a wasm tag is present).
+    "WasmCreateExnRefGenerator":                1,
     "WasmThrowRefGenerator":                    6,
     "WasmBranchGenerator":                      6,
     "WasmBranchIfGenerator":                    6,
