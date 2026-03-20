@@ -4754,40 +4754,14 @@ public struct Fuzzilli_Protobuf_WasmStoreGlobal: Sendable {
   fileprivate var _globalType: Fuzzilli_Protobuf_WasmILType? = nil
 }
 
-/// WasmTableGet and WasmTableSet need a WasmTableType as input.
 public struct Fuzzilli_Protobuf_WasmTableGet: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var elementType: Fuzzilli_Protobuf_WasmILType {
-    get {_elementType ?? Fuzzilli_Protobuf_WasmILType()}
-    set {_elementType = newValue}
-  }
-  /// Returns true if `elementType` has been explicitly set.
-  public var hasElementType: Bool {self._elementType != nil}
-  /// Clears the value of `elementType`. Subsequent reads from it will return its default value.
-  public mutating func clearElementType() {self._elementType = nil}
-
-  public var minSize: Int64 = 0
-
-  public var maxSize: Int64 {
-    get {_maxSize ?? 0}
-    set {_maxSize = newValue}
-  }
-  /// Returns true if `maxSize` has been explicitly set.
-  public var hasMaxSize: Bool {self._maxSize != nil}
-  /// Clears the value of `maxSize`. Subsequent reads from it will return its default value.
-  public mutating func clearMaxSize() {self._maxSize = nil}
-
-  public var isTable64: Bool = false
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _elementType: Fuzzilli_Protobuf_WasmILType? = nil
-  fileprivate var _maxSize: Int64? = nil
 }
 
 public struct Fuzzilli_Protobuf_WasmTableSet: Sendable {
@@ -4795,34 +4769,9 @@ public struct Fuzzilli_Protobuf_WasmTableSet: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var elementType: Fuzzilli_Protobuf_WasmILType {
-    get {_elementType ?? Fuzzilli_Protobuf_WasmILType()}
-    set {_elementType = newValue}
-  }
-  /// Returns true if `elementType` has been explicitly set.
-  public var hasElementType: Bool {self._elementType != nil}
-  /// Clears the value of `elementType`. Subsequent reads from it will return its default value.
-  public mutating func clearElementType() {self._elementType = nil}
-
-  public var minSize: Int64 = 0
-
-  public var maxSize: Int64 {
-    get {_maxSize ?? 0}
-    set {_maxSize = newValue}
-  }
-  /// Returns true if `maxSize` has been explicitly set.
-  public var hasMaxSize: Bool {self._maxSize != nil}
-  /// Clears the value of `maxSize`. Subsequent reads from it will return its default value.
-  public mutating func clearMaxSize() {self._maxSize = nil}
-
-  public var isTable64: Bool = false
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _elementType: Fuzzilli_Protobuf_WasmILType? = nil
-  fileprivate var _maxSize: Int64? = nil
 }
 
 public struct Fuzzilli_Protobuf_WasmTableSize: Sendable {
@@ -12732,48 +12681,18 @@ extension Fuzzilli_Protobuf_WasmStoreGlobal: SwiftProtobuf.Message, SwiftProtobu
 
 extension Fuzzilli_Protobuf_WasmTableGet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmTableGet"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elementType\0\u{1}minSize\0\u{1}maxSize\0\u{1}isTable64\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._elementType) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
-      case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
-      case 4: try { try decoder.decodeSingularBoolField(value: &self.isTable64) }()
-      default: break
-      }
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._elementType {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    if self.minSize != 0 {
-      try visitor.visitSingularInt64Field(value: self.minSize, fieldNumber: 2)
-    }
-    try { if let v = self._maxSize {
-      try visitor.visitSingularInt64Field(value: v, fieldNumber: 3)
-    } }()
-    if self.isTable64 != false {
-      try visitor.visitSingularBoolField(value: self.isTable64, fieldNumber: 4)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmTableGet, rhs: Fuzzilli_Protobuf_WasmTableGet) -> Bool {
-    if lhs._elementType != rhs._elementType {return false}
-    if lhs.minSize != rhs.minSize {return false}
-    if lhs._maxSize != rhs._maxSize {return false}
-    if lhs.isTable64 != rhs.isTable64 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12781,48 +12700,18 @@ extension Fuzzilli_Protobuf_WasmTableGet: SwiftProtobuf.Message, SwiftProtobuf._
 
 extension Fuzzilli_Protobuf_WasmTableSet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmTableSet"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elementType\0\u{1}minSize\0\u{1}maxSize\0\u{1}isTable64\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._elementType) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.minSize) }()
-      case 3: try { try decoder.decodeSingularInt64Field(value: &self._maxSize) }()
-      case 4: try { try decoder.decodeSingularBoolField(value: &self.isTable64) }()
-      default: break
-      }
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._elementType {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    if self.minSize != 0 {
-      try visitor.visitSingularInt64Field(value: self.minSize, fieldNumber: 2)
-    }
-    try { if let v = self._maxSize {
-      try visitor.visitSingularInt64Field(value: v, fieldNumber: 3)
-    } }()
-    if self.isTable64 != false {
-      try visitor.visitSingularBoolField(value: self.isTable64, fieldNumber: 4)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmTableSet, rhs: Fuzzilli_Protobuf_WasmTableSet) -> Bool {
-    if lhs._elementType != rhs._elementType {return false}
-    if lhs.minSize != rhs.minSize {return false}
-    if lhs._maxSize != rhs._maxSize {return false}
-    if lhs.isTable64 != rhs.isTable64 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

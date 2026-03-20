@@ -912,12 +912,7 @@ final class WasmStoreGlobal: WasmOperation {
 final class WasmTableGet: WasmOperation {
     override var opcode: Opcode { .wasmTableGet(self) }
 
-    let tableType: WasmTableType
-
-    init(tableType: ILType) {
-        assert(tableType.isWasmTableType)
-        self.tableType = tableType.wasmTableType!
-
+    init() {
         super.init(numInputs: 2, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }
@@ -925,11 +920,7 @@ final class WasmTableGet: WasmOperation {
 final class WasmTableSet: WasmOperation {
     override var opcode: Opcode { .wasmTableSet(self) }
 
-    let tableType: WasmTableType
-
-    init(tableType: ILType) {
-        assert(tableType.isWasmTableType)
-        self.tableType = tableType.wasmTableType!
+    init() {
         super.init(numInputs: 3, requiredContext: [.wasmFunction])
     }
 }

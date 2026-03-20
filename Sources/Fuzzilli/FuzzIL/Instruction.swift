@@ -1258,24 +1258,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmStoreGlobal = Fuzzilli_Protobuf_WasmStoreGlobal.with {
                     $0.globalType = ILTypeToWasmTypeEnum(op.globalType)
                 }
-            case .wasmTableGet(let op):
-                $0.wasmTableGet = Fuzzilli_Protobuf_WasmTableGet.with {
-                    $0.elementType = ILTypeToWasmTypeEnum(op.tableType.elementType)
-                    $0.minSize = Int64(op.tableType.limits.min)
-                    if let max = op.tableType.limits.max {
-                        $0.maxSize = Int64(max)
-                    }
-                    $0.isTable64 = op.tableType.isTable64
-                }
-            case .wasmTableSet(let op):
-                $0.wasmTableSet = Fuzzilli_Protobuf_WasmTableSet.with {
-                    $0.elementType = ILTypeToWasmTypeEnum(op.tableType.elementType)
-                    $0.minSize = Int64(op.tableType.limits.min)
-                    if let max = op.tableType.limits.max {
-                        $0.maxSize = Int64(max)
-                    }
-                    $0.isTable64 = op.tableType.isTable64
-                }
+            case .wasmTableGet(_):
+                $0.wasmTableGet = Fuzzilli_Protobuf_WasmTableGet()
+            case .wasmTableSet(_):
+                $0.wasmTableSet = Fuzzilli_Protobuf_WasmTableSet()
             case .wasmCallIndirect(let op):
                 $0.wasmCallIndirect = Fuzzilli_Protobuf_WasmCallIndirect.with {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
@@ -2340,14 +2326,10 @@ extension Instruction: ProtobufConvertible {
             op = WasmLoadGlobal(globalType: WasmTypeEnumToILType(p.globalType))
         case .wasmStoreGlobal(let p):
             op = WasmStoreGlobal(globalType: WasmTypeEnumToILType(p.globalType))
-        case .wasmTableGet(let p):
-            op = WasmTableGet(tableType: .wasmTable(wasmTableType:
-                WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
-                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [])))
-        case .wasmTableSet(let p):
-            op = WasmTableSet(tableType: .wasmTable(wasmTableType:
-                WasmTableType(elementType: WasmTypeEnumToILType(p.elementType),
-                              limits: Limits(min: Int(p.minSize), max: p.hasMaxSize ? Int(p.maxSize) : nil), isTable64: p.isTable64, knownEntries: [])))
+        case .wasmTableGet(_):
+            op = WasmTableGet()
+        case .wasmTableSet(_):
+            op = WasmTableSet()
         case .wasmCallIndirect(let p):
             let parameters = p.parameterTypes.map(WasmTypeEnumToILType)
             let outputs = p.outputTypes.map(WasmTypeEnumToILType)

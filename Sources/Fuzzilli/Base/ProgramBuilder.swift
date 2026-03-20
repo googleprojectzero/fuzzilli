@@ -3747,14 +3747,14 @@ public class ProgramBuilder {
         public func wasmTableGet(tableRef: Variable, idx: Variable) -> Variable {
             let tableType = b.type(of: tableRef)
             let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
-            return b.emit(WasmTableGet(tableType: tableType), withInputs: [tableRef, idx], types: [tableType, offsetType]).output
+            return b.emit(WasmTableGet(), withInputs: [tableRef, idx], types: [tableType, offsetType]).output
         }
 
         public func wasmTableSet(tableRef: Variable, idx: Variable, to value: Variable) {
             let tableType = b.type(of: tableRef)
             let elementType = tableType.wasmTableType!.elementType
             let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
-            b.emit(WasmTableSet(tableType: tableType), withInputs: [tableRef, idx, value], types: [tableType, offsetType, elementType])
+            b.emit(WasmTableSet(), withInputs: [tableRef, idx, value], types: [tableType, offsetType, elementType])
         }
 
         @discardableResult

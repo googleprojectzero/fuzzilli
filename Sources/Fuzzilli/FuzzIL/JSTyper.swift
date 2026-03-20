@@ -768,10 +768,11 @@ public struct JSTyper: Analyzer {
             case .wasmStoreGlobal(_):
                 let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
                 dynamicObjectGroupManager.addWasmGlobal(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
-            case .wasmTableGet(let op):
+            case .wasmTableGet(_):
                 let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-                dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
-                setType(of: instr.output, to: op.tableType.elementType)
+                let tableType = type(of: instr.input(0))
+                dynamicObjectGroupManager.addWasmTable(withType: tableType, forDefinition: definingInstruction, forVariable: instr.input(0))
+                setType(of: instr.output, to: tableType.wasmTableType!.elementType)
             case .wasmTableSet(_):
                 let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
                 dynamicObjectGroupManager.addWasmTable(withType: type(of: instr.input(0)), forDefinition: definingInstruction, forVariable: instr.input(0))
