@@ -1421,7 +1421,7 @@ final class WasmBeginCatch : WasmOperation {
             requiredContext: [.wasmFunction])
     }
 
-    var blockOutputCount: Int {numInputs - 2}
+    var blockOutputCount: Int {numInputs - 3}
     var labelParameterCount: Int {numInnerOutputs - 2}
 }
 

@@ -2532,7 +2532,7 @@ extension Instruction: ProtobufConvertible {
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {
-            throw FuzzilliError.instructionDecodingError("incorrect number of in- and outputs")
+            throw FuzzilliError.instructionDecodingError("incorrect number of in- and outputs for operation \(op)")
         }
 
         opCache?.add(op)
