@@ -1408,9 +1408,9 @@ final class WasmBeginCatch : WasmOperation {
         // the usage. For now, we just emit a label for branching and the ".exceptionLabel" for
         // rethrows.
         super.init(
-            // Inputs: The block signature, the tag and the outputs of the preceding try or catch
+            // Inputs: The block signature, the tag, the tag signature, and the outputs of the preceding try or catch
             // (all) block.
-            numInputs: 2 + blockOutputCount,
+            numInputs: 3 + blockOutputCount,
             // Inner outputs are the branch label, the exception label and the tag parameters.
             numInnerOutputs: 2 + labelParameterCount,
             attributes: [

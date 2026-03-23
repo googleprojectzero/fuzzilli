@@ -4092,18 +4092,28 @@ public class ProgramBuilder {
                 catchAllBody: ((Variable) -> Void)? = nil) {
             let signature = [] => []
             let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
+
+            // Define tag signatures before the try block so they don't interfere with the try/catch
+            // bodies and their scoping.
+            // TODO(mliedtke): We should reuse the signature of the tag once tags use a wasm-gc
+            // signature.
+            let tagSignatures = catchClauses.map {
+                b.wasmDefineAdHocSignatureType(signature: b.type(of: $0.tag).wasmTagType!.parameters => [])
+            }
+
             let instr = b.emit(WasmBeginTry(
                 parameterCount: 0), withInputs: [signatureDef], types: [.wasmTypeDef()])
             assert(instr.innerOutputs.count == 1)
             body(instr.innerOutput(0))
-            for (tag, generator) in catchClauses {
+            for (i, (tag, generator)) in catchClauses.enumerated() {
                 b.reportErrorIf(!b.type(of: tag).isWasmTagType,
                     "Expected tag misses the WasmTagType extension for variable \(tag), typed \(b.type(of: tag)).")
+                let tagSignatureDef = tagSignatures[i]
                 let instr = b.emit(WasmBeginCatch(
                         blockOutputCount: signature.outputTypes.count,
                         labelParameterCount:  b.type(of: tag).wasmTagType!.parameters.count),
-                    withInputs: [signatureDef, tag],
-                    types: [.wasmTypeDef(), .object(ofGroup: "WasmTag")] + signature.outputTypes)
+                    withInputs: [signatureDef, tag, tagSignatureDef],
+                    types: [.wasmTypeDef(), .object(ofGroup: "WasmTag"), .wasmTypeDef()] + signature.outputTypes)
                 generator(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
             }
             if let catchAllBody {
@@ -4125,18 +4135,28 @@ public class ProgramBuilder {
                 catchClauses: [(tag: Variable, body: (Variable, Variable, [Variable]) -> [Variable])] = [],
                 catchAllBody: ((Variable) -> [Variable])? = nil) -> [Variable] {
             let parameterCount = signature.parameterTypes.count
+
+            // Define tag signatures before the try block so they don't interfere with the try/catch
+            // bodies and their scoping.
+            // TODO(mliedtke): We should reuse the signature of the tag once tags use a wasm-gc
+            // signature.
+            let tagSignatures = catchClauses.map {
+                b.wasmDefineAdHocSignatureType(signature: b.type(of: $0.tag).wasmTagType!.parameters => [])
+            }
+
             let instr = b.emit(WasmBeginTry(parameterCount: parameterCount),
                 withInputs: [signatureDef] + args,
                 types: [.wasmTypeDef()] + signature.parameterTypes)
             var result = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            for (tag, generator) in catchClauses {
+            for (i, (tag, generator)) in catchClauses.enumerated() {
                 b.reportErrorIf(!b.type(of: tag).isWasmTagType,
                     "Expected tag misses the WasmTagType extension for variable \(tag), typed \(b.type(of: tag)).")
+                let tagSignatureDef = tagSignatures[i]
                 let instr = b.emit(WasmBeginCatch(
                         blockOutputCount: signature.outputTypes.count,
                         labelParameterCount:  b.type(of: tag).wasmTagType!.parameters.count),
-                    withInputs: [signatureDef, tag] + result,
-                    types: [.wasmTypeDef(), .object(ofGroup: "WasmTag")] + signature.outputTypes)
+                    withInputs: [signatureDef, tag, tagSignatureDef] + result,
+                    types: [.wasmTypeDef(), .object(ofGroup: "WasmTag"), .wasmTypeDef()] + signature.outputTypes)
                 result = generator(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
             }
             if let catchAllBody = catchAllBody {

@@ -883,13 +883,11 @@ public struct JSTyper: Analyzer {
                 // exception with the legacy exception handling proposal. (This is similar to the
                 // exnref in the standard exception handling spec.)
                 setType(of: instr.innerOutput(1), to: .exceptionLabel)
-                // Type the tag parameters.
-                // If the input isn't typed as a Wasm tag any more (this can happen as tags can be
-                // defined in JS and there a reassign as part of a CodeGenMutator run can loosen the
-                // inferred type), just act as if there weren't any label parameters. In that case
-                // the lifter will fail and the test case will be discarded.
-                let labelParameters = type(of: instr.input(1)).wasmTagType?.parameters ?? []
-                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(2), labelParameters) {
+                // Type the tag parameters based on the tag's signature definition.
+                // This guarantees that the inner outputs are properly typed, even if a mutator
+                // changed the tag variable to something that's not typed as a Wasm tag anymore.
+                let tagSignature = type(of: instr.input(2)).wasmFunctionSignatureDefSignature
+                for (innerOutput, paramType) in zip(instr.innerOutputs.dropFirst(2), tagSignature.parameterTypes) {
                     setType(of: innerOutput, to: paramType)
                 }
                 for (output, outputType) in zip(instr.outputs, blockSignature.outputTypes) {
