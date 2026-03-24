@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/setup-node@v4
         with:
-          node-version: 25-nightly
+          node-version: 26-nightly
       - name: Swift Version
         run: swift --version
       - uses: actions/checkout@v2
