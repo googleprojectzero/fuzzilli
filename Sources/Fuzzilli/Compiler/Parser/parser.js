@@ -164,7 +164,7 @@ function parse(script, proto) {
             } else if (member.key.type === 'StringLiteral') {
                 body.name = member.key.value;
             } else {
-                throw "Unknown member key type: " + member.key.type + " in class declaration";
+                throw "Unknown member key type: " + member.key.type + " in declaration";
             }
         }
         return make('PropertyKey', body);
@@ -468,19 +468,7 @@ function parse(script, proto) {
                         assert(!field.method, "Expected field.method to be false");
                         let property = {};
                         property.value = visitExpression(field.value);
-                        if (field.computed) {
-                            property.expression = visitExpression(field.key);
-                        } else {
-                            if (field.key.type === 'Identifier') {
-                                property.name = field.key.name;
-                            } else if (field.key.type === 'NumericLiteral') {
-                                property.index = field.key.value;
-                            } else if (field.key.type === 'StringLiteral') {
-                                property.name = field.key.value;
-                            } else {
-                                throw "Unknown property key type: " + field.key.type;
-                            }
-                        }
+                        property.key = visitMemberKey(field);
                         fields.push(make('ObjectField', { property: make('ObjectProperty', property) }));
                     } else {
                         assert(field.type === 'ObjectMethod', "Expected field.type to be exactly 'ObjectMethod'");
@@ -489,19 +477,7 @@ function parse(script, proto) {
                         let method = field;
 
                         let out = {};
-                        if (method.computed) {
-                            out.expression = visitExpression(method.key);
-                        } else {
-                            if (method.key.type === 'Identifier') {
-                                out.name = method.key.name;
-                            } else if (method.key.type === 'NumericLiteral') {
-                                out.name = String(method.key.value);
-                            } else if (method.key.type === 'StringLiteral') {
-                                out.name = method.key.value;
-                            } else {
-                                throw "Unknown method key type: " + method.key.type;
-                            }
-                        }
+                        out.key = visitMemberKey(method);
 
                         field = {};
                         if (method.kind === 'method') {

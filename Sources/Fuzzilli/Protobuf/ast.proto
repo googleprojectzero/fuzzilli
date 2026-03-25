@@ -318,42 +318,26 @@ message AssignmentExpression {
 }
 
 message ObjectProperty {
-    oneof key {
-        // A "regular" property.
-        string name = 1;
-        // An element.
-        int64 index = 2;
-        // A computed property.
-        Expression expression = 3;
-    }
-    Expression value = 4;
+    PropertyKey key = 1;
+    Expression value = 2;
 }
 
 message ObjectMethod {
-    oneof key {
-        string name = 1;
-        Expression expression = 2;
-    }
-    FunctionType type = 3;
-    Parameters parameters = 4;
-    repeated Statement body = 5;
+    PropertyKey key = 1;
+    FunctionType type = 2;
+    Parameters parameters = 3;
+    repeated Statement body = 4;
 }
 
 message ObjectGetter {
-    oneof key {
-        string name = 1;
-        Expression expression = 2;
-    }
-    repeated Statement body = 3;
+    PropertyKey key = 1;
+    repeated Statement body = 2;
 }
 
 message ObjectSetter {
-    oneof key {
-        string name = 1;
-        Expression expression = 2;
-    }
-    Parameter parameter = 3;
-    repeated Statement body = 4;
+    PropertyKey key = 1;
+    Parameter parameter = 2;
+    repeated Statement body = 3;
 }
 
 message ObjectField {

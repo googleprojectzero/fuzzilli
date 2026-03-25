@@ -329,7 +329,7 @@ struct JavaScriptExploreLifting {
         function exploreString(s) {
             // Sometimes (rarely) compare the string against it's original value. Otherwise, treat the string as an object.
             // TODO: sometimes access a character of the string or iterate over it?
-            if (probability(0.1) && isSimpleString(s)) {
+            if (probability(0.1) && isShortString(s)) {
                 return new Action(OP_COMPARE_EQUAL, [exploredValueInput, new StringInput(s)]);
             } else {
                 return exploreObject(new String(s));

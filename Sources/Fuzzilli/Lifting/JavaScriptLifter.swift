@@ -383,9 +383,8 @@ public class JavaScriptLifter: Lifter {
                 w.pushTemporaryOutputBuffer(initialIndentionLevel: 0)
 
             case .objectLiteralAddProperty(let op):
-                let PROPERTY = op.propertyName
+                let PROPERTY = quoteIdentifierIfNeeded(op.propertyName)
                 let VALUE = input(0)
-                assert(!PROPERTY.contains(" "))
                 currentObjectLiteral.addField("\(PROPERTY): \(VALUE)")
 
             case .objectLiteralAddElement(let op):
@@ -409,7 +408,7 @@ public class JavaScriptLifter: Lifter {
             case .beginObjectLiteralMethod(let op):
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
-                let METHOD = quoteMethodDefinitionIfNeeded(op.methodName)
+                let METHOD = quoteIdentifierIfNeeded(op.methodName)
                 currentObjectLiteral.beginMethod("\(METHOD)(\(PARAMS)) {", &w)
                 bindVariableToThis(instr.innerOutput(0))
 
@@ -428,7 +427,7 @@ public class JavaScriptLifter: Lifter {
 
             case .beginObjectLiteralGetter(let op):
                 assert(instr.numInnerOutputs == 1)
-                let PROPERTY = op.propertyName
+                let PROPERTY = quoteIdentifierIfNeeded(op.propertyName)
                 currentObjectLiteral.beginMethod("get \(PROPERTY)() {", &w)
                 bindVariableToThis(instr.innerOutput(0))
 
@@ -436,7 +435,7 @@ public class JavaScriptLifter: Lifter {
                 assert(instr.numInnerOutputs == 2)
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
-                let PROPERTY = op.propertyName
+                let PROPERTY = quoteIdentifierIfNeeded(op.propertyName)
                 currentObjectLiteral.beginMethod("set \(PROPERTY)(\(PARAMS)) {", &w)
                 bindVariableToThis(instr.innerOutput(0))
 
@@ -497,7 +496,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("}")
 
             case .classAddProperty(let op):
-                let PROPERTY = op.propertyName
+                let PROPERTY = quoteIdentifierIfNeeded(op.propertyName)
                 let staticStr = op.isStatic ? "static " : ""
                 if op.hasValue {
                     let VALUE = input(0)
@@ -538,7 +537,7 @@ public class JavaScriptLifter: Lifter {
             case .beginClassMethod(let op):
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
-                let METHOD = quoteMethodDefinitionIfNeeded(op.methodName)
+                let METHOD = quoteIdentifierIfNeeded(op.methodName)
                 let staticStr = op.isStatic ? "static " : ""
                 w.emit("\(staticStr)\(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
@@ -554,7 +553,7 @@ public class JavaScriptLifter: Lifter {
                 bindVariableToThis(instr.innerOutput(0))
 
             case .beginClassGetter(let op):
-                let PROPERTY = op.propertyName
+                let PROPERTY = quoteIdentifierIfNeeded(op.propertyName)
                 let staticStr = op.isStatic ? "static " : ""
                 w.emit("\(staticStr)get \(PROPERTY)() {")
                 w.enterNewBlock()
@@ -564,7 +563,7 @@ public class JavaScriptLifter: Lifter {
                 assert(instr.numInnerOutputs == 2)
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
-                let PROPERTY = op.propertyName
+                let PROPERTY = quoteIdentifierIfNeeded(op.propertyName)
                 let staticStr = op.isStatic ? "static " : ""
                 w.emit("\(staticStr)set \(PROPERTY)(\(PARAMS)) {")
                 w.enterNewBlock()
@@ -655,29 +654,27 @@ public class JavaScriptLifter: Lifter {
 
             case .getProperty(let op):
                 let obj = input(0)
-                let accessOperator = op.isGuarded ? "?." : "."
-                let expr = MemberExpression.new() + obj + accessOperator + op.propertyName
+                let expr = MemberExpression.new() + obj + (liftMemberAccess(op.propertyName, isGuarded: op.isGuarded))
                 w.assign(expr, to: instr.output)
 
             case .setProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
                 let obj = inputAsIdentifier(0)
-                let PROPERTY = MemberExpression.new() + obj + "." + op.propertyName
+                let PROPERTY = MemberExpression.new() + obj + (liftMemberAccess(op.propertyName))
                 let VALUE = input(1)
                 w.emit("\(PROPERTY) = \(VALUE);")
 
             case .updateProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
                 let obj = inputAsIdentifier(0)
-                let PROPERTY = MemberExpression.new() + obj + "." + op.propertyName
+                let PROPERTY = MemberExpression.new() + obj + (liftMemberAccess(op.propertyName))
                 let VALUE = input(1)
                 w.emit("\(PROPERTY) \(op.op.token)= \(VALUE);")
 
             case .deleteProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of a property deletion, so force it to be stored in a variable.
                 let obj = inputAsIdentifier(0)
-                let accessOperator = op.isGuarded ? "?." : "."
-                let target = MemberExpression.new() + obj + accessOperator + op.propertyName
+                let target = MemberExpression.new() + obj + (liftMemberAccess(op.propertyName, isGuarded: op.isGuarded))
                 let expr = UnaryExpression.new() + "delete " + target
                 w.assign(expr, to: instr.output)
 
@@ -1111,13 +1108,13 @@ public class JavaScriptLifter: Lifter {
                 w.assign(expr, to: instr.output)
 
             case .getSuperProperty(let op):
-                let expr = MemberExpression.new() + "super.\(op.propertyName)"
+                let expr = MemberExpression.new() + "super" + liftMemberAccess(op.propertyName)
                 w.assign(expr, to: instr.output)
 
             case .setSuperProperty(let op):
-                let PROPERTY = op.propertyName
+                let PROPERTY = liftMemberAccess(op.propertyName)
                 let VALUE = input(0)
-                w.emit("super.\(PROPERTY) = \(VALUE);")
+                w.emit("super\(PROPERTY) = \(VALUE);")
 
             case .getComputedSuperProperty(_):
                 let expr = MemberExpression.new() + "super[" + input(0).text + "]"
@@ -1129,9 +1126,9 @@ public class JavaScriptLifter: Lifter {
                 w.emit("super[\(PROPERTY)] = \(VALUE);")
 
             case .updateSuperProperty(let op):
-                let PROPERTY = op.propertyName
+                let PROPERTY = liftMemberAccess(op.propertyName)
                 let VALUE = input(0)
-                w.emit("super.\(PROPERTY) \(op.op.token)= \(VALUE);")
+                w.emit("super\(PROPERTY) \(op.op.token)= \(VALUE);")
 
             case .beginIf(let op):
                 var COND = input(0)
@@ -1804,19 +1801,19 @@ public class JavaScriptLifter: Lifter {
         }
     }
 
-    func quoteMethodDefinitionIfNeeded(_ name: String) -> String {
-        if environment.isValidNameForMethodDefinition(name) {
+    func quoteIdentifierIfNeeded(_ name: String) -> String {
+        if environment.isValidIdentifierOrIndex(name) {
             return name
         }
         return "\"\(name)\""
     }
 
-    private func liftMemberAccess(_ name: String) -> String {
+    private func liftMemberAccess(_ name: String, isGuarded: Bool = false) -> String {
         if environment.isValidDotNotationName(name){
-            return "." + name
+            return (isGuarded ? "?." : ".") + name
         }
         let safeName = environment.isValidPropertyIndex(name) ? name : "\"\(name)\""
-        return "[" + safeName + "]"
+        return (isGuarded ? "?." : "") + "[" + safeName + "]"
     }
 
     private func liftParameters(_ parameters: Parameters, as variables: [String]) -> String {

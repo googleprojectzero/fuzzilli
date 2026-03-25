@@ -8,6 +8,18 @@ console.log("Computed object property");
   console.log(obj.theAnswerIs);
 })();
 
+console.log("Indexed object property");
+(() => {
+  const obj = { 67 : 42 };
+  console.log(obj[67]);
+})();
+
+console.log("String literal object property");
+(() => {
+  const obj = { "?" : 42 };
+  console.log(obj["?"]);
+})();
+
 console.log("Computed object method");
 (() => {
   const p = 'theAnswerIs';
@@ -25,6 +37,67 @@ console.log("String literal object method");
 (() => {
   const obj = { "?"() { return 42; } };
   console.log(obj["?"]());
+})();
+
+/*
+console.log("Computed object property (getter/setter)");
+(() => {
+  const p = 'theAnswerIs';
+  const name = "foo";
+  const obj = {
+    answer: 7,
+    get [name]() {
+      console.log("Heavy calculations");
+      return this.answer;
+    },
+    set [name](answer) {
+      console.log(`The answer was ${this.answer}`);
+      this.answer = answer;
+      console.log(`Now the answer is ${this.answer}`);
+    }
+  };
+  console.log(obj.foo);
+  obj.foo = 42;
+  console.log(obj.foo);
+})();
+*/
+
+console.log("Indexed object property (getter/setter)");
+(() => {
+  const obj = {
+    answer: 7,
+    get 67() {
+      console.log("Heavy calculations");
+      return this.answer;
+    },
+    set 67(answer) {
+      console.log(`The answer was ${this.answer}`);
+      this.answer = answer;
+      console.log(`Now the answer is ${this.answer}`);
+    }
+  };
+  console.log(obj[67]);
+  obj[67] = 42;
+  console.log(obj[67]);
+})();
+
+console.log("String literal object property (getter/setter)");
+(() => {
+  const obj = {
+    answer: 7,
+    get "?"() {
+      console.log("Heavy calculations");
+      return this.answer;
+    },
+    set "?"(answer) {
+      console.log(`The answer was ${this.answer}`);
+      this.answer = answer;
+      console.log(`Now the answer is ${this.answer}`);
+    }
+  };
+  console.log(obj["?"]);
+  obj["?"] = 42;
+  console.log(obj["?"]);
 })();
 
 console.log("Computed class property (field)");

@@ -774,15 +774,21 @@ public class JavaScriptCompiler {
                 guard let field = field.field else {
                     throw CompilerError.invalidNodeError("missing concrete field in object expression")
                 }
-                if case .property(let property) = field {
-                    propertyValues.append(try compileExpression(property.value))
-                    if case .expression(let expression) = property.key {
-                        computedKeys.append(try compileExpression(expression))
-                    }
-                } else if case .method(let method) = field {
-                    if case .expression(let expression) = method.key {
-                        computedKeys.append(try compileExpression(expression))
-                    }
+
+                let key : Compiler_Protobuf_PropertyKey
+                switch field {
+                    case .property(let property):
+                        propertyValues.append(try compileExpression(property.value))
+                        key = property.key
+                    case .method(let method):
+                        key = method.key
+                    case .getter(let getter):
+                        key = getter.key
+                    case .setter(let setter):
+                        key = setter.key
+                }
+                if case .expression(let expression) = key.body {
+                    computedKeys.append(try compileExpression(expression))
                 }
             }
 
@@ -795,7 +801,7 @@ public class JavaScriptCompiler {
             for field in objectExpression.fields {
                 switch field.field! {
                 case .property(let property):
-                    guard let key = property.key else {
+                    guard let key = property.key.body else {
                         throw CompilerError.invalidNodeError("missing key in object expression field")
                     }
                     let inputs = [propertyValues.removeLast()]
@@ -809,16 +815,22 @@ public class JavaScriptCompiler {
                     }
                 case .method(let method):
                     let parameters = convertParameters(method.parameters)
+                    let head: Instruction
 
-                    let instr: Instruction
-                    if case .name(let name) = method.key {
-                        instr = emit(BeginObjectLiteralMethod(methodName: name, parameters: parameters))
-                    } else {
-                        instr = emit(BeginObjectLiteralComputedMethod(parameters: parameters), withInputs: [computedKeys.removeLast()])
+                    guard let key = method.key.body else {
+                        throw CompilerError.invalidNodeError("Missing key in object expression method")
+                    }
+                    switch key {
+                    case .name(let name):
+                        head = emit(BeginObjectLiteralMethod(methodName: name, parameters: parameters))
+                    case .index(let index):
+                        head = emit(BeginObjectLiteralMethod(methodName: String(index), parameters: parameters))
+                    case .expression:
+                        head = emit(BeginObjectLiteralComputedMethod(parameters: parameters), withInputs: [computedKeys.removeLast()])
                     }
 
                     try enterNewScope {
-                        var parameters = instr.innerOutputs
+                        var parameters = head.innerOutputs
                         map("this", to: parameters.removeFirst())
                         mapParameters(method.parameters, to: parameters)
                         for statement in method.body {
@@ -826,30 +838,47 @@ public class JavaScriptCompiler {
                         }
                     }
 
-                    if case .name = method.key {
+                    switch key {
+                    case .name, .index:
                         emit(EndObjectLiteralMethod())
-                    } else {
+                    case .expression:
                         emit(EndObjectLiteralComputedMethod())
                     }
                 case .getter(let getter):
-                    guard case .name(let name) = getter.key else {
+                    guard let key = getter.key.body else {
+                        throw CompilerError.invalidNodeError("Missing key in object expression getter")
+                    }
+                    let head: Instruction
+                    switch key {
+                    case .name(let name):
+                        head = emit(BeginObjectLiteralGetter(propertyName: name))
+                    case .index(let index):
+                        head = emit(BeginObjectLiteralGetter(propertyName: String(index)))
+                    case .expression:
                         fatalError("Computed getters are not yet supported")
                     }
-                    let instr = emit(BeginObjectLiteralGetter(propertyName: name))
                     try enterNewScope {
-                        map("this", to: instr.innerOutput)
+                        map("this", to: head.innerOutput)
                         for statement in getter.body {
                             try compileStatement(statement)
                         }
                     }
                     emit(EndObjectLiteralGetter())
                 case .setter(let setter):
-                    guard case .name(let name) = setter.key else {
+                    guard let key = setter.key.body else {
+                        throw CompilerError.invalidNodeError("Missing key in object expression setter")
+                    }
+                    let head: Instruction
+                    switch key {
+                    case .name(let name):
+                        head = emit(BeginObjectLiteralSetter(propertyName: name))
+                    case .index(let index):
+                        head = emit(BeginObjectLiteralSetter(propertyName: String(index)))
+                    case .expression:
                         fatalError("Computed setters are not yet supported")
                     }
-                    let instr = emit(BeginObjectLiteralSetter(propertyName: name))
                     try enterNewScope {
-                        var parameters = instr.innerOutputs
+                        var parameters = head.innerOutputs
                         map("this", to: parameters.removeFirst())
                         map(setter.parameter.name, to: parameters.removeFirst())
                         assert(parameters.isEmpty)

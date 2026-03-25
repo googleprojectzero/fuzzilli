@@ -291,7 +291,7 @@ public class JavaScriptEnvironment: ComponentBase {
     public let interestingRegExpQuantifiers = ["*", "+", "?"]
 
     /// Identifiers that should be used for custom properties and methods.
-    public static let CustomPropertyNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    public static let CustomPropertyNames = ["a", "b", "c", "d", "e", "f", "!", "42"]
     public static let CustomMethodNames = ["m", "n", "o", "?", "67", "valueOf", "toString"]
     public static let CustomPrivateMethodNames = ["m", "n", "o", "p"]
 
@@ -318,13 +318,13 @@ public class JavaScriptEnvironment: ComponentBase {
     private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
     private var subtypes: [ILType: [ILType]] = [:]
 
-    private let validMethodDefinitionName: Regex<AnyRegexOutput>?
+    private let validIdentifierOrIndex: Regex<AnyRegexOutput>?
     private let validDotNotationName: Regex<AnyRegexOutput>?
     private let validPropertyIndex: Regex<AnyRegexOutput>?
 
     public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = [], additionalEnumerations: [ILType] = []) {
         // A simple approximation of a valid JS identifier (used in dot
-        // notation and for method definitions).
+        // notation and for property and method names).
         let simpleId = "[_$a-zA-Z][_$a-zA-Z0-9]*"
 
         // A non-negative integer (with no leading zero) for index access
@@ -334,10 +334,10 @@ public class JavaScriptEnvironment: ComponentBase {
         // Initialize regular expressions to determine valid property
         // identifiers:
 
-        // At method definition site, we support simple identifiers and
-        // non-negative numbers. Other names will be quoted.
+        // We support simple identifiers and non-negative numbers. Other
+        // names will be quoted.
         // We don't support unquoted doubles.
-        self.validMethodDefinitionName = try! Regex("^(\(index)|\(simpleId))$")
+        self.validIdentifierOrIndex = try! Regex("^(\(index)|\(simpleId))$")
 
         // For dot notation we only support simple identifiers. We don't
         // support all possible names according to JS spec.
@@ -1004,8 +1004,8 @@ public class JavaScriptEnvironment: ComponentBase {
         }
     }
 
-    func isValidNameForMethodDefinition(_ name: String) -> Bool {
-        return (try? validMethodDefinitionName?.wholeMatch(in: name)) != nil
+    func isValidIdentifierOrIndex(_ name: String) -> Bool {
+        return (try? validIdentifierOrIndex?.wholeMatch(in: name)) != nil
     }
 
     func isValidDotNotationName(_ name: String) -> Bool {

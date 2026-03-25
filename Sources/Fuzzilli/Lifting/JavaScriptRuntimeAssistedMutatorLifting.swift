@@ -134,12 +134,10 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
             return isNumber(n) && NumberIsInteger(n) && n>= MIN_SAFE_INTEGER && n <= MAX_SAFE_INTEGER;
         }
 
-        // Helper function to determine if a string is "simple". We only include simple strings for property/method names or string literals.
-        // A simple string is basically a valid, property name with a maximum length.
-        const simpleStringRegExp = /^[0-9a-zA-Z_$]+$/;
-        function isSimpleString(s) {
-            if (!isString(s)) throw "Non-string argument to isSimpleString: " + s;
-            return s.length < 50 && execRegExp(simpleStringRegExp, s) !== null;
+        // Helper function to determine if a string is short.
+        function isShortString(s) {
+            if (!isString(s)) throw "Non-string argument to isShortString: " + s;
+            return s.length < 50;
         }
 
         // Helper function to determine if a string is numeric and its numeric value representable as an integer.
@@ -297,8 +295,8 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
                         // TODO should we allow negative indices here as well?
                         if (index >= 0 && index <= MAX_SAFE_INTEGER && numberToString(index) === p) {
                             push(allOwnElements, index);
-                        } else if (isSimpleString(p) && tryAccessProperty(p, o)) {
-                            // Only include properties with "simple" names and only if they can be accessed on the original object without raising an exception.
+                        } else if (isShortString(p) && tryAccessProperty(p, o)) {
+                            // Only include properties with short names and only if they can be accessed on the original object without raising an exception.
                             recordProperty(p);
                         }
                     }
@@ -453,7 +451,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
             return { argument: { index } };
         }
         function SpecialInput(name) {
-            if (!isString(name) || !isSimpleString(name)) throw "SpecialInput name is not a (simple) string: " + name;
+            if (!isString(name) || !isShortString(name)) throw "SpecialInput name is not a (short) string: " + name;
             return { special: { name } };
         }
         function IntInput(value) {
@@ -470,7 +468,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
             return { bigint: { value: bigintToString(value) } };
         }
         function StringInput(value) {
-            if (!isString(value) || !isSimpleString(value)) throw "StringInput value is not a (simple) string: " + value;
+            if (!isString(value) || !isShortString(value)) throw "StringInput value is not a (short) string: " + value;
             return { string: { value } };
         }
 

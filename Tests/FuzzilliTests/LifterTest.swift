@@ -583,8 +583,10 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
+        let v = b.loadInt(42)
         b.buildObjectLiteral { obj in
             for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                obj.addProperty(name, as: v)
                 obj.addMethod(name, with: .parameters(n: 0)) { args in
                 }
             }
@@ -594,21 +596,29 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v8 = {
+        const v9 = {
+            "???": 42,
             "???"() {
             },
+            0: 42,
             0() {
             },
+            "01": 42,
             "01"() {
             },
+            1: 42,
             1() {
             },
+            "0.1": 42,
             "0.1"() {
             },
+            "-1": 42,
             "-1"() {
             },
+            $valid_id_42: 42,
             $valid_id_42() {
             },
+            "42_invalid_id": 42,
             "42_invalid_id"() {
             },
         };
@@ -861,8 +871,11 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
+        let v = b.loadInt(42)
         b.buildClassDefinition() { cls in
             for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                cls.addInstanceProperty(name, value: v)
+                cls.addStaticProperty(name, value: v)
                 cls.addInstanceMethod(name, with: .parameters(n: 0)) { params in
                 }
                 cls.addStaticMethod(name, with: .parameters(n: 0)) { params in
@@ -874,35 +887,51 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        class C0 {
+        class C1 {
+            "???" = 42;
+            static "???" = 42;
             "???"() {
             }
             static "???"() {
             }
+            0 = 42;
+            static 0 = 42;
             0() {
             }
             static 0() {
             }
+            "01" = 42;
+            static "01" = 42;
             "01"() {
             }
             static "01"() {
             }
+            1 = 42;
+            static 1 = 42;
             1() {
             }
             static 1() {
             }
+            "0.1" = 42;
+            static "0.1" = 42;
             "0.1"() {
             }
             static "0.1"() {
             }
+            "-1" = 42;
+            static "-1" = 42;
             "-1"() {
             }
             static "-1"() {
             }
+            $valid_id_42 = 42;
+            static $valid_id_42 = 42;
             $valid_id_42() {
             }
             static $valid_id_42() {
             }
+            "42_invalid_id" = 42;
+            static "42_invalid_id" = 42;
             "42_invalid_id"() {
             }
             static "42_invalid_id"() {
@@ -1960,7 +1989,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let obj = b.createNamedVariable(forBuiltin: "Funky")
+        let obj = b.createObject(with: [:])
         for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
             b.callMethod(name, on: obj)
         }
@@ -1969,14 +1998,15 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        Funky["???"]();
-        Funky[0]();
-        Funky["01"]();
-        Funky[1]();
-        Funky["0.1"]();
-        Funky["-1"]();
-        Funky.$valid_id_42();
-        Funky["42_invalid_id"]();
+        const v0 = {};
+        v0["???"]();
+        v0[0]();
+        v0["01"]();
+        v0[1]();
+        v0["0.1"]();
+        v0["-1"]();
+        v0.$valid_id_42();
+        v0["42_invalid_id"]();
 
         """
 
@@ -1987,7 +2017,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let obj = b.createNamedVariable(forBuiltin: "Funky")
+        let obj = b.createObject(with: [:])
         let values = b.createArray(with: [])
         for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
             b.callMethod(name, on: obj, withArgs: [values], spreading: [true])
@@ -1997,15 +2027,16 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
+        const v0 = {};
         const v1 = [];
-        Funky["???"](...v1);
-        Funky[0](...v1);
-        Funky["01"](...v1);
-        Funky[1](...v1);
-        Funky["0.1"](...v1);
-        Funky["-1"](...v1);
-        Funky.$valid_id_42(...v1);
-        Funky["42_invalid_id"](...v1);
+        v0["???"](...v1);
+        v0[0](...v1);
+        v0["01"](...v1);
+        v0[1](...v1);
+        v0["0.1"](...v1);
+        v0["-1"](...v1);
+        v0.$valid_id_42(...v1);
+        v0["42_invalid_id"](...v1);
 
         """
 
@@ -2016,7 +2047,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let obj = b.createNamedVariable(forBuiltin: "Funky")
+        let obj = b.createObject(with: [:])
         for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
             let bound = b.bindMethod(name, on: obj)
             b.callFunction(bound, withArgs: [obj])
@@ -2026,22 +2057,23 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        let v1 = Function.prototype.call.bind(Funky["???"]);
-        v1(Funky);
-        let v3 = Function.prototype.call.bind(Funky[0]);
-        v3(Funky);
-        let v5 = Function.prototype.call.bind(Funky["01"]);
-        v5(Funky);
-        let v7 = Function.prototype.call.bind(Funky[1]);
-        v7(Funky);
-        let v9 = Function.prototype.call.bind(Funky["0.1"]);
-        v9(Funky);
-        let v11 = Function.prototype.call.bind(Funky["-1"]);
-        v11(Funky);
-        let v13 = Function.prototype.call.bind(Funky.$valid_id_42);
-        v13(Funky);
-        let v15 = Function.prototype.call.bind(Funky["42_invalid_id"]);
-        v15(Funky);
+        const v0 = {};
+        let v1 = Function.prototype.call.bind(v0["???"]);
+        v1(v0);
+        let v3 = Function.prototype.call.bind(v0[0]);
+        v3(v0);
+        let v5 = Function.prototype.call.bind(v0["01"]);
+        v5(v0);
+        let v7 = Function.prototype.call.bind(v0[1]);
+        v7(v0);
+        let v9 = Function.prototype.call.bind(v0["0.1"]);
+        v9(v0);
+        let v11 = Function.prototype.call.bind(v0["-1"]);
+        v11(v0);
+        let v13 = Function.prototype.call.bind(v0.$valid_id_42);
+        v13(v0);
+        let v15 = Function.prototype.call.bind(v0["42_invalid_id"]);
+        v15(v0);
 
         """
 
@@ -2097,6 +2129,95 @@ class LifterTests: XCTestCase {
 
         let expected = """
         SomeObject[RandomMethod()](...[1,2,3,4]);
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testPropertyLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createObject(with: [:])
+        for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+            b.setProperty(name, of: obj, to: b.getProperty(name, of: obj))
+            b.updateProperty(name, of: obj, with: b.getProperty(name, of: obj, guard: true), using: .Add)
+            b.deleteProperty(name, of: obj)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v0 = {};
+        v0["???"] = v0["???"];
+        v0["???"] += v0?.["???"];
+        delete v0["???"];
+        v0[0] = v0[0];
+        v0[0] += v0?.[0];
+        delete v0[0];
+        v0["01"] = v0["01"];
+        v0["01"] += v0?.["01"];
+        delete v0["01"];
+        v0[1] = v0[1];
+        v0[1] += v0?.[1];
+        delete v0[1];
+        v0["0.1"] = v0["0.1"];
+        v0["0.1"] += v0?.["0.1"];
+        delete v0["0.1"];
+        v0["-1"] = v0["-1"];
+        v0["-1"] += v0?.["-1"];
+        delete v0["-1"];
+        v0.$valid_id_42 = v0.$valid_id_42;
+        v0.$valid_id_42 += v0?.$valid_id_42;
+        delete v0.$valid_id_42;
+        v0["42_invalid_id"] = v0["42_invalid_id"];
+        v0["42_invalid_id"] += v0?.["42_invalid_id"];
+        delete v0["42_invalid_id"];
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testSuperPropertyLiftingWeirdNames() {
+        let fuzzer: Fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildClassDefinition() { cls in
+            cls.addInstanceMethod("sub", with: .parameters(n: 0)) { params in
+                for name in ["???", "0","01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                    b.setSuperProperty(name, to: b.getSuperProperty(name))
+                    b.updateSuperProperty(name, with: b.getSuperProperty(name), using: .Add)
+                }
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        class C0 {
+            sub() {
+                super["???"] = super["???"];
+                super["???"] += super["???"];
+                super[0] = super[0];
+                super[0] += super[0];
+                super["01"] = super["01"];
+                super["01"] += super["01"];
+                super[1] = super[1];
+                super[1] += super[1];
+                super["0.1"] = super["0.1"];
+                super["0.1"] += super["0.1"];
+                super["-1"] = super["-1"];
+                super["-1"] += super["-1"];
+                super.$valid_id_42 = super.$valid_id_42;
+                super.$valid_id_42 += super.$valid_id_42;
+                super["42_invalid_id"] = super["42_invalid_id"];
+                super["42_invalid_id"] += super["42_invalid_id"];
+            }
+        }
 
         """
 

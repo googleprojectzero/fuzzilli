@@ -64,7 +64,7 @@ struct JavaScriptProbeLifting {
                 }
             }
 
-            if (!isSimpleString(keyString) && !isNumericString(keyString) && !isSymbol(key)) {
+            if (!isShortString(keyString) && !isNumericString(keyString) && !isSymbol(key)) {
                 // Cannot deal with this property name. Ignore it.
                 return;
             }
