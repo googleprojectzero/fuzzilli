@@ -377,7 +377,10 @@ public class ProgramBuilder {
         }, {
             String(self.randomInt())
         }, {
-            String.random(ofLength: Int.random(in: 1...5))
+            // Prefer smaller strings both for readability as well as for small string optimizations
+            // (e.g. optimizations for single character strings) but also generate larger strings
+            // to hit cons string ("rope" / concatenated string) cases.
+            String.random(ofLength: Int.random(in: Bool.random() ? 0...5 : 0...33))
         })
     }
 
