@@ -318,34 +318,30 @@ public class JavaScriptEnvironment: ComponentBase {
     private var producingProperties: [ILType: [(group: String, property: String)]] = [:]
     private var subtypes: [ILType: [ILType]] = [:]
 
-    private let validIdentifierOrIndex: Regex<AnyRegexOutput>?
-    private let validDotNotationName: Regex<AnyRegexOutput>?
-    private let validPropertyIndex: Regex<AnyRegexOutput>?
-
-    public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = [], additionalEnumerations: [ILType] = []) {
+    private struct ValidationRegexes {
         // A simple approximation of a valid JS identifier (used in dot
         // notation and for property and method names).
-        let simpleId = "[_$a-zA-Z][_$a-zA-Z0-9]*"
+        static let simpleId = "[_$a-zA-Z][_$a-zA-Z0-9]*"
 
         // A non-negative integer (with no leading zero) for index access
         // without quotes.
-        let index = "[1-9]\\d*|0"
-
-        // Initialize regular expressions to determine valid property
-        // identifiers:
+        static let index = "[1-9]\\d*|0"
 
         // We support simple identifiers and non-negative numbers. Other
         // names will be quoted.
         // We don't support unquoted doubles.
-        self.validIdentifierOrIndex = try! Regex("^(\(index)|\(simpleId))$")
+        static let identifierOrIndex = try! Regex("^(\(index)|\(simpleId))$")
 
         // For dot notation we only support simple identifiers. We don't
         // support all possible names according to JS spec.
         // Unsupported names will be accessed with bracket notation.
-        self.validDotNotationName = try! Regex("^(\(simpleId))$")
+        static let dotNotationName = try! Regex("^(\(simpleId))$")
 
         // Valid indexes to use in bracket notation without quotes.
-        self.validPropertyIndex = try! Regex("^(\(index))$")
+        static let propertyIndex = try! Regex("^(\(index))$")
+    }
+
+    public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = [], additionalEnumerations: [ILType] = []) {
 
         super.init(name: "JavaScriptEnvironment")
 
@@ -1005,15 +1001,15 @@ public class JavaScriptEnvironment: ComponentBase {
     }
 
     func isValidIdentifierOrIndex(_ name: String) -> Bool {
-        return (try? validIdentifierOrIndex?.wholeMatch(in: name)) != nil
+        return (try? ValidationRegexes.identifierOrIndex.wholeMatch(in: name)) != nil
     }
 
     func isValidDotNotationName(_ name: String) -> Bool {
-        return (try? validDotNotationName?.wholeMatch(in: name)) != nil
+        return (try? ValidationRegexes.dotNotationName.wholeMatch(in: name)) != nil
     }
 
     func isValidPropertyIndex(_ name: String) -> Bool {
-        return (try? validPropertyIndex?.wholeMatch(in: name)) != nil
+        return (try? ValidationRegexes.propertyIndex.wholeMatch(in: name)) != nil
     }
 }
 
