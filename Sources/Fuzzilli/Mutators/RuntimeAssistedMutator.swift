@@ -32,6 +32,7 @@ public class RuntimeAssistedMutator: Mutator {
     enum Outcome: String, CaseIterable {
         case success = "Success"
         case cannotInstrument = "Cannot instrument input"
+        case instrumentedProgramCrashed = "Instrumented program crashed"
         case instrumentedProgramFailed = "Instrumented program failed"
         case instrumentedProgramTimedOut = "Instrumented program timed out"
         case noResults = "No results received"
@@ -90,6 +91,10 @@ public class RuntimeAssistedMutator: Mutator {
 
         // Execute the instrumented program (with a higher timeout) and collect the output.
         let execution = fuzzer.execute(instrumentedProgram, withTimeout: fuzzer.config.timeout * 4, purpose: .runtimeAssistedMutation)
+        // We need to cache these because they're invalidated the next time we call execute().
+        let oldStdout = execution.stdout
+        let oldStderr = execution.stderr
+        let oldFuzzout = execution.fuzzout
         switch execution.outcome {
         case .failed(_):
             // We generally do not expect the instrumentation code itself to cause runtime exceptions. Even if it performs new actions those should be guarded with try-catch.
@@ -109,8 +114,31 @@ public class RuntimeAssistedMutator: Mutator {
             // In this case we still try to process the instrumentation output (if any) and produce the final, uninstrumented program
             // so that we obtain reliable testcase for crashes due to (1). However, to not loose crashes due to (2), we also
             // report the instrumented program as crashing here. We may therefore end up with two crashes from one mutation.
-            let stdout = execution.fuzzout + "\n" + execution.stdout
-            fuzzer.processCrash(instrumentedProgram, withSignal: signal, withStderr: execution.stderr, withStdout: stdout, origin: .local, withExectime: execution.execTime)
+
+            let stdout = oldFuzzout + "\n" + oldStdout
+
+            // We log the crash here in case something goes wrong.
+            let crashInfoText = fuzzer.collectCrashInfo(for: program, withSignal: signal, withStderr: oldStderr, withStdout: oldStdout, withExectime: execution.execTime)
+            logger.error("Instrumented program crashed: \(fuzzer.lifter.lift(program))\n\(crashInfoText.joined(separator: "\n"))")
+
+            // Check if the process()'d program also crashes. If yes, we report that crash instead.
+            // This allows to use Fuzzilli's input minimization, which wouldn't work for the instrumented program.
+            let (mutatedProgram, outcome) = process(execution.fuzzout, ofInstrumentedProgram: instrumentedProgram, using: b)
+            if let mutatedProgram {
+                assert(outcome == .success)
+
+                let execution = fuzzer.execute(mutatedProgram, withTimeout: fuzzer.config.timeout , purpose: .runtimeAssistedMutation)
+                if case .crashed(let signal) = execution.outcome {
+                    logger.info("Mutated program crashed as well, reporting mutated program instead")
+                    let stdout = execution.fuzzout + "\n" + execution.stdout
+                    fuzzer.processCrash(mutatedProgram, withSignal: signal, withStderr: execution.stderr, withStdout: stdout, origin: .local, withExectime: execution.execTime)
+                    return failure(.instrumentedProgramCrashed)
+                }
+            }
+
+            // If we reach here, the process()'d program did not crash, so we need to report the instrumented program.
+            logger.info("Mutated program did not crash, reporting original crash of the instrumented program")
+            fuzzer.processCrash(instrumentedProgram, withSignal: signal, withStderr: oldStderr, withStdout: stdout, origin: .local, withExectime: execution.execTime)
         case .succeeded:
             // The expected case.
             break
@@ -119,7 +147,7 @@ public class RuntimeAssistedMutator: Mutator {
         }
 
         // Process the output to build the mutated program.
-        let (maybeMutatedProgram, outcome) = process(execution.fuzzout, ofInstrumentedProgram: instrumentedProgram, using: b)
+        let (maybeMutatedProgram, outcome) = process(oldFuzzout, ofInstrumentedProgram: instrumentedProgram, using: b)
         guard let mutatedProgram = maybeMutatedProgram else {
             assert(outcome != .success)
             return failure(outcome)

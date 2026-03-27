@@ -789,25 +789,34 @@ public class Fuzzer {
         return true
     }
 
+    /// Collect information about a crash.
+    func collectCrashInfo(for program: Program, withSignal termsig: Int, withStderr stderr: String, withStdout stdout: String, withExectime exectime: TimeInterval) -> [String] {
+        var info = [String]()
+        info.append("CRASH INFO")
+        info.append("==========")
+        if let tag = config.tag {
+            info.append("INSTANCE TAG: \(tag)")
+        }
+        info.append("TERMSIG: \(termsig)")
+        info.append("STDERR:")
+        info.append(stderr.trimmingCharacters(in: .newlines))
+        info.append("STDOUT:")
+        info.append(stdout.trimmingCharacters(in: .newlines))
+        info.append("FUZZER ARGS: \(config.arguments.joined(separator: " "))")
+        info.append("TARGET ARGS: \(runner.processArguments.joined(separator: " "))")
+        info.append("CONTRIBUTORS: \(program.contributors.map({ $0.name }).joined(separator: ", "))")
+        info.append("EXECUTION TIME: \(Int(exectime * 1000))ms")
+        return info
+    }
+
     /// Process a program that causes a crash.
     func processCrash(_ program: Program, withSignal termsig: Int, withStderr stderr: String, withStdout stdout: String, origin: ProgramOrigin, withExectime exectime: TimeInterval) {
         func processCommon(_ program: Program) {
             let hasCrashInfo = program.comments.at(.footer)?.contains("CRASH INFO") ?? false
             if !hasCrashInfo {
-                program.comments.add("CRASH INFO", at: .footer)
-                program.comments.add("==========", at: .footer)
-                if let tag = config.tag {
-                    program.comments.add("INSTANCE TAG: \(tag)", at: .footer)
+                for line in collectCrashInfo(for: program, withSignal: termsig, withStderr: stderr, withStdout: stdout, withExectime: exectime) {
+                    program.comments.add(line, at: .footer)
                 }
-                program.comments.add("TERMSIG: \(termsig)", at: .footer)
-                program.comments.add("STDERR:", at: .footer)
-                program.comments.add(stderr.trimmingCharacters(in: .newlines), at: .footer)
-                program.comments.add("STDOUT:", at: .footer)
-                program.comments.add(stdout.trimmingCharacters(in: .newlines), at: .footer)
-                program.comments.add("FUZZER ARGS: \(config.arguments.joined(separator: " "))", at: .footer)
-                program.comments.add("TARGET ARGS: \(runner.processArguments.joined(separator: " "))", at: .footer)
-                program.comments.add("CONTRIBUTORS: \(program.contributors.map({ $0.name }).joined(separator: ", "))", at: .footer)
-                program.comments.add("EXECUTION TIME: \(Int(exectime * 1000))ms", at: .footer)
             }
             assert(program.comments.at(.footer)?.contains("CRASH INFO") ?? false)
 
