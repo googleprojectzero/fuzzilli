@@ -129,7 +129,7 @@ public class RuntimeAssistedMutator: Mutator {
 
                 let execution = fuzzer.execute(mutatedProgram, withTimeout: fuzzer.config.timeout , purpose: .runtimeAssistedMutation)
                 if case .crashed(let signal) = execution.outcome {
-                    logger.info("Mutated program crashed as well, reporting mutated program instead")
+                    logger.warning("Mutated program crashed as well, reporting mutated program instead")
                     let stdout = execution.fuzzout + "\n" + execution.stdout
                     fuzzer.processCrash(mutatedProgram, withSignal: signal, withStderr: execution.stderr, withStdout: stdout, origin: .local, withExectime: execution.execTime)
                     return failure(.instrumentedProgramCrashed)
@@ -137,7 +137,7 @@ public class RuntimeAssistedMutator: Mutator {
             }
 
             // If we reach here, the process()'d program did not crash, so we need to report the instrumented program.
-            logger.info("Mutated program did not crash, reporting original crash of the instrumented program")
+            logger.warning("Mutated program did not crash, reporting original crash of the instrumented program")
             fuzzer.processCrash(instrumentedProgram, withSignal: signal, withStderr: oldStderr, withStdout: stdout, origin: .local, withExectime: execution.execTime)
         case .succeeded:
             // The expected case.
