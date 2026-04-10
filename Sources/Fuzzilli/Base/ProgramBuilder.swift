@@ -1308,10 +1308,16 @@ public class ProgramBuilder {
         return (newSignature, variables)
     }
 
-    public func randomWasmArguments(forWasmSignature signature: WasmSignature) -> [Variable]? {
+    public func randomWasmArguments(
+        forWasmSignature signature: WasmSignature, generate: Bool = false
+    ) -> [Variable]? {
         var variables = [Variable]()
         for parameterType in signature.parameterTypes {
             if let v = randomVariable(ofType: parameterType) {
+                variables.append(v)
+            } else if generate,
+                let v = currentWasmFunction.generateRandomWasmVar(ofType: parameterType)
+            {
                 variables.append(v)
             } else {
                 return nil
@@ -6070,11 +6076,13 @@ public class ProgramBuilder {
                 return ILType.wasmRef(.Index(), nullability: nullability)
             } else {
                 let nullability = !allowNonNullable || probability(0.5)
+                let abstractRefTypes = WasmAbstractHeapType.allCases.map {
+                    ILType.wasmRef($0, nullability: nullability)
+                }
+                // Prefer value types.
                 return chooseUniform(
-                    from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128]
-                        + WasmAbstractHeapType.allCases.map {
-                            ILType.wasmRef($0, nullability: nullability)
-                        })
+                    from: chooseBiased(
+                        from: [abstractRefTypes, ILType.wasmNonRefValueTypes], factor: 2))
             }
         }
         let signature =
@@ -6091,7 +6099,7 @@ public class ProgramBuilder {
         // TODO(pawkra): enable shared types.
         (0..<Int.random(in: 0...n)).map { _ in
             chooseUniform(
-                from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128, .wasmRefI31()]
+                from: ILType.wasmNonRefValueTypes + [.wasmRefI31()]
                     + WasmAbstractHeapType.allCases.map { .wasmRef($0, nullability: true) })
         }
     }

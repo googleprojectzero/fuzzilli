@@ -939,7 +939,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         inputs: .required(.wasmFunctionDef())
     ) { b, functionVar in
         let signature = b.type(of: functionVar).wasmFunctionDefSignature!
-        let functionArgs = b.randomWasmArguments(forWasmSignature: signature)
+        let functionArgs = b.randomWasmArguments(forWasmSignature: signature, generate: true)
         guard let functionArgs else { return }
         let function = b.currentWasmModule.currentWasmFunction
         function.wasmCallDirect(function: functionVar, functionArgs: functionArgs)
@@ -958,7 +958,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 })
         else { return }
         let signature = b.type(of: functionVar).wasmFunctionDefSignature!
-        let functionArgs = b.randomWasmArguments(forWasmSignature: signature)
+        let functionArgs = b.randomWasmArguments(forWasmSignature: signature, generate: true)
         guard let functionArgs else { return }
         function.wasmReturnCallDirect(function: functionVar, functionArgs: functionArgs)
     },
@@ -1393,14 +1393,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 provides: [.wasmFunction]
             ) { b in
                 let module = b.currentWasmModule
-                // TODO(mliedtke): Support index wasm-gc types in the signature. This requires the
-                // WasmDefineTable operation to track their types in a way that is compatible with
-                // wasm-gc types. Similarly, WasmCallIndirect and WasmReturnCallIndirect need to be
-                // adapted to use wasm-gc signatures.
-                let functionSignature = b.randomWasmSignature()
-                let signatureDef = b.wasmDefineAdHocSignatureType(signature: functionSignature)
+                // TODO(mliedtke): If we want to allow non-nullable types, we'll need to ensure that
+                // we are able to also generate them in all cases and contexts.
+                let (signature, indexTypes) = b.randomWasmGcSignature(allowNonNullable: false)
+                let signatureDef = b.wasmDefineAdHocSignatureType(
+                    signature: signature, indexTypes: indexTypes)
                 b.emit(
-                    BeginWasmFunction(parameterCount: functionSignature.parameterTypes.count),
+                    BeginWasmFunction(parameterCount: signature.parameterTypes.count),
                     withInputs: [signatureDef])
             },
             GeneratorStub(
@@ -2284,7 +2283,7 @@ private let wasmSignatureTypeGenerator = GeneratorStub(
             return ILType.wasmRef(.Index(), nullability: nullability)
         } else {
             // TODO(mliedtke): Extend list with abstract heap types.
-            return chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128])
+            return chooseUniform(from: ILType.wasmNonRefValueTypes)
         }
     }
     let signature =

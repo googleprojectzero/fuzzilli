@@ -407,6 +407,11 @@ public struct ILType: Hashable {
 
     public static let wasmNumericalPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64
 
+    /// Wasm value types ignoring reference types.
+    public static let wasmNonRefValueTypes: [ILType] = [
+        .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
+    ]
+
     public static let anyNonNullableIndexRef = wasmRef(.Index(), nullability: false)
     public static let anyIndexRef = wasmRef(.Index(), nullability: true)
 
