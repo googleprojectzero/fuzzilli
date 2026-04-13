@@ -702,7 +702,7 @@ public let WasmDeoptFuzzer = WasmProgramTemplate("WasmDeoptFuzzer") { b in
         let table = wasmModule.addTable(
             elementType: .wasmFuncRef(),
             minSize: numCallees,
-            definedEntryValues: callees.flatMap { [$0, calleeSignatureDef] },
+            definedSignatures: callees.flatMap { [$0, calleeSignatureDef] },
             isTable64: useTable64)
 
         wasmModule.addWasmFunction(with: mainSignature) { function, label, args in

@@ -5755,29 +5755,28 @@ public class ProgramBuilder {
             return b.emit(WasmDefineGlobal(wasmGlobal: wasmGlobal, isMutable: isMutable)).output
         }
 
-        // TODO(mliedtke): DefinedEntryValues is now an outdated naming.
         @discardableResult
         public func addTable(
             elementType: ILType, minSize: Int, maxSize: Int? = nil,
-            definedEntryValues: [Variable] = [], isTable64: Bool
+            definedSignatures: [Variable] = [], isTable64: Bool
         ) -> Variable {
             let inputTypes: [ILType]
             if elementType == .wasmFuncRef() {
-                inputTypes = (0..<definedEntryValues.count).map {
+                inputTypes = (0..<definedSignatures.count).map {
                     $0 % 2 == 0 ? getEntryTypeForTable(elementType: elementType) : .wasmTypeDef()
                 }
             } else {
                 inputTypes = Array(
                     repeating: getEntryTypeForTable(elementType: elementType),
-                    count: definedEntryValues.count)
+                    count: definedSignatures.count)
             }
             return b.emit(
                 WasmDefineTable(
                     elementType: elementType,
                     limits: Limits(min: minSize, max: maxSize),
-                    initializedSlotCount: definedEntryValues.count / 2,
+                    initializedSlotCount: definedSignatures.count / 2,
                     isTable64: isTable64),
-                withInputs: definedEntryValues,
+                withInputs: definedSignatures,
                 types: inputTypes
             ).output
         }

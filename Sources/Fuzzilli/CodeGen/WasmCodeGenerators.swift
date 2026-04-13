@@ -855,7 +855,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
         module.addTable(
             elementType: elementType, minSize: minSize, maxSize: maxSize,
-            definedEntryValues: inputs, isTable64: probability(0.5))
+            definedSignatures: inputs, isTable64: probability(0.5))
     },
 
     CodeGenerator("WasmDefineElementSegmentGenerator", inContext: .single(.wasm)) { b in

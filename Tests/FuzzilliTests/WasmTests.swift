@@ -881,7 +881,7 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addTable(
                 elementType: .wasmFuncRef(),
                 minSize: 10,
-                definedEntryValues: [wasmFunction, wasmSigDef, jsFunction, jsSigDef],
+                definedSignatures: [wasmFunction, wasmSigDef, jsFunction, jsSigDef],
                 isTable64: isTable64)
         }
 
@@ -960,7 +960,7 @@ class WasmFoundationTests: XCTestCase {
             let table = wasmModule.addTable(
                 elementType: .wasmFuncRef(),
                 minSize: 10,
-                definedEntryValues: [wasmFunction, wasmSigDef, jsFunction, jsSigDef],
+                definedSignatures: [wasmFunction, wasmSigDef, jsFunction, jsSigDef],
                 isTable64: false)
             wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64]) {
                 fn, label, params in
@@ -1043,7 +1043,7 @@ class WasmFoundationTests: XCTestCase {
             let table = wasmModule.addTable(
                 elementType: .wasmFuncRef(),
                 minSize: 10,
-                definedEntryValues: [wasmFunction, wasmSigDef],
+                definedSignatures: [wasmFunction, wasmSigDef],
                 isTable64: false)
 
             wasmModule.addWasmFunction(
@@ -1118,7 +1118,7 @@ class WasmFoundationTests: XCTestCase {
             wasmModule.addTable(
                 elementType: .wasmFuncRef(),
                 minSize: 10,
-                definedEntryValues: [wasmFunction, wasmSigDef, jsFunction, jsSigDef],
+                definedSignatures: [wasmFunction, wasmSigDef, jsFunction, jsSigDef],
                 isTable64: false)
         }
 
@@ -1303,7 +1303,7 @@ class WasmFoundationTests: XCTestCase {
             let table = wasmModule.addTable(
                 elementType: .wasmFuncRef(),
                 minSize: 10,
-                definedEntryValues: [wasmFunction, wasmSigDef, jsFunction, jsSigDef],
+                definedSignatures: [wasmFunction, wasmSigDef, jsFunction, jsSigDef],
                 isTable64: false)
             wasmModule.addWasmFunction(with: [.wasmi32, .wasmi64] => [.wasmi64, .wasmi64]) {
                 fn, label, params in
@@ -5578,12 +5578,12 @@ class WasmFoundationTests: XCTestCase {
                 module.addTable(
                     elementType: .wasmFuncRef(),
                     minSize: 10,
-                    definedEntryValues: [],
+                    definedSignatures: [],
                     isTable64: isTable64)
                 let table2 = module.addTable(
                     elementType: .wasmFuncRef(),
                     minSize: 10,
-                    definedEntryValues: [],
+                    definedSignatures: [],
                     isTable64: isTable64)
                 module.addElementSegment(elements: [])
                 let elemSegment2 = module.addElementSegment(elements: [f3, f3, f1, f2])
@@ -5641,13 +5641,13 @@ class WasmFoundationTests: XCTestCase {
                 let table1 = module.addTable(
                     elementType: .wasmFuncRef(),
                     minSize: 10,
-                    definedEntryValues: [],
+                    definedSignatures: [],
                     isTable64: isTable64)
                 let sigDef = b.wasmDefineAdHocSignatureType(signature: [] => [.wasmi64])
                 let table2 = module.addTable(
                     elementType: .wasmFuncRef(),
                     minSize: 10,
-                    definedEntryValues: [f3, sigDef, f3, sigDef, f1, sigDef, f2, sigDef],
+                    definedSignatures: [f3, sigDef, f3, sigDef, f1, sigDef, f2, sigDef],
                     isTable64: isTable64)
 
                 module.addWasmFunction(with: [] => [.wasmi64, .wasmi64]) { f, _, _ in

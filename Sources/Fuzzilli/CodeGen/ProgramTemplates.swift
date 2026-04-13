@@ -235,7 +235,7 @@ public let ProgramTemplates = [
             let table = wasmModule.addTable(
                 elementType: .wasmFuncRef(),
                 minSize: 10,
-                definedEntryValues: calleesWithSignature,
+                definedSignatures: calleesWithSignature,
                 isTable64: useTable64)
 
             let main = wasmModule.addWasmFunction(signature: mainSigDef) {
