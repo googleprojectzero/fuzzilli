@@ -959,6 +959,8 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         args.append("--sandbox-fuzzing")
         // This is so that we get an ASan splat directly in the reproducer file.
         args.append("--disable-in-process-stack-traces")
+        // Disable extra stress-testing that might trigger benign CHECKs and mask actual sandbox violations.
+        args.append("--no-stress-lazy-source-positions")
     }
 
     guard randomize else { return args }
@@ -1232,6 +1234,12 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         chooseBooleanFlag("force-slow-path")
         chooseBooleanFlag("lazy")
         chooseBooleanFlag("lazy-eval")
+        chooseBooleanFlag("baseline-batch-compilation")
+        chooseBooleanFlag("lazy-feedback-allocation")
+        chooseBooleanFlag("stress-branch-hinting")
+        if !forSandbox {
+            chooseBooleanFlag("stress-lazy-source-positions")
+        }
 
         // Maglev related flags
         chooseBooleanFlag("maglev-inline-api-calls")
