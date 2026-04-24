@@ -825,6 +825,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // Currently, only generate entries for funcref tables.
         // TODO(manoskouk): Generalize this.
         if elementType == .wasmFuncRef() {
+            var cachedSignatures = [Signature: Variable]()
             if b.randomVariable(ofType: expectedEntryType) != nil {
                 // There is at least one function in scope. Add some initial entries to the table.
                 // TODO(manoskouk): Generalize this.
@@ -832,21 +833,27 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 for index in definedEntryIndices {
                     let value = b.randomVariable(ofType: expectedEntryType)!
                     let actualEntryType = b.type(of: value)
-                    let signature =
-                        if actualEntryType.Is(.wasmFunctionDef()) {
-                            b.randomVariable(
-                                ofType: actualEntryType.wasmFunctionDef!.signatureType!)!
-                        } else {
-                            // If it isn't a Wasm function (e.g. JS functions), create a signature
-                            // that describes the JSTyper's current type knowledge about this
-                            // function. Note that it is needed to add this extra information to the
-                            // IL as the signature of JS functions are set manually during building
-                            // meaning its type information is lost on subsequent runs.
-                            b.wasmDefineAdHocSignatureType(
-                                signature:
-                                    ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(
-                                        actualEntryType.signature ?? Signature.forUnknownFunction))
-                        }
+                    let signature: Variable
+                    if actualEntryType.Is(.wasmFunctionDef()) {
+                        signature = b.randomVariable(
+                            ofType: actualEntryType.wasmFunctionDef!.signatureType!)!
+                    } else if let cachedSignature = cachedSignatures[
+                        actualEntryType.signature ?? Signature.forUnknownFunction]
+                    {
+                        signature = cachedSignature
+                    } else {
+                        // If it isn't a Wasm function (e.g. JS functions), create a signature
+                        // that describes the JSTyper's current type knowledge about this
+                        // function. Note that it is needed to add this extra information to the
+                        // IL as the signature of JS functions are set manually during building
+                        // meaning its type information is lost on subsequent runs.
+                        let jsSignature = actualEntryType.signature ?? Signature.forUnknownFunction
+                        signature = b.wasmDefineAdHocSignatureType(
+                            signature:
+                                ProgramBuilder.convertJsSignatureToWasmSignatureDeterministic(
+                                    jsSignature))
+                        cachedSignatures[jsSignature] = signature
+                    }
                     inputs.append(value)
                     inputs.append(signature)
                 }
