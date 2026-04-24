@@ -503,7 +503,7 @@ public struct JSTyper: Analyzer {
     }
 
     mutating func addSignatureType(
-        def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>
+        def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>, isAdHoc: Bool = false
     ) {
         assert(isWithinTypeGroup)
         var inputs = inputs.makeIterator()
@@ -560,7 +560,8 @@ public struct JSTyper: Analyzer {
             .wasmTypeDef(
                 description: WasmSignatureTypeDescription(
                     signature: resolvedParameterTypes => resolvedOutputTypes,
-                    typeGroupIndex: tgIndex)))
+                    typeGroupIndex: tgIndex,
+                    isAdHoc: isAdHoc)))
         typeGroups[typeGroups.count - 1].append(def)
     }
 
@@ -1155,12 +1156,14 @@ public struct JSTyper: Analyzer {
                     of: instr.output, to: .wasmRef(.WasmExtern, shared: false, nullability: null))
             case .wasmDefineAdHocSignatureType(let op):
                 startTypeGroup()
-                addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)
+                addSignatureType(
+                    def: instr.output, signature: op.signature, inputs: instr.inputs, isAdHoc: true)
                 finishTypeGroup()
                 registerWasmTypeDef(instr.output)
             case .wasmDefineAdHocModuleSignatureType(let op):
                 startTypeGroup()
-                addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)
+                addSignatureType(
+                    def: instr.output, signature: op.signature, inputs: instr.inputs, isAdHoc: true)
                 finishTypeGroup()
                 registerWasmTypeDef(instr.output)
             default:

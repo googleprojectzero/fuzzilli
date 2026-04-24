@@ -5961,7 +5961,7 @@ public class ProgramBuilder {
             // TODO(mliedtke): Allow non-nullable reference types. Right now we can't do this as
             // the WasmStructNewGenerator might then fail to generate a struct.
             let nullability = true
-            if let elementType = randomVariable(ofType: .wasmTypeDef()), probability(0.25) {
+            if let elementType = randomWasmTypeDef(), probability(0.25) {
                 indexTypes.append(elementType)
                 type = .wasmRef(.Index(), nullability: nullability)
             } else {
@@ -6027,6 +6027,15 @@ public class ProgramBuilder {
         }
     }
 
+    // Finds a random wasm type definition but skips adhoc signatures (as these are only used as a
+    // workaround for flexible signature generation in non-typegroup contexts.)
+    public func randomWasmTypeDef() -> Variable? {
+        findVariable { v in
+            (type(of: v).wasmTypeDefinition?.description as? WasmSignatureTypeDescription)?.isAdHoc
+                == false
+        }
+    }
+
     public func randomWasmSignature() -> WasmSignature {
         // TODO: generalize this to support more types. Also add support for simd128 and
         // (null)exnref, note however that these types raise exceptions when used from JS.
@@ -6052,7 +6061,7 @@ public class ProgramBuilder {
 
         var indexTypes: [Variable] = []
         let chooseType = {
-            if let elementType = self.randomVariable(ofType: .wasmTypeDef()), probability(0.25) {
+            if let elementType = self.randomWasmTypeDef(), probability(0.25) {
                 let nullability =
                     !allowNonNullable
                     || self.type(of: elementType).wasmTypeDefinition!.description == .selfReference

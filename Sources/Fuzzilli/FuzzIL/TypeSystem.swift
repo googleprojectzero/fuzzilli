@@ -2499,9 +2499,11 @@ class WasmTypeDescription: Hashable, CustomStringConvertible {
 
 class WasmSignatureTypeDescription: WasmTypeDescription {
     var signature: WasmSignature
+    let isAdHoc: Bool
 
-    init(signature: WasmSignature, typeGroupIndex: Int) {
+    init(signature: WasmSignature, typeGroupIndex: Int, isAdHoc: Bool = false) {
         self.signature = signature
+        self.isAdHoc = isAdHoc
         // TODO(pawkra): support shared variant.
         super.init(
             typeGroupIndex: typeGroupIndex, superType: HeapTypeInfo.init(.WasmFunc, shared: false))

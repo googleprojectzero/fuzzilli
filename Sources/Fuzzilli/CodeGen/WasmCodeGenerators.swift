@@ -2227,7 +2227,7 @@ private let wasmArrayTypeGenerator = GeneratorStub(
     producesComplex: [.init(.wasmTypeDef(), .IsWasmArray)]
 ) { b in
     let mutability = probability(0.75)
-    if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
+    if let elementType = b.randomWasmTypeDef(),
         probability(0.25)
     {
         // Excluding non-nullable references from referring to a self-reference ensures we do not end up with cycles of non-nullable references.
@@ -2274,7 +2274,7 @@ private let wasmSignatureTypeGenerator = GeneratorStub(
     var indexTypes: [Variable] = []
     let chooseType = {
         var type: ILType
-        if let elementType = b.randomVariable(ofType: .wasmTypeDef()),
+        if let elementType = b.randomWasmTypeDef(),
             probability(0.25)
         {
             let nullability =
