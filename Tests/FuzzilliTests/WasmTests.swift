@@ -6694,6 +6694,110 @@ class WasmGCTests: XCTestCase {
         }
         testForOutput(program: jsProg, runner: runner, outputString: "exception\n")
     }
+
+    func testBranchOnNull() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmAnyRef()] => [.wasmi32]) {
+                f, functionLabel, params in
+                let ref = params[0]
+                f.wasmBranchOnNull(ref, to: functionLabel, args: [f.consti32(20)])
+                return [f.consti32(30)]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let main = module.getExportedMethod(at: 0)
+
+        let out1 = b.callMethod(main, on: exports, withArgs: [b.loadNull()])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out1)])
+
+        let out2 = b.callMethod(main, on: exports, withArgs: [b.loadInt(100)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out2)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "20\n30\n")
+    }
+
+    func testBranchOnNullWithArgs() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmAnyRef(), .wasmi32] => [.wasmi32]) {
+                f, functionLabel, params in
+                let ref = params[0]
+                let arg = params[1]
+                let results = f.wasmBranchOnNull(ref, to: functionLabel, args: [arg])
+
+                let reboundArg = results[0]
+                let nonNullRef = results[1]
+                let isNull = f.wasmRefIsNull(nonNullRef)
+
+                // Return arg + 1000 + isNull.
+                let sum = f.wasmi32BinOp(reboundArg, f.consti32(1000), binOpKind: .Add)
+                return [f.wasmi32BinOp(sum, isNull, binOpKind: .Add)]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let main = module.getExportedMethod(at: 0)
+
+        // Case 1: ref is null. Branches to functionLabel with 1337. Output: 1337
+        let out1 = b.callMethod(main, on: exports, withArgs: [b.loadNull(), b.loadInt(1337)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out1)])
+
+        // Case 2: ref is not null. Does not branch. Output: 42 + 1000 + 0 = 1042
+        let out2 = b.callMethod(main, on: exports, withArgs: [b.loadInt(100), b.loadInt(42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out2)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "1337\n1042\n")
+    }
+
+    func testBranchOnNullToOuterBlockWithArgs() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmAnyRef(), .wasmi32] => [.wasmi32]) {
+                f, functionLabel, params in
+                let ref = params[0]
+                let arg = params[1]
+                return f.wasmBuildBlockWithResults(with: [] => [.wasmi32], args: []) {
+                    blockLabel, _ in
+                    f.wasmBranchOnNull(ref, to: functionLabel, args: [arg])
+                    return [f.consti32(30)]
+                }
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let main = module.getExportedMethod(at: 0)
+
+        let out1 = b.callMethod(main, on: exports, withArgs: [b.loadNull(), b.loadInt(1337)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out1)])
+
+        let out2 = b.callMethod(main, on: exports, withArgs: [b.loadInt(100), b.loadInt(42)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out2)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "1337\n30\n")
+    }
 }
 
 class WasmNumericalTests: XCTestCase {

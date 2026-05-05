@@ -1352,6 +1352,15 @@ public class FuzzILLifter: Lifter {
             let args = instr.inputs.dropFirst().dropLast().map(lift)
             w.emit("WasmBranchIf \(hint)\(condition) to \(label) [\(args.joined(separator: ", "))]")
 
+        case .wasmBranchOnNull(_):
+            let ref = instr.inputs.last!
+            let label = instr.inputs.first!
+            let args = instr.inputs.dropFirst().dropLast().map(lift)
+            let outputs = instr.outputs.map(lift).joined(separator: ", ")
+            w.emit(
+                "\(outputs) <- WasmBranchOnNull \(ref) to \(label) [\(args.joined(separator: ", "))]"
+            )
+
         case .wasmBranchTable(let op):
             let table =
                 (0..<op.valueCount).enumerated().map { "\($0) => \(instr.input($1)), " }.joined()

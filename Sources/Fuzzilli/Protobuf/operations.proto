@@ -1535,6 +1535,9 @@ message WasmRefCast {
     WasmILType type = 1;
 }
 
+message WasmBranchOnNull {
+}
+
 message WasmRefI31 {
     bool isShared = 1;
 }

@@ -1932,6 +1932,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmDefineTag(_),
                 .wasmBranch(_),
                 .wasmBranchIf(_),
+                .wasmBranchOnNull(_),
                 .wasmBranchTable(_),
                 .wasmBeginIf(_),
                 .wasmBeginElse(_),

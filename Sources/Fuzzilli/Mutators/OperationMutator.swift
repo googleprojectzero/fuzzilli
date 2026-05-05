@@ -808,6 +808,7 @@ public class OperationMutator: BaseInstructionMutator {
             .wasmBeginTryDelegate(_),
             .wasmEndTryDelegate(_),
             .wasmBranch(_),
+            .wasmBranchOnNull(_),
             .wasmBranchTable(_),
             .wasmBeginElse(_),
             .wasmEndIf(_),

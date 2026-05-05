@@ -4998,6 +4998,18 @@ public class ProgramBuilder {
                 withInputs: [label] + args + [condition])
         }
 
+        @discardableResult
+        public func wasmBranchOnNull(
+            _ reference: Variable, to label: Variable, args: [Variable] = []
+        ) -> [Variable] {
+            let labelType = b.type(of: label)
+            let instr = b.emit(
+                WasmBranchOnNull(parameterCount: labelType.wasmLabelType!.parameters.count),
+                withInputs: [label] + args + [reference],
+                types: [.anyWasmLabel] + labelType.wasmLabelType!.parameters + [.wasmGenericRef])
+            return Array(instr.outputs)
+        }
+
         public func wasmBranchTable(on: Variable, labels: [Variable], args: [Variable]) {
             labels.forEach { checkArgumentsMatchLabelType(label: b.type(of: $0), args: args) }
             b.emit(

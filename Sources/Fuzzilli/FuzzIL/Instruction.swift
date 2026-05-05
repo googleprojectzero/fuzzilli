@@ -1568,6 +1568,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmBranchTable = Fuzzilli_Protobuf_WasmBranchTable.with {
                     $0.valueCount = UInt32(op.valueCount)
                 }
+            case .wasmBranchOnNull(_):
+                $0.wasmBranchOnNull = Fuzzilli_Protobuf_WasmBranchOnNull()
             case .wasmBeginIf(let op):
                 $0.wasmBeginIf = Fuzzilli_Protobuf_WasmBeginIf.with {
                     $0.parameterCount = Int32(op.parameterCount)
@@ -2704,6 +2706,8 @@ extension Instruction: ProtobufConvertible {
         case .wasmBranchTable(let p):
             op = WasmBranchTable(
                 parameterCount: inouts.count - Int(p.valueCount) - 2, valueCount: Int(p.valueCount))
+        case .wasmBranchOnNull(_):
+            op = WasmBranchOnNull(parameterCount: (inouts.count - 3) / 2)
         case .wasmBeginIf(let p):
             op = WasmBeginIf(
                 parameterCount: Int(p.parameterCount),

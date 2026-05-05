@@ -373,4 +373,5 @@ enum Opcode {
     case importVariables(ImportVariables)
     case beginBundleModuleEntryPoint(BeginBundleModuleEntryPoint)
     case endBundleModuleEntryPoint(EndBundleModuleEntryPoint)
+    case wasmBranchOnNull(WasmBranchOnNull)
 }

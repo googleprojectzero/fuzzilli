@@ -369,6 +369,7 @@ message Instruction {
         ImportVariables importVariables = 343;
         BeginBundleModuleEntryPoint beginBundleModuleEntryPoint = 344;
         EndBundleModuleEntryPoint endBundleModuleEntryPoint = 345;
+        WasmBranchOnNull wasmBranchOnNull = 346;
     }
 }
 

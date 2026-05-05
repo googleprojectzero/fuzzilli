@@ -1827,6 +1827,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             conditionVar, to: label, args: args, hint: b.randomWasmBranchHint())
     },
 
+    CodeGenerator(
+        "WasmBranchOnNullGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.wasmGenericRef, .anyWasmLabel)
+    ) { b, ref, label in
+        let function = b.currentWasmModule.currentWasmFunction
+        let labelType = b.type(of: label)
+        let args = labelType.wasmLabelType!.parameters.map(function.findOrGenerateWasmVar)
+        function.wasmBranchOnNull(ref, to: label, args: args)
+    },
+
     // TODO split this into a multi-part Generator.
     CodeGenerator(
         "WasmBranchTableGenerator", inContext: .single(.wasmFunction),

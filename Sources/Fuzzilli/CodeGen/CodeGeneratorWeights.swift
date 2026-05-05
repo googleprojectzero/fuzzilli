@@ -345,6 +345,7 @@ public let codeGeneratorWeights = [
     "WasmThrowRefGenerator":                    6,
     "WasmBranchGenerator":                      6,
     "WasmBranchIfGenerator":                    6,
+    "WasmBranchOnNullGenerator":                6,
     "WasmBranchTableGenerator":                 6,
     "WasmTryTableGenerator":                    6,
     "WasmJsCallGenerator":                      30,

@@ -1107,6 +1107,23 @@ public struct JSTyper: Analyzer {
                 } else {
                     setType(of: instr.output, to: op.type)
                 }
+            case .wasmBranchOnNull(_):
+                let labelType = type(of: instr.input(0))
+                let parameterTypes = labelType.wasmLabelType!.parameters
+                // There is one more output (the non-null "condition" for the br_on_null) which will be typed below.
+                assert(instr.outputs.count == parameterTypes.count + 1)
+                for (output, parameterType) in zip(instr.outputs, parameterTypes) {
+                    setType(of: output, to: parameterType)
+                }
+                let refType = type(of: instr.inputs.last!)
+                guard let wasmRefType = refType.wasmReferenceType
+                else {
+                    fatalError("BranchOnNull reference is not a valid wasm reference type.")
+                }
+                setType(
+                    of: instr.outputs.last!,
+                    to: .wasmRef(wasmRefType.kind, nullability: false))
+
             case .wasmAnyConvertExtern(_):
                 // TODO(pawkra): forward shared bit & update the comment
                 // any.convert_extern forwards the nullability bit from the input.
