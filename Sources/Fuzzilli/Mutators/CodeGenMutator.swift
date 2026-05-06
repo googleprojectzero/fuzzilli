@@ -52,7 +52,19 @@ public class CodeGenMutator: BaseInstructionMutator {
             b.buildIntoTypeGroup(endTypeGroupInstr: instr, by: .generating)
         default:
             b.adopt(instr)
-            assert(b.numberOfVisibleVariables >= minVisibleVariables)
+            // VariableAnalyzer overapproximates the number of visible variables, e.g., JS labels are considered visible even after opening a new function scope.
+            // So, canMutate() may return true even if the _actual_ number of visible variables is less than minVisibleVariables, potentially triggering a call to mutate() later.
+            // In contrast, the analysis of ProgramBuilder (=b.numberOfVisibleJSVariables) is precise in this regard.
+            // Since b.build() requires some variables to be visible, we account for this discrepancy here by building some variables.
+            // We only generate variables if we are in a .javascript context, so we're not generating variables in, e.g., a switch block, which wouldn't be allowed.
+            // In other contexts, some variables should already be visible.
+            if b.context.contains(.javascript) && b.numberOfVisibleJsVariables < minVisibleVariables
+            {
+                b.buildValues(minVisibleVariables - b.numberOfVisibleJsVariables)
+            }
+            assert(b.numberOfVisibleVariables > 0)
+            assert(!b.context.contains(.switchBlock) || b.numberOfVisibleJsVariables > 0)
+            assert(!b.context.contains(.classDefinition) || b.numberOfVisibleJsVariables > 0)
             b.build(n: defaultCodeGenerationAmount, by: .generating)
         }
     }
