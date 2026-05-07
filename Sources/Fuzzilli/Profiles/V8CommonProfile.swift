@@ -1247,6 +1247,11 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         args.append("--private-field-bytecodes")
     }
 
+    // Choose the bytecode verification level: default (currently none), light or full.
+    if probability(0.67) {
+        args.append(probability(0.5) ? "--verify-bytecode-light" : "--verify-bytecode-full")
+    }
+
     //
     // Sometimes enable additional verification/stressing logic (which may be fairly expensive).
     //
