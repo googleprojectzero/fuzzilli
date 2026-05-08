@@ -1570,6 +1570,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmBranchOnNull(_):
                 $0.wasmBranchOnNull = Fuzzilli_Protobuf_WasmBranchOnNull()
+            case .wasmBranchOnNonNull(_):
+                $0.wasmBranchOnNonNull = Fuzzilli_Protobuf_WasmBranchOnNonNull()
             case .wasmBeginIf(let op):
                 $0.wasmBeginIf = Fuzzilli_Protobuf_WasmBeginIf.with {
                     $0.parameterCount = Int32(op.parameterCount)
@@ -2708,6 +2710,8 @@ extension Instruction: ProtobufConvertible {
                 parameterCount: inouts.count - Int(p.valueCount) - 2, valueCount: Int(p.valueCount))
         case .wasmBranchOnNull(_):
             op = WasmBranchOnNull(parameterCount: (inouts.count - 3) / 2)
+        case .wasmBranchOnNonNull(_):
+            op = WasmBranchOnNonNull(parameterCount: (inouts.count - 2) / 2)
         case .wasmBeginIf(let p):
             op = WasmBeginIf(
                 parameterCount: Int(p.parameterCount),

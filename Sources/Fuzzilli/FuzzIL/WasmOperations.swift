@@ -1589,6 +1589,20 @@ final class WasmBranchOnNull: WasmOperation {
     var parameterCount: Int { numInputs - 2 }
 }
 
+final class WasmBranchOnNonNull: WasmOperation {
+    override var opcode: Opcode { .wasmBranchOnNonNull(self) }
+
+    init(parameterCount: Int) {
+        // The inputs are the label, the arguments and the reference.
+        // The outputs are the arguments again (with branch target types).
+        super.init(
+            numInputs: 1 + parameterCount + 1, numOutputs: parameterCount,
+            requiredContext: [.wasmFunction])
+    }
+
+    var parameterCount: Int { numInputs - 2 }
+}
+
 // TODO: make this comprehensive, currently only works for locals, or assumes every thing it reassigns to is a local.
 // This should be doable in the lifter, where we can see what we reassign to.
 final class WasmReassign: WasmOperation {

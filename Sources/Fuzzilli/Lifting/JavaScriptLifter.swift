@@ -1933,6 +1933,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmBranch(_),
                 .wasmBranchIf(_),
                 .wasmBranchOnNull(_),
+                .wasmBranchOnNonNull(_),
                 .wasmBranchTable(_),
                 .wasmBeginIf(_),
                 .wasmBeginElse(_),

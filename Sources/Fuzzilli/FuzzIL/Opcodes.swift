@@ -374,4 +374,5 @@ enum Opcode {
     case beginBundleModuleEntryPoint(BeginBundleModuleEntryPoint)
     case endBundleModuleEntryPoint(EndBundleModuleEntryPoint)
     case wasmBranchOnNull(WasmBranchOnNull)
+    case wasmBranchOnNonNull(WasmBranchOnNonNull)
 }

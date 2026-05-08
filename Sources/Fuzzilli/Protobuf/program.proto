@@ -370,6 +370,7 @@ message Instruction {
         BeginBundleModuleEntryPoint beginBundleModuleEntryPoint = 344;
         EndBundleModuleEntryPoint endBundleModuleEntryPoint = 345;
         WasmBranchOnNull wasmBranchOnNull = 346;
+        WasmBranchOnNonNull wasmBranchOnNonNull = 347;
     }
 }
 

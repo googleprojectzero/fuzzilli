@@ -1844,6 +1844,49 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmBranchOnNull(ref, to: label, args: args)
     },
 
+    CodeGenerator(
+        "WasmBranchOnNonNullGenerator", inContext: .single(.wasmFunction)
+    ) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+
+        let label = b.findVariable { label in
+            // Ensure that the variable is a label, has at least one parameter, and the last is a reference.
+            b.type(of: label).wasmLabelType?.parameters.last?.Is(.wasmGenericRef) == true
+        }
+
+        if let label {
+            let labelType = b.type(of: label).wasmLabelType!
+            let lastParamType = labelType.parameters.last!
+            let nullableRefType = ILType.wasmRef(
+                lastParamType.wasmReferenceType!.kind, nullability: true)
+            let ref = function.findOrGenerateWasmVar(ofType: nullableRefType)
+            let args = labelType.parameters.dropLast().map(function.findOrGenerateWasmVar)
+            function.wasmBranchOnNonNull(ref, to: label, args: args)
+        } else {
+            var (randomSignature, indexTypes) = b.randomWasmGcSignature(allowNonNullable: false)
+            var outputTypes = randomSignature.outputTypes
+            if randomSignature.outputTypes.last?.Is(.wasmGenericRef) != true {
+                // For simplicity we use a non-index type here, randomWasmGcSignature will sometimes
+                // create index types as last parameter types.
+                outputTypes.append(
+                    .wasmRef(WasmAbstractHeapType.allCases.randomElement()!, nullability: true))
+            }
+            let signatureDef = b.wasmDefineAdHocSignatureType(
+                signature: randomSignature.parameterTypes => outputTypes, indexTypes: indexTypes)
+            let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
+
+            function.wasmBuildBlockWithResults(
+                with: signature,
+                args: signature.parameterTypes.map(function.findOrGenerateWasmVar)
+            ) {
+                label, args in
+                let inputs = signature.outputTypes.map(function.findOrGenerateWasmVar)
+                function.wasmBranchOnNonNull(inputs.last!, to: label, args: inputs.dropLast())
+                return signature.outputTypes.map(function.findOrGenerateWasmVar)
+            }
+        }
+    },
+
     // TODO split this into a multi-part Generator.
     CodeGenerator(
         "WasmBranchTableGenerator", inContext: .single(.wasmFunction),

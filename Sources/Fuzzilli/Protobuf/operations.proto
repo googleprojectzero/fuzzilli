@@ -1538,6 +1538,9 @@ message WasmRefCast {
 message WasmBranchOnNull {
 }
 
+message WasmBranchOnNonNull {
+}
+
 message WasmRefI31 {
     bool isShared = 1;
 }

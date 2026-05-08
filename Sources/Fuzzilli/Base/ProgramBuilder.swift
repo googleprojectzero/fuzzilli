@@ -4956,7 +4956,16 @@ public class ProgramBuilder {
             with signature: WasmSignature, args: [Variable],
             body: (Variable, [Variable]) -> [Variable]
         ) -> [Variable] {
-            let signatureDef = b.wasmDefineAdHocSignatureType(signature: signature)
+            wasmBuildBlockWithResults(
+                with: b.wasmDefineAdHocSignatureType(signature: signature), args: args, body: body)
+        }
+
+        @discardableResult
+        public func wasmBuildBlockWithResults(
+            with signatureDef: Variable, args: [Variable],
+            body: (Variable, [Variable]) -> [Variable]
+        ) -> [Variable] {
+            let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
             let instr = b.emit(
                 WasmBeginBlock(parameterCount: signature.parameterTypes.count),
                 withInputs: [signatureDef] + args,
@@ -5009,6 +5018,25 @@ public class ProgramBuilder {
                 WasmBranchOnNull(parameterCount: labelType.wasmLabelType!.parameters.count),
                 withInputs: [label] + args + [reference],
                 types: [.anyWasmLabel] + labelType.wasmLabelType!.parameters + [.wasmGenericRef])
+            return Array(instr.outputs)
+        }
+
+        @discardableResult
+        public func wasmBranchOnNonNull(
+            _ reference: Variable, to label: Variable, args: [Variable] = []
+        ) -> [Variable] {
+            let labelType = b.type(of: label)
+            let labelParams = labelType.wasmLabelType!.parameters
+            assert(!labelParams.isEmpty)
+            let nonNullRefType = labelParams.last!
+            assert(nonNullRefType.Is(.wasmGenericRef))
+            let wasmRefType = nonNullRefType.wasmReferenceType!
+            let nullableRefType = ILType.wasmRef(wasmRefType.kind, nullability: true)
+
+            let instr = b.emit(
+                WasmBranchOnNonNull(parameterCount: labelParams.count - 1),
+                withInputs: [label] + args + [reference],
+                types: [.anyWasmLabel] + labelParams.dropLast() + [nullableRefType])
             return Array(instr.outputs)
         }
 

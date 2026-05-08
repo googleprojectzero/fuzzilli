@@ -1124,6 +1124,16 @@ public struct JSTyper: Analyzer {
                     of: instr.outputs.last!,
                     to: .wasmRef(wasmRefType.kind, nullability: false))
 
+            case .wasmBranchOnNonNull(_):
+                let labelType = type(of: instr.input(0))
+                let parameterTypes = labelType.wasmLabelType!.parameters
+                // The label expects the arguments including the non-null reference.
+                // The fallthrough path only has the arguments excluding the reference.
+                assert(instr.outputs.count == parameterTypes.count - 1)
+                for (output, parameterType) in zip(instr.outputs, parameterTypes) {
+                    setType(of: output, to: parameterType)
+                }
+
             case .wasmAnyConvertExtern(_):
                 // TODO(pawkra): forward shared bit & update the comment
                 // any.convert_extern forwards the nullability bit from the input.
