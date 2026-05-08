@@ -1106,6 +1106,7 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         "--experimental-fuzzing",
         "--js-staging",
         "--wasm-staging",
+        "--experimental-wasm-acquire-release",
         "--wasm-fast-api",
         "--expose-fast-api",
         "--wasm-test-streaming",  // WebAssembly.compileStreaming & WebAssembly.instantiateStreaming()

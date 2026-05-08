@@ -4809,17 +4809,18 @@ public class ProgramBuilder {
 
         @discardableResult
         func wasmAtomicLoad(
-            memory: Variable, address: Variable, loadType: WasmAtomicLoadType, offset: Int64
+            memory: Variable, address: Variable, loadType: WasmAtomicLoadType, offset: Int64,
+            ordering: WasmMemoryOrdering = .sequentiallyConsistent
         ) -> Variable {
-            let op = WasmAtomicLoad(loadType: loadType, offset: offset)
+            let op = WasmAtomicLoad(loadType: loadType, offset: offset, ordering: ordering)
             return b.emit(op, withInputs: [memory, address]).output
         }
 
         func wasmAtomicStore(
             memory: Variable, address: Variable, value: Variable, storeType: WasmAtomicStoreType,
-            offset: Int64
+            offset: Int64, ordering: WasmMemoryOrdering = .sequentiallyConsistent
         ) {
-            let op = WasmAtomicStore(storeType: storeType, offset: offset)
+            let op = WasmAtomicStore(storeType: storeType, offset: offset, ordering: ordering)
             b.emit(op, withInputs: [memory, address, value])
         }
 

@@ -1467,11 +1467,13 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmAtomicLoad = Fuzzilli_Protobuf_WasmAtomicLoad.with {
                     $0.loadType = convertEnum(op.loadType, WasmAtomicLoadType.allCases)
                     $0.offset = op.offset
+                    $0.ordering = convertEnum(op.ordering, WasmMemoryOrdering.allCases)
                 }
             case .wasmAtomicStore(let op):
                 $0.wasmAtomicStore = Fuzzilli_Protobuf_WasmAtomicStore.with {
                     $0.storeType = convertEnum(op.storeType, WasmAtomicStoreType.allCases)
                     $0.offset = op.offset
+                    $0.ordering = convertEnum(op.ordering, WasmMemoryOrdering.allCases)
                 }
             case .wasmAtomicRMW(let op):
                 $0.wasmAtomicRmw = Fuzzilli_Protobuf_WasmAtomicRMW.with {
@@ -2866,12 +2868,16 @@ extension Instruction: ProtobufConvertible {
             op = WasmI31Get(isSigned: p.isSigned)
         case .wasmAtomicLoad(let p):
             op = WasmAtomicLoad(
-                loadType: try convertEnum(p.loadType, WasmAtomicLoadType.allCases), offset: p.offset
+                loadType: try convertEnum(p.loadType, WasmAtomicLoadType.allCases),
+                offset: p.offset,
+                ordering: try convertEnum(p.ordering, WasmMemoryOrdering.allCases)
             )
         case .wasmAtomicStore(let p):
             op = WasmAtomicStore(
                 storeType: try convertEnum(p.storeType, WasmAtomicStoreType.allCases),
-                offset: p.offset)
+                offset: p.offset,
+                ordering: try convertEnum(p.ordering, WasmMemoryOrdering.allCases)
+            )
         case .wasmAtomicRmw(let p):
             op = WasmAtomicRMW(
                 op: try convertEnum(p.op, WasmAtomicRMWType.allCases), offset: p.offset)

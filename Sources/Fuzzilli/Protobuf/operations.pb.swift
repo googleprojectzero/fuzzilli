@@ -1348,6 +1348,40 @@ public enum Fuzzilli_Protobuf_WasmAtomicStoreType: SwiftProtobuf.Enum, Swift.Cas
 
 }
 
+public enum Fuzzilli_Protobuf_WasmMemoryOrdering: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case sequentiallyConsistent // = 0
+  case acquireRelease // = 1
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .sequentiallyConsistent
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .sequentiallyConsistent
+    case 1: self = .acquireRelease
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .sequentiallyConsistent: return 0
+    case .acquireRelease: return 1
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmMemoryOrdering] = [
+    .sequentiallyConsistent,
+    .acquireRelease,
+  ]
+
+}
+
 public enum Fuzzilli_Protobuf_WasmAtomicRMWType: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case i32Add // = 0
@@ -5917,6 +5951,8 @@ public struct Fuzzilli_Protobuf_WasmAtomicLoad: Sendable {
 
   public var offset: Int64 = 0
 
+  public var ordering: Fuzzilli_Protobuf_WasmMemoryOrdering = .sequentiallyConsistent
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5930,6 +5966,8 @@ public struct Fuzzilli_Protobuf_WasmAtomicStore: Sendable {
   public var storeType: Fuzzilli_Protobuf_WasmAtomicStoreType = .i32Store
 
   public var offset: Int64 = 0
+
+  public var ordering: Fuzzilli_Protobuf_WasmMemoryOrdering = .sequentiallyConsistent
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -6359,6 +6397,10 @@ extension Fuzzilli_Protobuf_WasmAtomicLoadType: SwiftProtobuf._ProtoNameProvidin
 
 extension Fuzzilli_Protobuf_WasmAtomicStoreType: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0I32_STORE\0\u{1}I64_STORE\0\u{1}I32_STORE_8\0\u{1}I32_STORE_16\0\u{1}I64_STORE_8\0\u{1}I64_STORE_16\0\u{1}I64_STORE_32\0")
+}
+
+extension Fuzzilli_Protobuf_WasmMemoryOrdering: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SEQUENTIALLY_CONSISTENT\0\u{1}ACQUIRE_RELEASE\0")
 }
 
 extension Fuzzilli_Protobuf_WasmAtomicRMWType: SwiftProtobuf._ProtoNameProviding {
@@ -15482,7 +15524,7 @@ extension Fuzzilli_Protobuf_WasmI31Get: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Fuzzilli_Protobuf_WasmAtomicLoad: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmAtomicLoad"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}loadType\0\u{1}offset\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}loadType\0\u{1}offset\0\u{1}ordering\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -15492,6 +15534,7 @@ extension Fuzzilli_Protobuf_WasmAtomicLoad: SwiftProtobuf.Message, SwiftProtobuf
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.loadType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.ordering) }()
       default: break
       }
     }
@@ -15504,12 +15547,16 @@ extension Fuzzilli_Protobuf_WasmAtomicLoad: SwiftProtobuf.Message, SwiftProtobuf
     if self.offset != 0 {
       try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
     }
+    if self.ordering != .sequentiallyConsistent {
+      try visitor.visitSingularEnumField(value: self.ordering, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmAtomicLoad, rhs: Fuzzilli_Protobuf_WasmAtomicLoad) -> Bool {
     if lhs.loadType != rhs.loadType {return false}
     if lhs.offset != rhs.offset {return false}
+    if lhs.ordering != rhs.ordering {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -15517,7 +15564,7 @@ extension Fuzzilli_Protobuf_WasmAtomicLoad: SwiftProtobuf.Message, SwiftProtobuf
 
 extension Fuzzilli_Protobuf_WasmAtomicStore: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmAtomicStore"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}storeType\0\u{1}offset\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}storeType\0\u{1}offset\0\u{1}ordering\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -15527,6 +15574,7 @@ extension Fuzzilli_Protobuf_WasmAtomicStore: SwiftProtobuf.Message, SwiftProtobu
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.storeType) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.ordering) }()
       default: break
       }
     }
@@ -15539,12 +15587,16 @@ extension Fuzzilli_Protobuf_WasmAtomicStore: SwiftProtobuf.Message, SwiftProtobu
     if self.offset != 0 {
       try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
     }
+    if self.ordering != .sequentiallyConsistent {
+      try visitor.visitSingularEnumField(value: self.ordering, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmAtomicStore, rhs: Fuzzilli_Protobuf_WasmAtomicStore) -> Bool {
     if lhs.storeType != rhs.storeType {return false}
     if lhs.offset != rhs.offset {return false}
+    if lhs.ordering != rhs.ordering {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

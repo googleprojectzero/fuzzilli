@@ -999,12 +999,12 @@ public class FuzzILLifter: Lifter {
 
         case .wasmAtomicLoad(let op):
             w.emit(
-                "\(output()) <- WasmAtomicLoad \(input(0))[\(input(1)) + \(op.offset)] [\(op.loadType)]"
+                "\(output()) <- WasmAtomicLoad \(op.ordering) \(input(0))[\(input(1)) + \(op.offset)] [\(op.loadType)]"
             )
 
         case .wasmAtomicStore(let op):
             w.emit(
-                "WasmAtomicStore \(input(0))[\(input(1)) + \(op.offset)] <- \(input(2)) [\(op.storeType)]"
+                "WasmAtomicStore \(op.ordering) \(input(0))[\(input(1)) + \(op.offset)] <- \(input(2)) [\(op.storeType)]"
             )
 
         case .wasmAtomicRMW(let op):

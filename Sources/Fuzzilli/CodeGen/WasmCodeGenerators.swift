@@ -618,12 +618,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         let loadType = chooseUniform(from: WasmAtomicLoadType.allCases)
         let alignment = loadType.naturalAlignment()
+        let ordering = chooseUniform(from: WasmMemoryOrdering.allCases)
 
         let (address, staticOffset) = b.generateAlignedMemoryIndexes(
             forMemory: memory, alignment: alignment)
 
         function.wasmAtomicLoad(
-            memory: memory, address: address, loadType: loadType, offset: staticOffset)
+            memory: memory, address: address, loadType: loadType, offset: staticOffset,
+            ordering: ordering)
     },
 
     CodeGenerator(
@@ -633,6 +635,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         let storeType = chooseUniform(from: WasmAtomicStoreType.allCases)
         let alignment = storeType.naturalAlignment()
+        let ordering = chooseUniform(from: WasmMemoryOrdering.allCases)
 
         guard let value = b.randomVariable(ofType: storeType.numberType()) else { return }
 
@@ -641,7 +644,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
         function.wasmAtomicStore(
             memory: memory, address: address, value: value, storeType: storeType,
-            offset: staticOffset)
+            offset: staticOffset, ordering: ordering)
     },
 
     CodeGenerator(

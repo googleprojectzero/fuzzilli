@@ -408,4 +408,44 @@ class WasmAtomicsTests: XCTestCase {
 
         testForOutput(program: js, runner: runner, outputString: expectedOutput)
     }
+
+    /// Test case for the new AcquireRelease memory ordering.
+    func testMemoryOrdering() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(
+            type: .any,
+            withArguments: ["--experimental-wasm-acquire-release"])
+        let js = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                let memory0 = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: true)
+                let memory1 = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: true)
+                wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32]) { f, _, _ in
+                    let valueToStore = f.consti32(42)
+                    let address = f.consti32(0)
+                    f.wasmAtomicStore(
+                        memory: memory0, address: address, value: valueToStore,
+                        storeType: .i32Store, offset: 0, ordering: .acquireRelease)
+                    let loadedValue0 = f.wasmAtomicLoad(
+                        memory: memory0, address: address, loadType: .i32Load, offset: 0,
+                        ordering: .acquireRelease)
+
+                    let valueToStore1 = f.consti32(1337)
+                    let address1 = f.consti32(8)
+                    f.wasmAtomicStore(
+                        memory: memory1, address: address1, value: valueToStore1,
+                        storeType: .i32Store, offset: 0, ordering: .acquireRelease)
+                    let loadedValue1 = f.wasmAtomicLoad(
+                        memory: memory1, address: address1, loadType: .i32Load, offset: 0,
+                        ordering: .acquireRelease)
+
+                    return [loadedValue0, loadedValue1]
+                }
+            }
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let w0 = b.getProperty("w0", of: exports)
+            let r = b.callFunction(w0)
+            b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(r)])
+        }
+        testForOutput(program: js, runner: runner, outputString: "42,1337\n")
+    }
 }

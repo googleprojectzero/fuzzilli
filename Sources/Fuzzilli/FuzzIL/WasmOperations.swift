@@ -1123,6 +1123,11 @@ final class WasmMemorySize: WasmOperation {
     }
 }
 
+public enum WasmMemoryOrdering: UInt8, CaseIterable {
+    case sequentiallyConsistent = 0
+    case acquireRelease = 1
+}
+
 public enum WasmAtomicLoadType: UInt8, CaseIterable {
     case i32Load = 0x10
     case i64Load = 0x11
@@ -2446,10 +2451,16 @@ final class WasmAtomicLoad: WasmOperation {
     let loadType: WasmAtomicLoadType
     /// The static offset from the base address.
     let offset: Int64
+    /// The memory ordering of the load.
+    let ordering: WasmMemoryOrdering
 
-    init(loadType: WasmAtomicLoadType, offset: Int64) {
+    init(
+        loadType: WasmAtomicLoadType, offset: Int64,
+        ordering: WasmMemoryOrdering = .sequentiallyConsistent
+    ) {
         self.loadType = loadType
         self.offset = offset
+        self.ordering = ordering
         super.init(
             numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
@@ -2464,10 +2475,16 @@ final class WasmAtomicStore: WasmOperation {
     let storeType: WasmAtomicStoreType
     /// The static offset from the base address.
     let offset: Int64
+    /// The memory ordering of the store.
+    let ordering: WasmMemoryOrdering
 
-    init(storeType: WasmAtomicStoreType, offset: Int64) {
+    init(
+        storeType: WasmAtomicStoreType, offset: Int64,
+        ordering: WasmMemoryOrdering = .sequentiallyConsistent
+    ) {
         self.storeType = storeType
         self.offset = offset
+        self.ordering = ordering
         super.init(
             numInputs: 3, numOutputs: 0, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }

@@ -478,9 +478,11 @@ public class OperationMutator: BaseInstructionMutator {
                     $0.numberType() == op.loadType.numberType()
                 }))
             let newStaticOffset = b.randomInt()
+            let newOrdering = chooseUniform(from: WasmMemoryOrdering.allCases)
             newOp = WasmAtomicLoad(
                 loadType: newLoadType,
-                offset: newStaticOffset
+                offset: newStaticOffset,
+                ordering: newOrdering
             )
         case .wasmAtomicStore(let op):
             let newStoreType = chooseUniform(
@@ -488,9 +490,11 @@ public class OperationMutator: BaseInstructionMutator {
                     $0.numberType() == op.storeType.numberType()
                 }))
             let newStaticOffset = b.randomInt()
+            let newOrdering = chooseUniform(from: WasmMemoryOrdering.allCases)
             newOp = WasmAtomicStore(
                 storeType: newStoreType,
-                offset: newStaticOffset
+                offset: newStaticOffset,
+                ordering: newOrdering
             )
         case .wasmAtomicRMW(let op):
             let newOpType = chooseUniform(

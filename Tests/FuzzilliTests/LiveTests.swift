@@ -61,7 +61,11 @@ class LiveTests: XCTestCase {
 
     func testWasmCodeGenerationAndCompilation() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest(
-            type: .any, withArguments: ["--wasm-allow-mixed-eh-for-testing"])
+            type: .any,
+            withArguments: [
+                "--wasm-allow-mixed-eh-for-testing", "--experimental-wasm-acquire-release",
+            ]
+        )
 
         let results = try Self.runLiveTest(withRunner: runner) { b in
             // Fuzzilli can't handle situations where there aren't any variables available.
@@ -103,7 +107,11 @@ class LiveTests: XCTestCase {
 
     func testWasmCodeGenerationAndCompilationAndExecution() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest(
-            type: .any, withArguments: ["--wasm-allow-mixed-eh-for-testing"])
+            type: .any,
+            withArguments: [
+                "--wasm-allow-mixed-eh-for-testing", "--experimental-wasm-acquire-release",
+            ]
+        )
 
         let results = try Self.runLiveTest(withRunner: runner) { b in
             // Fuzzilli can't handle situations where there aren't any variables available.
