@@ -691,12 +691,12 @@ public struct JSTyper: Analyzer {
     }
 
     public mutating func finalizeJsModule() -> ILType {
+        // Handle duplicate keys in seenExports gracefully (see ProgramBuilder.generateExport).
         let exportsMap = Dictionary(
-            uniqueKeysWithValues: seenExports.map {
-                ($0, state.type(of: $1))
-            })
+            seenExports.map { ($0, state.type(of: $1)) },
+            uniquingKeysWith: { (first, last) in last }
+        )
         let moduleType = ILType.jsModule(exports: exportsMap)
-
         seenExports = []
         return moduleType
     }

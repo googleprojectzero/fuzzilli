@@ -2357,4 +2357,16 @@ class JSTyperTests: XCTestCase {
         XCTAssertTrue(t1Type.methods.contains("get"))
         XCTAssertTrue(t1Type.methods.contains("set"))
     }
+
+    func testHandlingDuplicateExportsGracefully() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        let b = fuzzer.makeBuilder()
+
+        b.beginBundleModule(name: "myModule")
+        let v = b.loadInt(42)
+        b.exportVariables(variables: [v, v], exportNames: ["foo", "foo"])
+        let module = b.endBundleModule()
+        XCTAssertEqual(b.type(of: module), .jsModule(exports: ["foo": .integer]))
+    }
 }

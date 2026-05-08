@@ -4206,11 +4206,13 @@ public class ProgramBuilder {
         let numExports = Int.random(in: 1...5)
         var varsToExport: [Variable] = []
         var exportNames: [String] = []
+
+        // Try to generate unique names for exports. The names will still be non-unique if a program is spliced with itself (the resulting JS will be invalid).
+        let randomPrefix = String.random(ofLength: 4)
+
         for i in 0..<numExports {
             varsToExport.append(randomJsVariable())
-            // TODO(marja): These names are not guaranteed to be unique. Figure out
-            // a better naming solution.
-            exportNames.append("export\(indexOfNextInstruction())_\(i)")
+            exportNames.append("export_\(randomPrefix)_\(i)")
         }
         exportVariables(variables: varsToExport, exportNames: exportNames)
     }
