@@ -84,6 +84,7 @@ public let v8Profile = Profile(
         (WasmFastCallFuzzer, 1),
         (FastApiCallFuzzer, 1),
         (LazyDeoptFuzzer, 1),
+        (HomomorphicFeedbackFuzzer, 1),
         (WasmDeoptFuzzer, 1),
         (WasmInJsInliningFuzzer, 1),
         (WasmTurbofanFuzzer, 1),

@@ -633,6 +633,61 @@ public let V8RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
     b.build(n: 15)
 }
 
+public let HomomorphicFeedbackFuzzer = ProgramTemplate("HomomorphicFeedbackFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 10)
+
+    let numObjects = Int.random(in: 5...8)
+    let commonProp = b.randomCustomPropertyName()
+
+    // Add a different property to each object.
+    var objects = (0..<numObjects).map { _ in
+        b.createObject(with: [b.randomCustomPropertyName(): b.randomJsVariable()])
+    }
+
+    // Add the common property.
+    for obj in objects {
+        let value = b.randomJsVariable()
+        b.setProperty(commonProp, of: obj, to: value)
+    }
+
+    // Again, add a different property to each object after the common one.
+    for obj in objects {
+        let finalProp = b.randomCustomPropertyName()
+        let value = b.randomJsVariable()
+        b.setProperty(finalProp, of: obj, to: value)
+    }
+
+    let f = b.buildPlainFunction(with: .parameters(.object())) { args in
+        let o = args[0]
+
+        // Eagerly load the target property (sometimes)
+        if probability(0.7) {
+            b.getProperty(commonProp, of: o)
+        }
+        b.build(n: 20)
+        b.doReturn(b.randomJsVariable())
+    }
+
+    b.eval("%PrepareFunctionForOptimization(%@)", with: [f])
+
+    // Call the target function with 5 of the objects (but not all)
+    let warmupObjects = Array(objects.prefix(5))
+    let warmupArray = b.createArray(with: warmupObjects)
+
+    b.buildForOfLoop(warmupArray) { obj in
+        b.callFunction(f, withArgs: [obj])
+    }
+
+    b.eval("%OptimizeFunctionOnNextCall(%@)", with: [f])
+
+    // Call the target function with all the objects
+    let allObjectsArray = b.createArray(with: objects)
+    b.buildForOfLoop(allObjectsArray) { obj in
+        b.callFunction(f, withArgs: [obj])
+    }
+}
+
 // Emits calls with recursive calls of limited depth.
 public let LazyDeoptFuzzer = ProgramTemplate("LazyDeoptFuzzer") { b in
     b.buildPrefix()

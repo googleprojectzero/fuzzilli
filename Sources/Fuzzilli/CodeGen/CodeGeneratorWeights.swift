@@ -159,6 +159,7 @@ public let codeGeneratorWeights = [
     "UnboundFunctionApplyGenerator":            10,
     "UnboundFunctionBindGenerator":             10,
     "FunctionBindGenerator":                    10,
+    "HomomorphicObjectsGenerator":              5,
 
     // These will only be used inside class methods, and only if private properties were previously declared in that class.
     "PrivatePropertyRetrievalGenerator":        30,

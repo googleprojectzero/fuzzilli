@@ -151,7 +151,6 @@ public let CodeGenerators: [CodeGenerator] = [
     //  - Should generate |n| different values of the same type, but may generate fewer.
     //  - May be recursive, for example to fill bodies of newly created blocks.
     //
-
     CodeGenerator("IntegerGenerator", produces: [.integer]) { b in
         b.loadInt(b.randomInt())
     },
@@ -3500,5 +3499,28 @@ public let CodeGenerators: [CodeGenerator] = [
         // - Exports from another module
         // - Multiple modules exporting a variable with the same name
         b.generateExport()
+    },
+
+    CodeGenerator("HomomorphicObjectsGenerator") { b in
+        let numObjects = Int.random(in: 5...8)
+        let commonProp = b.randomCustomPropertyName()
+
+        // Add a different property to each object.
+        let objects = (0..<numObjects).map { _ in
+            b.createObject(with: [b.randomCustomPropertyName(): b.randomJsVariable()])
+        }
+
+        // Add the common property.
+        for obj in objects {
+            let value = b.randomJsVariable()
+            b.setProperty(commonProp, of: obj, to: value)
+        }
+
+        // Again, add a different property to each object after the common one.
+        for obj in objects {
+            let finalProp = b.randomCustomPropertyName()
+            let value = b.randomJsVariable()
+            b.setProperty(finalProp, of: obj, to: value)
+        }
     },
 ]
