@@ -1135,6 +1135,10 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
     }
 
     if probability(0.1) {
+        args.append("--no-flush-bytecode")
+    }
+
+    if probability(0.1) {
         args.append("--no-maglev")
     }
 
@@ -1376,7 +1380,6 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         }
         if probability(0.5) {
             args.append("--stress-flush-code")
-            args.append("--flush-bytecode")
         }
         if probability(0.5) {
             args.append("--wasm-code-gc")
