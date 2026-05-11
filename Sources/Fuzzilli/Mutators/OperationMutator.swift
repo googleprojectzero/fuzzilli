@@ -766,6 +766,7 @@ public class OperationMutator: BaseInstructionMutator {
             .beginBundleModuleEntryPoint(_),
             .endBundleModuleEntryPoint(_),
             .exportVariables(_),
+            .createMap(_),
             // Wasm instructions
             .beginWasmModule(_),
             .endWasmModule(_),
@@ -959,6 +960,10 @@ public class OperationMutator: BaseInstructionMutator {
             names.append(b.randomPropertyName())
             inputs.append(b.randomJsVariable())
             newOp = ExportVariables(exportNames: names)
+        case .createMap(_):
+            // TODO(crbug.com/510424762): Implement
+            return instr
+
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }

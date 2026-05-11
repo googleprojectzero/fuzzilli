@@ -1631,6 +1631,10 @@ public class JavaScriptLifter: Lifter {
                 let VALUE = input(0)
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(VALUE));")
 
+            case .createMap:
+                let elems = inputs.map({ $0.text }).joined(separator: ",")
+                w.assign(NewExpression.new("new Map([\(elems)])"), to: instr.output)
+
             case .createWasmGlobal(let op):
                 let V = w.declare(instr.output)
                 let LET = w.varKeyword

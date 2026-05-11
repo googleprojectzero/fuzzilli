@@ -6234,6 +6234,37 @@ public struct Fuzzilli_Protobuf_EndBundleModuleEntryPoint: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_CreateMap: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var keyGroupName: String {
+    get {_keyGroupName ?? String()}
+    set {_keyGroupName = newValue}
+  }
+  /// Returns true if `keyGroupName` has been explicitly set.
+  public var hasKeyGroupName: Bool {self._keyGroupName != nil}
+  /// Clears the value of `keyGroupName`. Subsequent reads from it will return its default value.
+  public mutating func clearKeyGroupName() {self._keyGroupName = nil}
+
+  public var valueGroupName: String {
+    get {_valueGroupName ?? String()}
+    set {_valueGroupName = newValue}
+  }
+  /// Returns true if `valueGroupName` has been explicitly set.
+  public var hasValueGroupName: Bool {self._valueGroupName != nil}
+  /// Clears the value of `valueGroupName`. Subsequent reads from it will return its default value.
+  public mutating func clearValueGroupName() {self._valueGroupName = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _keyGroupName: String? = nil
+  fileprivate var _valueGroupName: String? = nil
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"
@@ -16150,6 +16181,45 @@ extension Fuzzilli_Protobuf_EndBundleModuleEntryPoint: SwiftProtobuf.Message, Sw
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_EndBundleModuleEntryPoint, rhs: Fuzzilli_Protobuf_EndBundleModuleEntryPoint) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_CreateMap: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CreateMap"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}keyGroupName\0\u{1}valueGroupName\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self._keyGroupName) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._valueGroupName) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._keyGroupName {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._valueGroupName {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_CreateMap, rhs: Fuzzilli_Protobuf_CreateMap) -> Bool {
+    if lhs._keyGroupName != rhs._keyGroupName {return false}
+    if lhs._valueGroupName != rhs._valueGroupName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

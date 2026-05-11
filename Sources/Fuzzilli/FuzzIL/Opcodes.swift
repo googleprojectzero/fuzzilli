@@ -375,4 +375,5 @@ enum Opcode {
     case endBundleModuleEntryPoint(EndBundleModuleEntryPoint)
     case wasmBranchOnNull(WasmBranchOnNull)
     case wasmBranchOnNonNull(WasmBranchOnNonNull)
+    case createMap(CreateMap)
 }

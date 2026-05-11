@@ -1309,14 +1309,28 @@ extension ILType {
         ofGroup: "Promise", withMethods: ["catch", "finally", "then"])
 
     /// Type of a JavaScript Map object.
-    public static let jsMap =
-        ILType.iterable()
-        + ILType.object(
-            ofGroup: "Map", withProperties: ["size"],
-            withMethods: [
-                "clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values",
-                "getOrInsert", "getOrInsertComputed",
-            ])
+    public static let jsMap = createJsMapType()
+
+    /// Create a jsMap parameterized by `ofKeyType` and `ofValueType`. Note that both
+    /// types should have a group, or else type information will be lost.
+    public static func createJsMapType(
+        ofKeyType keyType: ILType? = nil, ofValueType valueType: ILType? = nil
+    ) -> ILType {
+        assert(
+            (keyType == nil) == (valueType == nil),
+            "Either both key and value types must be specified, or neither.")
+
+        let entryElementType: ILType? = keyType != nil ? (keyType! | valueType!) : nil
+        let entryType = createJsArrayType(ofElementType: entryElementType)
+
+        return ILType.iterable(ofElementType: entryType)
+            + ILType.object(
+                ofGroup: "Map", withProperties: ["size"],
+                withMethods: [
+                    "clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values",
+                    "getOrInsert", "getOrInsertComputed",
+                ])
+    }
 
     /// Type of a JavaScript WeakMap object.
     public static let jsWeakMap = ILType.object(

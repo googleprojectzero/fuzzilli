@@ -1094,6 +1094,61 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: a3), ILType.jsArray)
     }
 
+    func testMapCreation() {
+        let env = JavaScriptEnvironment()
+
+        let fuzzer = makeMockFuzzer(environment: env)
+        let b = fuzzer.makeBuilder()
+
+        let m = b.createMap(withKeys: [], withValues: [])
+        XCTAssertEqual(b.type(of: m), ILType.jsMap)
+    }
+
+    func testParameterizedMapCreation() {
+        let fooElement = ILType.object(ofGroup: "FooElement", withProperties: ["foo"])
+        let stringElement = ILType.object(ofGroup: "StringElement")
+        let additionalObjectGroups: [ObjectGroup] = [
+            ObjectGroup(
+                name: "FooElement",
+                instanceType: fooElement,
+                properties: [
+                    "foo": .float
+                ],
+                methods: [:]),
+            ObjectGroup(
+                name: "StringElement",
+                instanceType: stringElement,
+                properties: [:],
+                methods: [:]),
+        ]
+
+        let env = JavaScriptEnvironment(additionalObjectGroups: additionalObjectGroups)
+        let fuzzer = makeMockFuzzer(environment: env)
+        let b = fuzzer.makeBuilder()
+
+        let keyGroups = ["StringElement", "UnknownGroup", nil]
+        let valueGroups = ["FooElement", "UnknownGroup", nil]
+        for (keyGroupName, valueGroupName) in zip(keyGroups, valueGroups) {
+            let m = b.createMap(
+                withKeys: [], withValues: [], keyGroupName: keyGroupName,
+                valueGroupName: valueGroupName)
+
+            if keyGroupName == nil || valueGroupName == nil {
+                // If either group name is nil, resulting `jsMap` will have both key and value types set to nil
+                XCTAssertEqual(b.type(of: m), ILType.createJsMapType())
+                continue
+            }
+
+            // Unregistered group names get resolved to jsAnything
+            let keyElement = keyGroupName != "UnknownGroup" ? stringElement : .jsAnything
+            let valueElement = valueGroupName != "UnknownGroup" ? fooElement : .jsAnything
+
+            XCTAssertEqual(
+                b.type(of: m),
+                ILType.createJsMapType(ofKeyType: keyElement, ofValueType: valueElement))
+        }
+    }
+
     func testSuperBinding() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

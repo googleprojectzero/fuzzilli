@@ -96,6 +96,9 @@ struct VariadicInputReducer: Reducer {
                     break loop
                 case .exportVariables(let op):
                     newOp = ExportVariables(exportNames: op.exportNames.dropLast())
+                case .createMap(_):
+                    // TODO(crbug.com/510424762): Implement
+                    break loop
                 default:
                     fatalError("Unknown variadic operation \(instr.op)")
                 }

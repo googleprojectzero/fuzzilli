@@ -3189,6 +3189,28 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func createMap(
+        withKeys initialKeys: [Variable], withValues initialValues: [Variable],
+        keyGroupName: String? = nil, valueGroupName: String? = nil
+    )
+        -> Variable
+    {
+        assert(
+            initialKeys.count == initialValues.count,
+            "Cannot create a map with a discrepancy in the key and value counts")
+        let mapEntries = zip(initialKeys, initialValues).map { key, value in
+            createArray(with: [key, value])
+        }
+        return emit(
+            CreateMap(
+                numInitialValues: initialKeys.count, keyGroupName: keyGroupName,
+                valueGroupName: valueGroupName),
+            withInputs: mapEntries
+        )
+        .output
+    }
+
+    @discardableResult
     public func createTemplateString(
         from parts: [String], interpolating interpolatedValues: [Variable]
     ) -> Variable {

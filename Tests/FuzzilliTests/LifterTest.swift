@@ -1273,6 +1273,33 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testMapLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.createMap(withKeys: [], withValues: [])
+
+        let key1 = b.loadString("key1")
+        let val1 = b.loadInt(42)
+        let key2 = b.loadString("key2")
+        let val2 = b.loadInt(43)
+        b.createMap(withKeys: [key1, key2], withValues: [val1, val2])
+        let undef = b.loadUndefined()
+        b.emit(CreateMap(numInitialValues: 1), withInputs: [undef])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+            new Map([]);
+            new Map([["key1",42],["key2",43]]);
+            new Map([undefined]);
+
+            """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testBinaryOperationLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

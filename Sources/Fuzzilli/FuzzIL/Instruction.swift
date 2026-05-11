@@ -1226,6 +1226,13 @@ extension Instruction: ProtobufConvertible {
                 }
             case .print(_):
                 fatalError("Print operations should not be serialized")
+            case .createMap(let op):
+                $0.createMap = Fuzzilli_Protobuf_CreateMap.with {
+                    if let keyGroupName = op.keyGroupName, let valueGroupName = op.valueGroupName {
+                        $0.keyGroupName = keyGroupName
+                        $0.valueGroupName = valueGroupName
+                    }
+                }
             // Wasm Operations
             case .consti64(let op):
                 $0.consti64 = Fuzzilli_Protobuf_Consti64.with { $0.value = op.value }
@@ -2487,6 +2494,16 @@ extension Instruction: ProtobufConvertible {
             op = BindFunction(numInputs: inouts.count - 1)
         case .print(_):
             fatalError("Should not deserialize a Print instruction!")
+        case .createMap(let p):
+            var keyGroupName: String? = nil
+            var valueGroupName: String? = nil
+            if p.hasKeyGroupName && p.hasValueGroupName {
+                keyGroupName = p.keyGroupName
+                valueGroupName = p.valueGroupName
+            }
+            op = CreateMap(
+                numInitialValues: inouts.count - 1, keyGroupName: keyGroupName,
+                valueGroupName: valueGroupName)
 
         // Wasm cases
         case .beginWasmModule(_):

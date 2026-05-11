@@ -865,6 +865,10 @@ public class FuzzILLifter: Lifter {
         case .loadNewTarget:
             w.emit("\(output()) <- LoadNewTarget")
 
+        case .createMap:
+            let elems = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- CreateMap [\(elems)]")
+
         case .beginWasmModule:
             w.emit("BeginWasmModule")
             w.increaseIndentionLevel()

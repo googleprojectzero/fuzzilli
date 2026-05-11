@@ -2415,6 +2415,15 @@ public struct JSTyper: Analyzer {
                 selfReferences[instr.input(0)] = []
             }
 
+        case .createMap(let op):
+            if let keyGroupName = op.keyGroupName, let valueGroupName = op.valueGroupName {
+                let keyType = self.environment.type(ofGroup: keyGroupName)
+                let valueType = self.environment.type(ofGroup: valueGroupName)
+                set(instr.output, .createJsMapType(ofKeyType: keyType, ofValueType: valueType))
+            } else {
+                set(instr.output, .jsMap)
+            }
+
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
             assert(
