@@ -44,6 +44,7 @@ public class OperationMutator: BaseInstructionMutator {
 
     private func mutateOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
         let newOp: Operation
+        var inouts = instr.inouts
         switch instr.op.opcode {
         case .loadInteger(let op):
             // Half the time we want to just hit the regular path
@@ -616,6 +617,15 @@ public class OperationMutator: BaseInstructionMutator {
                 newType = ILType.wasmRef(.Index(), nullability: !nullable)
             }
             newOp = WasmRefTest(refType: newType)
+        case .importVariables(let op):
+            var names = op.importNames
+            let module = instr.inputs[0]
+            assert(b.type(of: module).Is(.jsModule()))
+            let exports = b.type(of: module).exports.keys
+            assert(!exports.isEmpty)
+            names.append(exports.randomElement()!)
+            newOp = ImportVariables(importNames: names)
+            inouts.append(b.nextVariable())
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
             .loadUndefined(_),
@@ -756,7 +766,6 @@ public class OperationMutator: BaseInstructionMutator {
             .beginBundleModuleEntryPoint(_),
             .endBundleModuleEntryPoint(_),
             .exportVariables(_),
-            .importVariables(_),
             // Wasm instructions
             .beginWasmModule(_),
             .endWasmModule(_),
@@ -858,7 +867,7 @@ public class OperationMutator: BaseInstructionMutator {
         // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
         // If we add flags, remove this assert and change the code below.
         assert(instr.flags == .empty)
-        return Instruction(newOp, inouts: instr.inouts)
+        return Instruction(newOp, inouts: inouts)
     }
 
     private func extendVariadicOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
@@ -945,12 +954,11 @@ public class OperationMutator: BaseInstructionMutator {
             // `ProgramBuilder.buildIntoTypeGroup` which handles "exporting" of defined types via
             // the WasmEndTypeGroup instruction.
             return instr
-        case .exportVariables(_):
-            // TODO(marja): Implement
-            return instr
-        case .importVariables(_):
-            // TODO(marja): Implement
-            return instr
+        case .exportVariables(let op):
+            var names = op.exportNames
+            names.append(b.randomPropertyName())
+            inputs.append(b.randomJsVariable())
+            newOp = ExportVariables(exportNames: names)
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }
