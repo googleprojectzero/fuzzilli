@@ -1539,7 +1539,9 @@ final class WasmBranch: WasmOperation {
     override var opcode: Opcode { .wasmBranch(self) }
 
     init(parameterCount: Int) {
-        super.init(numInputs: 1 + parameterCount, requiredContext: [.wasmFunction])
+        super.init(
+            numInputs: 1 + parameterCount,
+            requiredContext: [.wasmFunction])
     }
 
     var parameterCount: Int { numInputs - 1 }
@@ -1553,8 +1555,8 @@ final class WasmBranchIf: WasmOperation {
         self.hint = hint
         // The inputs are the label, the arguments and the condition.
         super.init(
-            numInputs: 1 + parameterCount + 1, attributes: [.isMutable],
-            requiredContext: [.wasmFunction])
+            numInputs: 1 + parameterCount + 1, numOutputs: parameterCount,
+            attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 
     var parameterCount: Int { numInputs - 2 }

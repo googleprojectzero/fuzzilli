@@ -204,6 +204,32 @@ class WasmFoundationTests: XCTestCase {
             program: jsProg, runner: runner, outputString: "1,2,3\n4,5,6\n7,8,9\n10,11,12\n")
     }
 
+    func testBranchIfOutput() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let jsProg = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32, .wasmi32] => [.wasmi32, .wasmi32]) {
+                    function, label, args in
+                    let outputs = function.wasmBranchIf(
+                        function.consti32(0), to: label,
+                        args: args)
+                    let output0Plus1 = function.wasmi32BinOp(
+                        outputs[0], function.consti32(1), binOpKind: .Add)
+                    let output1Plus1 = function.wasmi32BinOp(
+                        outputs[1], function.consti32(1), binOpKind: .Add)
+                    return [output0Plus1, output1Plus1]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let main = module.getExportedMethod(at: 0)
+            let res0 = b.callMethod(main, on: exports, withArgs: [b.loadInt(42), b.loadInt(1337)])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "43,1338\n")
+    }
+
     func testExportNaming() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let jsProg = buildAndLiftProgram { b in

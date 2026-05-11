@@ -46,6 +46,10 @@ public final class Program: CustomStringConvertible {
     /// Each program has a unique ID to identify it even accross different fuzzer instances.
     public private(set) lazy var id = UUID()
 
+    /// The current version of the FuzzIL/Protobuf schema.
+    /// This version should be bumped whenever a breaking change is made to the protobuf format.
+    public static let protobufVersion: UInt32 = 1
+
     /// Constructs an empty program.
     public init(isBundle: Bool) {
         self.code = Code(isBundle: isBundle)
@@ -142,6 +146,7 @@ extension Program: ProtobufConvertible {
                 $0.parent = parent.asProtobuf(opCache: opCache)
             }
             $0.isBundle = code.isBundle
+            $0.version = Program.protobufVersion
         }
     }
 
@@ -150,6 +155,12 @@ extension Program: ProtobufConvertible {
     }
 
     convenience init(from proto: ProtobufType, opCache: OperationCache? = nil) throws {
+        if proto.version != Program.protobufVersion {
+            throw FuzzilliError.programDecodingError(
+                "Incompatible protobuf version: expected \(Program.protobufVersion), but found \(proto.version)"
+            )
+        }
+
         var code = Code(isBundle: proto.isBundle)
         for (i, protoInstr) in proto.code.enumerated() {
             do {

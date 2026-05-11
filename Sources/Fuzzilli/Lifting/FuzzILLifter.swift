@@ -1331,18 +1331,20 @@ public class FuzzILLifter: Lifter {
         case .wasmEndTryDelegate(_):
             w.decreaseIndentionLevel()
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
-            if instr.numOutputs > 0 {
+            if instr.outputs.isEmpty {
+                w.emit("WasmEndTryDelegate [\(inputs)]")
+            } else {
                 let outputs = instr.outputs.map(lift).joined(separator: ", ")
                 w.emit("\(outputs) <- WasmEndTryDelegate [\(inputs)]")
-            } else {
-                w.emit("WasmEndTryDelegate [\(inputs)]")
             }
 
         case .wasmReassign(_):
             w.emit("\(input(0)) <- WasmReassign \(input(1))")
 
         case .wasmBranch(_):
-            w.emit("WasmBranch: \(instr.inputs.map(lift).joined(separator: ", "))")
+            let label = instr.inputs.first!
+            let args = instr.inputs.dropFirst().map(lift).joined(separator: ", ")
+            w.emit("WasmBranch to \(label) [\(args)]")
 
         case .wasmBranchIf(let op):
             let hint =
@@ -1353,17 +1355,26 @@ public class FuzzILLifter: Lifter {
                 }
             let condition = instr.inputs.last!
             let label = instr.inputs.first!
-            let args = instr.inputs.dropFirst().dropLast().map(lift)
-            w.emit("WasmBranchIf \(hint)\(condition) to \(label) [\(args.joined(separator: ", "))]")
+            let args = instr.inputs.dropFirst().dropLast().map(lift).joined(separator: ", ")
+            if instr.outputs.isEmpty {
+                w.emit("WasmBranchIf \(hint)\(condition) to \(label) [\(args)]")
+            } else {
+                let outputs = instr.outputs.map(lift).joined(separator: ", ")
+                w.emit("\(outputs) <- WasmBranchIf \(hint)\(condition) to \(label) [\(args)]")
+            }
 
         case .wasmBranchOnNull(_):
             let ref = instr.inputs.last!
             let label = instr.inputs.first!
-            let args = instr.inputs.dropFirst().dropLast().map(lift)
-            let outputs = instr.outputs.map(lift).joined(separator: ", ")
-            w.emit(
-                "\(outputs) <- WasmBranchOnNull \(ref) to \(label) [\(args.joined(separator: ", "))]"
-            )
+            let args = instr.inputs.dropFirst().dropLast().map(lift).joined(separator: ", ")
+            if instr.outputs.isEmpty {
+                w.emit("WasmBranchOnNull \(ref) to \(label) [\(args)]")
+            } else {
+                let outputs = instr.outputs.map(lift).joined(separator: ", ")
+                w.emit(
+                    "\(outputs) <- WasmBranchOnNull \(ref) to \(label) [\(args)]"
+                )
+            }
 
         case .wasmBranchOnNonNull(_):
             let ref = instr.inputs.last!

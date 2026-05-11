@@ -2720,7 +2720,7 @@ extension Instruction: ProtobufConvertible {
             op = WasmBranch(parameterCount: inouts.count - 1)
         case .wasmBranchIf(let p):
             op = WasmBranchIf(
-                parameterCount: inouts.count - 2,
+                parameterCount: (inouts.count - 2) / 2,
                 hint: try convertEnum(p.hint, WasmBranchHint.allCases))
         case .wasmBranchTable(let p):
             op = WasmBranchTable(

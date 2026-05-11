@@ -2092,15 +2092,13 @@ public class WasmLifter {
         case .wasmRethrow(_):
             let blockDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0x09] + Leb128.unsignedEncode(blockDepth))
-        case .wasmBranch(let op):
+        case .wasmBranch(_):
             let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0x0C]) + Leb128.unsignedEncode(branchDepth)
-                + Array(repeating: 0x1a, count: op.parameterCount)
         case .wasmBranchIf(let op):
             currentFunction!.addBranchHint(op.hint)
             let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0x0D]) + Leb128.unsignedEncode(branchDepth)
-                + Array(repeating: 0x1a, count: op.parameterCount)
         case .wasmBranchOnNull(_):
             let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0xD5]) + Leb128.unsignedEncode(branchDepth)

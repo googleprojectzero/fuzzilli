@@ -1107,6 +1107,14 @@ public struct JSTyper: Analyzer {
                 } else {
                     setType(of: instr.output, to: op.type)
                 }
+            case .wasmBranchIf(_):
+                let labelType = type(of: instr.input(0))
+                let parameterTypes = labelType.wasmLabelType!.parameters
+                assert(instr.outputs.count == parameterTypes.count)
+                for (output, parameterType) in zip(instr.outputs, parameterTypes) {
+                    setType(of: output, to: parameterType)
+                }
+
             case .wasmBranchOnNull(_):
                 let labelType = type(of: instr.input(0))
                 let parameterTypes = labelType.wasmLabelType!.parameters

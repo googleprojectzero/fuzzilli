@@ -2470,7 +2470,6 @@ public class ProgramBuilder {
             let type = requirement.type
 
             if type.Is(.wasmAnything) && context.contains(.wasmFunction) {
-                // Check if we can produce it with findOrGenerateWasmVar
                 let _ = currentWasmFunction.generateRandomWasmVar(ofType: type)
             }
             if findVariable(satisfying: { requirement.fulfilled(by: self.type(of: $0)) }) == nil {
@@ -5016,19 +5015,23 @@ public class ProgramBuilder {
             checkArgumentsMatchLabelType(label: labelType, args: args)
             b.emit(
                 WasmBranch(parameterCount: labelType.wasmLabelType!.parameters.count),
-                withInputs: [label] + args)
+                withInputs: [label] + args,
+                types: [.anyWasmLabel] + labelType.wasmLabelType!.parameters)
         }
 
+        @discardableResult
         public func wasmBranchIf(
             _ condition: Variable, to label: Variable, args: [Variable] = [],
             hint: WasmBranchHint = .None
-        ) {
+        ) -> [Variable] {
             let labelType = b.type(of: label)
             checkArgumentsMatchLabelType(label: labelType, args: args)
             assert(b.type(of: condition).Is(.wasmi32))
-            b.emit(
+            let instr = b.emit(
                 WasmBranchIf(parameterCount: labelType.wasmLabelType!.parameters.count, hint: hint),
-                withInputs: [label] + args + [condition])
+                withInputs: [label] + args + [condition],
+                types: [.anyWasmLabel] + labelType.wasmLabelType!.parameters + [.wasmi32])
+            return Array(instr.outputs)
         }
 
         @discardableResult

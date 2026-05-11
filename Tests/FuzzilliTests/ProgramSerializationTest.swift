@@ -149,6 +149,38 @@ class ProgramSerializationTests: XCTestCase {
                 XCTAssertNotEqual(p1, p2)
             }
         }
+    }
 
+    func testProtobufVersioning() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.loadInt(42)
+        let program = b.finalize()
+
+        var proto = program.asProtobuf()
+        XCTAssertEqual(proto.version, Program.protobufVersion)
+
+        // Deserializing a protobuf with the correct version number should pass.
+        XCTAssertNoThrow(try Program(from: proto))
+
+        // Deserializing a protobuf with version 0 (e.g., the version field does not exist, as in legacy protobufs) should fail.
+        proto.version = 0
+        XCTAssertThrowsError(try Program(from: proto)) { error in
+            if case .programDecodingError(let msg) = error as? FuzzilliError {
+                XCTAssert(msg.contains("Incompatible protobuf version"))
+            } else {
+                XCTFail("Unexpected error type: \(error)")
+            }
+        }
+
+        // Deserializing a protobuf with an incompatible version number should fail.
+        proto.version = Program.protobufVersion + 1
+        XCTAssertThrowsError(try Program(from: proto)) { error in
+            if case .programDecodingError(let msg) = error as? FuzzilliError {
+                XCTAssert(msg.contains("Incompatible protobuf version"))
+            } else {
+                XCTFail("Unexpected error type: \(error)")
+            }
+        }
     }
 }

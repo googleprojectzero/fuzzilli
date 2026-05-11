@@ -3215,6 +3215,11 @@ public struct Fuzzilli_Protobuf_Program: @unchecked Sendable {
     set {_uniqueStorage()._isBundle = newValue}
   }
 
+  public var version: UInt32 {
+    get {_storage._version}
+    set {_uniqueStorage()._version = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -9160,7 +9165,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Program"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}uuid\0\u{1}code\0\u{1}comments\0\u{1}parent\0\u{1}isBundle\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}uuid\0\u{1}code\0\u{1}comments\0\u{1}parent\0\u{1}isBundle\0\u{1}version\0")
 
   fileprivate class _StorageClass {
     var _uuid: Data = Data()
@@ -9168,6 +9173,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
     var _comments: Dictionary<Int32,String> = [:]
     var _parent: Fuzzilli_Protobuf_Program? = nil
     var _isBundle: Bool = false
+    var _version: UInt32 = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -9183,6 +9189,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
       _comments = source._comments
       _parent = source._parent
       _isBundle = source._isBundle
+      _version = source._version
     }
   }
 
@@ -9206,6 +9213,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
         case 3: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufSInt32,SwiftProtobuf.ProtobufString>.self, value: &_storage._comments) }()
         case 4: try { try decoder.decodeSingularMessageField(value: &_storage._parent) }()
         case 5: try { try decoder.decodeSingularBoolField(value: &_storage._isBundle) }()
+        case 6: try { try decoder.decodeSingularUInt32Field(value: &_storage._version) }()
         default: break
         }
       }
@@ -9233,6 +9241,9 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
       if _storage._isBundle != false {
         try visitor.visitSingularBoolField(value: _storage._isBundle, fieldNumber: 5)
       }
+      if _storage._version != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._version, fieldNumber: 6)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -9247,6 +9258,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
         if _storage._comments != rhs_storage._comments {return false}
         if _storage._parent != rhs_storage._parent {return false}
         if _storage._isBundle != rhs_storage._isBundle {return false}
+        if _storage._version != rhs_storage._version {return false}
         return true
       }
       if !storagesAreEqual {return false}
