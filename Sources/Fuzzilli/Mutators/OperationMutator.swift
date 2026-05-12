@@ -960,9 +960,17 @@ public class OperationMutator: BaseInstructionMutator {
             names.append(b.randomPropertyName())
             inputs.append(b.randomJsVariable())
             newOp = ExportVariables(exportNames: names)
-        case .createMap(_):
-            // TODO(crbug.com/510424762): Implement
-            return instr
+        case .createMap(let op):
+            newOp = CreateMap(
+                numInitialValues: op.numInitialValues + 1, keyGroupName: op.keyGroupName,
+                valueGroupName: op.valueGroupName)
+            var elementType = ILType.jsArray
+            if let keyGroup = op.keyGroupName, let valueGroup = op.valueGroupName {
+                let keyType = b.fuzzer.environment.type(ofGroup: keyGroup)
+                let valueType = b.fuzzer.environment.type(ofGroup: valueGroup)
+                elementType = ILType.createJsArrayType(ofElementType: keyType | valueType)
+            }
+            inputs.append(b.randomVariable(forUseAs: elementType))
 
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
