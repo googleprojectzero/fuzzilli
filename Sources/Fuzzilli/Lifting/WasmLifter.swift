@@ -1703,7 +1703,7 @@ public class WasmLifter {
     // Multi-memory: `[align | 0x40] + [mem_idx]`.
     private func alignmentAndMemoryBytes(
         _ memory: Variable, alignment: Int64 = 1,
-        ordering: WasmMemoryOrdering = .sequentiallyConsistent
+        ordering: WasmMemoryOrdering = .sequentiallyConsistent, isRMW: Bool = false
     ) throws -> Data {
         assert(
             alignment > 0 && (alignment & (alignment - 1)) == 0, "Alignment must be a power of two")
@@ -1726,7 +1726,13 @@ public class WasmLifter {
             result.append(contentsOf: Leb128.unsignedEncode(memoryIdx))
         }
         if ordering != .sequentiallyConsistent {
-            result.append(ordering.rawValue)
+            var orderingByte = ordering.rawValue
+            if isRMW {
+                // For RMWs, the low four bits encode the read ordering and the high four bits
+                // encode the write ordering.
+                orderingByte |= (orderingByte << 4)
+            }
+            result.append(orderingByte)
         }
         return result
     }
@@ -1976,12 +1982,14 @@ public class WasmLifter {
         case .wasmAtomicRMW(let op):
             let opcode = [Prefix.Atomic.rawValue, op.op.rawValue]
             let alignAndMemory = try alignmentAndMemoryBytes(
-                wasmInstruction.input(0), alignment: op.op.naturalAlignment())
+                wasmInstruction.input(0), alignment: op.op.naturalAlignment(),
+                ordering: op.ordering, isRMW: true)
             return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
         case .wasmAtomicCmpxchg(let op):
             let opcode = [Prefix.Atomic.rawValue, op.op.rawValue]
             let alignAndMemory = try alignmentAndMemoryBytes(
-                wasmInstruction.input(0), alignment: op.op.naturalAlignment())
+                wasmInstruction.input(0), alignment: op.op.naturalAlignment(),
+                ordering: op.ordering, isRMW: true)
             return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
         case .wasmMemorySize(_):
             let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))

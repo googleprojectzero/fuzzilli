@@ -1479,11 +1479,13 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmAtomicRmw = Fuzzilli_Protobuf_WasmAtomicRMW.with {
                     $0.op = convertEnum(op.op, WasmAtomicRMWType.allCases)
                     $0.offset = op.offset
+                    $0.ordering = convertEnum(op.ordering, WasmMemoryOrdering.allCases)
                 }
             case .wasmAtomicCmpxchg(let op):
                 $0.wasmAtomicCmpxchg = Fuzzilli_Protobuf_WasmAtomicCmpxchg.with {
                     $0.op = convertEnum(op.op, WasmAtomicCmpxchgType.allCases)
                     $0.offset = op.offset
+                    $0.ordering = convertEnum(op.ordering, WasmMemoryOrdering.allCases)
                 }
             case .wasmMemorySize(_):
                 $0.wasmMemorySize = Fuzzilli_Protobuf_WasmMemorySize()
@@ -2880,10 +2882,16 @@ extension Instruction: ProtobufConvertible {
             )
         case .wasmAtomicRmw(let p):
             op = WasmAtomicRMW(
-                op: try convertEnum(p.op, WasmAtomicRMWType.allCases), offset: p.offset)
+                op: try convertEnum(p.op, WasmAtomicRMWType.allCases),
+                offset: p.offset,
+                ordering: try convertEnum(p.ordering, WasmMemoryOrdering.allCases)
+            )
         case .wasmAtomicCmpxchg(let p):
             op = WasmAtomicCmpxchg(
-                op: try convertEnum(p.op, WasmAtomicCmpxchgType.allCases), offset: p.offset)
+                op: try convertEnum(p.op, WasmAtomicCmpxchgType.allCases),
+                offset: p.offset,
+                ordering: try convertEnum(p.ordering, WasmMemoryOrdering.allCases)
+            )
         case .wasmAnyConvertExtern(_):
             op = WasmAnyConvertExtern()
         case .wasmExternConvertAny(_):

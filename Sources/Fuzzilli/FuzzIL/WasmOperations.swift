@@ -2495,10 +2495,14 @@ final class WasmAtomicRMW: WasmOperation {
 
     let op: WasmAtomicRMWType
     let offset: Int64
+    let ordering: WasmMemoryOrdering
 
-    init(op: WasmAtomicRMWType, offset: Int64) {
+    init(
+        op: WasmAtomicRMWType, offset: Int64, ordering: WasmMemoryOrdering = .sequentiallyConsistent
+    ) {
         self.op = op
         self.offset = offset
+        self.ordering = ordering
         super.init(
             numInputs: 3, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
@@ -2541,10 +2545,15 @@ final class WasmAtomicCmpxchg: WasmOperation {
 
     let op: WasmAtomicCmpxchgType
     let offset: Int64
+    let ordering: WasmMemoryOrdering
 
-    init(op: WasmAtomicCmpxchgType, offset: Int64) {
+    init(
+        op: WasmAtomicCmpxchgType, offset: Int64,
+        ordering: WasmMemoryOrdering = .sequentiallyConsistent
+    ) {
         self.op = op
         self.offset = offset
+        self.ordering = ordering
         super.init(
             numInputs: 4, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }

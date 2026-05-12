@@ -655,13 +655,15 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let op = chooseUniform(from: WasmAtomicRMWType.allCases)
         let valueType = op.type()
         let alignment = op.naturalAlignment()
+        let ordering = chooseUniform(from: WasmMemoryOrdering.allCases)
 
         let rhs = function.findOrGenerateWasmVar(ofType: valueType)
 
         let (lhs, staticOffset) = b.generateAlignedMemoryIndexes(
             forMemory: memory, alignment: alignment)
 
-        function.wasmAtomicRMW(memory: memory, lhs: lhs, rhs: rhs, op: op, offset: staticOffset)
+        function.wasmAtomicRMW(
+            memory: memory, lhs: lhs, rhs: rhs, op: op, offset: staticOffset, ordering: ordering)
     },
 
     CodeGenerator(
@@ -672,6 +674,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let op = chooseUniform(from: WasmAtomicCmpxchgType.allCases)
         let valueType = op.type()
         let alignment = op.naturalAlignment()
+        let ordering = chooseUniform(from: WasmMemoryOrdering.allCases)
 
         let expected = function.findOrGenerateWasmVar(ofType: valueType)
         let replacement = function.findOrGenerateWasmVar(ofType: valueType)
@@ -681,7 +684,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
         function.wasmAtomicCmpxchg(
             memory: memory, address: address, expected: expected, replacement: replacement, op: op,
-            offset: staticOffset)
+            offset: staticOffset, ordering: ordering)
     },
 
     // We don't specify what type this produces as it could be a .wasmi64 or a .wasmi32, depending on the WasmMemory object.

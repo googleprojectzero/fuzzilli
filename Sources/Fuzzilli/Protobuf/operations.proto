@@ -1634,6 +1634,7 @@ enum WasmAtomicRMWType {
 message WasmAtomicRMW {
     WasmAtomicRMWType op = 1;
     int64 offset = 2;
+    WasmMemoryOrdering ordering = 3;
 }
 
 enum WasmAtomicCmpxchgType {
@@ -1649,6 +1650,7 @@ enum WasmAtomicCmpxchgType {
 message WasmAtomicCmpxchg {
     WasmAtomicCmpxchgType op = 1;
     int64 offset = 2;
+    WasmMemoryOrdering ordering = 3;
 }
 
 message WasmAnyConvertExtern {

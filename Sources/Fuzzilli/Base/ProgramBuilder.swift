@@ -4826,9 +4826,10 @@ public class ProgramBuilder {
 
         @discardableResult
         func wasmAtomicRMW(
-            memory: Variable, lhs: Variable, rhs: Variable, op: WasmAtomicRMWType, offset: Int64
+            memory: Variable, lhs: Variable, rhs: Variable, op: WasmAtomicRMWType, offset: Int64,
+            ordering: WasmMemoryOrdering = .sequentiallyConsistent
         ) -> Variable {
-            let op = WasmAtomicRMW(op: op, offset: offset)
+            let op = WasmAtomicRMW(op: op, offset: offset, ordering: ordering)
             let anyInt: ILType = .wasmi32 | .wasmi64
             let valueType = op.op.type()
             return b.emit(
@@ -4840,9 +4841,10 @@ public class ProgramBuilder {
         @discardableResult
         func wasmAtomicCmpxchg(
             memory: Variable, address: Variable, expected: Variable, replacement: Variable,
-            op: WasmAtomicCmpxchgType, offset: Int64
+            op: WasmAtomicCmpxchgType, offset: Int64,
+            ordering: WasmMemoryOrdering = .sequentiallyConsistent
         ) -> Variable {
-            let op = WasmAtomicCmpxchg(op: op, offset: offset)
+            let op = WasmAtomicCmpxchg(op: op, offset: offset, ordering: ordering)
             let anyInt: ILType = .wasmi32 | .wasmi64
             let valueType = op.op.type()
             return b.emit(

@@ -500,12 +500,14 @@ public class OperationMutator: BaseInstructionMutator {
             let newOpType = chooseUniform(
                 from: WasmAtomicRMWType.allCases.filter({ $0.type() == op.op.type() }))
             let newOffset = b.randomInt()
-            newOp = WasmAtomicRMW(op: newOpType, offset: newOffset)
+            let newOrdering = chooseUniform(from: WasmMemoryOrdering.allCases)
+            newOp = WasmAtomicRMW(op: newOpType, offset: newOffset, ordering: newOrdering)
         case .wasmAtomicCmpxchg(let op):
             let newOpType = chooseUniform(
                 from: WasmAtomicCmpxchgType.allCases.filter({ $0.type() == op.op.type() }))
             let newOffset = b.randomInt()
-            newOp = WasmAtomicCmpxchg(op: newOpType, offset: newOffset)
+            let newOrdering = chooseUniform(from: WasmMemoryOrdering.allCases)
+            newOp = WasmAtomicCmpxchg(op: newOpType, offset: newOffset, ordering: newOrdering)
         case .constSimd128(_):
             newOp = ConstSimd128(
                 value: (0..<16).map { _ in UInt8.random(in: UInt8.min...UInt8.max) })

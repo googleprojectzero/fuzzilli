@@ -5983,6 +5983,8 @@ public struct Fuzzilli_Protobuf_WasmAtomicRMW: Sendable {
 
   public var offset: Int64 = 0
 
+  public var ordering: Fuzzilli_Protobuf_WasmMemoryOrdering = .sequentiallyConsistent
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5996,6 +5998,8 @@ public struct Fuzzilli_Protobuf_WasmAtomicCmpxchg: Sendable {
   public var op: Fuzzilli_Protobuf_WasmAtomicCmpxchgType = .i32Cmpxchg
 
   public var offset: Int64 = 0
+
+  public var ordering: Fuzzilli_Protobuf_WasmMemoryOrdering = .sequentiallyConsistent
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -15604,7 +15608,7 @@ extension Fuzzilli_Protobuf_WasmAtomicStore: SwiftProtobuf.Message, SwiftProtobu
 
 extension Fuzzilli_Protobuf_WasmAtomicRMW: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmAtomicRMW"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}op\0\u{1}offset\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}op\0\u{1}offset\0\u{1}ordering\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -15614,6 +15618,7 @@ extension Fuzzilli_Protobuf_WasmAtomicRMW: SwiftProtobuf.Message, SwiftProtobuf.
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.ordering) }()
       default: break
       }
     }
@@ -15626,12 +15631,16 @@ extension Fuzzilli_Protobuf_WasmAtomicRMW: SwiftProtobuf.Message, SwiftProtobuf.
     if self.offset != 0 {
       try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
     }
+    if self.ordering != .sequentiallyConsistent {
+      try visitor.visitSingularEnumField(value: self.ordering, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmAtomicRMW, rhs: Fuzzilli_Protobuf_WasmAtomicRMW) -> Bool {
     if lhs.op != rhs.op {return false}
     if lhs.offset != rhs.offset {return false}
+    if lhs.ordering != rhs.ordering {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -15639,7 +15648,7 @@ extension Fuzzilli_Protobuf_WasmAtomicRMW: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Fuzzilli_Protobuf_WasmAtomicCmpxchg: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmAtomicCmpxchg"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}op\0\u{1}offset\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}op\0\u{1}offset\0\u{1}ordering\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -15649,6 +15658,7 @@ extension Fuzzilli_Protobuf_WasmAtomicCmpxchg: SwiftProtobuf.Message, SwiftProto
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.ordering) }()
       default: break
       }
     }
@@ -15661,12 +15671,16 @@ extension Fuzzilli_Protobuf_WasmAtomicCmpxchg: SwiftProtobuf.Message, SwiftProto
     if self.offset != 0 {
       try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
     }
+    if self.ordering != .sequentiallyConsistent {
+      try visitor.visitSingularEnumField(value: self.ordering, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmAtomicCmpxchg, rhs: Fuzzilli_Protobuf_WasmAtomicCmpxchg) -> Bool {
     if lhs.op != rhs.op {return false}
     if lhs.offset != rhs.offset {return false}
+    if lhs.ordering != rhs.ordering {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
