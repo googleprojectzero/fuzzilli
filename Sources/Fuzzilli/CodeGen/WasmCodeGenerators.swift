@@ -1481,7 +1481,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 inContext: .single(.wasmFunction),
                 provides: [.wasmFunction]
             ) { b in
-                let args = b.randomWasmBlockArguments(upTo: 5, allowingGcTypes: true)
+                let args = b.randomWasmBlockArguments(upTo: 5)
                 let parameters = args.map(b.type)
 
                 let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
@@ -1544,7 +1544,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 let function = b.currentWasmModule.currentWasmFunction
                 // Count upwards here to make it slightly more different from the other loop generator.
                 // Also, instead of using reassign, this generator uses the signature to pass and update the loop counter.
-                let randomArgs = b.randomWasmBlockArguments(upTo: 5, allowingGcTypes: true)
+                let randomArgs = b.randomWasmBlockArguments(upTo: 5)
                 let randomArgTypes = randomArgs.map { b.type(of: $0) }
                 let args = [function.consti32(0)] + randomArgs
                 let parameters = args.map(b.type)
@@ -1591,7 +1591,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator("WasmLegacyTryCatchGenerator", inContext: .single(.wasmFunction)) { b in
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
-        let args = b.randomWasmBlockArguments(upTo: 5, allowingGcTypes: true)
+        let args = b.randomWasmBlockArguments(upTo: 5)
         let parameters = args.map(b.type)
         let tags = (0..<Int.random(in: 0...5)).map { _ in
             b.findVariable { b.type(of: $0).isWasmTagType }
@@ -1627,7 +1627,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     ) { b, label in
         let function = b.currentWasmModule.currentWasmFunction
         // Choose a few random wasm values as arguments if available.
-        let args = b.randomWasmBlockArguments(upTo: 5, allowingGcTypes: true)
+        let args = b.randomWasmBlockArguments(upTo: 5)
         let outputTypes = b.randomWasmBlockOutputTypes(upTo: 3)
         let parameters = args.map(b.type)
         function.wasmBuildLegacyTryDelegateWithResult(
@@ -1677,7 +1677,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 inputs: .required(.wasmi32),
                 provides: [.wasmFunction]
             ) { b, condition in
-                let args = b.randomWasmBlockArguments(upTo: 5, allowingGcTypes: true)
+                let args = b.randomWasmBlockArguments(upTo: 5)
                 let parameters = args.map(b.type)
                 let outputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
                 let signature = b.wasmDefineAdHocSignatureType(signature: parameters => outputTypes)
@@ -1974,7 +1974,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                         : (withExnRef ? .Ref : .NoRef)
                 }
 
-                var tryArgs = b.randomWasmBlockArguments(upTo: 5, allowingGcTypes: true)
+                var tryArgs = b.randomWasmBlockArguments(upTo: 5)
                 let tryParameters = tryArgs.map { b.type(of: $0) }
                 let tryOutputTypes = b.randomWasmBlockOutputTypes(upTo: 5)
                 tryArgs += zip(tags, labels).map { tag, label in

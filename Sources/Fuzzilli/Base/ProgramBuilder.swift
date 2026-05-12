@@ -6104,15 +6104,10 @@ public class ProgramBuilder {
         }
     }
 
-    public func randomWasmBlockArguments(upTo n: Int, allowingGcTypes: Bool = false) -> [Variable] {
-        (0..<Int.random(in: 0...n)).map { _ in
-            findVariable {
-                // TODO(mliedtke): Also support wasm-gc types in wasm blocks.
-                // This requires updating the inner output types based on the input types.
-                type(of: $0).Is(.wasmPrimitive)
-                    && (allowingGcTypes || !type(of: $0).Is(.wasmGenericRef))
-            }
-        }.filter { $0 != nil }.map { $0! }
+    public func randomWasmBlockArguments(upTo n: Int) -> [Variable] {
+        (0..<Int.random(in: 0...n))
+            .map { _ in findVariable { type(of: $0).Is(.wasmPrimitive) } }
+            .filter { $0 != nil }.map { $0! }
     }
 
     public func randomWasmBranchHint() -> WasmBranchHint {
