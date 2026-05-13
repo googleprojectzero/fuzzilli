@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Algorithms
 import XCTest
 
 @testable import Fuzzilli
@@ -202,6 +203,52 @@ class WasmFoundationTests: XCTestCase {
         }
         testForOutput(
             program: jsProg, runner: runner, outputString: "1,2,3\n4,5,6\n7,8,9\n10,11,12\n")
+    }
+
+    // Test WasmFunction.generateRandomWasmVar() for a large amount of reference types.
+    func testGenerateRandomWasmVar() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let jsProg = buildAndLiftProgram { b in
+            let typeDefs = b.wasmDefineTypeGroup {
+                let structDef = b.wasmDefineStructType(
+                    fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)],
+                    indexTypes: [])
+                let arrayDef = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                let signatureDef = b.wasmDefineSignatureType(
+                    signature: [] => [.wasmi32], indexTypes: [])
+                return [structDef, arrayDef, signatureDef]
+            }
+
+            let abstractTypes = product(WasmAbstractHeapType.allCases, [true, false])
+                .filter { heapType, nullable in
+                    nullable
+                        || (
+                            // Non-nullable heap types unsupported for these types.
+                            // TODO(mliedtke): Extend for ref extern, extend for ref func once we
+                            // have ref.func.
+                            heapType != .WasmFunc && heapType != .WasmExtern && heapType != .WasmExn
+                            // Bottom null-types must be nullable.
+                            && !heapType.isBottom())
+                }.map { ILType.wasmRef($0.0, nullability: $0.1) }
+            let indexTypes = product(typeDefs, [true, false])
+                .filter { typeDef, nullable in
+                    // Non-nullable function references for specific signatures cannot be generated.
+                    !b.type(of: typeDef).isWasmSignatureTypeDef || nullable
+                }.map { b.type(of: $0.0).wasmTypeDefinition!.getReferenceTypeTo(nullability: $0.1) }
+
+            b.buildWasmModule { wasmModule in
+                // Test multiple times. Note that this will lead to a huge test case (but will be
+                // significantly faster than invoking the JS engine many times).
+                for _ in 0..<10 {
+                    for type in abstractTypes + indexTypes {
+                        wasmModule.addWasmFunction(with: [] => [type]) { function, _, _ in
+                            [function.generateRandomWasmVar(ofType: type)!]
+                        }
+                    }
+                }
+            }
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "")
     }
 
     func testBranchIfOutput() throws {

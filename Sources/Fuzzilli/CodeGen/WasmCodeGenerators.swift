@@ -256,7 +256,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             fatalError("Invalid type description for \(b.type(of: structType))")
         }
         let function = b.currentWasmModule.currentWasmFunction
-        guard (typeDesc.fields.allSatisfy { $0.type.isWasmDefaultable }) else {
+        guard typeDesc.isDefaultable() else {
             fatalError("Non-defaultable type in Wasm struct fields \(typeDesc)")
         }
         function.wasmStructNewDefault(structType: structType)

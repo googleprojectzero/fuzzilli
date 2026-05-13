@@ -366,8 +366,14 @@ public struct ILType: Hashable {
     public static func wasmStructRef(shared: Bool = false) -> ILType {
         wasmRef(.WasmStruct, shared: shared, nullability: true)
     }
+    public static func wasmRefStruct(shared: Bool = false) -> ILType {
+        wasmRef(.WasmStruct, shared: shared, nullability: false)
+    }
     public static func wasmArrayRef(shared: Bool = false) -> ILType {
         wasmRef(.WasmArray, shared: shared, nullability: true)
+    }
+    public static func wasmRefArray(shared: Bool = false) -> ILType {
+        wasmRef(.WasmArray, shared: shared, nullability: false)
     }
     public static let wasmSimd128 = ILType(definiteType: .wasmSimd128)
     public static let wasmGenericRef = ILType(definiteType: .wasmRef)
@@ -777,6 +783,10 @@ public struct ILType: Hashable {
         assert(self.definiteType == .wasmFunctionDef)
         return (wasmType as? WasmFunctionDefinition)?.signatureType?
             .wasmFunctionSignatureDefSignature
+    }
+
+    public var isWasmSignatureTypeDef: Bool {
+        (wasmType as? WasmTypeDefinition)?.description is WasmSignatureTypeDescription
     }
 
     public var wasmFunctionSignatureDefSignature: WasmSignature {
@@ -2589,6 +2599,10 @@ class WasmStructTypeDescription: WasmTypeDescription {
         super.init(
             typeGroupIndex: typeGroupIndex, superType: HeapTypeInfo.init(.WasmStruct, shared: false)
         )
+    }
+
+    func isDefaultable() -> Bool {
+        fields.allSatisfy { $0.type.isWasmDefaultable }
     }
 
     override func format(abbreviate: Bool) -> String {

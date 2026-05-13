@@ -34,6 +34,10 @@ let package = Package(
             url: "https://github.com/apple/swift-collections.git",
             .upToNextMinor(from: "1.2.0")
         ),
+        .package(
+            url: "https://github.com/apple/swift-algorithms.git",
+            .upToNextMinor(from: "1.2.1")
+        ),
     ],
     targets: [
         .target(
@@ -97,7 +101,7 @@ let package = Package(
 
         .testTarget(
             name: "FuzzilliTests",
-            dependencies: ["Fuzzilli"],
+            dependencies: ["Fuzzilli", .product(name: "Algorithms", package: "swift-algorithms")],
             resources: [.copy("CompilerTests")]),
     ],
     swiftLanguageVersions: [.v5]

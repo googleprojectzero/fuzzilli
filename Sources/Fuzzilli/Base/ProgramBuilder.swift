@@ -2478,19 +2478,25 @@ public class ProgramBuilder {
         for requirement in requirements {
             let type = requirement.type
 
-            if type.Is(.wasmAnything) && context.contains(.wasmFunction) {
-                let _ = currentWasmFunction.generateRandomWasmVar(ofType: type)
-            }
             if findVariable(satisfying: { requirement.fulfilled(by: self.type(of: $0)) }) == nil {
 
                 // Check for other CodeGenerators that can produce the given type in this context.
                 let usableGenerators = fuzzer.codeGenerators.filter {
                     $0.requiredContext.isSubset(of: context)
                         && $0.produces.contains(where: requirement.fulfilled)
+                        && $0.parts.first!.inputs.constraints.allSatisfy { requirement in
+                            findVariable { requirement.fulfilled(by: self.type(of: $0)) } != nil
+                        }
                 }
 
                 // Cannot build type here.
                 if usableGenerators.isEmpty {
+                    if type.Is(.wasmAnything) && context.contains(.wasmFunction) {
+                        // If we didn't find a code generator, generateRandomWasmVar() can generate
+                        // some default value (though due to its limited capabilities this should be
+                        // used as a fallback, the code generators are strictly preferrable.)
+                        let _ = currentWasmFunction.generateRandomWasmVar(ofType: type)
+                    }
                     // Continue here though, as we might be able to create Variables for other types.
                     continue
                 }
@@ -5408,23 +5414,76 @@ public class ProgramBuilder {
                     // code generation in other contexts?
                     switch type.wasmReferenceType?.kind {
                     case .Abstract(let heapTypeInfo):
+                        let nullable = type.wasmReferenceType!.nullability
                         // TODO(pawkra): add support for shared refs.
                         assert(!heapTypeInfo.shared)
-                        if probability(0.2) && type.wasmReferenceType!.nullability {
-                            return self.wasmRefNull(type: type)
-                        }
                         // Prefer generating a non-null value.
-                        if heapTypeInfo.heapType == .WasmI31 {
-                            return self.wasmRefI31(
-                                self.consti32(Int32(truncatingIfNeeded: b.randomInt())))
+                        if probability(0.75) || !nullable {
+                            let allOptions: [(ILType, () -> Variable?)] = [
+                                (
+                                    .wasmRefI31(),
+                                    {
+                                        self.wasmRefI31(
+                                            self.consti32(
+                                                Int32(truncatingIfNeeded: self.b.randomInt())))
+                                    }
+                                ),
+                                (
+                                    .wasmRefStruct(),
+                                    {
+                                        self.b.findVariable {
+                                            let desc = self.b.type(of: $0).wasmTypeDefinition?
+                                                .description
+                                            return desc?.abstractHeapSupertype?.heapType
+                                                == .WasmStruct
+                                                && (desc as! WasmStructTypeDescription)
+                                                    .isDefaultable()
+                                        }.flatMap(self.wasmStructNewDefault)
+                                    }
+                                ),
+                                (
+                                    .wasmRefArray(),
+                                    {
+                                        self.b.findVariable {
+                                            self.b.type(of: $0).wasmTypeDefinition?.description?
+                                                .abstractHeapSupertype?.heapType == .WasmArray
+                                        }.flatMap {
+                                            self.wasmArrayNewFixed(arrayType: $0, elements: [])
+                                        }
+                                    }
+                                ),
+                            ]
+                            // Note that for a type like eqref there are multiple valid options.
+                            let options = allOptions.filter { $0.0.Is(type) }.map { $0.1 }
+                                .shuffled()
+                            for generator in options {
+                                if let value = generator() {
+                                    return value
+                                }
+                            }
                         }
-                        // TODO(pawkra): support other non-nullable types.
                         if type.wasmReferenceType!.nullability {
-                            return self.wasmRefNull(type: type)
+                            return wasmRefNull(type: type)
                         }
-                    case .Index(_):
-                        if type.wasmReferenceType?.nullability ?? false {
-                            return self.wasmRefNull(typeDef: b.jsTyper.getWasmTypeDef(for: type))
+                    case .Index(let desc):
+                        let nullable = type.wasmReferenceType!.nullability
+                        if probability(0.5) || !nullable, let desc = desc.get() {
+                            let abstractSuper = desc.abstractHeapSupertype!.heapType
+                            // For functions we can't just "func.new" a new instance of a type,
+                            // differently to structs and arrays.
+                            if abstractSuper == .WasmArray {
+                                return wasmArrayNewFixed(
+                                    arrayType: b.jsTyper.getWasmTypeDef(for: type), elements: [])
+                            }
+                            if abstractSuper == .WasmStruct
+                                && (desc as! WasmStructTypeDescription).isDefaultable()
+                            {
+                                return wasmStructNewDefault(
+                                    structType: b.jsTyper.getWasmTypeDef(for: type))
+                            }
+                        }
+                        if nullable {
+                            return wasmRefNull(typeDef: b.jsTyper.getWasmTypeDef(for: type))
                         }
                     case .none:
                         break
