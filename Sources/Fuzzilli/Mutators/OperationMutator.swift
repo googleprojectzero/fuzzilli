@@ -898,8 +898,13 @@ public class OperationMutator: BaseInstructionMutator {
 
         switch instr.op.opcode {
         case .createArray(let op):
-            newOp = CreateArray(numInitialValues: op.numInitialValues + 1)
-            inputs.append(b.randomJsVariable())
+            newOp = CreateArray(
+                numInitialValues: op.numInitialValues + 1, elementGroupName: op.elementGroupName)
+            let elementType = op.elementGroupName.map {
+                b.fuzzer.environment.type(ofGroup: $0)
+            }
+            inputs.append(
+                elementType.map { b.randomVariable(forUseAs: $0) } ?? b.randomJsVariable())
         case .createArrayWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
             inputs.append(b.randomJsVariable())

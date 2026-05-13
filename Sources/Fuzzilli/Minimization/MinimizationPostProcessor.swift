@@ -85,8 +85,14 @@ struct MinimizationPostProcessor {
                 case .createArray(let op):
                     // Add initial values, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleJsVariables { break }
+
+                    let elementType = op.elementGroupName.map {
+                        b.fuzzer.environment.type(ofGroup: $0)
+                    }
                     let initialValues = [Variable](
-                        repeating: b.randomJsVariable(), count: Int.random(in: 1...5))
+                        repeating: elementType.map { b.randomVariable(forUseAs: $0) }
+                            ?? b.randomJsVariable(),
+                        count: Int.random(in: 1...5))
                     replacementInstruction = Instruction(
                         CreateArray(
                             numInitialValues: initialValues.count,
