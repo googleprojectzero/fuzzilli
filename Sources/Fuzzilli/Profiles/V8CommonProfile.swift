@@ -1470,7 +1470,6 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         chooseBooleanFlag("wasm-math-intrinsics")
         chooseBooleanFlag("wasm-bulkmem-inlining")
         chooseBooleanFlag("wasm-lazy-compilation")
-        chooseBooleanFlag("wasm-lazy-validation")
         chooseBooleanFlag("asm-wasm-lazy-compilation")
         chooseBooleanFlag("validate-asm")
     }
