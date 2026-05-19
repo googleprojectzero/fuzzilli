@@ -1344,6 +1344,12 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         if probability(0.5) {
             args.append("--stress-lazy-source-positions")
         }
+        // This stressing is usually useful, but also run with the production configuration
+        // sometimes too. Similarly to the above, in sandbox fuzzers it'd trigger benign CHECKs
+        // hence avoided.
+        if probability(0.9) {
+            args.append("--stress-lazy")
+        }
     }
 
     if probability(0.1) {
