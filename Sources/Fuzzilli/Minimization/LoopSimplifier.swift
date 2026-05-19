@@ -42,6 +42,7 @@ struct LoopSimplifier: Reducer {
                 tryReduceRepeatLoopIterationCount(group, with: helper)
             case .beginForInLoop,
                 .beginForOfLoop,
+                .beginForAwaitOfLoop,
                 .beginForOfLoopWithDestruct:
                 // These loops are (usually) guaranteed to terminate, and should probably anyway not be replaced by repeat-loops.
                 break

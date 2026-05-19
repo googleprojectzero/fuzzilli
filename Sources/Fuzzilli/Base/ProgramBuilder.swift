@@ -4109,8 +4109,18 @@ public class ProgramBuilder {
         emit(EndForOfLoop())
     }
 
+    public func buildForAwaitOfLoop(_ obj: Variable, _ body: (Variable, Variable) -> Void) {
+        let instr = emit(BeginForAwaitOfLoop(), withInputs: [obj])
+        body(instr.innerOutput(0), instr.innerOutput(1))
+        emit(EndForOfLoop())
+    }
+
     public func buildForOfLoop(_ obj: Variable, _ body: (Variable) -> Void) {
         buildForOfLoop(obj) { i, _ in body(i) }
+    }
+
+    public func buildForAwaitOfLoop(_ obj: Variable, _ body: (Variable) -> Void) {
+        buildForAwaitOfLoop(obj) { i, _ in body(i) }
     }
 
     public func buildForOfLoop(

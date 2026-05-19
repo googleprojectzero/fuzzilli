@@ -1513,6 +1513,7 @@ public struct JSTyper: Analyzer {
         case .beginWhileLoopBody,
             .beginForInLoop,
             .beginForOfLoop,
+            .beginForAwaitOfLoop,
             .beginForOfLoopWithDestruct,
             .beginRepeatLoop,
             .beginCodeString:
@@ -2278,6 +2279,10 @@ public struct JSTyper: Analyzer {
             set(instr.innerOutput(1), .jsLoopLabel)
 
         case .beginForOfLoop:
+            set(instr.innerOutput(0), .jsAnything)
+            set(instr.innerOutput(1), .jsLoopLabel)
+
+        case .beginForAwaitOfLoop:
             set(instr.innerOutput(0), .jsAnything)
             set(instr.innerOutput(1), .jsLoopLabel)
 

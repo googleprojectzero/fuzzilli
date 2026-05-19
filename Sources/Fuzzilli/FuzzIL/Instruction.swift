@@ -1119,6 +1119,9 @@ extension Instruction: ProtobufConvertible {
                 $0.endForInLoop = Fuzzilli_Protobuf_EndForInLoop()
             case .beginForOfLoop:
                 $0.beginForOfLoop = Fuzzilli_Protobuf_BeginForOfLoop()
+            case .beginForAwaitOfLoop:
+                $0.beginForAwaitOfLoop = Fuzzilli_Protobuf_BeginForAwaitOfLoop()
+
             case .beginForOfLoopWithDestruct(let op):
                 $0.beginForOfLoopWithDestruct = Fuzzilli_Protobuf_BeginForOfLoopWithDestruct.with {
                     $0.indices = op.indices.map({ Int32($0) })
@@ -2412,6 +2415,8 @@ extension Instruction: ProtobufConvertible {
             op = EndForInLoop()
         case .beginForOfLoop:
             op = BeginForOfLoop()
+        case .beginForAwaitOfLoop:
+            op = BeginForAwaitOfLoop()
         case .beginForOfLoopWithDestruct(let p):
             op = BeginForOfLoopWithDestruct(
                 indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)

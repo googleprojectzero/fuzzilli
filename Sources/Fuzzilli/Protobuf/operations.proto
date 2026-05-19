@@ -1748,3 +1748,5 @@ message CreateMap {
     optional string valueGroupName = 2;
 }
 
+message BeginForAwaitOfLoop {
+}

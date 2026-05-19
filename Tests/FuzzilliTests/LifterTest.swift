@@ -4719,4 +4719,49 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(actual, expected)
     }
+
+    func testForAwaitOfLoopLifting() {
+        let fuzzer = makeMockFuzzer(
+            config: Configuration(logLevel: .error),
+            environment: JavaScriptEnvironment()
+        )
+        let b = fuzzer.makeBuilder()
+
+        b.buildAsyncFunction(with: .parameters(n: 1)) { args in
+            let asyncIterable = args[0]
+
+            b.buildForAwaitOfLoop(asyncIterable) { loopVar, label in
+                // Inside loop body: call 'print(loopVar)'
+                let printFunc = b.createNamedVariable(forBuiltin: "print")
+                b.callFunction(printFunc, withArgs: [loopVar])
+            }
+        }
+
+        let program = b.finalize()
+
+        let fuzzILLifter = FuzzILLifter()
+        let fuzzILOutput = fuzzILLifter.lift(program)
+
+        // Assert FuzzIL contains our new instructions
+        XCTAssertTrue(fuzzILOutput.contains("BeginForAwaitOfLoop"))
+        XCTAssertTrue(fuzzILOutput.contains("EndForOfLoop"))
+
+        let jsLifter = JavaScriptLifter(
+            prefix: "",
+            suffix: "",
+            ecmaVersion: .es6,
+            environment: fuzzer.environment
+        )
+        let actual = jsLifter.lift(program)
+
+        let expected = """
+            async function f0(a1) {
+                for await (const v2 of a1) {
+                    print(v2);
+                }
+            }
+
+            """
+        XCTAssertEqual(actual, expected)
+    }
 }

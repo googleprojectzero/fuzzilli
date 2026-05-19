@@ -748,6 +748,11 @@ public class FuzzILLifter: Lifter {
             w.emit("BeginForOfLoop \(input(0)) -> \(outputs)")
             w.increaseIndentionLevel()
 
+        case .beginForAwaitOfLoop:
+            let outputs = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginForAwaitOfLoop \(input(0)) -> \(outputs)")
+            w.increaseIndentionLevel()
+
         case .beginForOfLoopWithDestruct(let op):
             let outputs = instr.innerOutputs.dropLast().map(lift)
             let label = lift(instr.innerOutputs.last!)

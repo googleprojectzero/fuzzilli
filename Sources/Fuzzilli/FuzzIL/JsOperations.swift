@@ -2370,6 +2370,20 @@ final class BeginForOfLoop: JsOperation {
     }
 }
 
+final class BeginForAwaitOfLoop: JsOperation {
+    override var opcode: Opcode { .beginForAwaitOfLoop(self) }
+
+    init() {
+        super.init(
+            numInputs: 1,
+            numInnerOutputs: 2,
+            attributes: [.isBlockStart, .propagatesSurroundingContext],
+            requiredContext: [.javascript, .asyncFunction],
+            contextOpened: [.javascript, .loop]
+        )
+    }
+}
+
 // Note: The last innerOutput is the label of the loop.
 final class BeginForOfLoopWithDestruct: JsOperation {
     override var opcode: Opcode { .beginForOfLoopWithDestruct(self) }

@@ -2758,6 +2758,25 @@ public let CodeGenerators: [CodeGenerator] = [
         ]),
 
     CodeGenerator(
+        "ForAwaitOfLoopGenerator",
+        [
+            GeneratorStub(
+                "ForAwaitOfLoopBeginGenerator",
+                inContext: .single(.asyncFunction),
+                inputs: .preferred(.iterable()),
+                provides: [.loop, .javascript]
+            ) { b, obj in
+                b.emit(BeginForAwaitOfLoop(), withInputs: [obj])
+            },
+            GeneratorStub(
+                "ForAwaitOfLoopEndGenerator",
+                inContext: .single([.loop, .javascript])
+            ) { b in
+                b.emit(EndForOfLoop())
+            },
+        ]),
+
+    CodeGenerator(
         "ForOfWithDestructLoopGenerator",
         [
             GeneratorStub(

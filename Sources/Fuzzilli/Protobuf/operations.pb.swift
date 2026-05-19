@@ -6307,6 +6307,16 @@ public struct Fuzzilli_Protobuf_CreateMap: Sendable {
   fileprivate var _valueGroupName: String? = nil
 }
 
+public struct Fuzzilli_Protobuf_BeginForAwaitOfLoop: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"
@@ -16286,6 +16296,25 @@ extension Fuzzilli_Protobuf_CreateMap: SwiftProtobuf.Message, SwiftProtobuf._Mes
   public static func ==(lhs: Fuzzilli_Protobuf_CreateMap, rhs: Fuzzilli_Protobuf_CreateMap) -> Bool {
     if lhs._keyGroupName != rhs._keyGroupName {return false}
     if lhs._valueGroupName != rhs._valueGroupName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_BeginForAwaitOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginForAwaitOfLoop"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginForAwaitOfLoop, rhs: Fuzzilli_Protobuf_BeginForAwaitOfLoop) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

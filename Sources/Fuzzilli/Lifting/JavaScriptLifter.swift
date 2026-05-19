@@ -1478,6 +1478,17 @@ public class JavaScriptLifter: Lifter {
                 w.emit("\(prefix)for (\(LET) \(V) of \(OBJ)) {")
                 w.enterNewBlock()
 
+            case .beginForAwaitOfLoop:
+                let V = w.declare(instr.innerOutput(0))
+                let LET = w.declarationKeyword(for: instr.innerOutput(0))
+                let OBJ = input(0)
+
+                let labelVar = instr.innerOutputs.last!
+                let prefix = w.labelPrefix(for: labelVar)
+
+                w.emit("\(prefix)for await (\(LET) \(V) of \(OBJ)) {")
+                w.enterNewBlock()
+
             case .beginForOfLoopWithDestruct(let op):
                 let outputs = w.declareAll(instr.innerOutputs.dropLast())
                 let PATTERN = liftArrayDestructPattern(
