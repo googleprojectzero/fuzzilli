@@ -1793,6 +1793,12 @@ public class WasmLifter {
             return Data([0x45])
         case .wasmi64EqualZero(_):
             return Data([0x50])
+        case .wasmi64WideBinOp(let op):
+            return Data([Prefix.Numeric.rawValue])
+                + Leb128.unsignedEncode(Int(op.binOpKind.rawValue))
+        case .wasmi64WideMulOp(let op):
+            return Data([Prefix.Numeric.rawValue])
+                + Leb128.unsignedEncode(Int(op.mulOpKind.rawValue))
 
         // Numerical Conversion Operations
         case .wasmWrapi64Toi32(_):

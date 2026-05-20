@@ -1225,6 +1225,24 @@ enum WasmCatchKind {
   ALL_REF = 3;
 }
 
+message Wasmi64WideBinOp {
+    WasmWideBinaryOperator op = 1;
+}
+
+enum WasmWideBinaryOperator {
+    WASM_ADD128 = 0;
+    WASM_SUB128 = 1;
+}
+
+message Wasmi64WideMulOp {
+    WasmWideMulOperator op = 1;
+}
+
+enum WasmWideMulOperator {
+    WASM_MUL_WIDE_S = 0;
+    WASM_MUL_WIDE_U = 1;
+}
+
 message WasmBeginTryTable {
   int32 parameterCount = 1;
   repeated WasmCatchKind catches = 2;

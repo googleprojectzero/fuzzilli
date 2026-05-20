@@ -378,4 +378,6 @@ enum Opcode {
     case createMap(CreateMap)
     case beginForAwaitOfLoop(BeginForAwaitOfLoop)
     case beginForAwaitOfLoopWithDestruct(BeginForAwaitOfLoopWithDestruct)
+    case wasmi64WideBinOp(Wasmi64WideBinOp)
+    case wasmi64WideMulOp(Wasmi64WideMulOp)
 }

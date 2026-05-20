@@ -1066,6 +1066,16 @@ public class FuzzILLifter: Lifter {
         case .wasmi64BinOp(let op):
             w.emit("\(output()) <- Wasmi64BinOp \(input(0)) \(op.binOpKind) \(input(1))")
 
+        case .wasmi64WideBinOp(let op):
+            let outputs = instr.outputs.map(lift).joined(separator: ", ")
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(outputs) <- Wasmi64WideBinOp \(op.binOpKind) [\(inputs)]")
+
+        case .wasmi64WideMulOp(let op):
+            let outputs = instr.outputs.map(lift).joined(separator: ", ")
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(outputs) <- Wasmi64WideMulOp \(op.mulOpKind) [\(inputs)]")
+
         case .wasmi32BinOp(let op):
             w.emit("\(output()) <- Wasmi32BinOp \(input(0)) \(op.binOpKind) \(input(1))")
 

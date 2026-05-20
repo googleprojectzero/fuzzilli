@@ -394,6 +394,13 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmf64UnOp(_):
             newOp = Wasmf64UnOp(unOpKind: chooseUniform(from: WasmFloatUnaryOpKind.allCases))
 
+        case .wasmi64WideBinOp(let op):
+            let otherCases = WasmWideBinaryOpKind.allCases.filter { $0 != op.binOpKind }
+            newOp = Wasmi64WideBinOp(binOpKind: chooseUniform(from: otherCases))
+        case .wasmi64WideMulOp(let op):
+            let otherCases = WasmWideMulOpKind.allCases.filter { $0 != op.mulOpKind }
+            newOp = Wasmi64WideMulOp(mulOpKind: chooseUniform(from: otherCases))
+
         case .wasmTruncatef32Toi32(_):
             newOp = WasmTruncatef32Toi32(isSigned: probability(0.5))
         case .wasmTruncatef64Toi32(_):

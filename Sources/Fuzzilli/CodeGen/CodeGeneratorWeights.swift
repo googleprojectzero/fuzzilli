@@ -307,6 +307,8 @@ public let codeGeneratorWeights = [
     "Wasmf64CompareOpGenerator":                5,
     "Wasmi32EqzGenerator":                      5,
     "Wasmi64EqzGenerator":                      5,
+    "Wasmi64WideBinOpGenerator":                5,
+    "Wasmi64WideMulOpGenerator":                5,
 
     // Numerical Conversion Generators
     "WasmWrapi64Toi32Generator":                5,

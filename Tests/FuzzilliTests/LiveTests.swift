@@ -63,7 +63,8 @@ class LiveTests: XCTestCase {
         let runner = try GetJavaScriptExecutorOrSkipTest(
             type: .any,
             withArguments: [
-                "--wasm-allow-mixed-eh-for-testing", "--experimental-wasm-acquire-release",
+                "--experimental-fuzzing", "--wasm-allow-mixed-eh-for-testing",
+                "--experimental-wasm-acquire-release",
             ]
         )
 
@@ -109,7 +110,8 @@ class LiveTests: XCTestCase {
         let runner = try GetJavaScriptExecutorOrSkipTest(
             type: .any,
             withArguments: [
-                "--wasm-allow-mixed-eh-for-testing", "--experimental-wasm-acquire-release",
+                "--experimental-fuzzing", "--wasm-allow-mixed-eh-for-testing",
+                "--experimental-wasm-acquire-release",
             ]
         )
 

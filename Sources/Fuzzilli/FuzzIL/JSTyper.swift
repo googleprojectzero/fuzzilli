@@ -785,6 +785,12 @@ public struct JSTyper: Analyzer {
                 .wasmTruncateSatf32Toi64(_),
                 .wasmTruncateSatf64Toi64(_):
                 setType(of: instr.output, to: .wasmi64)
+            case .wasmi64WideBinOp(_),
+                .wasmi64WideMulOp(_):
+                assert(instr.numOutputs == 2)
+                for output in instr.outputs {
+                    setType(of: output, to: .wasmi64)
+                }
             case .wasmf32BinOp(_),
                 .wasmf32UnOp(_),
                 .wasmConverti32Tof32(_),

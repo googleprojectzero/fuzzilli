@@ -1310,6 +1310,14 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmi32EqualZero = Fuzzilli_Protobuf_Wasmi32EqualZero()
             case .wasmi64EqualZero(_):
                 $0.wasmi64EqualZero = Fuzzilli_Protobuf_Wasmi64EqualZero()
+            case .wasmi64WideBinOp(let op):
+                $0.wasmi64WideBinOp = Fuzzilli_Protobuf_Wasmi64WideBinOp.with {
+                    $0.op = convertEnum(op.binOpKind, WasmWideBinaryOpKind.allCases)
+                }
+            case .wasmi64WideMulOp(let op):
+                $0.wasmi64WideMulOp = Fuzzilli_Protobuf_Wasmi64WideMulOp.with {
+                    $0.op = convertEnum(op.mulOpKind, WasmWideMulOpKind.allCases)
+                }
 
             // Numerical Conversion Operations
 
@@ -2558,6 +2566,10 @@ extension Instruction: ProtobufConvertible {
             op = Wasmi32EqualZero()
         case .wasmi64EqualZero(_):
             op = Wasmi64EqualZero()
+        case .wasmi64WideBinOp(let p):
+            op = Wasmi64WideBinOp(binOpKind: try convertEnum(p.op, WasmWideBinaryOpKind.allCases))
+        case .wasmi64WideMulOp(let p):
+            op = Wasmi64WideMulOp(mulOpKind: try convertEnum(p.op, WasmWideMulOpKind.allCases))
         case .wasmi32BinOp(let p):
             op = Wasmi32BinOp(binOpKind: try convertEnum(p.op, WasmIntegerBinaryOpKind.allCases))
         case .wasmi64BinOp(let p):

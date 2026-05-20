@@ -1876,6 +1876,8 @@ public class JavaScriptLifter: Lifter {
                 .wasmf64CompareOp(_),
                 .wasmi64BinOp(_),
                 .wasmi32BinOp(_),
+                .wasmi64WideBinOp(_),
+                .wasmi64WideMulOp(_),
                 .wasmi32UnOp(_),
                 .wasmi64UnOp(_),
                 .wasmf32UnOp(_),

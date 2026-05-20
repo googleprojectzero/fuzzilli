@@ -4415,6 +4415,29 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func wasmi64WideBinOp(
+            _ lo1: Variable, _ hi1: Variable, _ lo2: Variable, _ hi2: Variable,
+            op: WasmWideBinaryOpKind
+        ) -> [Variable] {
+            return Array(
+                b.emit(
+                    Wasmi64WideBinOp(binOpKind: op), withInputs: [lo1, hi1, lo2, hi2],
+                    types: [.wasmi64, .wasmi64, .wasmi64, .wasmi64]
+                ).outputs)
+        }
+
+        @discardableResult
+        public func wasmi64WideMulOp(
+            _ lhs: Variable, _ rhs: Variable, op: WasmWideMulOpKind
+        ) -> [Variable] {
+            return Array(
+                b.emit(
+                    Wasmi64WideMulOp(mulOpKind: op), withInputs: [lhs, rhs],
+                    types: [.wasmi64, .wasmi64]
+                ).outputs)
+        }
+
+        @discardableResult
         public func wasmi32BinOp(
             _ lhs: Variable, _ rhs: Variable, binOpKind: WasmIntegerBinaryOpKind
         ) -> Variable {

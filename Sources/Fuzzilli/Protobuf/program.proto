@@ -374,6 +374,8 @@ message Instruction {
         CreateMap createMap = 348;
         BeginForAwaitOfLoop beginForAwaitOfLoop = 349;
         BeginForAwaitOfLoopWithDestruct beginForAwaitOfLoopWithDestruct = 350;
+        Wasmi64WideBinOp wasmi64WideBinOp = 351;
+        Wasmi64WideMulOp wasmi64WideMulOp = 352;
     }
 }
 

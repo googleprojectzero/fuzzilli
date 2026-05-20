@@ -2224,6 +2224,26 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     ) { b, memory in
         b.callMethod("grow", on: memory, withArgs: [b.loadInt(Int64.random(in: 0...10))])
     },
+
+    CodeGenerator(
+        "Wasmi64WideBinOpGenerator",
+        inContext: .single(.wasmFunction),
+        inputs: .required(.wasmi64, .wasmi64, .wasmi64, .wasmi64),
+        produces: [.wasmi64, .wasmi64]
+    ) { b, lo1, hi1, lo2, hi2 in
+        b.currentWasmModule.currentWasmFunction.wasmi64WideBinOp(
+            lo1, hi1, lo2, hi2, op: chooseUniform(from: WasmWideBinaryOpKind.allCases))
+    },
+
+    CodeGenerator(
+        "Wasmi64WideMulOpGenerator",
+        inContext: .single(.wasmFunction),
+        inputs: .required(.wasmi64, .wasmi64),
+        produces: [.wasmi64, .wasmi64]
+    ) { b, lhs, rhs in
+        b.currentWasmModule.currentWasmFunction.wasmi64WideMulOp(
+            lhs, rhs, op: chooseUniform(from: WasmWideMulOpKind.allCases))
+    },
 ]
 
 private let wasmArrayTypeGenerator = GeneratorStub(

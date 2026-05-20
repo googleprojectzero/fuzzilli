@@ -8654,3 +8654,73 @@ class WasmJSPITests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1337\n1338\n")
     }
 }
+
+class WasmWideArithmeticsTests: XCTestCase {
+    func testWideArithmetics() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(
+            type: .any, withArguments: ["--experimental-wasm-wide-arithmetic"])
+        let jsProg = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                // i64.add128: [i64 i64 i64 i64] -> [i64 i64]
+                wasmModule.addWasmFunction(
+                    with: [.wasmi64, .wasmi64, .wasmi64, .wasmi64] => [.wasmi64, .wasmi64]
+                ) { function, label, args in
+                    return function.wasmi64WideBinOp(
+                        args[0], args[1], args[2], args[3], op: .add128)
+                }
+
+                // i64.sub128: [i64 i64 i64 i64] -> [i64 i64]
+                wasmModule.addWasmFunction(
+                    with: [.wasmi64, .wasmi64, .wasmi64, .wasmi64] => [.wasmi64, .wasmi64]
+                ) { function, label, args in
+                    return function.wasmi64WideBinOp(
+                        args[0], args[1], args[2], args[3], op: .sub128)
+                }
+
+                // i64.mul_wide_s: [i64 i64] -> [i64 i64]
+                wasmModule.addWasmFunction(with: [.wasmi64, .wasmi64] => [.wasmi64, .wasmi64]) {
+                    function, label, args in
+                    return function.wasmi64WideMulOp(args[0], args[1], op: .mul_wide_s)
+                }
+
+                // i64.mul_wide_u: [i64 i64] -> [i64 i64]
+                wasmModule.addWasmFunction(with: [.wasmi64, .wasmi64] => [.wasmi64, .wasmi64]) {
+                    function, label, args in
+                    return function.wasmi64WideMulOp(args[0], args[1], op: .mul_wide_u)
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            let lo1 = b.loadBigInt(-1)
+            let hi1 = b.loadBigInt(Int64(bitPattern: 0x1234_5678_90ab_cdef))
+            let lo2 = b.loadBigInt(1)
+            let hi2 = b.loadBigInt(Int64(bitPattern: 0xfedc_ba09_8765_4321))
+
+            let resAdd = b.callMethod(
+                module.getExportedMethod(at: 0), on: exports, withArgs: [lo1, hi1, lo2, hi2])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: resAdd)])
+
+            let resSub = b.callMethod(
+                module.getExportedMethod(at: 1), on: exports, withArgs: [lo2, hi2, lo1, hi1])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: resSub)])
+
+            let lhs = b.loadBigInt(-0x1234_5678)
+            let rhs = b.loadBigInt(0x8765_4321)
+            let resMulS = b.callMethod(
+                module.getExportedMethod(at: 2), on: exports, withArgs: [lhs, rhs])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: resMulS)])
+
+            let resMulU = b.callMethod(
+                module.getExportedMethod(at: 3), on: exports, withArgs: [lhs, rhs])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: resMulU)])
+        }
+
+        testForOutput(
+            program: jsProg, runner: runner,
+            outputString:
+                "0,1229782324184420625\n2,-1393754610405378767\n-693779765864729976,-1\n-693779765864729976,2271560480\n"
+        )
+    }
+}

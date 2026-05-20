@@ -882,6 +882,74 @@ public enum Fuzzilli_Protobuf_WasmCatchKind: SwiftProtobuf.Enum, Swift.CaseItera
 
 }
 
+public enum Fuzzilli_Protobuf_WasmWideBinaryOperator: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case wasmAdd128 // = 0
+  case wasmSub128 // = 1
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .wasmAdd128
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .wasmAdd128
+    case 1: self = .wasmSub128
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .wasmAdd128: return 0
+    case .wasmSub128: return 1
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmWideBinaryOperator] = [
+    .wasmAdd128,
+    .wasmSub128,
+  ]
+
+}
+
+public enum Fuzzilli_Protobuf_WasmWideMulOperator: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case wasmMulWideS // = 0
+  case wasmMulWideU // = 1
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .wasmMulWideS
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .wasmMulWideS
+    case 1: self = .wasmMulWideU
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .wasmMulWideS: return 0
+    case .wasmMulWideU: return 1
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmWideMulOperator] = [
+    .wasmMulWideS,
+    .wasmMulWideU,
+  ]
+
+}
+
 public enum Fuzzilli_Protobuf_WasmBranchHint: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case branchhintNone // = 0
@@ -5125,6 +5193,30 @@ public struct Fuzzilli_Protobuf_WasmEndLoop: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_Wasmi64WideBinOp: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var op: Fuzzilli_Protobuf_WasmWideBinaryOperator = .wasmAdd128
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Wasmi64WideMulOp: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var op: Fuzzilli_Protobuf_WasmWideMulOperator = .wasmMulWideS
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_WasmBeginTryTable: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -6389,6 +6481,14 @@ extension Fuzzilli_Protobuf_WasmMemoryStoreType: SwiftProtobuf._ProtoNameProvidi
 
 extension Fuzzilli_Protobuf_WasmCatchKind: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0NO_REF\0\u{1}REF\0\u{1}ALL_NO_REF\0\u{1}ALL_REF\0")
+}
+
+extension Fuzzilli_Protobuf_WasmWideBinaryOperator: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0WASM_ADD128\0\u{1}WASM_SUB128\0")
+}
+
+extension Fuzzilli_Protobuf_WasmWideMulOperator: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0WASM_MUL_WIDE_S\0\u{1}WASM_MUL_WIDE_U\0")
 }
 
 extension Fuzzilli_Protobuf_WasmBranchHint: SwiftProtobuf._ProtoNameProviding {
@@ -13733,6 +13833,66 @@ extension Fuzzilli_Protobuf_WasmEndLoop: SwiftProtobuf.Message, SwiftProtobuf._M
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmEndLoop, rhs: Fuzzilli_Protobuf_WasmEndLoop) -> Bool {
     if lhs.outputCount != rhs.outputCount {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Wasmi64WideBinOp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Wasmi64WideBinOp"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}op\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.op != .wasmAdd128 {
+      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Wasmi64WideBinOp, rhs: Fuzzilli_Protobuf_Wasmi64WideBinOp) -> Bool {
+    if lhs.op != rhs.op {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Wasmi64WideMulOp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Wasmi64WideMulOp"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}op\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.op != .wasmMulWideS {
+      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Wasmi64WideMulOp, rhs: Fuzzilli_Protobuf_Wasmi64WideMulOp) -> Bool {
+    if lhs.op != rhs.op {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
