@@ -53,5 +53,7 @@ let serenityProfile = Profile(
 
     additionalEnumerations: [],
 
+    additionalOptionsBags: [],
+
     optionalPostProcessor: nil
 )

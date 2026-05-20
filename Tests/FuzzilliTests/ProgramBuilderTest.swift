@@ -695,6 +695,52 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(program.size, 16)
     }
 
+    func testOptionsBagAnySubset() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.loadInt(0)  // to pass assert(hasVisibleVariables)
+
+        let bag = OptionsBag(
+            name: "TestBag",
+            properties: ["a": .number, "b": .string, "c": .boolean],
+            selectionMode: .anySubset
+        )
+
+        b.createOptionsBag(bag)
+
+        let program = b.finalize()
+
+        // Expect at most 3 properties to be added
+        let addPropertyCount = program.code.filter { $0.op is ObjectLiteralAddProperty }.count
+        XCTAssertLessThanOrEqual(addPropertyCount, 3)
+
+        XCTAssert(program.code.contains(where: { $0.op is BeginObjectLiteral }))
+        XCTAssert(program.code.contains(where: { $0.op is EndObjectLiteral }))
+    }
+
+    func testOptionsBagExactlyOne() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.loadInt(0)  // to pass assert(hasVisibleVariables)
+
+        let bag = OptionsBag(
+            name: "TestBag",
+            properties: ["a": .number, "b": .string, "c": .boolean],
+            selectionMode: .exactlyOne
+        )
+
+        b.createOptionsBag(bag)
+
+        let program = b.finalize()
+
+        // Should be exactly 1 property to be added
+        let addPropertyCount = program.code.filter { $0.op is ObjectLiteralAddProperty }.count
+        XCTAssertEqual(addPropertyCount, 1)
+
+        XCTAssert(program.code.contains(where: { $0.op is BeginObjectLiteral }))
+        XCTAssert(program.code.contains(where: { $0.op is EndObjectLiteral }))
+    }
+
     func testClassDefinitionBuilding() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

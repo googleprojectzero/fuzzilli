@@ -555,7 +555,8 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     let environment = JavaScriptEnvironment(
         additionalBuiltins: profile.additionalBuiltins,
         additionalObjectGroups: profile.additionalObjectGroups,
-        additionalEnumerations: profile.additionalEnumerations)
+        additionalEnumerations: profile.additionalEnumerations,
+        additionalOptionsBags: profile.additionalOptionsBags)
     if !profile.additionalBuiltins.isEmpty {
         logger.verbose(
             "Loaded additional builtins from profile: \(profile.additionalBuiltins.map { $0.key })")
@@ -568,6 +569,11 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     if !profile.additionalEnumerations.isEmpty {
         logger.verbose(
             "Loaded additional Enumerations from profile: \(profile.additionalEnumerations.map { $0.group! })"
+        )
+    }
+    if !profile.additionalOptionsBags.isEmpty {
+        logger.verbose(
+            "Loaded additional OptionsBags from profile: \(profile.additionalOptionsBags.map { $0.group.name })"
         )
     }
 

@@ -357,7 +357,7 @@ public class JavaScriptEnvironment: ComponentBase {
 
     public init(
         additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = [],
-        additionalEnumerations: [ILType] = []
+        additionalEnumerations: [ILType] = [], additionalOptionsBags: [OptionsBag] = []
     ) {
 
         super.init(name: "JavaScriptEnvironment")
@@ -619,6 +619,10 @@ public class JavaScriptEnvironment: ComponentBase {
         registerOptionsBag(.jsIntlSegmenterSettings)
         registerOptionsBag(.jsIntlLocaleMatcherSettings)
         registerOptionsBag(.jsIteratorZipSettings)
+
+        for optionsBag in additionalOptionsBags {
+            registerOptionsBag(optionsBag)
+        }
 
         registerTemporalFieldsObject(
             .jsTemporalPlainTimeLikeObject, forWith: false, dateFields: false, timeFields: true,
@@ -983,6 +987,7 @@ public class JavaScriptEnvironment: ComponentBase {
     public func registerOptionsBag(_ bag: OptionsBag) {
         registerObjectGroup(bag.group)
 
+        assert(!bag.properties.isEmpty, "OptionsBag with should have at least one property")
         for property in bag.properties.values {
             if property.isEnumeration {
                 assert(
@@ -1189,27 +1194,31 @@ public struct ObjectGroup {
 //
 // It is useful to be able to represent simple options bags so that we can efficiently codegen them
 public struct OptionsBag {
+    public enum SelectionMode {
+        // Select any random subset of options
+        case anySubset
+        // Select exactly one random option
+        case exactlyOne
+    }
+
     // The type of each property, not including `| .undefined`.
     // We may extend this once we start supporting more complex bags
     public var properties: [String: ILType]
     // An ObjectGroup representing this bag
     public var group: ObjectGroup
+    // Determines how the OptionsBag selects from among the possible options
+    public var selectionMode: SelectionMode
 
-    public init(name: String, properties: [String: ILType]) {
+    public init(
+        name: String, properties: [String: ILType], selectionMode: SelectionMode = .anySubset
+    ) {
         self.properties = properties
         let properties = properties.mapValues {
-            // This list can be expanded over time as long as createOptionsBag() supports this
-            assert(
-                $0.isEnumeration || $0.Is(.number | .integer | .boolean | .iterable())
-                    // Has a producing generator registered
-                    || $0.Is(.jsTemporalPlainTime)
-                    // Has explicit support in createOptionsBag
-                    || $0.Is(OptionsBag.jsTemporalRelativeTo),
-                "Found unsupported option type \($0) in options bag \(name)")
             return $0 | .undefined
         }
         self.group = ObjectGroup(
             name: name, instanceType: nil, properties: properties, overloads: [:])
+        self.selectionMode = selectionMode
     }
 }
 

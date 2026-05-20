@@ -583,5 +583,7 @@ let v8SandboxProfile = Profile(
 
     additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
 
+    additionalOptionsBags: [],
+
     optionalPostProcessor: SandboxFuzzingPostProcessor()
 )

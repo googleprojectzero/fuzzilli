@@ -61,5 +61,7 @@ let jerryscriptProfile = Profile(
 
     additionalEnumerations: [],
 
+    additionalOptionsBags: [],
+
     optionalPostProcessor: nil
 )

@@ -92,5 +92,7 @@ let v8HoleFuzzingProfile = Profile(
 
     additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
 
+    additionalOptionsBags: [],
+
     optionalPostProcessor: nil
 )

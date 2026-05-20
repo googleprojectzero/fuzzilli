@@ -126,5 +126,7 @@ let spidermonkeyProfile = Profile(
 
     additionalEnumerations: [],
 
+    additionalOptionsBags: [],
+
     optionalPostProcessor: nil
 )

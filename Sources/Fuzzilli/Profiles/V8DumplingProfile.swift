@@ -154,6 +154,8 @@ let v8DumplingProfile = Profile(
 
     additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
 
+    additionalOptionsBags: [],
+
     optionalPostProcessor: DumplingFuzzingPostProcessor()
 )
 

@@ -114,5 +114,7 @@ public let v8Profile = Profile(
 
     additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
 
+    additionalOptionsBags: [],
+
     optionalPostProcessor: nil
 )

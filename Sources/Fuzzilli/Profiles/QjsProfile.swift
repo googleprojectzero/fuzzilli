@@ -59,5 +59,7 @@ let qjsProfile = Profile(
 
     additionalEnumerations: [],
 
+    additionalOptionsBags: [],
+
     optionalPostProcessor: nil
 )

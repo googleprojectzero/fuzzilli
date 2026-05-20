@@ -6588,30 +6588,36 @@ public class ProgramBuilder {
     //   property might still be filtered out.
     @discardableResult
     func createOptionsBag(_ bag: OptionsBag, predefined: [String: Variable] = [:]) -> Variable {
-        // We run .filter() to pick a subset of fields, but we generally want to set as many as possible
-        // and let the mutator prune things
-        let dict = [String: Variable](
-            uniqueKeysWithValues: bag.properties.filter { _ in probability(0.8) }.map {
-                let (propertyName, type) = $0
-                if let predefinedVar = predefined[propertyName] {
-                    return (propertyName, predefinedVar)
-                } else if type.isEnumeration {
-                    return (propertyName, loadEnum(type))
-                    // relativeTo doesn't have an ObjectGroup so we cannot just register a producingGenerator for it
-                } else if type.Is(OptionsBag.jsTemporalRelativeTo) {
-                    return (
-                        propertyName,
-                        findOrGenerateType(
-                            chooseUniform(from: [
-                                .jsTemporalZonedDateTime, .jsTemporalPlainDateTime,
-                                .jsTemporalPlainDate, .string,
-                            ]))
-                    )
-                } else {
-                    return (propertyName, findOrGenerateType(type))
-                }
-            })
-        return createObject(with: dict)
+        switch bag.selectionMode {
+        case .anySubset:
+            // We run .filter() to pick a subset of fields, but we generally want to set as many as possible
+            // and let the mutator prune things
+            let dict = [String: Variable](
+                uniqueKeysWithValues: bag.properties.filter { _ in probability(0.8) }.map {
+                    let (propertyName, type) = $0
+                    if let predefinedVar = predefined[propertyName] {
+                        return (propertyName, predefinedVar)
+                    } else if type.isEnumeration {
+                        return (propertyName, loadEnum(type))
+                        // relativeTo doesn't have an ObjectGroup so we cannot just register a producingGenerator for it
+                    } else if type.Is(OptionsBag.jsTemporalRelativeTo) {
+                        return (
+                            propertyName,
+                            findOrGenerateType(
+                                chooseUniform(from: [
+                                    .jsTemporalZonedDateTime, .jsTemporalPlainDateTime,
+                                    .jsTemporalPlainDate, .string,
+                                ]))
+                        )
+                    } else {
+                        return (propertyName, findOrGenerateType(type))
+                    }
+                })
+            return createObject(with: dict)
+        case .exactlyOne:
+            let (propertyName, type) = bag.properties.randomElement()!
+            return createObject(with: [propertyName: findOrGenerateType(type)])
+        }
     }
 
     // Generate a Temporal.Duration object

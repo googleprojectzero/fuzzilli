@@ -36,6 +36,7 @@ public struct Profile {
     public let additionalBuiltins: [String: ILType]
     public let additionalObjectGroups: [ObjectGroup]
     public let additionalEnumerations: [ILType]
+    public let additionalOptionsBags: [OptionsBag]
 
     // An optional post-processor that is executed for every sample generated for fuzzing and can modify it.
     public let optionalPostProcessor: FuzzingPostProcessor?
