@@ -378,6 +378,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsIteratorPrototype)
         registerObjectGroup(.jsIteratorConstructor)
         registerObjectGroup(.jsGenerators)
+        registerObjectGroup(.jsAsyncGenerators)
         registerObjectGroup(.jsPromises)
         registerObjectGroup(.jsRegExps)
         registerObjectGroup(.jsFunctions)
@@ -1304,6 +1305,10 @@ extension ILType {
         ILType.iterable()
         + ILType.object(ofGroup: "Generator", withMethods: ["next", "return", "throw"])
 
+    public static let jsAsyncGenerator =
+        ILType.asyncIterable()
+        + ILType.object(ofGroup: "AsyncGenerator", withMethods: ["next", "return", "throw"])
+
     /// Type of a JavaScript Promise object.
     public static let jsPromise = ILType.object(
         ofGroup: "Promise", withMethods: ["catch", "finally", "then"])
@@ -2222,6 +2227,17 @@ extension ObjectGroup {
             "next": [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
             "return": [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
             "throw": [.opt(.jsAnything)] => .object(withProperties: ["done", "value"]),
+        ]
+    )
+
+    public static let jsAsyncGenerators = ObjectGroup(
+        name: "AsyncGenerator",
+        instanceType: .jsAsyncGenerator,
+        properties: [:],
+        methods: [
+            "next": [.opt(.jsAnything)] => .jsPromise,
+            "return": [.opt(.jsAnything)] => .jsPromise,
+            "throw": [.opt(.jsAnything)] => .jsPromise,
         ]
     )
 

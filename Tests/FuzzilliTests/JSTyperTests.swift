@@ -453,28 +453,29 @@ class JSTyperTests: XCTestCase {
         }
         XCTAssertEqual(b.type(of: f), .function(signature3))
 
-        f = b.buildAsyncGeneratorFunction(with: .parameters(signature3.parameters)) { params in
+        let signature4 = [.integer, .number] => .jsAsyncGenerator
+        f = b.buildAsyncGeneratorFunction(with: .parameters(signature4.parameters)) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
             XCTAssertEqual(b.type(of: params[1]), .number)
         }
-        XCTAssertEqual(b.type(of: f), .function(signature3))
+        XCTAssertEqual(b.type(of: f), .function(signature4))
 
-        let signature4 = [.string, .number] => .jsPromise
-        f = b.buildAsyncFunction(with: .parameters(signature4.parameters)) { params in
+        let signature5 = [.string, .number] => .jsPromise
+        f = b.buildAsyncFunction(with: .parameters(signature5.parameters)) { params in
             XCTAssertEqual(b.type(of: params[0]), .string)
             XCTAssertEqual(b.type(of: params[1]), .number)
         }
-        XCTAssertEqual(b.type(of: f), .function(signature4))
+        XCTAssertEqual(b.type(of: f), .function(signature5))
 
-        f = b.buildAsyncArrowFunction(with: .parameters(signature4.parameters)) { params in
+        f = b.buildAsyncArrowFunction(with: .parameters(signature5.parameters)) { params in
             XCTAssertEqual(b.type(of: params[0]), .string)
             XCTAssertEqual(b.type(of: params[1]), .number)
         }
-        XCTAssertEqual(b.type(of: f), .function(signature4))
+        XCTAssertEqual(b.type(of: f), .function(signature5))
 
         // ... except for constructors, which are just constructors (when they are lifted to JavaScript, they explicitly forbid being called as a function).
-        let signature5 = [.integer, .number] => .object(withProperties: ["foo", "bar"])
-        f = b.buildConstructor(with: .parameters(signature3.parameters)) { params in
+        let signature6 = [.integer, .number] => .object(withProperties: ["foo", "bar"])
+        f = b.buildConstructor(with: .parameters(signature6.parameters)) { params in
             let this = params[0]
             XCTAssertEqual(b.type(of: this), .object())
             XCTAssertEqual(b.type(of: params[1]), .integer)
@@ -482,7 +483,7 @@ class JSTyperTests: XCTestCase {
             b.setProperty("foo", of: this, to: params[1])
             b.setProperty("bar", of: this, to: params[2])
         }
-        XCTAssertEqual(b.type(of: f), .constructor(signature5))
+        XCTAssertEqual(b.type(of: f), .constructor(signature6))
     }
 
     func testReturnValueInference() {
@@ -623,7 +624,7 @@ class JSTyperTests: XCTestCase {
         let g2 = b.buildAsyncGeneratorFunction(with: .parameters(n: 0)) { _ in
             b.yield(b.loadInt(42))
         }
-        XCTAssertEqual(b.type(of: g2).signature?.outputType, .jsGenerator)
+        XCTAssertEqual(b.type(of: g2).signature?.outputType, .jsAsyncGenerator)
 
         let a2 = b.buildAsyncFunction(with: .parameters(n: 0)) { _ in }
         XCTAssertEqual(b.type(of: a2).signature?.outputType, .jsPromise)

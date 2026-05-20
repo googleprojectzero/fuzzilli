@@ -1620,39 +1620,71 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(receiverObject.intersection(with: receiverNil), receiverObject)
     }
 
-    func testParameterizedIterables() {
-        let intIterable = ILType.iterable(ofElementType: .integer)
-        let strIterable = ILType.iterable(ofElementType: .string)
-        let multiIterable = ILType.iterable(ofElementType: .integer | .string)
-        let objIterable = ILType.iterable(ofElementType: .object(withProperties: ["foo"]))
-        let objIterable2 = ILType.iterable(ofElementType: .object(withProperties: ["foo", "bar"]))
+    private func runParameterizedIterableTests(
+        factory: (ILType) -> ILType,
+        baseInstance: ILType,
+        descriptionPrefix: String
+    ) {
+        let intIterable = factory(.integer)
+        let strIterable = factory(.string)
+        let multiIterable = factory(.integer | .string)
+        let objIterable = factory(.object(withProperties: ["foo"]))
+        let objIterable2 = factory(.object(withProperties: ["foo", "bar"]))
 
-        XCTAssertEqual(intIterable, ILType.iterable(ofElementType: .integer))
+        XCTAssertEqual(intIterable, factory(.integer))
         XCTAssertNotEqual(intIterable, strIterable)
-        XCTAssertNotEqual(intIterable, .iterable())
-        XCTAssert(.iterable() >= intIterable)
+        XCTAssertNotEqual(intIterable, baseInstance)
+        XCTAssert(baseInstance >= intIterable)
         XCTAssert(multiIterable >= intIterable)
         XCTAssert(multiIterable >= strIterable)
-        XCTAssertFalse(intIterable >= .iterable())
+        XCTAssertFalse(intIterable >= baseInstance)
         XCTAssertFalse(intIterable >= strIterable)
         XCTAssert(objIterable >= objIterable2)
         XCTAssertFalse(objIterable2 >= objIterable)
 
         XCTAssertEqual(intIterable | strIterable, multiIterable)
-        XCTAssertEqual(.iterable() | strIterable, .iterable())
+        XCTAssertEqual(baseInstance | strIterable, baseInstance)
 
-        XCTAssertEqual(intIterable & strIterable, ILType.iterable(ofElementType: .nothing))
-        XCTAssertEqual(.iterable() & strIterable, strIterable)
+        XCTAssertEqual(intIterable & strIterable, factory(.nothing))
+        XCTAssertEqual(baseInstance & strIterable, strIterable)
 
         XCTAssert(intIterable.canMerge(with: intIterable))
         XCTAssertFalse(intIterable.canMerge(with: strIterable))
-        XCTAssert(ILType.iterable().canMerge(with: intIterable))
+        XCTAssert(baseInstance.canMerge(with: intIterable))
         XCTAssertEqual(intIterable.merging(with: intIterable), intIterable)
-        XCTAssertEqual(.iterable().merging(with: intIterable), intIterable)
-        XCTAssertEqual(intIterable.merging(with: .iterable()), intIterable)
+        XCTAssertEqual(baseInstance.merging(with: intIterable), intIterable)
+        XCTAssertEqual(intIterable.merging(with: baseInstance), intIterable)
 
-        XCTAssertEqual(intIterable.description, ".iterable<.integer>")
-        XCTAssertEqual(multiIterable.description, ".iterable<.integer | .string>")
+        XCTAssertEqual(intIterable.description, "\(descriptionPrefix)<.integer>")
+        XCTAssertEqual(multiIterable.description, "\(descriptionPrefix)<.integer | .string>")
+    }
+
+    func testParameterizedIterables() {
+        runParameterizedIterableTests(
+            factory: { ILType.iterable(ofElementType: $0) },
+            baseInstance: .iterable(),
+            descriptionPrefix: ".iterable"
+        )
+    }
+
+    func testParameterizedAsyncIterables() {
+        runParameterizedIterableTests(
+            factory: { ILType.asyncIterable(ofElementType: $0) },
+            baseInstance: .asyncIterable(),
+            descriptionPrefix: ".asyncIterable"
+        )
+
+        // Subtyping with regular iterables
+        let intAsyncIterable = ILType.asyncIterable(ofElementType: .integer)
+        let intIterable = ILType.iterable(ofElementType: .integer)
+        XCTAssertFalse(intAsyncIterable.Is(intIterable))
+        XCTAssert(intIterable.Is(intAsyncIterable))
+        XCTAssertFalse(ILType.asyncIterable().Is(.iterable()))
+        XCTAssert(ILType.iterable().Is(.asyncIterable()))
+
+        // Object group subtyping
+        XCTAssertFalse(ILType.jsAsyncGenerator.Is(.iterable()))
+        XCTAssert(ILType.jsGenerator.Is(.asyncIterable()))
     }
 
     func testEnumerationTypeOperations() {

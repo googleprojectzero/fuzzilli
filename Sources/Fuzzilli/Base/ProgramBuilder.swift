@@ -1800,7 +1800,10 @@ public class ProgramBuilder {
                 // is probably fine in practice.
                 assert(
                     !instr.hasOneOutput || v != instr.output || !(instr.op is BeginAnySubroutine)
-                        || (type.signature?.outputType ?? .jsAnything) == .jsAnything)
+                        || instr.op is BeginGeneratorFunction
+                        || instr.op is BeginAsyncGeneratorFunction
+                        || (type.signature?.outputType ?? .jsAnything) == .jsAnything
+                )
                 // Try to find a compatible variable in the host program.
                 let replacement: Variable
                 if let match = randomVariable(ofType: type) {

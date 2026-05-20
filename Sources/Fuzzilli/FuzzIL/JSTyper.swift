@@ -1382,13 +1382,20 @@ public struct JSTyper: Analyzer {
                 .functionAndConstructor(
                     inferSubroutineParameterList(of: op, at: instr.index) => .jsAnything))
         case .beginArrowFunction(let op as BeginAnyFunction),
-            .beginGeneratorFunction(let op as BeginAnyFunction),
             .beginAsyncFunction(let op as BeginAnyFunction),
-            .beginAsyncArrowFunction(let op as BeginAnyFunction),
-            .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
+            .beginAsyncArrowFunction(let op as BeginAnyFunction):
             set(
                 instr.output,
                 .function(inferSubroutineParameterList(of: op, at: instr.index) => .jsAnything))
+        case .beginGeneratorFunction(let op):
+            set(
+                instr.output,
+                .function(inferSubroutineParameterList(of: op, at: instr.index) => .iterable()))
+        case .beginAsyncGeneratorFunction(let op):
+            set(
+                instr.output,
+                .function(inferSubroutineParameterList(of: op, at: instr.index) => .asyncIterable())
+            )
         case .beginConstructor(let op):
             set(
                 instr.output,
@@ -1592,11 +1599,15 @@ public struct JSTyper: Analyzer {
                 // The function variable may have been reassigned to a different function, in which case we may not have a signature anymore.
                 if let signature = funcType.signature {
                     switch begin.op.opcode {
-                    case .beginGeneratorFunction,
-                        .beginAsyncGeneratorFunction:
+                    case .beginGeneratorFunction:
                         setType(
                             of: begin.output,
                             to: funcType.settingSignature(to: signature.parameters => .jsGenerator))
+                    case .beginAsyncGeneratorFunction:
+                        setType(
+                            of: begin.output,
+                            to: funcType.settingSignature(
+                                to: signature.parameters => .jsAsyncGenerator))
                     case .beginAsyncFunction,
                         .beginAsyncArrowFunction:
                         setType(

@@ -145,6 +145,18 @@ public struct ILType: Hashable {
         return ILType(definiteType: .iterable, ext: ext)
     }
 
+    /// A type that can be asynchronously iterated over, which yields Promises.
+    public static func asyncIterable(ofElementType: ILType? = nil) -> ILType {
+        guard let elementType = ofElementType else {
+            return ILType(definiteType: .asyncIterable)
+        }
+
+        let ext = TypeExtension(
+            group: nil, properties: Set(), methods: Set(), signature: nil, wasmExt: nil,
+            isEnumeration: false, iterableElementType: elementType)
+        return ILType(definiteType: .asyncIterable, ext: ext)
+    }
+
     /// The type that subsumes all others (in js).
     public static let jsAnything = ILType(definiteType: .nothing, possibleType: .jsAnything)
 
@@ -1306,6 +1318,11 @@ extension ILType: CustomStringConvertible {
                 return ".iterable<\(elementType.format(abbreviate: abbreviate))>"
             }
             return ".iterable"
+        case .asyncIterable:
+            if let elementType = self.iterableElementType {
+                return ".asyncIterable<\(elementType.format(abbreviate: abbreviate))>"
+            }
+            return ".asyncIterable"
         case .object:
             var params: [String] = []
             if let group = group {
@@ -1456,49 +1473,50 @@ struct BaseType: OptionSet, Hashable {
     static let function = BaseType(rawValue: 1 << 8)
     static let constructor = BaseType(rawValue: 1 << 9)
     static let unboundFunction = BaseType(rawValue: 1 << 10)
-    static let iterable = BaseType(rawValue: 1 << 11)
+    static let asyncIterable = BaseType(rawValue: 1 << 11)
+    static let iterable = BaseType([BaseType(rawValue: 1 << 12), .asyncIterable])
 
     // Wasm Types
-    static let wasmi32 = BaseType(rawValue: 1 << 12)
-    static let wasmi64 = BaseType(rawValue: 1 << 13)
-    static let wasmf32 = BaseType(rawValue: 1 << 14)
-    static let wasmf64 = BaseType(rawValue: 1 << 15)
+    static let wasmi32 = BaseType(rawValue: 1 << 13)
+    static let wasmi64 = BaseType(rawValue: 1 << 14)
+    static let wasmf32 = BaseType(rawValue: 1 << 15)
+    static let wasmf64 = BaseType(rawValue: 1 << 16)
 
     // These are wasm internal types, these are never lifted as such and are only used to glue together dataflow in wasm.
-    static let wasmLabel = BaseType(rawValue: 1 << 16)
+    static let wasmLabel = BaseType(rawValue: 1 << 17)
     // Any catch block exposes such a label now to rethrow the exception caught by that catch.
     // Note that in wasm the label is actually the try block's label but as rethrows are only possible inside a catch
     // block, semantically having a label on the catch makes more sense.
-    static let wasmExceptionLabel = BaseType(rawValue: 1 << 17)
+    static let wasmExceptionLabel = BaseType(rawValue: 1 << 18)
     // This is a reference to a table, which can be passed around to table instructions
     // The lifter will resolve this to the proper index when lifting.
-    static let wasmSimd128 = BaseType(rawValue: 1 << 18)
-    static let wasmFunctionDef = BaseType(rawValue: 1 << 19)
+    static let wasmSimd128 = BaseType(rawValue: 1 << 19)
+    static let wasmFunctionDef = BaseType(rawValue: 1 << 20)
 
     // Wasm-gc types
-    static let wasmRef = BaseType(rawValue: 1 << 20)
-    static let wasmTypeDef = BaseType(rawValue: 1 << 21)
+    static let wasmRef = BaseType(rawValue: 1 << 21)
+    static let wasmTypeDef = BaseType(rawValue: 1 << 22)
 
     // Wasm packed types. These types only exist as part of struct / array definitions. A wasm value
     // can never have the type i8 or i16 (they will always be extended to i32 by any operation
     // loading them.)
-    static let wasmPackedI8 = BaseType(rawValue: 1 << 22)
-    static let wasmPackedI16 = BaseType(rawValue: 1 << 23)
+    static let wasmPackedI8 = BaseType(rawValue: 1 << 23)
+    static let wasmPackedI16 = BaseType(rawValue: 1 << 24)
 
-    static let wasmDataSegment = BaseType(rawValue: 1 << 24)
-    static let wasmElementSegment = BaseType(rawValue: 1 << 25)
+    static let wasmDataSegment = BaseType(rawValue: 1 << 25)
+    static let wasmElementSegment = BaseType(rawValue: 1 << 26)
 
     // A label for a statement, e.g. for break and continue.
-    static let jsLoopLabel = BaseType(rawValue: 1 << 26)
+    static let jsLoopLabel = BaseType(rawValue: 1 << 27)
 
     // A label for a block, as a target for break.
-    static let jsBlockLabel = BaseType(rawValue: 1 << 27)
+    static let jsBlockLabel = BaseType(rawValue: 1 << 28)
 
-    static let jsModule = BaseType(rawValue: 1 << 28)
+    static let jsModule = BaseType(rawValue: 1 << 29)
 
     static let jsAnything = BaseType([
         .undefined, .integer, .float, .string, .boolean, .object, .function, .constructor,
-        .unboundFunction, .bigint, .regexp, .iterable,
+        .unboundFunction, .bigint, .regexp, .iterable, .asyncIterable,
     ])
 
     static let wasmAnything = BaseType([
@@ -1508,7 +1526,8 @@ struct BaseType: OptionSet, Hashable {
 
     static let allBaseTypes: [BaseType] = [
         .undefined, .integer, .float, .string, .boolean, .object, .function, .constructor,
-        .unboundFunction, .bigint, .regexp, .iterable, .wasmf32, .wasmi32, .wasmf64, .wasmi64,
+        .unboundFunction, .bigint, .regexp, .iterable, .asyncIterable, .wasmf32, .wasmi32, .wasmf64,
+        .wasmi64,
         .wasmRef, .wasmSimd128, .wasmTypeDef, .wasmFunctionDef, .jsLoopLabel, .jsBlockLabel,
         .jsModule,
     ]
@@ -2168,6 +2187,7 @@ public enum Parameter: Hashable {
     public static let boolean = Parameter.plain(.boolean)
     public static let regexp = Parameter.plain(.regexp)
     public static let iterable = Parameter.plain(.iterable())
+    public static let asyncIterable = Parameter.plain(.asyncIterable())
     public static let jsAnything = Parameter.plain(.jsAnything)
     public static let number = Parameter.plain(.number)
     public static let primitive = Parameter.plain(.primitive)
