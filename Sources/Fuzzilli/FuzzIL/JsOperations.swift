@@ -2402,6 +2402,24 @@ final class BeginForOfLoopWithDestruct: JsOperation {
     }
 }
 
+final class BeginForAwaitOfLoopWithDestruct: JsOperation {
+    override var opcode: Opcode { .beginForAwaitOfLoopWithDestruct(self) }
+
+    let indices: [Int64]
+    let hasRestElement: Bool
+
+    init(indices: [Int64], hasRestElement: Bool) {
+        assert(indices.count >= 1)
+        self.indices = indices
+        self.hasRestElement = hasRestElement
+        super.init(
+            numInputs: 1, numInnerOutputs: indices.count + 1,
+            attributes: [.isBlockStart, .propagatesSurroundingContext],
+            requiredContext: [.javascript, .asyncFunction],
+            contextOpened: [.loop])
+    }
+}
+
 final class EndForOfLoop: JsOperation {
     override var opcode: Opcode { .endForOfLoop(self) }
 

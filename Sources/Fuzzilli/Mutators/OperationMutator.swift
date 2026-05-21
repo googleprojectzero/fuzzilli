@@ -730,6 +730,7 @@ public class OperationMutator: BaseInstructionMutator {
             .beginForOfLoop(_),
             .beginForAwaitOfLoop(_),
             .beginForOfLoopWithDestruct(_),
+            .beginForAwaitOfLoopWithDestruct(_),
             .endForOfLoop(_),
             .beginRepeatLoop(_),
             .endRepeatLoop(_),

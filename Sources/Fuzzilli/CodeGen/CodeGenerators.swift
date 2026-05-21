@@ -2814,6 +2814,44 @@ public let CodeGenerators: [CodeGenerator] = [
         ]),
 
     CodeGenerator(
+        "ForAwaitOfWithDestructLoopGenerator",
+        [
+            GeneratorStub(
+                "ForAwaitOfWithDestructLoopBeginGenerator",
+                inContext: .single(.asyncFunction),
+                inputs: .preferred(.asyncIterable()),
+                provides: [.loop, .javascript]
+            ) { b, obj in
+                var indices: [Int64] = []
+                for idx in 0..<Int64.random(in: 1..<5) {
+                    withProbability(0.8) {
+                        indices.append(idx)
+                    }
+                }
+
+                if indices.isEmpty {
+                    indices = [0]
+                }
+
+                let hasRestElement = probability(0.2)
+                let vars = b.emit(
+                    BeginForAwaitOfLoopWithDestruct(
+                        indices: indices, hasRestElement: hasRestElement),
+                    withInputs: [obj]
+                ).innerOutputs
+                if hasRestElement && probability(0.2) {
+                    b.getProperty("length", of: vars.last!)
+                }
+            },
+            GeneratorStub(
+                "ForAwaitOfWithDestructLoopEndGenerator",
+                inContext: .single([.loop, .javascript])
+            ) { b in
+                b.emit(EndForOfLoop())
+            },
+        ]),
+
+    CodeGenerator(
         "RepeatLoopGenerator",
         [
             GeneratorStub(

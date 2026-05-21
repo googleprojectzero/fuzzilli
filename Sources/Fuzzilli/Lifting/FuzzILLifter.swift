@@ -761,6 +761,14 @@ public class FuzzILLifter: Lifter {
             )
             w.increaseIndentionLevel()
 
+        case .beginForAwaitOfLoopWithDestruct(let op):
+            let outputs = instr.innerOutputs.dropLast().map(lift)
+            let label = lift(instr.innerOutputs.last!)
+            w.emit(
+                "BeginForAwaitOfLoopWithDestruct \(input(0)) -> [\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))], \(label)"
+            )
+            w.increaseIndentionLevel()
+
         case .endForOfLoop:
             w.decreaseIndentionLevel()
             w.emit("EndForOfLoop")

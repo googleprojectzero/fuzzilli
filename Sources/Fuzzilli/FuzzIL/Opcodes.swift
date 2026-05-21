@@ -377,4 +377,5 @@ enum Opcode {
     case wasmBranchOnNonNull(WasmBranchOnNonNull)
     case createMap(CreateMap)
     case beginForAwaitOfLoop(BeginForAwaitOfLoop)
+    case beginForAwaitOfLoopWithDestruct(BeginForAwaitOfLoopWithDestruct)
 }

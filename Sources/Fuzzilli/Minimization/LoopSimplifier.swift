@@ -43,7 +43,8 @@ struct LoopSimplifier: Reducer {
             case .beginForInLoop,
                 .beginForOfLoop,
                 .beginForAwaitOfLoop,
-                .beginForOfLoopWithDestruct:
+                .beginForOfLoopWithDestruct,
+                .beginForAwaitOfLoopWithDestruct:
                 // These loops are (usually) guaranteed to terminate, and should probably anyway not be replaced by repeat-loops.
                 break
             default:

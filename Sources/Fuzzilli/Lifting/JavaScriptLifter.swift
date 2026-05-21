@@ -1502,6 +1502,19 @@ public class JavaScriptLifter: Lifter {
                 w.emit("\(prefix)for (\(LET) [\(PATTERN)] of \(OBJ)) {")
                 w.enterNewBlock()
 
+            case .beginForAwaitOfLoopWithDestruct(let op):
+                let outputs = w.declareAll(instr.innerOutputs.dropLast())
+                let PATTERN = liftArrayDestructPattern(
+                    indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement)
+                let LET = w.varKeyword
+                let OBJ = input(0)
+
+                let labelVar = instr.innerOutputs.last!
+                let prefix = w.labelPrefix(for: labelVar)
+
+                w.emit("\(prefix)for await (\(LET) [\(PATTERN)] of \(OBJ)) {")
+                w.enterNewBlock()
+
             case .endForOfLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")

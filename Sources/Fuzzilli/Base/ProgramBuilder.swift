@@ -4154,6 +4154,19 @@ public class ProgramBuilder {
         }
     }
 
+    public func buildForAwaitOfLoop(
+        _ obj: Variable, selecting indices: [Int64], hasRestElement: Bool = false,
+        _ body: ([Variable], Variable) -> Void
+    ) {
+        let instr = emit(
+            BeginForAwaitOfLoopWithDestruct(indices: indices, hasRestElement: hasRestElement),
+            withInputs: [obj])
+        let label = instr.innerOutputs.last!
+        let vars = instr.innerOutputs.dropLast()
+        body(Array(vars), label)
+        emit(EndForOfLoop())
+    }
+
     public func buildRepeatLoop(n numIterations: Int, _ body: (Variable, Variable) -> Void) {
         let instr = emit(BeginRepeatLoop(iterations: numIterations))
         body(instr.innerOutput(0), instr.innerOutput(1))

@@ -4764,4 +4764,41 @@ class LifterTests: XCTestCase {
             """
         XCTAssertEqual(actual, expected)
     }
+
+    func testForAwaitLoopWithArrayDestructLifting() {
+        let fuzzer = makeMockFuzzer(
+            config: Configuration(logLevel: .error),
+            environment: JavaScriptEnvironment()
+        )
+        let b = fuzzer.makeBuilder()
+
+        b.buildAsyncFunction(with: .parameters(n: 1)) { args in
+            let asyncIterable = args[0]
+            b.buildForAwaitOfLoop(asyncIterable, selecting: [0, 2], hasRestElement: true) {
+                args, _ in
+                let print = b.createNamedVariable(forBuiltin: "print")
+                b.callFunction(print, withArgs: [args[0]])
+                b.buildForOfLoop(args[1]) { v in
+                    b.callFunction(print, withArgs: [v])
+                }
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+            async function f0(a1) {
+                for await (let [v2,,...v3] of a1) {
+                    print(v2);
+                    for (const v7 of v3) {
+                        print(v7);
+                    }
+                }
+            }
+
+            """
+
+        XCTAssertEqual(actual, expected)
+    }
 }

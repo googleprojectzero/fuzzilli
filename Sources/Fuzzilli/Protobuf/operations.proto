@@ -1750,3 +1750,9 @@ message CreateMap {
 
 message BeginForAwaitOfLoop {
 }
+
+message BeginForAwaitOfLoopWithDestruct {
+    repeated int32 indices = 1;
+    bool hasRestElement = 2;
+}
+

@@ -55,6 +55,7 @@ struct BlockReducer: Reducer {
                 .beginForOfLoop,
                 .beginForAwaitOfLoop,
                 .beginForOfLoopWithDestruct,
+                .beginForAwaitOfLoopWithDestruct,
                 .beginRepeatLoop:
                 reduceLoop(group, with: helper)
 
