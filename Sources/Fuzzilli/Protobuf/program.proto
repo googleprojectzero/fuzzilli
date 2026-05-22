@@ -380,6 +380,7 @@ message Instruction {
         BeginForAwaitOfLoopWithObjectDestruct beginForAwaitOfLoopWithObjectDestruct = 354;
         BeginWorkerFunction beginWorkerFunction = 355;
         EndWorkerFunction endWorkerFunction = 356;
+        WasmBranchOnCast wasmBranchOnCast = 357;
     }
 }
 

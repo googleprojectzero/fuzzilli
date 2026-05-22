@@ -5175,6 +5175,33 @@ public class ProgramBuilder {
             return Array(instr.outputs)
         }
 
+        @discardableResult
+        public func wasmBranchOnCast(
+            _ reference: Variable, targetRefType: ILType, to label: Variable, args: [Variable] = [],
+            typeDef: Variable? = nil
+        ) -> [Variable] {
+            let labelType = b.type(of: label)
+            let labelParams = labelType.wasmLabelType!.parameters
+            var inputs = [label] + args + [reference]
+            var types = [.anyWasmLabel] + labelParams.dropLast() + [.wasmGenericRef]
+            if let typeDef {
+                inputs.append(typeDef)
+                types.append(.wasmTypeDef())
+            }
+
+            let wasmRefType = targetRefType.wasmReferenceType!
+            let cleanTargetRefType =
+                wasmRefType.isAbstract()
+                ? targetRefType : ILType.wasmRef(.Index(), nullability: wasmRefType.nullability)
+
+            let instr = b.emit(
+                WasmBranchOnCast(
+                    parameterCount: labelParams.count - 1, targetRefType: cleanTargetRefType),
+                withInputs: inputs,
+                types: types)
+            return Array(instr.outputs)
+        }
+
         public func wasmBranchTable(on: Variable, labels: [Variable], args: [Variable]) {
             labels.forEach { checkArgumentsMatchLabelType(label: b.type(of: $0), args: args) }
             b.emit(
@@ -5580,6 +5607,44 @@ public class ProgramBuilder {
                 return result
             }
             fatalError("Could not find or generate wasm variable of type \(type)")
+        }
+
+        public func randomWasmReferenceType(withAbstractSuperType type: ILType) -> ILType {
+            assert(type.wasmReferenceType?.isAbstract() == true)
+
+            let nullability = type.wasmReferenceType!.nullability
+            assert(nullability == true)
+            // TODO(bettscheider): Support generating non-nullable reference types.
+            // If the super type is nullable, the sub type may also be non-nullable.
+            // We already have some support for generating non-nullable values, but at this point it's
+            // not complete. So when we want to allow generating non-nullable reference types here, we
+            // need to make sure that values can be generated for them.
+
+            if probability(0.5) {
+                let typeDef = b.findVariable { v in
+                    let isAdHocSignature =
+                        (b.type(of: v).wasmTypeDefinition?.description
+                        as? WasmSignatureTypeDescription)?.isAdHoc == true
+                    let isTypeDefinition = b.type(of: v).Is(.wasmTypeDef())
+                    guard isTypeDefinition && !isAdHocSignature else {
+                        return false
+                    }
+                    let desc = b.type(of: v).wasmTypeDefinition!.description!
+                    let indexType = ILType.wasmIndexRef(desc, nullability: nullability)
+                    return type.subsumes(indexType)
+                }
+
+                if let typeDef {
+                    let desc = b.type(of: typeDef).wasmTypeDefinition!.description!
+                    return ILType.wasmIndexRef(desc, nullability: nullability)
+                }
+            }
+
+            let candidates = WasmAbstractHeapType.allCases
+                .map { ILType.wasmRef($0, shared: false, nullability: nullability) }
+                .filter { type.subsumes($0) }
+
+            return candidates.randomElement() ?? type
         }
 
         public func wasmUnreachable() {

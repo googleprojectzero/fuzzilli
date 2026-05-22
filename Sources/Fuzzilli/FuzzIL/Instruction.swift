@@ -1619,6 +1619,10 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmBranchOnNull(_):
                 $0.wasmBranchOnNull = Fuzzilli_Protobuf_WasmBranchOnNull()
+            case .wasmBranchOnCast(let op):
+                $0.wasmBranchOnCast = Fuzzilli_Protobuf_WasmBranchOnCast.with {
+                    $0.type = ILTypeToWasmTypeEnum(op.targetType)
+                }
             case .wasmBranchOnNonNull(_):
                 $0.wasmBranchOnNonNull = Fuzzilli_Protobuf_WasmBranchOnNonNull()
             case .wasmBeginIf(let op):
@@ -2790,6 +2794,11 @@ extension Instruction: ProtobufConvertible {
                 parameterCount: inouts.count - Int(p.valueCount) - 2, valueCount: Int(p.valueCount))
         case .wasmBranchOnNull(_):
             op = WasmBranchOnNull(parameterCount: (inouts.count - 3) / 2)
+        case .wasmBranchOnCast(let p):
+            let type = WasmTypeEnumToILType(p.type)
+            op = WasmBranchOnCast(
+                parameterCount: (inouts.count - 3 - type.requiredInputCount()) / 2,
+                targetRefType: type)
         case .wasmBranchOnNonNull(_):
             op = WasmBranchOnNonNull(parameterCount: (inouts.count - 2) / 2)
         case .wasmBeginIf(let p):

@@ -1892,6 +1892,52 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator(
+        "WasmBranchOnCastGenerator", inContext: .single(.wasmFunction)
+    ) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+
+        let label = b.findVariable { label in
+            // Ensure that the variable is a label, has at least one parameter, and the last is a reference.
+            b.type(of: label).wasmLabelType?.parameters.last?.Is(.wasmGenericRef) == true
+        }
+
+        if let label {
+            let labelType = b.type(of: label).wasmLabelType!
+            let lastParamType = labelType.parameters.last!
+            assert(lastParamType.wasmReferenceType != nil, "This should never be a wasmGenericRef")
+            let isIndexType = !lastParamType.wasmReferenceType!.isAbstract()
+            let typeDef = isIndexType ? b.getWasmTypeDef(for: lastParamType) : nil
+            let sourceType = lastParamType.wasmReferenceType!.kind.topType()
+            let v = function.findOrGenerateWasmVar(ofType: sourceType)
+            let args = labelType.parameters.dropLast().map(function.findOrGenerateWasmVar)
+            function.wasmBranchOnCast(
+                v, targetRefType: lastParamType, to: label, args: args, typeDef: typeDef)
+        } else {
+            let hierarchies: [ILType] = [
+                .wasmAnyRef(), .wasmFuncRef(), .wasmExternRef(), .wasmExnRef(),
+            ]
+            let topType = hierarchies.randomElement()!
+            let targetRefType = function.randomWasmReferenceType(withAbstractSuperType: topType)
+            let isIndexType = !targetRefType.wasmReferenceType!.isAbstract()
+            let typeDef = isIndexType ? b.getWasmTypeDef(for: targetRefType) : nil
+
+            let blockParamTypes = b.randomWasmBlockOutputTypes(upTo: 2) + [targetRefType]
+
+            function.wasmBuildBlockWithResults(with: [] => blockParamTypes, args: []) {
+                blockLabel, _ in
+                let sourceVar = function.findOrGenerateWasmVar(ofType: topType)
+                let args = blockParamTypes.map(function.findOrGenerateWasmVar)
+
+                function.wasmBranchOnCast(
+                    sourceVar, targetRefType: targetRefType, to: blockLabel, args: args.dropLast(),
+                    typeDef: typeDef)
+
+                return args
+            }
+        }
+    },
+
     // TODO split this into a multi-part Generator.
     CodeGenerator(
         "WasmBranchTableGenerator", inContext: .single(.wasmFunction),

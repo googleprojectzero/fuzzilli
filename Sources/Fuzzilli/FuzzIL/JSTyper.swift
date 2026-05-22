@@ -1139,6 +1139,20 @@ public struct JSTyper: Analyzer {
                     of: instr.outputs.last!,
                     to: .wasmRef(wasmRefType.kind, nullability: false))
 
+            case .wasmBranchOnCast(let op):
+                let labelType = type(of: instr.input(0))
+                let parameterTypes = labelType.wasmLabelType!.parameters
+                assert(instr.outputs.count == parameterTypes.count)
+                for (output, parameterType) in zip(
+                    instr.outputs.dropLast(), parameterTypes.dropLast())
+                {
+                    setType(of: output, to: parameterType)
+                }
+                let refInputIndex = 1 + op.parameterCount
+                let actualSourceType = type(of: instr.input(refInputIndex)).wasmReferenceType!
+                let sourceTopType = actualSourceType.kind.topType()
+                setType(of: instr.outputs.last!, to: sourceTopType)
+
             case .wasmBranchOnNonNull(_):
                 let labelType = type(of: instr.input(0))
                 let parameterTypes = labelType.wasmLabelType!.parameters

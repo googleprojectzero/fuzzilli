@@ -1819,6 +1819,19 @@ public enum WasmAbstractHeapType: CaseIterable, Comparable {
         }
     }
 
+    func getTop() -> Self {
+        switch self {
+        case .WasmExtern, .WasmNoExtern:
+            return .WasmExtern
+        case .WasmFunc, .WasmNoFunc:
+            return .WasmFunc
+        case .WasmAny, .WasmEq, .WasmI31, .WasmStruct, .WasmArray, .WasmNone:
+            return .WasmAny
+        case .WasmExn, .WasmNoExn:
+            return .WasmExn
+        }
+    }
+
     func inSameHierarchy(_ other: Self) -> Bool {
         return getBottom() == other.getBottom()
     }
@@ -1945,6 +1958,16 @@ public class WasmReferenceType: WasmTypeExtension {
         // defining the wasm-gc type (and is kept alive by the JSTyper).
         case Index(UnownedWasmTypeDescription = UnownedWasmTypeDescription())
         case Abstract(HeapTypeInfo)
+
+        func topType() -> ILType {
+            switch self {
+            case .Abstract(let info):
+                return .wasmRef(info.heapType.getTop())
+            case .Index(let idx):
+                let desc = idx.get()!
+                return .wasmRef(desc.abstractHeapSupertype!.heapType.getTop())
+            }
+        }
 
         func union(_ other: Self) -> Self? {
             switch self {

@@ -6872,6 +6872,74 @@ class WasmGCTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "1337\n30\n")
     }
 
+    func testBranchOnCast() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let structType = b.wasmDefineTypeGroup {
+            b.wasmDefineStructType(
+                fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)],
+                indexTypes: [])
+        }[0]
+
+        let module = b.buildWasmModule { wasmModule in
+            let unresolvedType = ILType.wasmRef(.Index(), nullability: true)
+            wasmModule.addWasmFunction(
+                with: [.wasmAnyRef()] => [.wasmi32, unresolvedType], indexTypes: [structType]
+            ) {
+                f, functionLabel, params in
+                let ref = params[0]
+
+                let results = f.wasmBranchOnCast(
+                    ref, targetRefType: unresolvedType, to: functionLabel, args: [f.consti32(42)],
+                    typeDef: structType)
+
+                let reboundArg = results[0]
+                let originalRef = results[1]
+                let isNull = f.wasmRefIsNull(originalRef)
+                let isNotNull = f.wasmi32BinOp(isNull, f.consti32(1), binOpKind: .Xor)
+                let sum1 = f.wasmi32BinOp(reboundArg, f.consti32(1000), binOpKind: .Add)
+                let sum2 = f.wasmi32BinOp(sum1, isNotNull, binOpKind: .Add)
+
+                let s = f.wasmStructNew(structType: structType, fields: [f.consti32(99)])
+                return [sum2, s]
+            }
+
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmAnyRef()]) {
+                f, _, params in
+                let s = f.wasmStructNew(structType: structType, fields: [params[0]])
+                return [s]
+            }
+
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmAnyRef()]) {
+                f, _, params in
+                return [f.wasmRefI31(params[0])]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let main = module.getExportedMethod(at: 0)
+        let makeStruct = module.getExportedMethod(at: 1)
+        let makeI31 = module.getExportedMethod(at: 2)
+
+        let s = b.callMethod(makeStruct, on: exports, withArgs: [b.loadInt(55)])
+        let out1 = b.callMethod(main, on: exports, withArgs: [s])
+        let out1_0 = b.getProperty("0", of: out1)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out1_0)])
+
+        let i31 = b.callMethod(makeI31, on: exports, withArgs: [b.loadInt(1)])
+        let out2 = b.callMethod(main, on: exports, withArgs: [i31])
+        let out2_0 = b.getProperty("0", of: out2)
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out2_0)])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n1043\n")
+    }
+
     func testBranchOnNonNull() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

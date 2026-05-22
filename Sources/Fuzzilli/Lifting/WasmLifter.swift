@@ -2131,6 +2131,29 @@ public class WasmLifter {
         case .wasmBranchOnNull(_):
             let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0xD5]) + Leb128.unsignedEncode(branchDepth)
+        case .wasmBranchOnCast(let op):
+            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
+            let refInputIndex = 1 + op.parameterCount
+            let targetTypeInputIndex = refInputIndex + 1
+
+            let actualSourceType = typer.type(
+                of: wasmInstruction.input(refInputIndex)
+            )
+            .wasmReferenceType!
+            let targetRefType = op.targetType.wasmReferenceType!
+
+            // actualSourceType and targetRefType may be nullable or non-nullable independently of each other.
+            // For br_on_cast to be valid: targetRefType.nullability => actualSourceType.nullability
+            var flags: UInt8 = 0
+            if actualSourceType.nullability || targetRefType.nullability { flags |= 0x01 }
+            if targetRefType.nullability { flags |= 0x02 }
+
+            // To ensure br_on_cast validation succeeds (target <= source), we use the top type of the hierarchy as the source type.
+            let sourceData = try encodeHeapType(actualSourceType.kind.topType())
+            let targetData = try encodeReferenceType(
+                targetRefType, instr: wasmInstruction, typeInput: targetTypeInputIndex)
+            return Data([Prefix.GC.rawValue, 0x18, flags]) + Leb128.unsignedEncode(branchDepth)
+                + sourceData + targetData
         case .wasmBranchOnNonNull(_):
             let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0xD6]) + Leb128.unsignedEncode(branchDepth)

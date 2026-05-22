@@ -1992,6 +1992,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmBranchIf(_),
                 .wasmBranchOnNull(_),
                 .wasmBranchOnNonNull(_),
+                .wasmBranchOnCast(_),
                 .wasmBranchTable(_),
                 .wasmBeginIf(_),
                 .wasmBeginElse(_),

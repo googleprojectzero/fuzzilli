@@ -1408,14 +1408,10 @@ public class FuzzILLifter: Lifter {
             let ref = instr.inputs.last!
             let label = instr.inputs.first!
             let args = instr.inputs.dropFirst().dropLast().map(lift).joined(separator: ", ")
-            if instr.outputs.isEmpty {
-                w.emit("WasmBranchOnNull \(ref) to \(label) [\(args)]")
-            } else {
-                let outputs = instr.outputs.map(lift).joined(separator: ", ")
-                w.emit(
-                    "\(outputs) <- WasmBranchOnNull \(ref) to \(label) [\(args)]"
-                )
-            }
+            let outputs = instr.outputs.map(lift).joined(separator: ", ")
+            w.emit(
+                "\(outputs) <- WasmBranchOnNull \(ref) to \(label) [\(args)]"
+            )
 
         case .wasmBranchOnNonNull(_):
             let ref = instr.inputs.last!
@@ -1429,6 +1425,20 @@ public class FuzzILLifter: Lifter {
                     "\(outputs) <- WasmBranchOnNonNull \(ref) to \(label) [\(args)]"
                 )
             }
+
+        case .wasmBranchOnCast(let op):
+            let refInputIndex = 1 + op.parameterCount
+            let ref = instr.inputs[refInputIndex]
+            let label = instr.inputs.first!
+            let args = instr.inputs[1..<refInputIndex].map(lift).joined(separator: ", ")
+            let typeInput =
+                op.targetType.requiredInputCount() > 0
+                ? " (IndexType: \(instr.inputs[refInputIndex + 1])" : ""
+
+            let outputs = instr.outputs.map(lift).joined(separator: ", ")
+            w.emit(
+                "\(outputs) <- WasmBranchOnCast \(op.targetType) \(ref) to \(label) [\(args)]\(typeInput)"
+            )
 
         case .wasmBranchTable(let op):
             let table =
