@@ -3323,6 +3323,19 @@ class ProgramBuilderTests: XCTestCase {
         test("WasmAnyConvertExternGenerator", expectAny: WasmAnyConvertExtern.self)
     }
 
+    func testRandomWasmTypeDef() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let arrayTypeDef = b.wasmDefineTypeGroup {
+            [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+        }[0]
+
+        // Ensure that randomWasmTypeDef() finds the array definition
+        let randomTypeDef = b.randomWasmTypeDef()
+        XCTAssertEqual(randomTypeDef, arrayTypeDef)
+    }
+
     func testThatGeneratorsExistAndAreBuildableFromJs() {
         let fuzzer = makeMockFuzzer()
         let tries: Int = 10

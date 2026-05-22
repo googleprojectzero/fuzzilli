@@ -6194,8 +6194,10 @@ public class ProgramBuilder {
     // workaround for flexible signature generation in non-typegroup contexts.)
     public func randomWasmTypeDef() -> Variable? {
         findVariable { v in
-            (type(of: v).wasmTypeDefinition?.description as? WasmSignatureTypeDescription)?.isAdHoc
-                == false
+            let isAdHocSignature =
+                (type(of: v).wasmTypeDefinition?.description as? WasmSignatureTypeDescription)?
+                .isAdHoc == true
+            return type(of: v).Is(.wasmTypeDef()) && !isAdHocSignature
         }
     }
 
