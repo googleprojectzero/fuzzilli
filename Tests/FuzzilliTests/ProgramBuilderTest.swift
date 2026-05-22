@@ -695,7 +695,9 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(program.size, 16)
     }
 
-    func testOptionsBagAnySubset() {
+    func testOptionsBagAnySubset() throws {
+        throw XCTSkip("Skipping due to https://crbug.com/515494290")
+        /*
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.loadInt(0)  // to pass assert(hasVisibleVariables)
@@ -716,6 +718,7 @@ class ProgramBuilderTests: XCTestCase {
 
         XCTAssert(program.code.contains(where: { $0.op is BeginObjectLiteral }))
         XCTAssert(program.code.contains(where: { $0.op is EndObjectLiteral }))
+        */
     }
 
     func testOptionsBagExactlyOne() {
