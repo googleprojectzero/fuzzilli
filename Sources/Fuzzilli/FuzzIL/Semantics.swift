@@ -165,6 +165,8 @@ extension Operation {
             return endOp is EndClassPrivateMethod
         case .beginPlainFunction:
             return endOp is EndPlainFunction
+        case .beginWorkerFunction:
+            return endOp is EndWorkerFunction
         case .beginArrowFunction:
             return endOp is EndArrowFunction
         case .beginGeneratorFunction:

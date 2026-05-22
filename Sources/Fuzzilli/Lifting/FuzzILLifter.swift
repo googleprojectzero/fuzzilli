@@ -418,6 +418,7 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- TestIn \(input(0)), \(input(1))")
 
         case .beginPlainFunction(let op as BeginAnyFunction),
+            .beginWorkerFunction(let op as BeginAnyFunction),
             .beginArrowFunction(let op as BeginAnyFunction),
             .beginGeneratorFunction(let op as BeginAnyFunction),
             .beginAsyncFunction(let op as BeginAnyFunction),
@@ -429,6 +430,7 @@ public class FuzzILLifter: Lifter {
             w.increaseIndentionLevel()
 
         case .endPlainFunction(let op as EndAnyFunction),
+            .endWorkerFunction(let op as EndAnyFunction),
             .endArrowFunction(let op as EndAnyFunction),
             .endGeneratorFunction(let op as EndAnyFunction),
             .endAsyncFunction(let op as EndAnyFunction),

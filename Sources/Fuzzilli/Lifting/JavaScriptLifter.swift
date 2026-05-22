@@ -870,7 +870,8 @@ public class JavaScriptLifter: Lifter {
                 let expr = BinaryExpression.new() + lhs + " in " + rhs
                 w.assign(expr, to: instr.output)
 
-            case .beginPlainFunction:
+            case .beginPlainFunction,
+                .beginWorkerFunction:
                 liftFunctionDefinitionBegin(
                     instr, keyword: "function", withInputs: inputs, using: &w)
 
@@ -937,6 +938,7 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case .endPlainFunction(_),
+                .endWorkerFunction(_),
                 .endGeneratorFunction(_),
                 .endAsyncFunction(_),
                 .endAsyncGeneratorFunction:

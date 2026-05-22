@@ -43,6 +43,7 @@ struct MinimizationPostProcessor {
                     .endAsyncFunction,
                     .endAsyncArrowFunction,
                     .endAsyncGeneratorFunction,
+                    .endWorkerFunction,
                     .endObjectLiteralMethod,
                     .endObjectLiteralGetter:
                     // Insert return statements at the end of functions, but only if there is not one already.

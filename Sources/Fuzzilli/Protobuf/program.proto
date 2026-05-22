@@ -378,6 +378,8 @@ message Instruction {
         Wasmi64WideMulOp wasmi64WideMulOp = 352;
         BeginForOfLoopWithObjectDestruct beginForOfLoopWithObjectDestruct = 353;
         BeginForAwaitOfLoopWithObjectDestruct beginForAwaitOfLoopWithObjectDestruct = 354;
+        BeginWorkerFunction beginWorkerFunction = 355;
+        EndWorkerFunction endWorkerFunction = 356;
     }
 }
 

@@ -1425,6 +1425,21 @@ final class EndPlainFunction: EndAnyFunction {
     override var opcode: Opcode { .endPlainFunction(self) }
 }
 
+// A plain function which doesn't use any variables from the outside.
+// Suitable for converting to a string and transmitting to a Worker.
+final class BeginWorkerFunction: BeginAnyNamedFunction {
+    override var opcode: Opcode { .beginWorkerFunction(self) }
+
+    init(parameters: Parameters, functionName: String?) {
+        super.init(
+            parameters: parameters, functionName: functionName,
+            contextOpened: [.javascript, .subroutine, .workerFunction])
+    }
+}
+final class EndWorkerFunction: EndAnyFunction {
+    override var opcode: Opcode { .endWorkerFunction(self) }
+}
+
 // A ES6 arrow function
 final class BeginArrowFunction: BeginAnyFunction {
     override var opcode: Opcode { .beginArrowFunction(self) }

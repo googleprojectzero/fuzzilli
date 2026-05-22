@@ -205,19 +205,24 @@ public let TurbofanVerifyTypeGenerator = CodeGenerator("TurbofanVerifyTypeGenera
 public let WorkerGenerator = CodeGenerator("WorkerGenerator") { b in
     let workerSignature = Signature(withParameterCount: Int.random(in: 0...3))
 
-    // TODO(cffsmith): currently Fuzzilli does not know that this code is sent
-    // to another worker as a string. This has the consequence that we might
-    // use variables inside the worker that are defined in a different scope
-    // and as such they are not accessible / undefined. To fix this we should
-    // define an Operation attribute that tells Fuzzilli to ignore variables
-    // defined in outer scopes.
-    let workerFunction = b.buildPlainFunction(with: .parameters(workerSignature.parameters)) {
-        args in
+    let workerFunction = b.buildWorkerFunction(
+        with: .parameters(workerSignature.parameters)
+    ) { args in
+        b.buildPrefix(n: 3)
+
         let this = b.loadThis()
 
         // Generate a random onmessage handler for incoming messages.
-        let onmessageFunction = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+        let onmessageFunction = b.buildPlainFunction(
+            with: .parameters(.object(withProperties: ["data"]))
+        ) { args in
+            // Encourage reading the object contained in the message.
+            b.getProperty("data", of: args[0])
             b.buildRecursive(n: Int.random(in: 2...5))
+
+            // Signal done in worker. This shouldn't be minified away, since it changes the program behavior (the main thread is waiting for it, and without this, it will timeout).
+            let postMessage = b.createNamedVariable(forBuiltin: "postMessage")
+            b.callFunction(postMessage, withArgs: [b.randomJsVariable()])
         }
         b.setProperty("onmessage", of: this, to: onmessageFunction)
 
@@ -231,7 +236,14 @@ public let WorkerGenerator = CodeGenerator("WorkerGenerator") { b in
     let configObject = b.createObject(with: ["type": functionString, "arguments": argumentsArray])
 
     let worker = b.construct(workerConstructor, withArgs: [workerFunction, configObject])
-    // Fuzzilli can now use the worker.
+
+    // Send message to start worker.
+    b.callMethod("postMessage", on: worker, withArgs: [b.randomJsVariable()])
+
+    b.build(n: 10)
+
+    // Wait for worker to finish. This might get minified away, but if having it is the only way the worker runs long enough, it shouldn't be.
+    b.callMethod("getMessage", on: worker, withArgs: [])
 }
 
 public let WasmStructGenerator = CodeGenerator("WasmStructGenerator") { b in

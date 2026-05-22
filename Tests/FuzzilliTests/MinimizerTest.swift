@@ -186,6 +186,28 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    func testWorkerFunctionMinimization() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        evaluator.keepReturnsInFunctions = true
+
+        // Build input program to be minimized.
+        evaluator.nextInstructionIsImportant(in: b)
+        b.buildWorkerFunction(with: .parameters(n: 0)) { args in
+            evaluator.nextInstructionIsImportant(in: b)
+            let v = b.loadInt(42)
+            b.doReturn(v)
+        }
+
+        let originalProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(originalProgram, actualProgram)
+    }
+
     func testFunctionNameRemoval() {
         // We prefer functions with "flexible" names (automatically assigned during lifting)
         // as there's no risk of name collisions during mutations with those.

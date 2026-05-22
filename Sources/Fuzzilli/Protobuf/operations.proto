@@ -356,6 +356,15 @@ message BeginPlainFunction {
 message EndPlainFunction {
 }
 
+message BeginWorkerFunction {
+    Parameters parameters = 1;
+    // Can be missing, in which case the name is auto-assigned.
+    string name = 2;
+}
+
+message EndWorkerFunction {
+}
+
 message BeginArrowFunction {
     Parameters parameters = 1;
 }

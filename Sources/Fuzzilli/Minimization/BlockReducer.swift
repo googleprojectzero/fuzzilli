@@ -79,6 +79,7 @@ struct BlockReducer: Reducer {
                 reduceGenericBlockGroup(group, with: helper)
 
             case .beginPlainFunction,
+                .beginWorkerFunction,
                 .beginArrowFunction,
                 .beginGeneratorFunction,
                 .beginAsyncFunction,

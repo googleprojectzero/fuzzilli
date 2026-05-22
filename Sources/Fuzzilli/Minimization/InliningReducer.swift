@@ -50,7 +50,8 @@ struct InliningReducer: Reducer {
             case .beginPlainFunction:
                 candidates[instr.output] = (callCount: 0, index: instr.index)
                 fallthrough
-            case .beginArrowFunction,
+            case .beginWorkerFunction,
+                .beginArrowFunction,
                 .beginGeneratorFunction,
                 .beginAsyncFunction,
                 .beginAsyncArrowFunction,
@@ -72,6 +73,7 @@ struct InliningReducer: Reducer {
                 .beginClassStaticInitializer, .beginClassPrivateMethod:
                 activeSubroutineDefinitions.append(instr.hasOneOutput ? instr.output : nil)
             case .endPlainFunction,
+                .endWorkerFunction,
                 .endArrowFunction,
                 .endGeneratorFunction,
                 .endAsyncFunction,

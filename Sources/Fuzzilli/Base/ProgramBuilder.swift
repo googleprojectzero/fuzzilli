@@ -2295,16 +2295,17 @@ public class ProgramBuilder {
     /// Internally, this uses the ValueGenerators to generate some code. As such, the "shape"
     /// of prefix code is controlled in the same way as other generated code through the
     /// generator's respective weights.
-    public func buildPrefix() {
+    public func buildPrefix(n: Int? = nil) {
         if contextAnalyzer.context == .bundle {
             // Don't emit a prefix into the bundle context. The items inside the bundle will emit their own prefixes.
             return
         }
 
+        let numValuesToBuild = n ?? Int.random(in: 10...15)
+
         // Each value generators should generate at least 3 variables, and we probably want to run at least a
         // few of them (maybe roughly >= 3), so the number of variables to build shouldn't be set too low.
         assert(GeneratorStub.numberOfValuesToGenerateByValueGenerators == 3)
-        let numValuesToBuild = Int.random(in: 10...15)
 
         trace("Start of prefix code")
         buildValues(numValuesToBuild)
@@ -3530,6 +3531,23 @@ public class ProgramBuilder {
             withInputs: defaultValues)
         bodyWithRecursionGuard(instr.output) { body(Array(instr.innerOutputs)) }
         emit(EndPlainFunction())
+        return instr.output
+    }
+
+    @discardableResult
+    public func buildWorkerFunction(
+        with descriptor: SubroutineDescriptor, named functionName: String? = nil,
+        defaultValues: [Variable] = [],
+        _ body: ([Variable]) -> Void
+    ) -> Variable {
+        assert(descriptor.parameters.numDefaultParameters == defaultValues.count)
+        setParameterTypesForNextSubroutine(descriptor.parameterTypes)
+        let instr = emit(
+            BeginWorkerFunction(
+                parameters: descriptor.parameters, functionName: functionName),
+            withInputs: defaultValues)
+        bodyWithRecursionGuard(instr.output) { body(Array(instr.innerOutputs)) }
+        emit(EndWorkerFunction())
         return instr.output
     }
 
@@ -6472,15 +6490,29 @@ public class ProgramBuilder {
                 .subroutine, .classDefinition, .objectLiteral, .wasm, .wasmFunction,
             ]
 
+            var newlyHiddenVariables = Set<Variable>()
+
             if !instr.op.contextOpened.intersection(hidingContexts).isEmpty {
                 let labelType = ILType.jsLoopLabel | .jsBlockLabel
+                newlyHiddenVariables.formUnion(
+                    visibleVariables.filter { v in
+                        type(of: v).Is(labelType) && !hiddenVariables.contains(v)
+                    })
+            }
 
-                let newlyHiddenVariables = visibleVariables.filter { v in
-                    type(of: v).Is(labelType) && !hiddenVariables.contains(v)
-                }
-                _ = newlyHiddenVariables.map(hide)
-                hiddenVariablesInScope.push(newlyHiddenVariables)
+            if instr.op.contextOpened.contains(.workerFunction) {
+                // Hide all visible variables except the function variable itself (which will be hidden later).
+                let outputs = Set(instr.outputs)
+                newlyHiddenVariables.formUnion(
+                    visibleVariables.filter {
+                        !hiddenVariables.contains($0) && !outputs.contains($0)
+                    })
+            }
 
+            let newlyHiddenArray = Array(newlyHiddenVariables)
+            if !newlyHiddenArray.isEmpty {
+                _ = newlyHiddenArray.map(hide)
+                hiddenVariablesInScope.push(newlyHiddenArray)
             } else {
                 hiddenVariablesInScope.push([Variable]())
             }

@@ -48,6 +48,8 @@ struct InstructionSimplifier: Reducer {
             switch instr.op.opcode {
             case .beginPlainFunction(let op) where op.functionName != nil:
                 newOp = BeginPlainFunction(parameters: op.parameters, functionName: nil)
+            case .beginWorkerFunction(let op) where op.functionName != nil:
+                newOp = BeginWorkerFunction(parameters: op.parameters, functionName: nil)
             case .beginGeneratorFunction(let op) where op.functionName != nil:
                 newOp = BeginGeneratorFunction(parameters: op.parameters, functionName: nil)
             case .beginAsyncFunction(let op) where op.functionName != nil:

@@ -855,6 +855,15 @@ extension Instruction: ProtobufConvertible {
                 }
             case .endPlainFunction:
                 $0.endPlainFunction = Fuzzilli_Protobuf_EndPlainFunction()
+            case .beginWorkerFunction(let op):
+                $0.beginWorkerFunction = Fuzzilli_Protobuf_BeginWorkerFunction.with {
+                    $0.parameters = convertParameters(op.parameters)
+                    if let name = op.functionName {
+                        $0.name = name
+                    }
+                }
+            case .endWorkerFunction:
+                $0.endWorkerFunction = Fuzzilli_Protobuf_EndWorkerFunction()
             case .beginArrowFunction(let op):
                 $0.beginArrowFunction = Fuzzilli_Protobuf_BeginArrowFunction.with {
                     $0.parameters = convertParameters(op.parameters)
@@ -2252,6 +2261,12 @@ extension Instruction: ProtobufConvertible {
             op = BeginPlainFunction(parameters: parameters, functionName: functionName)
         case .endPlainFunction:
             op = EndPlainFunction()
+        case .beginWorkerFunction(let p):
+            let parameters = convertParameters(p.parameters)
+            let functionName = p.name.isEmpty ? nil : p.name
+            op = BeginWorkerFunction(parameters: parameters, functionName: functionName)
+        case .endWorkerFunction:
+            op = EndWorkerFunction()
         case .beginArrowFunction(let p):
             let parameters = convertParameters(p.parameters)
             op = BeginArrowFunction(parameters: parameters)

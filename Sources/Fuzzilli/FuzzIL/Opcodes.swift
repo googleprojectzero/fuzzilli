@@ -382,4 +382,6 @@ enum Opcode {
     case wasmi64WideMulOp(Wasmi64WideMulOp)
     case beginForOfLoopWithObjectDestruct(BeginForOfLoopWithObjectDestruct)
     case beginForAwaitOfLoopWithObjectDestruct(BeginForAwaitOfLoopWithObjectDestruct)
+    case beginWorkerFunction(BeginWorkerFunction)
+    case endWorkerFunction(EndWorkerFunction)
 }

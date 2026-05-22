@@ -1380,7 +1380,8 @@ public struct JSTyper: Analyzer {
             break
         case .endBundleModuleEntryPoint(_):
             break
-        case .beginPlainFunction(let op):
+        case .beginPlainFunction(let op as BeginAnyFunction),
+            .beginWorkerFunction(let op as BeginAnyFunction):
             // Plain functions can also be used as constructors.
             // The return value type will only be known after fully processing the function definitions.
             set(
@@ -1551,6 +1552,7 @@ public struct JSTyper: Analyzer {
             .beginObjectLiteralSetter,
             .beginObjectLiteralComputedSetter,
             .beginPlainFunction,
+            .beginWorkerFunction,
             .beginArrowFunction,
             .beginGeneratorFunction,
             .beginAsyncFunction,
@@ -1574,6 +1576,7 @@ public struct JSTyper: Analyzer {
             .endObjectLiteralSetter,
             .endObjectLiteralComputedSetter,
             .endPlainFunction,
+            .endWorkerFunction,
             .endArrowFunction,
             .endGeneratorFunction,
             .endAsyncFunction,
@@ -2236,6 +2239,7 @@ public struct JSTyper: Analyzer {
             }
 
         case .beginPlainFunction(let op as BeginAnyFunction),
+            .beginWorkerFunction(let op as BeginAnyFunction),
             .beginArrowFunction(let op as BeginAnyFunction),
             .beginGeneratorFunction(let op as BeginAnyFunction),
             .beginAsyncFunction(let op as BeginAnyFunction),
