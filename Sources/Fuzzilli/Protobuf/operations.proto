@@ -1774,3 +1774,12 @@ message BeginForAwaitOfLoopWithDestruct {
     bool hasRestElement = 2;
 }
 
+message BeginForOfLoopWithObjectDestruct {
+    repeated string properties = 1;
+    bool hasRestElement = 2;
+}
+
+message BeginForAwaitOfLoopWithObjectDestruct {
+    repeated string properties = 1;
+    bool hasRestElement = 2;
+}

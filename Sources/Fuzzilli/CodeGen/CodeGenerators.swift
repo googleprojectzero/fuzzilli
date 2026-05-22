@@ -2852,6 +2852,77 @@ public let CodeGenerators: [CodeGenerator] = [
         ]),
 
     CodeGenerator(
+        "ForOfWithObjectDestructLoopGenerator",
+        [
+            GeneratorStub(
+                "ForOfWithObjectDestructLoopBeginGenerator",
+                inputs: .preferred(.iterable()),
+                provides: [.loop, .javascript]
+            ) { b, obj in
+                let elementType = b.type(of: obj).iterableElementType ?? .jsAnything
+                var properties = Set<String>()
+                for _ in 0..<Int.random(in: 1...3) {
+                    if let prop = elementType.randomProperty(),
+                        !properties.contains(prop)
+                    {
+                        properties.insert(prop)
+                    } else {
+                        properties.insert(b.randomCustomPropertyName())
+                    }
+                }
+
+                let hasRestElement = probability(0.2)
+                b.emit(
+                    BeginForOfLoopWithObjectDestruct(
+                        properties: Array(properties), hasRestElement: hasRestElement),
+                    withInputs: [obj]
+                )
+            },
+            GeneratorStub(
+                "ForOfWithObjectDestructLoopEndGenerator",
+                inContext: .single([.loop, .javascript])
+            ) { b in
+                b.emit(EndForOfLoop())
+            },
+        ]),
+
+    CodeGenerator(
+        "ForAwaitOfWithObjectDestructLoopGenerator",
+        [
+            GeneratorStub(
+                "ForAwaitOfWithObjectDestructLoopBeginGenerator",
+                inContext: .single(.asyncFunction),
+                inputs: .preferred(.asyncIterable()),
+                provides: [.loop, .javascript]
+            ) { b, obj in
+                let elementType = b.type(of: obj).iterableElementType ?? .jsAnything
+                var properties = Set<String>()
+                for _ in 0..<Int.random(in: 1...3) {
+                    if let prop = elementType.randomProperty(),
+                        !properties.contains(prop)
+                    {
+                        properties.insert(prop)
+                    } else {
+                        properties.insert(b.randomCustomPropertyName())
+                    }
+                }
+
+                let hasRestElement = probability(0.2)
+                b.emit(
+                    BeginForAwaitOfLoopWithObjectDestruct(
+                        properties: Array(properties), hasRestElement: hasRestElement),
+                    withInputs: [obj]
+                )
+            },
+            GeneratorStub(
+                "ForAwaitOfWithObjectDestructLoopEndGenerator",
+                inContext: .single([.loop, .javascript])
+            ) { b in
+                b.emit(EndForOfLoop())
+            },
+        ]),
+
+    CodeGenerator(
         "RepeatLoopGenerator",
         [
             GeneratorStub(

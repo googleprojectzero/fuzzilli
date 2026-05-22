@@ -2424,6 +2424,42 @@ final class BeginForAwaitOfLoopWithDestruct: JsOperation {
     }
 }
 
+final class BeginForOfLoopWithObjectDestruct: JsOperation {
+    override var opcode: Opcode { .beginForOfLoopWithObjectDestruct(self) }
+
+    let properties: [String]
+    let hasRestElement: Bool
+
+    init(properties: [String], hasRestElement: Bool) {
+        assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
+        self.properties = properties
+        self.hasRestElement = hasRestElement
+        super.init(
+            numInputs: 1, numInnerOutputs: properties.count + (hasRestElement ? 1 : 0) + 1,
+            attributes: [.isBlockStart, .propagatesSurroundingContext],
+            requiredContext: [.javascript],
+            contextOpened: [.loop])
+    }
+}
+
+final class BeginForAwaitOfLoopWithObjectDestruct: JsOperation {
+    override var opcode: Opcode { .beginForAwaitOfLoopWithObjectDestruct(self) }
+
+    let properties: [String]
+    let hasRestElement: Bool
+
+    init(properties: [String], hasRestElement: Bool) {
+        assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
+        self.properties = properties
+        self.hasRestElement = hasRestElement
+        super.init(
+            numInputs: 1, numInnerOutputs: properties.count + (hasRestElement ? 1 : 0) + 1,
+            attributes: [.isBlockStart, .propagatesSurroundingContext],
+            requiredContext: [.javascript, .asyncFunction],
+            contextOpened: [.loop])
+    }
+}
+
 final class EndForOfLoop: JsOperation {
     override var opcode: Opcode { .endForOfLoop(self) }
 

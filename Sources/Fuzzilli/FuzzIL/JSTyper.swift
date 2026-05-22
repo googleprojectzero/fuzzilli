@@ -1529,6 +1529,8 @@ public struct JSTyper: Analyzer {
             .beginForAwaitOfLoop,
             .beginForOfLoopWithDestruct,
             .beginForAwaitOfLoopWithDestruct,
+            .beginForOfLoopWithObjectDestruct,
+            .beginForAwaitOfLoopWithObjectDestruct,
             .beginRepeatLoop,
             .beginCodeString:
             state.startGroupOfConditionallyExecutingBlocks()
@@ -2304,9 +2306,30 @@ public struct JSTyper: Analyzer {
             set(instr.innerOutput(0), .jsAnything)
             set(instr.innerOutput(1), .jsLoopLabel)
 
-        case .beginForOfLoopWithDestruct, .beginForAwaitOfLoopWithDestruct:
+        case .beginForOfLoopWithDestruct,
+            .beginForAwaitOfLoopWithDestruct:
             for v in instr.innerOutputs.dropLast() {
                 set(v, .jsAnything)
+            }
+            set(instr.innerOutputs.last!, .jsLoopLabel)
+
+        case .beginForOfLoopWithObjectDestruct(let op):
+            let destructuredVars = instr.innerOutputs.dropLast()
+            for v in destructuredVars {
+                set(v, .jsAnything)
+            }
+            if op.hasRestElement {
+                set(destructuredVars.last!, .object())
+            }
+            set(instr.innerOutputs.last!, .jsLoopLabel)
+
+        case .beginForAwaitOfLoopWithObjectDestruct(let op):
+            let destructuredVars = instr.innerOutputs.dropLast()
+            for v in destructuredVars {
+                set(v, .jsAnything)
+            }
+            if op.hasRestElement {
+                set(destructuredVars.last!, .object())
             }
             set(instr.innerOutputs.last!, .jsLoopLabel)
 

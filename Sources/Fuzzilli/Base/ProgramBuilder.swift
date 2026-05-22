@@ -4167,6 +4167,34 @@ public class ProgramBuilder {
         emit(EndForOfLoop())
     }
 
+    public func buildForOfLoop(
+        _ obj: Variable, selectingProperties properties: [String], hasRestElement: Bool = false,
+        _ body: ([Variable], Variable) -> Void
+    ) {
+        let instr = emit(
+            BeginForOfLoopWithObjectDestruct(
+                properties: properties, hasRestElement: hasRestElement),
+            withInputs: [obj])
+        let label = instr.innerOutputs.last!
+        let vars = instr.innerOutputs.dropLast()
+        body(Array(vars), label)
+        emit(EndForOfLoop())
+    }
+
+    public func buildForAwaitOfLoop(
+        _ obj: Variable, selectingProperties properties: [String], hasRestElement: Bool = false,
+        _ body: ([Variable], Variable) -> Void
+    ) {
+        let instr = emit(
+            BeginForAwaitOfLoopWithObjectDestruct(
+                properties: properties, hasRestElement: hasRestElement),
+            withInputs: [obj])
+        let label = instr.innerOutputs.last!
+        let vars = instr.innerOutputs.dropLast()
+        body(Array(vars), label)
+        emit(EndForOfLoop())
+    }
+
     public func buildRepeatLoop(n numIterations: Int, _ body: (Variable, Variable) -> Void) {
         let instr = emit(BeginRepeatLoop(iterations: numIterations))
         body(instr.innerOutput(0), instr.innerOutput(1))

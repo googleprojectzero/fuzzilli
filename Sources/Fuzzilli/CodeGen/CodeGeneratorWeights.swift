@@ -188,6 +188,8 @@ public let codeGeneratorWeights = [
     "ForAwaitOfLoopGenerator":                  10,
     "ForOfWithDestructLoopGenerator":           3,
     "ForAwaitOfWithDestructLoopGenerator":      3,
+    "ForOfWithObjectDestructLoopGenerator":      3,
+    "ForAwaitOfWithObjectDestructLoopGenerator": 3,
     "RepeatLoopGenerator":                      10,
     "SwitchCaseBreakGenerator":                 5,
     "LoopBreakGenerator":                       5,

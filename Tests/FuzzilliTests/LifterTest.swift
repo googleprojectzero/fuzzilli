@@ -4801,4 +4801,74 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(actual, expected)
     }
+
+    func testForLoopWithObjectDestructLifting() {
+        let fuzzer = makeMockFuzzer(
+            config: Configuration(logLevel: .error),
+            environment: JavaScriptEnvironment()
+        )
+        let b = fuzzer.makeBuilder()
+
+        b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let iterable = args[0]
+            b.buildForOfLoop(
+                iterable, selectingProperties: ["name", "department"], hasRestElement: true
+            ) { args, _ in
+                let print = b.createNamedVariable(forBuiltin: "print")
+                b.callFunction(print, withArgs: [args[0]])  // name
+                b.callFunction(print, withArgs: [args[1]])  // department
+                b.callFunction(print, withArgs: [args[2]])  // rest
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+            function f0(a1) {
+                for (let {"name":v2,"department":v3,...v4} of a1) {
+                    print(v2);
+                    print(v3);
+                    print(v4);
+                }
+            }
+
+            """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testForAwaitLoopWithObjectDestructLifting() {
+        let fuzzer = makeMockFuzzer(
+            config: Configuration(logLevel: .error),
+            environment: JavaScriptEnvironment()
+        )
+        let b = fuzzer.makeBuilder()
+
+        b.buildAsyncFunction(with: .parameters(n: 1)) { args in
+            let asyncIterable = args[0]
+            b.buildForAwaitOfLoop(
+                asyncIterable, selectingProperties: ["name", "department"], hasRestElement: false
+            ) { args, _ in
+                let print = b.createNamedVariable(forBuiltin: "print")
+                b.callFunction(print, withArgs: [args[0]])  // name
+                b.callFunction(print, withArgs: [args[1]])  // department
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+            async function f0(a1) {
+                for await (let {"name":v2,"department":v3,} of a1) {
+                    print(v2);
+                    print(v3);
+                }
+            }
+
+            """
+
+        XCTAssertEqual(actual, expected)
+    }
 }

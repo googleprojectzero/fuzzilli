@@ -376,6 +376,8 @@ message Instruction {
         BeginForAwaitOfLoopWithDestruct beginForAwaitOfLoopWithDestruct = 350;
         Wasmi64WideBinOp wasmi64WideBinOp = 351;
         Wasmi64WideMulOp wasmi64WideMulOp = 352;
+        BeginForOfLoopWithObjectDestruct beginForOfLoopWithObjectDestruct = 353;
+        BeginForAwaitOfLoopWithObjectDestruct beginForAwaitOfLoopWithObjectDestruct = 354;
     }
 }
 

@@ -209,7 +209,9 @@ extension Operation {
         case .beginForOfLoop,
             .beginForAwaitOfLoop,
             .beginForOfLoopWithDestruct,
-            .beginForAwaitOfLoopWithDestruct:
+            .beginForAwaitOfLoopWithDestruct,
+            .beginForOfLoopWithObjectDestruct,
+            .beginForAwaitOfLoopWithObjectDestruct:
             return endOp is EndForOfLoop
         case .beginRepeatLoop:
             return endOp is EndRepeatLoop
