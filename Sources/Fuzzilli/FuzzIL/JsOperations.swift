@@ -2393,6 +2393,8 @@ final class BeginForOfLoopWithDestruct: JsOperation {
 
     init(indices: [Int64], hasRestElement: Bool) {
         assert(indices.count >= 1)
+        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
         self.hasRestElement = hasRestElement
         super.init(
@@ -2410,6 +2412,8 @@ final class BeginForAwaitOfLoopWithDestruct: JsOperation {
 
     init(indices: [Int64], hasRestElement: Bool) {
         assert(indices.count >= 1)
+        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
         self.hasRestElement = hasRestElement
         super.init(
