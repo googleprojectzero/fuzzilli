@@ -1768,6 +1768,10 @@ message ImportVariables {
     repeated string importNames = 1;
 }
 
+message ImportNamespace {
+    bool isDeferred = 1;
+}
+
 message BeginBundleModuleEntryPoint {
 }
 

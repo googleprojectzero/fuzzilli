@@ -4871,4 +4871,35 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(actual, expected)
     }
+
+    func testImportNamespaceLifting() {
+        let config = Configuration(generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        let b = fuzzer.makeBuilder()
+
+        b.beginBundleModule(name: "deferMod.mjs")
+        let v1 = b.loadInt(1337)
+        b.exportVariables(variables: [v1], exportNames: ["value"])
+        let moduleVariable = b.endBundleModule()
+
+        b.beginBundleModuleEntryPoint()
+        let ns = b.importNamespace(module: moduleVariable, isDeferred: true).output
+        b.getProperty("value", of: ns)
+        b.endBundleModuleEntryPoint()
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+            // JS_BUNDLE_MODULE:deferMod.mjs
+            const v0 = 1337;
+            export { v0 as value };
+            // JS_BUNDLE_MODULE_ENTRYPOINT
+            import defer * as v2 from "deferMod.mjs";
+            v2.value;
+
+            """
+
+        XCTAssertEqual(actual, expected)
+    }
 }

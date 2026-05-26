@@ -381,6 +381,7 @@ message Instruction {
         BeginWorkerFunction beginWorkerFunction = 355;
         EndWorkerFunction endWorkerFunction = 356;
         WasmBranchOnCast wasmBranchOnCast = 357;
+        ImportNamespace importNamespace = 358;
     }
 }
 

@@ -3346,11 +3346,8 @@ class ProgramBuilderTests: XCTestCase {
             let b = fuzzer.makeBuilder()
             b.buildPrefix()
 
-            if generator.name == "BundleScriptGenerator"
-                || generator.name == "BundleModuleGenerator"
-                || generator.name == "BundleModuleEntryPointGenerator"
-                || generator.name == "ModuleImportGenerator"
-                || generator.name == "ModuleExportGenerator"
+            if generator.requiredContext.contains(.bundle)
+                || generator.requiredContext.contains(.moduleTopLevel)
             {
                 // Only buildable in the "bundle" configuration.
                 continue

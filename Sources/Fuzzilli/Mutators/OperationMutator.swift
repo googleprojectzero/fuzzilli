@@ -639,6 +639,8 @@ public class OperationMutator: BaseInstructionMutator {
             names.append(exports.randomElement()!)
             newOp = ImportVariables(importNames: names)
             inouts.append(b.nextVariable())
+        case .importNamespace(let op):
+            newOp = ImportNamespace(isDeferred: !op.isDeferred)
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
             .loadUndefined(_),

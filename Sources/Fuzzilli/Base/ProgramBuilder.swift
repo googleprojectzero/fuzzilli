@@ -4336,6 +4336,12 @@ public class ProgramBuilder {
         }
     }
 
+    public func generateNamespaceImport() {
+        if let module = randomVariable(ofType: .jsModule()) {
+            importNamespace(module: module, isDeferred: probability(0.5))
+        }
+    }
+
     public func exportVariables(variables: [Variable], exportNames: [String]) {
         assert(variables.count == exportNames.count)
         emit(ExportVariables(exportNames: exportNames), withInputs: variables)
@@ -4343,6 +4349,11 @@ public class ProgramBuilder {
 
     public func importVariables(module: Variable, importNames: [String]) -> Instruction {
         return emit(ImportVariables(importNames: importNames), withInputs: [module])
+    }
+
+    @discardableResult
+    public func importNamespace(module: Variable, isDeferred: Bool) -> Instruction {
+        return emit(ImportNamespace(isDeferred: isDeferred), withInputs: [module])
     }
 
     public func blockBreak(_ label: Variable) {

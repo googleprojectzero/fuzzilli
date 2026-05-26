@@ -106,6 +106,7 @@ public struct ILType: Hashable {
     public static let dynamicObjectGroupPrefixes = [
         "_fuzz_Object", "_fuzz_WasmModule", "_fuzz_WasmExports", "_fuzz_Class",
         "_fuzz_Constructor", "_fuzz_RawWasmExports", "_fuzz_RawWasmModule",
+        "_fuzz_Namespace",
     ]
 
     //

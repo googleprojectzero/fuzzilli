@@ -3133,6 +3133,18 @@ final class ImportVariables: JsOperation {
     }
 }
 
+final class ImportNamespace: JsOperation {
+    override var opcode: Opcode { .importNamespace(self) }
+    let isDeferred: Bool
+
+    init(isDeferred: Bool) {
+        self.isDeferred = isDeferred
+        super.init(
+            numInputs: 1, numOutputs: 1, attributes: [.isNotInputMutable],
+            requiredContext: .moduleTopLevel)
+    }
+}
+
 final class BeginBundleModuleEntryPoint: JsOperation {
     override var opcode: Opcode { .beginBundleModuleEntryPoint(self) }
 

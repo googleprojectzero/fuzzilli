@@ -2129,6 +2129,15 @@ public struct JSTyper: Analyzer {
                 set(output, exportedType)
             }
 
+        case .importNamespace(_):
+            let moduleType = type(ofInput: 0)
+            let groupName = "_fuzz_Namespace\(instr.index)"
+            let objectGroup = ObjectGroup(
+                name: groupName, instanceType: nil, properties: moduleType.exports, overloads: [:]
+            )
+            dynamicObjectGroupManager.finalizedObjectGroups.append(objectGroup)
+            set(instr.output, objectGroup.instanceType)
+
         case .ternaryOperation:
             let outputType = type(ofInput: 1) | type(ofInput: 2)
             set(instr.output, outputType)

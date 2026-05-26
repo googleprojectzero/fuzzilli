@@ -1254,6 +1254,10 @@ extension Instruction: ProtobufConvertible {
                 $0.importVariables = Fuzzilli_Protobuf_ImportVariables.with {
                     $0.importNames = op.importNames
                 }
+            case .importNamespace(let op):
+                $0.importNamespace = Fuzzilli_Protobuf_ImportNamespace.with {
+                    $0.isDeferred = op.isDeferred
+                }
             case .print(_):
                 fatalError("Print operations should not be serialized")
             case .createMap(let op):
@@ -2521,6 +2525,8 @@ extension Instruction: ProtobufConvertible {
             op = ExportVariables(exportNames: p.exportNames)
         case .importVariables(let p):
             op = ImportVariables(importNames: p.importNames)
+        case .importNamespace(let p):
+            op = ImportNamespace(isDeferred: p.isDeferred)
         case .loadNewTarget:
             op = LoadNewTarget()
         case .nop:

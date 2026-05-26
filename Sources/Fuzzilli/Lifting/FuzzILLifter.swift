@@ -893,6 +893,10 @@ public class FuzzILLifter: Lifter {
             let names = op.importNames.joined(separator: ", ")
             w.emit("\(outputs) <- ImportVariables \(input(0)), [\(names)]")
 
+        case .importNamespace(let op):
+            let deferKeyword = op.isDeferred ? "defer " : ""
+            w.emit("\(output()) <- ImportNamespace \(deferKeyword)\(input(0))")
+
         case .loadNewTarget:
             w.emit("\(output()) <- LoadNewTarget")
 

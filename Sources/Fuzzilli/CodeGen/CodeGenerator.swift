@@ -283,6 +283,15 @@ public class GeneratorStub: Contributor {
                 }
             }
         }
+
+        public func contains(_ context: Context) -> Bool {
+            switch self {
+            case .single(let ctx):
+                return ctx.contains(context)
+            case .either(let ctxs):
+                return ctxs.contains(where: { $0.contains(context) })
+            }
+        }
     }
 
     /// The contexts in which this code generator can run.

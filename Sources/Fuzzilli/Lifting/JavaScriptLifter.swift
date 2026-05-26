@@ -1676,6 +1676,12 @@ public class JavaScriptLifter: Lifter {
                 let moduleName = moduleNames[instr.input(0)]!
                 w.emit("import { \(specsStr) } from \"\(moduleName)\";")
 
+            case .importNamespace(let op):
+                let output = w.declare(instr.output)
+                let moduleName = moduleNames[instr.input(0)]!
+                let deferKeyword = op.isDeferred ? "defer " : ""
+                w.emit("import \(deferKeyword)* as \(output) from \"\(moduleName)\";")
+
             case .loadNewTarget:
                 w.assign(Identifier.new("new.target"), to: instr.output)
 

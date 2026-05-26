@@ -3615,9 +3615,12 @@ public let CodeGenerators: [CodeGenerator] = [
         // TODO(marja): Add more complex imports:
         // - Importing the default export
         // - Non-named exports (import {v1})
-        // - Importing and creating a Module object
         // - Dynamic imports (also in scripts)
         b.generateImport()
+    },
+
+    CodeGenerator("ModuleNamespaceImportGenerator", inContext: .single(.moduleTopLevel)) { b in
+        b.generateNamespaceImport()
     },
 
     CodeGenerator("ModuleExportGenerator", inContext: .single(.moduleTopLevel)) { b in
