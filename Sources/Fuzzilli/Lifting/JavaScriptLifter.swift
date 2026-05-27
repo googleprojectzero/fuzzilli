@@ -1777,7 +1777,8 @@ public class JavaScriptLifter: Lifter {
                     type = "externref"
                 case .wasmFuncRef():
                     type = "anyfunc"
-                // TODO(mliedtke): add tables for i31ref.
+                case .wasmI31Ref():
+                    type = "i31ref"
                 // TODO(pawkra): add shared ref variants.
                 default:
                     fatalError("Unknown table type")

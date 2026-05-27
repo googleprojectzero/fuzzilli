@@ -46,6 +46,25 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator(
+        "WasmTableGenerator",
+        inContext: .single(.javascript),
+        produces: [.object(ofGroup: "WasmTable")]
+    ) { b in
+        // TODO(mliedtke): Support more abstract types in the JS API.
+        let elementType: ILType = chooseUniform(from: [
+            .wasmFuncRef(), .wasmExternRef(), .wasmI31Ref(),
+        ])
+        let minSize = Int.random(in: 0..<100)
+        var maxSize: Int? = nil
+        if probability(0.5) {
+            maxSize = Int.random(in: minSize..<minSize + 1_000)
+        }
+        b.createWasmTable(
+            elementType: elementType, limits: Limits(min: minSize, max: maxSize),
+            isTable64: probability(0.5))
+    },
+
+    CodeGenerator(
         "WasmTagGenerator",
         inContext: .single(.javascript),
         produces: [.object(ofGroup: "WasmTag")]
@@ -825,7 +844,10 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         // TODO(manoskouk): Generalize these.
         let minSize = 10
         let maxSize: Int? = nil
-        let elementType = ILType.wasmFuncRef()
+        // TODO(mliedtke): Support more types including index types.
+        let elementType = chooseUniform(from: [
+            ILType.wasmFuncRef(), ILType.wasmExternRef(), ILType.wasmI31Ref(),
+        ])
 
         let definedEntryIndices: [Int]
         var inputs: [Variable] = []

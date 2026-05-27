@@ -94,6 +94,63 @@ class WasmSignatureConversionTests: XCTestCase {
 }
 
 class WasmFoundationTests: XCTestCase {
+    func simpleTableTest(elementType: ILType, expect: String) throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let javaScriptTable = b.createWasmTable(
+            elementType: elementType, limits: Limits(min: 5, max: 25), isTable64: false)
+
+        let module = b.buildWasmModule { wasmModule in
+            let wasmTable = wasmModule.addTable(
+                elementType: elementType, minSize: 3, isTable64: false)
+
+            for table in [javaScriptTable, wasmTable] {
+                wasmModule.addWasmFunction(with: [.wasmi32] => [elementType]) { function, _, args in
+                    [function.wasmTableGet(tableRef: table, idx: args[0])]
+                }
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        // Initialize the table entries in JS.
+        b.callMethod("set", on: javaScriptTable, withArgs: [b.loadInt(1), b.loadInt(123)])
+        b.callMethod("set", on: javaScriptTable, withArgs: [b.loadInt(2), b.loadInt(321)])
+        let wasmTable = b.getProperty("wt0", of: exports)
+        b.callMethod("set", on: wasmTable, withArgs: [b.loadInt(1), b.loadInt(456)])
+        b.callMethod("set", on: wasmTable, withArgs: [b.loadInt(2), b.loadInt(654)])
+        // Perform the table.get in Wasm and in JS on both tables each.
+        let results = [
+            b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1)]),
+            b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [b.loadInt(1)]),
+            b.callMethod("get", on: javaScriptTable, withArgs: [b.loadInt(2)]),
+            b.callMethod("get", on: wasmTable, withArgs: [b.loadInt(2)]),
+        ]
+        for result in results {
+            b.callFunction(outputFunc, withArgs: [result])
+        }
+
+        let program = b.finalize()
+        let jsProg = fuzzer.lifter.lift(program)
+        // Very simple test: Expect that the JS element type representation is found in the program.
+        // (To make sure that we did lift the provided element type as otherwise the i31ref and
+        // externref test cases have the exact same behavior)
+        XCTAssert(jsProg.contains("element: \"\(expect)\""), jsProg)
+        testForOutput(program: jsProg, runner: runner, outputString: "123\n456\n321\n654\n")
+    }
+
+    func testI31RefTable() throws {
+        try simpleTableTest(elementType: .wasmI31Ref(), expect: "i31ref")
+    }
+
+    func testExternRefTable() throws {
+        try simpleTableTest(elementType: .wasmExternRef(), expect: "externref")
+    }
+
     func testFunction() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
         let jsProg = buildAndLiftProgram { b in

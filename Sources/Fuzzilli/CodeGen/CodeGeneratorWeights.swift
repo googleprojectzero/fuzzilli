@@ -237,6 +237,7 @@ public let codeGeneratorWeights = [
     // JS generators for wasm features (e.g. APIs on the WebAssembly global object).
     "WasmGlobalGenerator":                      4,
     "WasmMemoryGenerator":                      4,
+    "WasmTableGenerator":                       4,
     "WasmMemoryToResizableBufferGenerator":     5,
     "WasmMemoryToFixedLengthBufferGenerator":   5,
     "WasmMemoryJSGrowGenerator":                5,

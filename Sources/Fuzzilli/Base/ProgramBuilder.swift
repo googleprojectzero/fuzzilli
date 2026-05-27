@@ -4314,6 +4314,7 @@ public class ProgramBuilder {
         ).output
     }
 
+    @discardableResult
     public func createWasmTable(elementType: ILType, limits: Limits, isTable64: Bool) -> Variable {
         return emit(CreateWasmTable(elementType: elementType, limits: limits, isTable64: isTable64))
             .output
