@@ -382,6 +382,7 @@ message Instruction {
         EndWorkerFunction endWorkerFunction = 356;
         WasmBranchOnCast wasmBranchOnCast = 357;
         ImportNamespace importNamespace = 358;
+        WasmBranchOnCastFail wasmBranchOnCastFail = 359;
     }
 }
 

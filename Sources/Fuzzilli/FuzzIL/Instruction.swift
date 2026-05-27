@@ -1627,6 +1627,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmBranchOnCast = Fuzzilli_Protobuf_WasmBranchOnCast.with {
                     $0.type = ILTypeToWasmTypeEnum(op.targetType)
                 }
+            case .wasmBranchOnCastFail(let op):
+                $0.wasmBranchOnCastFail = Fuzzilli_Protobuf_WasmBranchOnCastFail.with {
+                    $0.type = ILTypeToWasmTypeEnum(op.targetType)
+                }
             case .wasmBranchOnNonNull(_):
                 $0.wasmBranchOnNonNull = Fuzzilli_Protobuf_WasmBranchOnNonNull()
             case .wasmBeginIf(let op):
@@ -2803,6 +2807,11 @@ extension Instruction: ProtobufConvertible {
         case .wasmBranchOnCast(let p):
             let type = WasmTypeEnumToILType(p.type)
             op = WasmBranchOnCast(
+                parameterCount: (inouts.count - 3 - type.requiredInputCount()) / 2,
+                targetRefType: type)
+        case .wasmBranchOnCastFail(let p):
+            let type = WasmTypeEnumToILType(p.type)
+            op = WasmBranchOnCastFail(
                 parameterCount: (inouts.count - 3 - type.requiredInputCount()) / 2,
                 targetRefType: type)
         case .wasmBranchOnNonNull(_):

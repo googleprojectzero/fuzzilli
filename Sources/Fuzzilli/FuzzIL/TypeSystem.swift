@@ -431,6 +431,10 @@ public struct ILType: Hashable {
         .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
     ]
 
+    public static let wasmRefHierarchyTopTypes: [ILType] = [
+        .wasmAnyRef(), .wasmFuncRef(), .wasmExternRef(), .wasmExnRef(),
+    ]
+
     public static let anyNonNullableIndexRef = wasmRef(.Index(), nullability: false)
     public static let anyIndexRef = wasmRef(.Index(), nullability: true)
 

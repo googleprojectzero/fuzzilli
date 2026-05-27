@@ -1431,17 +1431,33 @@ public class FuzzILLifter: Lifter {
             }
 
         case .wasmBranchOnCast(let op):
-            let refInputIndex = 1 + op.parameterCount
-            let ref = instr.inputs[refInputIndex]
+            let typeDefCount = op.targetType.requiredInputCount()  // 0 or 1
+            let ref = instr.inputs.dropLast(typeDefCount).last!
             let label = instr.inputs.first!
-            let args = instr.inputs[1..<refInputIndex].map(lift).joined(separator: ", ")
+            let args = instr.inputs.dropFirst().dropLast(1 + typeDefCount).map(lift).joined(
+                separator: ", ")
             let typeInput =
-                op.targetType.requiredInputCount() > 0
-                ? " (IndexType: \(instr.inputs[refInputIndex + 1])" : ""
+                typeDefCount > 0
+                ? " (IndexType: \(instr.inputs.last!))" : ""
 
             let outputs = instr.outputs.map(lift).joined(separator: ", ")
             w.emit(
                 "\(outputs) <- WasmBranchOnCast \(op.targetType) \(ref) to \(label) [\(args)]\(typeInput)"
+            )
+
+        case .wasmBranchOnCastFail(let op):
+            let typeDefCount = op.targetType.requiredInputCount()  // 0 or 1
+            let ref = instr.inputs.dropLast(typeDefCount).last!
+            let label = instr.inputs.first!
+            let args = instr.inputs.dropFirst().dropLast(1 + typeDefCount).map(lift).joined(
+                separator: ", ")
+            let typeInput =
+                typeDefCount > 0
+                ? " (IndexType: \(instr.inputs.last!))" : ""
+
+            let outputs = instr.outputs.map(lift).joined(separator: ", ")
+            w.emit(
+                "\(outputs) <- WasmBranchOnCastFail \(op.targetType) \(ref) to \(label) [\(args)]\(typeInput)"
             )
 
         case .wasmBranchTable(let op):

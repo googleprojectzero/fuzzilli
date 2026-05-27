@@ -1999,6 +1999,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmBranchOnNull(_),
                 .wasmBranchOnNonNull(_),
                 .wasmBranchOnCast(_),
+                .wasmBranchOnCastFail(_),
                 .wasmBranchTable(_),
                 .wasmBeginIf(_),
                 .wasmBeginElse(_),

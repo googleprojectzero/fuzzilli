@@ -386,4 +386,5 @@ enum Opcode {
     case endWorkerFunction(EndWorkerFunction)
     case wasmBranchOnCast(WasmBranchOnCast)
     case importNamespace(ImportNamespace)
+    case wasmBranchOnCastFail(WasmBranchOnCastFail)
 }

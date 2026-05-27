@@ -5200,14 +5200,31 @@ public class ProgramBuilder {
                 types.append(.wasmTypeDef())
             }
 
-            let wasmRefType = targetRefType.wasmReferenceType!
-            let cleanTargetRefType =
-                wasmRefType.isAbstract()
-                ? targetRefType : ILType.wasmRef(.Index(), nullability: wasmRefType.nullability)
-
             let instr = b.emit(
                 WasmBranchOnCast(
-                    parameterCount: labelParams.count - 1, targetRefType: cleanTargetRefType),
+                    parameterCount: labelParams.count - 1, targetRefType: targetRefType),
+                withInputs: inputs,
+                types: types)
+            return Array(instr.outputs)
+        }
+
+        @discardableResult
+        public func wasmBranchOnCastFail(
+            _ reference: Variable, targetRefType: ILType, to label: Variable, args: [Variable] = [],
+            typeDef: Variable? = nil
+        ) -> [Variable] {
+            let labelType = b.type(of: label)
+            let labelParams = labelType.wasmLabelType!.parameters
+            var inputs = [label] + args + [reference]
+            var types = [.anyWasmLabel] + labelParams.dropLast() + [.wasmGenericRef]
+            if let typeDef {
+                inputs.append(typeDef)
+                types.append(.wasmTypeDef())
+            }
+
+            let instr = b.emit(
+                WasmBranchOnCastFail(
+                    parameterCount: labelParams.count - 1, targetRefType: targetRefType),
                 withInputs: inputs,
                 types: types)
             return Array(instr.outputs)
@@ -5620,7 +5637,9 @@ public class ProgramBuilder {
             fatalError("Could not find or generate wasm variable of type \(type)")
         }
 
-        public func randomWasmReferenceType(withAbstractSuperType type: ILType) -> ILType {
+        public func randomWasmReferenceType(withAbstractSuperType type: ILType) -> (
+            type: ILType, typeDef: Variable?
+        ) {
             assert(type.wasmReferenceType?.isAbstract() == true)
 
             let nullability = type.wasmReferenceType!.nullability
@@ -5646,8 +5665,7 @@ public class ProgramBuilder {
                 }
 
                 if let typeDef {
-                    let desc = b.type(of: typeDef).wasmTypeDefinition!.description!
-                    return ILType.wasmIndexRef(desc, nullability: nullability)
+                    return (.wasmRef(.Index(), nullability: nullability), typeDef)
                 }
             }
 
@@ -5655,7 +5673,7 @@ public class ProgramBuilder {
                 .map { ILType.wasmRef($0, shared: false, nullability: nullability) }
                 .filter { type.subsumes($0) }
 
-            return candidates.randomElement() ?? type
+            return (candidates.randomElement() ?? type, nil)
         }
 
         public func wasmUnreachable() {
