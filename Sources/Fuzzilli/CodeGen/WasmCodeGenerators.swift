@@ -943,6 +943,40 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator(
+        "WasmTableGetGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.object(ofGroup: "WasmTable"))
+    ) { b, table in
+        let tableType = b.type(of: table).wasmTableType!
+        let function = b.currentWasmModule.currentWasmFunction
+        let index = Int.random(in: 0...tableType.limits.min)
+        let indexVar =
+            tableType.isTable64
+            ? function.consti64(Int64(index))
+            : function.consti32(Int32(index))
+        function.wasmTableGet(tableRef: table, idx: indexVar)
+    },
+
+    CodeGenerator(
+        "WasmTableSetGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.object(ofGroup: "WasmTable"))
+    ) { b, table in
+        let tableType = b.type(of: table).wasmTableType!
+        let function = b.currentWasmModule.currentWasmFunction
+        let index = Int.random(in: 0...tableType.limits.min)
+        let indexVar =
+            tableType.isTable64
+            ? function.consti64(Int64(index))
+            : function.consti32(Int32(index))
+        guard
+            let value = b.randomVariable(ofType: tableType.elementType)
+                ?? function.generateRandomWasmVar(ofType: tableType.elementType)
+        else {
+            return
+        }
+        function.wasmTableSet(tableRef: table, idx: indexVar, to: value)
+    },
+
+    CodeGenerator(
         "WasmCallIndirectGenerator", inContext: .single(.wasmFunction),
         inputs: .required(.object(ofGroup: "WasmTable"))
     ) { b, table in

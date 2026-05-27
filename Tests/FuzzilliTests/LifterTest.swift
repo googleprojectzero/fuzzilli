@@ -4885,7 +4885,7 @@ class LifterTests: XCTestCase {
     }
 
     func testImportNamespaceLifting() {
-        let config = Configuration(generateBundle: true)
+        let config = Configuration(logLevel: .error, generateBundle: true)
         let fuzzer = makeMockFuzzer(config: config)
         let b = fuzzer.makeBuilder()
 

@@ -281,6 +281,8 @@ public let codeGeneratorWeights = [
     "WasmDropElementSegmentGenerator":          1,
     "WasmTableSizeGenerator":                   5,
     "WasmTableGrowGenerator":                   1,
+    "WasmTableGetGenerator":                    5,
+    "WasmTableSetGenerator":                    5,
     "WasmGlobalStoreGenerator":                 2,
     "WasmGlobalLoadGenerator":                  2,
     "WasmReassignmentGenerator":                2,
