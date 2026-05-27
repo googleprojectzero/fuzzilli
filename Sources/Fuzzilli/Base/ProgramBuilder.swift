@@ -4120,97 +4120,19 @@ public class ProgramBuilder {
         emit(EndForLoop())
     }
 
-    public func buildForInLoop(_ obj: Variable, _ body: (Variable, Variable) -> Void) {
-        let instr = emit(BeginForInLoop(), withInputs: [obj])
-        body(instr.innerOutput(0), instr.innerOutput(1))
-        emit(EndForInLoop())
-    }
-
-    public func buildForInLoop(_ obj: Variable, _ body: (Variable) -> Void) {
-        buildForInLoop(obj) { i, _ in body(i) }
-    }
-
-    public func buildForOfLoop(_ obj: Variable, _ body: (Variable, Variable) -> Void) {
-        let instr = emit(BeginForOfLoop(), withInputs: [obj])
-        body(instr.innerOutput(0), instr.innerOutput(1))
-        emit(EndForOfLoop())
-    }
-
-    public func buildForAwaitOfLoop(_ obj: Variable, _ body: (Variable, Variable) -> Void) {
-        let instr = emit(BeginForAwaitOfLoop(), withInputs: [obj])
-        body(instr.innerOutput(0), instr.innerOutput(1))
-        emit(EndForOfLoop())
-    }
-
-    public func buildForOfLoop(_ obj: Variable, _ body: (Variable) -> Void) {
-        buildForOfLoop(obj) { i, _ in body(i) }
-    }
-
-    public func buildForAwaitOfLoop(_ obj: Variable, _ body: (Variable) -> Void) {
-        buildForAwaitOfLoop(obj) { i, _ in body(i) }
-    }
-
-    public func buildForOfLoop(
-        _ obj: Variable, selecting indices: [Int64], hasRestElement: Bool = false,
+    public func buildForInOfLoop(
+        _ obj: Variable,
+        type: ForInOfLoopType,
+        isAsync: Bool,
+        header: LoopHeader,
         _ body: ([Variable], Variable) -> Void
     ) {
-        let instr = emit(
-            BeginForOfLoopWithDestruct(indices: indices, hasRestElement: hasRestElement),
-            withInputs: [obj])
+        let beginOp = ForLoop(type: type, isAsync: isAsync, header: header)
+        let instr = emit(beginOp, withInputs: [obj])
         let label = instr.innerOutputs.last!
         let vars = instr.innerOutputs.dropLast()
         body(Array(vars), label)
-        emit(EndForOfLoop())
-    }
-
-    public func buildForOfLoop(
-        _ obj: Variable, selecting indices: [Int64], hasRestElement: Bool = false,
-        _ body: ([Variable]) -> Void
-    ) {
-        buildForOfLoop(obj, selecting: indices, hasRestElement: hasRestElement) { vars, _ in
-            body(vars)
-        }
-    }
-
-    public func buildForAwaitOfLoop(
-        _ obj: Variable, selecting indices: [Int64], hasRestElement: Bool = false,
-        _ body: ([Variable], Variable) -> Void
-    ) {
-        let instr = emit(
-            BeginForAwaitOfLoopWithDestruct(indices: indices, hasRestElement: hasRestElement),
-            withInputs: [obj])
-        let label = instr.innerOutputs.last!
-        let vars = instr.innerOutputs.dropLast()
-        body(Array(vars), label)
-        emit(EndForOfLoop())
-    }
-
-    public func buildForOfLoop(
-        _ obj: Variable, selectingProperties properties: [String], hasRestElement: Bool = false,
-        _ body: ([Variable], Variable) -> Void
-    ) {
-        let instr = emit(
-            BeginForOfLoopWithObjectDestruct(
-                properties: properties, hasRestElement: hasRestElement),
-            withInputs: [obj])
-        let label = instr.innerOutputs.last!
-        let vars = instr.innerOutputs.dropLast()
-        body(Array(vars), label)
-        emit(EndForOfLoop())
-    }
-
-    public func buildForAwaitOfLoop(
-        _ obj: Variable, selectingProperties properties: [String], hasRestElement: Bool = false,
-        _ body: ([Variable], Variable) -> Void
-    ) {
-        let instr = emit(
-            BeginForAwaitOfLoopWithObjectDestruct(
-                properties: properties, hasRestElement: hasRestElement),
-            withInputs: [obj])
-        let label = instr.innerOutputs.last!
-        let vars = instr.innerOutputs.dropLast()
-        body(Array(vars), label)
-        emit(EndForOfLoop())
+        emit(EndForLoop())
     }
 
     public func buildRepeatLoop(n numIterations: Int, _ body: (Variable, Variable) -> Void) {

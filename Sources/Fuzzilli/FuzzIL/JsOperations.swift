@@ -2353,133 +2353,78 @@ final class EndForLoop: JsOperation {
     }
 }
 
-// Note: The last innerOutput is the label of the loop.
-final class BeginForInLoop: JsOperation {
-    override var opcode: Opcode { .beginForInLoop(self) }
-
-    init() {
-        super.init(
-            numInputs: 1, numInnerOutputs: 2,
-            attributes: [.isBlockStart, .propagatesSurroundingContext],
-            contextOpened: [.javascript, .loop])
-    }
-}
-
-final class EndForInLoop: JsOperation {
-    override var opcode: Opcode { .endForInLoop(self) }
-
-    init() {
-        super.init(attributes: .isBlockEnd)
-    }
+public enum ForInOfLoopType {
+    case forIn
+    case forOf
 }
 
 // Note: The last innerOutput is the label of the loop.
-final class BeginForOfLoop: JsOperation {
-    override var opcode: Opcode { .beginForOfLoop(self) }
-
-    init() {
-        super.init(
-            numInputs: 1, numInnerOutputs: 2,
-            attributes: [.isBlockStart, .propagatesSurroundingContext],
-            contextOpened: [.javascript, .loop])
-    }
+public enum LoopHeader: Hashable {
+    case simple
+    case arrayDestruct(indices: [Int64], hasRestElement: Bool)
+    case objectDestruct(properties: [String], hasRestElement: Bool)
 }
 
-final class BeginForAwaitOfLoop: JsOperation {
-    override var opcode: Opcode { .beginForAwaitOfLoop(self) }
+final class ForLoop: JsOperation {
+    let header: LoopHeader
+    let isAsync: Bool
+    let type: ForInOfLoopType
+    public var isForIn: Bool { return type == .forIn }
 
-    init() {
+    init(type: ForInOfLoopType, isAsync: Bool = false, header: LoopHeader = .simple) {
+        self.header = header
+        self.isAsync = isAsync
+        self.type = type
+
+        if type == .forIn {
+            assert(!isAsync, "For-in loops cannot be async")
+            assert(header == .simple, "For-in loops cannot have destructuring headers")
+        }
+
+        let numInnerOutputs: Int
+
+        switch header {
+        case .simple:
+            numInnerOutputs = 2
+
+        case .arrayDestruct(let indices, _):
+            assert(indices.count >= 1)
+            assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+            assert(indices.count == Set(indices).count, "Indices must not have duplicates")
+            numInnerOutputs = indices.count + 1  // loop label is appended
+
+        case .objectDestruct(let properties, let hasRestElement):
+            assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
+            numInnerOutputs = properties.count + (hasRestElement ? 1 : 0) + 1  // loop label is appended
+        }
+
         super.init(
-            numInputs: 1,
-            numInnerOutputs: 2,
+            numInputs: 1, numInnerOutputs: numInnerOutputs,
             attributes: [.isBlockStart, .propagatesSurroundingContext],
-            requiredContext: [.javascript, .asyncFunction],
-            contextOpened: [.javascript, .loop]
-        )
-    }
-}
-
-// Note: The last innerOutput is the label of the loop.
-final class BeginForOfLoopWithDestruct: JsOperation {
-    override var opcode: Opcode { .beginForOfLoopWithDestruct(self) }
-
-    let indices: [Int64]
-    let hasRestElement: Bool
-
-    init(indices: [Int64], hasRestElement: Bool) {
-        assert(indices.count >= 1)
-        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
-        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
-        self.indices = indices
-        self.hasRestElement = hasRestElement
-        super.init(
-            numInputs: 1, numInnerOutputs: indices.count + 1,
-            attributes: [.isBlockStart, .propagatesSurroundingContext],
-            contextOpened: [.javascript, .loop])
-    }
-}
-
-final class BeginForAwaitOfLoopWithDestruct: JsOperation {
-    override var opcode: Opcode { .beginForAwaitOfLoopWithDestruct(self) }
-
-    let indices: [Int64]
-    let hasRestElement: Bool
-
-    init(indices: [Int64], hasRestElement: Bool) {
-        assert(indices.count >= 1)
-        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
-        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
-        self.indices = indices
-        self.hasRestElement = hasRestElement
-        super.init(
-            numInputs: 1, numInnerOutputs: indices.count + 1,
-            attributes: [.isBlockStart, .propagatesSurroundingContext],
-            requiredContext: [.javascript, .asyncFunction],
+            requiredContext: isAsync ? [.javascript, .asyncFunction] : [.javascript],
             contextOpened: [.loop])
     }
-}
 
-final class BeginForOfLoopWithObjectDestruct: JsOperation {
-    override var opcode: Opcode { .beginForOfLoopWithObjectDestruct(self) }
-
-    let properties: [String]
-    let hasRestElement: Bool
-
-    init(properties: [String], hasRestElement: Bool) {
-        assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
-        self.properties = properties
-        self.hasRestElement = hasRestElement
-        super.init(
-            numInputs: 1, numInnerOutputs: properties.count + (hasRestElement ? 1 : 0) + 1,
-            attributes: [.isBlockStart, .propagatesSurroundingContext],
-            requiredContext: [.javascript],
-            contextOpened: [.loop])
+    var indices: [Int64] {
+        if case .arrayDestruct(let indices, _) = self.header { return indices }
+        preconditionFailure("Invalid header for ForLoop indices")
     }
-}
 
-final class BeginForAwaitOfLoopWithObjectDestruct: JsOperation {
-    override var opcode: Opcode { .beginForAwaitOfLoopWithObjectDestruct(self) }
-
-    let properties: [String]
-    let hasRestElement: Bool
-
-    init(properties: [String], hasRestElement: Bool) {
-        assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
-        self.properties = properties
-        self.hasRestElement = hasRestElement
-        super.init(
-            numInputs: 1, numInnerOutputs: properties.count + (hasRestElement ? 1 : 0) + 1,
-            attributes: [.isBlockStart, .propagatesSurroundingContext],
-            requiredContext: [.javascript, .asyncFunction],
-            contextOpened: [.loop])
+    var properties: [String] {
+        if case .objectDestruct(let properties, _) = self.header { return properties }
+        preconditionFailure("Invalid header for ForLoop properties")
     }
-}
 
-final class EndForOfLoop: JsOperation {
-    override var opcode: Opcode { .endForOfLoop(self) }
+    var hasRestElement: Bool {
+        switch self.header {
+        case .arrayDestruct(_, let hasRest): return hasRest
+        case .objectDestruct(_, let hasRest): return hasRest
+        default: preconditionFailure("Invalid header for ForLoop hasRestElement")
+        }
+    }
 
-    init() {
-        super.init(attributes: .isBlockEnd)
+    override var opcode: Opcode {
+        return .beginForLoop(self)
     }
 }
 

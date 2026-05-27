@@ -687,7 +687,8 @@ public let HomomorphicFeedbackFuzzer = ProgramTemplate("HomomorphicFeedbackFuzze
     let warmupObjects = Array(objects.prefix(5))
     let warmupArray = b.createArray(with: warmupObjects)
 
-    b.buildForOfLoop(warmupArray) { obj in
+    b.buildForInOfLoop(warmupArray, type: .forOf, isAsync: false, header: .simple) { vars, _ in
+        let obj = vars[0]
         b.callFunction(f, withArgs: [obj])
     }
 
@@ -695,7 +696,8 @@ public let HomomorphicFeedbackFuzzer = ProgramTemplate("HomomorphicFeedbackFuzze
 
     // Call the target function with all the objects
     let allObjectsArray = b.createArray(with: objects)
-    b.buildForOfLoop(allObjectsArray) { obj in
+    b.buildForInOfLoop(allObjectsArray, type: .forOf, isAsync: false, header: .simple) { vars, _ in
+        let obj = vars[0]
         b.callFunction(f, withArgs: [obj])
     }
 }

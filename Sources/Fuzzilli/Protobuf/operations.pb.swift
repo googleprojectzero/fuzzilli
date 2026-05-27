@@ -3813,56 +3813,96 @@ public struct Fuzzilli_Protobuf_EndForLoop: Sendable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForInLoop: Sendable {
+public struct Fuzzilli_Protobuf_BeginForLoop: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var loopType: Fuzzilli_Protobuf_BeginForLoop.ForInOfLoopType = .forOf
 
-  public init() {}
-}
+  public var isAsync: Bool = false
 
-public struct Fuzzilli_Protobuf_EndForInLoop: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginForOfLoop: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginForOfLoopWithDestruct: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
+  public var headerType: Fuzzilli_Protobuf_BeginForLoop.HeaderType = .simple
 
   public var indices: [Int32] = []
+
+  public var properties: [String] = []
 
   public var hasRestElement_p: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public init() {}
-}
+  public enum ForInOfLoopType: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case forOf // = 0
+    case forIn // = 1
+    case UNRECOGNIZED(Int)
 
-public struct Fuzzilli_Protobuf_EndForOfLoop: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
+    public init() {
+      self = .forOf
+    }
 
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .forOf
+      case 1: self = .forIn
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .forOf: return 0
+      case .forIn: return 1
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [Fuzzilli_Protobuf_BeginForLoop.ForInOfLoopType] = [
+      .forOf,
+      .forIn,
+    ]
+
+  }
+
+  public enum HeaderType: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case simple // = 0
+    case arrayDestruct // = 1
+    case objectDestruct // = 2
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .simple
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .simple
+      case 1: self = .arrayDestruct
+      case 2: self = .objectDestruct
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .simple: return 0
+      case .arrayDestruct: return 1
+      case .objectDestruct: return 2
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [Fuzzilli_Protobuf_BeginForLoop.HeaderType] = [
+      .simple,
+      .arrayDestruct,
+      .objectDestruct,
+    ]
+
+  }
 
   public init() {}
 }
@@ -6485,58 +6525,6 @@ public struct Fuzzilli_Protobuf_CreateMap: Sendable {
 
   fileprivate var _keyGroupName: String? = nil
   fileprivate var _valueGroupName: String? = nil
-}
-
-public struct Fuzzilli_Protobuf_BeginForAwaitOfLoop: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginForAwaitOfLoopWithDestruct: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var indices: [Int32] = []
-
-  public var hasRestElement_p: Bool = false
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginForOfLoopWithObjectDestruct: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var properties: [String] = []
-
-  public var hasRestElement_p: Bool = false
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_BeginForAwaitOfLoopWithObjectDestruct: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var properties: [String] = []
-
-  public var hasRestElement_p: Bool = false
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -11064,66 +11052,9 @@ extension Fuzzilli_Protobuf_EndForLoop: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 }
 
-extension Fuzzilli_Protobuf_BeginForInLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginForInLoop"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    // Load everything into unknown fields
-    while try decoder.nextFieldNumber() != nil {}
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginForInLoop, rhs: Fuzzilli_Protobuf_BeginForInLoop) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_EndForInLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EndForInLoop"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    // Load everything into unknown fields
-    while try decoder.nextFieldNumber() != nil {}
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_EndForInLoop, rhs: Fuzzilli_Protobuf_EndForInLoop) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_BeginForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginForOfLoop"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    // Load everything into unknown fields
-    while try decoder.nextFieldNumber() != nil {}
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginForOfLoop, rhs: Fuzzilli_Protobuf_BeginForOfLoop) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_BeginForOfLoopWithDestruct: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginForOfLoopWithDestruct"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}indices\0\u{1}hasRestElement\0")
+extension Fuzzilli_Protobuf_BeginForLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginForLoop"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}loopType\0\u{1}isAsync\0\u{1}headerType\0\u{1}indices\0\u{1}properties\0\u{1}hasRestElement\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11131,48 +11062,57 @@ extension Fuzzilli_Protobuf_BeginForOfLoopWithDestruct: SwiftProtobuf.Message, S
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.loopType) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isAsync) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.headerType) }()
+      case 4: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
+      case 5: try { try decoder.decodeRepeatedStringField(value: &self.properties) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.loopType != .forOf {
+      try visitor.visitSingularEnumField(value: self.loopType, fieldNumber: 1)
+    }
+    if self.isAsync != false {
+      try visitor.visitSingularBoolField(value: self.isAsync, fieldNumber: 2)
+    }
+    if self.headerType != .simple {
+      try visitor.visitSingularEnumField(value: self.headerType, fieldNumber: 3)
+    }
     if !self.indices.isEmpty {
-      try visitor.visitPackedInt32Field(value: self.indices, fieldNumber: 1)
+      try visitor.visitPackedInt32Field(value: self.indices, fieldNumber: 4)
+    }
+    if !self.properties.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.properties, fieldNumber: 5)
     }
     if self.hasRestElement_p != false {
-      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 2)
+      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 6)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginForOfLoopWithDestruct, rhs: Fuzzilli_Protobuf_BeginForOfLoopWithDestruct) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginForLoop, rhs: Fuzzilli_Protobuf_BeginForLoop) -> Bool {
+    if lhs.loopType != rhs.loopType {return false}
+    if lhs.isAsync != rhs.isAsync {return false}
+    if lhs.headerType != rhs.headerType {return false}
     if lhs.indices != rhs.indices {return false}
+    if lhs.properties != rhs.properties {return false}
     if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_EndForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EndForOfLoop"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+extension Fuzzilli_Protobuf_BeginForLoop.ForInOfLoopType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0FOR_OF\0\u{1}FOR_IN\0")
+}
 
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    // Load everything into unknown fields
-    while try decoder.nextFieldNumber() != nil {}
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_EndForOfLoop, rhs: Fuzzilli_Protobuf_EndForOfLoop) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
+extension Fuzzilli_Protobuf_BeginForLoop.HeaderType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SIMPLE\0\u{1}ARRAY_DESTRUCT\0\u{1}OBJECT_DESTRUCT\0")
 }
 
 extension Fuzzilli_Protobuf_BeginRepeatLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -16742,130 +16682,6 @@ extension Fuzzilli_Protobuf_CreateMap: SwiftProtobuf.Message, SwiftProtobuf._Mes
   public static func ==(lhs: Fuzzilli_Protobuf_CreateMap, rhs: Fuzzilli_Protobuf_CreateMap) -> Bool {
     if lhs._keyGroupName != rhs._keyGroupName {return false}
     if lhs._valueGroupName != rhs._valueGroupName {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_BeginForAwaitOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginForAwaitOfLoop"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    // Load everything into unknown fields
-    while try decoder.nextFieldNumber() != nil {}
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginForAwaitOfLoop, rhs: Fuzzilli_Protobuf_BeginForAwaitOfLoop) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_BeginForAwaitOfLoopWithDestruct: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginForAwaitOfLoopWithDestruct"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}indices\0\u{1}hasRestElement\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.indices.isEmpty {
-      try visitor.visitPackedInt32Field(value: self.indices, fieldNumber: 1)
-    }
-    if self.hasRestElement_p != false {
-      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginForAwaitOfLoopWithDestruct, rhs: Fuzzilli_Protobuf_BeginForAwaitOfLoopWithDestruct) -> Bool {
-    if lhs.indices != rhs.indices {return false}
-    if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_BeginForOfLoopWithObjectDestruct: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginForOfLoopWithObjectDestruct"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}properties\0\u{1}hasRestElement\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedStringField(value: &self.properties) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.properties.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.properties, fieldNumber: 1)
-    }
-    if self.hasRestElement_p != false {
-      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginForOfLoopWithObjectDestruct, rhs: Fuzzilli_Protobuf_BeginForOfLoopWithObjectDestruct) -> Bool {
-    if lhs.properties != rhs.properties {return false}
-    if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_BeginForAwaitOfLoopWithObjectDestruct: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginForAwaitOfLoopWithObjectDestruct"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}properties\0\u{1}hasRestElement\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedStringField(value: &self.properties) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.properties.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.properties, fieldNumber: 1)
-    }
-    if self.hasRestElement_p != false {
-      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginForAwaitOfLoopWithObjectDestruct, rhs: Fuzzilli_Protobuf_BeginForAwaitOfLoopWithObjectDestruct) -> Bool {
-    if lhs.properties != rhs.properties {return false}
-    if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

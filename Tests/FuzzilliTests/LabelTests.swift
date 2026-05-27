@@ -80,7 +80,7 @@ class LabelTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let obj = b.createObject(with: [:])
-        b.buildForInLoop(obj) { i, label in
+        b.buildForInOfLoop(obj, type: .forIn, isAsync: false, header: .simple) { vars, label in
             XCTAssertEqual(b.type(of: label), .jsLoopLabel)
             b.loopBreak(label)
         }
@@ -101,7 +101,7 @@ class LabelTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let obj = b.createArray(with: [])
-        b.buildForOfLoop(obj) { i, label in
+        b.buildForInOfLoop(obj, type: .forOf, isAsync: false, header: .simple) { vars, label in
             XCTAssertEqual(b.type(of: label), .jsLoopLabel)
             b.loopBreak(label)
         }
@@ -152,7 +152,8 @@ class LabelTests: XCTestCase {
                     b.loopBreak(forLabel)
 
                     let obj = b.createObject(with: [:])
-                    b.buildForInLoop(obj) { i, forInLabel in
+                    b.buildForInOfLoop(obj, type: .forIn, isAsync: false, header: .simple) {
+                        vars, forInLabel in
                         b.loopContinue(forInLabel)
                         b.loopBreak(forLabel)
 
@@ -162,7 +163,9 @@ class LabelTests: XCTestCase {
                                 b.loopBreak(doWhileLabel)
 
                                 let arr = b.createArray(with: [])
-                                b.buildForOfLoop(arr) { i, forOfLabel in
+                                b.buildForInOfLoop(
+                                    arr, type: .forOf, isAsync: false, header: .simple
+                                ) { vars, forOfLabel in
                                     b.loopContinue(forOfLabel)
                                     b.loopBreak(forInLabel)
 
@@ -217,11 +220,14 @@ class LabelTests: XCTestCase {
                 i: { b.loadInt(0) }, { i in b.loadBool(true) }, { i in },
                 { i in
                     let obj = b.createObject(with: [:])
-                    b.buildForInLoop(obj) { i in
+                    b.buildForInOfLoop(obj, type: .forIn, isAsync: false, header: .simple) {
+                        vars, _ in
                         b.buildDoWhileLoop(
                             do: {
                                 let arr = b.createArray(with: [])
-                                b.buildForOfLoop(arr) { i in
+                                b.buildForInOfLoop(
+                                    arr, type: .forOf, isAsync: false, header: .simple
+                                ) { vars, _ in
                                     b.buildRepeatLoop(n: 10) { i in
                                         b.loadInt(42)
                                     }

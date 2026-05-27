@@ -751,21 +751,24 @@ message BeginForLoopBody {
 message EndForLoop {
 }
 
-message BeginForInLoop {
-}
+message BeginForLoop {
+    enum ForInOfLoopType {
+        FOR_OF = 0;
+        FOR_IN = 1;
+    }
+    enum HeaderType {
+        SIMPLE = 0;
+        ARRAY_DESTRUCT = 1;
+        OBJECT_DESTRUCT = 2;
+    }
 
-message EndForInLoop {
-}
+    ForInOfLoopType loopType = 1;
+    bool isAsync = 2;
+    HeaderType headerType = 3;
 
-message BeginForOfLoop {
-}
-
-message BeginForOfLoopWithDestruct {
-    repeated int32 indices = 1;
-    bool hasRestElement = 2;
-}
-
-message EndForOfLoop {
+    repeated int32 indices = 4;
+    repeated string properties = 5;
+    bool hasRestElement = 6;
 }
 
 message BeginRepeatLoop {
@@ -1787,20 +1790,4 @@ message CreateMap {
     optional string valueGroupName = 2;
 }
 
-message BeginForAwaitOfLoop {
-}
 
-message BeginForAwaitOfLoopWithDestruct {
-    repeated int32 indices = 1;
-    bool hasRestElement = 2;
-}
-
-message BeginForOfLoopWithObjectDestruct {
-    repeated string properties = 1;
-    bool hasRestElement = 2;
-}
-
-message BeginForAwaitOfLoopWithObjectDestruct {
-    repeated string properties = 1;
-    bool hasRestElement = 2;
-}

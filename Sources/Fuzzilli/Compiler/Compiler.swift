@@ -577,7 +577,7 @@ public class JavaScriptCompiler {
 
             let obj = try compileExpression(forInLoop.right)
 
-            let instr = emit(BeginForInLoop(), withInputs: [obj])
+            let instr = emit(ForLoop(type: .forIn), withInputs: [obj])
             let loopVar = instr.innerOutput(0)
             let loopLabelVariable = instr.innerOutput(1)
             try enterNewScope(
@@ -587,7 +587,7 @@ public class JavaScriptCompiler {
                 try compileBody(forInLoop.body)
             }
 
-            emit(EndForInLoop())
+            emit(EndForLoop())
 
         case .forOfLoop(let forOfLoop):
             let initializer = forOfLoop.left
@@ -598,7 +598,7 @@ public class JavaScriptCompiler {
 
             let obj = try compileExpression(forOfLoop.right)
 
-            let instr = emit(BeginForOfLoop(), withInputs: [obj])
+            let instr = emit(ForLoop(type: .forOf), withInputs: [obj])
             let loopVar = instr.innerOutput(0)
             let loopLabelVariable = instr.innerOutput(1)
             try enterNewScope(
@@ -608,7 +608,7 @@ public class JavaScriptCompiler {
                 try compileBody(forOfLoop.body)
             }
 
-            emit(EndForOfLoop())
+            emit(EndForLoop())
 
         case .breakStatement(let breakStatement):
             if !breakStatement.label.isEmpty {

@@ -3592,9 +3592,13 @@ class LifterTests: XCTestCase {
         let a3 = b.createArray(with: [b.loadInt(30), b.loadInt(31), b.loadInt(32)])
         let a4 = b.createArray(with: [a1, a2, a3])
         let print = b.createNamedVariable(forBuiltin: "print")
-        b.buildForOfLoop(a4, selecting: [0, 2], hasRestElement: true) { args in
+        b.buildForInOfLoop(
+            a4, type: .forOf, isAsync: false,
+            header: .arrayDestruct(indices: [0, 2], hasRestElement: true)
+        ) { args, _ in
             b.callFunction(print, withArgs: [args[0]])
-            b.buildForOfLoop(args[1]) { v in
+            b.buildForInOfLoop(args[1], type: .forOf, isAsync: false, header: .simple) { vars, _ in
+                let v = vars[0]
                 b.callFunction(print, withArgs: [v])
             }
         }
@@ -3621,7 +3625,8 @@ class LifterTests: XCTestCase {
 
         let v0 = b.loadInt(1337)
         let v1 = b.createObject(with: ["a": v0])
-        b.buildForInLoop(v1) { v2 in
+        b.buildForInOfLoop(v1, type: .forIn, isAsync: false, header: .simple) { vars, _ in
+            let v2 = vars[0]
             b.buildBlockStatement {
                 let v3 = b.loadInt(1337)
                 b.reassign(variable: v2, value: v3)
@@ -4730,8 +4735,9 @@ class LifterTests: XCTestCase {
         b.buildAsyncFunction(with: .parameters(n: 1)) { args in
             let asyncIterable = args[0]
 
-            b.buildForAwaitOfLoop(asyncIterable) { loopVar, label in
-                // Inside loop body: call 'print(loopVar)'
+            b.buildForInOfLoop(asyncIterable, type: .forOf, isAsync: true, header: .simple) {
+                vars, label in
+                let loopVar = vars[0]
                 let printFunc = b.createNamedVariable(forBuiltin: "print")
                 b.callFunction(printFunc, withArgs: [loopVar])
             }
@@ -4743,8 +4749,8 @@ class LifterTests: XCTestCase {
         let fuzzILOutput = fuzzILLifter.lift(program)
 
         // Assert FuzzIL contains our new instructions
-        XCTAssertTrue(fuzzILOutput.contains("BeginForAwaitOfLoop"))
-        XCTAssertTrue(fuzzILOutput.contains("EndForOfLoop"))
+        XCTAssertTrue(fuzzILOutput.contains("BeginForLoop type='forOf' async='true'"))
+        XCTAssertTrue(fuzzILOutput.contains("EndForLoop"))
 
         let jsLifter = JavaScriptLifter(
             prefix: "",
@@ -4774,11 +4780,15 @@ class LifterTests: XCTestCase {
 
         b.buildAsyncFunction(with: .parameters(n: 1)) { args in
             let asyncIterable = args[0]
-            b.buildForAwaitOfLoop(asyncIterable, selecting: [0, 2], hasRestElement: true) {
-                args, _ in
+            b.buildForInOfLoop(
+                asyncIterable, type: .forOf, isAsync: true,
+                header: .arrayDestruct(indices: [0, 2], hasRestElement: true)
+            ) { args, _ in
                 let print = b.createNamedVariable(forBuiltin: "print")
                 b.callFunction(print, withArgs: [args[0]])
-                b.buildForOfLoop(args[1]) { v in
+                b.buildForInOfLoop(args[1], type: .forOf, isAsync: false, header: .simple) {
+                    vars, _ in
+                    let v = vars[0]
                     b.callFunction(print, withArgs: [v])
                 }
             }
@@ -4811,8 +4821,9 @@ class LifterTests: XCTestCase {
 
         b.buildPlainFunction(with: .parameters(n: 1)) { args in
             let iterable = args[0]
-            b.buildForOfLoop(
-                iterable, selectingProperties: ["name", "department"], hasRestElement: true
+            b.buildForInOfLoop(
+                iterable, type: .forOf, isAsync: false,
+                header: .objectDestruct(properties: ["name", "department"], hasRestElement: true)
             ) { args, _ in
                 let print = b.createNamedVariable(forBuiltin: "print")
                 b.callFunction(print, withArgs: [args[0]])  // name
@@ -4847,8 +4858,9 @@ class LifterTests: XCTestCase {
 
         b.buildAsyncFunction(with: .parameters(n: 1)) { args in
             let asyncIterable = args[0]
-            b.buildForAwaitOfLoop(
-                asyncIterable, selectingProperties: ["name", "department"], hasRestElement: false
+            b.buildForInOfLoop(
+                asyncIterable, type: .forOf, isAsync: true,
+                header: .objectDestruct(properties: ["name", "department"], hasRestElement: false)
             ) { args, _ in
                 let print = b.createNamedVariable(forBuiltin: "print")
                 b.callFunction(print, withArgs: [args[0]])  // name

@@ -2420,7 +2420,8 @@ class ProgramBuilderTests: XCTestCase {
         var o1 = b.createObject(with: ["foo": i, "bar": s, "baz": f])
         b.loadString("unused")
         var o2 = b.createObject(with: [:])
-        b.buildForInLoop(o1) { p in
+        b.buildForInOfLoop(o1, type: .forIn, isAsync: false, header: .simple) { vars, _ in
+            let p = vars[0]
             let i = b.loadInt(1337)
             b.loadString("unusedButPartOfBody")
             splicePoint = b.indexOfNextInstruction()
@@ -2443,7 +2444,8 @@ class ProgramBuilderTests: XCTestCase {
         f = b.loadFloat(13.37)
         o1 = b.createObject(with: ["foo": i, "bar": s, "baz": f])
         o2 = b.createObject(with: [:])
-        b.buildForInLoop(o1) { p in
+        b.buildForInOfLoop(o1, type: .forIn, isAsync: false, header: .simple) { vars, _ in
+            let p = vars[0]
             let i = b.loadInt(1337)
             b.loadString("unusedButPartOfBody")
             b.setComputedProperty(p, of: o2, to: i)

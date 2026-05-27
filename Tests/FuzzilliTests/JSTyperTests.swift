@@ -838,12 +838,14 @@ class JSTyperTests: XCTestCase {
                 }
                 break
             case 2:
-                b.buildForInLoop(obj) { loopVar in
+                b.buildForInOfLoop(obj, type: .forIn, isAsync: false, header: .simple) { vars, _ in
+                    let loopVar = vars[0]
                     XCTAssertEqual(b.type(of: loopVar), .string)
                     body()
                 }
             case 3:
-                b.buildForOfLoop(obj) { loopVar in
+                b.buildForInOfLoop(obj, type: .forOf, isAsync: false, header: .simple) { vars, _ in
+                    let loopVar = vars[0]
                     XCTAssertEqual(b.type(of: loopVar), .jsAnything)
                     body()
                 }

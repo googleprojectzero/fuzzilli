@@ -204,17 +204,9 @@ extension Operation {
             return endOp is BeginForLoopAfterthought
         case .beginForLoopAfterthought:
             return endOp is BeginForLoopBody
-        case .beginForLoopBody:
+        case .beginForLoopBody,
+            .beginForLoop:
             return endOp is EndForLoop
-        case .beginForInLoop:
-            return endOp is EndForInLoop
-        case .beginForOfLoop,
-            .beginForAwaitOfLoop,
-            .beginForOfLoopWithDestruct,
-            .beginForAwaitOfLoopWithDestruct,
-            .beginForOfLoopWithObjectDestruct,
-            .beginForAwaitOfLoopWithObjectDestruct:
-            return endOp is EndForOfLoop
         case .beginRepeatLoop:
             return endOp is EndRepeatLoop
         case .beginTry:

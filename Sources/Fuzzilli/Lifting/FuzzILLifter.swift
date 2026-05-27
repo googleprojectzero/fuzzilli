@@ -732,64 +732,29 @@ public class FuzzILLifter: Lifter {
             w.emit("BeginForLoopBody -> \(loopVariablesAndLabel)")
             w.increaseIndentionLevel()
 
+        case .beginForLoop(let op):
+            let outputs = instr.innerOutputs.dropLast().map(lift)
+            let label = lift(instr.innerOutputs.last!)
+            let line = "BeginForLoop type='\(op.type)' async='\(op.isAsync)'"
+
+            switch op.header {
+            case .simple:
+                let allOutputs = instr.innerOutputs.map(lift).joined(separator: ", ")
+                w.emit("\(line) \(input(0)) -> \(allOutputs)")
+            case .arrayDestruct(let indices, let hasRest):
+                let pattern =
+                    " -> [\(liftArrayDestructPattern(indices: indices, outputs: outputs, hasRestElement: hasRest))], \(label)"
+                w.emit("\(line) \(input(0))\(pattern)")
+            case .objectDestruct(let properties, let hasRest):
+                let pattern =
+                    " -> {\(liftObjectDestructPattern(properties: properties, outputs: outputs, hasRestElement: hasRest))}, \(label)"
+                w.emit("\(line) \(input(0))\(pattern)")
+            }
+            w.increaseIndentionLevel()
+
         case .endForLoop:
             w.decreaseIndentionLevel()
             w.emit("EndForLoop")
-
-        case .beginForInLoop:
-            let outputs = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginForInLoop \(input(0)) -> \(outputs)")
-            w.increaseIndentionLevel()
-
-        case .endForInLoop:
-            w.decreaseIndentionLevel()
-            w.emit("EndForInLoop")
-
-        case .beginForOfLoop:
-            let outputs = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginForOfLoop \(input(0)) -> \(outputs)")
-            w.increaseIndentionLevel()
-
-        case .beginForAwaitOfLoop:
-            let outputs = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginForAwaitOfLoop \(input(0)) -> \(outputs)")
-            w.increaseIndentionLevel()
-
-        case .beginForOfLoopWithDestruct(let op):
-            let outputs = instr.innerOutputs.dropLast().map(lift)
-            let label = lift(instr.innerOutputs.last!)
-            w.emit(
-                "BeginForOfLoopWithDestruct \(input(0)) -> [\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))], \(label)"
-            )
-            w.increaseIndentionLevel()
-
-        case .beginForAwaitOfLoopWithDestruct(let op):
-            let outputs = instr.innerOutputs.dropLast().map(lift)
-            let label = lift(instr.innerOutputs.last!)
-            w.emit(
-                "BeginForAwaitOfLoopWithDestruct \(input(0)) -> [\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))], \(label)"
-            )
-            w.increaseIndentionLevel()
-
-        case .beginForOfLoopWithObjectDestruct(let op):
-            let outputs = instr.innerOutputs.dropLast().map(lift)
-            let label = lift(instr.innerOutputs.last!)
-            w.emit(
-                "BeginForOfLoopWithObjectDestruct \(input(0)) -> {\(liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))}, \(label)"
-            )
-            w.increaseIndentionLevel()
-
-        case .beginForAwaitOfLoopWithObjectDestruct(let op):
-            let outputs = instr.innerOutputs.dropLast().map(lift)
-            let label = lift(instr.innerOutputs.last!)
-            w.emit(
-                "BeginForAwaitOfLoopWithObjectDestruct \(input(0)) -> {\(liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))}, \(label)"
-            )
-            w.increaseIndentionLevel()
-
-        case .endForOfLoop:
-            w.decreaseIndentionLevel()
-            w.emit("EndForOfLoop")
 
         case .beginRepeatLoop(let op):
             let outputs = instr.innerOutputs.map(lift).joined(separator: ", ")

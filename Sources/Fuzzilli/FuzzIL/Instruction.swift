@@ -1120,42 +1120,37 @@ extension Instruction: ProtobufConvertible {
                 $0.beginForLoopAfterthought = Fuzzilli_Protobuf_BeginForLoopAfterthought()
             case .beginForLoopBody:
                 $0.beginForLoopBody = Fuzzilli_Protobuf_BeginForLoopBody()
+            case .beginForLoop(let op):
+                $0.beginForLoop = Fuzzilli_Protobuf_BeginForLoop.with {
+                    $0.loopType =
+                        switch op.type {
+                        case .forIn:
+                            .forIn
+                        case .forOf:
+                            .forOf
+                        }
+                    $0.isAsync = op.isAsync
+                    $0.headerType =
+                        switch op.header {
+                        case .simple:
+                            .simple
+                        case .arrayDestruct:
+                            .arrayDestruct
+                        case .objectDestruct:
+                            .objectDestruct
+                        }
+                    if case .arrayDestruct(let indices, let hasRest) = op.header {
+                        $0.indices = indices.map({ Int32($0) })
+                        $0.hasRestElement_p = hasRest
+                    }
+                    if case .objectDestruct(let properties, let hasRest) = op.header {
+                        $0.properties = properties
+                        $0.hasRestElement_p = hasRest
+                    }
+                }
+
             case .endForLoop:
                 $0.endForLoop = Fuzzilli_Protobuf_EndForLoop()
-            case .beginForInLoop:
-                $0.beginForInLoop = Fuzzilli_Protobuf_BeginForInLoop()
-            case .endForInLoop:
-                $0.endForInLoop = Fuzzilli_Protobuf_EndForInLoop()
-            case .beginForOfLoop:
-                $0.beginForOfLoop = Fuzzilli_Protobuf_BeginForOfLoop()
-            case .beginForAwaitOfLoop:
-                $0.beginForAwaitOfLoop = Fuzzilli_Protobuf_BeginForAwaitOfLoop()
-
-            case .beginForOfLoopWithDestruct(let op):
-                $0.beginForOfLoopWithDestruct = Fuzzilli_Protobuf_BeginForOfLoopWithDestruct.with {
-                    $0.indices = op.indices.map({ Int32($0) })
-                    $0.hasRestElement_p = op.hasRestElement
-                }
-            case .beginForAwaitOfLoopWithDestruct(let op):
-                $0.beginForAwaitOfLoopWithDestruct =
-                    Fuzzilli_Protobuf_BeginForAwaitOfLoopWithDestruct.with {
-                        $0.indices = op.indices.map({ Int32($0) })
-                        $0.hasRestElement_p = op.hasRestElement
-                    }
-            case .beginForOfLoopWithObjectDestruct(let op):
-                $0.beginForOfLoopWithObjectDestruct =
-                    Fuzzilli_Protobuf_BeginForOfLoopWithObjectDestruct.with {
-                        $0.properties = op.properties
-                        $0.hasRestElement_p = op.hasRestElement
-                    }
-            case .beginForAwaitOfLoopWithObjectDestruct(let op):
-                $0.beginForAwaitOfLoopWithObjectDestruct =
-                    Fuzzilli_Protobuf_BeginForAwaitOfLoopWithObjectDestruct.with {
-                        $0.properties = op.properties
-                        $0.hasRestElement_p = op.hasRestElement
-                    }
-            case .endForOfLoop:
-                $0.endForOfLoop = Fuzzilli_Protobuf_EndForOfLoop()
             case .beginRepeatLoop(let op):
                 $0.beginRepeatLoop = Fuzzilli_Protobuf_BeginRepeatLoop.with {
                     $0.iterations = Int64(op.iterations)
@@ -2460,30 +2455,35 @@ extension Instruction: ProtobufConvertible {
             op = BeginForLoopAfterthought(numLoopVariables: inouts.count - 1)
         case .beginForLoopBody:
             op = BeginForLoopBody(numLoopVariables: inouts.count - 1)
+        case .beginForLoop(let p):
+            let header: LoopHeader =
+                switch p.headerType {
+                case .simple:
+                    .simple
+                case .arrayDestruct:
+                    .arrayDestruct(
+                        indices: p.indices.map({ Int64($0) }),
+                        hasRestElement: p.hasRestElement_p)
+                case .objectDestruct:
+                    .objectDestruct(
+                        properties: p.properties,
+                        hasRestElement: p.hasRestElement_p)
+                default:
+                    .simple
+                }
+            let type: ForInOfLoopType =
+                switch p.loopType {
+                case .forIn:
+                    .forIn
+                case .forOf:
+                    .forOf
+                default:
+                    .forOf
+                }
+            op = ForLoop(type: type, isAsync: p.isAsync, header: header)
+
         case .endForLoop:
             op = EndForLoop()
-        case .beginForInLoop:
-            op = BeginForInLoop()
-        case .endForInLoop:
-            op = EndForInLoop()
-        case .beginForOfLoop:
-            op = BeginForOfLoop()
-        case .beginForAwaitOfLoop:
-            op = BeginForAwaitOfLoop()
-        case .beginForOfLoopWithDestruct(let p):
-            op = BeginForOfLoopWithDestruct(
-                indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
-        case .beginForAwaitOfLoopWithDestruct(let p):
-            op = BeginForAwaitOfLoopWithDestruct(
-                indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
-        case .beginForOfLoopWithObjectDestruct(let p):
-            op = BeginForOfLoopWithObjectDestruct(
-                properties: p.properties, hasRestElement: p.hasRestElement_p)
-        case .beginForAwaitOfLoopWithObjectDestruct(let p):
-            op = BeginForAwaitOfLoopWithObjectDestruct(
-                properties: p.properties, hasRestElement: p.hasRestElement_p)
-        case .endForOfLoop:
-            op = EndForOfLoop()
         case .beginRepeatLoop(let p):
             op = BeginRepeatLoop(
                 iterations: Int(p.iterations), exposesLoopCounter: p.exposesLoopCounter)

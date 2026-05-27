@@ -270,15 +270,18 @@ class AnalyzerTests: XCTestCase {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 
-            b.buildForInLoop(args[1]) { _ in
+            b.buildForInOfLoop(args[1], type: .forIn, isAsync: false, header: .simple) { _, _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 
-            b.buildForOfLoop(args[2]) { _ in
+            b.buildForInOfLoop(args[2], type: .forOf, isAsync: false, header: .simple) { _, _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 
-            b.buildForOfLoop(args[3], selecting: [0, 1, 3]) { _ in
+            b.buildForInOfLoop(
+                args[3], type: .forOf, isAsync: false,
+                header: .arrayDestruct(indices: [0, 1, 3], hasRestElement: false)
+            ) { _, _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 

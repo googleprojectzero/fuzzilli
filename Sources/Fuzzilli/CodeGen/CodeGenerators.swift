@@ -130,6 +130,92 @@ func disposableClassVariableGeneratorStubs(
     ]
 }
 
+func makeForInOfLoopGenerator(
+    prefix: String,
+    type: ForInOfLoopType,
+    isAsync: Bool,
+    body: @escaping (ProgramBuilder, Variable) -> Void
+) -> CodeGenerator {
+    let generatorName = "\(prefix)Generator"
+    let beginStubName = "\(prefix)BeginGenerator"
+    let endStubName = "\(prefix)EndGenerator"
+
+    let context: GeneratorStub.ContextRequirement =
+        isAsync ? .single(.asyncFunction) : .single(.javascript)
+
+    let inputs: GeneratorStub.Inputs
+    switch type {
+    case .forIn:
+        assert(!isAsync, "async for in is invalid")
+        inputs = .preferred(.object())
+    case .forOf:
+        inputs = .preferred(isAsync ? .asyncIterable() : .iterable())
+    }
+
+    return CodeGenerator(
+        generatorName,
+        [
+            GeneratorStub(
+                beginStubName,
+                inContext: context,
+                inputs: inputs,
+                provides: [.loop, .javascript]
+            ) { b, obj in
+                body(b, obj)
+            },
+            GeneratorStub(
+                endStubName,
+                inContext: .single([.loop, .javascript])
+            ) { b in
+                b.emit(EndForLoop())
+            },
+        ]
+    )
+}
+
+func makeArrayDestructForOfLoopGenerator(
+    prefix: String,
+    isAsync: Bool
+) -> CodeGenerator {
+    return makeForInOfLoopGenerator(prefix: prefix, type: .forOf, isAsync: isAsync) { b, obj in
+        var indices: [Int64] = []
+        for idx in 0..<Int64.random(in: 1..<5) {
+            withProbability(0.8) { indices.append(idx) }
+        }
+        if indices.isEmpty { indices = [0] }
+        let hasRestElement = probability(0.2)
+        let op = ForLoop(
+            type: .forOf, isAsync: isAsync,
+            header: .arrayDestruct(indices: indices, hasRestElement: hasRestElement))
+        let vars = b.emit(op, withInputs: [obj]).innerOutputs
+        if hasRestElement && probability(0.2) {
+            b.getProperty("length", of: vars.dropLast().last!)
+        }
+    }
+}
+
+func makeObjectDestructForOfLoopGenerator(
+    prefix: String,
+    isAsync: Bool
+) -> CodeGenerator {
+    return makeForInOfLoopGenerator(prefix: prefix, type: .forOf, isAsync: isAsync) { b, obj in
+        let elementType = b.type(of: obj).iterableElementType ?? .jsAnything
+        var properties = Set<String>()
+        for _ in 0..<Int.random(in: 1...3) {
+            if let prop = elementType.randomProperty(), !properties.contains(prop) {
+                properties.insert(prop)
+            } else {
+                properties.insert(b.randomCustomPropertyName())
+            }
+        }
+        let hasRestElement = probability(0.2)
+        let op = ForLoop(
+            type: .forOf, isAsync: isAsync,
+            header: .objectDestruct(properties: Array(properties), hasRestElement: hasRestElement))
+        b.emit(op, withInputs: [obj])
+    }
+}
+
 //
 // Code generators.
 //
@@ -2719,208 +2805,49 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator(
-        "ForInLoopGenerator",
-        [
-            GeneratorStub(
-                "ForInLoopBeginGenerator",
-                inputs: .preferred(.object()),
-                provides: [.loop, .javascript]
-            ) { b, obj in
-                b.emit(
-                    BeginForInLoop(), withInputs: [obj]
-                )
-            },
-            GeneratorStub(
-                "ForInLoopEndGenerator",
-                inContext: .single([.loop, .javascript])
-            ) { b in
-                b.emit(EndForInLoop())
-            },
-        ]),
+    makeForInOfLoopGenerator(
+        prefix: "ForInLoop",
+        type: .forIn,
+        isAsync: false
+    ) { b, obj in
+        b.emit(ForLoop(type: .forIn), withInputs: [obj])
+    },
 
-    CodeGenerator(
-        "ForOfLoopGenerator",
-        [
-            GeneratorStub(
-                "ForOfLoopBeginGenerator",
-                inputs: .preferred(.iterable()),
-                provides: [.loop, .javascript]
-            ) { b, obj in
-                b.emit(BeginForOfLoop(), withInputs: [obj])
-            },
-            GeneratorStub(
-                "ForOfLoopEndGenerator",
-                inContext: .single([.loop, .javascript])
-            ) { b in
-                b.emit(EndForOfLoop())
-            },
-        ]),
+    makeForInOfLoopGenerator(
+        prefix: "ForOfLoop",
+        type: .forOf,
+        isAsync: false
+    ) { b, obj in
+        b.emit(ForLoop(type: .forOf), withInputs: [obj])
+    },
 
-    CodeGenerator(
-        "ForAwaitOfLoopGenerator",
-        [
-            GeneratorStub(
-                "ForAwaitOfLoopBeginGenerator",
-                inContext: .single(.asyncFunction),
-                inputs: .preferred(.asyncIterable()),
-                provides: [.loop, .javascript]
-            ) { b, obj in
-                b.emit(BeginForAwaitOfLoop(), withInputs: [obj])
-            },
-            GeneratorStub(
-                "ForAwaitOfLoopEndGenerator",
-                inContext: .single([.loop, .javascript])
-            ) { b in
-                b.emit(EndForOfLoop())
-            },
-        ]),
+    makeForInOfLoopGenerator(
+        prefix: "ForAwaitOfLoop",
+        type: .forOf,
+        isAsync: true
+    ) { b, obj in
+        b.emit(ForLoop(type: .forOf, isAsync: true), withInputs: [obj])
+    },
 
-    CodeGenerator(
-        "ForOfWithDestructLoopGenerator",
-        [
-            GeneratorStub(
-                "ForOfWithDestructLoopBeginGenerator",
-                inputs: .preferred(.iterable()),
-                provides: [.loop, .javascript]
-            ) { b, obj in
-                var indices: [Int64] = []
-                for idx in 0..<Int64.random(in: 1..<5) {
-                    withProbability(0.8) {
-                        indices.append(idx)
-                    }
-                }
+    makeArrayDestructForOfLoopGenerator(
+        prefix: "ForOfWithArrayDestructLoop",
+        isAsync: false
+    ),
 
-                if indices.isEmpty {
-                    indices = [0]
-                }
+    makeArrayDestructForOfLoopGenerator(
+        prefix: "ForAwaitOfWithArrayDestructLoop",
+        isAsync: true
+    ),
 
-                let hasRestElement = probability(0.2)
-                let vars = b.emit(
-                    BeginForOfLoopWithDestruct(
-                        indices: indices, hasRestElement: hasRestElement),
-                    withInputs: [obj]
-                ).innerOutputs
-                if hasRestElement && probability(0.2) {
-                    b.getProperty("length", of: vars.last!)
-                }
-            },
-            GeneratorStub(
-                "ForOfWithDestructLoopEndGenerator",
-                inContext: .single([.loop, .javascript])
-            ) { b in
-                b.emit(EndForOfLoop())
-            },
-        ]),
+    makeObjectDestructForOfLoopGenerator(
+        prefix: "ForOfWithObjectDestructLoop",
+        isAsync: false
+    ),
 
-    CodeGenerator(
-        "ForAwaitOfWithDestructLoopGenerator",
-        [
-            GeneratorStub(
-                "ForAwaitOfWithDestructLoopBeginGenerator",
-                inContext: .single(.asyncFunction),
-                inputs: .preferred(.asyncIterable()),
-                provides: [.loop, .javascript]
-            ) { b, obj in
-                var indices: [Int64] = []
-                for idx in 0..<Int64.random(in: 1..<5) {
-                    withProbability(0.8) {
-                        indices.append(idx)
-                    }
-                }
-
-                if indices.isEmpty {
-                    indices = [0]
-                }
-
-                let hasRestElement = probability(0.2)
-                let vars = b.emit(
-                    BeginForAwaitOfLoopWithDestruct(
-                        indices: indices, hasRestElement: hasRestElement),
-                    withInputs: [obj]
-                ).innerOutputs
-                if hasRestElement && probability(0.2) {
-                    b.getProperty("length", of: vars.last!)
-                }
-            },
-            GeneratorStub(
-                "ForAwaitOfWithDestructLoopEndGenerator",
-                inContext: .single([.loop, .javascript])
-            ) { b in
-                b.emit(EndForOfLoop())
-            },
-        ]),
-
-    CodeGenerator(
-        "ForOfWithObjectDestructLoopGenerator",
-        [
-            GeneratorStub(
-                "ForOfWithObjectDestructLoopBeginGenerator",
-                inputs: .preferred(.iterable()),
-                provides: [.loop, .javascript]
-            ) { b, obj in
-                let elementType = b.type(of: obj).iterableElementType ?? .jsAnything
-                var properties = Set<String>()
-                for _ in 0..<Int.random(in: 1...3) {
-                    if let prop = elementType.randomProperty(),
-                        !properties.contains(prop)
-                    {
-                        properties.insert(prop)
-                    } else {
-                        properties.insert(b.randomCustomPropertyName())
-                    }
-                }
-
-                let hasRestElement = probability(0.2)
-                b.emit(
-                    BeginForOfLoopWithObjectDestruct(
-                        properties: Array(properties), hasRestElement: hasRestElement),
-                    withInputs: [obj]
-                )
-            },
-            GeneratorStub(
-                "ForOfWithObjectDestructLoopEndGenerator",
-                inContext: .single([.loop, .javascript])
-            ) { b in
-                b.emit(EndForOfLoop())
-            },
-        ]),
-
-    CodeGenerator(
-        "ForAwaitOfWithObjectDestructLoopGenerator",
-        [
-            GeneratorStub(
-                "ForAwaitOfWithObjectDestructLoopBeginGenerator",
-                inContext: .single(.asyncFunction),
-                inputs: .preferred(.asyncIterable()),
-                provides: [.loop, .javascript]
-            ) { b, obj in
-                let elementType = b.type(of: obj).iterableElementType ?? .jsAnything
-                var properties = Set<String>()
-                for _ in 0..<Int.random(in: 1...3) {
-                    if let prop = elementType.randomProperty(),
-                        !properties.contains(prop)
-                    {
-                        properties.insert(prop)
-                    } else {
-                        properties.insert(b.randomCustomPropertyName())
-                    }
-                }
-
-                let hasRestElement = probability(0.2)
-                b.emit(
-                    BeginForAwaitOfLoopWithObjectDestruct(
-                        properties: Array(properties), hasRestElement: hasRestElement),
-                    withInputs: [obj]
-                )
-            },
-            GeneratorStub(
-                "ForAwaitOfWithObjectDestructLoopEndGenerator",
-                inContext: .single([.loop, .javascript])
-            ) { b in
-                b.emit(EndForOfLoop())
-            },
-        ]),
+    makeObjectDestructForOfLoopGenerator(
+        prefix: "ForAwaitOfWithObjectDestructLoop",
+        isAsync: true
+    ),
 
     CodeGenerator(
         "RepeatLoopGenerator",

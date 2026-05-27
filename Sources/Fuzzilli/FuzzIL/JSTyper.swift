@@ -1559,13 +1559,7 @@ public struct JSTyper: Analyzer {
         case .endForLoop:
             state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
         case .beginWhileLoopBody,
-            .beginForInLoop,
-            .beginForOfLoop,
-            .beginForAwaitOfLoop,
-            .beginForOfLoopWithDestruct,
-            .beginForAwaitOfLoopWithDestruct,
-            .beginForOfLoopWithObjectDestruct,
-            .beginForAwaitOfLoopWithObjectDestruct,
+            .beginForLoop,
             .beginRepeatLoop,
             .beginCodeString:
             state.startGroupOfConditionallyExecutingBlocks()
@@ -1574,8 +1568,6 @@ public struct JSTyper: Analyzer {
             // Push a new state tracking the types inside the loop
             state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
         case .endWhileLoop,
-            .endForInLoop,
-            .endForOfLoop,
             .endRepeatLoop,
             .endCodeString:
             state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
@@ -2341,44 +2333,33 @@ public struct JSTyper: Analyzer {
         case .beginDoWhileLoopBody:
             set(instr.innerOutput, .jsLoopLabel)
 
-        case .beginForInLoop:
-            set(instr.innerOutput(0), .string)
-            set(instr.innerOutput(1), .jsLoopLabel)
+        case .beginForLoop(let op):
+            let outputs = Array(instr.innerOutputs.dropLast())
+            let label = instr.innerOutputs.last!
 
-        case .beginForOfLoop:
-            set(instr.innerOutput(0), .jsAnything)
-            set(instr.innerOutput(1), .jsLoopLabel)
-
-        case .beginForAwaitOfLoop:
-            set(instr.innerOutput(0), .jsAnything)
-            set(instr.innerOutput(1), .jsLoopLabel)
-
-        case .beginForOfLoopWithDestruct,
-            .beginForAwaitOfLoopWithDestruct:
-            for v in instr.innerOutputs.dropLast() {
-                set(v, .jsAnything)
+            if op.isForIn {
+                set(outputs[0], .string)
+            } else {
+                switch op.header {
+                case .simple:
+                    set(outputs[0], .jsAnything)
+                case .arrayDestruct(_, let hasRest):
+                    for v in outputs {
+                        set(v, .jsAnything)
+                    }
+                    if hasRest {
+                        set(outputs.last!, .jsArray)
+                    }
+                case .objectDestruct(_, let hasRest):
+                    for v in outputs {
+                        set(v, .jsAnything)
+                    }
+                    if hasRest {
+                        set(outputs.last!, .object())
+                    }
+                }
             }
-            set(instr.innerOutputs.last!, .jsLoopLabel)
-
-        case .beginForOfLoopWithObjectDestruct(let op):
-            let destructuredVars = instr.innerOutputs.dropLast()
-            for v in destructuredVars {
-                set(v, .jsAnything)
-            }
-            if op.hasRestElement {
-                set(destructuredVars.last!, .object())
-            }
-            set(instr.innerOutputs.last!, .jsLoopLabel)
-
-        case .beginForAwaitOfLoopWithObjectDestruct(let op):
-            let destructuredVars = instr.innerOutputs.dropLast()
-            for v in destructuredVars {
-                set(v, .jsAnything)
-            }
-            if op.hasRestElement {
-                set(destructuredVars.last!, .object())
-            }
-            set(instr.innerOutputs.last!, .jsLoopLabel)
+            set(label, .jsLoopLabel)
 
         case .beginRepeatLoop(let op):
             if op.exposesLoopCounter {
