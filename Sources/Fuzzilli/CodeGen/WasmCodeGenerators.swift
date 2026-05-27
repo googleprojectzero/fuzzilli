@@ -959,8 +959,12 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 (b.findVariable { v in
                     let type = b.type(of: v)
                     return type.Is(.wasmFunctionDef())
-                        && type.wasmFunctionDefSignature!.outputTypes
-                            == function.signature.outputTypes
+                        && function.signature.outputTypes.count
+                            == type.wasmFunctionDefSignature!.outputTypes.count
+                        && zip(
+                            function.signature.outputTypes,
+                            type.wasmFunctionDefSignature!.outputTypes
+                        ).allSatisfy { $0.subsumes($1) }
                 })
         else { return }
         let signature = b.type(of: functionVar).wasmFunctionDefSignature!
@@ -980,7 +984,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let matchingIndices = tableType.knownEntrySignatures.enumerated().compactMap {
             (index, signatureDef) -> Int? in
             let wasmSignature = signatureDef.wasmFunctionSignatureDefSignature
-            return wasmSignature.outputTypes == function.signature.outputTypes ? index : nil
+            return
+                (function.signature.outputTypes.count == wasmSignature.outputTypes.count
+                && zip(function.signature.outputTypes, wasmSignature.outputTypes).allSatisfy {
+                    $0.subsumes($1)
+                }) ? index : nil
         }
 
         guard let tableIndex = matchingIndices.randomElement() else { return }

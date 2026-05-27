@@ -3141,6 +3141,41 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testWasmReturnCallDirectGenerator() {
+        // Check that the generator always selects the previously defined,
+        // compatible function and never the current function recursively.
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let generator = fuzzer.codeGenerators.first {
+            $0.name == "WasmReturnCallDirectGenerator"
+        }!
+
+        var callee: Variable?
+        b.buildWasmModule { wasmModule in
+            callee = wasmModule.addWasmFunction(with: [] => [.wasmI31Ref()]) {
+                function, label, args in
+                return [function.wasmRefI31(function.consti32(42))]
+            }
+
+            wasmModule.addWasmFunction(with: [] => [.wasmAnyRef()]) { function, label, args in
+                let _ = generator.parts[0].run(in: b, with: [])
+                return [function.wasmRefI31(function.consti32(0))]
+            }
+        }
+
+        let program = b.finalize()
+
+        XCTAssertTrue(
+            program.code.contains(where: { instr in
+                if case .wasmReturnCallDirect = instr.op.opcode {
+                    return instr.input(0) == callee
+                } else {
+                    return false
+                }
+            }))
+    }
+
     func testWasmBranchGeneratorSchedulingTest() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

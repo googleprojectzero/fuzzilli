@@ -4771,7 +4771,11 @@ public class ProgramBuilder {
 
         public func wasmReturnCallDirect(function: Variable, functionArgs: [Variable]) {
             let signature = b.type(of: function).wasmFunctionDefSignature!
-            assert(self.signature.outputTypes == signature.outputTypes)
+            assert(
+                self.signature.outputTypes.count == signature.outputTypes.count
+                    && zip(self.signature.outputTypes, signature.outputTypes).allSatisfy {
+                        $0.subsumes($1)
+                    })
             b.emit(
                 WasmReturnCallDirect(parameterCount: signature.parameterTypes.count),
                 withInputs: [function] + functionArgs,
@@ -4783,7 +4787,11 @@ public class ProgramBuilder {
         ) {
             let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
             let isTable64 = b.type(of: table).wasmTableType!.isTable64
-            assert(self.signature.outputTypes == signature.outputTypes)
+            assert(
+                self.signature.outputTypes.count == signature.outputTypes.count
+                    && zip(self.signature.outputTypes, signature.outputTypes).allSatisfy {
+                        $0.subsumes($1)
+                    })
             b.emit(
                 WasmReturnCallIndirect(parameterCount: signature.parameterTypes.count),
                 withInputs: [table, signatureDef] + functionArgs + [tableIndex],
