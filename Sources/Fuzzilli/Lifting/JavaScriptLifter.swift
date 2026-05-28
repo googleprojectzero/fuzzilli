@@ -1779,9 +1779,17 @@ public class JavaScriptLifter: Lifter {
                     type = "anyfunc"
                 case .wasmI31Ref():
                     type = "i31ref"
+                case .wasmAnyRef():
+                    type = "anyref"
+                case .wasmEqRef():
+                    type = "eqref"
+                case .wasmStructRef():
+                    type = "structref"
+                case .wasmArrayRef():
+                    type = "arrayref"
                 // TODO(pawkra): add shared ref variants.
                 default:
-                    fatalError("Unknown table type")
+                    fatalError("Unknown table type: \(op.tableType.elementType)")
                 }
 
                 let isTable64: Bool = op.tableType.isTable64

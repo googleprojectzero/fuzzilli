@@ -50,9 +50,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         inContext: .single(.javascript),
         produces: [.object(ofGroup: "WasmTable")]
     ) { b in
-        // TODO(mliedtke): Support more abstract types in the JS API.
         let elementType: ILType = chooseUniform(from: [
-            .wasmFuncRef(), .wasmExternRef(), .wasmI31Ref(),
+            .wasmFuncRef(), .wasmExternRef(), .wasmI31Ref(), .wasmAnyRef(), .wasmEqRef(),
+            .wasmStructRef(), .wasmArrayRef(),
         ])
         let minSize = Int.random(in: 0..<100)
         var maxSize: Int? = nil

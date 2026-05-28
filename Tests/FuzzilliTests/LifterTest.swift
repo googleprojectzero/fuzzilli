@@ -4005,6 +4005,30 @@ class LifterTests: XCTestCase {
             })
     }
 
+    func testWasmAbstractTableLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.createWasmTable(elementType: .wasmAnyRef(), limits: Limits(min: 1), isTable64: false)
+        b.createWasmTable(
+            elementType: .wasmEqRef(), limits: Limits(min: 2, max: 10), isTable64: false)
+        b.createWasmTable(elementType: .wasmStructRef(), limits: Limits(min: 3), isTable64: true)
+        b.createWasmTable(
+            elementType: .wasmArrayRef(), limits: Limits(min: 4, max: 20), isTable64: true)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+            let v0 = new WebAssembly.Table({ element: "anyref", initial: 1, address: 'i32' });
+            let v1 = new WebAssembly.Table({ element: "eqref", initial: 2, maximum: 10, address: 'i32' });
+            let v2 = new WebAssembly.Table({ element: "structref", initial: 3n, address: 'i64' });
+            let v3 = new WebAssembly.Table({ element: "arrayref", initial: 4n, maximum: 20n, address: 'i64' });
+
+            """
+        XCTAssertEqual(actual, expected)
+    }
+
     func testImportAnalysisMisTypedJS() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
