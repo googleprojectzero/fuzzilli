@@ -3051,13 +3051,33 @@ public let CodeGenerators: [CodeGenerator] = [
             "construct",
         ])
 
-        var handlerProperties = [String: Variable]()
-        for _ in 0..<Int.random(in: 0..<candidates.count) {
-            let hook = chooseUniform(from: candidates)
-            candidates.remove(hook)
-            handlerProperties[hook] = b.randomVariable(ofType: .function())
+        let handler: Variable
+        if probability(0.5),
+            // To increase coverage we try to create multiple proxies with the same handler object. As a
+            // heuristic to find interesting handlers we search for objects which have methods installed
+            // with proxy trap names.
+            let existing = b.findVariable(satisfying: { obj in
+                let type = b.type(of: obj)
+                guard type.Is(.object()) else { return false }
+                let matchingMethods = type.methods.intersection(candidates)
+                let matchingProperties = type.properties.intersection(candidates)
+                guard !matchingMethods.isEmpty || !matchingProperties.isEmpty else { return false }
+                // Ensure all matching trap candidates are callable functions to prevent runtime TypeErrors.
+                return matchingProperties.allSatisfy {
+                    b.type(ofProperty: $0, on: obj).Is(.function())
+                }
+            })
+        {
+            handler = existing
+        } else {
+            var handlerProperties = [String: Variable]()
+            for _ in 0..<Int.random(in: 0..<candidates.count) {
+                let hook = chooseUniform(from: candidates)
+                candidates.remove(hook)
+                handlerProperties[hook] = b.randomVariable(ofType: .function())
+            }
+            handler = b.createObject(with: handlerProperties)
         }
-        let handler = b.createObject(with: handlerProperties)
 
         let Proxy = b.createNamedVariable(forBuiltin: "Proxy")
         b.hide(Proxy)  // We want the proxy to be used by following code generators, not the Proxy constructor
