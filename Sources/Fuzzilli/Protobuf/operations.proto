@@ -1554,6 +1554,9 @@ message WasmRefNull {
 message WasmRefIsNull {
 }
 
+message WasmRefFunc {
+}
+
 message WasmRefEq {
 }
 

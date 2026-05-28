@@ -6012,6 +6012,16 @@ public struct Fuzzilli_Protobuf_WasmRefIsNull: Sendable {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_WasmRefFunc: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_WasmRefEq: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -15634,6 +15644,25 @@ extension Fuzzilli_Protobuf_WasmRefIsNull: SwiftProtobuf.Message, SwiftProtobuf.
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmRefIsNull, rhs: Fuzzilli_Protobuf_WasmRefIsNull) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_WasmRefFunc: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WasmRefFunc"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_WasmRefFunc, rhs: Fuzzilli_Protobuf_WasmRefFunc) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

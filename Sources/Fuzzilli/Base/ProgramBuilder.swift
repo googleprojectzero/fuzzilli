@@ -5876,6 +5876,11 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func wasmRefFunc(_ function: Variable) -> Variable {
+            return b.emit(WasmRefFunc(), withInputs: [function], types: [.wasmFunctionDef()]).output
+        }
+
+        @discardableResult
         // TODO(pawkra): Support shared references.
         public func wasmRefEq(_ lhs: Variable, _ rhs: Variable) -> Variable {
             return b.emit(

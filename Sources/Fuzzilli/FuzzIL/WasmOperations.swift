@@ -2441,6 +2441,14 @@ class WasmRefIsNull: WasmOperation {
     }
 }
 
+class WasmRefFunc: WasmOperation {
+    override var opcode: Opcode { .wasmRefFunc(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
 class WasmRefEq: WasmOperation {
     override var opcode: Opcode { .wasmRefEq(self) }
 

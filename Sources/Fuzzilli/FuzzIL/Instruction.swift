@@ -1793,6 +1793,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmRefIsNull(_):
                 $0.wasmRefIsNull = Fuzzilli_Protobuf_WasmRefIsNull()
+            case .wasmRefFunc(_):
+                $0.wasmRefFunc = Fuzzilli_Protobuf_WasmRefFunc()
             case .wasmRefEq(_):
                 $0.wasmRefEq = Fuzzilli_Protobuf_WasmRefEq()
             case .wasmRefTest(let op):
@@ -2941,6 +2943,8 @@ extension Instruction: ProtobufConvertible {
                 p.hasType ? WasmRefNull(type: WasmTypeEnumToILType(p.type)) : WasmRefNull(type: nil)
         case .wasmRefIsNull(_):
             op = WasmRefIsNull()
+        case .wasmRefFunc(_):
+            op = WasmRefFunc()
         case .wasmRefEq(_):
             op = WasmRefEq()
         case .wasmRefTest(let p):

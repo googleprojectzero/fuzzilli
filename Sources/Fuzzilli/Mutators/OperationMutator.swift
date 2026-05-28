@@ -865,6 +865,7 @@ public class OperationMutator: BaseInstructionMutator {
             .wasmStructSet(_),
             .wasmRefNull(_),
             .wasmRefIsNull(_),
+            .wasmRefFunc(_),
             .wasmRefI31(_),
             .wasmAnyConvertExtern(_),
             .wasmExternConvertAny(_),

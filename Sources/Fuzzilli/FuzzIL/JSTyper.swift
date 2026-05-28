@@ -1098,6 +1098,15 @@ public struct JSTyper: Analyzer {
                 }
             case .wasmRefIsNull(_):
                 setType(of: instr.output, to: .wasmi32)
+            case .wasmRefFunc(_):
+                if let signatureType = type(of: instr.input(0)).wasmFunctionDef?.signatureType,
+                    let refType = signatureType.wasmTypeDefinition?.getReferenceTypeTo(
+                        nullability: false)
+                {
+                    setType(of: instr.output, to: refType)
+                } else {
+                    fatalError("Function passed to ref.func lacks a concrete signature definition")
+                }
             case .wasmRefEq(_):
                 setType(of: instr.output, to: .wasmi32)
             case .wasmRefI31(let op):
