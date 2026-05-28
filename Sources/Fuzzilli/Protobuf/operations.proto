@@ -1136,6 +1136,7 @@ message WasmStoreGlobal {
 }
 
 message WasmTableGet {
+  WasmILType elementType = 1;
 }
 
 message WasmTableSet {

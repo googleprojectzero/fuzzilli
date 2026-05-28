@@ -956,7 +956,10 @@ final class WasmStoreGlobal: WasmOperation {
 final class WasmTableGet: WasmOperation {
     override var opcode: Opcode { .wasmTableGet(self) }
 
-    init() {
+    let elementType: ILType
+
+    init(elementType: ILType) {
+        self.elementType = elementType
         super.init(numInputs: 2, numOutputs: 1, requiredContext: [.wasmFunction])
     }
 }

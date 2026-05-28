@@ -975,8 +975,8 @@ public class FuzzILLifter: Lifter {
         case .wasmLoadGlobal(_):
             w.emit("\(output()) <- WasmLoadGlobal \(input(0))")
 
-        case .wasmTableGet(_):
-            w.emit("\(output()) <- WasmTableGet \(input(0))[\(input(1))]")
+        case .wasmTableGet(let op):
+            w.emit("\(output()) <- WasmTableGet \(op.elementType) \(input(0))[\(input(1))]")
 
         case .wasmTableSet(_):
             w.emit("WasmTabletSet \(input(0))[\(input(1))] <- \(input(2))")

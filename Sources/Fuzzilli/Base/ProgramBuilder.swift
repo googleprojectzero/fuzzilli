@@ -4697,7 +4697,8 @@ public class ProgramBuilder {
             let tableType = b.type(of: tableRef)
             let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
             return b.emit(
-                WasmTableGet(), withInputs: [tableRef, idx], types: [tableType, offsetType]
+                WasmTableGet(elementType: tableType.wasmTableType!.elementType),
+                withInputs: [tableRef, idx], types: [tableType, offsetType]
             ).output
         }
 

@@ -1468,8 +1468,10 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmStoreGlobal = Fuzzilli_Protobuf_WasmStoreGlobal.with {
                     $0.globalType = ILTypeToWasmTypeEnum(op.globalType)
                 }
-            case .wasmTableGet(_):
-                $0.wasmTableGet = Fuzzilli_Protobuf_WasmTableGet()
+            case .wasmTableGet(let op):
+                $0.wasmTableGet = Fuzzilli_Protobuf_WasmTableGet.with {
+                    $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
+                }
             case .wasmTableSet(_):
                 $0.wasmTableSet = Fuzzilli_Protobuf_WasmTableSet()
             case .wasmCallIndirect(let op):
@@ -2719,8 +2721,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmLoadGlobal(globalType: WasmTypeEnumToILType(p.globalType))
         case .wasmStoreGlobal(let p):
             op = WasmStoreGlobal(globalType: WasmTypeEnumToILType(p.globalType))
-        case .wasmTableGet(_):
-            op = WasmTableGet()
+        case .wasmTableGet(let p):
+            op = WasmTableGet(elementType: WasmTypeEnumToILType(p.elementType))
         case .wasmTableSet(_):
             op = WasmTableSet()
         case .wasmCallIndirect(let p):

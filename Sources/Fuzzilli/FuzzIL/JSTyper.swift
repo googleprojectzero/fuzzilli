@@ -906,13 +906,13 @@ public struct JSTyper: Analyzer {
                 dynamicObjectGroupManager.addWasmGlobal(
                     withType: type(of: instr.input(0)), forDefinition: definingInstruction,
                     forVariable: instr.input(0))
-            case .wasmTableGet(_):
+            case .wasmTableGet(let op):
                 let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
                 let tableType = type(of: instr.input(0))
                 dynamicObjectGroupManager.addWasmTable(
                     withType: tableType, forDefinition: definingInstruction,
                     forVariable: instr.input(0))
-                setType(of: instr.output, to: tableType.wasmTableType!.elementType)
+                setType(of: instr.output, to: op.elementType)
             case .wasmTableSet(_):
                 let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
                 dynamicObjectGroupManager.addWasmTable(
