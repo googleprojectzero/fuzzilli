@@ -2368,11 +2368,9 @@ class WasmArrayNewFixed: WasmOperation {
 
     init(size: Int) {
         self.size = size
-        // TODO(mliedtke): Mark this operation variadic and extend
-        // OperationMutator::extendVariadicOperationByOneInput and ensure correct types of added
-        // inputs. (This requires some integration for .wasmRef(Index) to ensure it isn't just an
-        // index type but a matching one!)
-        super.init(numInputs: size + 1, numOutputs: 1, requiredContext: [.wasmFunction])
+        super.init(
+            numInputs: 1 + size, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic],
+            requiredContext: [.wasmFunction])
     }
 }
 

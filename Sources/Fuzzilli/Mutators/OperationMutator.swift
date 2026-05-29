@@ -999,6 +999,22 @@ public class OperationMutator: BaseInstructionMutator {
             }
             inputs.append(b.randomVariable(forUseAs: elementType))
 
+        case .wasmArrayNewFixed(let op):
+            let arrayType = b.type(of: instr.input(0))
+            let desc = arrayType.wasmTypeDefinition!.description as! WasmArrayTypeDescription
+            let inputType = desc.elementType.unpacked()
+            guard
+                let additionalValue = b.currentWasmFunction.tryFindOrGenerateWasmVar(
+                    ofType: inputType)
+            else {
+                // If we can't find any valid input for it, there can't be any current inputs.
+                assert(op.size == 0)
+                // Skip the mutation.
+                return instr
+            }
+            newOp = WasmArrayNewFixed(size: op.size + 1)
+            inputs.append(additionalValue)
+
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }

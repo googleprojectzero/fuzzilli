@@ -425,4 +425,45 @@ class MutatorTests: XCTestCase {
             actual == expectedPattern1 || actual == expectedPattern2,
             "Output does not match expected patterns. Actual:\n\(actual)")
     }
+
+    func testWasmArrayNewFixedExtension() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.loadInt(1)  // dummy prefix
+
+        let arrayDef = b.wasmDefineTypeGroup {
+            return [b.wasmDefineArrayType(elementType: ILType.wasmi32, mutability: true)]
+        }[0]
+        b.buildWasmModule { module in
+            module.addWasmFunction(with: [] => []) { fn, label, params in
+                let i1 = fn.consti32(1)
+                let array = fn.wasmArrayNewFixed(arrayType: arrayDef, elements: [i1])
+                fn.wasmArrayGet(array: array, index: fn.consti32(0))
+                return []
+            }
+        }
+
+        let prog = b.finalize()
+        let instr = prog.code.filter { $0.op is WasmArrayNewFixed }[0]
+        XCTAssertEqual((instr.op as! WasmArrayNewFixed).size, 1)
+
+        let mutator = OperationMutator()
+        let newBuilder = fuzzer.makeBuilder()
+
+        newBuilder.adopting {
+            for i in 0..<instr.index {
+                newBuilder.adopt(prog.code[i])
+            }
+            mutator.mutate(instr, newBuilder)
+            for i in (instr.index + 1)..<prog.code.count {
+                newBuilder.adopt(prog.code[i])
+            }
+        }
+
+        let mutatedProg = newBuilder.finalize()
+        let mutatedInstr = mutatedProg.code.first(where: { $0.op is WasmArrayNewFixed })!
+        let newOp = mutatedInstr.op as! WasmArrayNewFixed
+        XCTAssertGreaterThan(newOp.size, 1)
+    }
 }

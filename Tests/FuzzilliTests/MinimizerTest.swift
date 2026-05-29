@@ -2915,4 +2915,42 @@ class MinimizerTests: XCTestCase {
             "Expected:\n\(FuzzILLifter().lift(originalProgram.code))\n\n"
                 + "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
     }
+
+    func testWasmArrayNewFixedReduction() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        evaluator.operationIsImportant(WasmArrayGet.self)
+
+        let arrayDef = b.wasmDefineTypeGroup {
+            return [b.wasmDefineArrayType(elementType: ILType.wasmi32, mutability: true)]
+        }[0]
+        b.buildWasmModule { module in
+            module.addWasmFunction(with: [] => [.wasmi32]) { fn, label, params in
+                let i1 = fn.consti32(1)
+                let i2 = fn.consti32(2)
+                let i3 = fn.consti32(3)
+
+                let array = fn.wasmArrayNewFixed(arrayType: arrayDef, elements: [i1, i2, i3])
+                return [fn.wasmArrayGet(array: array, index: fn.consti32(0))]
+            }
+        }
+
+        let originalProgram = b.finalize()
+
+        let expectedArrayDef = b.wasmDefineTypeGroup {
+            return [b.wasmDefineArrayType(elementType: ILType.wasmi32, mutability: true)]
+        }[0]
+        b.buildWasmModule { module in
+            module.addWasmFunction(with: [] => [.wasmi32]) { fn, label, params in
+                let array = fn.wasmArrayNewFixed(arrayType: expectedArrayDef, elements: [])
+                return [fn.wasmArrayGet(array: array, index: fn.consti32(0))]
+            }
+        }
+        let expectedProgram = b.finalize()
+
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
 }

@@ -101,6 +101,8 @@ struct VariadicInputReducer: Reducer {
                         numInitialValues: op.numInitialValues - 1,
                         keyGroupName: op.keyGroupName,
                         valueGroupName: op.valueGroupName)
+                case .wasmArrayNewFixed(let op):
+                    newOp = WasmArrayNewFixed(size: op.size - 1)
                 default:
                     fatalError("Unknown variadic operation \(instr.op)")
                 }
