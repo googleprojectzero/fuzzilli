@@ -1203,18 +1203,18 @@ public class Fuzzer {
         // Check if we can execute bundles with modules correctly if we are generating bundles.
         if config.generateBundle {
             b = makeBuilder()
-            b.beginBundleModule(name: "module.mjs")
-            let v = b.loadInt(42)
-            b.exportVariables(variables: [v], exportNames: ["foo"])
-            let moduleVariable = b.endBundleModule()
+            let moduleVariable = b.buildBundleModule(name: "module.mjs") {
+                let v = b.loadInt(42)
+                b.exportVariables(variables: [v], exportNames: ["foo"])
+            }
 
-            b.beginBundleModuleEntryPoint()
-            let importInstruction = b.importVariables(
-                module: moduleVariable, importNames: ["foo"])
-            let imported = importInstruction.output
-            let v2 = b.loadInt(43)
-            b.binary(imported, v2, with: .Add)
-            b.endBundleModuleEntryPoint()
+            b.buildBundleModuleEntryPoint {
+                let importInstruction = b.importVariables(
+                    module: moduleVariable, importNames: ["foo"])
+                let imported = importInstruction.output
+                let v2 = b.loadInt(43)
+                b.binary(imported, v2, with: .Add)
+            }
 
             execution = execute(b.finalize(), purpose: .startup)
             guard case .succeeded = execution.outcome else {

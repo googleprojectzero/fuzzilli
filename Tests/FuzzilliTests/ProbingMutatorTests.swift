@@ -73,14 +73,14 @@ class ProbingMutatorTests: XCTestCase {
 
         let b = fuzzer.makeBuilder()
 
-        b.beginBundleModule(name: "a.mjs")
-        let v0 = b.loadInt(83)
-        b.exportVariables(variables: [v0], exportNames: ["exp0"])
-        let module = b.endBundleModule()
+        let module = b.buildBundleModule(name: "a.mjs") {
+            let v0 = b.loadInt(83)
+            b.exportVariables(variables: [v0], exportNames: ["exp0"])
+        }
 
-        b.beginBundleModuleEntryPoint()
-        let _ = b.importVariables(module: module, importNames: ["exp0"])
-        b.endBundleModuleEntryPoint()
+        b.buildBundleModuleEntryPoint {
+            let _ = b.importVariables(module: module, importNames: ["exp0"])
+        }
 
         let program = b.finalize()
 

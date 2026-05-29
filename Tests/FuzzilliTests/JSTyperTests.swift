@@ -2421,10 +2421,10 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: config)
         let b = fuzzer.makeBuilder()
 
-        b.beginBundleModule(name: "myModule")
-        let v = b.loadInt(42)
-        b.exportVariables(variables: [v, v], exportNames: ["foo", "foo"])
-        let module = b.endBundleModule()
+        let module = b.buildBundleModule(name: "myModule") {
+            let v = b.loadInt(42)
+            b.exportVariables(variables: [v, v], exportNames: ["foo", "foo"])
+        }
         XCTAssertEqual(b.type(of: module), .jsModule(exports: ["foo": .integer]))
     }
 
@@ -2433,23 +2433,23 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: config)
         let b = fuzzer.makeBuilder()
 
-        b.beginBundleModule(name: "myModule")
-        let v1 = b.loadInt(42)
-        let v2 = b.loadString("abc")
-        b.exportVariables(variables: [v1, v2], exportNames: ["foo", "bar"])
-        let module = b.endBundleModule()
+        let module = b.buildBundleModule(name: "myModule") {
+            let v1 = b.loadInt(42)
+            let v2 = b.loadString("abc")
+            b.exportVariables(variables: [v1, v2], exportNames: ["foo", "bar"])
+        }
 
-        b.beginBundleModuleEntryPoint()
-        let ns = b.importNamespace(module: module, isDeferred: true).output
-        XCTAssertEqual(
-            b.type(of: ns),
-            .object(ofGroup: "_fuzz_Namespace6", withProperties: ["foo", "bar"]))
+        b.buildBundleModuleEntryPoint {
+            let ns = b.importNamespace(module: module, isDeferred: true).output
+            XCTAssertEqual(
+                b.type(of: ns),
+                .object(ofGroup: "_fuzz_Namespace6", withProperties: ["foo", "bar"]))
 
-        let retrievedFoo = b.getProperty("foo", of: ns)
-        XCTAssertEqual(b.type(of: retrievedFoo), .integer)
+            let retrievedFoo = b.getProperty("foo", of: ns)
+            XCTAssertEqual(b.type(of: retrievedFoo), .integer)
 
-        let retrievedBar = b.getProperty("bar", of: ns)
-        XCTAssertEqual(b.type(of: retrievedBar), .jsString)
-        b.endBundleModuleEntryPoint()
+            let retrievedBar = b.getProperty("bar", of: ns)
+            XCTAssertEqual(b.type(of: retrievedBar), .jsString)
+        }
     }
 }

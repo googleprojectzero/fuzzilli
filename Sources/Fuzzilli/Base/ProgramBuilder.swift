@@ -4208,6 +4208,18 @@ public class ProgramBuilder {
         buildBlockStatement { _ in body() }
     }
 
+    public func buildBundleModule(name: String, _ body: () -> Void) -> Variable {
+        beginBundleModule(name: name)
+        body()
+        return endBundleModule()
+    }
+
+    public func buildBundleModuleEntryPoint(_ body: () -> Void) {
+        beginBundleModuleEntryPoint()
+        body()
+        endBundleModuleEntryPoint()
+    }
+
     public func beginBundleModule(name: String) {
         activeJsModuleName = name
         emit(BeginBundleModule(moduleName: name))

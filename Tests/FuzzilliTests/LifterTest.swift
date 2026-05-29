@@ -452,10 +452,10 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: config)
         let b = fuzzer.makeBuilder()
 
-        b.beginBundleModule(name: "module.mjs")
-        let date = b.createNamedVariable(forBuiltin: "Date")
-        b.exportVariables(variables: [date], exportNames: ["foo"])
-        let module = b.endBundleModule()
+        let module = b.buildBundleModule(name: "module.mjs") {
+            let date = b.createNamedVariable(forBuiltin: "Date")
+            b.exportVariables(variables: [date], exportNames: ["foo"])
+        }
         XCTAssertTrue(
             b.type(of: module).Is(.jsModule(exports: ["foo": .object(ofGroup: "DateConstructor")])))
 
@@ -4685,28 +4685,28 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: config)
         let b = fuzzer.makeBuilder()
 
-        b.beginBundleModule(name: "module.mjs")
-        let v1 = b.loadInt(42)
-        let v2 = b.loadString("foo")
+        let moduleVariable = b.buildBundleModule(name: "module.mjs") {
+            let v1 = b.loadInt(42)
+            let v2 = b.loadString("foo")
+            b.exportVariables(variables: [v1, v2], exportNames: ["ex1", "ex2"])
+        }
 
-        b.exportVariables(variables: [v1, v2], exportNames: ["ex1", "ex2"])
-        let moduleVariable = b.endBundleModule()
         let moduleVariableType = b.type(of: moduleVariable)
         let exports = moduleVariableType.exports
 
         XCTAssertTrue(exports["ex1"]!.Is(.integer))
         XCTAssertTrue(exports["ex2"]!.Is(.string))
 
-        b.beginBundleModuleEntryPoint()
-        let importInstruction = b.importVariables(
-            module: moduleVariable, importNames: ["ex1", "ex2"])
-        let imported = Array(importInstruction.outputs)
+        b.buildBundleModuleEntryPoint {
+            let importInstruction = b.importVariables(
+                module: moduleVariable, importNames: ["ex1", "ex2"])
+            let imported = Array(importInstruction.outputs)
 
-        XCTAssertEqual(imported.count, 2)
-        XCTAssertTrue(b.type(of: imported[0]).Is(.integer))
-        XCTAssertTrue(b.type(of: imported[1]).Is(.string))
-        b.binary(imported[0], imported[1], with: .Add)
-        b.endBundleModuleEntryPoint()
+            XCTAssertEqual(imported.count, 2)
+            XCTAssertTrue(b.type(of: imported[0]).Is(.integer))
+            XCTAssertTrue(b.type(of: imported[1]).Is(.string))
+            b.binary(imported[0], imported[1], with: .Add)
+        }
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -4889,15 +4889,15 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: config)
         let b = fuzzer.makeBuilder()
 
-        b.beginBundleModule(name: "deferMod.mjs")
-        let v1 = b.loadInt(1337)
-        b.exportVariables(variables: [v1], exportNames: ["value"])
-        let moduleVariable = b.endBundleModule()
+        let moduleVariable = b.buildBundleModule(name: "deferMod.mjs") {
+            let v1 = b.loadInt(1337)
+            b.exportVariables(variables: [v1], exportNames: ["value"])
+        }
 
-        b.beginBundleModuleEntryPoint()
-        let ns = b.importNamespace(module: moduleVariable, isDeferred: true).output
-        b.getProperty("value", of: ns)
-        b.endBundleModuleEntryPoint()
+        b.buildBundleModuleEntryPoint {
+            let ns = b.importNamespace(module: moduleVariable, isDeferred: true).output
+            b.getProperty("value", of: ns)
+        }
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
