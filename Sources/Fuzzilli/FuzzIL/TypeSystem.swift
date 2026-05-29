@@ -1674,17 +1674,8 @@ public class WasmFunctionDefinition: WasmTypeExtension {
     }
 
     init(_ signatureType: ILType?) {
-        assert(
-            signatureType == nil
-                || (signatureType!.wasmTypeDefinition?.description as? WasmSignatureTypeDescription)?
-                    .signature != nil
-        )
+        assert(signatureType == nil || signatureType!.isWasmSignatureTypeDef)
         self.signatureType = signatureType
-    }
-
-    // TODO(mliedtke): Is this needed and are its usages OK when we move to full wasm-gc types?
-    var signature: WasmSignature? {
-        (signatureType?.wasmTypeDefinition?.description as? WasmSignatureTypeDescription)?.signature
     }
 }
 
