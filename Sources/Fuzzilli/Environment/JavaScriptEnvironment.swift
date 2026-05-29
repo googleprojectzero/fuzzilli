@@ -1301,7 +1301,7 @@ extension ILType {
             ofGroup: "Iterator", withProperties: ["value", "done"],
             withMethods: [
                 "next", "return", "throw", "map", "filter", "take", "drop", "flatMap", "reduce",
-                "toArray", "forEach", "some", "every", "find", "join",
+                "toArray", "forEach", "some", "every", "find", "join", "includes",
             ])
 
     /// Type of the JavaScript Iterator constructor builtin.
@@ -2204,6 +2204,7 @@ extension ObjectGroup {
             "every": [.function()] => .boolean,
             "find": [.function()] => .jsAnything,
             "join": [.string] => .jsString,
+            "includes": [.jsAnything, .opt(.integer)] => .boolean,
         ]
     )
 
