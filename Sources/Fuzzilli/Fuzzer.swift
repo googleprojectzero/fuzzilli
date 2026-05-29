@@ -1200,7 +1200,29 @@ public class Fuzzer {
             }
         }
 
-        // TODO(marja): when we have modules, add a "bundles" startup test which asserts that bundles are handled correctly.
+        // Check if we can execute bundles with modules correctly if we are generating bundles.
+        if config.generateBundle {
+            b = makeBuilder()
+            b.beginBundleModule(name: "module.mjs")
+            let v = b.loadInt(42)
+            b.exportVariables(variables: [v], exportNames: ["foo"])
+            let moduleVariable = b.endBundleModule()
+
+            b.beginBundleModuleEntryPoint()
+            let importInstruction = b.importVariables(
+                module: moduleVariable, importNames: ["foo"])
+            let imported = importInstruction.output
+            let v2 = b.loadInt(43)
+            b.binary(imported, v2, with: .Add)
+            b.endBundleModuleEntryPoint()
+
+            execution = execute(b.finalize(), purpose: .startup)
+            guard case .succeeded = execution.outcome else {
+                logger.fatal(
+                    "Bundle test did not execute successfully"
+                        + "\nstdout:\n\(execution.stdout)\nstderr:\n\(execution.stderr)")
+            }
+        }
 
         if !hasAnyCrashTests {
             logger.warning(
