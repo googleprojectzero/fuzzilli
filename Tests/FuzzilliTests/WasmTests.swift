@@ -281,8 +281,9 @@ class WasmFoundationTests: XCTestCase {
                     nullable
                         || (
                             // Non-nullable heap types unsupported for these types.
-                            // TODO(mliedtke): Extend for ref func, extend for exnref once we can generate them.
-                            heapType != .WasmFunc && heapType != .WasmExn
+                            // TODO(mliedtke): Extend for ref extern, extend for ref func once we
+                            // have ref.func.
+                            heapType != .WasmFunc && heapType != .WasmExtern && heapType != .WasmExn
                             // Bottom null-types must be nullable.
                             && !heapType.isBottom())
                 }.map { ILType.wasmRef($0.0, nullability: $0.1) }
@@ -293,9 +294,6 @@ class WasmFoundationTests: XCTestCase {
                 }.map { b.type(of: $0.0).wasmTypeDefinition!.getReferenceTypeTo(nullability: $0.1) }
 
             b.buildWasmModule { wasmModule in
-                // Add a dummy function so that ref.func has something to pick.
-                wasmModule.addWasmFunction(with: [] => []) { _, _, _ in [] }
-
                 // Test multiple times. Note that this will lead to a huge test case (but will be
                 // significantly faster than invoking the JS engine many times).
                 for _ in 0..<10 {

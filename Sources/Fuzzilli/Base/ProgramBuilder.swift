@@ -5549,15 +5549,6 @@ public class ProgramBuilder {
                                         }
                                     }
                                 ),
-                                (
-                                    .wasmRefExtern(),
-                                    {
-                                        let i31 = self.wasmRefI31(
-                                            self.consti32(
-                                                Int32(truncatingIfNeeded: self.b.randomInt())))
-                                        return self.wasmExternConvertAny(i31)
-                                    }
-                                ),
                             ]
                             // Note that for a type like eqref there are multiple valid options.
                             let options = allOptions.filter { $0.0.Is(type) }.map { $0.1 }
@@ -5586,15 +5577,6 @@ public class ProgramBuilder {
                             {
                                 return wasmStructNewDefault(
                                     structType: b.jsTyper.getWasmTypeDef(for: type))
-                            }
-                            if abstractSuper == .WasmFunc {
-                                let signatureType = b.type(of: b.jsTyper.getWasmTypeDef(for: type))
-                                if let f = b.findVariable(satisfying: {
-                                    b.type(of: $0).wasmFunctionDef?.signatureType
-                                        == signatureType
-                                }) {
-                                    return wasmRefFunc(f)
-                                }
                             }
                         }
                         if nullable {
