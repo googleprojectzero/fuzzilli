@@ -561,7 +561,7 @@ public class WasmLifter {
         guard let description else {
             throw WasmLifter.CompileError.missingTypeInformation
         }
-        return Leb128.unsignedEncode(typeDescToIndex[description]!)
+        return Leb128.signedEncode(typeDescToIndex[description]!)
     }
 
     private func encodeType(_ type: ILType, defaultType: ILType? = nil) throws -> Data {

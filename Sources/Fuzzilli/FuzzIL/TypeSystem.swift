@@ -337,6 +337,9 @@ public struct ILType: Hashable {
     public static func wasmFuncRef(shared: Bool = false) -> ILType {
         wasmRef(.WasmFunc, shared: shared, nullability: true)
     }
+    public static func wasmRefFunc(shared: Bool = false) -> ILType {
+        wasmRef(.WasmFunc, shared: shared, nullability: false)
+    }
     public static func wasmExnRef(shared: Bool = false) -> ILType {
         wasmRef(.WasmExn, shared: shared, nullability: true)
     }
