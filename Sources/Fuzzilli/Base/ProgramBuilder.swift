@@ -4783,6 +4783,22 @@ public class ProgramBuilder {
                 ).outputs)
         }
 
+        @discardableResult
+        public func wasmCallRef(
+            functionRef: Variable, functionArgs: [Variable]
+        ) -> [Variable] {
+            let signatureDef = b.getWasmTypeDef(for: b.type(of: functionRef))
+            let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
+            return Array(
+                b.emit(
+                    WasmCallRef(
+                        parameterCount: signature.parameterTypes.count,
+                        outputCount: signature.outputTypes.count),
+                    withInputs: functionArgs + [functionRef],
+                    types: signature.parameterTypes + [.wasmFuncRef()]
+                ).outputs)
+        }
+
         public func wasmReturnCallDirect(function: Variable, functionArgs: [Variable]) {
             let signature = b.type(of: function).wasmFunctionDefSignature!
             assert(

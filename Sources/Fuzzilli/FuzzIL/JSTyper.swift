@@ -1070,6 +1070,13 @@ public struct JSTyper: Analyzer {
                 for (output, outputType) in zip(instr.outputs, signature.outputTypes) {
                     setType(of: output, to: outputType)
                 }
+            case .wasmCallRef(_):
+                let functionRef = instr.inputs.last!
+                let typeDesc = getTypeDescription(of: functionRef) as! WasmSignatureTypeDescription
+                let signature = typeDesc.signature
+                for (output, outputType) in zip(instr.outputs, signature.outputTypes) {
+                    setType(of: output, to: outputType)
+                }
             // Functions that can be called through a table are also already added by the wasmDefineTable instruction.
             // No need to analyze this and add them to the DynamicObjectGroupManager.
             case .wasmArrayNewFixed(_),

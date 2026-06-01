@@ -1158,6 +1158,11 @@ message WasmCallDirect {
   int32 outputCount = 2;
 }
 
+message WasmCallRef {
+  int32 parameterCount = 1;
+  int32 outputCount = 2;
+}
+
 message WasmReturnCallDirect {
   int32 parameterCount = 1;
 }

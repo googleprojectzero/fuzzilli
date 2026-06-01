@@ -1219,6 +1219,15 @@ public class FuzzILLifter: Lifter {
                 w.emit("\(outputs) <- WasmCallDirect \(inputs)")
             }
 
+        case .wasmCallRef(_):
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            if instr.outputs.isEmpty {
+                w.emit("WasmCallRef \(inputs)")
+            } else {
+                let outputs = instr.outputs.map(lift).joined(separator: ", ")
+                w.emit("\(outputs) <- WasmCallRef \(inputs)")
+            }
+
         case .wasmReturnCallDirect(_):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("WasmReturnCallDirect \(inputs)")

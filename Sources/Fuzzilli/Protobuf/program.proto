@@ -377,6 +377,7 @@ message Instruction {
         WasmBranchOnCastFail wasmBranchOnCastFail = 351;
         WasmRefFunc wasmRefFunc = 352;
         WasmRefAsNonNull wasmRefAsNonNull = 353;
+        WasmCallRef wasmCallRef = 354;
     }
 }
 

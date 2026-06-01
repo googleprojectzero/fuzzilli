@@ -1950,6 +1950,11 @@ public class WasmLifter {
             let functionRef = wasmInstruction.input(0)
             return Data([0x10])
                 + Leb128.unsignedEncode(try resolveIdx(ofType: .function, for: functionRef))
+        case .wasmCallRef(_):
+            let functionRef = wasmInstruction.inputs.last!
+            let typeDesc = typer.getTypeDescription(of: functionRef)
+            let sigIndex = typeDescToIndex[typeDesc]!
+            return Data([0x14]) + Leb128.unsignedEncode(sigIndex)
         case .wasmReturnCallDirect(_):
             let functionRef = wasmInstruction.input(0)
             return Data([0x12])

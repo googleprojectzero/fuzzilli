@@ -6443,24 +6443,26 @@ class WasmGCTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let module = b.buildWasmModule { wasmModule in
-            let f1 = wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
-                return [function.consti32(42)]
+            let f1 = wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) {
+                function, label, args in
+                return [function.wasmi32BinOp(args[0], function.consti32(1), binOpKind: .Add)]
             }
-            wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, label, args in
                 let ref = function.wasmRefFunc(f1)
-                // TODO(bettscheider): Once implemented, use `function.wasmCallRef(ref)` here.
-                return [function.wasmRefIsNull(ref)]
+                let callResult = function.wasmCallRef(functionRef: ref, functionArgs: args)[0]
+                return [callResult]
             }
         }
 
         let exports = module.loadExports()
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
-        let wasmOut = b.callMethod(module.getExportedMethod(at: 1), on: exports, withArgs: [])
+        let wasmOut = b.callMethod(
+            module.getExportedMethod(at: 1), on: exports, withArgs: [b.loadInt(41)])
         b.callFunction(outputFunc, withArgs: [wasmOut])
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
-        testForOutput(program: jsProg, runner: runner, outputString: "0\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 
     func testRefNullIndexTypes() throws {

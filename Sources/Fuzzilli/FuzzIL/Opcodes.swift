@@ -381,4 +381,5 @@ enum Opcode {
     case wasmBranchOnCastFail(WasmBranchOnCastFail)
     case wasmRefFunc(WasmRefFunc)
     case wasmRefAsNonNull(WasmRefAsNonNull)
+    case wasmCallRef(WasmCallRef)
 }

@@ -1484,6 +1484,11 @@ extension Instruction: ProtobufConvertible {
                     $0.parameterCount = Int32(op.parameterCount)
                     $0.outputCount = Int32(op.numOutputs)
                 }
+            case .wasmCallRef(let op):
+                $0.wasmCallRef = Fuzzilli_Protobuf_WasmCallRef.with {
+                    $0.parameterCount = Int32(op.parameterCount)
+                    $0.outputCount = Int32(op.numOutputs)
+                }
             case .wasmReturnCallDirect(let op):
                 $0.wasmReturnCallDirect = Fuzzilli_Protobuf_WasmReturnCallDirect.with {
                     $0.parameterCount = Int32(op.parameterCount)
@@ -2732,6 +2737,9 @@ extension Instruction: ProtobufConvertible {
                 parameterCount: Int(p.parameterCount), outputCount: Int(p.outputCount))
         case .wasmCallDirect(let p):
             op = WasmCallDirect(
+                parameterCount: Int(p.parameterCount), outputCount: Int(p.outputCount))
+        case .wasmCallRef(let p):
+            op = WasmCallRef(
                 parameterCount: Int(p.parameterCount), outputCount: Int(p.outputCount))
         case .wasmReturnCallDirect(let p):
             op = WasmReturnCallDirect(parameterCount: Int(p.parameterCount))
