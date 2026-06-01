@@ -89,3 +89,74 @@ for (output("inside for loop initializer"); output("inside for loop condition"),
   if (!countdown()) break;
 }
 resetCounter();
+
+// ForInOf Loops
+// -------------
+const syncDataset = [10, 11, 12];
+const arrayDataset = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+const objectDataset = [{ a: 1, b: 2, c: 3 }, { a: 4, b: 5, c: 6 }, { a: 7, b: 8, c: 9 }];
+
+const objForIn = { a: 100, b: 200, c: 300 };
+for (const key in objForIn) {
+  output("for-in key: " + key + " value: " + objForIn[key]);
+}
+
+for (const x of syncDataset) {
+  output("sync var: " + x);
+}
+
+for (const [a, b] of arrayDataset) {
+  output("sync destruct_array a: " + a + " b: " + b);
+}
+
+for (const [a, ...b] of arrayDataset) {
+  output("sync destruct_array_rest a: " + a + " b: " + b);
+}
+
+for (const { a, b } of objectDataset) {
+  output("sync destruct_object a: " + a + " b: " + b);
+}
+
+for (const { a, ...b } of objectDataset) {
+  output("sync destruct_object_rest a: " + a + " b.b: " + b.b + " b.c: " + b.c);
+}
+
+async function runAsyncTests() {
+  for await (const x of syncDataset) {
+    output("async var: " + x);
+  }
+
+  for await (const [a, b] of arrayDataset) {
+    output("async destruct_array a: " + a + " b: " + b);
+  }
+
+  for await (const [a, ...b] of arrayDataset) {
+    output("async destruct_array_rest a: " + a + " b: " + b);
+  }
+
+  for await (const { a, b } of objectDataset) {
+    output("async destruct_object a: " + a + " b: " + b);
+  }
+
+  for await (const { a, ...b } of objectDataset) {
+    output("async destruct_object_rest a: " + a + " b.b: " + b.b + " b.c: " + b.c);
+  }
+}
+
+runAsyncTests();
+
+let asyncLog = [];
+async function runAsyncTimingTest() {
+  asyncLog.push("start");
+  for await (const x of [1, 2]) {
+    asyncLog.push("loop_" + x);
+  }
+  asyncLog.push("end");
+}
+
+runAsyncTimingTest();
+asyncLog.push("main_end");
+
+setTimeout(() => {
+  output("async timing outcome: " + asyncLog.join(", "));
+}, 0);

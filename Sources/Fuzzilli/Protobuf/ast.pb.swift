@@ -924,14 +924,34 @@ public struct Compiler_Protobuf_ForOfLoop: @unchecked Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var left: Compiler_Protobuf_VariableDeclarator {
-    get {_storage._left ?? Compiler_Protobuf_VariableDeclarator()}
-    set {_uniqueStorage()._left = newValue}
+  public var initializer: OneOf_Initializer? {
+    get {return _storage._initializer}
+    set {_uniqueStorage()._initializer = newValue}
   }
-  /// Returns true if `left` has been explicitly set.
-  public var hasLeft: Bool {_storage._left != nil}
-  /// Clears the value of `left`. Subsequent reads from it will return its default value.
-  public mutating func clearLeft() {_uniqueStorage()._left = nil}
+
+  public var left: Compiler_Protobuf_VariableDeclarator {
+    get {
+      if case .left(let v)? = _storage._initializer {return v}
+      return Compiler_Protobuf_VariableDeclarator()
+    }
+    set {_uniqueStorage()._initializer = .left(newValue)}
+  }
+
+  public var objectPattern: Compiler_Protobuf_ObjectPattern {
+    get {
+      if case .objectPattern(let v)? = _storage._initializer {return v}
+      return Compiler_Protobuf_ObjectPattern()
+    }
+    set {_uniqueStorage()._initializer = .objectPattern(newValue)}
+  }
+
+  public var arrayPattern: Compiler_Protobuf_ArrayPattern {
+    get {
+      if case .arrayPattern(let v)? = _storage._initializer {return v}
+      return Compiler_Protobuf_ArrayPattern()
+    }
+    set {_uniqueStorage()._initializer = .arrayPattern(newValue)}
+  }
 
   public var right: Compiler_Protobuf_Expression {
     get {_storage._right ?? Compiler_Protobuf_Expression()}
@@ -951,7 +971,19 @@ public struct Compiler_Protobuf_ForOfLoop: @unchecked Sendable {
   /// Clears the value of `body`. Subsequent reads from it will return its default value.
   public mutating func clearBody() {_uniqueStorage()._body = nil}
 
+  public var isAsync: Bool {
+    get {_storage._isAsync}
+    set {_uniqueStorage()._isAsync = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_Initializer: Equatable, Sendable {
+    case left(Compiler_Protobuf_VariableDeclarator)
+    case objectPattern(Compiler_Protobuf_ObjectPattern)
+    case arrayPattern(Compiler_Protobuf_ArrayPattern)
+
+  }
 
   public init() {}
 
@@ -2506,6 +2538,36 @@ public struct Compiler_Protobuf_Expression: @unchecked Sendable {
   public init() {}
 
   fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+public struct Compiler_Protobuf_ObjectPattern: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var properties: [String] = []
+
+  public var restBinding: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Compiler_Protobuf_ArrayPattern: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var indices: [Int32] = []
+
+  public var names: [String] = []
+
+  public var hasRestElement_p: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -4166,12 +4228,13 @@ extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ForOfLoop"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}left\0\u{1}right\0\u{1}body\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}left\0\u{1}right\0\u{1}body\0\u{1}objectPattern\0\u{1}arrayPattern\0\u{1}isAsync\0")
 
   fileprivate class _StorageClass {
-    var _left: Compiler_Protobuf_VariableDeclarator? = nil
+    var _initializer: Compiler_Protobuf_ForOfLoop.OneOf_Initializer?
     var _right: Compiler_Protobuf_Expression? = nil
     var _body: Compiler_Protobuf_Statement? = nil
+    var _isAsync: Bool = false
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -4182,9 +4245,10 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
     private init() {}
 
     init(copying source: _StorageClass) {
-      _left = source._left
+      _initializer = source._initializer
       _right = source._right
       _body = source._body
+      _isAsync = source._isAsync
     }
   }
 
@@ -4203,9 +4267,48 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
         // allocates stack space for every case branch when no optimizations are
         // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._left) }()
+        case 1: try {
+          var v: Compiler_Protobuf_VariableDeclarator?
+          var hadOneofValue = false
+          if let current = _storage._initializer {
+            hadOneofValue = true
+            if case .left(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._initializer = .left(v)
+          }
+        }()
         case 2: try { try decoder.decodeSingularMessageField(value: &_storage._right) }()
         case 3: try { try decoder.decodeSingularMessageField(value: &_storage._body) }()
+        case 4: try {
+          var v: Compiler_Protobuf_ObjectPattern?
+          var hadOneofValue = false
+          if let current = _storage._initializer {
+            hadOneofValue = true
+            if case .objectPattern(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._initializer = .objectPattern(v)
+          }
+        }()
+        case 5: try {
+          var v: Compiler_Protobuf_ArrayPattern?
+          var hadOneofValue = false
+          if let current = _storage._initializer {
+            hadOneofValue = true
+            if case .arrayPattern(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._initializer = .arrayPattern(v)
+          }
+        }()
+        case 6: try { try decoder.decodeSingularBoolField(value: &_storage._isAsync) }()
         default: break
         }
       }
@@ -4218,7 +4321,7 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
       // allocates stack space for every if/case branch local when no optimizations
       // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
       // https://github.com/apple/swift-protobuf/issues/1182
-      try { if let v = _storage._left {
+      try { if case .left(let v)? = _storage._initializer {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
       } }()
       try { if let v = _storage._right {
@@ -4227,6 +4330,20 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
       try { if let v = _storage._body {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
       } }()
+      switch _storage._initializer {
+      case .objectPattern?: try {
+        guard case .objectPattern(let v)? = _storage._initializer else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+      }()
+      case .arrayPattern?: try {
+        guard case .arrayPattern(let v)? = _storage._initializer else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      }()
+      default: break
+      }
+      if _storage._isAsync != false {
+        try visitor.visitSingularBoolField(value: _storage._isAsync, fieldNumber: 6)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -4236,9 +4353,10 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
       let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
         let rhs_storage = _args.1
-        if _storage._left != rhs_storage._left {return false}
+        if _storage._initializer != rhs_storage._initializer {return false}
         if _storage._right != rhs_storage._right {return false}
         if _storage._body != rhs_storage._body {return false}
+        if _storage._isAsync != rhs_storage._isAsync {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -7691,6 +7809,81 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
       }
       if !storagesAreEqual {return false}
     }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ObjectPattern: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ObjectPattern"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}properties\0\u{1}restBinding\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.properties) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.restBinding) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.properties.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.properties, fieldNumber: 1)
+    }
+    if !self.restBinding.isEmpty {
+      try visitor.visitSingularStringField(value: self.restBinding, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ObjectPattern, rhs: Compiler_Protobuf_ObjectPattern) -> Bool {
+    if lhs.properties != rhs.properties {return false}
+    if lhs.restBinding != rhs.restBinding {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ArrayPattern: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ArrayPattern"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}indices\0\u{1}names\0\u{1}hasRestElement\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.names) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.indices.isEmpty {
+      try visitor.visitPackedInt32Field(value: self.indices, fieldNumber: 1)
+    }
+    if !self.names.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.names, fieldNumber: 2)
+    }
+    if self.hasRestElement_p != false {
+      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ArrayPattern, rhs: Compiler_Protobuf_ArrayPattern) -> Bool {
+    if lhs.indices != rhs.indices {return false}
+    if lhs.names != rhs.names {return false}
+    if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

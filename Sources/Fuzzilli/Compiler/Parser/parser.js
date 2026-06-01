@@ -347,15 +347,68 @@ function parse(script, proto) {
                 return makeStatement('ForInLoop', forInLoop);
             }
             case 'ForOfStatement': {
-                assert(node.left.type === 'VariableDeclaration', "Expected variable declaration as init part of a for-in loop, found " + node.left.type);
-                assert(node.left.declarations.length === 1, "Expected exactly one variable declaration in the init part of a for-in loop");
+                assert(node.left.type === 'VariableDeclaration', "Expected variable declaration as init part of a for-of loop, found " + node.left.type);
+                assert(node.left.declarations.length === 1, "Expected exactly one variable declaration in the init part of a for-of loop");
                 let decl = node.left.declarations[0];
                 let forOfLoop = {};
-                let initDecl = { name: decl.id.name };
-                assert(decl.init == null, "Expected no initial value for the variable declared as part of a for-in loop")
-                forOfLoop.left = make('VariableDeclarator', initDecl);
+                assert(decl.init == null, "Expected no initial value for the variable declared as part of a for-of loop");
+
+                if (decl.id.type === 'Identifier') {
+                    let initDecl = { name: decl.id.name };
+                    forOfLoop.left = make('VariableDeclarator', initDecl);
+                } else if (decl.id.type === 'ObjectPattern') {
+                    let properties = [];
+                    let restBindingName = "";
+                    for (let prop of decl.id.properties) {
+                        if (prop.type === 'ObjectProperty') {
+                            assert(prop.value.type === 'Identifier', "Nested destructuring is not yet supported in loops");
+                            assert(prop.shorthand === true, "Renaming destructuring bindings (e.g. {a: b}) is not yet supported in loops");
+                            properties.push(prop.key.name);
+                        } else if (prop.type === 'RestElement') {
+                            assert(prop.argument.type === 'Identifier', "Expected identifier for rest element");
+                            restBindingName = prop.argument.name;
+                        } else {
+                            assert(false, "Unsupported object destructuring property type: " + prop.type);
+                        }
+                    }
+                    properties.sort();
+                    forOfLoop.objectPattern = make('ObjectPattern', {
+                        properties: properties,
+                        restBinding: restBindingName
+                    });
+                } else if (decl.id.type === 'ArrayPattern') {
+                    let indices = [];
+                    let names = [];
+                    let hasRestElement = false;
+                    for (let i = 0; i < decl.id.elements.length; i++) {
+                        let elem = decl.id.elements[i];
+                        if (elem === null) {
+                            continue;
+                        }
+                        if (elem.type === 'Identifier') {
+                            indices.push(i);
+                            names.push(elem.name);
+                        } else if (elem.type === 'RestElement') {
+                            assert(elem.argument.type === 'Identifier', "Expected identifier for rest element");
+                            indices.push(i);
+                            names.push(elem.argument.name);
+                            hasRestElement = true;
+                        } else {
+                            assert(false, "Unsupported array destructuring element type: " + elem.type);
+                        }
+                    }
+                    forOfLoop.arrayPattern = make('ArrayPattern', {
+                        indices: indices,
+                        names: names,
+                        hasRestElement: hasRestElement
+                    });
+                } else {
+                    assert(false, "Unsupported loop variable initializer type: " + decl.id.type);
+                }
+
                 forOfLoop.right = visitExpression(node.right);
                 forOfLoop.body = visitStatement(node.body);
+                forOfLoop.isAsync = !!node.await;
                 return makeStatement('ForOfLoop', forOfLoop);
             }
             case 'BreakStatement': {

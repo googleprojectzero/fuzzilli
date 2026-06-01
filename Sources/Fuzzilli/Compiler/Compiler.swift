@@ -590,22 +590,76 @@ public class JavaScriptCompiler {
             emit(EndForLoop())
 
         case .forOfLoop(let forOfLoop):
-            let initializer = forOfLoop.left
-            guard !initializer.hasValue else {
-                throw CompilerError.invalidNodeError(
-                    "Expected no initial value for the variable declared in a for-of loop")
+            guard let initializer = forOfLoop.initializer else {
+                throw CompilerError.invalidNodeError("Expected initializer in for-of loop")
             }
 
             let obj = try compileExpression(forOfLoop.right)
 
-            let instr = emit(ForLoop(type: .forOf), withInputs: [obj])
-            let loopVar = instr.innerOutput(0)
-            let loopLabelVariable = instr.innerOutput(1)
-            try enterNewScope(
-                labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
-            ) {
-                map(initializer.name, to: loopVar)
-                try compileBody(forOfLoop.body)
+            switch initializer {
+            case .left(let declarator):
+                guard !declarator.hasValue else {
+                    throw CompilerError.invalidNodeError(
+                        "Expected no initial value for the variable declared in a for-of loop")
+                }
+                let instr = emit(
+                    ForLoop(type: .forOf, isAsync: forOfLoop.isAsync, header: .simple),
+                    withInputs: [obj])
+                let loopVar = instr.innerOutput(0)
+                let loopLabelVariable = instr.innerOutput(1)
+                try enterNewScope(
+                    labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
+                ) {
+                    map(declarator.name, to: loopVar)
+                    try compileBody(forOfLoop.body)
+                }
+
+            case .objectPattern(let pattern):
+                let properties = pattern.properties
+                let hasRest = !pattern.restBinding.isEmpty
+
+                let header = LoopHeader.objectDestruct(
+                    properties: properties, hasRestElement: hasRest)
+                let instr = emit(
+                    ForLoop(type: .forOf, isAsync: forOfLoop.isAsync, header: header),
+                    withInputs: [obj])
+
+                let loopLabelVariable = instr.innerOutputs.last!
+                let vars = Array(instr.innerOutputs.dropLast())
+
+                try enterNewScope(
+                    labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
+                ) {
+                    for (i, prop) in properties.enumerated() {
+                        map(prop, to: vars[i])
+                    }
+                    if hasRest {
+                        map(pattern.restBinding, to: vars.last!)
+                    }
+                    try compileBody(forOfLoop.body)
+                }
+
+            case .arrayPattern(let pattern):
+                assert(pattern.names.count == pattern.indices.count)
+                let indices = pattern.indices.map { Int64($0) }
+                let hasRest = pattern.hasRestElement_p
+
+                let header = LoopHeader.arrayDestruct(indices: indices, hasRestElement: hasRest)
+                let instr = emit(
+                    ForLoop(type: .forOf, isAsync: forOfLoop.isAsync, header: header),
+                    withInputs: [obj])
+
+                let loopLabelVariable = instr.innerOutputs.last!
+                let vars = Array(instr.innerOutputs.dropLast())
+
+                try enterNewScope(
+                    labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
+                ) {
+                    zip(pattern.names, vars).forEach { name, v in
+                        map(name, to: v)
+                    }
+                    try compileBody(forOfLoop.body)
+                }
             }
 
             emit(EndForLoop())

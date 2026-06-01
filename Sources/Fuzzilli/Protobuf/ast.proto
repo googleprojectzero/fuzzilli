@@ -202,9 +202,14 @@ message ForInLoop {
 }
 
 message ForOfLoop {
-    VariableDeclarator left = 1;
+    oneof initializer {
+        VariableDeclarator left = 1;
+        ObjectPattern objectPattern = 4;
+        ArrayPattern arrayPattern = 5;
+    }
     Expression right = 2;
     Statement body = 3;
+    bool isAsync = 6;
 }
 
 message BreakStatement {
@@ -502,4 +507,15 @@ message Expression {
         CallSuperConstructor callSuperConstructor = 28;
         ClassExpression classExpression = 29;
     }
+}
+
+message ObjectPattern {
+    repeated string properties = 1;
+    string restBinding = 2;
+}
+
+message ArrayPattern {
+    repeated int32 indices = 1;
+    repeated string names = 2;
+    bool hasRestElement = 3;
 }
