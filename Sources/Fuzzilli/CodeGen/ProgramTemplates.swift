@@ -209,16 +209,27 @@ public let ProgramTemplates = [
         b.buildPrefix()
         b.build(n: 10)
 
-        let calleeSig = b.randomWasmSignature()
-        let mainSig = b.randomWasmSignature().parameterTypes => calleeSig.outputTypes
+        let (calleeSig, calleeIndexTypes) = b.randomWasmGcSignature(allowNonNullable: false)
+        let (mainSigPart, mainIndexTypes) = b.randomWasmGcSignature(
+            withResults: false, allowNonNullable: false)
+
+        let calleeParamsIndexTypeCount = calleeSig.parameterTypes.filter({ $0.Is(.anyIndexRef) })
+            .count
+        let calleeOutputIndexTypes = Array(calleeIndexTypes.dropFirst(calleeParamsIndexTypeCount))
+
         let wasmTypeGroup = b.wasmDefineTypeGroup {
             [
-                b.wasmDefineSignatureType(signature: calleeSig, indexTypes: []),
-                b.wasmDefineSignatureType(signature: mainSig, indexTypes: []),
+                b.wasmDefineSignatureType(signature: calleeSig, indexTypes: calleeIndexTypes),
+                b.wasmDefineSignatureType(
+                    signature: mainSigPart.parameterTypes => calleeSig.outputTypes,
+                    indexTypes: mainIndexTypes + calleeOutputIndexTypes),
             ]
         }
         let calleeSigDef = wasmTypeGroup[0]
         let mainSigDef = wasmTypeGroup[1]
+
+        let linkedCalleeSig = b.type(of: calleeSigDef).wasmFunctionSignatureDefSignature
+        let linkedMainSig = b.type(of: mainSigDef).wasmFunctionSignatureDefSignature
 
         let useTable64 = Bool.random()
         let numCallees = Int.random(in: 1...5)
@@ -227,7 +238,7 @@ public let ProgramTemplates = [
             let callees = (0..<numCallees).map { _ in
                 wasmModule.addWasmFunction(signature: calleeSigDef) { function, label, params in
                     b.build(n: 10)
-                    return calleeSig.outputTypes.map(function.findOrGenerateWasmVar)
+                    return linkedCalleeSig.outputTypes.map(function.findOrGenerateWasmVar)
                 }
             }
 
@@ -241,29 +252,48 @@ public let ProgramTemplates = [
             let main = wasmModule.addWasmFunction(signature: mainSigDef) {
                 function, label, params in
                 b.build(n: 20)
-                if let arguments = b.randomWasmArguments(forWasmSignature: calleeSig) {
-                    if Bool.random() {
-                        function.wasmReturnCallDirect(
-                            function: callees.randomElement()!, functionArgs: arguments)
-                    } else {
-                        let calleeIndex =
-                            useTable64
-                            ? function.consti64(Int64(Int.random(in: 0..<callees.count)))
-                            : function.consti32(Int32(Int.random(in: 0..<callees.count)))
-                        function.wasmReturnCallIndirect(
-                            signatureDef: calleeSigDef, table: table, functionArgs: arguments,
-                            tableIndex: calleeIndex)
-                    }
+                if let arguments = b.randomWasmArguments(
+                    forWasmSignature: linkedCalleeSig, generate: true)
+                {
+                    withEqualProbability(
+                        {
+                            function.wasmReturnCallDirect(
+                                function: callees.randomElement()!, functionArgs: arguments)
+                        },
+                        {
+                            let calleeIndex =
+                                useTable64
+                                ? function.consti64(Int64(Int.random(in: 0..<callees.count)))
+                                : function.consti32(Int32(Int.random(in: 0..<callees.count)))
+                            function.wasmReturnCallIndirect(
+                                signatureDef: calleeSigDef, table: table, functionArgs: arguments,
+                                tableIndex: calleeIndex)
+                        },
+                        {
+                            let calleeRef = function.wasmRefFunc(callees.randomElement()!)
+                            function.wasmReturnCallRef(
+                                functionRef: calleeRef, functionArgs: arguments)
+                        })
                 }
-                return mainSig.outputTypes.map(function.findOrGenerateWasmVar)
+                return linkedMainSig.outputTypes.map(function.findOrGenerateWasmVar)
+            }
+
+            // We wrap the main function with a function that has no parameters and no return values.
+            // We do this because we call this function from JS. If we called the main function
+            // directly from JS, some arguments could not be produced (e.g., .wasmSimd128) or would
+            // require special handling.
+            wasmModule.addWasmFunction(with: [] => []) { function, label, params in
+                if let arguments = b.randomWasmArguments(
+                    forWasmSignature: linkedMainSig, generate: true)
+                {
+                    function.wasmCallDirect(function: main, functionArgs: arguments)
+                }
+                return []
             }
         }
 
         let exports = module.loadExports()
-        let args = b.randomArguments(
-            forCallingFunctionWithSignature:
-                ProgramBuilder.convertWasmSignatureToJsSignature(mainSig))
-        b.callMethod(module.getExportedMethod(at: numCallees), on: exports, withArgs: args)
+        b.callMethod(module.methods.last!, on: exports, withArgs: [])
     },
 
     ProgramTemplate("JIT1Function") { b in

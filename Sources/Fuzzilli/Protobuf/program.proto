@@ -378,6 +378,7 @@ message Instruction {
         WasmRefFunc wasmRefFunc = 352;
         WasmRefAsNonNull wasmRefAsNonNull = 353;
         WasmCallRef wasmCallRef = 354;
+        WasmReturnCallRef wasmReturnCallRef = 355;
     }
 }
 

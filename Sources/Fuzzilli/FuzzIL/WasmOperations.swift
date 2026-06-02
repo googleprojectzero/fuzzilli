@@ -1025,6 +1025,19 @@ final class WasmCallRef: WasmOperation {
     var parameterCount: Int { numInputs - 1 }
 }
 
+final class WasmReturnCallRef: WasmOperation {
+    override var opcode: Opcode { .wasmReturnCallRef(self) }
+
+    init(parameterCount: Int) {
+        // The inputs are the function reference and the function arguments.
+        super.init(
+            numInputs: 1 + parameterCount, numOutputs: 0, attributes: [.isJump],
+            requiredContext: [.wasmFunction])
+    }
+
+    var parameterCount: Int { numInputs - 1 }
+}
+
 final class WasmReturnCallDirect: WasmOperation {
     override var opcode: Opcode { .wasmReturnCallDirect(self) }
 

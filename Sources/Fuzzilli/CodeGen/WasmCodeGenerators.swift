@@ -1041,6 +1041,35 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmCallRef(functionRef: functionRef, functionArgs: functionArgs)
     },
 
+    CodeGenerator("WasmReturnCallRefGenerator", inContext: .single(.wasmFunction)) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+        guard
+            let functionVar =
+                (b.findVariable { v in
+                    let type = b.type(of: v)
+                    return type.Is(.wasmFunctionDef())
+                        && type.wasmFunctionDefSignature!.outputTypes.count
+                            == function.signature.outputTypes.count
+                        && zip(
+                            function.signature.outputTypes,
+                            type.wasmFunctionDefSignature!.outputTypes
+                        ).allSatisfy { $0.subsumes($1) }
+                })
+        else { return }
+
+        let signatureType = b.type(of: functionVar).wasmFunctionDef!.signatureType!
+        let signatureDef = b.getWasmTypeDef(for: signatureType)
+        let typeDef = b.type(of: signatureDef).wasmTypeDefinition!
+
+        let refType = typeDef.getReferenceTypeTo(nullability: false)
+        let functionRef = b.randomVariable(ofType: refType) ?? function.wasmRefFunc(functionVar)
+
+        let signature = b.type(of: functionVar).wasmFunctionDefSignature!
+        let functionArgs = b.randomWasmArguments(forWasmSignature: signature, generate: true)
+        guard let functionArgs else { return }
+        function.wasmReturnCallRef(functionRef: functionRef, functionArgs: functionArgs)
+    },
+
     CodeGenerator("WasmReturnCallDirectGenerator", inContext: .single(.wasmFunction)) {
         b in
         let function = b.currentWasmModule.currentWasmFunction

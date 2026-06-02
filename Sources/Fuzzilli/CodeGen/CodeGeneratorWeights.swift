@@ -365,6 +365,7 @@ public let codeGeneratorWeights = [
     "WasmCallDirectGenerator":                  10,
     "WasmCallRefGenerator":                     10,
     "WasmReturnCallDirectGenerator":            10,
+    "WasmReturnCallRefGenerator":               10,
     "WasmReturnCallIndirectGenerator":          10,
 
     // Simd Generators

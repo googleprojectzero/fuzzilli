@@ -1469,6 +1469,39 @@ class WasmFoundationTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: "10,1\n52\n")
     }
 
+    func testReturnCallRef() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            let f1 = wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmI31Ref()]) {
+                function, label, args in
+                return [
+                    function.wasmRefI31(
+                        function.wasmi32BinOp(args[0], function.consti32(1), binOpKind: .Add))
+                ]
+            }
+            wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmAnyRef()]) {
+                function, label, args in
+                let ref = function.wasmRefFunc(f1)
+                function.wasmReturnCallRef(functionRef: ref, functionArgs: args)
+                return [function.wasmRefNull(type: .wasmAnyRef())]
+            }
+        }
+
+        let exports = module.loadExports()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        let wasmOut = b.callMethod(
+            module.getExportedMethod(at: 1), on: exports, withArgs: [b.loadInt(41)])
+        b.callFunction(outputFunc, withArgs: [wasmOut])
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog, withOptions: [.includeComments])
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
     // Test every memory testcase for both memory32 and memory64.
 
     func importedMemoryTestCase(isShared: Bool, isMemory64: Bool) throws {

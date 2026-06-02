@@ -1480,17 +1480,17 @@ public class ProgramBuilder {
             return .jsAnything
         } else if type.Is(.nothing) {
             return .undefined
-        } else if type.Is(.wasmFuncRef()) {
-            // TODO(cffsmith): refine this type with the signature if we can.
-            return .function()
-        } else if type.Is(.wasmI31Ref()) {
-            return .integer
         } else if type.Is(.wasmNullRef()) || type.Is(.wasmNullExternRef())
             || type.Is(.wasmNullFuncRef())
         {
             // This is slightly imprecise: The null types only accept null, not undefined but
             // Fuzzilli doesn't differentiate between null and undefined in its type system.
             return .nullish
+        } else if type.Is(.wasmFuncRef()) {
+            // TODO(cffsmith): refine this type with the signature if we can.
+            return .function()
+        } else if type.Is(.wasmI31Ref()) {
+            return .integer
         } else if type.Is(.wasmGenericRef) {
             return .jsAnything
         } else {
@@ -4797,6 +4797,22 @@ public class ProgramBuilder {
                     withInputs: functionArgs + [functionRef],
                     types: signature.parameterTypes + [.wasmFuncRef()]
                 ).outputs)
+        }
+
+        public func wasmReturnCallRef(
+            functionRef: Variable, functionArgs: [Variable]
+        ) {
+            let signatureDef = b.getWasmTypeDef(for: b.type(of: functionRef))
+            let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
+            assert(
+                self.signature.outputTypes.count == signature.outputTypes.count
+                    && zip(self.signature.outputTypes, signature.outputTypes).allSatisfy {
+                        $0.subsumes($1)
+                    })
+            b.emit(
+                WasmReturnCallRef(parameterCount: signature.parameterTypes.count),
+                withInputs: functionArgs + [functionRef],
+                types: signature.parameterTypes + [.wasmFuncRef()])
         }
 
         public func wasmReturnCallDirect(function: Variable, functionArgs: [Variable]) {

@@ -1912,6 +1912,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmCallIndirect(_),
                 .wasmCallDirect(_),
                 .wasmCallRef(_),
+                .wasmReturnCallRef(_),
                 .wasmReturnCallDirect(_),
                 .wasmReturnCallIndirect(_),
                 .wasmMemoryLoad(_),

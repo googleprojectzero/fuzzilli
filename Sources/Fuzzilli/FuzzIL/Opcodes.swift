@@ -382,4 +382,5 @@ enum Opcode {
     case wasmRefFunc(WasmRefFunc)
     case wasmRefAsNonNull(WasmRefAsNonNull)
     case wasmCallRef(WasmCallRef)
+    case wasmReturnCallRef(WasmReturnCallRef)
 }

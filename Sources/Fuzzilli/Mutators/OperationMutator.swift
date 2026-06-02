@@ -793,6 +793,7 @@ public class OperationMutator: BaseInstructionMutator {
             .wasmCallIndirect(_),
             .wasmCallDirect(_),
             .wasmCallRef(_),
+            .wasmReturnCallRef(_),
             .wasmReturnCallDirect(_),
             .wasmReturnCallIndirect(_),
             .wasmi32EqualZero(_),
