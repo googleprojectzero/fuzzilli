@@ -596,14 +596,33 @@ public class JavaScriptCompiler {
 
             let obj = try compileExpression(forOfLoop.right)
 
+            if forOfLoop.usingType != .none {
+                guard case .left = initializer else {
+                    throw CompilerError.invalidNodeError(
+                        "using declarations cannot be destructured")
+                }
+            }
+
             switch initializer {
             case .left(let declarator):
                 guard !declarator.hasValue else {
                     throw CompilerError.invalidNodeError(
                         "Expected no initial value for the variable declared in a for-of loop")
                 }
+                let usingType: UsingType =
+                    switch forOfLoop.usingType {
+                    case .using: .using
+                    case .awaitUsing: .awaitUsing
+                    case .none: .none
+                    case .UNRECOGNIZED(let type):
+                        throw CompilerError.invalidNodeError("Unrecognized using type \(type)")
+                    }
+
                 let instr = emit(
-                    ForLoop(type: .forOf, isAsync: forOfLoop.isAsync, header: .simple),
+                    ForLoop(
+                        type: .forOf, isAsync: forOfLoop.isAsync,
+                        usingType: usingType,
+                        header: .simple),
                     withInputs: [obj])
                 let loopVar = instr.innerOutput(0)
                 let loopLabelVariable = instr.innerOutput(1)
@@ -621,7 +640,10 @@ public class JavaScriptCompiler {
                 let header = LoopHeader.objectDestruct(
                     properties: properties, hasRestElement: hasRest)
                 let instr = emit(
-                    ForLoop(type: .forOf, isAsync: forOfLoop.isAsync, header: header),
+                    ForLoop(
+                        type: .forOf, isAsync: forOfLoop.isAsync,
+                        usingType: .none,
+                        header: header),
                     withInputs: [obj])
 
                 let loopLabelVariable = instr.innerOutputs.last!
@@ -646,7 +668,10 @@ public class JavaScriptCompiler {
 
                 let header = LoopHeader.arrayDestruct(indices: indices, hasRestElement: hasRest)
                 let instr = emit(
-                    ForLoop(type: .forOf, isAsync: forOfLoop.isAsync, header: header),
+                    ForLoop(
+                        type: .forOf, isAsync: forOfLoop.isAsync,
+                        usingType: .none,
+                        header: header),
                     withInputs: [obj])
 
                 let loopLabelVariable = instr.innerOutputs.last!

@@ -735,7 +735,10 @@ public class FuzzILLifter: Lifter {
         case .beginForLoop(let op):
             let outputs = instr.innerOutputs.dropLast().map(lift)
             let label = lift(instr.innerOutputs.last!)
-            let line = "BeginForLoop type='\(op.type)' async='\(op.isAsync)'"
+            var line = "BeginForLoop type='\(op.type)' async='\(op.isAsync)'"
+            if op.usingType != .none {
+                line += " usingType='\(op.usingType)'"
+            }
 
             switch op.header {
             case .simple:

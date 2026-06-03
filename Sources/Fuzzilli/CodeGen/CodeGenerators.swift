@@ -133,23 +133,40 @@ func disposableClassVariableGeneratorStubs(
 func makeForInOfLoopGenerator(
     prefix: String,
     type: ForInOfLoopType,
-    isAsync: Bool,
+    isAsyncIteration: Bool,
+    requiresAsyncContext: Bool = false,
+    usingType: UsingType = .none,
     body: @escaping (ProgramBuilder, Variable) -> Void
 ) -> CodeGenerator {
     let generatorName = "\(prefix)Generator"
     let beginStubName = "\(prefix)BeginGenerator"
     let endStubName = "\(prefix)EndGenerator"
 
+    // 'await using' requires an async function context, even inside a standard (non-async) for-of loop.
     let context: GeneratorStub.ContextRequirement =
-        isAsync ? .single(.asyncFunction) : .single(.javascript)
+        (isAsyncIteration || requiresAsyncContext) ? .single(.asyncFunction) : .single(.javascript)
 
     let inputs: GeneratorStub.Inputs
     switch type {
     case .forIn:
-        assert(!isAsync, "async for in is invalid")
+        assert(!isAsyncIteration, "async for in is invalid")
         inputs = .preferred(.object())
     case .forOf:
-        inputs = .preferred(isAsync ? .asyncIterable() : .iterable())
+        let elementType: ILType =
+            switch usingType {
+            case .awaitUsing:
+                .asyncDisposable()
+            case .using:
+                .disposable()
+            case .none:
+                .jsAnything
+            }
+
+        if isAsyncIteration {
+            inputs = .preferred(.asyncIterable(ofElementType: elementType))
+        } else {
+            inputs = .preferred(.iterable(ofElementType: elementType))
+        }
     }
 
     return CodeGenerator(
@@ -175,9 +192,11 @@ func makeForInOfLoopGenerator(
 
 func makeArrayDestructForOfLoopGenerator(
     prefix: String,
-    isAsync: Bool
+    isAsyncIteration: Bool
 ) -> CodeGenerator {
-    return makeForInOfLoopGenerator(prefix: prefix, type: .forOf, isAsync: isAsync) { b, obj in
+    return makeForInOfLoopGenerator(
+        prefix: prefix, type: .forOf, isAsyncIteration: isAsyncIteration
+    ) { b, obj in
         var indices: [Int64] = []
         for idx in 0..<Int64.random(in: 1..<5) {
             withProbability(0.8) { indices.append(idx) }
@@ -185,7 +204,7 @@ func makeArrayDestructForOfLoopGenerator(
         if indices.isEmpty { indices = [0] }
         let hasRestElement = probability(0.2)
         let op = ForLoop(
-            type: .forOf, isAsync: isAsync,
+            type: .forOf, isAsync: isAsyncIteration,
             header: .arrayDestruct(indices: indices, hasRestElement: hasRestElement))
         let vars = b.emit(op, withInputs: [obj]).innerOutputs
         if hasRestElement && probability(0.2) {
@@ -196,9 +215,11 @@ func makeArrayDestructForOfLoopGenerator(
 
 func makeObjectDestructForOfLoopGenerator(
     prefix: String,
-    isAsync: Bool
+    isAsyncIteration: Bool
 ) -> CodeGenerator {
-    return makeForInOfLoopGenerator(prefix: prefix, type: .forOf, isAsync: isAsync) { b, obj in
+    return makeForInOfLoopGenerator(
+        prefix: prefix, type: .forOf, isAsyncIteration: isAsyncIteration
+    ) { b, obj in
         let elementType = b.type(of: obj).iterableElementType ?? .jsAnything
         var properties = Set<String>()
         for _ in 0..<Int.random(in: 1...3) {
@@ -210,7 +231,7 @@ func makeObjectDestructForOfLoopGenerator(
         }
         let hasRestElement = probability(0.2)
         let op = ForLoop(
-            type: .forOf, isAsync: isAsync,
+            type: .forOf, isAsync: isAsyncIteration,
             header: .objectDestruct(properties: Array(properties), hasRestElement: hasRestElement))
         b.emit(op, withInputs: [obj])
     }
@@ -2808,7 +2829,7 @@ public let CodeGenerators: [CodeGenerator] = [
     makeForInOfLoopGenerator(
         prefix: "ForInLoop",
         type: .forIn,
-        isAsync: false
+        isAsyncIteration: false
     ) { b, obj in
         b.emit(ForLoop(type: .forIn), withInputs: [obj])
     },
@@ -2816,37 +2837,74 @@ public let CodeGenerators: [CodeGenerator] = [
     makeForInOfLoopGenerator(
         prefix: "ForOfLoop",
         type: .forOf,
-        isAsync: false
+        isAsyncIteration: false
     ) { b, obj in
         b.emit(ForLoop(type: .forOf), withInputs: [obj])
     },
 
     makeForInOfLoopGenerator(
+        prefix: "ForOfWithUsingLoop",
+        type: .forOf,
+        isAsyncIteration: false,
+        usingType: .using
+    ) { b, obj in
+        b.emit(ForLoop(type: .forOf, usingType: .using), withInputs: [obj])
+    },
+
+    makeForInOfLoopGenerator(
+        prefix: "ForOfWithAwaitUsingLoop",
+        type: .forOf,
+        isAsyncIteration: false,
+        requiresAsyncContext: true,
+        usingType: .awaitUsing
+    ) { b, obj in
+        b.emit(ForLoop(type: .forOf, isAsync: false, usingType: .awaitUsing), withInputs: [obj])
+    },
+
+    makeForInOfLoopGenerator(
         prefix: "ForAwaitOfLoop",
         type: .forOf,
-        isAsync: true
+        isAsyncIteration: true
     ) { b, obj in
         b.emit(ForLoop(type: .forOf, isAsync: true), withInputs: [obj])
     },
 
+    makeForInOfLoopGenerator(
+        prefix: "ForAwaitOfWithUsingLoop",
+        type: .forOf,
+        isAsyncIteration: true,
+        usingType: .using
+    ) { b, obj in
+        b.emit(ForLoop(type: .forOf, isAsync: true, usingType: .using), withInputs: [obj])
+    },
+
+    makeForInOfLoopGenerator(
+        prefix: "ForAwaitOfWithAwaitUsingLoop",
+        type: .forOf,
+        isAsyncIteration: true,
+        usingType: .awaitUsing
+    ) { b, obj in
+        b.emit(ForLoop(type: .forOf, isAsync: true, usingType: .awaitUsing), withInputs: [obj])
+    },
+
     makeArrayDestructForOfLoopGenerator(
         prefix: "ForOfWithArrayDestructLoop",
-        isAsync: false
+        isAsyncIteration: false
     ),
 
     makeArrayDestructForOfLoopGenerator(
         prefix: "ForAwaitOfWithArrayDestructLoop",
-        isAsync: true
+        isAsyncIteration: true
     ),
 
     makeObjectDestructForOfLoopGenerator(
         prefix: "ForOfWithObjectDestructLoop",
-        isAsync: false
+        isAsyncIteration: false
     ),
 
     makeObjectDestructForOfLoopGenerator(
         prefix: "ForAwaitOfWithObjectDestructLoop",
-        isAsync: true
+        isAsyncIteration: true
     ),
 
     CodeGenerator(
@@ -3418,6 +3476,24 @@ public let CodeGenerators: [CodeGenerator] = [
         b.setType(ofVariable: iterableObject, to: .iterable() + .object())
     },
 
+    CodeGenerator("DisposableGenerator", produces: [.disposable()]) { b in
+        let disposeSymbol = b.createSymbolProperty("dispose")
+        b.hide(disposeSymbol)
+        b.buildObjectLiteral { obj in
+            obj.addComputedMethod(disposeSymbol, with: .parameters(n: 0)) { _ in
+            }
+        }
+    },
+
+    CodeGenerator("AsyncDisposableGenerator", produces: [.asyncDisposable()]) { b in
+        let asyncDisposeSymbol = b.createSymbolProperty("asyncDispose")
+        b.hide(asyncDisposeSymbol)
+        b.buildObjectLiteral { obj in
+            obj.addComputedMethod(asyncDisposeSymbol, with: .parameters(n: 0)) { _ in
+            }
+        }
+    },
+
     CodeGenerator("LoadNewTargetGenerator", inContext: .single(.subroutine)) { b in
         b.loadNewTarget()
     },
@@ -3577,6 +3653,48 @@ public let CodeGenerators: [CodeGenerator] = [
         // - Exports from another module
         // - Multiple modules exporting a variable with the same name
         b.generateExport()
+    },
+
+    CodeGenerator(
+        "DisposableArrayGenerator",
+        inputs: .required(.disposable()),
+        produces: [.createJsArrayType(ofElementType: .disposable())]
+    ) { b, disposable in
+        let array = b.createArray(with: [disposable])
+        b.setType(ofVariable: array, to: .createJsArrayType(ofElementType: .disposable()))
+    },
+
+    CodeGenerator(
+        "AsyncDisposableArrayGenerator",
+        inputs: .required(.asyncDisposable()),
+        produces: [.createJsArrayType(ofElementType: .asyncDisposable())]
+    ) { b, asyncDisposable in
+        let array = b.createArray(with: [asyncDisposable])
+        b.setType(ofVariable: array, to: .createJsArrayType(ofElementType: .asyncDisposable()))
+    },
+
+    CodeGenerator(
+        "AsyncIterableDisposableGenerator",
+        inputs: .required(.disposable()),
+        produces: [.asyncIterable(ofElementType: .disposable())]
+    ) { b, disposable in
+        let genFunc = b.buildAsyncGeneratorFunction(with: .parameters(n: 0)) { _ in
+            b.yield(disposable)
+        }
+        let iterator = b.callFunction(genFunc)
+        b.setType(ofVariable: iterator, to: .asyncIterable(ofElementType: .disposable()))
+    },
+
+    CodeGenerator(
+        "AsyncIterableAsyncDisposableGenerator",
+        inputs: .required(.asyncDisposable()),
+        produces: [.asyncIterable(ofElementType: .asyncDisposable())]
+    ) { b, asyncDisposable in
+        let genFunc = b.buildAsyncGeneratorFunction(with: .parameters(n: 0)) { _ in
+            b.yield(asyncDisposable)
+        }
+        let iterator = b.callFunction(genFunc)
+        b.setType(ofVariable: iterator, to: .asyncIterable(ofElementType: .asyncDisposable()))
     },
 
     CodeGenerator("HomomorphicObjectsGenerator") { b in

@@ -4938,4 +4938,49 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(actual, expected)
     }
+
+    func testForOfLoopWithUsingLifting() {
+        let fuzzer = makeMockFuzzer(
+            config: Configuration(logLevel: .error),
+            environment: JavaScriptEnvironment()
+        )
+        let b = fuzzer.makeBuilder()
+
+        let iterable = b.createArray(with: [])
+
+        b.buildForInOfLoop(
+            iterable, type: .forOf, isAsync: false, usingType: .using, header: .simple
+        ) {
+            vars, label in
+            let loopVar = vars[0]
+            let printFunc = b.createNamedVariable(forBuiltin: "print")
+            b.callFunction(printFunc, withArgs: [loopVar])
+        }
+
+        let program = b.finalize()
+
+        let fuzzILLifter = FuzzILLifter()
+        let fuzzILOutput = fuzzILLifter.lift(program)
+
+        // Assert FuzzIL contains our new instructions
+        XCTAssertTrue(
+            fuzzILOutput.contains("BeginForLoop type='forOf' async='false' usingType='using'"))
+        XCTAssertTrue(fuzzILOutput.contains("EndForLoop"))
+
+        let jsLifter = JavaScriptLifter(
+            prefix: "",
+            suffix: "",
+            ecmaVersion: .es6,
+            environment: fuzzer.environment
+        )
+        let actual = jsLifter.lift(program)
+
+        let expected = """
+            for (using v1 of []) {
+                print(v1);
+            }
+
+            """
+        XCTAssertEqual(actual, expected)
+    }
 }

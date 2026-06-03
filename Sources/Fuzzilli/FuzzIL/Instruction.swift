@@ -1122,13 +1122,7 @@ extension Instruction: ProtobufConvertible {
                 $0.beginForLoopBody = Fuzzilli_Protobuf_BeginForLoopBody()
             case .beginForLoop(let op):
                 $0.beginForLoop = Fuzzilli_Protobuf_BeginForLoop.with {
-                    $0.loopType =
-                        switch op.type {
-                        case .forIn:
-                            .forIn
-                        case .forOf:
-                            .forOf
-                        }
+                    $0.loopType = convertEnum(op.type, ForInOfLoopType.allCases)
                     $0.isAsync = op.isAsync
                     $0.headerType =
                         switch op.header {
@@ -1139,6 +1133,7 @@ extension Instruction: ProtobufConvertible {
                         case .objectDestruct:
                             .objectDestruct
                         }
+                    $0.usingType = convertEnum(op.usingType, UsingType.allCases)
                     if case .arrayDestruct(let indices, let hasRest) = op.header {
                         $0.indices = indices.map({ Int32($0) })
                         $0.hasRestElement_p = hasRest
@@ -2486,16 +2481,10 @@ extension Instruction: ProtobufConvertible {
                 default:
                     .simple
                 }
-            let type: ForInOfLoopType =
-                switch p.loopType {
-                case .forIn:
-                    .forIn
-                case .forOf:
-                    .forOf
-                default:
-                    .forOf
-                }
-            op = ForLoop(type: type, isAsync: p.isAsync, header: header)
+            let type = try convertEnum(p.loopType, ForInOfLoopType.allCases)
+            let usingType = try convertEnum(p.usingType, UsingType.allCases)
+            op = ForLoop(
+                type: type, isAsync: p.isAsync, usingType: usingType, header: header)
 
         case .endForLoop:
             op = EndForLoop()

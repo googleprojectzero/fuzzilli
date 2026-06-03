@@ -3830,6 +3830,8 @@ public struct Fuzzilli_Protobuf_BeginForLoop: Sendable {
 
   public var hasRestElement_p: Bool = false
 
+  public var usingType: Fuzzilli_Protobuf_BeginForLoop.UsingType = .none
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum ForInOfLoopType: SwiftProtobuf.Enum, Swift.CaseIterable {
@@ -3900,6 +3902,44 @@ public struct Fuzzilli_Protobuf_BeginForLoop: Sendable {
       .simple,
       .arrayDestruct,
       .objectDestruct,
+    ]
+
+  }
+
+  public enum UsingType: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case none // = 0
+    case using // = 1
+    case awaitUsing // = 2
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .none
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .none
+      case 1: self = .using
+      case 2: self = .awaitUsing
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .none: return 0
+      case .using: return 1
+      case .awaitUsing: return 2
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [Fuzzilli_Protobuf_BeginForLoop.UsingType] = [
+      .none,
+      .using,
+      .awaitUsing,
     ]
 
   }
@@ -11111,7 +11151,7 @@ extension Fuzzilli_Protobuf_EndForLoop: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Fuzzilli_Protobuf_BeginForLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BeginForLoop"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}loopType\0\u{1}isAsync\0\u{1}headerType\0\u{1}indices\0\u{1}properties\0\u{1}hasRestElement\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}loopType\0\u{1}isAsync\0\u{1}headerType\0\u{1}indices\0\u{1}properties\0\u{1}hasRestElement\0\u{1}usingType\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11125,6 +11165,7 @@ extension Fuzzilli_Protobuf_BeginForLoop: SwiftProtobuf.Message, SwiftProtobuf._
       case 4: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
       case 5: try { try decoder.decodeRepeatedStringField(value: &self.properties) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
+      case 7: try { try decoder.decodeSingularEnumField(value: &self.usingType) }()
       default: break
       }
     }
@@ -11149,6 +11190,9 @@ extension Fuzzilli_Protobuf_BeginForLoop: SwiftProtobuf.Message, SwiftProtobuf._
     if self.hasRestElement_p != false {
       try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 6)
     }
+    if self.usingType != .none {
+      try visitor.visitSingularEnumField(value: self.usingType, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11159,6 +11203,7 @@ extension Fuzzilli_Protobuf_BeginForLoop: SwiftProtobuf.Message, SwiftProtobuf._
     if lhs.indices != rhs.indices {return false}
     if lhs.properties != rhs.properties {return false}
     if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
+    if lhs.usingType != rhs.usingType {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11170,6 +11215,10 @@ extension Fuzzilli_Protobuf_BeginForLoop.ForInOfLoopType: SwiftProtobuf._ProtoNa
 
 extension Fuzzilli_Protobuf_BeginForLoop.HeaderType: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SIMPLE\0\u{1}ARRAY_DESTRUCT\0\u{1}OBJECT_DESTRUCT\0")
+}
+
+extension Fuzzilli_Protobuf_BeginForLoop.UsingType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0NONE\0\u{1}USING\0\u{1}AWAIT_USING\0")
 }
 
 extension Fuzzilli_Protobuf_BeginRepeatLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {

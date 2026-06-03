@@ -4124,10 +4124,11 @@ public class ProgramBuilder {
         _ obj: Variable,
         type: ForInOfLoopType,
         isAsync: Bool,
+        usingType: UsingType = .none,
         header: LoopHeader,
         _ body: ([Variable], Variable) -> Void
     ) {
-        let beginOp = ForLoop(type: type, isAsync: isAsync, header: header)
+        let beginOp = ForLoop(type: type, isAsync: isAsync, usingType: usingType, header: header)
         let instr = emit(beginOp, withInputs: [obj])
         let label = instr.innerOutputs.last!
         let vars = instr.innerOutputs.dropLast()

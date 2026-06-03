@@ -976,12 +976,55 @@ public struct Compiler_Protobuf_ForOfLoop: @unchecked Sendable {
     set {_uniqueStorage()._isAsync = newValue}
   }
 
+  public var usingType: Compiler_Protobuf_ForOfLoop.UsingType {
+    get {_storage._usingType}
+    set {_uniqueStorage()._usingType = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Initializer: Equatable, Sendable {
     case left(Compiler_Protobuf_VariableDeclarator)
     case objectPattern(Compiler_Protobuf_ObjectPattern)
     case arrayPattern(Compiler_Protobuf_ArrayPattern)
+
+  }
+
+  public enum UsingType: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case none // = 0
+    case using // = 1
+    case awaitUsing // = 2
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .none
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .none
+      case 1: self = .using
+      case 2: self = .awaitUsing
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .none: return 0
+      case .using: return 1
+      case .awaitUsing: return 2
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [Compiler_Protobuf_ForOfLoop.UsingType] = [
+      .none,
+      .using,
+      .awaitUsing,
+    ]
 
   }
 
@@ -4228,13 +4271,14 @@ extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ForOfLoop"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}left\0\u{1}right\0\u{1}body\0\u{1}objectPattern\0\u{1}arrayPattern\0\u{1}isAsync\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}left\0\u{1}right\0\u{1}body\0\u{1}objectPattern\0\u{1}arrayPattern\0\u{1}isAsync\0\u{1}usingType\0")
 
   fileprivate class _StorageClass {
     var _initializer: Compiler_Protobuf_ForOfLoop.OneOf_Initializer?
     var _right: Compiler_Protobuf_Expression? = nil
     var _body: Compiler_Protobuf_Statement? = nil
     var _isAsync: Bool = false
+    var _usingType: Compiler_Protobuf_ForOfLoop.UsingType = .none
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -4249,6 +4293,7 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
       _right = source._right
       _body = source._body
       _isAsync = source._isAsync
+      _usingType = source._usingType
     }
   }
 
@@ -4309,6 +4354,7 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
           }
         }()
         case 6: try { try decoder.decodeSingularBoolField(value: &_storage._isAsync) }()
+        case 7: try { try decoder.decodeSingularEnumField(value: &_storage._usingType) }()
         default: break
         }
       }
@@ -4344,6 +4390,9 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
       if _storage._isAsync != false {
         try visitor.visitSingularBoolField(value: _storage._isAsync, fieldNumber: 6)
       }
+      if _storage._usingType != .none {
+        try visitor.visitSingularEnumField(value: _storage._usingType, fieldNumber: 7)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -4357,6 +4406,7 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
         if _storage._right != rhs_storage._right {return false}
         if _storage._body != rhs_storage._body {return false}
         if _storage._isAsync != rhs_storage._isAsync {return false}
+        if _storage._usingType != rhs_storage._usingType {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -4364,6 +4414,10 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
+}
+
+extension Compiler_Protobuf_ForOfLoop.UsingType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0NONE\0\u{1}USING\0\u{1}AWAIT_USING\0")
 }
 
 extension Compiler_Protobuf_BreakStatement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {

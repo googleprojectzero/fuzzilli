@@ -761,6 +761,11 @@ message BeginForLoop {
         ARRAY_DESTRUCT = 1;
         OBJECT_DESTRUCT = 2;
     }
+    enum UsingType {
+        NONE = 0;
+        USING = 1;
+        AWAIT_USING = 2;
+    }
 
     ForInOfLoopType loopType = 1;
     bool isAsync = 2;
@@ -769,6 +774,7 @@ message BeginForLoop {
     repeated int32 indices = 4;
     repeated string properties = 5;
     bool hasRestElement = 6;
+    UsingType usingType = 7;
 }
 
 message BeginRepeatLoop {

@@ -210,7 +210,8 @@ public struct JSTyper: Analyzer {
             // This type and the object group will be updated dynamically
             let instanceType: ILType = .object(
                 ofGroup: instanceName, withProperties: Array(superType.properties),
-                withMethods: Array(superType.methods))
+                withMethods: Array(superType.methods),
+                withSymbolMethods: Array(superType.symbolMethods))
 
             // This is the wip object group.
             let objectGroup = ObjectGroup(
@@ -396,6 +397,15 @@ public struct JSTyper: Analyzer {
             assert(newType != .nothing)
             activeObjectGroups.top.instanceType = newType
             activeObjectGroups.top.methods[methodName] = []
+        }
+
+        public func addSymbolMethod(_ symbol: String) {
+            let topGroup = activeObjectGroups.top
+            let newType =
+                ILType.object(ofGroup: topGroup.name, withSymbolMethods: [symbol])
+                + topGroup.instanceType
+            assert(newType != .nothing)
+            activeObjectGroups.top.instanceType = newType
         }
 
         public func updateMethodSignature(methodName: String, signature: Signature) {
@@ -1922,6 +1932,11 @@ public struct JSTyper: Analyzer {
                 instr.innerOutputs(1...),
                 parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
+            let keyType = type(ofInput: 0)
+            if let symbolGroup = keyType.group, ILType.groupsMatchByPrefix("Symbol", symbolGroup) {
+                dynamicObjectGroupManager.addSymbolMethod(symbolGroup)
+            }
+
         case .beginObjectLiteralGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), dynamicObjectGroupManager.top.instanceType)
@@ -2006,6 +2021,13 @@ public struct JSTyper: Analyzer {
             processParameterDeclarations(
                 instr.innerOutputs(1...),
                 parameters: inferSubroutineParameterList(of: op, at: instr.index))
+
+            let keyType = type(ofInput: 0)
+            if let symbolGroup = keyType.group, ILType.groupsMatchByPrefix("Symbol", symbolGroup) {
+                // TODO: We do not support static symbol methods yet.
+                assert(!op.isStatic)
+                dynamicObjectGroupManager.addSymbolMethod(symbolGroup)
+            }
 
         case .beginClassGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor

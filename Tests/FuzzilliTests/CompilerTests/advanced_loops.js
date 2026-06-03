@@ -145,6 +145,27 @@ async function runAsyncTests() {
 
 runAsyncTests();
 
+// Explicit Resource Management in Loops
+// -------------------------------------
+
+const disposableResource = {
+  [Symbol.dispose]() {
+    output("disposed sync resource");
+  }
+};
+
+for (using x of [disposableResource]) {
+  output("inside sync using loop");
+}
+
+async function runExplicitResourceManagementAsyncTests() {
+  for await (using x of [disposableResource]) {
+    output("inside async loop with sync resource");
+  }
+}
+
+runExplicitResourceManagementAsyncTests();
+
 let asyncLog = [];
 async function runAsyncTimingTest() {
   asyncLog.push("start");

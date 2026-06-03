@@ -2,6 +2,13 @@ const Parser = require("@babel/parser");
 const protobuf = require("protobufjs");
 const fs = require('fs');
 
+const USING_TYPES = {
+    NONE: 0,
+    USING: 1,
+    AWAIT_USING: 2
+};
+
+
 if (process.argv.length < 5) {
     console.error(`Usage: node ${process.argv[1]} path/to/ast.proto path/to/code.js path/to/output.ast.proto`);
     process.exit(0);
@@ -352,6 +359,14 @@ function parse(script, proto) {
                 let decl = node.left.declarations[0];
                 let forOfLoop = {};
                 assert(decl.init == null, "Expected no initial value for the variable declared as part of a for-of loop");
+
+                let usingType = USING_TYPES.NONE;
+                if (node.left.kind === 'using') {
+                    usingType = USING_TYPES.USING;
+                } else if (node.left.kind === 'await using') {
+                    usingType = USING_TYPES.AWAIT_USING;
+                }
+                forOfLoop.usingType = usingType;
 
                 if (decl.id.type === 'Identifier') {
                     let initDecl = { name: decl.id.name };

@@ -1269,6 +1269,10 @@ extension ILType {
     /// Type of a JavaScript Symbol.
     public static let jsSymbol = ILType.object(ofGroup: "Symbol", withProperties: ["description"])
 
+    public static func jsSymbol(ofGroup group: String) -> ILType {
+        return ILType.object(ofGroup: group, withProperties: ["description"])
+    }
+
     /// Type of a JavaScript array.
     public static let jsArray = createJsArrayType(ofElementType: nil)
 
@@ -1287,6 +1291,16 @@ extension ILType {
                     "toReversed", "toSorted", "toSpliced", "with", "join", "lastIndexOf", "values",
                     "flat", "flatMap",
                 ])
+    }
+
+    /// A type that can be disposed.
+    public static func disposable() -> ILType {
+        return .object(withSymbolMethods: ["Symbol.dispose"])
+    }
+
+    /// A type that can be asynchronously disposed.
+    public static func asyncDisposable() -> ILType {
+        return .object(withSymbolMethods: ["Symbol.asyncDispose"])
     }
 
     /// Type of a JavaScript function's arguments object.
@@ -2920,8 +2934,8 @@ extension ObjectGroup {
             "species": .jsSymbol,
             "toPrimitive": .jsSymbol,
             "toStringTag": .jsSymbol,
-            "dispose": .jsSymbol,
-            "asyncDispose": .jsSymbol,
+            "dispose": .jsSymbol(ofGroup: "Symbol.dispose"),
+            "asyncDispose": .jsSymbol(ofGroup: "Symbol.asyncDispose"),
         ],
         methods: [
             "for": [.string] => .jsSymbol,

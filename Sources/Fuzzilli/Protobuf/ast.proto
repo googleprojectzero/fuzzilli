@@ -202,6 +202,11 @@ message ForInLoop {
 }
 
 message ForOfLoop {
+    enum UsingType {
+        NONE = 0;
+        USING = 1;
+        AWAIT_USING = 2;
+    }
     oneof initializer {
         VariableDeclarator left = 1;
         ObjectPattern objectPattern = 4;
@@ -210,6 +215,7 @@ message ForOfLoop {
     Expression right = 2;
     Statement body = 3;
     bool isAsync = 6;
+    UsingType usingType = 7;
 }
 
 message BreakStatement {

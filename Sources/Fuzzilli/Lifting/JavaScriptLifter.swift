@@ -1464,7 +1464,10 @@ public class JavaScriptLifter: Lifter {
                 } else {
                     switch op.header {
                     case .simple:
-                        let LET = w.declarationKeyword(for: instr.innerOutput(0))
+                        let LET =
+                            op.usingType != .none
+                            ? op.usingType.rawValue
+                            : w.declarationKeyword(for: instr.innerOutput(0))
                         let V = w.declare(instr.innerOutput(0))
                         w.emit("\(prefix)\(loopKeyword) (\(LET) \(V) of \(OBJ)) {")
                     case .arrayDestruct(let indices, let hasRest):

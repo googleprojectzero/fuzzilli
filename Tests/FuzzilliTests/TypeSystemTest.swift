@@ -18,6 +18,18 @@ import XCTest
 
 class TypeSystemTests: XCTestCase {
 
+    func testSymbolGroups() {
+        XCTAssert(ILType.jsSymbol(ofGroup: "Symbol.dispose").Is(.jsSymbol))
+        XCTAssertEqual(ILType.jsSymbol(ofGroup: "Symbol.dispose").union(with: .jsSymbol), .jsSymbol)
+        XCTAssertEqual(ILType.jsSymbol.union(with: .jsSymbol(ofGroup: "Symbol.dispose")), .jsSymbol)
+        XCTAssertEqual(
+            ILType.jsSymbol(ofGroup: "Symbol.dispose").intersection(with: .jsSymbol),
+            .jsSymbol(ofGroup: "Symbol.dispose"))
+        XCTAssertEqual(
+            ILType.jsSymbol.intersection(with: .jsSymbol(ofGroup: "Symbol.dispose")),
+            .jsSymbol(ofGroup: "Symbol.dispose"))
+    }
+
     func testSubsumptionReflexivity() {
         for t in typeSuite {
             XCTAssert(t >= t, "\(t) >= \(t)")

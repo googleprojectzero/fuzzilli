@@ -2353,9 +2353,15 @@ final class EndForLoop: JsOperation {
     }
 }
 
-public enum ForInOfLoopType {
-    case forIn
+public enum ForInOfLoopType: CaseIterable {
     case forOf
+    case forIn
+}
+
+public enum UsingType: String, Hashable, CaseIterable {
+    case none = ""
+    case using = "using"
+    case awaitUsing = "await using"
 }
 
 // Note: The last innerOutput is the label of the loop.
@@ -2369,16 +2375,24 @@ final class ForLoop: JsOperation {
     let header: LoopHeader
     let isAsync: Bool
     let type: ForInOfLoopType
+    let usingType: UsingType
     public var isForIn: Bool { return type == .forIn }
 
-    init(type: ForInOfLoopType, isAsync: Bool = false, header: LoopHeader = .simple) {
+    init(
+        type: ForInOfLoopType, isAsync: Bool = false,
+        usingType: UsingType = .none, header: LoopHeader = .simple
+    ) {
         self.header = header
         self.isAsync = isAsync
         self.type = type
+        self.usingType = usingType
+
+        assert(usingType == .none || header == .simple, "using declarations cannot be destructured")
 
         if type == .forIn {
             assert(!isAsync, "For-in loops cannot be async")
             assert(header == .simple, "For-in loops cannot have destructuring headers")
+            assert(usingType == .none, "For-in loops cannot use using")
         }
 
         let numInnerOutputs: Int

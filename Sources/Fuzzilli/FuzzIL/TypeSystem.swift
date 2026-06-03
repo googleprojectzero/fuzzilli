@@ -102,6 +102,7 @@
 //
 // See also Tests/FuzzilliTests/TypeSystemTest.swift for examples of the various properties and features of this type system.
 //
+
 public struct ILType: Hashable {
     public static let dynamicObjectGroupPrefixes = [
         "_fuzz_Object", "_fuzz_WasmModule", "_fuzz_WasmExports", "_fuzz_Class",
@@ -179,11 +180,12 @@ public struct ILType: Hashable {
     /// Constructs an object type.
     public static func object(
         ofGroup group: String? = nil, withProperties properties: [String] = [],
-        withMethods methods: [String] = [], withWasmType wasmExt: WasmTypeExtension? = nil
+        withMethods methods: [String] = [], withSymbolMethods symbolMethods: [String] = [],
+        withWasmType wasmExt: WasmTypeExtension? = nil
     ) -> ILType {
         let ext = TypeExtension(
-            group: group, properties: Set(properties), methods: Set(methods), signature: nil,
-            wasmExt: wasmExt)
+            group: group, properties: Set(properties), methods: Set(methods),
+            symbolMethods: Set(symbolMethods), signature: nil, wasmExt: wasmExt)
         return ILType(definiteType: .object, ext: ext)
     }
 
@@ -559,7 +561,8 @@ public struct ILType: Hashable {
         // tracked ObjectGroups, they also subsume such that we can interchange
         // them in JS for efficient fuzzing, i.e. object0 and object1 can be
         // considered to have the same group, we then proceed with the other checks for subsumption.
-        guard group == nil || group == other.group || groupsMatchByPrefix(group, other.group) else {
+        guard group == nil || group == other.group || ILType.groupsMatchByPrefix(group, other.group)
+        else {
             return false
         }
 
@@ -575,6 +578,9 @@ public struct ILType: Hashable {
             return false
         }
         guard methods.isSubset(of: other.methods) else {
+            return false
+        }
+        guard symbolMethods.isSubset(of: other.symbolMethods) else {
             return false
         }
 
@@ -617,12 +623,16 @@ public struct ILType: Hashable {
     // This helps with the custom object groups.
     // This basically says that even though objects might have program local object groups, they can still subsume, if they belong to the same "subclass" indicated by having the same prefix (with a different number as a suffix).
     // These should match the custom object group types in JSTyper.swift
-    public func groupsMatchByPrefix(_ groupLhs: String?, _ groupRhs: String?) -> Bool {
+    public static func groupsMatchByPrefix(_ groupLhs: String?, _ groupRhs: String?) -> Bool {
         guard let lhs = groupLhs else {
             return false
         }
         guard let rhs = groupRhs else {
             return false
+        }
+
+        if lhs == "Symbol" && rhs.hasPrefix("Symbol.") {
+            return true
         }
 
         // Make sure that the groups themselves are not prefixes.
@@ -823,6 +833,10 @@ public struct ILType: Hashable {
         return ext?.methods ?? Set()
     }
 
+    public var symbolMethods: Set<String> {
+        return ext?.symbolMethods ?? Set()
+    }
+
     public var numProperties: Int {
         return ext?.properties.count ?? 0
     }
@@ -831,12 +845,20 @@ public struct ILType: Hashable {
         return ext?.methods.count ?? 0
     }
 
+    public var numSymbolMethods: Int {
+        return ext?.symbolMethods.count ?? 0
+    }
+
     public func randomProperty() -> String? {
         return ext?.properties.randomElement()
     }
 
     public func randomMethod() -> String? {
         return ext?.methods.randomElement()
+    }
+
+    public func randomSymbolMethod() -> String? {
+        return ext?.symbolMethods.randomElement()
     }
 
     // Returns how many additional inputs an operation using this type will need
@@ -906,10 +928,18 @@ public struct ILType: Hashable {
         // that means finding the set of shared properties and methods, which is imprecise but correct.
         let commonProperties = self.properties.intersection(other.properties)
         let commonMethods = self.methods.intersection(other.methods)
+        let commonSymbolMethods = self.symbolMethods.intersection(other.symbolMethods)
         let signature = self.signature == other.signature ? self.signature : nil  // TODO: this is overly coarse, we could also see if one signature subsumes the other, then take the subsuming one.
         let receiver =
             other.receiver != nil ? self.receiver?.intersection(with: other.receiver!) : nil
-        var group = self.group == other.group ? self.group : nil
+        var group: String? = nil
+        if self.group == other.group {
+            group = self.group
+        } else if ILType.groupsMatchByPrefix(self.group, other.group) {
+            group = self.group
+        } else if ILType.groupsMatchByPrefix(other.group, self.group) {
+            group = other.group
+        }
         let wasmExt =
             self.wasmType != nil && other.wasmType != nil
             ? self.wasmType!.union(other.wasmType!) : nil
@@ -939,6 +969,7 @@ public struct ILType: Hashable {
             definiteType: definiteType, possibleType: possibleType,
             ext: TypeExtension(
                 group: group, properties: commonProperties, methods: commonMethods,
+                symbolMethods: commonSymbolMethods,
                 signature: signature, wasmExt: wasmExt, receiver: receiver,
                 isEnumeration: isEnumeration, iterableElementType: iterableElementType,
                 exports: commonExports))
@@ -997,12 +1028,33 @@ public struct ILType: Hashable {
             return .nothing
         }
 
-        // Groups must either be equal or one of them must be nil, in which case
-        // the result will have the non-nil group as that is again the smaller type.
-        guard self.group == nil || other.group == nil || self.group == other.group else {
+        let symbolMethods = self.symbolMethods.union(other.symbolMethods)
+        guard symbolMethods.count == max(self.numSymbolMethods, other.numSymbolMethods) else {
             return .nothing
         }
-        let group = self.group ?? other.group
+
+        // Groups must either be equal or one of them must be nil, in which case
+        // the result will have the non-nil group as that is again the smaller type.
+        // If they match by prefix, the more specific group (the one with the longer prefix) is the result.
+        guard
+            self.group == nil || other.group == nil || self.group == other.group
+                || ILType.groupsMatchByPrefix(self.group, other.group)
+                || ILType.groupsMatchByPrefix(other.group, self.group)
+        else {
+            return .nothing
+        }
+        let group: String?
+        if self.group == nil {
+            group = other.group
+        } else if other.group == nil {
+            group = self.group
+        } else if self.group == other.group {
+            group = self.group
+        } else if ILType.groupsMatchByPrefix(self.group, other.group) {
+            group = other.group
+        } else {
+            group = self.group
+        }
 
         // For signatures we take a shortcut: if one signature subsumes the other, then the intersection
         // must be the subsumed signature. Additionally, we know that if there is an intersection, the
@@ -1068,8 +1120,10 @@ public struct ILType: Hashable {
         return ILType(
             definiteType: definiteType, possibleType: possibleType,
             ext: TypeExtension(
-                group: group, properties: properties, methods: methods, signature: signature,
-                wasmExt: wasmExt, receiver: receiver, isEnumeration: isEnumeration,
+                group: group, properties: properties, methods: methods,
+                symbolMethods: symbolMethods,
+                signature: signature, wasmExt: wasmExt, receiver: receiver,
+                isEnumeration: isEnumeration,
                 iterableElementType: iterableElementType, exports: commonExports))
     }
 
@@ -1158,8 +1212,10 @@ public struct ILType: Hashable {
         // We just take the self.wasmExt as they have to be the same, see `canMerge`.
         let ext = TypeExtension(
             group: group, properties: self.properties.union(other.properties),
-            methods: self.methods.union(other.methods), signature: signature, wasmExt: wasmExt,
-            receiver: receiver, isEnumeration: isEnumeration,
+            methods: self.methods.union(other.methods),
+            symbolMethods: self.symbolMethods.union(other.symbolMethods),
+            signature: signature, wasmExt: wasmExt, receiver: receiver,
+            isEnumeration: isEnumeration,
             iterableElementType: iterableElementType)
         return ILType(definiteType: definiteType, possibleType: possibleType, ext: ext)
     }
@@ -1555,6 +1611,7 @@ class TypeExtension: Hashable {
     // Properties and methods. Will only be populated if MayBe(.object()) is true.
     let properties: Set<String>
     let methods: Set<String>
+    let symbolMethods: Set<String>
 
     // The group name. Basically each group is its own sub type of the object type.
     // (For now), there is no subtyping for group: if two objects have a different
@@ -1581,11 +1638,13 @@ class TypeExtension: Hashable {
     let exports: [String: ILType]
 
     init?(
-        group: String? = nil, properties: Set<String>, methods: Set<String>, signature: Signature?,
+        group: String? = nil, properties: Set<String>, methods: Set<String>,
+        symbolMethods: Set<String> = [], signature: Signature?,
         wasmExt: WasmTypeExtension? = nil, receiver: ILType? = nil, isEnumeration: Bool = false,
         iterableElementType: ILType? = nil, exports: [String: ILType] = [:]
     ) {
-        if group == nil && properties.isEmpty && methods.isEmpty && signature == nil
+        if group == nil && properties.isEmpty && methods.isEmpty && symbolMethods.isEmpty
+            && signature == nil
             && wasmExt == nil && receiver == nil && isEnumeration == false
             && iterableElementType == nil && exports.isEmpty
         {
@@ -1594,6 +1653,7 @@ class TypeExtension: Hashable {
 
         self.properties = properties
         self.methods = methods
+        self.symbolMethods = symbolMethods
         self.group = group
         self.signature = signature
         self.wasmExt = wasmExt
@@ -1606,6 +1666,7 @@ class TypeExtension: Hashable {
     static func == (lhs: TypeExtension, rhs: TypeExtension) -> Bool {
         return lhs.properties == rhs.properties
             && lhs.methods == rhs.methods
+            && lhs.symbolMethods == rhs.symbolMethods
             && lhs.group == rhs.group
             && lhs.signature == rhs.signature
             && lhs.wasmExt == rhs.wasmExt
@@ -1619,6 +1680,7 @@ class TypeExtension: Hashable {
         hasher.combine(group)
         hasher.combine(properties)
         hasher.combine(methods)
+        hasher.combine(symbolMethods)
         hasher.combine(signature)
         hasher.combine(wasmExt)
         hasher.combine(receiver)
@@ -2220,6 +2282,8 @@ public enum Parameter: Hashable {
     public static let regexp = Parameter.plain(.regexp)
     public static let iterable = Parameter.plain(.iterable())
     public static let asyncIterable = Parameter.plain(.asyncIterable())
+    public static let disposable = Parameter.plain(.disposable())
+    public static let asyncDisposable = Parameter.plain(.asyncDisposable())
     public static let jsAnything = Parameter.plain(.jsAnything)
     public static let number = Parameter.plain(.number)
     public static let primitive = Parameter.plain(.primitive)

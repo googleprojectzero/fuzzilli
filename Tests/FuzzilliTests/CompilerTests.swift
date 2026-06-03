@@ -27,26 +27,32 @@ import XCTest
 ///  - The new JavaScript code is again executed inside the same engine and the output again recorded
 ///  - The test passes if there are no errors along the way and if the output of both executions is identical
 class CompilerTests: XCTestCase {
-    func testFuzzILCompiler() throws {
+    var nodejs: JavaScriptExecutor!
+    var parser: JavaScriptParser!
+    var compiler: JavaScriptCompiler!
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         guard
-            let nodejs = JavaScriptExecutor(
+            let executor = JavaScriptExecutor(
                 type: .nodejs, withArguments: ["--allow-natives-syntax"])
         else {
             throw XCTSkip(
                 "Could not find NodeJS executable. See Sources/Fuzzilli/Compiler/Parser/README.md for details on how to set up the parser."
             )
         }
+        self.nodejs = executor
 
-        // Initialize the parser. This can fail if no node.js executable is found or if the
-        // parser's node.js dependencies are not installed. In that case, skip these tests.
-        guard let parser = JavaScriptParser(executor: nodejs) else {
+        guard let parser = JavaScriptParser(executor: executor) else {
             throw XCTSkip(
                 "The JavaScript parser does not appear to be working. See Sources/Fuzzilli/Compiler/Parser/README.md for details on how to set up the parser."
             )
         }
+        self.parser = parser
+        self.compiler = JavaScriptCompiler()
+    }
 
-        let compiler = JavaScriptCompiler()
-
+    func testFuzzILCompiler() throws {
         let lifter = JavaScriptLifter(ecmaVersion: .es6, environment: JavaScriptEnvironment())
 
         for testcasePath in enumerateAllTestcases() {
@@ -86,6 +92,44 @@ class CompilerTests: XCTestCase {
                 )
             }
         }
+    }
+
+    func testInvalidDestructuredUsing() throws {
+        // 1. Object destructuring with using: for (using {x} of y)
+        let script1 = "for (using {x} of [{}]) {}"
+        XCTAssertThrowsError(try compile(script: script1)) {
+            error in
+            guard let parserError = error as? JavaScriptParser.ParserError else {
+                return XCTFail("Expected JavaScriptParser.ParserError, got \(error)")
+            }
+            guard case .parsingFailed(let message) = parserError else {
+                return XCTFail("Expected parsingFailed, got \(parserError)")
+            }
+            XCTAssertTrue(message.contains("SyntaxError") || message.contains("Assertion failed"))
+        }
+
+        // 2. Array destructuring with using: for (using [x] of y)
+        let script2 = "for (using [x] of [[]]) {}"
+        XCTAssertThrowsError(try compile(script: script2)) {
+            error in
+            guard let parserError = error as? JavaScriptParser.ParserError else {
+                return XCTFail("Expected JavaScriptParser.ParserError, got \(error)")
+            }
+            guard case .parsingFailed(let message) = parserError else {
+                return XCTFail("Expected parsingFailed, got \(parserError)")
+            }
+            XCTAssertTrue(message.contains("SyntaxError") || message.contains("Assertion failed"))
+        }
+    }
+
+    private func compile(script: String) throws -> Program {
+        let tempDir = FileManager.default.temporaryDirectory
+        let tempFile = tempDir.appendingPathComponent(UUID().uuidString + ".js")
+        try script.write(to: tempFile, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: tempFile) }
+
+        let ast = try parser.parse(tempFile.path)
+        return try compiler.compile(ast)
     }
 
     /// Returns the absolute paths of all .js compiler testcases.
