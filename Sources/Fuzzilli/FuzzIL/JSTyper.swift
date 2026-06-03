@@ -2587,6 +2587,8 @@ public struct JSTyper: Analyzer {
             case .rest:
                 // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
                 types.append(.jsArray)
+            case .either:
+                fatalError(".either parameters must be resolved to .plain at generation-time")
             }
         }
         return types

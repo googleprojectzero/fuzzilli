@@ -1086,6 +1086,10 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse(sig2.parameters[1].isRestParameter)
         XCTAssertFalse(sig2.parameters[2].isOptionalParameter)
         XCTAssert(sig2.parameters[2].isRestParameter)
+
+        let sig3 = [.either(.integer, .string)] => .undefined
+        XCTAssertFalse(sig3.parameters[0].isOptionalParameter)
+        XCTAssertFalse(sig3.parameters[0].isRestParameter)
     }
 
     func testSignatureSubsumption() {
@@ -1152,6 +1156,22 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse([.opt(.integer)] => .undefined >= [.integer] => .undefined)
         XCTAssertFalse([.opt(.integer)] => .undefined >= [.string...] => .undefined)
         XCTAssertFalse([.string...] => .undefined >= [.opt(.integer)] => .undefined)
+
+        // Signatures with .either parameters
+        XCTAssert([.either(.integer, .float)] => .undefined >= [.number] => .undefined)
+        XCTAssertFalse([.either(.integer, .string)] => .undefined >= [.number] => .undefined)
+        XCTAssert([.integer] => .undefined >= [.either(.number, .string)] => .undefined)
+        XCTAssert([.integer] => .undefined >= [.either(.string, .number)] => .undefined)
+        XCTAssertFalse([.integer] => .undefined >= [.either(.string, .boolean)] => .undefined)
+        XCTAssert(
+            [.either(.integer, .string)] => .undefined >= [.either(.number, .jsAnything)]
+                => .undefined)
+        XCTAssert(
+            [.either(.integer, .string)] => .undefined >= [.either(.jsAnything, .number)]
+                => .undefined)
+        XCTAssertFalse(
+            [.either(.integer, .string)] => .undefined >= [.either(.number, .boolean)] => .undefined
+        )
 
         // Test return value subsumption: sig1 subsumes sig2 if sig1's return value subsumes that
         // of sig2. For example, a function returning .integer is a function returning a .number.

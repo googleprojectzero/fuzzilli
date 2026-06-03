@@ -1840,6 +1840,10 @@ extension Instruction: ProtobufConvertible {
                                         case .rest(_):
                                             fatalError(
                                                 "Rest parameters are not expected in Wasm exports")
+                                        case .either(_, _):
+                                            fatalError(
+                                                "Either parameters are not expected in Wasm exports"
+                                            )
                                         }
                                     }
                                     sig.returnType = ILTypeToJSTypeEnum(f.signature.outputType)

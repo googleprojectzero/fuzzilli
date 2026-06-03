@@ -2272,6 +2272,8 @@ public enum Parameter: Hashable {
     case plain(ILType)
     case opt(ILType)
     case rest(ILType)
+    // A parameter that can be either one of two types (t1, t2).
+    case either(ILType, ILType)
 
     // Convenience constructors for plain parameters.
     public static let integer = Parameter.plain(.integer)
@@ -2322,6 +2324,9 @@ public enum Parameter: Hashable {
             return ".opt(\(t.format(abbreviate: abbreviate)))"
         case .rest(let t):
             return "\(t.format(abbreviate: abbreviate))..."
+        case .either(let t1, let t2):
+            return
+                ".either(\(t1.format(abbreviate: abbreviate)), \(t2.format(abbreviate: abbreviate)))"
         }
     }
 }
@@ -2353,9 +2358,13 @@ extension ParameterList {
             case .opt(let t):
                 assert(!t.Is(.nothing))
                 sawOptionals = true
+
+            // Optional parameters must not be followed by regular parameters.
             case .plain(let t):
                 assert(!t.Is(.nothing))
-                // Optional parameters must not be followed by regular parameters.
+                guard !sawOptionals else { return false }
+            case .either(let t1, let t2):
+                assert(!t1.Is(.nothing) && !t2.Is(.nothing))
                 guard !sawOptionals else { return false }
             }
         }
@@ -2524,8 +2533,18 @@ public struct Signature: Hashable, CustomStringConvertible {
             switch (p1, p2) {
             case (.plain(let t1), .plain(let t2)):
                 guard t2.subsumes(t1) else { return false }
+            case (.either(let t1, let t2), .plain(let t3)):
+                // `other` must handle both t1 and t2.
+                guard t3.subsumes(t1) && t3.subsumes(t2) else { return false }
+            case (.plain(let t1), .either(let t2, let t3)):
+                // `other` must handle t1 (by choosing either t2 or t3).
+                guard t2.subsumes(t1) || t3.subsumes(t1) else { return false }
+            case (.either(let t1, let t2), .either(let t3, let t4)):
+                // `other` must handle both t1 and t2.
+                guard (t3.subsumes(t1) || t4.subsumes(t1)) && (t3.subsumes(t2) || t4.subsumes(t2))
+                else { return false }
             default:
-                fatalError("All parameters must by now have been converted to plain parameters")
+                fatalError("Unexpected parameter types in subsumes: \(p1) and \(p2)")
             }
         }
 

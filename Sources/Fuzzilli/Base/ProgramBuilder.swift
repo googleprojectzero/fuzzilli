@@ -696,6 +696,9 @@ public class ProgramBuilder {
                 for _ in 0...Int.random(in: 1...3) {
                     args.append(generateTypeInternal(t))
                 }
+            case .either(let t1, let t2):
+                let chosenType = probability(0.5) ? t1 : t2
+                args.append(generateTypeInternal(chosenType))
             }
         }
 
@@ -1565,6 +1568,8 @@ public class ProgramBuilder {
                 fallthrough
             case .plain(let t):
                 argumentTypes.append(t)
+            case .either(let t1, let t2):
+                argumentTypes.append(probability(0.5) ? t1 : t2)
             }
         }
 
@@ -1586,6 +1591,8 @@ public class ProgramBuilder {
                 return argumentTypes
             case .plain(let t):
                 argumentTypes.append(t)
+            case .either(let t1, _):
+                argumentTypes.append(t1)
             }
         }
 
