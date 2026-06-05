@@ -682,17 +682,21 @@ public class Fuzzer {
         }
 
         // Third and final attempt at fixing up the program: simply wrap the entire program in a try-catch block.
-        b.buildTryCatchFinally(
-            tryBody: {
-                b.adopting {
-                    for instr in program.code {
-                        b.adopt(instr)
+        // We cannot wrap a bundle in a try-catch block, so skip this step for bundles.
+        // TODO(marja): Find a solution that works for bundles.
+        if !program.code.isBundle {
+            b.buildTryCatchFinally(
+                tryBody: {
+                    b.adopting {
+                        for instr in program.code {
+                            b.adopt(instr)
+                        }
                     }
-                }
-            }, catchBody: { _ in })
-        program = b.finalize()
+                }, catchBody: { _ in })
+            program = b.finalize()
+            result = importProgram(program, origin: origin)
+        }
 
-        result = importProgram(program, origin: origin)
         assert(Fuzzer.maxProgramImportFixupAttempts == 3)
         return (result, 3)
     }
