@@ -312,6 +312,17 @@ public class JavaScriptCompiler {
         }
     }
 
+    private func compileInitialDeclarationValue(_ decl: Compiler_Protobuf_SimpleVariableDeclarator)
+        throws
+        -> Variable
+    {
+        if decl.hasValue {
+            return try compileExpression(decl.value)
+        } else {
+            return emit(LoadUndefined()).output
+        }
+    }
+
     private func compileStatement(_ node: StatementNode, pendingLabel: String? = nil) throws {
         guard let stmt = node.statement else {
             throw CompilerError.invalidASTError("missing concrete statement in statement node")
@@ -620,25 +631,29 @@ public class JavaScriptCompiler {
             emit(EndForLoop())
 
         case .forOfLoop(let forOfLoop):
-            guard let initializer = forOfLoop.initializer else {
-                throw CompilerError.invalidNodeError("Expected initializer in for-of loop")
-            }
+            let initializer = forOfLoop.left
 
             let obj = try compileExpression(forOfLoop.right)
 
             if forOfLoop.usingType != .none {
-                guard case .left = initializer else {
+                guard case .name = initializer.id else {
                     throw CompilerError.invalidNodeError(
                         "using declarations cannot be destructured")
                 }
             }
 
-            switch initializer {
-            case .left(let declarator):
-                guard !declarator.hasValue else {
-                    throw CompilerError.invalidNodeError(
-                        "Expected no initial value for the variable declared in a for-of loop")
-                }
+            guard !initializer.hasValue else {
+                throw CompilerError.invalidNodeError(
+                    "Expected no initial value for the variable declared in a for-of loop")
+            }
+
+            guard let id = initializer.id else {
+                throw CompilerError.invalidNodeError(
+                    "Variable declarator missing id in for-of loop")
+            }
+
+            switch id {
+            case .name(let name):
                 let usingType: UsingType =
                     switch forOfLoop.usingType {
                     case .using: .using
@@ -659,7 +674,7 @@ public class JavaScriptCompiler {
                 try enterNewScope(
                     labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
                 ) {
-                    map(declarator.name, to: loopVar)
+                    map(name, to: loopVar)
                     try compileBody(forOfLoop.body)
                 }
 

@@ -49,6 +49,12 @@ message VariableDeclarator {
     Expression value = 2;
 }
 
+message SimpleVariableDeclarator {
+    string name = 1;
+    // The value is optional
+    Expression value = 2;
+}
+
 message VariableDeclaration {
     VariableDeclarationKind kind = 1;
     repeated VariableDeclarator declarations = 2;
@@ -61,7 +67,7 @@ enum DisposableVariableDeclarationKind {
 
 message DisposableVariableDeclaration {
     DisposableVariableDeclarationKind kind = 1;
-    repeated VariableDeclarator declarations = 2;
+    repeated SimpleVariableDeclarator declarations = 2;
 }
 
 enum FunctionType {
@@ -200,7 +206,7 @@ message ForLoop {
 }
 
 message ForInLoop {
-    VariableDeclarator left = 1;
+    SimpleVariableDeclarator left = 1;
     Expression right = 2;
     Statement body = 3;
 }
@@ -211,11 +217,7 @@ message ForOfLoop {
         USING = 1;
         AWAIT_USING = 2;
     }
-    oneof initializer {
-        VariableDeclarator left = 1;
-        ObjectPattern objectPattern = 4;
-        ArrayPattern arrayPattern = 5;
-    }
+    VariableDeclarator left = 1;
     Expression right = 2;
     Statement body = 3;
     bool isAsync = 6;

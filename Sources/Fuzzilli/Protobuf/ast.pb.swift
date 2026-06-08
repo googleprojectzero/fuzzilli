@@ -269,6 +269,33 @@ public struct Compiler_Protobuf_VariableDeclarator: @unchecked Sendable {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+public struct Compiler_Protobuf_SimpleVariableDeclarator: @unchecked Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String {
+    get {_storage._name}
+    set {_uniqueStorage()._name = newValue}
+  }
+
+  /// The value is optional
+  public var value: Compiler_Protobuf_Expression {
+    get {_storage._value ?? Compiler_Protobuf_Expression()}
+    set {_uniqueStorage()._value = newValue}
+  }
+  /// Returns true if `value` has been explicitly set.
+  public var hasValue: Bool {_storage._value != nil}
+  /// Clears the value of `value`. Subsequent reads from it will return its default value.
+  public mutating func clearValue() {_uniqueStorage()._value = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
 public struct Compiler_Protobuf_VariableDeclaration: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -290,7 +317,7 @@ public struct Compiler_Protobuf_DisposableVariableDeclaration: Sendable {
 
   public var kind: Compiler_Protobuf_DisposableVariableDeclarationKind = .using
 
-  public var declarations: [Compiler_Protobuf_VariableDeclarator] = []
+  public var declarations: [Compiler_Protobuf_SimpleVariableDeclarator] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -916,8 +943,8 @@ public struct Compiler_Protobuf_ForInLoop: @unchecked Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var left: Compiler_Protobuf_VariableDeclarator {
-    get {_storage._left ?? Compiler_Protobuf_VariableDeclarator()}
+  public var left: Compiler_Protobuf_SimpleVariableDeclarator {
+    get {_storage._left ?? Compiler_Protobuf_SimpleVariableDeclarator()}
     set {_uniqueStorage()._left = newValue}
   }
   /// Returns true if `left` has been explicitly set.
@@ -955,34 +982,14 @@ public struct Compiler_Protobuf_ForOfLoop: @unchecked Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var initializer: OneOf_Initializer? {
-    get {return _storage._initializer}
-    set {_uniqueStorage()._initializer = newValue}
-  }
-
   public var left: Compiler_Protobuf_VariableDeclarator {
-    get {
-      if case .left(let v)? = _storage._initializer {return v}
-      return Compiler_Protobuf_VariableDeclarator()
-    }
-    set {_uniqueStorage()._initializer = .left(newValue)}
+    get {_storage._left ?? Compiler_Protobuf_VariableDeclarator()}
+    set {_uniqueStorage()._left = newValue}
   }
-
-  public var objectPattern: Compiler_Protobuf_ObjectPattern {
-    get {
-      if case .objectPattern(let v)? = _storage._initializer {return v}
-      return Compiler_Protobuf_ObjectPattern()
-    }
-    set {_uniqueStorage()._initializer = .objectPattern(newValue)}
-  }
-
-  public var arrayPattern: Compiler_Protobuf_ArrayPattern {
-    get {
-      if case .arrayPattern(let v)? = _storage._initializer {return v}
-      return Compiler_Protobuf_ArrayPattern()
-    }
-    set {_uniqueStorage()._initializer = .arrayPattern(newValue)}
-  }
+  /// Returns true if `left` has been explicitly set.
+  public var hasLeft: Bool {_storage._left != nil}
+  /// Clears the value of `left`. Subsequent reads from it will return its default value.
+  public mutating func clearLeft() {_uniqueStorage()._left = nil}
 
   public var right: Compiler_Protobuf_Expression {
     get {_storage._right ?? Compiler_Protobuf_Expression()}
@@ -1013,13 +1020,6 @@ public struct Compiler_Protobuf_ForOfLoop: @unchecked Sendable {
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public enum OneOf_Initializer: Equatable, Sendable {
-    case left(Compiler_Protobuf_VariableDeclarator)
-    case objectPattern(Compiler_Protobuf_ObjectPattern)
-    case arrayPattern(Compiler_Protobuf_ArrayPattern)
-
-  }
 
   public enum UsingType: SwiftProtobuf.Enum, Swift.CaseIterable {
     public typealias RawValue = Int
@@ -2951,6 +2951,83 @@ extension Compiler_Protobuf_VariableDeclarator: SwiftProtobuf.Message, SwiftProt
   }
 }
 
+extension Compiler_Protobuf_SimpleVariableDeclarator: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SimpleVariableDeclarator"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}value\0")
+
+  fileprivate class _StorageClass {
+    var _name: String = String()
+    var _value: Compiler_Protobuf_Expression? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _name = source._name
+      _value = source._value
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._name) }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._value) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._name.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._name, fieldNumber: 1)
+      }
+      try { if let v = _storage._value {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      } }()
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_SimpleVariableDeclarator, rhs: Compiler_Protobuf_SimpleVariableDeclarator) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._name != rhs_storage._name {return false}
+        if _storage._value != rhs_storage._value {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Compiler_Protobuf_VariableDeclaration: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".VariableDeclaration"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}declarations\0")
@@ -4274,7 +4351,7 @@ extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}left\0\u{1}right\0\u{1}body\0")
 
   fileprivate class _StorageClass {
-    var _left: Compiler_Protobuf_VariableDeclarator? = nil
+    var _left: Compiler_Protobuf_SimpleVariableDeclarator? = nil
     var _right: Compiler_Protobuf_Expression? = nil
     var _body: Compiler_Protobuf_Statement? = nil
 
@@ -4355,10 +4432,10 @@ extension Compiler_Protobuf_ForInLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ForOfLoop"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}left\0\u{1}right\0\u{1}body\0\u{1}objectPattern\0\u{1}arrayPattern\0\u{1}isAsync\0\u{1}usingType\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}left\0\u{1}right\0\u{1}body\0\u{2}\u{3}isAsync\0\u{1}usingType\0")
 
   fileprivate class _StorageClass {
-    var _initializer: Compiler_Protobuf_ForOfLoop.OneOf_Initializer?
+    var _left: Compiler_Protobuf_VariableDeclarator? = nil
     var _right: Compiler_Protobuf_Expression? = nil
     var _body: Compiler_Protobuf_Statement? = nil
     var _isAsync: Bool = false
@@ -4373,7 +4450,7 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
     private init() {}
 
     init(copying source: _StorageClass) {
-      _initializer = source._initializer
+      _left = source._left
       _right = source._right
       _body = source._body
       _isAsync = source._isAsync
@@ -4396,47 +4473,9 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
         // allocates stack space for every case branch when no optimizations are
         // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try {
-          var v: Compiler_Protobuf_VariableDeclarator?
-          var hadOneofValue = false
-          if let current = _storage._initializer {
-            hadOneofValue = true
-            if case .left(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._initializer = .left(v)
-          }
-        }()
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._left) }()
         case 2: try { try decoder.decodeSingularMessageField(value: &_storage._right) }()
         case 3: try { try decoder.decodeSingularMessageField(value: &_storage._body) }()
-        case 4: try {
-          var v: Compiler_Protobuf_ObjectPattern?
-          var hadOneofValue = false
-          if let current = _storage._initializer {
-            hadOneofValue = true
-            if case .objectPattern(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._initializer = .objectPattern(v)
-          }
-        }()
-        case 5: try {
-          var v: Compiler_Protobuf_ArrayPattern?
-          var hadOneofValue = false
-          if let current = _storage._initializer {
-            hadOneofValue = true
-            if case .arrayPattern(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._initializer = .arrayPattern(v)
-          }
-        }()
         case 6: try { try decoder.decodeSingularBoolField(value: &_storage._isAsync) }()
         case 7: try { try decoder.decodeSingularEnumField(value: &_storage._usingType) }()
         default: break
@@ -4451,7 +4490,7 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
       // allocates stack space for every if/case branch local when no optimizations
       // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
       // https://github.com/apple/swift-protobuf/issues/1182
-      try { if case .left(let v)? = _storage._initializer {
+      try { if let v = _storage._left {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
       } }()
       try { if let v = _storage._right {
@@ -4460,17 +4499,6 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
       try { if let v = _storage._body {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
       } }()
-      switch _storage._initializer {
-      case .objectPattern?: try {
-        guard case .objectPattern(let v)? = _storage._initializer else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-      }()
-      case .arrayPattern?: try {
-        guard case .arrayPattern(let v)? = _storage._initializer else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-      }()
-      default: break
-      }
       if _storage._isAsync != false {
         try visitor.visitSingularBoolField(value: _storage._isAsync, fieldNumber: 6)
       }
@@ -4486,7 +4514,7 @@ extension Compiler_Protobuf_ForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._Mes
       let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
         let rhs_storage = _args.1
-        if _storage._initializer != rhs_storage._initializer {return false}
+        if _storage._left != rhs_storage._left {return false}
         if _storage._right != rhs_storage._right {return false}
         if _storage._body != rhs_storage._body {return false}
         if _storage._isAsync != rhs_storage._isAsync {return false}

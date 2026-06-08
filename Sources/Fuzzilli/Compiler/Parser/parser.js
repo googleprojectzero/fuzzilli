@@ -206,7 +206,12 @@ function parse(script, proto) {
             if (decl.init !== null) {
                 outDecl.value = visitExpression(decl.init);
             }
-            declarations.push(make('VariableDeclarator', outDecl));
+            if (disposable) {
+                assert(outDecl.name, "Disposable variable declarations cannot be destructured");
+                declarations.push(make('SimpleVariableDeclarator', outDecl));
+            } else {
+                declarations.push(make('VariableDeclarator', outDecl));
+            }
         }
 
         const type = disposable ? 'DisposableVariableDeclaration' : 'VariableDeclaration'
@@ -396,7 +401,7 @@ function parse(script, proto) {
                 let forInLoop = {};
                 let initDecl = { name: decl.id.name };
                 assert(decl.init == null, "Expected no initial value for the variable declared as part of a for-in loop")
-                forInLoop.left = make('VariableDeclarator', initDecl);
+                forInLoop.left = make('SimpleVariableDeclarator', initDecl);
                 forInLoop.right = visitExpression(node.right);
                 forInLoop.body = visitStatement(node.body);
                 return makeStatement('ForInLoop', forInLoop);
@@ -417,11 +422,7 @@ function parse(script, proto) {
                 forOfLoop.usingType = usingType;
 
                 let parsedPattern = parsePattern(decl.id);
-                if (parsedPattern.name) {
-                    forOfLoop.left = make('VariableDeclarator', parsedPattern);
-                } else {
-                    Object.assign(forOfLoop, parsedPattern);
-                }
+                forOfLoop.left = make('VariableDeclarator', parsedPattern);
 
                 forOfLoop.right = visitExpression(node.right);
                 forOfLoop.body = visitStatement(node.body);
