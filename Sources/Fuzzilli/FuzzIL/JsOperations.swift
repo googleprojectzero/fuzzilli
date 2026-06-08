@@ -371,7 +371,7 @@ final class LoadAsyncDisposableVariable: JsOperation {
     override var opcode: Opcode { .loadAsyncDisposableVariable(self) }
 
     init() {
-        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .asyncFunction])
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .async])
     }
 }
 
@@ -382,7 +382,7 @@ final class CreateNamedAsyncDisposableVariable: JsOperation {
 
     init(_ name: String) {
         self.variableName = name
-        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .asyncFunction])
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .async])
     }
 }
 
@@ -1469,7 +1469,7 @@ final class BeginAsyncFunction: BeginAnyNamedFunction {
     init(parameters: Parameters, functionName: String?) {
         super.init(
             parameters: parameters, functionName: functionName,
-            contextOpened: [.javascript, .subroutine, .asyncFunction])
+            contextOpened: [.javascript, .subroutine, .async])
     }
 }
 final class EndAsyncFunction: EndAnyFunction {
@@ -1482,7 +1482,7 @@ final class BeginAsyncArrowFunction: BeginAnyFunction {
 
     init(parameters: Parameters) {
         super.init(
-            parameters: parameters, contextOpened: [.javascript, .subroutine, .asyncFunction])
+            parameters: parameters, contextOpened: [.javascript, .subroutine, .async])
     }
 }
 final class EndAsyncArrowFunction: EndAnyFunction {
@@ -1496,7 +1496,7 @@ final class BeginAsyncGeneratorFunction: BeginAnyNamedFunction {
     init(parameters: Parameters, functionName: String?) {
         super.init(
             parameters: parameters, functionName: functionName,
-            contextOpened: [.javascript, .subroutine, .asyncFunction, .generatorFunction])
+            contextOpened: [.javascript, .subroutine, .async, .generatorFunction])
     }
 }
 final class EndAsyncGeneratorFunction: EndAnyFunction {
@@ -1592,7 +1592,7 @@ final class Await: JsOperation {
     init() {
         super.init(
             numInputs: 1, numOutputs: 1, attributes: [],
-            requiredContext: [.javascript, .asyncFunction])
+            requiredContext: [.javascript, .async])
     }
 }
 
@@ -2415,7 +2415,7 @@ final class ForLoop: JsOperation {
         super.init(
             numInputs: 1, numInnerOutputs: numInnerOutputs,
             attributes: [.isBlockStart, .propagatesSurroundingContext],
-            requiredContext: isAsync ? [.javascript, .asyncFunction] : [.javascript],
+            requiredContext: isAsync ? [.javascript, .async] : [.javascript],
             contextOpened: [.loop])
     }
 
@@ -3053,7 +3053,7 @@ final class BeginBundleModule: JsOperation {
         self.moduleName = moduleName
         super.init(
             attributes: .isBlockStart, requiredContext: [.bundle],
-            contextOpened: [.moduleTopLevel, .javascript])
+            contextOpened: [.moduleTopLevel, .javascript, .async])
     }
 }
 
@@ -3120,7 +3120,7 @@ final class BeginBundleModuleEntryPoint: JsOperation {
     init() {
         super.init(
             attributes: .isBlockStart, requiredContext: [.bundle],
-            contextOpened: [.moduleTopLevel, .javascript])
+            contextOpened: [.moduleTopLevel, .javascript, .async])
     }
 }
 

@@ -18,7 +18,7 @@ public struct Context: OptionSet, Hashable, CaseIterable {
         .javascript,
         .subroutine,
         .generatorFunction,
-        .asyncFunction,
+        .async,
         .method,
         .classMethod,
         .loop,
@@ -51,7 +51,7 @@ public struct Context: OptionSet, Hashable, CaseIterable {
     public static let generatorFunction = Context(rawValue: 1 << 2)
     // Inside an async function definition.
     // This for example means that `await` is allowed.
-    public static let asyncFunction = Context(rawValue: 1 << 3)
+    public static let async = Context(rawValue: 1 << 3)
     // Inside a method.
     // This for example means that access to `super` is allowed.
     public static let method = Context(rawValue: 1 << 4)
@@ -102,8 +102,8 @@ extension Context: CustomStringConvertible {
         if self.contains(.generatorFunction) {
             strings.append(".generatorFunction")
         }
-        if self.contains(.asyncFunction) {
-            strings.append(".asyncFunction")
+        if self.contains(.async) {
+            strings.append(".async")
         }
         if self.contains(.method) {
             strings.append(".method")

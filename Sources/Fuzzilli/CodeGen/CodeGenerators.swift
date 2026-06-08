@@ -144,7 +144,7 @@ func makeForInOfLoopGenerator(
 
     // 'await using' requires an async function context, even inside a standard (non-async) for-of loop.
     let context: GeneratorStub.ContextRequirement =
-        (isAsyncIteration || requiresAsyncContext) ? .single(.asyncFunction) : .single(.javascript)
+        (isAsyncIteration || requiresAsyncContext) ? .single(.async) : .single(.javascript)
 
     let inputs: GeneratorStub.Inputs
     switch type {
@@ -819,7 +819,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "AsyncDisposableObjVariableGenerator",
         disposableObjVariableGeneratorStubs(
-            inContext: .asyncFunction,
+            inContext: .async,
             withSymbol: "asyncDispose"
         ) { b, variable in
             b.loadAsyncDisposableVariable(variable)
@@ -837,7 +837,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "AsyncDisposableClassVariableGenerator",
         disposableClassVariableGeneratorStubs(
-            inContext: .asyncFunction,
+            inContext: .async,
             withSymbol: "asyncDispose"
         ) { b, variable in
             b.loadAsyncDisposableVariable(variable)
@@ -1769,7 +1769,7 @@ public let CodeGenerators: [CodeGenerator] = [
         "AsyncFunctionGenerator",
         [
             GeneratorStub(
-                "AsyncFunctionBeginGenerator", provides: [.javascript, .subroutine, .asyncFunction]
+                "AsyncFunctionBeginGenerator", provides: [.javascript, .subroutine, .async]
             ) { b in
                 let (randomParameters, defaultValues) = b.randomParameters()
                     .withRandomDefaultParameters(
@@ -1787,7 +1787,7 @@ public let CodeGenerators: [CodeGenerator] = [
             },
             GeneratorStub(
                 "AsyncFunctionEndGenerator",
-                inContext: .single([.javascript, .subroutine, .asyncFunction])
+                inContext: .single([.javascript, .subroutine, .async])
             ) { b in
                 b.await(b.randomJsVariable())
                 b.doReturn(b.randomJsVariable())
@@ -1803,7 +1803,7 @@ public let CodeGenerators: [CodeGenerator] = [
         [
             GeneratorStub(
                 "AsyncArrowFunctionBeginGenerator",
-                provides: [.javascript, .asyncFunction]
+                provides: [.javascript, .async]
             ) { b in
                 let (randomParameters, defaultValues) = b.randomParameters()
                     .withRandomDefaultParameters(
@@ -1820,14 +1820,14 @@ public let CodeGenerators: [CodeGenerator] = [
             },
             GeneratorStub(
                 "AsyncArrowFunctionAwaitGenerator",
-                inContext: .single([.javascript, .asyncFunction]),
-                provides: [.javascript, .asyncFunction]
+                inContext: .single([.javascript, .async]),
+                provides: [.javascript, .async]
             ) { b in
                 b.await(b.randomJsVariable())
             },
             GeneratorStub(
                 "AsyncArrowFunctionEndGenerator",
-                inContext: .single([.javascript, .asyncFunction])
+                inContext: .single([.javascript, .async])
             ) { b in
                 // These are "typically" used as arguments, so we don't directly generate a call operation here.
                 b.doReturn(b.randomJsVariable())
@@ -1842,7 +1842,7 @@ public let CodeGenerators: [CodeGenerator] = [
         [
             GeneratorStub(
                 "AsyncGeneratorFunctionBeginGenerator",
-                provides: [.javascript, .subroutine, .asyncFunction, .generatorFunction]
+                provides: [.javascript, .subroutine, .async, .generatorFunction]
             ) { b in
                 let (randomParameters, defaultValues) = b.randomParameters()
                     .withRandomDefaultParameters(
@@ -1861,7 +1861,7 @@ public let CodeGenerators: [CodeGenerator] = [
             },
             GeneratorStub(
                 "AsyncGeneratorFunctionEndGenerator",
-                inContext: .single([.javascript, .subroutine, .generatorFunction, .asyncFunction])
+                inContext: .single([.javascript, .subroutine, .generatorFunction, .async])
             ) { b in
                 b.await(b.randomJsVariable())
                 if probability(0.5) {
@@ -2373,7 +2373,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.yieldEach(val)
     },
 
-    CodeGenerator("AwaitGenerator", inContext: .single(.asyncFunction), inputs: .one) {
+    CodeGenerator("AwaitGenerator", inContext: .single(.async), inputs: .preferred(.jsPromise)) {
         b, val in
         b.await(val)
     },

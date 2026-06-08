@@ -1651,8 +1651,7 @@ public class JavaScriptCompiler {
             )
 
         case .awaitExpression(let awaitExpression):
-            // TODO await is also allowed at the top level of a module
-            if !contextAnalyzer.context.contains(.asyncFunction) {
+            if !contextAnalyzer.context.contains(.async) {
                 throw CompilerError.invalidNodeError(
                     "`await` is currently only supported in async functions")
             }

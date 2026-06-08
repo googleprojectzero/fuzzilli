@@ -98,18 +98,18 @@ class AnalyzerTests: XCTestCase {
 
         XCTAssertEqual(b.context, .javascript)
         b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
-            XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
+            XCTAssertEqual(b.context, [.javascript, .subroutine, .async])
             let v3 = b.loadInt(0)
             b.buildPlainFunction(with: .parameters(n: 3)) { _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine])
             }
-            XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
+            XCTAssertEqual(b.context, [.javascript, .subroutine, .async])
             b.await(v3)
             b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { _ in
                 XCTAssertEqual(
-                    b.context, [.javascript, .subroutine, .asyncFunction, .generatorFunction])
+                    b.context, [.javascript, .subroutine, .async, .generatorFunction])
             }
-            XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
+            XCTAssertEqual(b.context, [.javascript, .subroutine, .async])
         }
 
         let _ = b.finalize()
@@ -164,7 +164,7 @@ class AnalyzerTests: XCTestCase {
             cls.addInstanceMethod("m", with: .parameters(n: 2)) { _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
                 b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
-                    XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine, .async])
                 }
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
             }
