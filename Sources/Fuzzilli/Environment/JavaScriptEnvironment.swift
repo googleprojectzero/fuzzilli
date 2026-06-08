@@ -1011,7 +1011,7 @@ public class JavaScriptEnvironment: ComponentBase {
     }
 
     public func type(ofGroup groupName: String) -> ILType {
-        if let type = groups[groupName]?.instanceType {
+        if let type = getGroup(groupName)?.instanceType {
             return type
         } else {
             logger.warning("Missing type for group \(groupName)")
@@ -1021,7 +1021,7 @@ public class JavaScriptEnvironment: ComponentBase {
 
     public func type(ofProperty propertyName: String, on baseType: ILType) -> ILType {
         if let groupName = baseType.group {
-            if let group = groups[groupName] {
+            if let group = getGroup(groupName) {
                 if let type = group.properties[propertyName] {
                     return type
                 }
@@ -1039,7 +1039,7 @@ public class JavaScriptEnvironment: ComponentBase {
 
     public func signatures(ofMethod methodName: String, on baseType: ILType) -> [Signature] {
         if let groupName = baseType.group {
-            if let group = groups[groupName] {
+            if let group = getGroup(groupName) {
                 if let signatures = group.methods[methodName] {
                     return signatures
                 }
@@ -1079,7 +1079,7 @@ public class JavaScriptEnvironment: ComponentBase {
 
     // If the object group refers to a constructor, get its path.
     public func getPathIfConstructor(ofGroup groupName: String) -> [String]? {
-        guard let group = groups[groupName] else {
+        guard let group = getGroup(groupName) else {
             return nil
         }
         return group.constructorPath
@@ -1115,6 +1115,21 @@ public class JavaScriptEnvironment: ComponentBase {
 
     func isValidPropertyIndex(_ name: String) -> Bool {
         return (try? ValidationRegexes.propertyIndex.wholeMatch(in: name)) != nil
+    }
+
+    private func getGroup(_ groupName: String) -> ObjectGroup? {
+        if let group = groups[groupName] {
+            return group
+        }
+
+        // Specific well-known symbols (e.g., Symbol.dispose) use their own distinct group names
+        // (like "Symbol.dispose") so the type system can differentiate them. This maps them back to the registered
+        // "Symbol" ObjectGroup for property and method lookups.
+        if groupName.hasPrefix("Symbol.") {
+            return groups["Symbol"]
+        }
+
+        return nil
     }
 }
 
