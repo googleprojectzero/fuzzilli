@@ -3643,7 +3643,15 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ModuleNamespaceImportGenerator", inContext: .single(.moduleTopLevel)) { b in
-        b.generateNamespaceImport()
+        if let module = b.randomVariable(ofType: .jsModule()) {
+            b.importNamespace(module: module, isDeferred: probability(0.5))
+        }
+    },
+
+    CodeGenerator("DynamicImportGenerator") { b in
+        if let module = b.randomVariable(ofType: .jsModule()) {
+            b.dynamicImport(module, isDeferred: probability(0.5))
+        }
     },
 
     CodeGenerator("ModuleExportGenerator", inContext: .single(.moduleTopLevel)) { b in

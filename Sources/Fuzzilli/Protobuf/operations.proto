@@ -1798,6 +1798,10 @@ message ImportNamespace {
     bool isDeferred = 1;
 }
 
+message DynamicImport {
+    bool isDeferred = 1;
+}
+
 message BeginBundleModuleEntryPoint {
 }
 

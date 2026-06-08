@@ -260,6 +260,7 @@ public let codeGeneratorWeights = [
     "BundleModuleEntryPointGenerator":          5,
     "ModuleImportGenerator":                    20,
     "ModuleNamespaceImportGenerator":           10,
+    "DynamicImportGenerator":                   15,
     "ModuleExportGenerator":                    20,
 
     //

@@ -1625,6 +1625,16 @@ public class JavaScriptLifter: Lifter {
                 let deferKeyword = op.isDeferred ? "defer " : ""
                 w.emit("import \(deferKeyword)* as \(output) from \"\(moduleName)\";")
 
+            case .dynamicImport(let op):
+                let importKeyword = op.isDeferred ? "import.defer" : "import"
+                let expr =
+                    if let moduleName = moduleNames[instr.input(0)] {
+                        CallExpression.new() + importKeyword + "(\"\(moduleName)\")"
+                    } else {
+                        CallExpression.new() + importKeyword + "(" + inputAsIdentifier(0) + ")"
+                    }
+                w.assign(expr, to: instr.output)
+
             case .loadNewTarget:
                 w.assign(Identifier.new("new.target"), to: instr.output)
 

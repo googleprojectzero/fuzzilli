@@ -2194,6 +2194,9 @@ public struct JSTyper: Analyzer {
             dynamicObjectGroupManager.finalizedObjectGroups.append(objectGroup)
             set(instr.output, objectGroup.instanceType)
 
+        case .dynamicImport(_):
+            set(instr.output, .jsPromise)
+
         case .ternaryOperation:
             let outputType = type(ofInput: 1) | type(ofInput: 2)
             set(instr.output, outputType)

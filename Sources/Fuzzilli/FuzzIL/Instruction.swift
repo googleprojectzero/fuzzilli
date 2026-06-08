@@ -1248,6 +1248,10 @@ extension Instruction: ProtobufConvertible {
                 $0.importNamespace = Fuzzilli_Protobuf_ImportNamespace.with {
                     $0.isDeferred = op.isDeferred
                 }
+            case .dynamicImport(let op):
+                $0.dynamicImport = Fuzzilli_Protobuf_DynamicImport.with {
+                    $0.isDeferred = op.isDeferred
+                }
             case .print(_):
                 fatalError("Print operations should not be serialized")
             case .createMap(let op):
@@ -2539,6 +2543,8 @@ extension Instruction: ProtobufConvertible {
             op = ImportVariables(importNames: p.importNames)
         case .importNamespace(let p):
             op = ImportNamespace(isDeferred: p.isDeferred)
+        case .dynamicImport(let p):
+            op = DynamicImport(isDeferred: p.isDeferred)
         case .loadNewTarget:
             op = LoadNewTarget()
         case .nop:

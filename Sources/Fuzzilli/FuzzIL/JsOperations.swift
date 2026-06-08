@@ -3104,6 +3104,16 @@ final class ImportNamespace: JsOperation {
     }
 }
 
+final class DynamicImport: JsOperation {
+    override var opcode: Opcode { .dynamicImport(self) }
+    let isDeferred: Bool
+
+    init(isDeferred: Bool) {
+        self.isDeferred = isDeferred
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isNotInputMutable])
+    }
+}
+
 final class BeginBundleModuleEntryPoint: JsOperation {
     override var opcode: Opcode { .beginBundleModuleEntryPoint(self) }
 

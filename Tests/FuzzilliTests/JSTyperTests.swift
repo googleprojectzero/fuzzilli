@@ -2452,4 +2452,23 @@ class JSTyperTests: XCTestCase {
             XCTAssertEqual(b.type(of: retrievedBar), .jsString)
         }
     }
+
+    func testDynamicImportTyping() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildBundleModule(name: "myModule") {
+            let v1 = b.loadInt(42)
+            let v2 = b.loadString("abc")
+            b.exportVariables(variables: [v1, v2], exportNames: ["foo", "bar"])
+        }
+
+        b.buildBundleModuleEntryPoint {
+            let dynImport = b.dynamicImport(module)
+            XCTAssertEqual(
+                b.type(of: dynImport),
+                .jsPromise)
+        }
+    }
 }

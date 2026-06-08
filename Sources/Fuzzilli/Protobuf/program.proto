@@ -379,6 +379,7 @@ message Instruction {
         WasmRefAsNonNull wasmRefAsNonNull = 353;
         WasmCallRef wasmCallRef = 354;
         WasmReturnCallRef wasmReturnCallRef = 355;
+        DynamicImport dynamicImport = 356;
     }
 }
 
