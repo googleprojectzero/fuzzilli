@@ -48,7 +48,7 @@ public struct WeightedList<Element>: Sequence {
         return r
     }
 
-    public func randomElement() -> Element {
+    public func randomElement() -> Element? {
         // Binary search: pick a random value between 0 and the sum of all weights, then find the
         // first element whose cumulative weight is less-than or equal to the selected one.
         let v = Int.random(in: 0..<totalWeight)

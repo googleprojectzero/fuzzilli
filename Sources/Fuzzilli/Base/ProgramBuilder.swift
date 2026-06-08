@@ -860,7 +860,7 @@ public class ProgramBuilder {
                             produces.type.Is(.wasmTypeDef())
                         }
                     }
-                    let _ = self.complete(generator: generators.randomElement(), withBudget: 5)
+                    let _ = self.complete(generator: generators.randomElement()!, withBudget: 5)
                     return self.randomVariable(ofType: .wasmTypeDef())!
                 },
             .object():
@@ -943,7 +943,7 @@ public class ProgramBuilder {
                     })
 
                     func useGenerator() -> Variable {
-                        let generator = generators.randomElement()
+                        let generator = generators.randomElement()!
                         let _ = self.complete(generator: generator, withBudget: 10)
                         guard let variable = self.randomVariable(ofTypeOrSubtype: type) else {
                             fatalError(
@@ -1508,7 +1508,7 @@ public class ProgramBuilder {
         let matchingTypes = matchingWasmTypes(jsType: type)
         let intersection = availableTypes.filter({ type in matchingTypes.contains(type) })
         return intersection.count != 0
-            ? intersection.randomElement() : availableTypes.randomElement()
+            ? intersection.randomElement()! : availableTypes.randomElement()!
     }
 
     /// Type information access.
@@ -2194,7 +2194,7 @@ public class ProgramBuilder {
                         })
 
                         assert(!possibleGenerators.isEmpty)
-                        let randomGenerator = possibleGenerators.randomElement()
+                        let randomGenerator = possibleGenerators.randomElement()!
                         // After having picked a generator, we might need to nest it in other generators that provide the necessary contexts.
                         generator = assembleSyntheticGenerator(for: randomGenerator)
                         counter += 1
@@ -2277,7 +2277,7 @@ public class ProgramBuilder {
 
         while numberOfVisibleVariables - previousNumberOfVisibleVariables < n {
 
-            let generator = valueGenerators.randomElement()
+            let generator = valueGenerators.randomElement()!
 
             // Just fully run the generator without yielding back.
             // Think about changing this and calling into the higher level build logic?
@@ -2509,7 +2509,7 @@ public class ProgramBuilder {
                     continue
                 }
 
-                let generator = usableGenerators.randomElement()
+                let generator = usableGenerators.randomElement()!
                 let _ = complete(generator: generator, withBudget: 5)
             }
         }

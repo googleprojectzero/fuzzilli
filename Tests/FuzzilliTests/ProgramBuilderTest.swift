@@ -51,7 +51,7 @@ class ProgramBuilderTests: XCTestCase {
         var sumOfProgramSizes = 0
 
         for _ in 0..<numPrograms {
-            let template = fuzzer.programTemplates.randomElement()
+            let template = fuzzer.programTemplates.randomElement()!
             template.generate(in: b)
             let program = b.finalize()
             sumOfProgramSizes += program.size

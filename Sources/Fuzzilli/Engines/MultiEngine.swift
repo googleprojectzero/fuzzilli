@@ -36,7 +36,7 @@ public class MultiEngine: FuzzEngine {
         assert(iterationsPerEngine > 0)
         self.iterationsPerEngine = iterationsPerEngine
         self.engines = engines
-        self.activeEngine = initialActive ?? engines.randomElement()
+        self.activeEngine = initialActive ?? engines.randomElement()!
         super.init(name: "MultiEngine")
     }
 
@@ -50,7 +50,7 @@ public class MultiEngine: FuzzEngine {
         activeEngine.fuzzOne(group)
         currentIteration += 1
         if currentIteration % iterationsPerEngine == 0 {
-            let nextEngine = engines.randomElement()
+            let nextEngine = engines.randomElement()!
             if nextEngine !== activeEngine {
                 logger.info(
                     "Switching active engine from \(activeEngine.name) to \(nextEngine.name)")

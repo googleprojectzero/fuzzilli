@@ -49,7 +49,7 @@ public class MutationEngine: FuzzEngine {
         parent = prepareForMutating(parent)
         for _ in 0..<numConsecutiveMutations {
             // TODO: factor out code shared with the HybridEngine?
-            var mutator = fuzzer.mutators.randomElement()
+            var mutator = fuzzer.mutators.randomElement()!
             let maxAttempts = 10
             var mutatedProgram: Program? = nil
             for _ in 0..<maxAttempts {
@@ -62,7 +62,7 @@ public class MutationEngine: FuzzEngine {
                 } else {
                     // Try a different mutator.
                     mutator.failedToGenerate()
-                    mutator = fuzzer.mutators.randomElement()
+                    mutator = fuzzer.mutators.randomElement()!
                 }
             }
 
