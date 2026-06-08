@@ -129,6 +129,54 @@ function parse(script, proto) {
         return statements;
     }
 
+    function parsePattern(id) {
+        if (id.type === 'Identifier') {
+            return { name: id.name };
+        } else if (id.type === 'ObjectPattern') {
+            let properties = [];
+            let restBindingName = undefined;
+            for (let prop of id.properties) {
+                if (prop.type === 'ObjectProperty') {
+                    assert(prop.value.type === 'Identifier', "Nested destructuring is not yet supported");
+                    assert(prop.shorthand === true, "Renaming destructuring bindings (e.g. {a: b}) is not yet supported");
+                    properties.push(prop.key.name);
+                } else if (prop.type === 'RestElement') {
+                    assert(prop.argument.type === 'Identifier', "Expected identifier for rest element");
+                    restBindingName = prop.argument.name;
+                } else {
+                    assert(false, "Unsupported object destructuring property type: " + prop.type);
+                }
+            }
+            let obj = { properties: properties };
+            if (restBindingName !== undefined) {
+                obj.restBinding = restBindingName;
+            }
+            return { objectPattern: make('ObjectPattern', obj) };
+        } else if (id.type === 'ArrayPattern') {
+            let indices = [];
+            let names = [];
+            let hasRestElement = false;
+            for (let i = 0; i < id.elements.length; i++) {
+                let elem = id.elements[i];
+                if (elem === null) continue;
+                if (elem.type === 'Identifier') {
+                    indices.push(i);
+                    names.push(elem.name);
+                } else if (elem.type === 'RestElement') {
+                    assert(elem.argument.type === 'Identifier', "Expected identifier for rest element");
+                    indices.push(i);
+                    names.push(elem.argument.name);
+                    hasRestElement = true;
+                } else {
+                    assert(false, "Unsupported array destructuring element type: " + elem.type);
+                }
+            }
+            return { arrayPattern: make('ArrayPattern', { indices, names, hasRestElement }) };
+        } else {
+            assert(false, "Unsupported pattern type: " + id.type);
+        }
+    }
+
     function visitVariableDeclaration(node) {
         let kind;
         let disposable;
@@ -154,7 +202,7 @@ function parse(script, proto) {
         let declarations = [];
         for (let decl of node.declarations) {
             assert(decl.type === 'VariableDeclarator', "Expected variable declarator nodes inside variable declaration, found " + decl.type);
-            let outDecl = {name: decl.id.name};
+            let outDecl = parsePattern(decl.id);
             if (decl.init !== null) {
                 outDecl.value = visitExpression(decl.init);
             }
@@ -368,57 +416,11 @@ function parse(script, proto) {
                 }
                 forOfLoop.usingType = usingType;
 
-                if (decl.id.type === 'Identifier') {
-                    let initDecl = { name: decl.id.name };
-                    forOfLoop.left = make('VariableDeclarator', initDecl);
-                } else if (decl.id.type === 'ObjectPattern') {
-                    let properties = [];
-                    let restBindingName = "";
-                    for (let prop of decl.id.properties) {
-                        if (prop.type === 'ObjectProperty') {
-                            assert(prop.value.type === 'Identifier', "Nested destructuring is not yet supported in loops");
-                            assert(prop.shorthand === true, "Renaming destructuring bindings (e.g. {a: b}) is not yet supported in loops");
-                            properties.push(prop.key.name);
-                        } else if (prop.type === 'RestElement') {
-                            assert(prop.argument.type === 'Identifier', "Expected identifier for rest element");
-                            restBindingName = prop.argument.name;
-                        } else {
-                            assert(false, "Unsupported object destructuring property type: " + prop.type);
-                        }
-                    }
-                    properties.sort();
-                    forOfLoop.objectPattern = make('ObjectPattern', {
-                        properties: properties,
-                        restBinding: restBindingName
-                    });
-                } else if (decl.id.type === 'ArrayPattern') {
-                    let indices = [];
-                    let names = [];
-                    let hasRestElement = false;
-                    for (let i = 0; i < decl.id.elements.length; i++) {
-                        let elem = decl.id.elements[i];
-                        if (elem === null) {
-                            continue;
-                        }
-                        if (elem.type === 'Identifier') {
-                            indices.push(i);
-                            names.push(elem.name);
-                        } else if (elem.type === 'RestElement') {
-                            assert(elem.argument.type === 'Identifier', "Expected identifier for rest element");
-                            indices.push(i);
-                            names.push(elem.argument.name);
-                            hasRestElement = true;
-                        } else {
-                            assert(false, "Unsupported array destructuring element type: " + elem.type);
-                        }
-                    }
-                    forOfLoop.arrayPattern = make('ArrayPattern', {
-                        indices: indices,
-                        names: names,
-                        hasRestElement: hasRestElement
-                    });
+                let parsedPattern = parsePattern(decl.id);
+                if (parsedPattern.name) {
+                    forOfLoop.left = make('VariableDeclarator', parsedPattern);
                 } else {
-                    assert(false, "Unsupported loop variable initializer type: " + decl.id.type);
+                    Object.assign(forOfLoop, parsedPattern);
                 }
 
                 forOfLoop.right = visitExpression(node.right);

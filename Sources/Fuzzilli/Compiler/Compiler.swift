@@ -361,13 +361,43 @@ public class JavaScriptCompiler {
                         "invalid variable declaration type \(type)")
                 }
 
-                let v = emit(
-                    CreateNamedVariable(decl.name, declarationMode: declarationMode),
-                    withInputs: [initialValue]
-                ).output
-                // Variables declared with .var are allowed to overwrite each other.
-                assert(!currentScope.keys.contains(decl.name) || declarationMode == .var)
-                mapOrRemap(decl.name, to: v)
+                switch decl.id {
+                case .name(let name):
+                    let v = emit(
+                        CreateNamedVariable(name, declarationMode: declarationMode),
+                        withInputs: [initialValue]
+                    ).output
+                    // Variables declared with .var are allowed to overwrite each other.
+                    assert(!currentScope.keys.contains(name) || declarationMode == .var)
+                    mapOrRemap(name, to: v)
+                case .objectPattern(let objectPattern):
+                    let hasRestElement = objectPattern.hasRestBinding
+                    let destOp = DestructObject(
+                        properties: objectPattern.properties,
+                        hasRestElement: hasRestElement
+                    )
+                    let outputs = emit(destOp, withInputs: [initialValue]).outputs
+                    let names =
+                        objectPattern.properties
+                        + (hasRestElement ? [objectPattern.restBinding] : [])
+                    for (name, v) in zip(names, outputs) {
+                        assert(!currentScope.keys.contains(name) || declarationMode == .var)
+                        mapOrRemap(name, to: v)
+                    }
+                case .arrayPattern(let arrayPattern):
+                    let indices = arrayPattern.indices.map { Int64($0) }
+                    let destOp = DestructArray(
+                        indices: indices,
+                        lastIsRest: arrayPattern.hasRestElement_p
+                    )
+                    let outputs = emit(destOp, withInputs: [initialValue]).outputs
+                    for (name, v) in zip(arrayPattern.names, outputs) {
+                        assert(!currentScope.keys.contains(name) || declarationMode == .var)
+                        mapOrRemap(name, to: v)
+                    }
+                case .none:
+                    throw CompilerError.invalidASTError("VariableDeclarator is missing its id")
+                }
             }
 
         case .disposableVariableDeclaration(let variableDeclaration):
@@ -635,7 +665,7 @@ public class JavaScriptCompiler {
 
             case .objectPattern(let pattern):
                 let properties = pattern.properties
-                let hasRest = !pattern.restBinding.isEmpty
+                let hasRest = pattern.hasRestBinding
 
                 let header = LoopHeader.objectDestruct(
                     properties: properties, hasRestElement: hasRest)

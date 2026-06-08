@@ -40,7 +40,11 @@ enum VariableDeclarationKind {
 }
 
 message VariableDeclarator {
-    string name = 1;
+    oneof id {
+        string name = 1;
+        ObjectPattern objectPattern = 3;
+        ArrayPattern arrayPattern = 4;
+    }
     // The value is optional
     Expression value = 2;
 }
@@ -517,7 +521,7 @@ message Expression {
 
 message ObjectPattern {
     repeated string properties = 1;
-    string restBinding = 2;
+    optional string restBinding = 2;
 }
 
 message ArrayPattern {

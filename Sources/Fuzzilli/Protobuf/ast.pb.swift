@@ -216,9 +216,33 @@ public struct Compiler_Protobuf_VariableDeclarator: @unchecked Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  public var id: OneOf_ID? {
+    get {return _storage._id}
+    set {_uniqueStorage()._id = newValue}
+  }
+
   public var name: String {
-    get {_storage._name}
-    set {_uniqueStorage()._name = newValue}
+    get {
+      if case .name(let v)? = _storage._id {return v}
+      return String()
+    }
+    set {_uniqueStorage()._id = .name(newValue)}
+  }
+
+  public var objectPattern: Compiler_Protobuf_ObjectPattern {
+    get {
+      if case .objectPattern(let v)? = _storage._id {return v}
+      return Compiler_Protobuf_ObjectPattern()
+    }
+    set {_uniqueStorage()._id = .objectPattern(newValue)}
+  }
+
+  public var arrayPattern: Compiler_Protobuf_ArrayPattern {
+    get {
+      if case .arrayPattern(let v)? = _storage._id {return v}
+      return Compiler_Protobuf_ArrayPattern()
+    }
+    set {_uniqueStorage()._id = .arrayPattern(newValue)}
   }
 
   /// The value is optional
@@ -232,6 +256,13 @@ public struct Compiler_Protobuf_VariableDeclarator: @unchecked Sendable {
   public mutating func clearValue() {_uniqueStorage()._value = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_ID: Equatable, Sendable {
+    case name(String)
+    case objectPattern(Compiler_Protobuf_ObjectPattern)
+    case arrayPattern(Compiler_Protobuf_ArrayPattern)
+
+  }
 
   public init() {}
 
@@ -2590,11 +2621,20 @@ public struct Compiler_Protobuf_ObjectPattern: Sendable {
 
   public var properties: [String] = []
 
-  public var restBinding: String = String()
+  public var restBinding: String {
+    get {_restBinding ?? String()}
+    set {_restBinding = newValue}
+  }
+  /// Returns true if `restBinding` has been explicitly set.
+  public var hasRestBinding: Bool {self._restBinding != nil}
+  /// Clears the value of `restBinding`. Subsequent reads from it will return its default value.
+  public mutating func clearRestBinding() {self._restBinding = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _restBinding: String? = nil
 }
 
 public struct Compiler_Protobuf_ArrayPattern: Sendable {
@@ -2792,10 +2832,10 @@ extension Compiler_Protobuf_BlockStatement: SwiftProtobuf.Message, SwiftProtobuf
 
 extension Compiler_Protobuf_VariableDeclarator: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".VariableDeclarator"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}value\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}value\0\u{1}objectPattern\0\u{1}arrayPattern\0")
 
   fileprivate class _StorageClass {
-    var _name: String = String()
+    var _id: Compiler_Protobuf_VariableDeclarator.OneOf_ID?
     var _value: Compiler_Protobuf_Expression? = nil
 
       // This property is used as the initial default value for new instances of the type.
@@ -2807,7 +2847,7 @@ extension Compiler_Protobuf_VariableDeclarator: SwiftProtobuf.Message, SwiftProt
     private init() {}
 
     init(copying source: _StorageClass) {
-      _name = source._name
+      _id = source._id
       _value = source._value
     }
   }
@@ -2827,8 +2867,41 @@ extension Compiler_Protobuf_VariableDeclarator: SwiftProtobuf.Message, SwiftProt
         // allocates stack space for every case branch when no optimizations are
         // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._name) }()
+        case 1: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._id != nil {try decoder.handleConflictingOneOf()}
+            _storage._id = .name(v)
+          }
+        }()
         case 2: try { try decoder.decodeSingularMessageField(value: &_storage._value) }()
+        case 3: try {
+          var v: Compiler_Protobuf_ObjectPattern?
+          var hadOneofValue = false
+          if let current = _storage._id {
+            hadOneofValue = true
+            if case .objectPattern(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._id = .objectPattern(v)
+          }
+        }()
+        case 4: try {
+          var v: Compiler_Protobuf_ArrayPattern?
+          var hadOneofValue = false
+          if let current = _storage._id {
+            hadOneofValue = true
+            if case .arrayPattern(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._id = .arrayPattern(v)
+          }
+        }()
         default: break
         }
       }
@@ -2841,12 +2914,23 @@ extension Compiler_Protobuf_VariableDeclarator: SwiftProtobuf.Message, SwiftProt
       // allocates stack space for every if/case branch local when no optimizations
       // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
       // https://github.com/apple/swift-protobuf/issues/1182
-      if !_storage._name.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._name, fieldNumber: 1)
-      }
+      try { if case .name(let v)? = _storage._id {
+        try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+      } }()
       try { if let v = _storage._value {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
       } }()
+      switch _storage._id {
+      case .objectPattern?: try {
+        guard case .objectPattern(let v)? = _storage._id else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      }()
+      case .arrayPattern?: try {
+        guard case .arrayPattern(let v)? = _storage._id else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+      }()
+      default: break
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2856,7 +2940,7 @@ extension Compiler_Protobuf_VariableDeclarator: SwiftProtobuf.Message, SwiftProt
       let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
         let rhs_storage = _args.1
-        if _storage._name != rhs_storage._name {return false}
+        if _storage._id != rhs_storage._id {return false}
         if _storage._value != rhs_storage._value {return false}
         return true
       }
@@ -7879,25 +7963,29 @@ extension Compiler_Protobuf_ObjectPattern: SwiftProtobuf.Message, SwiftProtobuf.
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedStringField(value: &self.properties) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.restBinding) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._restBinding) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.properties.isEmpty {
       try visitor.visitRepeatedStringField(value: self.properties, fieldNumber: 1)
     }
-    if !self.restBinding.isEmpty {
-      try visitor.visitSingularStringField(value: self.restBinding, fieldNumber: 2)
-    }
+    try { if let v = self._restBinding {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Compiler_Protobuf_ObjectPattern, rhs: Compiler_Protobuf_ObjectPattern) -> Bool {
     if lhs.properties != rhs.properties {return false}
-    if lhs.restBinding != rhs.restBinding {return false}
+    if lhs._restBinding != rhs._restBinding {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
