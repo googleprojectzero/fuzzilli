@@ -1513,6 +1513,106 @@ class TypeSystemTests: XCTestCase {
         }
     }
 
+    func testWasmSubtypingRules() {
+        let baseDesc = WasmTypeDescription(typeGroupIndex: 0)
+        let subDesc = WasmTypeDescription(typeGroupIndex: 1, concreteHeapSupertype: baseDesc)
+        let subSubDesc = WasmTypeDescription(typeGroupIndex: 2, concreteHeapSupertype: subDesc)
+        let unrelatedDesc = WasmTypeDescription(typeGroupIndex: 3)
+
+        XCTAssertTrue(baseDesc.subsumes(baseDesc))
+        XCTAssertTrue(baseDesc.subsumes(subDesc))
+        XCTAssertTrue(baseDesc.subsumes(subSubDesc))
+        XCTAssertTrue(subDesc.subsumes(subSubDesc))
+
+        XCTAssertFalse(subDesc.subsumes(baseDesc))
+        XCTAssertFalse(subSubDesc.subsumes(baseDesc))
+        XCTAssertFalse(subSubDesc.subsumes(subDesc))
+
+        XCTAssertFalse(baseDesc.subsumes(unrelatedDesc))
+        XCTAssertFalse(unrelatedDesc.subsumes(baseDesc))
+
+        let anyTypeDef = ILType.wasmTypeDef()
+        let baseDef = ILType.wasmTypeDef(description: baseDesc)
+        let subDef = ILType.wasmTypeDef(description: subDesc)
+        let subSubDef = ILType.wasmTypeDef(description: subSubDesc)
+        let unrelatedDef: ILType = ILType.wasmTypeDef(description: unrelatedDesc)
+
+        XCTAssertTrue(baseDef >= baseDef)
+        XCTAssertTrue(baseDef >= subDef)
+        XCTAssertTrue(baseDef >= subSubDef)
+        XCTAssertTrue(subDef >= subSubDef)
+
+        XCTAssertFalse(subDef >= baseDef)
+        XCTAssertFalse(subSubDef >= baseDef)
+        XCTAssertFalse(subSubDef >= subDef)
+
+        XCTAssertFalse(baseDef >= unrelatedDef)
+        XCTAssertFalse(unrelatedDef >= baseDef)
+
+        XCTAssertTrue(anyTypeDef >= baseDef)
+        XCTAssertFalse(baseDef >= anyTypeDef)
+
+        XCTAssertEqual(anyTypeDef.union(with: baseDef), anyTypeDef)
+        XCTAssertEqual(baseDef.union(with: anyTypeDef), anyTypeDef)
+        XCTAssertEqual(baseDef.union(with: subDef), baseDef)
+        XCTAssertEqual(subDef.union(with: baseDef), baseDef)
+
+        XCTAssertEqual(anyTypeDef.intersection(with: baseDef), baseDef)
+        XCTAssertEqual(baseDef.intersection(with: anyTypeDef), baseDef)
+        XCTAssertEqual(baseDef.intersection(with: subDef), subDef)
+        XCTAssertEqual(subDef.intersection(with: baseDef), subDef)
+
+        let baseRefNullable = ILType.wasmIndexRef(baseDesc, nullability: true)
+        let subRefNullable = ILType.wasmIndexRef(subDesc, nullability: true)
+        let subSubRefNullable = ILType.wasmIndexRef(subSubDesc, nullability: true)
+        let unrelatedRefNullable = ILType.wasmIndexRef(unrelatedDesc, nullability: true)
+
+        let subRefNonNull = ILType.wasmIndexRef(subDesc, nullability: false)
+        let subSubRefNonNull = ILType.wasmIndexRef(subSubDesc, nullability: false)
+
+        XCTAssertTrue(baseRefNullable >= baseRefNullable)
+        XCTAssertTrue(baseRefNullable >= subRefNullable)
+        XCTAssertTrue(baseRefNullable >= subSubRefNullable)
+        XCTAssertTrue(subRefNullable >= subSubRefNullable)
+
+        XCTAssertFalse(subRefNullable >= baseRefNullable)
+        XCTAssertFalse(subSubRefNullable >= baseRefNullable)
+        XCTAssertFalse(subSubRefNullable >= subRefNullable)
+
+        XCTAssertFalse(baseRefNullable >= unrelatedRefNullable)
+        XCTAssertFalse(unrelatedRefNullable >= baseRefNullable)
+
+        XCTAssertTrue(subRefNonNull >= subSubRefNonNull)
+        XCTAssertFalse(subSubRefNonNull >= subRefNonNull)
+        XCTAssertTrue(baseRefNullable >= subSubRefNonNull)
+        XCTAssertFalse(subRefNonNull >= subSubRefNullable)
+        XCTAssertTrue(subRefNullable >= subSubRefNullable)
+
+        XCTAssertEqual(baseRefNullable.union(with: subRefNullable), baseRefNullable)
+        XCTAssertEqual(subRefNullable.union(with: baseRefNullable), baseRefNullable)
+        XCTAssertEqual(subRefNullable.union(with: subSubRefNullable), subRefNullable)
+        XCTAssertEqual(subSubRefNullable.union(with: subRefNullable), subRefNullable)
+        XCTAssertEqual(baseRefNullable.union(with: subSubRefNullable), baseRefNullable)
+        XCTAssertEqual(subSubRefNullable.union(with: baseRefNullable), baseRefNullable)
+        XCTAssertEqual(subRefNullable.union(with: subRefNullable), subRefNullable)
+
+        XCTAssertEqual(subRefNonNull.union(with: subSubRefNonNull), subRefNonNull)
+        XCTAssertEqual(subRefNullable.union(with: subRefNonNull), subRefNullable)
+        XCTAssertEqual(subRefNonNull.union(with: subSubRefNullable), subRefNullable)
+
+        XCTAssertEqual(baseRefNullable.intersection(with: subRefNullable), subRefNullable)
+        XCTAssertEqual(subRefNullable.intersection(with: baseRefNullable), subRefNullable)
+        XCTAssertEqual(subRefNullable.intersection(with: subSubRefNullable), subSubRefNullable)
+        XCTAssertEqual(subSubRefNullable.intersection(with: subRefNullable), subSubRefNullable)
+        XCTAssertEqual(baseRefNullable.intersection(with: subSubRefNullable), subSubRefNullable)
+        XCTAssertEqual(subSubRefNullable.intersection(with: baseRefNullable), subSubRefNullable)
+        XCTAssertEqual(subRefNullable.intersection(with: subRefNullable), subRefNullable)
+
+        XCTAssertEqual(subRefNonNull.intersection(with: subSubRefNonNull), subSubRefNonNull)
+        XCTAssertEqual(subRefNullable.intersection(with: subRefNonNull), subRefNonNull)
+        XCTAssertEqual(subRefNonNull.intersection(with: subSubRefNullable), subSubRefNonNull)
+    }
+
     func testWasmTypeExtensionUnionTypeExtensionVsWasmTypeExtension() {
         let tagA = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi32]))
         let tagB = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi64]))

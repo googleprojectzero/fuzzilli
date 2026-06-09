@@ -395,8 +395,7 @@ public struct ILType: Hashable {
     }
 
     static func wasmTypeDef(description: WasmTypeDescription? = nil) -> ILType {
-        let typeDef = WasmTypeDefinition()
-        typeDef.description = description
+        let typeDef = WasmTypeDefinition(description)
         return ILType(
             definiteType: .wasmTypeDef,
             ext: TypeExtension(
@@ -1810,7 +1809,11 @@ public class WasmLabelType: WasmTypeExtension {
 }
 
 public class WasmTypeDefinition: WasmTypeExtension {
-    var description: WasmTypeDescription? = nil
+    let description: WasmTypeDescription?
+
+    init(_ description: WasmTypeDescription? = nil) {
+        self.description = description
+    }
 
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmTypeDefinition else { return false }
@@ -1819,11 +1822,44 @@ public class WasmTypeDefinition: WasmTypeExtension {
 
     override func subsumes(_ other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmTypeDefinition else { return false }
-        return description == nil || other.description == nil || description == other.description
+        guard let description else { return true }
+        guard let otherDescription = other.description else { return false }
+        return description.subsumes(otherDescription)
     }
 
     override public func hash(into hasher: inout Hasher) {
         hasher.combine(description)
+    }
+
+    override func union(_ other: WasmTypeExtension) -> WasmTypeExtension? {
+        guard let other = other as? WasmTypeDefinition else { return nil }
+
+        if description == nil || other.description == nil {
+            return WasmTypeDefinition()
+        }
+
+        if let common = description!.union(other.description!) {
+            return WasmTypeDefinition(common)
+        }
+
+        return nil
+    }
+
+    override func intersection(_ other: WasmTypeExtension) -> WasmTypeExtension? {
+        guard let other = other as? WasmTypeDefinition else { return nil }
+
+        guard let description else {
+            return WasmTypeDefinition(other.description)
+        }
+        guard let otherDescription = other.description else {
+            return WasmTypeDefinition(description)
+        }
+
+        if let common = description.intersection(otherDescription) {
+            return WasmTypeDefinition(common)
+        }
+
+        return nil
     }
 
     func getReferenceTypeTo(nullability: Bool) -> ILType {
@@ -2038,11 +2074,16 @@ public class WasmReferenceType: WasmTypeExtension {
                     if desc.get() == nil || otherDesc.get() == nil {
                         return .Index(.init())
                     }
-                    if desc.get() == otherDesc.get() {
-                        return self
+
+                    let selfType = desc.get()!
+                    let otherType = otherDesc.get()!
+
+                    if let common = selfType.union(otherType) {
+                        return .Index(UnownedWasmTypeDescription(common))
                     }
-                    if let abstract = desc.get()?.abstractHeapSupertype,
-                        let otherAbstract = otherDesc.get()?.abstractHeapSupertype,
+
+                    if let abstract = selfType.abstractHeapSupertype,
+                        let otherAbstract = otherType.abstractHeapSupertype,
                         let upperBound = abstract.union(otherAbstract)
                     {
                         return .Abstract(upperBound)
@@ -2076,10 +2117,19 @@ public class WasmReferenceType: WasmTypeExtension {
             case .Index(let desc):
                 switch other {
                 case .Index(let otherDesc):
-                    if desc.get() == otherDesc.get() || desc.get() == nil || otherDesc.get() == nil
-                    {
+                    guard let selfType = desc.get() else {
+                        return .Index(otherDesc)
+                    }
+
+                    guard let otherType = otherDesc.get() else {
                         return .Index(desc)
                     }
+
+                    if let common = selfType.intersection(otherType) {
+                        return .Index(UnownedWasmTypeDescription(common))
+                    }
+
+                    return nil
                 case .Abstract(let otherAbstract):
                     if let abstractSuper = desc.get()?.abstractHeapSupertype,
                         otherAbstract.subsumes(abstractSuper)
@@ -2610,11 +2660,38 @@ class WasmTypeDescription: Hashable, CustomStringConvertible {
     // structs). It is nil for unresolved forward/self references for which the concrete abstract
     // super type is still undecided.
     public let abstractHeapSupertype: HeapTypeInfo?
+    public let concreteHeapSupertype: WasmTypeDescription?
+
+    var supertypes: UnfoldFirstSequence<WasmTypeDescription> {
+        sequence(first: self, next: { $0.concreteHeapSupertype })
+    }
 
     // TODO(gc): We will also need to support subtyping of struct and array types at some point.
-    init(typeGroupIndex: Int, superType: HeapTypeInfo? = nil) {
+    init(
+        typeGroupIndex: Int, abstractHeapSupertype: HeapTypeInfo? = nil,
+        concreteHeapSupertype: WasmTypeDescription? = nil
+    ) {
         self.typeGroupIndex = typeGroupIndex
-        self.abstractHeapSupertype = superType
+        self.abstractHeapSupertype = abstractHeapSupertype
+        self.concreteHeapSupertype = concreteHeapSupertype
+    }
+
+    func subsumes(_ other: WasmTypeDescription) -> Bool {
+        return other.supertypes.contains(self)
+    }
+
+    func union(_ other: WasmTypeDescription) -> WasmTypeDescription? {
+        return supertypes.first(where: { $0.subsumes(other) })
+    }
+
+    func intersection(_ other: WasmTypeDescription) -> WasmTypeDescription? {
+        if self.subsumes(other) {
+            return other
+        }
+        if other.subsumes(self) {
+            return self
+        }
+        return nil
     }
 
     static func == (lhs: WasmTypeDescription, rhs: WasmTypeDescription) -> Bool {
@@ -2646,7 +2723,8 @@ class WasmSignatureTypeDescription: WasmTypeDescription {
         self.isAdHoc = isAdHoc
         // TODO(pawkra): support shared variant.
         super.init(
-            typeGroupIndex: typeGroupIndex, superType: HeapTypeInfo.init(.WasmFunc, shared: false))
+            typeGroupIndex: typeGroupIndex,
+            abstractHeapSupertype: HeapTypeInfo.init(.WasmFunc, shared: false))
     }
 
     override func format(abbreviate: Bool) -> String {
@@ -2669,7 +2747,8 @@ class WasmArrayTypeDescription: WasmTypeDescription {
         self.mutability = mutability
         // TODO(pawkra): support shared variant.
         super.init(
-            typeGroupIndex: typeGroupIndex, superType: HeapTypeInfo.init(.WasmArray, shared: false))
+            typeGroupIndex: typeGroupIndex,
+            abstractHeapSupertype: HeapTypeInfo.init(.WasmArray, shared: false))
     }
 
     override func format(abbreviate: Bool) -> String {
@@ -2702,7 +2781,8 @@ class WasmStructTypeDescription: WasmTypeDescription {
         self.fields = fields
         // TODO(pawkra): support shared variant.
         super.init(
-            typeGroupIndex: typeGroupIndex, superType: HeapTypeInfo.init(.WasmStruct, shared: false)
+            typeGroupIndex: typeGroupIndex,
+            abstractHeapSupertype: HeapTypeInfo.init(.WasmStruct, shared: false)
         )
     }
 
