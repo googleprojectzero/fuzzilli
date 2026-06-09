@@ -86,6 +86,17 @@ class MockEvaluator: ProgramEvaluator {
 
     func resetState() {}
 }
+func findWasmOptInPath() -> String? {
+    guard let pathVar = ProcessInfo.processInfo.environment["PATH"] else { return nil }
+    let directories = pathVar.split(separator: ":")
+    for directory in directories {
+        let path = String(directory) + "/wasm-opt"
+        if FileManager.default.isExecutableFile(atPath: path) {
+            return path
+        }
+    }
+    return nil
+}
 
 /// Create a fuzzer instance usable for testing.
 public func makeMockFuzzer(
@@ -97,7 +108,13 @@ public func makeMockFuzzer(
     queue: DispatchQueue? = nil, overwriteGenerators: WeightedList<CodeGenerator>? = nil
 ) -> Fuzzer {
     // The configuration of this fuzzer.
-    let configuration = maybeConfiguration ?? Configuration(logLevel: .warning)
+    let configuration =
+        maybeConfiguration
+        ?? Configuration(
+            logLevel: .warning,
+            wasmOptPath: findWasmOptInPath(),
+            storagePath: FileManager.default.temporaryDirectory.path
+        )
 
     // A script runner to execute JavaScript code in an instrumented JS engine.
     let runner = maybeRunner ?? MockScriptRunner()

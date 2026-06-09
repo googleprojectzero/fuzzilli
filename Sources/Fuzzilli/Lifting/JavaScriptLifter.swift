@@ -22,6 +22,26 @@ public enum ECMAScriptVersion {
 
 /// Lifts a FuzzIL program to JavaScript.
 public class JavaScriptLifter: Lifter {
+    public static let wasmProxyPrefix = """
+        const fuzzing_imports = new Proxy({}, {
+            get: (target, moduleName) => {
+                return new Proxy({}, {
+                    get: (target, fieldName) => {
+                        if (moduleName === 'fuzzing-support') {
+                            if (fieldName === 'wasmtag') {
+                                return new WebAssembly.Tag({ 'parameters': ['i32'] });
+                            }
+                            if (fieldName === 'jstag') {
+                                return WebAssembly.JSTag;
+                            }
+                        }
+                        return () => undefined;
+                    }
+                });
+            }
+        });
+        """
+
     /// Prefix and suffix to surround the emitted code in
     private let prefix: String
     private let suffix: String
@@ -111,6 +131,7 @@ public class JavaScriptLifter: Lifter {
         var needToSupportProbing = false
         var needToSupportFixup = false
         var needToSupportWasm = false
+        var needToSupportWasmProxy = false
         var analyzer = DefUseAnalyzer(for: program)
         // If this program has a WasmModule, i.e. has a BeginWasmModule / EndWasmModule instruction, we need a typer to collect type information for lifting of that module.
         // This typer is shared across WasmLifters and a WasmLifter is only valid for a single WasmModule.
@@ -137,6 +158,7 @@ public class JavaScriptLifter: Lifter {
             if instr.op is Probe { needToSupportProbing = true }
             if instr.op is Fixup { needToSupportFixup = true }
             if instr.op is BeginWasmModule { needToSupportWasm = true }
+            if instr.op is RawWasmModule { needToSupportWasmProxy = true }
         }
         analyzer.finishAnalysis()
 
@@ -170,6 +192,10 @@ public class JavaScriptLifter: Lifter {
 
         if needToSupportFixup {
             w.emitBlock(JavaScriptFixupLifting.prefixCode)
+        }
+
+        if needToSupportWasmProxy {
+            w.emitBlock(JavaScriptLifter.wasmProxyPrefix)
         }
 
         // Singular operation handling.
@@ -1779,7 +1805,7 @@ public class JavaScriptLifter: Lifter {
                 w.enterNewBlock()
                 liftByteArray(op.bytes, to: &w)
                 w.leaveCurrentBlock()
-                w.emit("])));")
+                w.emit("])), fuzzing_imports);")
 
             case .createWasmTable(let op):
                 let V = w.declare(instr.output)

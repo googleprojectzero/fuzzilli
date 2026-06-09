@@ -1661,6 +1661,9 @@ public class FuzzILLifter: Lifter {
         case .wasmResolveForwardReference(_):
             w.emit("WasmResolveForwardReference [\(input(0)) => \(input(1))]")
 
+        case .rawWasmModule(let op):
+            w.emit("\(output()) <- RawWasmModule [\(op.bytes.count) bytes]")
+
         default:
             fatalError("No FuzzIL lifting for this operation!")
         }

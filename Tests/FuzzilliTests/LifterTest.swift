@@ -4695,9 +4695,10 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
+            \(JavaScriptLifter.wasmProxyPrefix)
             const v0 = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([
                 0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00,
-            ])));
+            ])), fuzzing_imports);
 
             """
 
@@ -4982,5 +4983,24 @@ class LifterTests: XCTestCase {
 
             """
         XCTAssertEqual(actual, expected)
+    }
+
+    func testBinaryenWasmGenerator() throws {
+        let fuzzer = makeMockFuzzer()
+        guard findWasmOptInPath() != nil else {
+            throw XCTSkip(
+                "wasm-opt not found in PATH. To run this test, please ensure that the directory containing wasm-opt is added to your PATH environment variable. Skipping test for now."
+            )
+        }
+        let b = fuzzer.makeBuilder()
+
+        // Run the generator
+        _ = BinaryenWasmGenerator.parts.first!.run(in: b, with: [])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        // Verify that it produced a Wasm module instantiation with the correct header
+        XCTAssertTrue(actual.contains("0x00, 0x61, 0x73, 0x6D"))
     }
 }

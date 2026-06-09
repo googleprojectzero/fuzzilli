@@ -94,6 +94,9 @@ public struct Configuration {
     // this disables all wasm-related code generators.
     public let isWasmEnabled: Bool
 
+    // Path to the wasm-opt binary to enable Binaryen Wasm generation.
+    public let wasmOptPath: String?
+
     // The directory in which the corpus and additional diagnostics files are stored.
     public let storagePath: String?
 
@@ -127,6 +130,7 @@ public struct Configuration {
         staticCorpus: Bool = false,
         tag: String? = nil,
         isWasmEnabled: Bool = false,
+        wasmOptPath: String? = nil,
         generateBundle: Bool = false,
         storagePath: String? = nil,
         corpusGenerationIterations: Int = 100,
@@ -146,6 +150,7 @@ public struct Configuration {
         self.staticCorpus = staticCorpus
         self.tag = tag
         self.isWasmEnabled = isWasmEnabled
+        self.wasmOptPath = wasmOptPath
         self.generateBundle = generateBundle
         self.storagePath = storagePath
         self.corpusGenerationIterations = corpusGenerationIterations

@@ -270,6 +270,7 @@ public let codeGeneratorWeights = [
     // This weight is important as we need to have a module for the other generators to work.
     // As they all require .wasm context.
     "WasmModuleGenerator":                      35,
+    "BinaryenWasmGenerator":                    10,
     "WasmDefineMemoryGenerator":                8,
     "WasmDefineDataSegmentGenerator":           8,
     "WasmDropDataSegmentGenerator":             5,

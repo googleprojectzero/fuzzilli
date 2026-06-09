@@ -103,6 +103,7 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
             --tag=tag                    : Optional string tag associated with this instance which will be stored in the settings.json file as well as in crashing samples.
                                            This can for example be used to remember the target revision that is being fuzzed.
             --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
+            --wasm-opt-path=path         : Path to the wasm-opt binary to enable Binaryen Wasm generation.
             --forDifferentialFuzzing     : Enable additional features for better support of external differential fuzzing.
             --bundle                     : Generate bundles containing multiple JS scripts and modules
 
@@ -164,6 +165,7 @@ let argumentRandomization = args.has("--argumentRandomization")
 let additionalArguments = args["--additionalArguments"] ?? ""
 let tag = args["--tag"]
 let enableWasm = args.has("--wasm")
+let wasmOptPath = args["--wasm-opt-path"]
 let generateBundle = args.has("--bundle")
 let forDifferentialFuzzing = args.has("--forDifferentialFuzzing")
 
@@ -347,6 +349,15 @@ if staticCorpus && !(resume || isNetworkChildNode || corpusImportPath != nil) {
     )
 }
 
+if let path = wasmOptPath {
+    guard FileManager.default.isExecutableFile(atPath: path) else {
+        configError("Invalid wasm-opt path \"\(path)\", file does not exist or is not executable")
+    }
+    if storagePath == nil {
+        configError("--wasm-opt-path requires --storagePath")
+    }
+}
+
 // Make it easy to detect typos etc. in command line arguments
 if args.unusedOptionals.count > 0 {
     configError("Invalid arguments: \(args.unusedOptionals)")
@@ -371,12 +382,10 @@ if swarmTesting {
 let disableCodeGenerators = Set(profile.disabledCodeGenerators)
 let additionalCodeGenerators = profile.additionalCodeGenerators
 
-let codeGeneratorsToUse =
-    if enableWasm {
-        CodeGenerators + WasmCodeGenerators
-    } else {
-        CodeGenerators
-    }
+var codeGeneratorsToUse = enableWasm ? CodeGenerators + WasmCodeGenerators : CodeGenerators
+if wasmOptPath != nil {
+    codeGeneratorsToUse.append(BinaryenWasmGenerator)
+}
 
 let standardCodeGenerators: [(CodeGenerator, Int)] = codeGeneratorsToUse.map {
     guard let weight = codeGeneratorWeights[$0.name] else {
@@ -633,6 +642,7 @@ let mainConfig = Configuration(
     staticCorpus: staticCorpus,
     tag: tag,
     isWasmEnabled: enableWasm,
+    wasmOptPath: wasmOptPath,
     generateBundle: generateBundle,
     storagePath: storagePath,
     corpusGenerationIterations: corpusGenerationIterations,

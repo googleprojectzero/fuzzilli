@@ -183,6 +183,117 @@ class LiveTests: XCTestCase {
         checkFailureRate(testResults: results, maxFailureRate: 0.35)
     }
 
+    func testBinaryenWasmCodeGenerationAndCompilation() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(
+            type: .any,
+            withArguments: [
+                "--wasm-staging", "--wasm-allow-mixed-eh-for-testing",
+                "--experimental-fuzzing",
+            ]
+        )
+
+        guard findWasmOptInPath() != nil else {
+            throw XCTSkip(
+                "wasm-opt not found in PATH. To run this test, please ensure that the directory containing wasm-opt is added to your PATH environment variable. Skipping test for now."
+            )
+        }
+
+        let results = try Self.runLiveTest(withRunner: runner) { b in
+            b.loadInt(123)  // dummy prefix
+            if runBinaryenWasmGenerator(b: b) == nil {
+                let errorMsg = b.loadString("BinaryenWasmGenerator failed to generate Wasm module")
+                b.throwException(errorMsg)
+            }
+        }
+
+        // For now, we expect a maximum of 5% of Wasm compilation attempts to fail.
+        checkFailureRate(testResults: results, maxFailureRate: 0.05)
+    }
+
+    func testBinaryenWasmCodeGenerationAndCompilationAndExecution() throws {
+        let runner = try GetJavaScriptExecutorOrSkipTest(
+            type: .any,
+            withArguments: [
+                "--wasm-staging", "--wasm-allow-mixed-eh-for-testing",
+                "--experimental-fuzzing",
+            ]
+        )
+
+        guard findWasmOptInPath() != nil else {
+            throw XCTSkip(
+                "wasm-opt not found in PATH. To run this test, please ensure that the directory containing wasm-opt is added to your PATH environment variable. Skipping test for now."
+            )
+        }
+
+        let results = try Self.runLiveTest(withRunner: runner) { b in
+            b.loadInt(123)  // dummy prefix
+
+            // Run the generator and get the metadata
+            guard let metadata = runBinaryenWasmGenerator(b: b) else {
+                let errorMsg = b.loadString("BinaryenWasmGenerator failed to generate Wasm module")
+                b.throwException(errorMsg)
+                return
+            }
+
+            // The last instruction in our generator was `b.getProperty("exports", of: instance)`
+            let exports = b.lastInstruction().output
+
+            // Dynamically find a simple function with simple parameters to call
+            let simpleFunc = metadata.functions.first { funcExport in
+                funcExport.signature.parameters.allSatisfy { param in
+                    let type: ILType
+                    switch param {
+                    case .plain(let t), .opt(let t), .rest(let t):
+                        type = t
+                    case .either(_, _):
+                        type = .nothing
+                    }
+                    return type == .integer || type == .bigint || type == .float
+                }
+            }
+
+            b.buildTryCatchFinally {
+                if let targetFunc = simpleFunc {
+                    let args = targetFunc.signature.parameters.map { param in
+                        let type: ILType
+                        switch param {
+                        case .plain(let t), .opt(let t), .rest(let t):
+                            type = t
+                        case .either(_, _):
+                            fatalError("either parameter type should have been filtered out")
+                        }
+
+                        if let randomVar = b.randomVariable(ofType: type) {
+                            return randomVar
+                        }
+
+                        if type.Is(.integer) {
+                            return b.loadInt(0)
+                        } else if type.Is(.bigint) {
+                            return b.loadBigInt(0)
+                        } else {
+                            // type.Is(.float)
+                            return b.loadFloat(0.0)
+                        }
+                    }
+                    b.callMethod(targetFunc.name, on: exports, withArgs: args)
+                } else if let firstGlobal = metadata.globals.first {
+                    let globalObj = b.getProperty(firstGlobal, of: exports)
+                    b.getProperty("value", of: globalObj)
+                }
+            } catchBody: { exception in
+                let wasmGlobal = b.createNamedVariable(forBuiltin: "WebAssembly")
+                let wasmException = b.getProperty("Exception", of: wasmGlobal)
+                b.buildIf(b.unary(.LogicalNot, b.testInstanceOf(exception, wasmException))) {
+                    b.throwException(exception)
+                }
+            }
+        }
+
+        // For now, we expect a maximum of 50% of Wasm execution attempts to fail.
+        checkFailureRate(testResults: results, maxFailureRate: 0.5)
+    }
+
     // The closure can use the ProgramBuilder to emit a program of a specific
     // shape that is then executed with the given runner. We then check that
     // we stay below the maximum failure rate over the given number of iterations.
@@ -190,7 +301,11 @@ class LiveTests: XCTestCase {
         iterations n: Int = 250, withRunner runner: JavaScriptExecutor, timeoutInSeconds: Int = 5,
         body: (ProgramBuilder) -> Void
     ) throws -> (failureRate: Double, failureMessages: [String: Int]) {
-        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let liveTestConfig = Configuration(
+            logLevel: .error,
+            enableInspection: true,
+            wasmOptPath: findWasmOptInPath()
+        )
 
         // We have to use the proper JavaScriptEnvironment here.
         // This ensures that we use the available builtins.
