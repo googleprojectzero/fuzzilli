@@ -241,9 +241,23 @@ public class Fuzzer {
 
     /// Schedule work on this fuzzer's dispatch queue and wait for its completion.
     public func sync(do block: () -> Void) {
-        queue.sync {
-            guard !self.isStopped else { return }
+        guard !self.isStopped else { return }
+        if Fuzzer.current === self {
             block()
+        } else {
+            queue.sync {
+                guard !self.isStopped else { return }
+                block()
+            }
+        }
+    }
+
+    /// Schedule work on this fuzzer's dispatch queue and wait for its completion.
+    public func sync<T>(do block: () -> T) -> T {
+        if Fuzzer.current === self {
+            block()
+        } else {
+            queue.sync(execute: block)
         }
     }
 

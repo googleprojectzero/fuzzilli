@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import Algorithms
+import Testing
 import XCTest
 
 @testable import Fuzzilli
@@ -30,12 +31,17 @@ func testExecuteScript(program: String, runner: JavaScriptExecutor) -> JavaScrip
 
 func testForOutput(program: String, runner: JavaScriptExecutor, outputString: String) {
     let result = testExecuteScript(program: program, runner: runner)
+    #expect(result.output == outputString, "Error Output:\n\(result.error)")
     XCTAssertEqual(result.output, outputString, "Error Output:\n" + result.error)
 }
 
 func testForOutputRegex(program: String, runner: JavaScriptExecutor, outputPattern: String) {
     let result = testExecuteScript(program: program, runner: runner)
     let matches = result.output.matches(of: try! Regex(outputPattern))
+    #expect(
+        !matches.isEmpty,
+        "Output:\n\(result.output)\nExpected output:\n\(outputPattern)Error Output:\n\(result.error)"
+    )
     XCTAssertEqual(
         matches.isEmpty, false,
         "Output:\n\(result.output)\nExpected output:\n\(outputPattern)Error Output:\n\(result.error)"
@@ -46,6 +52,9 @@ func testForErrorOutput(
     program: String, runner: JavaScriptExecutor, errorMessageContains errormsg: String
 ) {
     let result = testExecuteScript(program: program, runner: runner)
+    #expect(
+        result.output.contains(errormsg) || result.error.contains(errormsg),
+        "Error messages don't match, got stdout:\n\(result.output)\nstderr:\n\(result.error)")
     XCTAssert(
         result.output.contains(errormsg) || result.error.contains(errormsg),
         "Error messages don't match, got stdout:\n\(result.output)\nstderr:\n\(result.error)")

@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import XCTest
+import Testing
 
 @testable import Fuzzilli
 
 // Unit tests for the WebAssembly atomics operations.
-class WasmAtomicsTests: XCTestCase {
+@Suite(.enabled { JavaScriptExecutor() != nil })
+struct WasmAtomicsTests {
     /// A basic sanity check for 32-bit and 64-bit atomic load and store operations, on both shared and unshared memory.
-    func testAtomicLoadStore() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+    @Test func testAtomicLoadStore() throws {
+        let runner = JavaScriptExecutor()!
         var expectedOutput = ""
 
         let js = buildAndLiftProgram { b in
@@ -77,8 +78,8 @@ class WasmAtomicsTests: XCTestCase {
     }
 
     /// Verifies the correctness of packed (narrow) atomic operations.
-    func testAtomics8bit() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+    @Test func testAtomics8bit() throws {
+        let runner = JavaScriptExecutor()!
         var expectedOutput = ""
 
         let js = buildAndLiftProgram { b in
@@ -137,8 +138,8 @@ class WasmAtomicsTests: XCTestCase {
     }
 
     /// Verifies that a misaligned atomic memory access correctly triggers a WebAssembly trap.
-    func testAtomicsMisalignedTrap() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+    @Test func testAtomicsMisalignedTrap() throws {
+        let runner = JavaScriptExecutor()!
         var expectedOutput = ""
 
         let js = buildAndLiftProgram { b in
@@ -215,8 +216,8 @@ class WasmAtomicsTests: XCTestCase {
         testForOutput(program: js, runner: runner, outputString: expectedOutput)
     }
 
-    func testAtomicRMWs() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+    @Test func testAtomicRMWs() throws {
+        let runner = JavaScriptExecutor()!
         var expectedOutput = ""
         var expectedResults: [String] = []
 
@@ -312,8 +313,8 @@ class WasmAtomicsTests: XCTestCase {
         testForOutput(program: js, runner: runner, outputString: expectedOutput)
     }
 
-    func testAtomicCmpxchg() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+    @Test func testAtomicCmpxchg() throws {
+        let runner = JavaScriptExecutor()!
         var expectedOutput = ""
         var expectedResults: [String] = []
 
@@ -409,11 +410,10 @@ class WasmAtomicsTests: XCTestCase {
         testForOutput(program: js, runner: runner, outputString: expectedOutput)
     }
 
-    /// Test case for the new AcquireRelease memory ordering.
-    func testMemoryOrdering() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest(
+    @Test func testMemoryOrdering() throws {
+        let runner = JavaScriptExecutor(
             type: .any,
-            withArguments: ["--experimental-wasm-acquire-release"])
+            withArguments: ["--experimental-wasm-acquire-release"])!
         let js = buildAndLiftProgram { b in
             let module = b.buildWasmModule { wasmModule in
                 let memory0 = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: true)
@@ -449,11 +449,10 @@ class WasmAtomicsTests: XCTestCase {
         testForOutput(program: js, runner: runner, outputString: "42,1337\n")
     }
 
-    /// Test case for the new AcquireRelease memory ordering on RMW operations.
-    func testRMWOrdering() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest(
+    @Test func testRMWOrdering() throws {
+        let runner = JavaScriptExecutor(
             type: .any,
-            withArguments: ["--experimental-wasm-acquire-release"])
+            withArguments: ["--experimental-wasm-acquire-release"])!
         let js = buildAndLiftProgram { b in
             let module = b.buildWasmModule { wasmModule in
                 let memory = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: true)
@@ -485,11 +484,10 @@ class WasmAtomicsTests: XCTestCase {
         testForOutput(program: js, runner: runner, outputString: "42,52\n")
     }
 
-    /// Test case for the new AcquireRelease memory ordering on Cmpxchg operations.
-    func testCmpxchgOrdering() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest(
+    @Test func testCmpxchgOrdering() throws {
+        let runner = JavaScriptExecutor(
             type: .any,
-            withArguments: ["--experimental-wasm-acquire-release"])
+            withArguments: ["--experimental-wasm-acquire-release"])!
         let js = buildAndLiftProgram { b in
             let module = b.buildWasmModule { wasmModule in
                 let memory = wasmModule.addMemory(minPages: 1, maxPages: 4, isShared: true)

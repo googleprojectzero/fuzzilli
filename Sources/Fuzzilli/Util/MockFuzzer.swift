@@ -163,6 +163,11 @@ public func makeMockFuzzer(
         ProgramTemplates.map { return ($0, programTemplateWeights[$0.name]!) })
 
     // Construct the fuzzer instance.
+    let fuzzerQueue =
+        queue
+        ?? (Thread.isMainThread
+            ? DispatchQueue.main
+            : DispatchQueue(label: "MockFuzzer", target: DispatchQueue.global()))
     let fuzzer = Fuzzer(
         configuration: configuration,
         scriptRunner: runner,
@@ -176,22 +181,14 @@ public func makeMockFuzzer(
         lifter: lifter,
         corpus: corpus,
         minimizer: minimizer,
-        queue: queue ?? DispatchQueue.main)
+        queue: fuzzerQueue)
 
-    let initializeFuzzer = {
+    fuzzer.sync {
         fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
             print("[\(ev.label)] \(ev.message)")
         }
 
         fuzzer.initialize()
-    }
-    // If a DispatchQueue was provided by the caller, initialize the fuzzer
-    // there. Otherwise initialize it directly.
-    if let queue {
-        queue.sync { initializeFuzzer() }
-    } else {
-        dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
-        initializeFuzzer()
     }
 
     return fuzzer

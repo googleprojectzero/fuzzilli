@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import Foundation
+import Testing
 import XCTest
 
 @testable import Fuzzilli
@@ -76,18 +77,22 @@ func buildAndLiftProgram(withLiftingOptions: LiftingOptions, buildFunc: (Program
     // We have to use the proper JavaScriptEnvironment here.
     // This ensures that we use the available builtins.
     let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
-    let b = fuzzer.makeBuilder()
 
-    buildFunc(b)
+    return fuzzer.sync {
+        let b = fuzzer.makeBuilder()
 
-    // AssertThat prog == Deserialize(Serilize(prog))
-    let prog = b.finalize()
-    let serializedBytes = try! prog.asProtobuf().serializedData()
-    let deserialized = try! Program(
-        from: Fuzzilli_Protobuf_Program(serializedBytes: serializedBytes))
-    XCTAssertEqual(prog, deserialized)
+        buildFunc(b)
 
-    return fuzzer.lifter.lift(prog, withOptions: withLiftingOptions)
+        // AssertThat prog == Deserialize(Serilize(prog))
+        let prog = b.finalize()
+        let serializedBytes = try! prog.asProtobuf().serializedData()
+        let deserialized = try! Program(
+            from: Fuzzilli_Protobuf_Program(serializedBytes: serializedBytes))
+        XCTAssertEqual(prog, deserialized)
+        #expect(prog == deserialized)
+
+        return fuzzer.lifter.lift(prog, withOptions: withLiftingOptions)
+    }
 }
 
 func buildAndLiftProgram(buildFunc: (ProgramBuilder) -> Void) -> String {
