@@ -2025,8 +2025,9 @@ public struct JSTyper: Analyzer {
             let keyType = type(ofInput: 0)
             if let symbolGroup = keyType.group, ILType.groupsMatchByPrefix("Symbol", symbolGroup) {
                 // TODO: We do not support static symbol methods yet.
-                assert(!op.isStatic)
-                dynamicObjectGroupManager.addSymbolMethod(symbolGroup)
+                if !op.isStatic {
+                    dynamicObjectGroupManager.addSymbolMethod(symbolGroup)
+                }
             }
 
         case .beginClassGetter(let op):
