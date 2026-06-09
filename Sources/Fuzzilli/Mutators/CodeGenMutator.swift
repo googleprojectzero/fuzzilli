@@ -42,6 +42,7 @@ public class CodeGenMutator: BaseInstructionMutator {
             return false
         }
 
+        // The visible variables don't necessarily need to be JS variables; Wasm code generators can run without JS variables.
         return variableAnalyzer.visibleVariables.count >= minVisibleVariables
             && !deadCodeAnalyzer.currentlyInDeadCode
     }
@@ -52,19 +53,27 @@ public class CodeGenMutator: BaseInstructionMutator {
             b.buildIntoTypeGroup(endTypeGroupInstr: instr, by: .generating)
         default:
             b.adopt(instr)
-            // VariableAnalyzer overapproximates the number of visible variables, e.g., JS labels are considered visible even after opening a new function scope.
-            // So, canMutate() may return true even if the _actual_ number of visible variables is less than minVisibleVariables, potentially triggering a call to mutate() later.
-            // In contrast, the analysis of ProgramBuilder (=b.numberOfVisibleJSVariables) is precise in this regard.
-            // Since b.build() requires some variables to be visible, we account for this discrepancy here by building some variables.
-            // We only generate variables if we are in a .javascript context, so we're not generating variables in, e.g., a switch block, which wouldn't be allowed.
-            // In other contexts, some variables should already be visible.
-            if b.context.contains(.javascript) && b.numberOfVisibleJsVariables < minVisibleVariables
-            {
-                b.buildValues(minVisibleVariables - b.numberOfVisibleJsVariables)
+
+            if b.numberOfVisibleJsVariables < minVisibleVariables {
+                // VariableAnalyzer counts the number of visible variables, not only JS variables. It also overapproxiamtes, e.g., JS labels are considered visible even after opening a new function scope.
+                // So, canMutate() may return true even if the _actual_ number of visible variables is less than minVisibleVariables, potentially triggering a call to mutate() later.
+                // In contrast, the analysis of ProgramBuilder (=b.numberOfVisibleJSVariables) is precise in this regard.
+                // Since b.build() might trigger generators which require JS variables to be visible, we account for this discrepancy here by building some JS variables.
+                // We only generate variables if we are in a .javascript context, so we're not generating variables in, e.g., a switch block, which wouldn't be allowed.
+                if b.context.contains(.javascript) {
+                    b.buildValues(minVisibleVariables - b.numberOfVisibleJsVariables)
+                } else if b.context.contains(.objectLiteral) || b.context.contains(.classDefinition)
+                    || b.context.contains(.switchBlock)
+                {
+                    // In these contexts, we might still run code generators which depend on having JS variables available, but we cannot insert more code here to ensure we have enough variables. Thus, our only option is to bail out.
+                    return
+                }
+                // Otherwise, we are in a context where we only run code generators which don't require JS variables (such as wasm contexts).
             }
             assert(b.numberOfVisibleVariables > 0)
             assert(!b.context.contains(.switchBlock) || b.numberOfVisibleJsVariables > 0)
             assert(!b.context.contains(.classDefinition) || b.numberOfVisibleJsVariables > 0)
+            assert(!b.context.contains(.objectLiteral) || b.numberOfVisibleJsVariables > 0)
             b.build(n: defaultCodeGenerationAmount, by: .generating)
         }
     }
