@@ -77,6 +77,11 @@ def check_formatting():
     run_formatting()
     check_git_clean("after auto-formatting")
 
+def check_all():
+    check_git_clean("before any checks")
+    check_proto()
+    check_formatting()
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--format", action="store_true", help="Run auto-formatting.")
@@ -90,10 +95,7 @@ def main():
         if args.format:
             run_formatting()
     else:
-        check_git_clean("before any checks")
-        check_proto()
-        check_formatting()
-
+        check_all()
 
 if __name__ == '__main__':
   main()
