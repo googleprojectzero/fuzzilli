@@ -99,14 +99,8 @@ public class JavaScriptExecutor {
         _ path: String, withInput input: Data = Data(), withArguments arguments: [String] = [],
         withEnv env: [(String, String)] = [], timeout maybeTimeout: TimeInterval? = nil
     ) throws -> Result {
-        let inputPipe = Pipe()
         let outputPipe = Pipe()
         let errorPipe = Pipe()
-
-        let outputData = OutputBuffer()
-        outputPipe.fileHandleForReading.readabilityHandler = { handle in
-            outputData.append(handle.availableData)
-        }
 
         // Write input into file.
         let url = FileManager.default.temporaryDirectory
@@ -114,8 +108,6 @@ public class JavaScriptExecutor {
             .appendingPathExtension("js")
 
         try input.write(to: url)
-        // Close stdin
-        try inputPipe.fileHandleForWriting.close()
 
         let environment = ProcessInfo.processInfo.environment.merging(
             env, uniquingKeysWith: { _, new in new })
@@ -126,8 +118,15 @@ public class JavaScriptExecutor {
         task.standardError = errorPipe
         task.arguments = arguments + [url.path]
         task.executableURL = URL(fileURLWithPath: path)
-        task.standardInput = inputPipe
         task.environment = environment
+
+        let outputData = OutputBuffer()
+        let errorData = OutputBuffer()
+        let readGroup = DispatchGroup()
+
+        setupConcurrentRead(from: outputPipe, into: outputData, group: readGroup)
+        setupConcurrentRead(from: errorPipe, into: errorData, group: readGroup)
+
         try task.run()
 
         var timedOut = false
@@ -161,6 +160,7 @@ public class JavaScriptExecutor {
         }
 
         task.waitUntilExit()
+        readGroup.wait()
 
         // Delete the temporary file
         try FileManager.default.removeItem(at: url)
@@ -170,7 +170,7 @@ public class JavaScriptExecutor {
             String(data: outputData.currentData, encoding: .utf8)
             ?? "Process output is not valid UTF-8"
         let error =
-            String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
+            String(data: errorData.currentData, encoding: .utf8)
             ?? "Process stderr is not valid UTF-8"
         let outcome: Result.Outcome
         if timedOut {

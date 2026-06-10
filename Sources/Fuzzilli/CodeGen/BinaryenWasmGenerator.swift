@@ -28,15 +28,12 @@ private func runWasmOpt(wasmOptPath: String, arguments: [String]) -> Result<Stri
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
 
-    let stdoutData = OutputBuffer()
-    stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
-        stdoutData.append(handle.availableData)
-    }
+    let stdoutDataBuffer = OutputBuffer()
+    let stderrDataBuffer = OutputBuffer()
+    let readGroup = DispatchGroup()
 
-    let stderrData = OutputBuffer()
-    stderrPipe.fileHandleForReading.readabilityHandler = { handle in
-        stderrData.append(handle.availableData)
-    }
+    setupConcurrentRead(from: stdoutPipe, into: stdoutDataBuffer, group: readGroup)
+    setupConcurrentRead(from: stderrPipe, into: stderrDataBuffer, group: readGroup)
 
     let timeout: TimeInterval = 1.0
     let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
@@ -54,19 +51,15 @@ private func runWasmOpt(wasmOptPath: String, arguments: [String]) -> Result<Stri
     do {
         try process.run()
         process.waitUntilExit()
+        readGroup.wait()
     } catch {
-        stdoutPipe.fileHandleForReading.readabilityHandler = nil
-        stderrPipe.fileHandleForReading.readabilityHandler = nil
         return .failure(BinaryenError(description: "Failed to run wasm-opt: \(error)"))
     }
 
-    stdoutPipe.fileHandleForReading.readabilityHandler = nil
-    stderrPipe.fileHandleForReading.readabilityHandler = nil
-
-    let stdoutStr = String(data: stdoutData.currentData, encoding: .utf8) ?? ""
+    let stdoutStr = String(data: stdoutDataBuffer.currentData, encoding: .utf8) ?? ""
 
     if process.terminationStatus != 0 {
-        let stderrStr = String(data: stderrData.currentData, encoding: .utf8) ?? ""
+        let stderrStr = String(data: stderrDataBuffer.currentData, encoding: .utf8) ?? ""
         return .failure(
             BinaryenError(
                 description:
