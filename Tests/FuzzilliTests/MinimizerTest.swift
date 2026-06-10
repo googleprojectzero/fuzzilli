@@ -802,6 +802,51 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(originalProgram, actualProgram)
     }
 
+    func testInliningWithTopLevelAsyncDisposableVariable() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config, evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program with a bundle.
+        b.buildBundleModuleEntryPoint {
+            let a1 = b.loadBool(true)
+
+            // We need some function to be an inlining candidate, but it doesn't have to be related to the disposable.
+            let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
+                b.doReturn(a1)
+            }
+
+            let r = b.callFunction(f, withArgs: [])
+            let o = b.createObject(with: [:])
+            evaluator.nextInstructionIsImportant(in: b)
+            b.setProperty("result", of: o, to: r)
+
+            // This is allowed because we are in .async context (opened by buildBundleModuleEntryPoint)
+            // but activeSubroutineDefinitions is empty.
+            b.loadAsyncDisposableVariable(a1)
+        }
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        b.buildBundleModuleEntryPoint {
+            let a1 = b.loadBool(true)
+            let o = b.createObject(with: [:])
+            b.setProperty("result", of: o, to: a1)
+            b.loadAsyncDisposableVariable(a1)
+        }
+        let expectedProgram = b.finalize()
+
+        evaluator.operationIsImportant(LoadBoolean.self)
+        evaluator.operationIsImportant(LoadAsyncDisposableVariable.self)
+        evaluator.keepReturnsInFunctions = true
+
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(FuzzILLifter().lift(expectedProgram), FuzzILLifter().lift(actualProgram))
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
     func testMultiInlining() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)

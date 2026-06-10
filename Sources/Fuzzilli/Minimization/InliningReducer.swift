@@ -127,7 +127,7 @@ struct InliningReducer: Reducer {
                 .loadArguments:
                 // Can't inline functions if they access their arguments or new.target.
                 // Or if they create a disposable variable.
-                if let function = activeSubroutineDefinitions.last! {
+                if let function = activeSubroutineDefinitions.last ?? nil {
                     candidates.removeValue(forKey: function)
                 }
             default:
