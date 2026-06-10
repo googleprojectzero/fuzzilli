@@ -1477,7 +1477,7 @@ public let CodeGenerators: [CodeGenerator] = [
     ) { b in
         // Try to find a private field that hasn't already been added to this literal.
         let propertyName = b.generateString(
-            b.randomCustomPropertyName,
+            b.randomCustomIdentifierName,
             notIn: b.currentClassDefinition.privateFields)
 
         var value = probability(0.5) ? b.randomJsVariable() : nil
@@ -1518,7 +1518,7 @@ public let CodeGenerators: [CodeGenerator] = [
     ) { b in
         // Try to find a private field that hasn't already been added to this literal.
         let propertyName = b.generateString(
-            b.randomCustomPropertyName,
+            b.randomCustomIdentifierName,
             notIn: b.currentClassDefinition.privateFields)
         var value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addPrivateStaticProperty(
@@ -1609,11 +1609,11 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("NamedVariableGenerator") { b in
-        // We're using the custom property names set from the environment for named variables.
+        // We're using the custom identifier names set from the environment for named variables.
         // It's not clear if there's something better since that set should be relatively small
         // (increasing the probability that named variables will be reused), and it also makes
-        // sense to use property names if we're inside a `with` statement.
-        let name = b.randomCustomPropertyName()
+        // sense to use identifier names if we're inside a `with` statement.
+        let name = b.randomCustomIdentifierName()
         let declarationMode = chooseUniform(
             from: NamedVariableDeclarationMode.allCases)
         if declarationMode != .none {
@@ -3195,10 +3195,15 @@ public let CodeGenerators: [CodeGenerator] = [
                 inputs: .preferred(.object())
             ) { b, obj in
                 b.emit(BeginWith(), withInputs: [obj])
-                for i in 1...3 {
-                    let propertyName =
-                        b.type(of: obj).randomProperty()
-                        ?? b.randomCustomPropertyName()
+                for _ in 1...3 {
+                    let propertyName: String
+                    if let prop = b.type(of: obj).randomProperty(),
+                        b.fuzzer.environment.isValidDotNotationName(prop)
+                    {
+                        propertyName = prop
+                    } else {
+                        propertyName = b.randomCustomIdentifierName()
+                    }
                     b.createNamedVariable(propertyName, declarationMode: .none)
                 }
             },

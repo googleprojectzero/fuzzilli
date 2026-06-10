@@ -297,8 +297,9 @@ public class OperationMutator: BaseInstructionMutator {
         case .compare(_):
             newOp = Compare(chooseUniform(from: Comparator.allCases))
         case .createNamedVariable(let op):
-            // We just use property names as variable names here. It's not clear if there's a better alternative and this also works well with `with` statements.
-            newOp = CreateNamedVariable(b.randomPropertyName(), declarationMode: op.declarationMode)
+            // We must use a valid identifier name here.
+            newOp = CreateNamedVariable(
+                b.randomIdentifierName(), declarationMode: op.declarationMode)
         case .callSuperMethod(let op):
             let methodName = b.currentSuperType().randomMethod() ?? b.randomMethodName()
             newOp = CallSuperMethod(methodName: methodName, numArguments: op.numArguments)

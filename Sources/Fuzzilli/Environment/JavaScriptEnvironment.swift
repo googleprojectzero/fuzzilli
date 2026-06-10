@@ -308,11 +308,13 @@ public class JavaScriptEnvironment: ComponentBase {
     public static let CustomPropertyNames = ["a", "b", "c", "d", "e", "f", "!", "42"]
     public static let CustomMethodNames = ["m", "n", "o", "?", "67", "valueOf", "toString"]
     public static let CustomPrivateMethodNames = ["m", "n", "o", "p"]
+    public static let CustomIdentifierNames = ["a", "b", "c", "d", "e", "f"]
 
     public private(set) var builtins = Set<String>()
     public let customProperties = Set<String>(CustomPropertyNames)
     public let customMethods = Set<String>(CustomMethodNames)
     public let customPrivateMethods = Set<String>(CustomPrivateMethodNames)
+    public let customIdentifiers = Set<String>(CustomIdentifierNames)
     public private(set) var builtinProperties = Set<String>()
     public private(set) var builtinMethods = Set<String>()
 
@@ -793,6 +795,9 @@ public class JavaScriptEnvironment: ComponentBase {
         logger.info("Have \(customMethods.count) custom method names: \(customMethods.sorted())")
         logger.info(
             "Have \(customPrivateMethods.count) custom private method names: \(customPrivateMethods.sorted())"
+        )
+        logger.info(
+            "Have \(customIdentifiers.count) custom identifier names: \(customIdentifiers.sorted())"
         )
     }
 

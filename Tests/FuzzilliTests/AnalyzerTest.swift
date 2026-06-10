@@ -130,7 +130,7 @@ class AnalyzerTests: XCTestCase {
                 }
             }
             XCTAssertEqual(b.context, [.javascript])
-            b.createNamedVariable(b.randomPropertyName(), declarationMode: .none)
+            b.createNamedVariable(b.randomIdentifierName(), declarationMode: .none)
         }
 
         let _ = b.finalize()

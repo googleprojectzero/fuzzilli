@@ -511,6 +511,22 @@ public class ProgramBuilder {
         return chooseUniform(from: fuzzer.environment.customProperties)
     }
 
+    /// Returns a random custom identifier name.
+    public func randomCustomIdentifierName() -> String {
+        return chooseUniform(from: fuzzer.environment.customIdentifiers)
+    }
+
+    /// Returns a random identifier name.
+    public func randomIdentifierName() -> String {
+        if probability(0.5) {
+            let name = randomBuiltinPropertyName()
+            if fuzzer.environment.isValidDotNotationName(name) {
+                return name
+            }
+        }
+        return randomCustomIdentifierName()
+    }
+
     /// Returns either a builtin or a custom property name, with equal probability.
     public func randomPropertyName() -> String {
         return probability(0.5) ? randomBuiltinPropertyName() : randomCustomPropertyName()
