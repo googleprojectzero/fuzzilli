@@ -21,18 +21,20 @@ public class CombineMutator: BaseInstructionMutator {
 
     public override func beginMutation(of program: Program) {
         deadCodeAnalyzer = DeadCodeAnalyzer()
-        contextAnalyzer = ContextAnalyzer()
+        contextAnalyzer = ContextAnalyzer(isBundle: program.code.isBundle)
     }
 
     public override func canMutate(_ instr: Instruction) -> Bool {
         deadCodeAnalyzer.analyze(instr)
         contextAnalyzer.analyze(instr)
         let inDeadCode = deadCodeAnalyzer.currentlyInDeadCode
-        let inScriptContext = contextAnalyzer.context.contains(.javascript)
 
-        // We can mutate this sample, iff we are not in dead code and we also
-        // have script context, as this is always required for a random sample.
-        return !inDeadCode && inScriptContext
+        // In non-bundles, we can append other programs wherever we're in the .javascript context (= where JavaScript statements can occur).
+        // In bundles, we can append other bundles at the top level of the bundle (= in the .bundle context).
+        let inStartingContext = contextAnalyzer.context.contains(contextAnalyzer.startingContext)
+
+        // We can mutate this sample, iff we are not in dead code we are in a suitable context.
+        return !inDeadCode && inStartingContext
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {

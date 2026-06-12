@@ -428,6 +428,11 @@ func loadCorpus(from dirPath: String) -> [Program] {
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
             let pb = try Fuzzilli_Protobuf_Program(serializedBytes: data)
             let program = try Program.init(from: pb)
+            if program.code.isBundle != generateBundle {
+                logger.fatal(
+                    "Program \(path) has the wrong bundle-ness (expected \(generateBundle), got \(program.code.isBundle))"
+                )
+            }
             if !program.isEmpty {
                 programs.append(program)
             }
@@ -474,12 +479,7 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     }()
 
     /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
-    var disabledMutators = Set(profile.disabledMutators)
-
-    if configuration.generateBundle {
-        // TODO(marja): enable combining bundles.
-        disabledMutators.insert("CombineMutator")
-    }
+    let disabledMutators = Set(profile.disabledMutators)
 
     var mutators = WeightedList([
         (ExplorationMutator(), 3),

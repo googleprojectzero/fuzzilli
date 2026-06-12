@@ -973,9 +973,10 @@ public class Fuzzer {
     /// Constructs a new ProgramBuilder using this fuzzing context.
     public func makeBuilder(forMutating parent: Program? = nil) -> ProgramBuilder {
         dispatchPrecondition(condition: .onQueue(queue))
+        let isBundle = parent?.code.isBundle ?? config.generateBundle
         // Program ancestor chains are only constructed if inspection mode is enabled
         let parent = config.enableInspection ? parent : nil
-        return ProgramBuilder(for: self, parent: parent, isBundle: config.generateBundle)
+        return ProgramBuilder(for: self, parent: parent, isBundle: isBundle)
     }
 
     /// Performs one round of fuzzing.

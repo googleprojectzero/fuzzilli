@@ -163,6 +163,7 @@ struct VariableAnalyzer: Analyzer {
 
 /// Keeps track of the current context during program construction.
 struct ContextAnalyzer: Analyzer {
+    public var startingContext: Context
     private var contextStack: Stack<Context>
 
     var context: Context {
@@ -170,7 +171,7 @@ struct ContextAnalyzer: Analyzer {
     }
 
     public init(isBundle: Bool = false) {
-        let startingContext = isBundle ? Context.bundle : Context.javascript
+        startingContext = isBundle ? Context.bundle : Context.javascript
         contextStack = Stack([startingContext])
     }
 
