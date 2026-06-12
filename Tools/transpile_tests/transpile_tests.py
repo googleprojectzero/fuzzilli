@@ -25,6 +25,7 @@ import importlib.machinery
 import json
 import multiprocessing
 import os
+import re
 import subprocess
 import sys
 
@@ -32,6 +33,26 @@ from collections import defaultdict, Counter
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent.parent
+
+
+def run_d8(d8_exec, harness_files, script_path, timeout=60):
+  """Executes the given script in d8 with resolved harness files and a safety timeout."""
+  cmd = [d8_exec, '--correctness-fuzzer-suppressions'] + harness_files + [script_path]
+  try:
+    # Explicitly decode as UTF-8 with replace error handling (instead of using locale-dependent text=True)
+    # to prevent UnicodeDecodeError crashes on environments using non-UTF-8 default locales (e.g. ASCII).
+    res = subprocess.run(
+        cmd, capture_output=True, encoding='utf-8', errors='replace', timeout=timeout)
+    return res.returncode, res.stdout + res.stderr
+  except subprocess.TimeoutExpired as e:
+    # Prior to Python 3.12, e.stdout/stderr might be bytes objects even under text=True.
+    # We cleanly decode them to avoid TypeError crashes, using 'is not None' to bypass roundtrips on empty strings.
+    stdout_bytes = e.stdout if e.stdout is not None else b""
+    stderr_bytes = e.stderr if e.stderr is not None else b""
+    stdout = stdout_bytes.decode('utf-8', errors='replace') if isinstance(stdout_bytes, bytes) else stdout_bytes
+    stderr = stderr_bytes.decode('utf-8', errors='replace') if isinstance(stderr_bytes, bytes) else stderr_bytes
+    timeout_msg = f"\n[EXEC_FAILURE: TIMEOUT EXPIRED after {timeout} seconds]"
+    return -9, stdout + stderr + timeout_msg
 
 
 class DefaultMetaDataParser:
@@ -43,6 +64,9 @@ class DefaultMetaDataParser:
 
   def is_supported(self, abspath, relpath):
     return any(relpath.name.endswith(ext) for ext in ['.js', '.mjs'])
+
+  def get_harness_files(self, abspath, harness_dir):
+    return []
 
 
 class Test262MetaDataParser(DefaultMetaDataParser):
@@ -68,6 +92,18 @@ class Test262MetaDataParser(DefaultMetaDataParser):
     # We don't support negative tests, which typically exhibit syntax errors.
     return 'negative' not in record
 
+  def get_harness_files(self, abspath, harness_dir):
+    with open(abspath, encoding='utf-8') as f:
+      content = f.read()
+    record = self.parse(content, abspath)
+    harness_files = [
+        os.path.join(harness_dir, "sta.js"),
+        os.path.join(harness_dir, "assert.js")
+    ]
+    for inc in record.get('includes', []):
+      harness_files.append(os.path.join(harness_dir, inc))
+    return harness_files
+
 
 TEST_CONFIGS = {
   'mjsunit': {
@@ -79,6 +115,7 @@ TEST_CONFIGS = {
   },
   'test262': {
     'path': 'test/test262/data/test',
+    'harness_dir': 'test/test262/data/harness',
     'excluded_suffixes': ['_FIXTURE.js'],
     'levels': 2,
     'expand_level_paths': [
@@ -167,7 +204,12 @@ class TestCounter:
     self.num_tests[key] += 1
     if exit_code != 0:
       self.num_failures += 1
-      verbose_print(self.options, f'Failed to compile {relpath}')
+      if exit_code == 2:
+        verbose_print(self.options, f'Failed to verify (exit code mismatch): {relpath}')
+      elif exit_code == 3:
+        verbose_print(self.options, f'Failed to verify (output mismatch): {relpath}')
+      else:
+        verbose_print(self.options, f'Failed to compile: {relpath}')
       self.failures[key].append({'path': str(relpath), 'output': stdout})
     if (self.total_tests + 1) % 500 == 0:
       print(f'Processed {self.total_tests + 1} test cases.')
@@ -210,16 +252,65 @@ def run_transpile_tool(input_file, output_file):
 
 
 def transpile_test(args):
-  """Transpile one test from JS -> JS with Fuzzilli.
-
-  This method is to be called via the multi-process boundary.
-
-  We rebuild the original directory structure on the output side.
-  """
-  input_file, output_file = args
+  """Transpile and optionally verify one test."""
+  input_file, output_file, d8_path, harness = args
   os.makedirs(output_file.parent, exist_ok=True)
-  process = run_transpile_tool(input_file, output_file)
-  return process.returncode, input_file, process.stdout.decode('utf-8')
+
+  # 1. Compile to Lifted JS
+  process = run_transpile_tool(str(input_file), str(output_file))
+
+  # Safe decode using errors='replace' to prevent UnicodeDecodeError on invalid chars
+  compile_stdout = process.stdout.decode('utf-8', errors='replace')
+  if process.returncode != 0:
+    prefix = "[COMPILE_FAILURE]\n" if d8_path else ""
+    return (
+        process.returncode,
+        input_file,
+        prefix + compile_stdout
+    )
+
+  # 2. Optional Differential Verification Run
+  if d8_path and harness is not None:
+
+    # Run original and lifted JS
+    orig_code, orig_output = run_d8(d8_path, harness, str(input_file))
+    lifted_code, lifted_output = run_d8(d8_path, harness, str(output_file))
+
+    test_filename = input_file.name
+    # 1. Clean up absolute path references in outputs
+    orig_output_cleaned = orig_output.replace(str(input_file), test_filename)
+    lifted_output_cleaned = lifted_output.replace(str(output_file), test_filename)
+
+    # 2. Normalize outputs to avoid false-positive mismatches when both scripts throw identical exceptions:
+    # A. Strip out the offending source code line and the caret (^) printed on the following line in stderr
+    #    as the source code differs between original and lifted files.
+    orig_output_cleaned = re.sub(r'\n[^\n]+\n\s*\^\s*(?=\n|$)', '\n', orig_output_cleaned)
+    lifted_output_cleaned = re.sub(r'\n[^\n]+\n\s*\^\s*(?=\n|$)', '\n', lifted_output_cleaned)
+
+    # B. Strip out line and column numbers (e.g. ":25:3" and ":25" at word boundaries) in stderr stack traces
+    #    as the line counts differ between original and lifted files.
+    orig_output_cleaned = re.sub(r':\d+(:\d+)?\b', '', orig_output_cleaned)
+    lifted_output_cleaned = re.sub(r':\d+(:\d+)?\b', '', lifted_output_cleaned)
+
+    # Assert exit code & logs
+    if orig_code != lifted_code:
+      mismatch_report = (
+          f"[EXEC_FAILURE: EXIT CODE MISMATCH]\n"
+          f"Original Exit Code: {orig_code}, Lifted Exit Code: {lifted_code}\n"
+          f"Original Output:\n{orig_output_cleaned.strip()}\n"
+          f"Lifted Output:\n{lifted_output_cleaned.strip()}"
+      )
+      return 2, input_file, mismatch_report
+
+    if orig_output_cleaned != lifted_output_cleaned:
+      mismatch_report = (
+          f"[EXEC_FAILURE: CONSOLE OUTPUT MISMATCH]\n"
+          f"Original Output:\n{orig_output_cleaned.strip()}\n"
+          f"Lifted Output:\n{lifted_output_cleaned.strip()}"
+      )
+      return 3, input_file, mismatch_report
+
+  return 0, input_file, compile_stdout
 
 
 def verbose_print(options, text):
@@ -239,18 +330,35 @@ def supports_index_on_shard(options, index):
 
 
 def transpile_suite(options, base_dir, output_dir):
-  """Transpile all tests from one suite configuration in parallel."""
+  """Transpile and verify all tests from one suite configuration in parallel."""
   test_config = TEST_CONFIGS[options.config]
-  test_input_dir = base_dir / test_config['path']
+  test_input_dir_root = base_dir / test_config['path']
+
+  if options.test_dir:
+    test_input_dir = test_input_dir_root / options.test_dir
+  else:
+    test_input_dir = test_input_dir_root
+
   metadata_parser = test_config['metadata_parser'](base_dir)
 
-  # Prepare inputs as a generator over tuples of input/output path.
+  # Prepare inputs as a generator over tuples of (input_path, output_path, d8_path, harness_dir)
   verbose_print(options, f'Listing tests in {test_input_dir}')
+
+  harness_dir_config = test_config.get('harness_dir')
+  harness_dir = str(base_dir / harness_dir_config) if options.d8_path and harness_dir_config else None
+
   def test_input_gen():
     for index, abspath in enumerate(list_test_filenames(
         test_input_dir, metadata_parser.is_supported)):
       if supports_index_on_shard(options, index):
-        yield (abspath, output_dir / abspath.relative_to(base_dir))
+        # We must provide relpath relative to the base_dir to preserve V8 folder layout for testing
+        rel_p_output = abspath.relative_to(base_dir)
+        yield (
+            abspath,
+            output_dir / rel_p_output,
+            options.d8_path,
+            metadata_parser.get_harness_files(abspath, harness_dir) if harness_dir else None
+        )
 
   # Iterate over all tests in parallel and collect stats.
   counter = TestCounter(
@@ -258,7 +366,8 @@ def transpile_suite(options, base_dir, output_dir):
   with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
     for exit_code, abspath, stdout in pool.imap_unordered(
         transpile_test, test_input_gen()):
-      relpath = abspath.relative_to(test_input_dir)
+      # Get relpath relative to the root for grouping keys
+      relpath = abspath.relative_to(test_input_dir_root)
       counter.count(exit_code, relpath, stdout)
 
   # Render and return results.
@@ -291,6 +400,14 @@ def parse_args(args):
     help='Optional absolute path to a json file, '
          'where this script will write its stats to.')
   parser.add_argument(
+    '--d8-path',
+    help='Optional absolute path to the d8 executable. If provided, '
+         'the script will run differential execution validation in d8.')
+  parser.add_argument(
+    '--test-dir',
+    help='Optional relative path to a subdirectory inside the test suite '
+         '(e.g. "language/statements/for-of"). Limits the run to this folder.')
+  parser.add_argument(
     '--num-shards', type=int, default=1, choices=range(1, 9),
     help='Overall number of shards to split this task into.')
   parser.add_argument(
@@ -300,7 +417,11 @@ def parse_args(args):
   parser.add_argument(
     '-v', '--verbose', default=False, action='store_true',
     help='Print more verbose output.')
-  return parser.parse_args(args)
+  options = parser.parse_args(args)
+  # Validate that differential execution is only enabled for test262 configuration
+  if options.d8_path and options.config != 'test262':
+    parser.error("--d8-path option is currently only supported for test262 configuration.")
+  return options
 
 
 def main(args):
