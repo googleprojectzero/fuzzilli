@@ -2718,13 +2718,17 @@ class WasmSignatureTypeDescription: WasmTypeDescription {
     var signature: WasmSignature
     let isAdHoc: Bool
 
-    init(signature: WasmSignature, typeGroupIndex: Int, isAdHoc: Bool = false) {
+    init(
+        signature: WasmSignature, typeGroupIndex: Int, isAdHoc: Bool = false,
+        concreteHeapSupertype: WasmTypeDescription? = nil
+    ) {
         self.signature = signature
         self.isAdHoc = isAdHoc
         // TODO(pawkra): support shared variant.
         super.init(
             typeGroupIndex: typeGroupIndex,
-            abstractHeapSupertype: HeapTypeInfo.init(.WasmFunc, shared: false))
+            abstractHeapSupertype: HeapTypeInfo.init(.WasmFunc, shared: false),
+            concreteHeapSupertype: concreteHeapSupertype)
     }
 
     override func format(abbreviate: Bool) -> String {
