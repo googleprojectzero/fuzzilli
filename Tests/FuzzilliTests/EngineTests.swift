@@ -107,4 +107,34 @@ class EngineTests: XCTestCase {
             _ = try! processor.process(program, for: fuzzer)
         }
     }
+
+    func testHybridEngineBundleGeneration() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let engine = HybridEngine(numConsecutiveMutations: 0)
+
+        let template = ProgramTemplate("TestTemplate") { b in
+            let val = b.loadInt(42)
+            b.doPrint(val)
+        }
+
+        let q = DispatchQueue(label: "fuzzerQueue")
+        let fuzzer = makeMockFuzzer(
+            config: config,
+            engine: engine,
+            queue: q
+        )
+
+        var program: Program? = nil
+        q.sync {
+            program = engine.generateTemplateProgram(template: template)
+        }
+
+        let liftedCode = fuzzer.lifter.lift(program!)
+        let expected = """
+            // JS_BUNDLE_SCRIPT
+            fuzzilli('FUZZILLI_PRINT', 42);
+
+            """
+        XCTAssertEqual(liftedCode, expected)
+    }
 }

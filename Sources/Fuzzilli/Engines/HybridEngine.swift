@@ -93,10 +93,12 @@ public class HybridEngine: FuzzEngine {
         }
     }
 
-    private func generateTemplateProgram(template: ProgramTemplate) -> Program {
+    func generateTemplateProgram(template: ProgramTemplate) -> Program {
         let b = fuzzer.makeBuilder()
         b.traceHeader("Generating program based on \(template.name) template")
-        template.generate(in: b)
+        b.maybeWrapInsideBundleScript {
+            template.generate(in: b)
+        }
         let program = b.finalize()
 
         program.contributors.insert(template)
