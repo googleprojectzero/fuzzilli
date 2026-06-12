@@ -1640,7 +1640,7 @@ class MinimizerTests: XCTestCase {
     }
 
     func testBundleMinimizing() {
-        let config = Configuration(generateBundle: true)
+        let config = Configuration(logLevel: .error, generateBundle: true)
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(config: config, evaluator: evaluator)
         let b = fuzzer.makeBuilder()

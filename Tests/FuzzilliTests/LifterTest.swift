@@ -448,7 +448,7 @@ class LifterTests: XCTestCase {
     }
 
     func testExportBuiltinInlining() {
-        let config = Configuration(generateBundle: true)
+        let config = Configuration(logLevel: .error, generateBundle: true)
         let fuzzer = makeMockFuzzer(config: config)
         let b = fuzzer.makeBuilder()
 
@@ -4660,7 +4660,7 @@ class LifterTests: XCTestCase {
     }
 
     func testBundleScripts() {
-        let config = Configuration(generateBundle: true)
+        let config = Configuration(logLevel: .error, generateBundle: true)
         let fuzzer = makeMockFuzzer(config: config)
         let b = fuzzer.makeBuilder()
 
@@ -4710,7 +4710,7 @@ class LifterTests: XCTestCase {
     }
 
     func testBundleModules() {
-        let config = Configuration(generateBundle: true)
+        let config = Configuration(logLevel: .error, generateBundle: true)
         let fuzzer = makeMockFuzzer(config: config)
         let b = fuzzer.makeBuilder()
 

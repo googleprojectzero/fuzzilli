@@ -3412,7 +3412,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testThatGeneratorsAreBuildableFromBundle() throws {
-        let config = Configuration(generateBundle: true)
+        let config = Configuration(logLevel: .error, generateBundle: true)
         let fuzzer = makeMockFuzzer(config: config)
         let tries: Int = 10
 

@@ -41,7 +41,7 @@ class ContextGraphTests: XCTestCase {
     }
 
     func testReachabilityCalculationForBundles() {
-        let config = Configuration(generateBundle: true)
+        let config = Configuration(logLevel: .error, generateBundle: true)
         let fuzzer = makeMockFuzzer(config: config)
         let contextGraph = ContextGraph(
             for: fuzzer.codeGenerators, isBundle: true, withLogger: Logger(withLabel: "Test"))
