@@ -1644,9 +1644,11 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- WasmDefineAdHocModuleSignatureType(\(op.signature)) [\(inputs)]")
 
         case .wasmDefineArrayType(let op):
-            let typeInput = op.elementType.requiredInputCount() == 1 ? " \(input(0))" : ""
+            let superTypeInput = op.hasSuperType ? " superType=\(lift(instr.inputs.first!))" : ""
+            let typeInput =
+                op.elementType.requiredInputCount() == 1 ? " \(lift(instr.inputs.last!))" : ""
             w.emit(
-                "\(output()) <- WasmDefineArrayType \(op.elementType) mutability=\(op.mutability)\(typeInput)"
+                "\(output()) <- WasmDefineArrayType \(op.elementType) mutability=\(op.mutability)\(superTypeInput)\(typeInput)"
             )
 
         case .wasmDefineStructType(let op):

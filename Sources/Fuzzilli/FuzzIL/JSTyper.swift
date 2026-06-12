@@ -576,7 +576,8 @@ public struct JSTyper: Analyzer {
     }
 
     mutating func addArrayType(
-        def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil
+        def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil,
+        concreteHeapSupertype: WasmTypeDescription? = nil
     ) {
         assert(isWithinTypeGroup)
         let tgIndex = typeGroups.count - 1
@@ -622,7 +623,8 @@ public struct JSTyper: Analyzer {
                 description: WasmArrayTypeDescription(
                     elementType: resolvedElementType,
                     mutability: mutability,
-                    typeGroupIndex: tgIndex)))
+                    typeGroupIndex: tgIndex,
+                    concreteHeapSupertype: concreteHeapSupertype)))
         typeGroups[typeGroups.count - 1].append(def)
     }
 
@@ -2513,10 +2515,12 @@ public struct JSTyper: Analyzer {
             addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)
 
         case .wasmDefineArrayType(let op):
-            let elementRef = op.elementType.requiredInputCount() == 1 ? instr.input(0) : nil
+            let elementRef = op.elementType.requiredInputCount() == 1 ? instr.inputs.last! : nil
+            let concreteHeapSupertype =
+                op.hasSuperType ? getTypeDescription(of: instr.inputs.first!) : nil
             addArrayType(
                 def: instr.output, elementType: op.elementType, mutability: op.mutability,
-                elementRef: elementRef)
+                elementRef: elementRef, concreteHeapSupertype: concreteHeapSupertype)
 
         case .wasmDefineStructType(let op):
             var inputIndex = 0

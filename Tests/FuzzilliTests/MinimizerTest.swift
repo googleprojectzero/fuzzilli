@@ -2406,6 +2406,130 @@ class MinimizerTests: XCTestCase {
 
     }
 
+    func testWasmTypeGroupUnusedSubType() throws {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        do {
+            let typeGroup = b.wasmDefineTypeGroup {
+                let v0 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                let v1 = b.wasmDefineArrayType(
+                    elementType: .wasmi32, mutability: true, superType: v0)
+                return [v0, v1]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let constOne = function.consti32(1)
+                    let constZero = function.consti32(0)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let array = function.wasmArrayNewDefault(
+                        arrayType: typeGroup[0], size: constOne)
+                    // Not important array, this should make the sub type unused and then being
+                    // removed from the type group.
+                    let _ = function.wasmArrayNewDefault(arrayType: typeGroup[1], size: constOne)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let element = function.wasmArrayGet(array: array, index: constZero)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [element]
+                }
+            }
+        }
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        do {
+            let typeGroup = b.wasmDefineTypeGroup {
+                return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let constOne = function.consti32(1)
+                    let constZero = function.consti32(0)
+                    let array = function.wasmArrayNewDefault(
+                        arrayType: typeGroup[0], size: constOne)
+                    let element = function.wasmArrayGet(array: array, index: constZero)
+                    return [element]
+                }
+            }
+        }
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(
+            expectedProgram, actualProgram,
+            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n"
+                + "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+
+    }
+
+    func testWasmTypeGroupUnusedSuperType() throws {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        do {
+            let typeGroup = b.wasmDefineTypeGroup {
+                let v0 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                let v1 = b.wasmDefineArrayType(
+                    elementType: .wasmi32, mutability: true, superType: v0)
+                return [v0, v1]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let constOne = function.consti32(1)
+                    let constZero = function.consti32(0)
+                    // Not important array, this should make the super type unused and then being
+                    // removed from the type group, because the sub type is the only user of the
+                    // super type.
+                    let _ = function.wasmArrayNewDefault(
+                        arrayType: typeGroup[0], size: constOne)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let array = function.wasmArrayNewDefault(
+                        arrayType: typeGroup[1], size: constOne)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    let element = function.wasmArrayGet(array: array, index: constZero)
+                    evaluator.nextInstructionIsImportant(in: b)
+                    return [element]
+                }
+            }
+        }
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        do {
+            let typeGroup = b.wasmDefineTypeGroup {
+                return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+            }
+
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let constOne = function.consti32(1)
+                    let constZero = function.consti32(0)
+                    let array = function.wasmArrayNewDefault(
+                        arrayType: typeGroup[0], size: constOne)
+                    let element = function.wasmArrayGet(array: array, index: constZero)
+                    return [element]
+                }
+            }
+        }
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(
+            expectedProgram, actualProgram,
+            "Expected:\n\(FuzzILLifter().lift(expectedProgram.code))\n\n"
+                + "Actual:\n\(FuzzILLifter().lift(actualProgram.code))")
+
+    }
+
     func testWasmTypeGroupTypeOnlyUsedInDependency() throws {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)

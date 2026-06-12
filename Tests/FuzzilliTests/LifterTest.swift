@@ -4125,8 +4125,11 @@ class LifterTests: XCTestCase {
                 mutability: false,
                 indexType: forwardReference)
             let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+            let subtypeArray = b.wasmDefineArrayType(
+                elementType: .wasmi32, mutability: true, superType: arrayi32
+            )
             b.wasmResolveForwardReference(forwardReference, to: arrayi32)
-            return [arrayOfArrayi32, arrayi32]
+            return [arrayOfArrayi32, arrayi32, subtypeArray]
         }
 
         b.wasmDefineTypeGroup {
@@ -4152,12 +4155,13 @@ class LifterTests: XCTestCase {
                 v0 <- WasmDefineForwardOrSelfReference
                 v1 <- WasmDefineArrayType .wasmRef(null Index) mutability=false v0
                 v2 <- WasmDefineArrayType .wasmi32 mutability=true
+                v3 <- WasmDefineArrayType .wasmi32 mutability=true superType=v2
                 WasmResolveForwardReference [v0 => v2]
-            v3, v4 <- WasmEndTypeGroup [v1, v2]
+            v4, v5, v6 <- WasmEndTypeGroup [v1, v2, v3]
             WasmBeginTypeGroup
-                v5 <- WasmDefineForwardOrSelfReference
-                v6 <- WasmDefineStructType(.wasmRef(Index) mutability=false, .wasmi32 mutability=true, .wasmRef(null Index) mutability=true) [v3, v5]
-            v7 <- WasmEndTypeGroup [v6]
+                v7 <- WasmDefineForwardOrSelfReference
+                v8 <- WasmDefineStructType(.wasmRef(Index) mutability=false, .wasmi32 mutability=true, .wasmRef(null Index) mutability=true) [v4, v7]
+            v9 <- WasmEndTypeGroup [v8]
 
             """
         XCTAssertEqual(actual, expected)
