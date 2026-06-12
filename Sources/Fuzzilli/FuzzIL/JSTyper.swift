@@ -629,7 +629,8 @@ public struct JSTyper: Analyzer {
     }
 
     mutating func addStructType(
-        def: Variable, fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)]
+        def: Variable, fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)],
+        concreteHeapSupertype: WasmTypeDescription? = nil
     ) {
         let tgIndex = typeGroups.count - 1
         let resolvedFields = fieldsWithRefs.enumerated().map { (fieldIndex, fieldWithInput) in
@@ -669,7 +670,8 @@ public struct JSTyper: Analyzer {
             def,
             .wasmTypeDef(
                 description: WasmStructTypeDescription(
-                    fields: resolvedFields, typeGroupIndex: tgIndex)))
+                    fields: resolvedFields, typeGroupIndex: tgIndex,
+                    concreteHeapSupertype: concreteHeapSupertype)))
         typeGroups[typeGroups.count - 1].append(def)
     }
 
@@ -2523,7 +2525,9 @@ public struct JSTyper: Analyzer {
                 elementRef: elementRef, concreteHeapSupertype: concreteHeapSupertype)
 
         case .wasmDefineStructType(let op):
-            var inputIndex = 0
+            let concreteHeapSupertype =
+                op.hasSuperType ? getTypeDescription(of: instr.inputs.first!) : nil
+            var inputIndex = op.hasSuperType ? 1 : 0
             let fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)] = op.fields.map {
                 field in
                 if field.type.requiredInputCount() == 0 {
@@ -2535,7 +2539,9 @@ public struct JSTyper: Analyzer {
                 }
             }
             assert(inputIndex == instr.inputs.count)
-            addStructType(def: instr.output, fieldsWithRefs: fieldsWithRefs)
+            addStructType(
+                def: instr.output, fieldsWithRefs: fieldsWithRefs,
+                concreteHeapSupertype: concreteHeapSupertype)
 
         case .wasmDefineForwardOrSelfReference(_):
             set(instr.output, .wasmSelfReference())

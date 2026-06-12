@@ -609,7 +609,7 @@ public class WasmLifter {
         if let supertype = desc.concreteHeapSupertype {
             data += [0x50, 0x01]  // Non-final, with super type
             data += try encodeWasmGCType(supertype)
-        } else if desc is WasmArrayTypeDescription {
+        } else if desc is WasmArrayTypeDescription || desc is WasmStructTypeDescription {
             data += [0x50, 0x00]  // Non-final, no super type
         }
         if let arrayDesc = desc as? WasmArrayTypeDescription {

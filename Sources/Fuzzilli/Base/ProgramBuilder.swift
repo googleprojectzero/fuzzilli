@@ -6538,10 +6538,40 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    func wasmDefineStructType(fields: [WasmStructTypeDescription.Field], indexTypes: [Variable])
+    func wasmDefineStructType(
+        fields: [WasmStructTypeDescription.Field], indexTypes: [Variable],
+        superType: Variable? = nil
+    )
         -> Variable
     {
-        return emit(WasmDefineStructType(fields: fields), withInputs: indexTypes).output
+        var inputs: [Variable] = []
+        if let superType {
+            let superTypeDesc = type(of: superType).wasmTypeDefinition?.description
+            assert(
+                superTypeDesc != .selfReference, "Supertype cannot be a forward or self-reference")
+            guard let superStructType = superTypeDesc as? WasmStructTypeDescription else {
+                fatalError("Supertype of a struct must be a struct type")
+            }
+
+            assert(fields.count >= superStructType.fields.count)
+            for (superField, subField) in zip(superStructType.fields, fields) {
+                if superField.mutability {
+                    assert(subField.mutability)
+                    assert(subField.type == superField.type)
+                } else {
+                    assert(!subField.mutability)
+                    assert(superField.type.subsumes(subField.type))
+                }
+            }
+
+            inputs.append(superType)
+        }
+
+        inputs += indexTypes
+
+        return emit(
+            WasmDefineStructType(fields: fields, hasSuperType: superType != nil), withInputs: inputs
+        ).output
     }
 
     @discardableResult

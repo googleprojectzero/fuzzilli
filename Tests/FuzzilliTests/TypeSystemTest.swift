@@ -1642,6 +1642,46 @@ class TypeSystemTests: XCTestCase {
         XCTAssertTrue(superArrayDescMutable.subsumes(subArrayDescMutable2))
     }
 
+    func testWasmStructSubtypingRules() {
+        let anyRefType = ILType.wasmAnyRef()
+        let indexDesc = WasmArrayTypeDescription(
+            elementType: .wasmi32, mutability: true, typeGroupIndex: 0)
+        let indexRefType = ILType.wasmIndexRef(indexDesc, nullability: true)
+
+        let superStructDescImmutable = WasmStructTypeDescription(
+            fields: [WasmStructTypeDescription.Field(type: anyRefType, mutability: false)],
+            typeGroupIndex: 1)
+        let subStructDescImmutable = WasmStructTypeDescription(
+            fields: [WasmStructTypeDescription.Field(type: indexRefType, mutability: false)],
+            typeGroupIndex: 2, concreteHeapSupertype: superStructDescImmutable)
+        let subStructDescMutable = WasmStructTypeDescription(
+            fields: [WasmStructTypeDescription.Field(type: indexRefType, mutability: true)],
+            typeGroupIndex: 3, concreteHeapSupertype: superStructDescImmutable)
+
+        XCTAssertTrue(superStructDescImmutable.subsumes(subStructDescImmutable))
+        XCTAssertFalse(subStructDescImmutable.subsumes(superStructDescImmutable))
+        XCTAssertTrue(superStructDescImmutable.subsumes(subStructDescMutable))
+        XCTAssertFalse(subStructDescMutable.subsumes(superStructDescImmutable))
+
+        let superStructDescMulti = WasmStructTypeDescription(
+            fields: [
+                WasmStructTypeDescription.Field(type: anyRefType, mutability: false),
+                WasmStructTypeDescription.Field(type: anyRefType, mutability: true),
+            ],
+            typeGroupIndex: 4)
+
+        let subStructDescMultiWidthAndDepth = WasmStructTypeDescription(
+            fields: [
+                WasmStructTypeDescription.Field(type: indexRefType, mutability: true),
+                WasmStructTypeDescription.Field(type: anyRefType, mutability: true),
+                WasmStructTypeDescription.Field(type: .wasmi32, mutability: false),
+            ],
+            typeGroupIndex: 5, concreteHeapSupertype: superStructDescMulti)
+
+        XCTAssertTrue(superStructDescMulti.subsumes(subStructDescMultiWidthAndDepth))
+        XCTAssertFalse(subStructDescMultiWidthAndDepth.subsumes(superStructDescMulti))
+    }
+
     func testWasmTypeExtensionUnionTypeExtensionVsWasmTypeExtension() {
         let tagA = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi32]))
         let tagB = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi64]))

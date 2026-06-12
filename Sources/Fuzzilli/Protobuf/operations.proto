@@ -1525,6 +1525,7 @@ message WasmStructField {
 
 message WasmDefineStructType {
     repeated WasmStructField fields = 1;
+    bool hasSuperType = 2;
 }
 
 message WasmDefineForwardOrSelfReference {
