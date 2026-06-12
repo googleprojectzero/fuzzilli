@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import XCTest
+import Testing
 
 @testable import Fuzzilli
 
-class WasmTableTests: XCTestCase {
-    func testTableSizeAndGrow() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+@Suite(.enabled { JavaScriptExecutor() != nil })
+struct WasmTableTests {
+    @Test func testTableSizeAndGrow() throws {
+        let runner = JavaScriptExecutor()!
         var expectedOutput = ""
 
         let js = buildAndLiftProgram { b in
