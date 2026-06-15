@@ -1,23 +1,33 @@
-import XCTest
+// Copyright 2026 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import Testing
 
 @testable import Fuzzilli
 
-class LabelTests: XCTestCase {
-    func testWhileLoopLabel() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let loopVar = b.loadInt(0)
-        b.buildWhileLoop({
-            return b.compare(loopVar, with: b.loadInt(10), using: .lessThan)
-        }) { label in
-            XCTAssertEqual(b.type(of: label), .jsLoopLabel)
-            b.unary(.PostInc, loopVar)
-            b.loopBreak(label)
+struct LabelTests {
+    @Test func testWhileLoopLabel() {
+        let actual = buildAndLiftProgram { b in
+            let loopVar = b.loadInt(0)
+            b.buildWhileLoop({
+                return b.compare(loopVar, with: b.loadInt(10), using: .lessThan)
+            }) { label in
+                #expect(b.type(of: label) == .jsLoopLabel)
+                b.unary(.PostInc, loopVar)
+                b.loopBreak(label)
+            }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             let v0 = 0;
             L3: while (v0 < 10) {
@@ -26,161 +36,137 @@ class LabelTests: XCTestCase {
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testDoWhileLoopLabel() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildDoWhileLoop(
-            do: { label in
-                XCTAssertEqual(b.type(of: label), .jsLoopLabel)
-                b.loopBreak(label)
-            },
-            while: {
-                return b.loadBool(false)
-            })
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+    @Test func testDoWhileLoopLabel() {
+        let actual = buildAndLiftProgram { b in
+            b.buildDoWhileLoop(
+                do: { label in
+                    #expect(b.type(of: label) == .jsLoopLabel)
+                    b.loopBreak(label)
+                },
+                while: {
+                    return b.loadBool(false)
+                })
+        }
         let expected = """
             L0: do {
                 break L0;
             } while (false)
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testForLoopLabel() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildForLoop(
-            i: { b.loadInt(0) }, { i in b.loadBool(true) }, { i in },
-            { i, label in
-                XCTAssertEqual(b.type(of: label), .jsLoopLabel)
-                b.loopBreak(label)
-            })
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+    @Test func testForLoopLabel() {
+        let actual = buildAndLiftProgram { b in
+            b.buildForLoop(
+                i: { b.loadInt(0) }, { i in b.loadBool(true) }, { i in },
+                { i, label in
+                    #expect(b.type(of: label) == .jsLoopLabel)
+                    b.loopBreak(label)
+                })
+        }
         let expected = """
             L5: for (let i1 = 0;;) {
                 break L5;
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testForInLoopLabel() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let obj = b.createObject(with: [:])
-        b.buildForInOfLoop(obj, type: .forIn, isAsync: false, header: .simple) { vars, label in
-            XCTAssertEqual(b.type(of: label), .jsLoopLabel)
-            b.loopBreak(label)
+    @Test func testForInLoopLabel() {
+        let actual = buildAndLiftProgram { b in
+            let obj = b.createObject(with: [:])
+            b.buildForInOfLoop(obj, type: .forIn, isAsync: false, header: .simple) { vars, label in
+                #expect(b.type(of: label) == .jsLoopLabel)
+                b.loopBreak(label)
+            }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             L2: for (const v1 in {}) {
                 break L2;
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testForOfLoopLabel() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let obj = b.createArray(with: [])
-        b.buildForInOfLoop(obj, type: .forOf, isAsync: false, header: .simple) { vars, label in
-            XCTAssertEqual(b.type(of: label), .jsLoopLabel)
-            b.loopBreak(label)
+    @Test func testForOfLoopLabel() {
+        let actual = buildAndLiftProgram { b in
+            let obj = b.createArray(with: [])
+            b.buildForInOfLoop(obj, type: .forOf, isAsync: false, header: .simple) { vars, label in
+                #expect(b.type(of: label) == .jsLoopLabel)
+                b.loopBreak(label)
+            }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             L2: for (const v1 of []) {
                 break L2;
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testRepeatLoopLabel() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildRepeatLoop(n: 10) { i, label in
-            XCTAssertEqual(b.type(of: label), .jsLoopLabel)
-            b.loopBreak(label)
+    @Test func testRepeatLoopLabel() {
+        let actual = buildAndLiftProgram { b in
+            b.buildRepeatLoop(n: 10) { i, label in
+                #expect(b.type(of: label) == .jsLoopLabel)
+                b.loopBreak(label)
+            }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             L1: for (let v0 = 0; v0 < 10; v0++) {
                 break L1;
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testAllNestedLoopsLabels() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+    @Test func testAllNestedLoopsLabels() {
+        let actual = buildAndLiftProgram { b in
+            b.buildWhileLoop({ b.loadBool(true) }) { whileLabel in
+                b.loopContinue(whileLabel)
+                b.loopBreak(whileLabel)
 
-        b.buildWhileLoop({ b.loadBool(true) }) { whileLabel in
-            b.loopContinue(whileLabel)
-            b.loopBreak(whileLabel)
-
-            b.buildForLoop(
-                i: { b.loadInt(0) }, { i in b.loadBool(true) }, { i in },
-                { i, forLabel in
-                    b.loopContinue(whileLabel)
-                    b.loopBreak(forLabel)
-
-                    let obj = b.createObject(with: [:])
-                    b.buildForInOfLoop(obj, type: .forIn, isAsync: false, header: .simple) {
-                        vars, forInLabel in
-                        b.loopContinue(forInLabel)
+                b.buildForLoop(
+                    i: { b.loadInt(0) }, { i in b.loadBool(true) }, { i in },
+                    { i, forLabel in
+                        b.loopContinue(whileLabel)
                         b.loopBreak(forLabel)
 
-                        b.buildDoWhileLoop(
-                            do: { doWhileLabel in
-                                b.loopContinue(whileLabel)
-                                b.loopBreak(doWhileLabel)
+                        let obj = b.createObject(with: [:])
+                        b.buildForInOfLoop(obj, type: .forIn, isAsync: false, header: .simple) {
+                            vars, forInLabel in
+                            b.loopContinue(forInLabel)
+                            b.loopBreak(forLabel)
 
-                                let arr = b.createArray(with: [])
-                                b.buildForInOfLoop(
-                                    arr, type: .forOf, isAsync: false, header: .simple
-                                ) { vars, forOfLabel in
-                                    b.loopContinue(forOfLabel)
-                                    b.loopBreak(forInLabel)
+                            b.buildDoWhileLoop(
+                                do: { doWhileLabel in
+                                    b.loopContinue(whileLabel)
+                                    b.loopBreak(doWhileLabel)
 
-                                    b.buildRepeatLoop(n: 10) { i, repeatLabel in
-                                        b.loopContinue(whileLabel)
-                                        b.loopBreak(repeatLabel)
+                                    let arr = b.createArray(with: [])
+                                    b.buildForInOfLoop(
+                                        arr, type: .forOf, isAsync: false, header: .simple
+                                    ) { vars, forOfLabel in
+                                        b.loopContinue(forOfLabel)
+                                        b.loopBreak(forInLabel)
+
+                                        b.buildRepeatLoop(n: 10) { i, repeatLabel in
+                                            b.loopContinue(whileLabel)
+                                            b.loopBreak(repeatLabel)
+                                        }
                                     }
-                                }
-                            }, while: { b.loadBool(false) })
-                    }
-                })
+                                }, while: { b.loadBool(false) })
+                        }
+                    })
+            }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             L1: while (true) {
                 continue L1;
@@ -208,37 +194,33 @@ class LabelTests: XCTestCase {
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testAllNestedLoopsNoLabels() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildWhileLoop({ b.loadBool(true) }) {
-            b.buildForLoop(
-                i: { b.loadInt(0) }, { i in b.loadBool(true) }, { i in },
-                { i in
-                    let obj = b.createObject(with: [:])
-                    b.buildForInOfLoop(obj, type: .forIn, isAsync: false, header: .simple) {
-                        vars, _ in
-                        b.buildDoWhileLoop(
-                            do: {
-                                let arr = b.createArray(with: [])
-                                b.buildForInOfLoop(
-                                    arr, type: .forOf, isAsync: false, header: .simple
-                                ) { vars, _ in
-                                    b.buildRepeatLoop(n: 10) { i in
-                                        b.loadInt(42)
+    @Test func testAllNestedLoopsNoLabels() {
+        let actual = buildAndLiftProgram { b in
+            b.buildWhileLoop({ b.loadBool(true) }) {
+                b.buildForLoop(
+                    i: { b.loadInt(0) }, { i in b.loadBool(true) }, { i in },
+                    { i in
+                        let obj = b.createObject(with: [:])
+                        b.buildForInOfLoop(obj, type: .forIn, isAsync: false, header: .simple) {
+                            vars, _ in
+                            b.buildDoWhileLoop(
+                                do: {
+                                    let arr = b.createArray(with: [])
+                                    b.buildForInOfLoop(
+                                        arr, type: .forOf, isAsync: false, header: .simple
+                                    ) { vars, _ in
+                                        b.buildRepeatLoop(n: 10) { i in
+                                            b.loadInt(42)
+                                        }
                                     }
-                                }
-                            }, while: { b.loadBool(false) })
-                    }
-                })
+                                }, while: { b.loadBool(false) })
+                        }
+                    })
+            }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             while (true) {
                 for (let i3 = 0;;) {
@@ -254,42 +236,34 @@ class LabelTests: XCTestCase {
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testBlockStatementLabel() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildBlockStatement { label in
-            XCTAssertEqual(b.type(of: label), .jsBlockLabel)
-            b.blockBreak(label)
+    @Test func testBlockStatementLabel() {
+        let actual = buildAndLiftProgram { b in
+            b.buildBlockStatement { label in
+                #expect(b.type(of: label) == .jsBlockLabel)
+                b.blockBreak(label)
+            }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             L0: {
                 break L0;
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testNestedBlockStatementLabels() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildBlockStatement { label1 in
-            b.buildBlockStatement { label2 in
-                b.blockBreak(label1)
-                b.blockBreak(label2)
+    @Test func testNestedBlockStatementLabels() {
+        let actual = buildAndLiftProgram { b in
+            b.buildBlockStatement { label1 in
+                b.buildBlockStatement { label2 in
+                    b.blockBreak(label1)
+                    b.blockBreak(label2)
+                }
             }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             L0: {
                 L1: {
@@ -299,62 +273,57 @@ class LabelTests: XCTestCase {
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testIfStatementLabel() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let cond = b.loadBool(true)
-        b.buildIf(cond) { label in
-            XCTAssertEqual(b.type(of: label), .jsBlockLabel)
-            b.blockBreak(label)
+    @Test func testIfStatementLabel() {
+        let actual = buildAndLiftProgram { b in
+            let cond = b.loadBool(true)
+            b.buildIf(cond) { label in
+                #expect(b.type(of: label) == .jsBlockLabel)
+                b.blockBreak(label)
+            }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             L1: if (true) {
                 break L1;
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testIfElseStatementLabel() {
+    @Test func testIfElseStatementLabel() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        let actual = fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            let cond = b.loadBool(true)
+            b.buildIfElse(
+                cond,
+                ifBody: { label in
+                    #expect(b.type(of: label) == .jsBlockLabel)
+                    b.blockBreak(label)
+                },
+                elseBody: { label in
+                    #expect(b.type(of: label) == .jsBlockLabel)
+                    b.blockBreak(label)
+                })
 
-        let cond = b.loadBool(true)
-        b.buildIfElse(
-            cond,
-            ifBody: { label in
-                XCTAssertEqual(b.type(of: label), .jsBlockLabel)
-                b.blockBreak(label)
-            },
-            elseBody: { label in
-                XCTAssertEqual(b.type(of: label), .jsBlockLabel)
-                b.blockBreak(label)
-            })
+            let program = b.finalize()
+            let fuzzilLifter = FuzzILLifter()
+            let expectedFuzzil = """
+                v0 <- LoadBoolean 'true'
+                BeginIf v0 -> v1
+                    BlockBreak v1
+                BeginElse -> v2
+                    BlockBreak v2
+                EndIf
 
-        let program = b.finalize()
+                """
+            #expect(fuzzilLifter.lift(program) == expectedFuzzil)
 
-        let fuzzilLifter = FuzzILLifter()
-        let fuzzil = fuzzilLifter.lift(program)
-        let expectedFuzzil = """
-            v0 <- LoadBoolean 'true'
-            BeginIf v0 -> v1
-                BlockBreak v1
-            BeginElse -> v2
-                BlockBreak v2
-            EndIf
-
-            """
-        XCTAssertEqual(fuzzil, expectedFuzzil)
-
-        let actual = fuzzer.lifter.lift(program)
+            return fuzzer.lifter.lift(program)
+        }
         let expected = """
             L1: if (true) {
                 break L1;
@@ -363,56 +332,55 @@ class LabelTests: XCTestCase {
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testNestedIfElseStatementLabels() {
+    @Test func testNestedIfElseStatementLabels() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        let actual = fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            let cond1 = b.loadBool(true)
+            let cond2 = b.loadBool(false)
+            b.buildIfElse(
+                cond1,
+                ifBody: { label1If in
+                    b.buildIfElse(
+                        cond2,
+                        ifBody: { label2If in
+                            b.blockBreak(label1If)
+                            b.blockBreak(label2If)
+                        },
+                        elseBody: { label2Else in
+                            b.blockBreak(label1If)
+                            b.blockBreak(label2Else)
+                        })
+                },
+                elseBody: { label1Else in
+                    b.blockBreak(label1Else)
+                })
 
-        let cond1 = b.loadBool(true)
-        let cond2 = b.loadBool(false)
-        b.buildIfElse(
-            cond1,
-            ifBody: { label1If in
-                b.buildIfElse(
-                    cond2,
-                    ifBody: { label2If in
-                        b.blockBreak(label1If)
-                        b.blockBreak(label2If)
-                    },
-                    elseBody: { label2Else in
-                        b.blockBreak(label1If)
-                        b.blockBreak(label2Else)
-                    })
-            },
-            elseBody: { label1Else in
-                b.blockBreak(label1Else)
-            })
-
-        let program = b.finalize()
-
-        let fuzzilLifter = FuzzILLifter()
-        let fuzzil = fuzzilLifter.lift(program)
-        let expectedFuzzil = """
-            v0 <- LoadBoolean 'true'
-            v1 <- LoadBoolean 'false'
-            BeginIf v0 -> v2
-                BeginIf v1 -> v3
-                    BlockBreak v2
-                    BlockBreak v3
-                BeginElse -> v4
-                    BlockBreak v2
-                    BlockBreak v4
+            let program = b.finalize()
+            let fuzzilLifter = FuzzILLifter()
+            let expectedFuzzil = """
+                v0 <- LoadBoolean 'true'
+                v1 <- LoadBoolean 'false'
+                BeginIf v0 -> v2
+                    BeginIf v1 -> v3
+                        BlockBreak v2
+                        BlockBreak v3
+                    BeginElse -> v4
+                        BlockBreak v2
+                        BlockBreak v4
+                    EndIf
+                BeginElse -> v5
+                    BlockBreak v5
                 EndIf
-            BeginElse -> v5
-                BlockBreak v5
-            EndIf
 
-            """
-        XCTAssertEqual(fuzzil, expectedFuzzil)
+                """
+            #expect(fuzzilLifter.lift(program) == expectedFuzzil)
 
-        let actual = fuzzer.lifter.lift(program)
+            return fuzzer.lifter.lift(program)
+        }
         let expected = """
             L2: if (true) {
                 L3: if (false) {
@@ -427,102 +395,106 @@ class LabelTests: XCTestCase {
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testLabelVisibilityInFunctions() {
+    @Test func testLabelVisibilityInFunctions() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
 
-        b.buildWhileLoop({ b.loadBool(true) }) { label in
-            XCTAssertEqual(b.type(of: label), .jsLoopLabel)
+            b.buildWhileLoop({ b.loadBool(true) }) { label in
+                #expect(b.type(of: label) == .jsLoopLabel)
 
-            // The label should NOT be visible here if we are inside a function
-            b.buildPlainFunction(with: .parameters(n: 0)) { args in
-                let visibleLabels = b.visibleVariables.filter {
-                    b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
-                }
-                XCTAssertTrue(visibleLabels.isEmpty)
-            }
-
-            // But it should be visible again here
-            let visibleLabels = b.visibleVariables.filter {
-                b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
-            }
-            XCTAssertTrue(visibleLabels.contains(label))
-        }
-    }
-
-    func testLabelVisibilityInClasses() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildWhileLoop({ b.loadBool(true) }) { label in
-            XCTAssertEqual(b.type(of: label), .jsLoopLabel)
-
-            // The label should NOT be visible here if we are inside a class definition
-            b.buildClassDefinition { cls in
-                let visibleLabels = b.visibleVariables.filter {
-                    b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
-                }
-                XCTAssertTrue(visibleLabels.isEmpty)
-            }
-
-            // But it should be visible again here
-            let visibleLabels = b.visibleVariables.filter {
-                b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
-            }
-            XCTAssertTrue(visibleLabels.contains(label))
-        }
-    }
-
-    func testLabelVisibilityInObjectLiterals() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildWhileLoop({ b.loadBool(true) }) { label in
-            // Labels should NOT be visible inside an object literal
-            b.buildObjectLiteral { obj in
-                let visibleLabels = b.visibleVariables.filter {
-                    b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
-                }
-                XCTAssertTrue(visibleLabels.isEmpty)
-            }
-        }
-    }
-
-    func testLabelVisibilityAcrossSwitches() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildWhileLoop({ b.loadBool(true) }) { label in
-            // Labels SHOULD be visible inside a switch
-            let cond = b.loadInt(42)
-            b.buildSwitch(on: cond) { sw in
-                sw.addDefaultCase {
+                // The label should NOT be visible here if we are inside a function
+                b.buildPlainFunction(with: .parameters(n: 0)) { args in
                     let visibleLabels = b.visibleVariables.filter {
                         b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
                     }
-                    XCTAssertTrue(visibleLabels.contains(label))
+                    #expect(visibleLabels.isEmpty)
+                }
+
+                // But it should be visible again here
+                let visibleLabels = b.visibleVariables.filter {
+                    b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
+                }
+                #expect(visibleLabels.contains(label))
+            }
+        }
+    }
+
+    @Test func testLabelVisibilityInClasses() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            b.buildWhileLoop({ b.loadBool(true) }) { label in
+                #expect(b.type(of: label) == .jsLoopLabel)
+
+                // The label should NOT be visible here if we are inside a class definition
+                b.buildClassDefinition { cls in
+                    let visibleLabels = b.visibleVariables.filter {
+                        b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
+                    }
+                    #expect(visibleLabels.isEmpty)
+                }
+
+                // But it should be visible again here
+                let visibleLabels = b.visibleVariables.filter {
+                    b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
+                }
+                #expect(visibleLabels.contains(label))
+            }
+        }
+    }
+
+    @Test func testLabelVisibilityInObjectLiterals() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            b.buildWhileLoop({ b.loadBool(true) }) { label in
+                // Labels should NOT be visible inside an object literal
+                b.buildObjectLiteral { obj in
+                    let visibleLabels = b.visibleVariables.filter {
+                        b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
+                    }
+                    #expect(visibleLabels.isEmpty)
                 }
             }
         }
     }
 
-    func testSwitchNoLabel() {
+    @Test func testLabelVisibilityAcrossSwitches() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
 
-        let v = b.loadInt(42)
-        let case1 = b.loadInt(1)
-        b.buildSwitch(on: v) { sw in
-            sw.addCase(case1, fallsThrough: true) {
-                b.switchBreak()
+            b.buildWhileLoop({ b.loadBool(true) }) { label in
+                // Labels SHOULD be visible inside a switch
+                let cond = b.loadInt(42)
+                b.buildSwitch(on: cond) { sw in
+                    sw.addDefaultCase {
+                        let visibleLabels = b.visibleVariables.filter {
+                            b.type(of: $0).Is(.jsLoopLabel | .jsBlockLabel)
+                        }
+                        #expect(visibleLabels.contains(label))
+                    }
+                }
             }
         }
+    }
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+    @Test func testSwitchNoLabel() {
+        let actual = buildAndLiftProgram { b in
+            let v = b.loadInt(42)
+            let case1 = b.loadInt(1)
+            b.buildSwitch(on: v) { sw in
+                sw.addCase(case1, fallsThrough: true) {
+                    b.switchBreak()
+                }
+            }
+        }
         let expected = """
             switch (42) {
                 case 1:
@@ -530,27 +502,23 @@ class LabelTests: XCTestCase {
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testSwitchLabel() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v = b.loadInt(42)
-        let case1 = b.loadInt(1)
-        b.buildSwitch(on: v) { sw, label in
-            XCTAssertEqual(b.type(of: label), .jsBlockLabel)
-            sw.addCase(case1, fallsThrough: true) {
-                b.blockBreak(label)
-            }
-            sw.addDefaultCase(fallsThrough: true) {
-                b.blockBreak(label)
+    @Test func testSwitchLabel() {
+        let actual = buildAndLiftProgram { b in
+            let v = b.loadInt(42)
+            let case1 = b.loadInt(1)
+            b.buildSwitch(on: v) { sw, label in
+                #expect(b.type(of: label) == .jsBlockLabel)
+                sw.addCase(case1, fallsThrough: true) {
+                    b.blockBreak(label)
+                }
+                sw.addDefaultCase(fallsThrough: true) {
+                    b.blockBreak(label)
+                }
             }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             L2: switch (42) {
                 case 1:
@@ -560,29 +528,25 @@ class LabelTests: XCTestCase {
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 
-    func testNestedSwitchLabel() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v1 = b.loadInt(1)
-        let v2 = b.loadInt(2)
-        let case1 = b.loadInt(1)
-        let case2 = b.loadInt(2)
-        b.buildSwitch(on: v1) { sw1, label1 in
-            sw1.addCase(case1, fallsThrough: true) {
-                b.buildSwitch(on: v2) { sw2, label2 in
-                    sw2.addCase(case2, fallsThrough: true) {
-                        b.blockBreak(label1)
+    @Test func testNestedSwitchLabel() {
+        let actual = buildAndLiftProgram { b in
+            let v1 = b.loadInt(1)
+            let v2 = b.loadInt(2)
+            let case1 = b.loadInt(1)
+            let case2 = b.loadInt(2)
+            b.buildSwitch(on: v1) { sw1, label1 in
+                sw1.addCase(case1, fallsThrough: true) {
+                    b.buildSwitch(on: v2) { sw2, label2 in
+                        sw2.addCase(case2, fallsThrough: true) {
+                            b.blockBreak(label1)
+                        }
                     }
                 }
             }
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
         let expected = """
             L4: switch (1) {
                 case 1:
@@ -593,6 +557,6 @@ class LabelTests: XCTestCase {
             }
 
             """
-        XCTAssertEqual(actual, expected)
+        #expect(actual == expected)
     }
 }
