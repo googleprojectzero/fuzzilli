@@ -1848,75 +1848,6 @@ final class Dup: JsOperation {
     }
 }
 
-/// Destructs an array into n output variables.
-final class DestructArray: JsOperation {
-    override var opcode: Opcode { .destructArray(self) }
-
-    let indices: [Int64]
-    let lastIsRest: Bool
-
-    init(indices: [Int64], lastIsRest: Bool) {
-        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
-        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
-        assert(
-            !lastIsRest || !indices.isEmpty,
-            "DestructArray with lastIsRest requires at least one index")
-        self.indices = indices
-        self.lastIsRest = lastIsRest
-        super.init(numInputs: 1, numOutputs: indices.count)
-    }
-}
-
-/// Destructs an array and reassigns the output to n existing variables.
-final class DestructArrayAndReassign: JsOperation {
-    override var opcode: Opcode { .destructArrayAndReassign(self) }
-
-    let indices: [Int64]
-    let lastIsRest: Bool
-
-    init(indices: [Int64], lastIsRest: Bool) {
-        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
-        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
-        assert(
-            !lastIsRest || !indices.isEmpty,
-            "DestructArray with lastIsRest requires at least one index")
-        self.indices = indices
-        self.lastIsRest = lastIsRest
-        // The first input is the array being destructed
-        super.init(numInputs: 1 + indices.count, numOutputs: 0)
-    }
-}
-
-/// Destructs an object into n output variables
-final class DestructObject: JsOperation {
-    override var opcode: Opcode { .destructObject(self) }
-
-    let properties: [String]
-    let hasRestElement: Bool
-
-    init(properties: [String], hasRestElement: Bool) {
-        assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
-        self.properties = properties
-        self.hasRestElement = hasRestElement
-        super.init(numInputs: 1, numOutputs: properties.count + (hasRestElement ? 1 : 0))
-    }
-}
-
-/// Destructs an object and reassigns the output to n existing variables
-final class DestructObjectAndReassign: JsOperation {
-    override var opcode: Opcode { .destructObjectAndReassign(self) }
-
-    let properties: [String]
-    let hasRestElement: Bool
-
-    init(properties: [String], hasRestElement: Bool) {
-        self.properties = properties
-        self.hasRestElement = hasRestElement
-        // The first input is the object being destructed
-        super.init(numInputs: 1 + properties.count + (hasRestElement ? 1 : 0), numOutputs: 0)
-    }
-}
-
 // This array must be kept in sync with the Comparator Enum in operations.proto
 public enum Comparator: String, CaseIterable {
     case equal = "=="
@@ -2367,8 +2298,51 @@ public enum UsingType: String, Hashable, CaseIterable {
 // Note: The last innerOutput is the label of the loop.
 public enum LoopHeader: Hashable {
     case simple
-    case arrayDestruct(indices: [Int64], hasRestElement: Bool)
-    case objectDestruct(properties: [String], hasRestElement: Bool)
+    case destruct(pattern: DestructuringPattern)
+
+    // Legacy helper methods to allow tests to use the old concise syntax
+    public static func arrayDestruct(indices: [Int64], hasRestElement: Bool) -> LoopHeader {
+        var elements = [DestructuringPattern.ArrayElement]()
+        var elementIndices = indices
+        if hasRestElement && !elementIndices.isEmpty {
+            elementIndices.removeLast()
+        }
+
+        // In the old format, the rest element's index dictated how many elements came before it.
+        let maxIndex =
+            hasRestElement && !indices.isEmpty
+            ? Int(indices.last!) - 1 : Int(elementIndices.max() ?? -1)
+
+        if maxIndex >= 0 {
+            for i in 0...maxIndex {
+                if elementIndices.contains(Int64(i)) {
+                    elements.append(
+                        DestructuringPattern.ArrayElement(
+                            target: .flatBinding))
+                } else {
+                    elements.append(
+                        DestructuringPattern.ArrayElement(
+                            target: .elision))
+                }
+            }
+        }
+        return .destruct(
+            pattern: .array(
+                DestructuringPattern.ArrayPattern(
+                    elements: elements, restTarget: hasRestElement ? .flatBinding : .none))
+        )
+    }
+
+    public static func objectDestruct(properties: [String], hasRestElement: Bool) -> LoopHeader {
+        let props = properties.map {
+            DestructuringPattern.ObjectProperty(
+                key: .string($0), target: .flatBinding)
+        }
+        return .destruct(
+            pattern: .object(
+                DestructuringPattern.ObjectPattern(
+                    properties: props, hasRestElement: hasRestElement)))
+    }
 }
 
 final class ForLoop: JsOperation {
@@ -2380,7 +2354,8 @@ final class ForLoop: JsOperation {
 
     init(
         type: ForInOfLoopType, isAsync: Bool = false,
-        usingType: UsingType = .none, header: LoopHeader = .simple
+        usingType: UsingType = .none, header: LoopHeader = .simple,
+        patternInputs: Int = 0
     ) {
         self.header = header
         self.isAsync = isAsync
@@ -2401,40 +2376,20 @@ final class ForLoop: JsOperation {
         case .simple:
             numInnerOutputs = 2
 
-        case .arrayDestruct(let indices, _):
-            assert(indices.count >= 1)
-            assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
-            assert(indices.count == Set(indices).count, "Indices must not have duplicates")
-            numInnerOutputs = indices.count + 1  // loop label is appended
-
-        case .objectDestruct(let properties, let hasRestElement):
-            assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
-            numInnerOutputs = properties.count + (hasRestElement ? 1 : 0) + 1  // loop label is appended
+        case .destruct(let pattern):
+            numInnerOutputs = pattern.numBindings + 1  // loop label is appended
         }
 
         super.init(
-            numInputs: 1, numInnerOutputs: numInnerOutputs,
+            numInputs: 1 + patternInputs, numInnerOutputs: numInnerOutputs,
             attributes: [.isBlockStart, .propagatesSurroundingContext],
             requiredContext: isAsync ? [.javascript, .async] : [.javascript],
             contextOpened: [.loop])
     }
 
-    var indices: [Int64] {
-        if case .arrayDestruct(let indices, _) = self.header { return indices }
-        preconditionFailure("Invalid header for ForLoop indices")
-    }
-
-    var properties: [String] {
-        if case .objectDestruct(let properties, _) = self.header { return properties }
-        preconditionFailure("Invalid header for ForLoop properties")
-    }
-
-    var hasRestElement: Bool {
-        switch self.header {
-        case .arrayDestruct(_, let hasRest): return hasRest
-        case .objectDestruct(_, let hasRest): return hasRest
-        default: preconditionFailure("Invalid header for ForLoop hasRestElement")
-        }
+    var pattern: DestructuringPattern {
+        if case .destruct(let pattern) = self.header { return pattern }
+        preconditionFailure("Invalid header for ForLoop pattern")
     }
 
     override var opcode: Opcode {
@@ -3165,5 +3120,379 @@ final class CreateMap: JsOperation {
         super.init(
             numInputs: numInitialValues, numOutputs: 1, firstVariadicInput: 0,
             attributes: [.isVariadic])
+    }
+}
+
+/// The native FuzzIL representation of a destructuring pattern
+public indirect enum DestructuringPattern: Hashable, Equatable {
+    case object(ObjectPattern)
+    case array(ArrayPattern)
+
+    public struct ObjectPattern: Hashable, Equatable {
+        public let properties: [ObjectProperty]
+        public let hasRestElement: Bool
+        public init(properties: [ObjectProperty], hasRestElement: Bool) {
+            self.properties = properties
+            self.hasRestElement = hasRestElement
+        }
+    }
+
+    public struct ObjectProperty: Hashable, Equatable {
+        public enum Key: Hashable, Equatable {
+            case string(String)
+            case computed
+        }
+        public let key: Key
+
+        public enum Target: Hashable, Equatable {
+            case flatBinding
+            case pattern(DestructuringPattern)
+        }
+        public let target: Target
+        public let hasDefaultValue: Bool
+
+        public init(key: Key, target: Target, hasDefaultValue: Bool = false) {
+            self.key = key
+            self.target = target
+            self.hasDefaultValue = hasDefaultValue
+        }
+    }
+
+    public struct ArrayPattern: Hashable, Equatable {
+        public let elements: [ArrayElement]
+        public enum RestTarget: Hashable, Equatable {
+            case none
+            case flatBinding
+            case pattern(DestructuringPattern)
+        }
+        public let restTarget: RestTarget
+
+        public init(elements: [ArrayElement], restTarget: RestTarget) {
+            self.elements = elements
+            self.restTarget = restTarget
+        }
+    }
+
+    public struct ArrayElement: Hashable, Equatable {
+        public enum Target: Hashable, Equatable {
+            case elision
+            case flatBinding
+            case pattern(DestructuringPattern)
+        }
+        public let target: Target
+        public let hasDefaultValue: Bool
+
+        public init(target: Target, hasDefaultValue: Bool = false) {
+            self.target = target
+            self.hasDefaultValue = hasDefaultValue
+        }
+    }
+}
+
+extension DestructuringPattern {
+    public var hasNestedDestructuring: Bool {
+        switch self {
+        case .object(let obj):
+            for prop in obj.properties {
+                if case .pattern = prop.target { return true }
+            }
+            return false
+        case .array(let arr):
+            for elem in arr.elements {
+                if case .pattern = elem.target { return true }
+            }
+            if case .pattern = arr.restTarget { return true }
+            return false
+        }
+    }
+
+    public var hasRestElement: Bool {
+        switch self {
+        case .object(let obj):
+            return obj.hasRestElement
+        case .array(let arr):
+            return arr.restTarget != .none
+        }
+    }
+}
+
+/// Destructs a variable using a nested pattern into n output variables.
+///
+/// The inputs to this operation are laid out as follows:
+///   1. `input(0)`: The source object/iterable being destructured.
+///   2. `input(1...n)`: The variables used for computed property keys and default values.
+///      These variables appear in the exact lexicographical order of a depth-first,
+///      left-to-right traversal of the `DestructuringPattern` AST.
+///
+/// The outputs of this operation are the newly declared variables, which also strictly
+/// match the depth-first, left-to-right order of the bindings in the pattern.
+final class Destruct: JsOperation {
+    override var opcode: Opcode { .destruct(self) }
+
+    let pattern: DestructuringPattern
+
+    init(pattern: DestructuringPattern, numInputs: Int, numOutputs: Int) {
+        self.pattern = pattern
+        assert(numInputs == 1 + pattern.numExtraInputs)
+        super.init(numInputs: numInputs, numOutputs: numOutputs, attributes: [.isMutable])
+    }
+}
+
+/// Destructs a variable using a nested pattern and reassigns to n existing variables.
+///
+/// The inputs to this operation are laid out as follows:
+///   1. `input(0)`: The source object/iterable being destructured.
+///   2. `input(1...n)`: A flat, interleaved sequence of variables representing computed property
+///      keys, target variables being reassigned, and default values. These variables appear
+///      in the exact lexicographical order of a depth-first, left-to-right traversal of the
+///      `DestructuringPattern` AST. For any given property/element, the ordering is:
+///      `[computedKeyVariable]`, `[targetVariable]`, `[defaultValueVariable]`.
+final class DestructAndReassign: JsOperation {
+    override var opcode: Opcode { .destructAndReassign(self) }
+
+    let pattern: DestructuringPattern
+    let isTarget: [Bool]
+
+    init(pattern: DestructuringPattern, numInputs: Int) {
+        self.pattern = pattern
+        var targets = [Bool](repeating: false, count: numInputs)
+        var currentInputIdx = 1
+
+        func traverse(_ pattern: DestructuringPattern) {
+            switch pattern {
+            case .object(let obj):
+                for prop in obj.properties {
+                    if case .computed = prop.key {
+                        currentInputIdx += 1
+                    }
+                    switch prop.target {
+                    case .flatBinding:
+                        targets[currentInputIdx] = true
+                        currentInputIdx += 1
+                    case .pattern(let p):
+                        traverse(p)
+                    }
+                    if prop.hasDefaultValue {
+                        currentInputIdx += 1
+                    }
+                }
+                if obj.hasRestElement {
+                    targets[currentInputIdx] = true
+                    currentInputIdx += 1
+                }
+            case .array(let arr):
+                for elem in arr.elements {
+                    switch elem.target {
+                    case .elision: break
+                    case .flatBinding:
+                        targets[currentInputIdx] = true
+                        currentInputIdx += 1
+                    case .pattern(let p):
+                        traverse(p)
+                    }
+                    if elem.hasDefaultValue {
+                        currentInputIdx += 1
+                    }
+                }
+                switch arr.restTarget {
+                case .none: break
+                case .flatBinding:
+                    targets[currentInputIdx] = true
+                    currentInputIdx += 1
+                case .pattern(let p):
+                    traverse(p)
+                }
+            }
+        }
+        traverse(pattern)
+        assert(currentInputIdx == numInputs)
+        self.isTarget = targets
+        super.init(numInputs: numInputs, numOutputs: 0, attributes: [.isMutable])
+    }
+}
+
+extension DestructuringPattern {
+    var numExtraInputs: Int {
+        switch self {
+        case .object(let obj):
+            var count = 0
+            for prop in obj.properties {
+                if case .computed = prop.key { count += 1 }
+                if prop.hasDefaultValue { count += 1 }
+                if case .pattern(let p) = prop.target { count += p.numExtraInputs }
+            }
+            return count
+        case .array(let arr):
+            var count = 0
+            for elem in arr.elements {
+                if elem.hasDefaultValue { count += 1 }
+                if case .pattern(let p) = elem.target { count += p.numExtraInputs }
+            }
+            if case .pattern(let p) = arr.restTarget { count += p.numExtraInputs }
+            return count
+        }
+    }
+
+    var numBindings: Int {
+        switch self {
+        case .object(let obj):
+            var count = 0
+            for prop in obj.properties {
+                switch prop.target {
+                case .flatBinding: count += 1
+                case .pattern(let p): count += p.numBindings
+                }
+            }
+            if obj.hasRestElement { count += 1 }
+            return count
+        case .array(let arr):
+            var count = 0
+            for elem in arr.elements {
+                switch elem.target {
+                case .elision: break
+                case .flatBinding: count += 1
+                case .pattern(let p): count += p.numBindings
+                }
+            }
+            switch arr.restTarget {
+            case .none: break
+            case .flatBinding: count += 1
+            case .pattern(let p): count += p.numBindings
+            }
+            return count
+        }
+    }
+
+    var protobuf: Fuzzilli_Protobuf_FuzzILDestructuringPattern {
+        var proto = Fuzzilli_Protobuf_FuzzILDestructuringPattern()
+        switch self {
+        case .object(let obj):
+            var objProto = Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectPattern()
+            for prop in obj.properties {
+                var propProto = Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty()
+                switch prop.key {
+                case .string(let s):
+                    propProto.stringKey = s
+                case .computed:
+                    propProto.hasComputedKey_p = true
+                }
+                switch prop.target {
+                case .flatBinding:
+                    propProto.isFlatBinding = true
+                case .pattern(let p):
+                    propProto.pattern = p.protobuf
+                }
+                if prop.hasDefaultValue {
+                    propProto.hasDefaultValue_p = true
+                }
+                objProto.properties.append(propProto)
+            }
+            objProto.hasRestElement_p = obj.hasRestElement
+            proto.objectPattern = objProto
+        case .array(let arr):
+            var arrProto = Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern()
+            for elem in arr.elements {
+                var elemProto = Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement()
+                switch elem.target {
+                case .elision:
+                    elemProto.isElision = true
+                case .flatBinding:
+                    elemProto.isFlatBinding = true
+                case .pattern(let p):
+                    elemProto.pattern = p.protobuf
+                }
+                if elem.hasDefaultValue {
+                    elemProto.hasDefaultValue_p = true
+                }
+                arrProto.elements.append(elemProto)
+            }
+            switch arr.restTarget {
+            case .none: break
+            case .flatBinding:
+                arrProto.hasRestElement_p = true
+            case .pattern(let p):
+                arrProto.restPattern = p.protobuf
+            }
+            proto.arrayPattern = arrProto
+        }
+        return proto
+    }
+
+    init(from proto: Fuzzilli_Protobuf_FuzzILDestructuringPattern) throws {
+        switch proto.pattern {
+        case .objectPattern(let objProto):
+            var properties = [ObjectProperty]()
+            for propProto in objProto.properties {
+                let key: ObjectProperty.Key
+                switch propProto.key {
+                case .stringKey(let s): key = .string(s)
+                case .hasComputedKey_p(let b):
+                    if !b {
+                        throw FuzzilliError.instructionDecodingError("hasComputedKey must be true")
+                    }
+                    key = .computed
+                default:
+                    throw FuzzilliError.instructionDecodingError(
+                        "Missing or invalid key in ObjectProperty")
+                }
+                let target: ObjectProperty.Target
+                switch propProto.target {
+                case .isFlatBinding(let b):
+                    if !b {
+                        throw FuzzilliError.instructionDecodingError("isFlatBinding must be true")
+                    }
+                    target = .flatBinding
+                case .pattern(let p):
+                    target = .pattern(try DestructuringPattern(from: p))
+                default:
+                    throw FuzzilliError.instructionDecodingError(
+                        "Missing or invalid target in ObjectProperty")
+                }
+                let def = propProto.hasDefaultValue_p
+                properties.append(
+                    ObjectProperty(key: key, target: target, hasDefaultValue: def))
+            }
+            self = .object(
+                ObjectPattern(properties: properties, hasRestElement: objProto.hasRestElement_p))
+
+        case .arrayPattern(let arrProto):
+            var elements = [ArrayElement]()
+            for elemProto in arrProto.elements {
+                let target: ArrayElement.Target
+                switch elemProto.target {
+                case .isElision(let b):
+                    if !b { throw FuzzilliError.instructionDecodingError("isElision must be true") }
+                    target = .elision
+                case .isFlatBinding(let b):
+                    if !b {
+                        throw FuzzilliError.instructionDecodingError("isFlatBinding must be true")
+                    }
+                    target = .flatBinding
+                case .pattern(let p):
+                    target = .pattern(try DestructuringPattern(from: p))
+                default:
+                    throw FuzzilliError.instructionDecodingError(
+                        "Missing or invalid target in ArrayElement")
+                }
+                let def = elemProto.hasDefaultValue_p
+                elements.append(ArrayElement(target: target, hasDefaultValue: def))
+            }
+            let restTarget: ArrayPattern.RestTarget
+            switch arrProto.restTarget {
+            case .hasRestElement_p(let b):
+                if !b {
+                    throw FuzzilliError.instructionDecodingError("hasRestElement must be true")
+                }
+                restTarget = .flatBinding
+            case .restPattern(let p):
+                restTarget = .pattern(try DestructuringPattern(from: p))
+            default:
+                restTarget = .none
+            }
+            self = .array(ArrayPattern(elements: elements, restTarget: restTarget))
+
+        default:
+            throw FuzzilliError.instructionDecodingError("Missing or invalid DestructuringPattern")
+        }
     }
 }

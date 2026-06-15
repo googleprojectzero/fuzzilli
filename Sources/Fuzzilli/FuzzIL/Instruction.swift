@@ -975,26 +975,7 @@ extension Instruction: ProtobufConvertible {
                 }
             case .dup:
                 $0.dup = Fuzzilli_Protobuf_Dup()
-            case .destructArray(let op):
-                $0.destructArray = Fuzzilli_Protobuf_DestructArray.with {
-                    $0.indices = op.indices.map({ Int32($0) })
-                    $0.lastIsRest = op.lastIsRest
-                }
-            case .destructArrayAndReassign(let op):
-                $0.destructArrayAndReassign = Fuzzilli_Protobuf_DestructArrayAndReassign.with {
-                    $0.indices = op.indices.map({ Int32($0) })
-                    $0.lastIsRest = op.lastIsRest
-                }
-            case .destructObject(let op):
-                $0.destructObject = Fuzzilli_Protobuf_DestructObject.with {
-                    $0.properties = op.properties
-                    $0.hasRestElement_p = op.hasRestElement
-                }
-            case .destructObjectAndReassign(let op):
-                $0.destructObjectAndReassign = Fuzzilli_Protobuf_DestructObjectAndReassign.with {
-                    $0.properties = op.properties
-                    $0.hasRestElement_p = op.hasRestElement
-                }
+
             case .compare(let op):
                 $0.compare = Fuzzilli_Protobuf_Compare.with {
                     $0.op = convertEnum(op.op, Comparator.allCases)
@@ -1128,19 +1109,12 @@ extension Instruction: ProtobufConvertible {
                         switch op.header {
                         case .simple:
                             .simple
-                        case .arrayDestruct:
-                            .arrayDestruct
-                        case .objectDestruct:
-                            .objectDestruct
+                        case .destruct:
+                            .destruct
                         }
                     $0.usingType = convertEnum(op.usingType, UsingType.allCases)
-                    if case .arrayDestruct(let indices, let hasRest) = op.header {
-                        $0.indices = indices.map({ Int32($0) })
-                        $0.hasRestElement_p = hasRest
-                    }
-                    if case .objectDestruct(let properties, let hasRest) = op.header {
-                        $0.properties = properties
-                        $0.hasRestElement_p = hasRest
+                    if case .destruct(let pattern) = op.header {
+                        $0.pattern = pattern.protobuf
                     }
                 }
 
@@ -1251,6 +1225,14 @@ extension Instruction: ProtobufConvertible {
             case .dynamicImport(let op):
                 $0.dynamicImport = Fuzzilli_Protobuf_DynamicImport.with {
                     $0.isDeferred = op.isDeferred
+                }
+            case .destruct(let op):
+                $0.destruct = Fuzzilli_Protobuf_Destruct.with {
+                    $0.pattern = op.pattern.protobuf
+                }
+            case .destructAndReassign(let op):
+                $0.destructAndReassign = Fuzzilli_Protobuf_DestructAndReassign.with {
+                    $0.pattern = op.pattern.protobuf
                 }
             case .print(_):
                 fatalError("Print operations should not be serialized")
@@ -2374,16 +2356,7 @@ extension Instruction: ProtobufConvertible {
             op = Dup()
         case .reassign:
             op = Reassign()
-        case .destructArray(let p):
-            op = DestructArray(indices: p.indices.map({ Int64($0) }), lastIsRest: p.lastIsRest)
-        case .destructArrayAndReassign(let p):
-            op = DestructArrayAndReassign(
-                indices: p.indices.map({ Int64($0) }), lastIsRest: p.lastIsRest)
-        case .destructObject(let p):
-            op = DestructObject(properties: p.properties, hasRestElement: p.hasRestElement_p)
-        case .destructObjectAndReassign(let p):
-            op = DestructObjectAndReassign(
-                properties: p.properties, hasRestElement: p.hasRestElement_p)
+
         case .compare(let p):
             op = Compare(try convertEnum(p.op, Comparator.allCases))
         case .createNamedVariable(let p):
@@ -2481,21 +2454,25 @@ extension Instruction: ProtobufConvertible {
                 switch p.headerType {
                 case .simple:
                     .simple
-                case .arrayDestruct:
-                    .arrayDestruct(
-                        indices: p.indices.map({ Int64($0) }),
-                        hasRestElement: p.hasRestElement_p)
-                case .objectDestruct:
-                    .objectDestruct(
-                        properties: p.properties,
-                        hasRestElement: p.hasRestElement_p)
+                case .destruct:
+                    .destruct(pattern: try DestructuringPattern(from: p.pattern))
                 default:
                     .simple
                 }
+
+            let numInnerOutputs: Int
+            switch header {
+            case .simple:
+                numInnerOutputs = 2
+            case .destruct(let pattern):
+                numInnerOutputs = pattern.numBindings + 1
+            }
+
             let type = try convertEnum(p.loopType, ForInOfLoopType.allCases)
             let usingType = try convertEnum(p.usingType, UsingType.allCases)
             op = ForLoop(
-                type: type, isAsync: p.isAsync, usingType: usingType, header: header)
+                type: type, isAsync: p.isAsync, usingType: usingType, header: header,
+                patternInputs: inouts.count - 1 - numInnerOutputs)
 
         case .endForLoop:
             op = EndForLoop()
@@ -2548,6 +2525,14 @@ extension Instruction: ProtobufConvertible {
             op = ImportNamespace(isDeferred: p.isDeferred)
         case .dynamicImport(let p):
             op = DynamicImport(isDeferred: p.isDeferred)
+        case .destruct(let p):
+            let pattern = try DestructuringPattern(from: p.pattern)
+            op = Destruct(
+                pattern: pattern, numInputs: inouts.count - pattern.numBindings,
+                numOutputs: pattern.numBindings)
+        case .destructAndReassign(let p):
+            let pattern = try DestructuringPattern(from: p.pattern)
+            op = DestructAndReassign(pattern: pattern, numInputs: inouts.count)
         case .loadNewTarget:
             op = LoadNewTarget()
         case .nop:
@@ -3066,5 +3051,12 @@ private func JSTypeEnumToILType(_ type: Fuzzilli_Protobuf_JSType) -> ILType {
         return .undefined
     default:
         return .jsAnything
+    }
+}
+
+extension Operation {
+    func isDestructTarget(inputIdx: Int) -> Bool {
+        guard let op = self as? DestructAndReassign else { return false }
+        return op.isTarget[inputIdx]
     }
 }

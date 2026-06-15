@@ -1515,7 +1515,7 @@ class MinimizerTests: XCTestCase {
         // of all important operations doesn't decrease, and so this will allow the DestructObject
         // to be converted into GetProperty operations but prevent both the DestructObject and the
         // GetProperty from being removed entirely.
-        evaluator.operationIsImportant(DestructObject.self)
+        evaluator.operationIsImportant(Destruct.self)
         evaluator.operationIsImportant(GetProperty.self)
 
         // Perform minimization and check that the two programs are equal.
@@ -1551,7 +1551,7 @@ class MinimizerTests: XCTestCase {
         // of all important operations doesn't decrease, and so this will allow the DestructArray
         // to be converted into GetElement operations but prevent both the DestructArray and the
         // GetElement from being removed entirely.
-        evaluator.operationIsImportant(DestructArray.self)
+        evaluator.operationIsImportant(Destruct.self)
         evaluator.operationIsImportant(GetElement.self)
 
         // Perform minimization and check that the two programs are equal.
@@ -1585,7 +1585,7 @@ class MinimizerTests: XCTestCase {
         let expectedProgram = b.finalize()
 
         // See testDestructuringSimplification2 for why these are marked important.
-        evaluator.operationIsImportant(DestructArray.self)
+        evaluator.operationIsImportant(Destruct.self)
         evaluator.operationIsImportant(GetElement.self)
 
         let actualProgram = minimize(originalProgram, with: fuzzer)

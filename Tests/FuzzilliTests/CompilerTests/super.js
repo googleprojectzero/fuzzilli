@@ -12,7 +12,7 @@ class Animal {
       console.log("Animal speaks!"); // CallSuperMethod
     }
   }
-  
+
   class Dog extends Animal {
     constructor(name) {
       super(name); // CallSuperConstructor
@@ -28,7 +28,7 @@ class Animal {
       super.name += " Updated"; // UpdateSuperProperty
     }
   }
-  
+
   const myDog = new Dog("Bello");
   myDog.m();
   myDog.updateName();

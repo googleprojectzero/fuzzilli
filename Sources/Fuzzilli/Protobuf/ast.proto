@@ -521,13 +521,42 @@ message Expression {
     }
 }
 
+message DestructuringPattern {
+    oneof pattern {
+        ObjectPattern objectPattern = 1;
+        ArrayPattern arrayPattern = 2;
+    }
+}
+
 message ObjectPattern {
-    repeated string properties = 1;
+    repeated ObjectPatternProperty properties = 1;
     optional string restBinding = 2;
 }
 
+message ObjectPatternProperty {
+    PropertyKey key = 1;
+
+    oneof target {
+        string name = 2;
+        DestructuringPattern pattern = 3;
+    }
+
+    Expression defaultValue = 5;
+}
+
 message ArrayPattern {
-    repeated int32 indices = 1;
-    repeated string names = 2;
-    bool hasRestElement = 3;
+    repeated ArrayPatternElement elements = 1;
+
+    oneof restTarget {
+        string restBinding = 2;
+        DestructuringPattern restPattern = 3;
+    }
+}
+
+message ArrayPatternElement {
+    oneof target {
+        string name = 1;
+        DestructuringPattern pattern = 2;
+    }
+    Expression defaultValue = 3;
 }

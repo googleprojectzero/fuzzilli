@@ -382,27 +382,32 @@ public class JavaScriptCompiler {
                     assert(!currentScope.keys.contains(name) || declarationMode == .var)
                     mapOrRemap(name, to: v)
                 case .objectPattern(let objectPattern):
-                    let hasRestElement = objectPattern.hasRestBinding
-                    let destOp = DestructObject(
-                        properties: objectPattern.properties,
-                        hasRestElement: hasRestElement
-                    )
-                    let outputs = emit(destOp, withInputs: [initialValue]).outputs
-                    let names =
-                        objectPattern.properties
-                        + (hasRestElement ? [objectPattern.restBinding] : [])
-                    for (name, v) in zip(names, outputs) {
+                    var inputs = [initialValue]
+                    var outputs = [String]()
+                    let patternProto = Compiler_Protobuf_DestructuringPattern.with {
+                        $0.objectPattern = objectPattern
+                    }
+                    let pattern = try compileDestructuringPattern(
+                        patternProto, inputs: &inputs, outputs: &outputs)
+                    let destOp = Destruct(
+                        pattern: pattern, numInputs: inputs.count, numOutputs: pattern.numBindings)
+                    let outVars = emit(destOp, withInputs: inputs).outputs
+                    for (name, v) in zip(outputs, outVars) {
                         assert(!currentScope.keys.contains(name) || declarationMode == .var)
                         mapOrRemap(name, to: v)
                     }
                 case .arrayPattern(let arrayPattern):
-                    let indices = arrayPattern.indices.map { Int64($0) }
-                    let destOp = DestructArray(
-                        indices: indices,
-                        lastIsRest: arrayPattern.hasRestElement_p
-                    )
-                    let outputs = emit(destOp, withInputs: [initialValue]).outputs
-                    for (name, v) in zip(arrayPattern.names, outputs) {
+                    var inputs = [initialValue]
+                    var outputs = [String]()
+                    let patternProto = Compiler_Protobuf_DestructuringPattern.with {
+                        $0.arrayPattern = arrayPattern
+                    }
+                    let pattern = try compileDestructuringPattern(
+                        patternProto, inputs: &inputs, outputs: &outputs)
+                    let destOp = Destruct(
+                        pattern: pattern, numInputs: inputs.count, numOutputs: pattern.numBindings)
+                    let outVars = emit(destOp, withInputs: inputs).outputs
+                    for (name, v) in zip(outputs, outVars) {
                         assert(!currentScope.keys.contains(name) || declarationMode == .var)
                         mapOrRemap(name, to: v)
                     }
@@ -679,17 +684,20 @@ public class JavaScriptCompiler {
                 }
 
             case .objectPattern(let pattern):
-                let properties = pattern.properties
-                let hasRest = pattern.hasRestBinding
-
-                let header = LoopHeader.objectDestruct(
-                    properties: properties, hasRestElement: hasRest)
+                var inputs = [Variable]()
+                var outputs = [String]()
+                let patternProto = Compiler_Protobuf_DestructuringPattern.with {
+                    $0.objectPattern = pattern
+                }
+                let destPattern = try compileDestructuringPattern(
+                    patternProto, inputs: &inputs, outputs: &outputs)
                 let instr = emit(
                     ForLoop(
                         type: .forOf, isAsync: forOfLoop.isAsync,
                         usingType: .none,
-                        header: header),
-                    withInputs: [obj])
+                        header: .destruct(pattern: destPattern),
+                        patternInputs: inputs.count),
+                    withInputs: [obj] + inputs)
 
                 let loopLabelVariable = instr.innerOutputs.last!
                 let vars = Array(instr.innerOutputs.dropLast())
@@ -697,27 +705,27 @@ public class JavaScriptCompiler {
                 try enterNewScope(
                     labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
                 ) {
-                    for (i, prop) in properties.enumerated() {
-                        map(prop, to: vars[i])
-                    }
-                    if hasRest {
-                        map(pattern.restBinding, to: vars.last!)
+                    for (i, name) in outputs.enumerated() {
+                        map(name, to: vars[i])
                     }
                     try compileBody(forOfLoop.body)
                 }
 
             case .arrayPattern(let pattern):
-                assert(pattern.names.count == pattern.indices.count)
-                let indices = pattern.indices.map { Int64($0) }
-                let hasRest = pattern.hasRestElement_p
-
-                let header = LoopHeader.arrayDestruct(indices: indices, hasRestElement: hasRest)
+                var inputs = [Variable]()
+                var outputs = [String]()
+                let patternProto = Compiler_Protobuf_DestructuringPattern.with {
+                    $0.arrayPattern = pattern
+                }
+                let destPattern = try compileDestructuringPattern(
+                    patternProto, inputs: &inputs, outputs: &outputs)
                 let instr = emit(
                     ForLoop(
                         type: .forOf, isAsync: forOfLoop.isAsync,
                         usingType: .none,
-                        header: header),
-                    withInputs: [obj])
+                        header: .destruct(pattern: destPattern),
+                        patternInputs: inputs.count),
+                    withInputs: [obj] + inputs)
 
                 let loopLabelVariable = instr.innerOutputs.last!
                 let vars = Array(instr.innerOutputs.dropLast())
@@ -725,8 +733,8 @@ public class JavaScriptCompiler {
                 try enterNewScope(
                     labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
                 ) {
-                    zip(pattern.names, vars).forEach { name, v in
-                        map(name, to: v)
+                    for (i, name) in outputs.enumerated() {
+                        map(name, to: vars[i])
                     }
                     try compileBody(forOfLoop.body)
                 }
@@ -1774,5 +1782,122 @@ public class JavaScriptCompiler {
         scopes.removeAll()
         labelsStack.removeAll()
         nextVariable = 0
+    }
+
+    private func compileDestructuringPattern(
+        _ pattern: Compiler_Protobuf_DestructuringPattern, inputs: inout [Variable],
+        outputs: inout [String]
+    ) throws -> DestructuringPattern {
+        switch pattern.pattern {
+        case .objectPattern(let objProto):
+            return .object(try compileObjectPattern(objProto, inputs: &inputs, outputs: &outputs))
+        case .arrayPattern(let arrProto):
+            return .array(try compileArrayPattern(arrProto, inputs: &inputs, outputs: &outputs))
+        case .none:
+            throw CompilerError.invalidASTError("Missing pattern in DestructuringPattern")
+        }
+    }
+
+    private func compileObjectPattern(
+        _ objProto: Compiler_Protobuf_ObjectPattern, inputs: inout [Variable],
+        outputs: inout [String]
+    ) throws -> DestructuringPattern.ObjectPattern {
+        var properties = [DestructuringPattern.ObjectProperty]()
+        for propProto in objProto.properties {
+            let key: DestructuringPattern.ObjectProperty.Key
+            switch propProto.key.body {
+            case .name(let s):
+                key = .string(s)
+            case .index(let i):
+                key = .string(String(i))
+            case .expression(let exprProto):
+                let exprVar = try compileExpression(exprProto)
+                key = .computed
+                inputs.append(exprVar)
+            default:
+                throw CompilerError.invalidASTError("Invalid key in ObjectPatternProperty")
+            }
+
+            let target: DestructuringPattern.ObjectProperty.Target
+            switch propProto.target {
+            case .name(let s):
+                target = .flatBinding
+                outputs.append(s)
+            case .pattern(let p):
+                target = .pattern(
+                    try compileDestructuringPattern(p, inputs: &inputs, outputs: &outputs))
+            case .none:
+                // Implicit shorthand (e.g. {x}) means key is a string and target is the same string
+                if case .string(let s) = key {
+                    target = .flatBinding
+                    outputs.append(s)
+                } else {
+                    throw CompilerError.invalidASTError(
+                        "Missing target in ObjectPatternProperty without string key")
+                }
+            }
+
+            var hasDefaultValue = false
+            if propProto.hasDefaultValue {
+                let defaultVar = try compileExpression(propProto.defaultValue)
+                hasDefaultValue = true
+                inputs.append(defaultVar)
+            }
+
+            properties.append(
+                DestructuringPattern.ObjectProperty(
+                    key: key, target: target, hasDefaultValue: hasDefaultValue))
+        }
+
+        if objProto.hasRestBinding {
+            outputs.append(objProto.restBinding)
+        }
+        return DestructuringPattern.ObjectPattern(
+            properties: properties, hasRestElement: objProto.hasRestBinding)
+    }
+
+    private func compileArrayPattern(
+        _ arrProto: Compiler_Protobuf_ArrayPattern, inputs: inout [Variable],
+        outputs: inout [String]
+    ) throws -> DestructuringPattern.ArrayPattern {
+        var elements = [DestructuringPattern.ArrayElement]()
+        for elemProto in arrProto.elements {
+            let target: DestructuringPattern.ArrayElement.Target
+            switch elemProto.target {
+            case .name(let s):
+                target = .flatBinding
+                outputs.append(s)
+            case .pattern(let p):
+                target = .pattern(
+                    try compileDestructuringPattern(p, inputs: &inputs, outputs: &outputs))
+            case .none:
+                target = .elision
+            }
+
+            var hasDefaultValue = false
+            if elemProto.hasDefaultValue {
+                let defaultVar = try compileExpression(elemProto.defaultValue)
+                hasDefaultValue = true
+                inputs.append(defaultVar)
+            }
+
+            elements.append(
+                DestructuringPattern.ArrayElement(
+                    target: target, hasDefaultValue: hasDefaultValue))
+        }
+
+        let restTarget: DestructuringPattern.ArrayPattern.RestTarget
+        switch arrProto.restTarget {
+        case .restBinding(let s):
+            restTarget = .flatBinding
+            outputs.append(s)
+        case .restPattern(let p):
+            restTarget = .pattern(
+                try compileDestructuringPattern(p, inputs: &inputs, outputs: &outputs))
+        case .none:
+            restTarget = .none
+        }
+
+        return DestructuringPattern.ArrayPattern(elements: elements, restTarget: restTarget)
     }
 }

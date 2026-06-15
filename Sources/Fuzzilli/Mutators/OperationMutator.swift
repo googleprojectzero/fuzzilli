@@ -267,33 +267,7 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = BinaryOperation(chooseUniform(from: BinaryOperator.allCases))
         case .update(_):
             newOp = Update(chooseUniform(from: BinaryOperator.allCases))
-        case .destructArray(let op):
-            var newIndices = op.indices
-            replaceRandomElement(
-                in: &newIndices, generatingRandomValuesWith: { return Int64.random(in: 0..<10) })
-            assert(newIndices.count == Set(newIndices).count)
-            newOp = DestructArray(indices: newIndices.sorted(), lastIsRest: !op.lastIsRest)
-        case .destructArrayAndReassign(let op):
-            var newIndices = op.indices
-            replaceRandomElement(
-                in: &newIndices, generatingRandomValuesWith: { return Int64.random(in: 0..<10) })
-            assert(newIndices.count == Set(newIndices).count)
-            newOp = DestructArrayAndReassign(
-                indices: newIndices.sorted(), lastIsRest: !op.lastIsRest)
-        case .destructObject(let op):
-            var newProperties = op.properties
-            replaceRandomElement(
-                in: &newProperties, generatingRandomValuesWith: { return b.randomPropertyName() })
-            assert(newProperties.count == Set(newProperties).count)
-            newOp = DestructObject(
-                properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
-        case .destructObjectAndReassign(let op):
-            var newProperties = op.properties
-            replaceRandomElement(
-                in: &newProperties, generatingRandomValuesWith: { return b.randomPropertyName() })
-            assert(newProperties.count == Set(newProperties).count)
-            newOp = DestructObjectAndReassign(
-                properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
+
         case .compare(_):
             newOp = Compare(chooseUniform(from: Comparator.allCases))
         case .createNamedVariable(let op):
@@ -644,6 +618,21 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = ImportNamespace(isDeferred: !op.isDeferred)
         case .dynamicImport(let op):
             newOp = DynamicImport(isDeferred: !op.isDeferred)
+        case .destruct(let op):
+            if let newPattern = mutateDestructuringPattern(
+                op.pattern, b, &inouts, isReassign: false)
+            {
+                newOp = Destruct(pattern: newPattern, numInputs: 1, numOutputs: inouts.count - 1)
+            } else {
+                return instr
+            }
+        case .destructAndReassign(let op):
+            if let newPattern = mutateDestructuringPattern(op.pattern, b, &inouts, isReassign: true)
+            {
+                newOp = DestructAndReassign(pattern: newPattern, numInputs: inouts.count)
+            } else {
+                return instr
+            }
         // Unexpected operations to make the switch fully exhaustive.
         case .nop(_),
             .loadUndefined(_),
@@ -1045,5 +1034,91 @@ public class OperationMutator: BaseInstructionMutator {
         }
 
         // Failed to find a replacement value, so just leave the array unmodified.
+    }
+}
+
+extension OperationMutator {
+    fileprivate func mutateDestructuringPattern(
+        _ pattern: DestructuringPattern, _ b: ProgramBuilder, _ inouts: inout ArraySlice<Variable>,
+        isReassign: Bool
+    ) -> DestructuringPattern? {
+        switch pattern {
+        case .array(let arr):
+            // Check flat
+            // TODO(rherouart): Support mutating indices when default values are present.
+            for elem in arr.elements {
+                if elem.hasDefaultValue { return nil }
+                if case .pattern = elem.target { return nil }
+            }
+            if case .pattern = arr.restTarget { return nil }
+
+            // TODO(rherouart): Simplify this by directly adding or removing random elisions instead of mapping to and from indices.
+            var indices: [Int64] = []
+            for (idx, elem) in arr.elements.enumerated() {
+                if case .flatBinding = elem.target { indices.append(Int64(idx)) }
+            }
+
+            guard let indexToReplace = indices.indices.randomElement() else { return nil }
+            let newValue = Int64.random(in: 0..<10)
+            guard !indices.contains(newValue) else { return nil }
+            indices[indexToReplace] = newValue
+
+            let sortedIndices = indices.sorted()
+            // TODO(rherouart): Toggle this behind some probability.
+            let lastIsRest = (arr.restTarget == .none)  // Toggle it
+
+            // Adjust inouts for rest element change
+            if lastIsRest && arr.restTarget == .none {
+                inouts.append(isReassign ? b.randomJsVariable() : b.nextVariable())
+            } else if !lastIsRest && arr.restTarget == .flatBinding {
+                inouts.removeLast()
+            }
+
+            var elements: [DestructuringPattern.ArrayElement] = []
+            var currentIndex: Int64 = 0
+            for idx in sortedIndices {
+                while currentIndex < idx {
+                    elements.append(.init(target: .elision))
+                    currentIndex += 1
+                }
+                if lastIsRest && idx == sortedIndices.last! { break }
+                elements.append(.init(target: .flatBinding))
+                currentIndex += 1
+            }
+            let restTarget: DestructuringPattern.ArrayPattern.RestTarget =
+                (lastIsRest && !sortedIndices.isEmpty) ? .flatBinding : .none
+
+            return .array(.init(elements: elements, restTarget: restTarget))
+
+        case .object(let obj):
+            for prop in obj.properties {
+                if prop.hasDefaultValue { return nil }
+                if case .computed = prop.key { return nil }
+                if case .pattern = prop.target { return nil }
+            }
+
+            var properties: [String] = []
+            for prop in obj.properties {
+                if case .string(let key) = prop.key { properties.append(key) }
+            }
+
+            guard let indexToReplace = properties.indices.randomElement() else { return nil }
+            let newValue = b.randomPropertyName()
+            guard !properties.contains(newValue) else { return nil }
+            properties[indexToReplace] = newValue
+
+            // TODO(rherouart): Toggle this behind some probability.
+            let hasRest = !obj.hasRestElement
+            if hasRest && !obj.hasRestElement {
+                inouts.append(isReassign ? b.randomJsVariable() : b.nextVariable())
+            } else if !hasRest && obj.hasRestElement {
+                inouts.removeLast()
+            }
+
+            let newProps = properties.sorted().map {
+                DestructuringPattern.ObjectProperty(key: .string($0), target: .flatBinding)
+            }
+            return .object(.init(properties: newProps, hasRestElement: hasRest))
+        }
     }
 }

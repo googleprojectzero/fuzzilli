@@ -3834,42 +3834,88 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func destruct(
+        _ input: Variable, using pattern: DestructuringPattern, defaultValues: [Variable] = []
+    ) -> [Variable] {
+        let op = Destruct(
+            pattern: pattern, numInputs: 1 + defaultValues.count,
+            numOutputs: pattern.numBindings)
+        let outputs = emit(op, withInputs: [input] + defaultValues).outputs
+        return Array(outputs)
+    }
+
+    public func destruct(
+        _ input: Variable, using pattern: DestructuringPattern, into outputs: [Variable],
+        defaultValues: [Variable] = []
+    ) {
+        let op = DestructAndReassign(
+            pattern: pattern, numInputs: 1 + defaultValues.count + outputs.count)
+        emit(op, withInputs: [input] + defaultValues + outputs)
+    }
+
+    private func buildArrayPattern(selecting indices: [Int64], lastIsRest: Bool)
+        -> DestructuringPattern
+    {
+        var elements: [DestructuringPattern.ArrayElement] = []
+        let sortedIndices = indices.sorted()
+        var currentIndex: Int64 = 0
+        for idx in sortedIndices {
+            assert(
+                idx >= currentIndex,
+                "Indices must be non-negative and strictly ascending without duplicates")
+            while currentIndex < idx {
+                elements.append(.init(target: .elision))
+                currentIndex += 1
+            }
+            if lastIsRest && idx == sortedIndices.last! {
+                break
+            }
+            elements.append(.init(target: .flatBinding))
+            currentIndex += 1
+        }
+        let restTarget: DestructuringPattern.ArrayPattern.RestTarget =
+            (lastIsRest && !sortedIndices.isEmpty) ? .flatBinding : .none
+
+        return .array(.init(elements: elements, restTarget: restTarget))
+    }
+
+    @discardableResult
     public func destruct(_ input: Variable, selecting indices: [Int64], lastIsRest: Bool = false)
         -> [Variable]
     {
-        let outputs = emit(
-            DestructArray(indices: indices, lastIsRest: lastIsRest), withInputs: [input]
-        ).outputs
-        return Array(outputs)
+        return destruct(input, using: buildArrayPattern(selecting: indices, lastIsRest: lastIsRest))
     }
 
     public func destruct(
         _ input: Variable, selecting indices: [Int64], into outputs: [Variable],
         lastIsRest: Bool = false
     ) {
-        emit(
-            DestructArrayAndReassign(indices: indices, lastIsRest: lastIsRest),
-            withInputs: [input] + outputs)
+        destruct(
+            input, using: buildArrayPattern(selecting: indices, lastIsRest: lastIsRest),
+            into: outputs)
     }
 
     @discardableResult
     public func destruct(
         _ input: Variable, selecting properties: [String], hasRestElement: Bool = false
     ) -> [Variable] {
-        let outputs = emit(
-            DestructObject(properties: properties, hasRestElement: hasRestElement),
-            withInputs: [input]
-        ).outputs
-        return Array(outputs)
+        let props = properties.map {
+            DestructuringPattern.ObjectProperty(key: .string($0), target: .flatBinding)
+        }
+        return destruct(
+            input, using: .object(.init(properties: props, hasRestElement: hasRestElement)))
     }
 
     public func destruct(
         _ input: Variable, selecting properties: [String], into outputs: [Variable],
         hasRestElement: Bool = false
     ) {
-        emit(
-            DestructObjectAndReassign(properties: properties, hasRestElement: hasRestElement),
-            withInputs: [input] + outputs)
+        let props = properties.map {
+            DestructuringPattern.ObjectProperty(key: .string($0), target: .flatBinding)
+        }
+        destruct(
+            input, using: .object(.init(properties: props, hasRestElement: hasRestElement)),
+            into: outputs)
     }
 
     @discardableResult

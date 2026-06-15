@@ -129,52 +129,96 @@ function parse(script, proto) {
         return statements;
     }
 
+    function parseTargetAndDefault(node) {
+      let targetNode = node;
+      let defaultValue = null;
+      if (node.type === "AssignmentPattern") {
+        targetNode = node.left;
+        defaultValue = visitExpression(node.right);
+      }
+
+      if (targetNode.type === "Identifier") {
+        return { name: targetNode.name, defaultValue: defaultValue };
+      } else {
+        return {
+          pattern: make("DestructuringPattern", parsePattern(targetNode)),
+          defaultValue: defaultValue,
+        };
+      }
+    }
+
     function parsePattern(id) {
-        if (id.type === 'Identifier') {
-            return { name: id.name };
-        } else if (id.type === 'ObjectPattern') {
-            let properties = [];
-            let restBindingName = undefined;
-            for (let prop of id.properties) {
-                if (prop.type === 'ObjectProperty') {
-                    assert(prop.value.type === 'Identifier', "Nested destructuring is not yet supported");
-                    assert(prop.shorthand === true, "Renaming destructuring bindings (e.g. {a: b}) is not yet supported");
-                    properties.push(prop.key.name);
-                } else if (prop.type === 'RestElement') {
-                    assert(prop.argument.type === 'Identifier', "Expected identifier for rest element");
-                    restBindingName = prop.argument.name;
-                } else {
-                    assert(false, "Unsupported object destructuring property type: " + prop.type);
-                }
-            }
-            let obj = { properties: properties };
-            if (restBindingName !== undefined) {
-                obj.restBinding = restBindingName;
-            }
-            return { objectPattern: make('ObjectPattern', obj) };
-        } else if (id.type === 'ArrayPattern') {
-            let indices = [];
-            let names = [];
-            let hasRestElement = false;
-            for (let i = 0; i < id.elements.length; i++) {
-                let elem = id.elements[i];
-                if (elem === null) continue;
-                if (elem.type === 'Identifier') {
-                    indices.push(i);
-                    names.push(elem.name);
-                } else if (elem.type === 'RestElement') {
-                    assert(elem.argument.type === 'Identifier', "Expected identifier for rest element");
-                    indices.push(i);
-                    names.push(elem.argument.name);
-                    hasRestElement = true;
-                } else {
-                    assert(false, "Unsupported array destructuring element type: " + elem.type);
-                }
-            }
-            return { arrayPattern: make('ArrayPattern', { indices, names, hasRestElement }) };
-        } else {
-            assert(false, "Unsupported pattern type: " + id.type);
+      if (id.type === "Identifier") {
+        return { name: id.name };
+      } else if (id.type === "ObjectPattern") {
+        let properties = [];
+        let restBinding = undefined;
+        for (let prop of id.properties) {
+          if (prop.type === "ObjectProperty") {
+            let key = visitMemberKey(prop);
+            let { name, pattern, defaultValue } = parseTargetAndDefault(
+              prop.value,
+            );
+
+            let outProp = { key };
+            if (name !== undefined) outProp.name = name;
+            if (pattern !== undefined) outProp.pattern = pattern;
+            if (defaultValue !== null) outProp.defaultValue = defaultValue;
+
+            properties.push(make("ObjectPatternProperty", outProp));
+          } else if (prop.type === "RestElement") {
+            assert(
+              prop.argument.type === "Identifier",
+              "Object rest binding must be an identifier",
+            );
+            restBinding = prop.argument.name;
+          } else {
+            assert(
+              false,
+              "Unsupported object destructuring property type: " + prop.type,
+            );
+          }
         }
+        let obj = { properties: properties };
+        if (restBinding !== undefined) obj.restBinding = restBinding;
+        return { objectPattern: make("ObjectPattern", obj) };
+      } else if (id.type === "ArrayPattern") {
+        let elements = [];
+        let restBinding = undefined;
+        let restPattern = undefined;
+        for (let i = 0; i < id.elements.length; i++) {
+          let elem = id.elements[i];
+          if (elem === null) {
+            elements.push(make("ArrayPatternElement", {})); // elision (hole)
+            continue;
+          }
+          if (elem.type === "RestElement") {
+            let restTargetNode = elem.argument;
+            if (restTargetNode.type === "Identifier") {
+              restBinding = restTargetNode.name;
+            } else {
+              restPattern = make(
+                "DestructuringPattern",
+                parsePattern(restTargetNode),
+              );
+            }
+          } else {
+            let { name, pattern, defaultValue } = parseTargetAndDefault(elem);
+            let outElem = {};
+            if (name !== undefined) outElem.name = name;
+            if (pattern !== undefined) outElem.pattern = pattern;
+            if (defaultValue !== null) outElem.defaultValue = defaultValue;
+
+            elements.push(make("ArrayPatternElement", outElem));
+          }
+        }
+        let arrPat = { elements };
+        if (restBinding !== undefined) arrPat.restBinding = restBinding;
+        else if (restPattern !== undefined) arrPat.restPattern = restPattern;
+        return { arrayPattern: make("ArrayPattern", arrPat) };
+      } else {
+        assert(false, "Unsupported pattern type: " + id.type);
+      }
     }
 
     function visitVariableDeclaration(node) {

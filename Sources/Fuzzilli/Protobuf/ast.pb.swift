@@ -2614,12 +2614,51 @@ public struct Compiler_Protobuf_Expression: @unchecked Sendable {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+public struct Compiler_Protobuf_DestructuringPattern: @unchecked Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var pattern: OneOf_Pattern? {
+    get {return _storage._pattern}
+    set {_uniqueStorage()._pattern = newValue}
+  }
+
+  public var objectPattern: Compiler_Protobuf_ObjectPattern {
+    get {
+      if case .objectPattern(let v)? = _storage._pattern {return v}
+      return Compiler_Protobuf_ObjectPattern()
+    }
+    set {_uniqueStorage()._pattern = .objectPattern(newValue)}
+  }
+
+  public var arrayPattern: Compiler_Protobuf_ArrayPattern {
+    get {
+      if case .arrayPattern(let v)? = _storage._pattern {return v}
+      return Compiler_Protobuf_ArrayPattern()
+    }
+    set {_uniqueStorage()._pattern = .arrayPattern(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_Pattern: Equatable, Sendable {
+    case objectPattern(Compiler_Protobuf_ObjectPattern)
+    case arrayPattern(Compiler_Protobuf_ArrayPattern)
+
+  }
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
 public struct Compiler_Protobuf_ObjectPattern: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var properties: [String] = []
+  public var properties: [Compiler_Protobuf_ObjectPatternProperty] = []
 
   public var restBinding: String {
     get {_restBinding ?? String()}
@@ -2637,20 +2676,148 @@ public struct Compiler_Protobuf_ObjectPattern: Sendable {
   fileprivate var _restBinding: String? = nil
 }
 
-public struct Compiler_Protobuf_ArrayPattern: Sendable {
+public struct Compiler_Protobuf_ObjectPatternProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var indices: [Int32] = []
+  public var key: Compiler_Protobuf_PropertyKey {
+    get {_key ?? Compiler_Protobuf_PropertyKey()}
+    set {_key = newValue}
+  }
+  /// Returns true if `key` has been explicitly set.
+  public var hasKey: Bool {self._key != nil}
+  /// Clears the value of `key`. Subsequent reads from it will return its default value.
+  public mutating func clearKey() {self._key = nil}
 
-  public var names: [String] = []
+  public var target: Compiler_Protobuf_ObjectPatternProperty.OneOf_Target? = nil
 
-  public var hasRestElement_p: Bool = false
+  public var name: String {
+    get {
+      if case .name(let v)? = target {return v}
+      return String()
+    }
+    set {target = .name(newValue)}
+  }
+
+  public var pattern: Compiler_Protobuf_DestructuringPattern {
+    get {
+      if case .pattern(let v)? = target {return v}
+      return Compiler_Protobuf_DestructuringPattern()
+    }
+    set {target = .pattern(newValue)}
+  }
+
+  public var defaultValue: Compiler_Protobuf_Expression {
+    get {_defaultValue ?? Compiler_Protobuf_Expression()}
+    set {_defaultValue = newValue}
+  }
+  /// Returns true if `defaultValue` has been explicitly set.
+  public var hasDefaultValue: Bool {self._defaultValue != nil}
+  /// Clears the value of `defaultValue`. Subsequent reads from it will return its default value.
+  public mutating func clearDefaultValue() {self._defaultValue = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
+  public enum OneOf_Target: Equatable, Sendable {
+    case name(String)
+    case pattern(Compiler_Protobuf_DestructuringPattern)
+
+  }
+
   public init() {}
+
+  fileprivate var _key: Compiler_Protobuf_PropertyKey? = nil
+  fileprivate var _defaultValue: Compiler_Protobuf_Expression? = nil
+}
+
+public struct Compiler_Protobuf_ArrayPattern: @unchecked Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var elements: [Compiler_Protobuf_ArrayPatternElement] {
+    get {_storage._elements}
+    set {_uniqueStorage()._elements = newValue}
+  }
+
+  public var restTarget: OneOf_RestTarget? {
+    get {return _storage._restTarget}
+    set {_uniqueStorage()._restTarget = newValue}
+  }
+
+  public var restBinding: String {
+    get {
+      if case .restBinding(let v)? = _storage._restTarget {return v}
+      return String()
+    }
+    set {_uniqueStorage()._restTarget = .restBinding(newValue)}
+  }
+
+  public var restPattern: Compiler_Protobuf_DestructuringPattern {
+    get {
+      if case .restPattern(let v)? = _storage._restTarget {return v}
+      return Compiler_Protobuf_DestructuringPattern()
+    }
+    set {_uniqueStorage()._restTarget = .restPattern(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_RestTarget: Equatable, Sendable {
+    case restBinding(String)
+    case restPattern(Compiler_Protobuf_DestructuringPattern)
+
+  }
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+public struct Compiler_Protobuf_ArrayPatternElement: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var target: Compiler_Protobuf_ArrayPatternElement.OneOf_Target? = nil
+
+  public var name: String {
+    get {
+      if case .name(let v)? = target {return v}
+      return String()
+    }
+    set {target = .name(newValue)}
+  }
+
+  public var pattern: Compiler_Protobuf_DestructuringPattern {
+    get {
+      if case .pattern(let v)? = target {return v}
+      return Compiler_Protobuf_DestructuringPattern()
+    }
+    set {target = .pattern(newValue)}
+  }
+
+  public var defaultValue: Compiler_Protobuf_Expression {
+    get {_defaultValue ?? Compiler_Protobuf_Expression()}
+    set {_defaultValue = newValue}
+  }
+  /// Returns true if `defaultValue` has been explicitly set.
+  public var hasDefaultValue: Bool {self._defaultValue != nil}
+  /// Clears the value of `defaultValue`. Subsequent reads from it will return its default value.
+  public mutating func clearDefaultValue() {self._defaultValue = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_Target: Equatable, Sendable {
+    case name(String)
+    case pattern(Compiler_Protobuf_DestructuringPattern)
+
+  }
+
+  public init() {}
+
+  fileprivate var _defaultValue: Compiler_Protobuf_Expression? = nil
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -7980,6 +8147,109 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 }
 
+extension Compiler_Protobuf_DestructuringPattern: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DestructuringPattern"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}objectPattern\0\u{1}arrayPattern\0")
+
+  fileprivate class _StorageClass {
+    var _pattern: Compiler_Protobuf_DestructuringPattern.OneOf_Pattern?
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _pattern = source._pattern
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try {
+          var v: Compiler_Protobuf_ObjectPattern?
+          var hadOneofValue = false
+          if let current = _storage._pattern {
+            hadOneofValue = true
+            if case .objectPattern(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._pattern = .objectPattern(v)
+          }
+        }()
+        case 2: try {
+          var v: Compiler_Protobuf_ArrayPattern?
+          var hadOneofValue = false
+          if let current = _storage._pattern {
+            hadOneofValue = true
+            if case .arrayPattern(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._pattern = .arrayPattern(v)
+          }
+        }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      switch _storage._pattern {
+      case .objectPattern?: try {
+        guard case .objectPattern(let v)? = _storage._pattern else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      }()
+      case .arrayPattern?: try {
+        guard case .arrayPattern(let v)? = _storage._pattern else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      }()
+      case nil: break
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_DestructuringPattern, rhs: Compiler_Protobuf_DestructuringPattern) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._pattern != rhs_storage._pattern {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Compiler_Protobuf_ObjectPattern: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ObjectPattern"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}properties\0\u{1}restBinding\0")
@@ -7990,7 +8260,7 @@ extension Compiler_Protobuf_ObjectPattern: SwiftProtobuf.Message, SwiftProtobuf.
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedStringField(value: &self.properties) }()
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.properties) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self._restBinding) }()
       default: break
       }
@@ -8003,7 +8273,7 @@ extension Compiler_Protobuf_ObjectPattern: SwiftProtobuf.Message, SwiftProtobuf.
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
     if !self.properties.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.properties, fieldNumber: 1)
+      try visitor.visitRepeatedMessageField(value: self.properties, fieldNumber: 1)
     }
     try { if let v = self._restBinding {
       try visitor.visitSingularStringField(value: v, fieldNumber: 2)
@@ -8019,9 +8289,9 @@ extension Compiler_Protobuf_ObjectPattern: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
-extension Compiler_Protobuf_ArrayPattern: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ArrayPattern"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}indices\0\u{1}names\0\u{1}hasRestElement\0")
+extension Compiler_Protobuf_ObjectPatternProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ObjectPatternProperty"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}key\0\u{1}name\0\u{1}pattern\0\u{2}\u{2}defaultValue\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -8029,31 +8299,235 @@ extension Compiler_Protobuf_ArrayPattern: SwiftProtobuf.Message, SwiftProtobuf._
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
-      case 2: try { try decoder.decodeRepeatedStringField(value: &self.names) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._key) }()
+      case 2: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.target != nil {try decoder.handleConflictingOneOf()}
+          self.target = .name(v)
+        }
+      }()
+      case 3: try {
+        var v: Compiler_Protobuf_DestructuringPattern?
+        var hadOneofValue = false
+        if let current = self.target {
+          hadOneofValue = true
+          if case .pattern(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.target = .pattern(v)
+        }
+      }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._defaultValue) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.indices.isEmpty {
-      try visitor.visitPackedInt32Field(value: self.indices, fieldNumber: 1)
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._key {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    switch self.target {
+    case .name?: try {
+      guard case .name(let v)? = self.target else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    }()
+    case .pattern?: try {
+      guard case .pattern(let v)? = self.target else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case nil: break
     }
-    if !self.names.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.names, fieldNumber: 2)
+    try { if let v = self._defaultValue {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ObjectPatternProperty, rhs: Compiler_Protobuf_ObjectPatternProperty) -> Bool {
+    if lhs._key != rhs._key {return false}
+    if lhs.target != rhs.target {return false}
+    if lhs._defaultValue != rhs._defaultValue {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ArrayPattern: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ArrayPattern"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elements\0\u{1}restBinding\0\u{1}restPattern\0")
+
+  fileprivate class _StorageClass {
+    var _elements: [Compiler_Protobuf_ArrayPatternElement] = []
+    var _restTarget: Compiler_Protobuf_ArrayPattern.OneOf_RestTarget?
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _elements = source._elements
+      _restTarget = source._restTarget
     }
-    if self.hasRestElement_p != false {
-      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 3)
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeRepeatedMessageField(value: &_storage._elements) }()
+        case 2: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._restTarget != nil {try decoder.handleConflictingOneOf()}
+            _storage._restTarget = .restBinding(v)
+          }
+        }()
+        case 3: try {
+          var v: Compiler_Protobuf_DestructuringPattern?
+          var hadOneofValue = false
+          if let current = _storage._restTarget {
+            hadOneofValue = true
+            if case .restPattern(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._restTarget = .restPattern(v)
+          }
+        }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._elements.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._elements, fieldNumber: 1)
+      }
+      switch _storage._restTarget {
+      case .restBinding?: try {
+        guard case .restBinding(let v)? = _storage._restTarget else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+      }()
+      case .restPattern?: try {
+        guard case .restPattern(let v)? = _storage._restTarget else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      }()
+      case nil: break
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Compiler_Protobuf_ArrayPattern, rhs: Compiler_Protobuf_ArrayPattern) -> Bool {
-    if lhs.indices != rhs.indices {return false}
-    if lhs.names != rhs.names {return false}
-    if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._elements != rhs_storage._elements {return false}
+        if _storage._restTarget != rhs_storage._restTarget {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ArrayPatternElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ArrayPatternElement"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}pattern\0\u{1}defaultValue\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.target != nil {try decoder.handleConflictingOneOf()}
+          self.target = .name(v)
+        }
+      }()
+      case 2: try {
+        var v: Compiler_Protobuf_DestructuringPattern?
+        var hadOneofValue = false
+        if let current = self.target {
+          hadOneofValue = true
+          if case .pattern(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.target = .pattern(v)
+        }
+      }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._defaultValue) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.target {
+    case .name?: try {
+      guard case .name(let v)? = self.target else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+    }()
+    case .pattern?: try {
+      guard case .pattern(let v)? = self.target else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case nil: break
+    }
+    try { if let v = self._defaultValue {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ArrayPatternElement, rhs: Compiler_Protobuf_ArrayPatternElement) -> Bool {
+    if lhs.target != rhs.target {return false}
+    if lhs._defaultValue != rhs._defaultValue {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

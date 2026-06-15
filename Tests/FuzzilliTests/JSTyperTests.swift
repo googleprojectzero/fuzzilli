@@ -1541,6 +1541,49 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: outputs[2]), .object())
     }
 
+    func testDestructAndReassignTypeInference() {
+        let objectGroups: [ObjectGroup] = [
+            ObjectGroup(
+                name: "O",
+                instanceType: .object(ofGroup: "O", withProperties: ["foo"]),
+                properties: [
+                    "foo": .integer
+                ],
+                methods: [:])
+        ]
+
+        let env = JavaScriptEnvironment(
+            additionalBuiltins: [:], additionalObjectGroups: objectGroups)
+        let fuzzer = makeMockFuzzer(environment: env)
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createNamedVariable(forBuiltin: "myO")
+        b.setType(
+            ofVariable: obj, to: .object(ofGroup: "O", withProperties: ["foo"]))
+
+        let v1 = b.loadInt(0)
+        let v2 = b.loadInt(0)
+        let v3 = b.loadInt(0)
+
+        let computedKey = b.loadString("bar")
+        let defaultVal = b.loadString("default")
+
+        let props = [
+            DestructuringPattern.ObjectProperty(key: .string("foo"), target: .flatBinding),
+            DestructuringPattern.ObjectProperty(
+                key: .computed, target: .flatBinding, hasDefaultValue: true),
+        ]
+        let pattern = DestructuringPattern.ObjectPattern(properties: props, hasRestElement: true)
+
+        // DestructAndReassign: ({ "foo": v1, [computedKey]: v2 = defaultVal, ...v3 } = obj)
+        // Inputs must be strictly ordered: [obj, computedKey, v1, v2, defaultVal, v3]
+        b.destruct(obj, using: .object(pattern), into: [computedKey, v1, v2, defaultVal, v3])
+
+        XCTAssertEqual(b.type(of: v1), .integer)
+        XCTAssertEqual(b.type(of: v2), .jsAnything)
+        XCTAssertEqual(b.type(of: v3), .object())
+    }
+
     func testWasmTypeInference() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

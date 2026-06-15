@@ -205,7 +205,15 @@ func makeArrayDestructForOfLoopGenerator(
         let hasRestElement = probability(0.2)
         let op = ForLoop(
             type: .forOf, isAsync: isAsyncIteration,
-            header: .arrayDestruct(indices: indices, hasRestElement: hasRestElement))
+            header: .destruct(
+                pattern: .array(
+                    DestructuringPattern.ArrayPattern(
+                        elements: (0...(indices.max() ?? 0)).map { i in
+                            let target: DestructuringPattern.ArrayElement.Target =
+                                indices.contains(Int64(i)) ? .flatBinding : .elision
+                            return DestructuringPattern.ArrayElement(target: target)
+                        },
+                        restTarget: hasRestElement ? .flatBinding : .none))))
         let vars = b.emit(op, withInputs: [obj]).innerOutputs
         if hasRestElement && probability(0.2) {
             b.getProperty("length", of: vars.dropLast().last!)
@@ -232,7 +240,14 @@ func makeObjectDestructForOfLoopGenerator(
         let hasRestElement = probability(0.2)
         let op = ForLoop(
             type: .forOf, isAsync: isAsyncIteration,
-            header: .objectDestruct(properties: Array(properties), hasRestElement: hasRestElement))
+            header: .destruct(
+                pattern: .object(
+                    DestructuringPattern.ObjectPattern(
+                        properties: properties.map {
+                            DestructuringPattern.ObjectProperty(
+                                key: .string($0), target: .flatBinding)
+                        },
+                        hasRestElement: hasRestElement))))
         b.emit(op, withInputs: [obj])
     }
 }

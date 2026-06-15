@@ -2650,7 +2650,7 @@ class LifterTests: XCTestCase {
             let {"foo":v3,...v4} = v2;
             let {"foo":v5,"bar":v6,...v7} = v2;
             let {...v8} = v2;
-            let {"foo":v9,"bar":v10,} = v2;
+            let {"foo":v9,"bar":v10} = v2;
 
             """
 
@@ -2682,7 +2682,7 @@ class LifterTests: XCTestCase {
             ({"foo":v2,...v0} = v3);
             ({"foo":v2,"bar":v0,...v1} = v3);
             ({...v2} = v3);
-            ({"foo":v2,"bar":v1,} = v3);
+            ({"foo":v2,"bar":v1} = v3);
             ({} = v3);
 
             """
@@ -4902,7 +4902,7 @@ class LifterTests: XCTestCase {
 
         let expected = """
             async function f0(a1) {
-                for await (let {"name":v2,"department":v3,} of a1) {
+                for await (let {"name":v2,"department":v3} of a1) {
                     print(v2);
                     print(v3);
                 }
@@ -5005,6 +5005,41 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         // Verify that it produced a Wasm module instantiation with the correct header
-        XCTAssertTrue(actual.contains("0x00, 0x61, 0x73, 0x6D"))
+        XCTAssertEqual(actual, ("0x00, 0x61, 0x73, 0x6D"))
+    }
+
+    func testNestedDestructuringLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.loadString("obj")
+        let defaultVal = b.loadInt(42)
+        let computedKey = b.loadString("dynamic")
+
+        let arrayElements = [
+            DestructuringPattern.ArrayElement(target: .flatBinding),
+            DestructuringPattern.ArrayElement(target: .flatBinding, hasDefaultValue: true),
+        ]
+        let arrayPattern = DestructuringPattern.ArrayPattern(
+            elements: arrayElements, restTarget: .flatBinding)
+        let arrayTarget = DestructuringPattern.ObjectProperty.Target.pattern(.array(arrayPattern))
+        let properties = [
+            DestructuringPattern.ObjectProperty(key: .computed, target: .flatBinding),
+            DestructuringPattern.ObjectProperty(key: .string("b"), target: arrayTarget),
+        ]
+        let objectPattern = DestructuringPattern.ObjectPattern(
+            properties: properties, hasRestElement: true)
+
+        b.destruct(
+            obj,
+            using: .object(objectPattern),
+            defaultValues: [computedKey, defaultVal]
+        )
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        XCTAssertTrue(
+            actual.contains("let {[\"dynamic\"]:v3,\"b\":[v4,v5=42,...v6],...v7} = \"obj\";"))
     }
 }

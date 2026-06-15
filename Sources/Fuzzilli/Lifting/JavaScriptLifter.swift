@@ -1134,37 +1134,31 @@ public class JavaScriptLifter: Lifter {
                 let VALUE = input(0)
                 w.emit("\(LET) \(V) = \(VALUE);")
 
-            case .destructArray(let op):
-                let outputs = w.declareAll(instr.outputs)
-                let ARRAY = input(0)
-                let PATTERN = liftArrayDestructPattern(
-                    indices: op.indices, outputs: outputs, hasRestElement: op.lastIsRest)
-                let LET = w.varKeyword
-                w.emit("\(LET) [\(PATTERN)] = \(ARRAY);")
-
-            case .destructArrayAndReassign(let op):
-                assert(inputs.dropFirst().allSatisfy({ $0.type === Identifier }))
-                let ARRAY = input(0)
-                let outputs = inputs.dropFirst().map({ $0.text })
-                let PATTERN = liftArrayDestructPattern(
-                    indices: op.indices, outputs: outputs, hasRestElement: op.lastIsRest)
-                w.emit("[\(PATTERN)] = \(ARRAY);")
-
-            case .destructObject(let op):
+            case .destruct(let op):
                 let outputs = w.declareAll(instr.outputs)
                 let OBJ = input(0)
-                let PATTERN = liftObjectDestructPattern(
-                    properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement)
+                var inputIdx = 1
+                var outputIdx = 0
+                let PATTERN = liftDestructuringPattern(
+                    op.pattern, isReassign: false, inputIdx: &inputIdx, outputIdx: &outputIdx,
+                    inputs: inputs, outputs: outputs)
                 let LET = w.varKeyword
-                w.emit("\(LET) {\(PATTERN)} = \(OBJ);")
+                w.emit("\(LET) \(PATTERN) = \(OBJ);")
 
-            case .destructObjectAndReassign(let op):
-                assert(inputs.dropFirst().allSatisfy({ $0.type === Identifier }))
+            case .destructAndReassign(let op):
                 let OBJ = input(0)
-                let outputs = inputs.dropFirst().map({ $0.text })
-                let PATTERN = liftObjectDestructPattern(
-                    properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement)
-                w.emit("({\(PATTERN)} = \(OBJ));")
+                var inputIdx = 1
+                var outputIdx = 0
+                let PATTERN = liftDestructuringPattern(
+                    op.pattern, isReassign: true, inputIdx: &inputIdx, outputIdx: &outputIdx,
+                    inputs: inputs, outputs: [],
+                    resolveTarget: { i in w.ensureIsIdentifier(inputs[i], for: instr.input(i)).text
+                    })
+                if case .object = op.pattern {
+                    w.emit("(\(PATTERN) = \(OBJ));")
+                } else {
+                    w.emit("\(PATTERN) = \(OBJ);")
+                }
 
             case .compare(let op):
                 let lhs = input(0)
@@ -1496,18 +1490,17 @@ public class JavaScriptLifter: Lifter {
                             : w.declarationKeyword(for: instr.innerOutput(0))
                         let V = w.declare(instr.innerOutput(0))
                         w.emit("\(prefix)\(loopKeyword) (\(LET) \(V) of \(OBJ)) {")
-                    case .arrayDestruct(let indices, let hasRest):
+                    case .destruct(let pattern):
                         let LET = w.varKeyword
                         let outputs = w.declareAll(instr.innerOutputs.dropLast())
-                        let PATTERN = liftArrayDestructPattern(
-                            indices: indices, outputs: outputs, hasRestElement: hasRest)
-                        w.emit("\(prefix)\(loopKeyword) (\(LET) [\(PATTERN)] of \(OBJ)) {")
-                    case .objectDestruct(let properties, let hasRest):
-                        let LET = w.varKeyword
-                        let outputs = w.declareAll(instr.innerOutputs.dropLast())
-                        let PATTERN = liftObjectDestructPattern(
-                            properties: properties, outputs: outputs, hasRestElement: hasRest)
-                        w.emit("\(prefix)\(loopKeyword) (\(LET) {\(PATTERN)} of \(OBJ)) {")
+                        // Note: ForLoop patterns don't have inputs for computed keys or defaults right now.
+                        var nextInputIndex = 1
+                        var nextOutputIndex = 0
+                        let PATTERN = liftDestructuringPattern(
+                            pattern, isReassign: false,
+                            inputIdx: &nextInputIndex, outputIdx: &nextOutputIndex,
+                            inputs: inputs, outputs: outputs)
+                        w.emit("\(prefix)\(loopKeyword) (\(LET) \(PATTERN) of \(OBJ)) {")
                     }
                 }
                 w.enterNewBlock()
@@ -2313,15 +2306,113 @@ public class JavaScriptLifter: Lifter {
     ) -> String {
         assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
 
-        var objectPattern = ""
+        var props = [String]()
         for (property, output) in zip(properties, outputs) {
-            objectPattern += "\"\(property)\":\(output),"
+            props.append("\"\(property)\":\(output)")
         }
         if hasRestElement {
-            objectPattern += "...\(outputs.last!)"
+            props.append("...\(outputs.last!)")
         }
 
-        return objectPattern
+        return props.joined(separator: ",")
+    }
+
+    private func liftDestructuringPattern(
+        _ pattern: DestructuringPattern, isReassign: Bool,
+        inputIdx: inout Int, outputIdx: inout Int,
+        inputs: [Expression], outputs: [String],
+        resolveTarget: ((Int) -> String)? = nil
+    ) -> String {
+        switch pattern {
+        case .object(let obj):
+            var props = [String]()
+            for prop in obj.properties {
+                var keyStr = ""
+                switch prop.key {
+                case .string(let s): keyStr = "\"\(s)\""
+                case .computed:
+                    keyStr = "[\(inputs[inputIdx].text)]"
+                    inputIdx += 1
+                }
+
+                var targetStr = ""
+                switch prop.target {
+                case .flatBinding:
+                    targetStr =
+                        isReassign
+                        ? (resolveTarget?(inputIdx) ?? inputs[inputIdx].text) : outputs[outputIdx]
+                    if isReassign { inputIdx += 1 } else { outputIdx += 1 }
+                case .pattern(let p):
+                    targetStr = liftDestructuringPattern(
+                        p, isReassign: isReassign, inputIdx: &inputIdx, outputIdx: &outputIdx,
+                        inputs: inputs, outputs: outputs, resolveTarget: resolveTarget)
+                }
+
+                var defStr = ""
+                if prop.hasDefaultValue {
+                    defStr = "=\(inputs[inputIdx].text)"
+                    inputIdx += 1
+                }
+
+                props.append("\(keyStr):\(targetStr)\(defStr)")
+            }
+            if obj.hasRestElement {
+                let targetStr =
+                    isReassign
+                    ? (resolveTarget?(inputIdx) ?? inputs[inputIdx].text) : outputs[outputIdx]
+                if isReassign { inputIdx += 1 } else { outputIdx += 1 }
+                props.append("...\(targetStr)")
+            }
+            return "{\(props.joined(separator: ","))}"
+
+        case .array(let arr):
+            var elems = [String]()
+            for elem in arr.elements {
+                switch elem.target {
+                case .elision:
+                    if elem.hasDefaultValue { inputIdx += 1 }
+                    elems.append("")
+                case .flatBinding:
+                    let targetStr =
+                        isReassign
+                        ? (resolveTarget?(inputIdx) ?? inputs[inputIdx].text) : outputs[outputIdx]
+                    if isReassign { inputIdx += 1 } else { outputIdx += 1 }
+                    if elem.hasDefaultValue {
+                        elems.append("\(targetStr)=\(inputs[inputIdx].text)")
+                        inputIdx += 1
+                    } else {
+                        elems.append(targetStr)
+                    }
+                case .pattern(let p):
+                    let targetStr = liftDestructuringPattern(
+                        p, isReassign: isReassign, inputIdx: &inputIdx, outputIdx: &outputIdx,
+                        inputs: inputs, outputs: outputs, resolveTarget: resolveTarget)
+                    if elem.hasDefaultValue {
+                        elems.append("\(targetStr)=\(inputs[inputIdx].text)")
+                        inputIdx += 1
+                    } else {
+                        elems.append(targetStr)
+                    }
+                }
+            }
+            switch arr.restTarget {
+            case .none: break
+            case .flatBinding:
+                let targetStr =
+                    isReassign
+                    ? (resolveTarget?(inputIdx) ?? inputs[inputIdx].text) : outputs[outputIdx]
+                if isReassign { inputIdx += 1 } else { outputIdx += 1 }
+                elems.append("...\(targetStr)")
+            case .pattern(let p):
+                elems.append(
+                    "...\(liftDestructuringPattern(p, isReassign: isReassign, inputIdx: &inputIdx, outputIdx: &outputIdx, inputs: inputs, outputs: outputs, resolveTarget: resolveTarget))"
+                )
+            }
+            if let last = arr.elements.last, case .elision = last.target, arr.restTarget == .none {
+                elems.append("")
+            }
+            return "[\(elems.joined(separator: ","))]"
+        }
     }
 
     private func liftFloatValue(_ value: Double) -> Expression {

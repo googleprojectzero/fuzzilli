@@ -136,10 +136,7 @@ enum Opcode {
     case update(Update)
     case dup(Dup)
     case reassign(Reassign)
-    case destructArray(DestructArray)
-    case destructArrayAndReassign(DestructArrayAndReassign)
-    case destructObject(DestructObject)
-    case destructObjectAndReassign(DestructObjectAndReassign)
+
     case compare(Compare)
     case eval(Eval)
     case beginWith(BeginWith)
@@ -384,4 +381,6 @@ enum Opcode {
     case wasmCallRef(WasmCallRef)
     case wasmReturnCallRef(WasmReturnCallRef)
     case dynamicImport(DynamicImport)
+    case destruct(Destruct)
+    case destructAndReassign(DestructAndReassign)
 }

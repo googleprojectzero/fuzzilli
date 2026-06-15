@@ -2283,29 +2283,94 @@ public struct JSTyper: Analyzer {
                 state.updateReturnValueType(to: .undefined)
             }
 
-        case .destructArray:
-            instr.outputs.forEach { set($0, .jsAnything) }
+        case .destruct(let op):
+            var outputIterator = instr.outputs.makeIterator()
+            func inferTypes(_ pattern: DestructuringPattern, isRoot: Bool = false) {
+                switch pattern {
+                case .object(let obj):
+                    for prop in obj.properties {
+                        var propType = ILType.jsAnything
+                        if isRoot, case .string(let property) = prop.key {
+                            propType = inferPropertyType(of: property, on: instr.input(0))
+                        }
+                        switch prop.target {
+                        case .flatBinding:
+                            set(outputIterator.next()!, propType)
+                        case .pattern(let p):
+                            inferTypes(p)
+                        }
+                    }
+                    if obj.hasRestElement {
+                        // TODO: Add the subset of object properties and methods captured by the rest element
+                        set(outputIterator.next()!, .object())
+                    }
+                case .array(let arr):
+                    for elem in arr.elements {
+                        switch elem.target {
+                        case .elision: break
+                        case .flatBinding:
+                            set(outputIterator.next()!, .jsAnything)
+                        case .pattern(let p):
+                            inferTypes(p)
+                        }
+                    }
+                    switch arr.restTarget {
+                    case .none: break
+                    case .flatBinding:
+                        set(outputIterator.next()!, .jsArray)
+                    case .pattern(let p):
+                        inferTypes(p)
+                    }
+                }
+            }
+            inferTypes(op.pattern, isRoot: true)
 
-        case .destructArrayAndReassign:
-            instr.inputs.dropFirst().forEach { set($0, .jsAnything) }
+        case .destructAndReassign(let op):
+            var inputIterator = instr.inputs.dropFirst().makeIterator()  // skip the source object
+            func inferTypes(_ pattern: DestructuringPattern, isRoot: Bool = false) {
+                switch pattern {
+                case .object(let obj):
+                    for prop in obj.properties {
+                        if case .computed = prop.key { _ = inputIterator.next() }
 
-        case .destructObject(let op):
-            for (property, output) in zip(op.properties, instr.outputs) {
-                set(output, inferPropertyType(of: property, on: instr.input(0)))
-            }
-            if op.hasRestElement {
-                // TODO: Add the subset of object properties and methods captured by the rest element
-                set(instr.outputs.last!, .object())
-            }
+                        var propType = ILType.jsAnything
+                        if isRoot, case .string(let property) = prop.key {
+                            propType = inferPropertyType(of: property, on: instr.input(0))
+                        }
 
-        case .destructObjectAndReassign(let op):
-            for (property, input) in zip(op.properties, instr.inputs.dropFirst()) {
-                set(input, inferPropertyType(of: property, on: instr.input(0)))
+                        switch prop.target {
+                        case .flatBinding:
+                            set(inputIterator.next()!, propType)
+                        case .pattern(let p):
+                            inferTypes(p)
+                        }
+                        if prop.hasDefaultValue { _ = inputIterator.next() }
+                    }
+                    if obj.hasRestElement {
+                        // TODO: Add the subset of object properties and methods captured by the rest element
+                        set(inputIterator.next()!, .object())
+                    }
+                case .array(let arr):
+                    for elem in arr.elements {
+                        switch elem.target {
+                        case .elision: break
+                        case .flatBinding:
+                            set(inputIterator.next()!, .jsAnything)
+                        case .pattern(let p):
+                            inferTypes(p)
+                        }
+                        if elem.hasDefaultValue { _ = inputIterator.next() }
+                    }
+                    switch arr.restTarget {
+                    case .none: break
+                    case .flatBinding:
+                        set(inputIterator.next()!, .jsArray)
+                    case .pattern(let p):
+                        inferTypes(p)
+                    }
+                }
             }
-            if op.hasRestElement {
-                // TODO: Add the subset of object properties and methods captured by the rest element
-                set(instr.inputs.last!, .object())
-            }
+            inferTypes(op.pattern, isRoot: true)
 
         case .compare:
             set(instr.output, .boolean)
@@ -2398,20 +2463,46 @@ public struct JSTyper: Analyzer {
                 switch op.header {
                 case .simple:
                     set(outputs[0], .jsAnything)
-                case .arrayDestruct(_, let hasRest):
-                    for v in outputs {
-                        set(v, .jsAnything)
+                case .destruct(let pattern):
+                    func inferTypes(_ pattern: DestructuringPattern, outputIdx: inout Int) {
+                        switch pattern {
+                        case .object(let obj):
+                            for prop in obj.properties {
+                                switch prop.target {
+                                case .flatBinding:
+                                    set(outputs[outputIdx], .jsAnything)
+                                    outputIdx += 1
+                                case .pattern(let p):
+                                    inferTypes(p, outputIdx: &outputIdx)
+                                }
+                            }
+                            if obj.hasRestElement {
+                                set(outputs[outputIdx], .object())
+                                outputIdx += 1
+                            }
+                        case .array(let arr):
+                            for elem in arr.elements {
+                                switch elem.target {
+                                case .elision: break
+                                case .flatBinding:
+                                    set(outputs[outputIdx], .jsAnything)
+                                    outputIdx += 1
+                                case .pattern(let p):
+                                    inferTypes(p, outputIdx: &outputIdx)
+                                }
+                            }
+                            switch arr.restTarget {
+                            case .none: break
+                            case .flatBinding:
+                                set(outputs[outputIdx], .jsArray)
+                                outputIdx += 1
+                            case .pattern(let p):
+                                inferTypes(p, outputIdx: &outputIdx)
+                            }
+                        }
                     }
-                    if hasRest {
-                        set(outputs.last!, .jsArray)
-                    }
-                case .objectDestruct(_, let hasRest):
-                    for v in outputs {
-                        set(v, .jsAnything)
-                    }
-                    if hasRest {
-                        set(outputs.last!, .object())
-                    }
+                    var outputIdx = 0
+                    inferTypes(pattern, outputIdx: &outputIdx)
                 }
             }
             set(label, .jsLoopLabel)

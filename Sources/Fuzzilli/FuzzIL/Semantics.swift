@@ -50,9 +50,8 @@ extension Operation {
             return inputIdx == 0
         case .unaryOperation(let op):
             return op.op.reassignsInput
-        case .destructArrayAndReassign,
-            .destructObjectAndReassign:
-            return inputIdx != 0
+        case .destructAndReassign:
+            return self.isDestructTarget(inputIdx: inputIdx)
         default:
             return false
         }

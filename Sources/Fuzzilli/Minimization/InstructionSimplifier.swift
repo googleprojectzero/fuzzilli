@@ -135,47 +135,106 @@ struct InstructionSimplifier: Reducer {
         for instr in helper.code {
             var keepInstruction = true
             switch instr.op.opcode {
-            case .destructObject(let op):
-                guard op.properties.count > 0 else {
-                    // Cannot simplify this as it would be a no-op
-                    break
-                }
 
-                let outputs = Array(instr.outputs)
-                for (i, propertyName) in op.properties.enumerated() {
-                    newCode.append(
-                        Instruction(
-                            GetProperty(propertyName: propertyName, isGuarded: false),
-                            output: outputs[i], inputs: [instr.input(0)]))
-                }
-                if op.hasRestElement {
-                    newCode.append(
-                        Instruction(
-                            DestructObject(properties: [], hasRestElement: true),
-                            output: outputs.last!, inputs: [instr.input(0)]))
-                }
-                keepInstruction = false
-            case .destructArray(let op):
-                guard op.indices.count > 1 || !op.lastIsRest else {
-                    // Cannot simplify this as it would be a no-op
-                    break
-                }
+            // TODO(rherouart): Also simplify DestructAndReassign in a similar way (by converting flat targets into individual assignment operations).
+            // TODO(rherouart): Consider a secondary simplification step that tries to drop default values.
+            case .destruct(let op):
+                guard !op.pattern.hasNestedDestructuring else { break }
+                guard
+                    instr.outputs.count > 1
+                        || (instr.outputs.count == 1 && !op.pattern.hasRestElement)
+                else { break }
 
-                let outputs = Array(instr.outputs)
-                for (i, idx) in op.indices.enumerated() {
-                    if i == op.indices.count - 1 && op.lastIsRest {
-                        newCode.append(
-                            Instruction(
-                                DestructArray(indices: [idx], lastIsRest: true),
-                                output: outputs.last!, inputs: [instr.input(0)]))
-                    } else {
-                        newCode.append(
-                            Instruction(
-                                GetElement(index: idx, isGuarded: false), output: outputs[i],
-                                inputs: [instr.input(0)]))
+                var outputs = instr.outputs.makeIterator()
+
+                switch op.pattern {
+                case .object(let obj):
+                    var leftOverProperties: [DestructuringPattern.ObjectProperty] = []
+                    var leftOverOutputs: [Variable] = []
+                    var simplifiedAny = false
+
+                    for property in obj.properties {
+                        let output = outputs.next()!
+                        if case .string(let propertyName) = property.key, !property.hasDefaultValue
+                        {
+                            newCode.append(
+                                Instruction(
+                                    GetProperty(propertyName: propertyName, isGuarded: false),
+                                    output: output, inputs: [instr.input(0)]))
+                            simplifiedAny = true
+                        } else {
+                            leftOverProperties.append(property)
+                            leftOverOutputs.append(output)
+                        }
+                    }
+
+                    if obj.hasRestElement {
+                        leftOverOutputs.append(outputs.next()!)
+                    }
+
+                    if simplifiedAny {
+                        if !leftOverProperties.isEmpty || obj.hasRestElement {
+                            newCode.append(
+                                Instruction(
+                                    Destruct(
+                                        pattern: DestructuringPattern.object(
+                                            DestructuringPattern.ObjectPattern(
+                                                properties: leftOverProperties,
+                                                hasRestElement: obj.hasRestElement)),
+                                        numInputs: instr.inputs.count,
+                                        numOutputs: leftOverOutputs.count),
+                                    inouts: Array(instr.inputs) + leftOverOutputs))
+                        }
+                        keepInstruction = false
+                    }
+
+                case .array(let arr):
+                    var leftOverElements: [DestructuringPattern.ArrayElement] = []
+                    var leftOverOutputs: [Variable] = []
+                    var currentIndex = 0
+                    var simplifiedAny = false
+
+                    for element in arr.elements {
+                        if case .flatBinding = element.target, !element.hasDefaultValue {
+                            let output = outputs.next()!
+                            newCode.append(
+                                Instruction(
+                                    GetElement(index: Int64(currentIndex), isGuarded: false),
+                                    output: output, inputs: [instr.input(0)]))
+                            leftOverElements.append(
+                                DestructuringPattern.ArrayElement(target: .elision))
+                            simplifiedAny = true
+                        } else {
+                            if case .elision = element.target {
+                                // No output variable for elisions
+                            } else {
+                                leftOverOutputs.append(outputs.next()!)
+                            }
+                            leftOverElements.append(element)
+                        }
+                        currentIndex += 1
+                    }
+
+                    if arr.restTarget != .none {
+                        leftOverOutputs.append(outputs.next()!)
+                    }
+
+                    if simplifiedAny {
+                        if !leftOverOutputs.isEmpty {
+                            newCode.append(
+                                Instruction(
+                                    Destruct(
+                                        pattern: DestructuringPattern.array(
+                                            DestructuringPattern.ArrayPattern(
+                                                elements: leftOverElements,
+                                                restTarget: arr.restTarget)),
+                                        numInputs: instr.inputs.count,
+                                        numOutputs: leftOverOutputs.count),
+                                    inouts: Array(instr.inputs) + leftOverOutputs))
+                        }
+                        keepInstruction = false
                     }
                 }
-                keepInstruction = false
             default:
                 break
             }
