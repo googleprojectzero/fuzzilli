@@ -1057,6 +1057,9 @@ extension OperationMutator {
             for (idx, elem) in arr.elements.enumerated() {
                 if case .flatBinding = elem.target { indices.append(Int64(idx)) }
             }
+            if case .flatBinding = arr.restTarget {
+                indices.append((indices.last ?? -1) + 1)
+            }
 
             guard let indexToReplace = indices.indices.randomElement() else { return nil }
             let newValue = Int64.random(in: 0..<10)
@@ -1066,13 +1069,6 @@ extension OperationMutator {
             let sortedIndices = indices.sorted()
             // TODO(rherouart): Toggle this behind some probability.
             let lastIsRest = (arr.restTarget == .none)  // Toggle it
-
-            // Adjust inouts for rest element change
-            if lastIsRest && arr.restTarget == .none {
-                inouts.append(isReassign ? b.randomJsVariable() : b.nextVariable())
-            } else if !lastIsRest && arr.restTarget == .flatBinding {
-                inouts.removeLast()
-            }
 
             var elements: [DestructuringPattern.ArrayElement] = []
             var currentIndex: Int64 = 0
@@ -1085,8 +1081,9 @@ extension OperationMutator {
                 elements.append(.init(target: .flatBinding))
                 currentIndex += 1
             }
+            assert(!sortedIndices.isEmpty)
             let restTarget: DestructuringPattern.ArrayPattern.RestTarget =
-                (lastIsRest && !sortedIndices.isEmpty) ? .flatBinding : .none
+                lastIsRest ? .flatBinding : .none
 
             return .array(.init(elements: elements, restTarget: restTarget))
 
@@ -1108,9 +1105,11 @@ extension OperationMutator {
             properties[indexToReplace] = newValue
 
             // TODO(rherouart): Toggle this behind some probability.
-            let hasRest = !obj.hasRestElement
+            // We can only add/remove bindings if we are reassigning, because changing
+            // the number of outputs of an existing instruction breaks contiguous variables.
+            let hasRest = isReassign ? !obj.hasRestElement : obj.hasRestElement
             if hasRest && !obj.hasRestElement {
-                inouts.append(isReassign ? b.randomJsVariable() : b.nextVariable())
+                inouts.append(b.randomJsVariable())
             } else if !hasRest && obj.hasRestElement {
                 inouts.removeLast()
             }
